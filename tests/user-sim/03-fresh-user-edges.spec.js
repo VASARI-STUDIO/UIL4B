@@ -2,7 +2,7 @@
 // presses the wrong keys. This file covers mobile usability, keyboard
 // behaviour, and garbage-input resilience (Murphy's-law states).
 import { test, expect } from './base.js'
-import { watch, expectRendered, go, goReady } from './helpers.js'
+import { watch, expectRendered, go } from './helpers.js'
 
 const PERSONA = 'fresh user (mobile & edge cases)'
 
@@ -115,7 +115,7 @@ test.describe('route sweep — every public page loads clean', () => {
       // The poll this replaces asked `body.innerText > 40` of a fallback state
       // that measures 421 — it returned true on its first tick for every route
       // in this list, arrived or not.
-      await goReady(page, url)
+      await go(page, url)
       await expectRendered(page, url)
     })
   }

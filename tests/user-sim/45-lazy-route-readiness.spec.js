@@ -23,7 +23,10 @@
 // request itself is the same state arrived at deterministically, so this spec
 // measures the same thing on any hardware.
 import { test, expect } from './base.js'
-import { go, ready, renderState, expectRendered } from './helpers.js'
+// goRaw, not go. `go()` now waits for the route to arrive, which is the fix
+// this file exists to prove works - so measuring the moment before it arrives
+// has to bypass it. This is goRaw's only caller, and that is the point.
+import { goRaw, ready, renderState, expectRendered } from './helpers.js'
 
 // /privacy is the sharpest case in the app: 421 characters of chrome while the
 // fallback is up against 6537 once it lands, and it is one of the two routes
@@ -52,7 +55,7 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     const release = new Promise((r) => { open = r })
     const servedCount = await holdChunk(page, release)
 
-    await go(page, HELD_ROUTE)
+    await goRaw(page, HELD_ROUTE)
     const held = await renderState(page)
 
     // ── The vacuity, as two numbers from one instant. ──
@@ -103,7 +106,7 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
   test('a chunk that never arrives fails as a CRASH, not as a rendered page', async ({ page }) => {
     test.setTimeout(60000)
     await page.route(HELD_CHUNK, (route) => route.abort())
-    await go(page, HELD_ROUTE)
+    await goRaw(page, HELD_ROUTE)
 
     // The state a visitor is actually in: no fallback, plenty of text, and
     // none of it the page they asked for.
@@ -136,7 +139,7 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     // CI failure this contract comes from actually had. Nothing rejects, so
     // Suspense never leaves the fallback and there is no crash to catch.
     await page.route(HELD_CHUNK, () => { /* never continued, never aborted */ })
-    await go(page, HELD_ROUTE)
+    await goRaw(page, HELD_ROUTE)
 
     const failure = await expectRendered(page, HELD_ROUTE).then(
       () => null,
@@ -157,7 +160,7 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     const release = new Promise((r) => { open = r })
     await holdChunk(page, release)
 
-    await go(page, HELD_ROUTE)
+    await goRaw(page, HELD_ROUTE)
     const held = await renderState(page)
     open()
     await ready(page, HELD_ROUTE)

@@ -91,13 +91,40 @@ export function watch(page, persona) {
 }
 
 /**
- * Navigate without waiting for the full 'load' event: blocked external hosts
- * (fonts, Firebase, iconify) can hold 'load' — and 'networkidle' never settles
- * — inside the sandboxed runner. DOM-ready is enough for an SPA shell; tests
- * then wait on real UI via locators.
+ * Navigate WITHOUT waiting for the route to arrive. There is one caller:
+ * 45-lazy-route-readiness.spec.js, which exists to read the page in the moment
+ * before it has, and cannot use `go()` to get there.
+ *
+ * Not waiting for the full 'load' event is separate and applies to both: the
+ * blocked external hosts (fonts, Firebase, iconify) can hold 'load', and
+ * 'networkidle' never settles at all inside the sandboxed runner.
  */
-export function go(page, url) {
+export function goRaw(page, url) {
   return page.goto(url, { waitUntil: 'domcontentloaded' })
+}
+
+/**
+ * Navigate, and come back when the ROUTE is on screen rather than when its
+ * loading fallback is.
+ *
+ * This used to be `goRaw` above, and closing the gap here rather than at the
+ * call sites is deliberate — see the long note below. Nineteen routes are
+ * `lazy()`, the fallback keeps the nav, the footer and a visible `main` on
+ * screen, and every readiness check the suite owned was satisfied by it. A
+ * spec that navigated and then measured did not time out on a slow chunk: it
+ * measured the chrome and reported a confident number about a page that was
+ * not there. Fixing that per-spec left the next spec exposed, and expressed
+ * the failure as a false claim about the app rather than as a wait that ran
+ * out.
+ *
+ * Navigations followed only by `expect(locator)` did not strictly need this —
+ * those auto-wait on the thing itself — but they are not harmed by it, and
+ * one door is worth more here than a rule about which door to use when.
+ */
+export async function go(page, url) {
+  const res = await goRaw(page, url)
+  await ready(page, url)
+  return res
 }
 
 /* ── Waiting for a LAZY ROUTE to have actually ARRIVED ───────────────────────
@@ -221,13 +248,6 @@ export async function ready(page, what) {
       + (s ? ` — mounted=${s.mounted} fallback=${s.loading} bodyChars=${s.body} ownChars=${s.own}` : ''),
     )
   }
-}
-
-/** `go()`, and then the route has actually arrived. Prefer this over bare `go()`. */
-export async function goReady(page, url, what) {
-  const res = await go(page, url)
-  await ready(page, what || url)
-  return res
 }
 
 /**

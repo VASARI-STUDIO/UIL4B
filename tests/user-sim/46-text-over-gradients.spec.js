@@ -43,7 +43,7 @@
 // every stop boundary puts it within far less than the 0.01 this rounds to.
 import zlib from 'node:zlib'
 import { test, expect } from './base.js'
-import { goReady } from './helpers.js'
+import { go } from './helpers.js'
 
 const SAMPLES = 64
 
@@ -423,10 +423,10 @@ test.describe('text over a gradient is measured, not skipped', () => {
         }, theme)
         const page = await ctx.newPage()
         for (const route of ROUTES) {
-          // goReady, not go: every measurement below is a page.evaluate, and
-          // the Suspense fallback contains no gradients at all - a spec that
-          // measured too early would report a clean sweep of nothing.
-          await goReady(page, route)
+          // `go()` waits for the route, not just for the document: every measurement
+          // below is a page.evaluate, and the Suspense fallback contains no
+          // gradients at all - measuring too early is a clean sweep of nothing.
+          await go(page, route)
           const res = await page.evaluate(WALK)
           measured += res.out.length
           for (const r of res.refusals) refused.push(`  ${route} [${theme}@${vp.width}] .${r.cls} — ${r.why}`)
@@ -553,7 +553,7 @@ test('the gradient model matches the pixels Chromium actually paints', async ({ 
   let checked = 0
   const wrong = []
   for (const { route, sel } of CASES) {
-    await goReady(page, route)
+    await go(page, route)
     const count = await page.locator(sel).count()
     expect(count, `${sel} on ${route} must still exist, or this check proves nothing`).toBeGreaterThan(0)
 

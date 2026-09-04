@@ -3,7 +3,7 @@
 // reach a real tool through the navigation alone, find the price, and never
 // hit a blank or broken page while wandering.
 import { test, expect } from './base.js'
-import { watch, expectRendered, renderState, go, goReady } from './helpers.js'
+import { watch, expectRendered, renderState, go } from './helpers.js'
 
 const PERSONA = 'first-time visitor'
 
@@ -69,10 +69,10 @@ test.describe('first-time visitor', () => {
     const fb = watch(page, PERSONA)
     const surfaces = ['/discover', '/learn', '/community', '/help', '/info', '/sitemap', '/plans', '/login']
     for (const url of surfaces) {
-      // `goReady` rather than `go`: eight of these nine surfaces are `lazy()`,
-      // and the reading below has to be of the route rather than of the
-      // Suspense fallback's 421 characters of shared chrome.
-      await goReady(page, url)
+      // Eight of these nine surfaces are `lazy()`, so the reading below has to
+      // be of the route rather than of the Suspense fallback's 421 characters
+      // of shared chrome. `go()` is what guarantees that now.
+      await go(page, url)
       const state = await renderState(page)
       if (state.own <= 40) {
         fb.note('critical', `Surface ${url} rendered ${state.own} characters of its own content — reads as a blank page.`, url)
