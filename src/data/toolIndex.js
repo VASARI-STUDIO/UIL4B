@@ -483,11 +483,30 @@ export function queryCommandIndex(query, { tools = [], categories = [], actions 
 // The length cap keeps a term inside the input at 390px — "Aspect & Resolution
 // Calculator" is 30 characters and truncates mid-word, which reads as a bug.
 //
-// Caller passes an already-localised, already-soon-filtered list, the same way
-// queryCommandIndex takes its index.
+// THIS FUNCTION APPLIES THE WORKSHOP FILTER ITSELF, and that is the whole
+// point of the 2026-09-05 revision. It used to say “caller passes an
+// already-soon-filtered list” and leave `soon` to the two call sites — which
+// made it a helper that answered a SIMILAR question to the one its callers were
+// asking. Both happened to filter correctly, so nothing was wrong on screen;
+// what was wrong is that nothing could go wrong ONLY BY LUCK. Handed the plain
+// registry it returned Component Designer, Box Shadow, Auto-Builder, Image
+// Prompt and Landing-Page Prompt — five tools with no page behind them — and
+// the suite could not see it, because the existing assertion pre-filtered its
+// own input and then checked the result was filtered.
+//
+// A third surface is the realistic way that lands: someone adds hints somewhere
+// new, reads the signature, passes `localiseTools(t)`, and ships the persistent
+// nav advertising a tool that does not exist. That is the same defect this
+// function was written to end, arriving through the function itself.
+//
+// So the rule lives in ONE place and no caller can decline it. The `!tl.soon`
+// filters still at the call sites are not redundant: they narrow the list those
+// components ALSO feed to queryCommandIndex, which is a different question.
 export const HINT_MAX_LEN = 20
 export function searchHints(tools) {
   return tools
-    .filter(tool => tool.path.startsWith('/create/') && tool.label.length <= HINT_MAX_LEN)
+    .filter(tool => !tool.soon
+      && tool.path.startsWith('/create/')
+      && tool.label.length <= HINT_MAX_LEN)
     .map(tool => tool.label)
 }
