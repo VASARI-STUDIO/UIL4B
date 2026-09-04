@@ -888,3 +888,143 @@ test('S16 · no Type Scale specimen is reduced to a fragment on a phone', async 
   }
   expect(damage, damage.join('\n')).toEqual([])
 })
+
+// ──────────────────────────────────────────────────────────────────────────────
+// The 834px tool stack [palette-swatch-actions-tablet]
+// ──────────────────────────────────────────────────────────────────────────────
+// The REVEAL_CASES above ask whether a control is invisible-but-live. This asks
+// the opposite question, and neither one implies the other: are there simply
+// TOO MANY of them, permanently, on top of the thing the page exists to show?
+//
+// The defect was composed, not written. Above 768px a swatch column is vertical
+// and the tool stack runs down it; `@media(hover:hover)` was the only thing
+// hiding that stack at rest. An iPad in landscape is 834px wide AND reports
+// hover:none, so it took the desktop vertical column and the permanent
+// visibility together: seven unlabelled 32px icons stacked over ~450px of
+// swatch, five columns at once, 35 buttons sitting on the colours. 1280 hid
+// them until hover; 390 laid them out as a short row under the name and hex.
+//
+// TWO INDEPENDENT HALVES OF THE FIX ARE ASSERTED HERE, because reverting either
+// one alone brings the defect back and a test that only checked the other would
+// stay green:
+//   1. COUNT. Only Lock, Copy and the overflow control survive in this band.
+//      Restoring `.plb-col-tools>*` to `display:flex` puts all seven back — that
+//      is the exact revert this guards, and without it the whole fix can be
+//      undone with every gate still passing.
+//   2. PLACEMENT. The row sits BELOW the name and hex, which is where 390
+//      already puts it. Dropping the `order:2` half sends the stack back to the
+//      top of the swatch even with the count correct.
+//
+// And the overflow control must be PRESENT, not merely the others absent: the
+// cheap way to pass a count assertion is to delete the actions outright, which
+// would be a worse product than the one being fixed.
+//
+// REAL DEVICE METRICS ARE THE WHOLE TEST. `hover:none` is what makes this bug
+// exist. A desktop Chromium narrowed to 834px reports hover:hover, renders the
+// correct desktop layout, and would pass every assertion below on a fully
+// reverted stylesheet. The caps assertion is therefore not a formality — it is
+// the half that makes the rest mean anything.
+const PINNED_BAND = [
+  [834, 1194],  // iPad portrait — the width the audit reported
+  [1180, 820],  // iPad Pro landscape
+  [1024, 768],  // the old 4:3 tablet, still above the 768px cutover
+]
+
+test('S11b · the touch band collapses the swatch tool stack instead of pinning seven icons open', async ({ browser }) => {
+  const damage = []
+  for (const [w, h] of PINNED_BAND) {
+    const { ctx, page } = await openTouch(browser, w, h, '/create/palette', true, '.plb-col')
+
+    const caps = await page.evaluate(() => ({
+      hover: matchMedia('(hover: hover)').matches,
+      coarse: matchMedia('(pointer: coarse)').matches,
+    }))
+    expect(caps, `${w}x${h}: device emulation lost — this test is meaningless without hover:none, because the defect only exists on a device that cannot hover`)
+      .toEqual({ hover: false, coarse: true })
+
+    const r = await page.evaluate(() => {
+      const shown = (el) => {
+        if (!el || el.offsetParent === null) return false
+        const s = getComputedStyle(el)
+        if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity) === 0) return false
+        const b = el.getBoundingClientRect()
+        return b.width > 0 && b.height > 0
+      }
+      const cols = [...document.querySelectorAll('.plb-col')].filter(c => c.offsetParent !== null)
+      return cols.map((col, i) => {
+        const tools = [...col.querySelectorAll('.plb-tool')].filter(shown)
+        const toolsBox = col.querySelector('.plb-col-tools')
+        const hex = col.querySelector('.plb-hex')
+        return {
+          i,
+          count: tools.length,
+          labels: tools.map(t => t.getAttribute('aria-label') || t.className),
+          hasOverflow: tools.some(t => t.classList.contains('plb-tool--more')),
+          // Positive when the tool row starts below the top of the hex, i.e. the
+          // controls are under the swatch identity rather than over the colour.
+          belowHex: shown(toolsBox) && shown(hex)
+            ? Math.round(toolsBox.getBoundingClientRect().top - hex.getBoundingClientRect().top)
+            : null,
+        }
+      })
+    })
+    await ctx.close()
+
+    // The sample cannot collapse to nothing: five columns, each with controls.
+    expect(r.length, `${w}x${h}: no palette columns rendered, so this proves nothing`).toBeGreaterThan(2)
+
+    for (const c of r) {
+      if (c.count > 3) {
+        damage.push(`${w}x${h} col${c.i}: ${c.count} controls pinned open — ${c.labels.join(', ')}`)
+      }
+      if (c.count === 0) {
+        damage.push(`${w}x${h} col${c.i}: no controls at all — touch must keep persistent controls`)
+      }
+      if (!c.hasOverflow) {
+        damage.push(`${w}x${h} col${c.i}: no .plb-tool--more, so the hidden actions are unreachable on touch`)
+      }
+      if (c.belowHex === null || c.belowHex <= 0) {
+        damage.push(`${w}x${h} col${c.i}: the tool row is ${c.belowHex}px relative to the hex — it must sit BELOW the swatch name and hex, not over the colour`)
+      }
+    }
+  }
+  expect(damage, damage.join('\n')).toEqual([])
+})
+
+// The collapse is scoped to the band that was broken. 390 lays the same
+// controls out as a short horizontal row under the name and hex, and the audit
+// called that treatment legible and clearly authored — so over-applying the
+// tablet collapse to phones would be a regression in the other direction, and
+// the count assertion above would never notice.
+test('S11b · the phone row keeps its full control set', async ({ browser }) => {
+  const { ctx, page } = await openTouch(browser, 390, 844, '/create/palette', false, '.plb-col')
+
+  const caps = await page.evaluate(() => ({
+    hover: matchMedia('(hover: hover)').matches,
+    coarse: matchMedia('(pointer: coarse)').matches,
+  }))
+  expect(caps, '390x844: device emulation lost — this test is meaningless without hover:none')
+    .toEqual({ hover: false, coarse: true })
+
+  const r = await page.evaluate(() => {
+    const shown = (el) => {
+      if (!el || el.offsetParent === null) return false
+      const s = getComputedStyle(el)
+      if (s.display === 'none') return false
+      const b = el.getBoundingClientRect()
+      return b.width > 0 && b.height > 0
+    }
+    const col = [...document.querySelectorAll('.plb-col')].filter(c => c.offsetParent !== null)[0]
+    const tools = [...col.querySelectorAll('.plb-tool')].filter(shown)
+    return {
+      count: tools.length,
+      overflow: tools.filter(t => t.classList.contains('plb-tool--more')).length,
+    }
+  })
+  await ctx.close()
+
+  expect(r.count, 'the phone row lost controls to the tablet collapse; 390 is not the band that was broken')
+    .toBeGreaterThan(3)
+  expect(r.overflow, 'the overflow control belongs to the tablet band only — on 390 it would be an eighth icon in a row that already works')
+    .toBe(0)
+})

@@ -372,6 +372,9 @@ const IcoEye = () => (
 const IcoGrip = () => (
   <Ico><circle cx="9" cy="5" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="19" r="1" /></Ico>
 )
+const IcoMore = () => (
+  <Ico><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></Ico>
+)
 const IcoSliders = () => (
   <Ico><path d="M4 21v-7" /><path d="M4 10V3" /><path d="M12 21v-9" /><path d="M12 8V3" /><path d="M20 21v-5" /><path d="M20 12V3" /><path d="M2 14h4" /><path d="M10 8h4" /><path d="M18 16h4" /></Ico>
 )
@@ -2529,7 +2532,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 </span>
                 <button
                   type="button"
-                  className={isLocked ? 'plb-tool plb-tool--on' : 'plb-tool'}
+                  className={isLocked ? 'plb-tool plb-tool--key plb-tool--on' : 'plb-tool plb-tool--key'}
                   aria-pressed={isLocked}
                   title={isLocked ? 'Unlock — allow randomise to change it' : 'Lock — keep this colour through randomise'}
                   aria-label={isLocked ? `Unlock ${role}` : `Lock ${role}`}
@@ -2578,7 +2581,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                     <IcoSwap />
                   </button>
                 )}
-                <button type="button" className="plb-tool" title="Copy hex" aria-label={`Copy ${adjusted[i]}`} onClick={() => onCopy?.(adjusted[i])}>
+                <button type="button" className="plb-tool plb-tool--key" title="Copy hex" aria-label={`Copy ${adjusted[i]}`} onClick={() => onCopy?.(adjusted[i])}>
                   <IcoCopy />
                 </button>
                 {adjusted.length > 2 && (
@@ -2586,6 +2589,31 @@ export default function PaletteBuilder({ onCopy, toast }) {
                     <IcoX />
                   </button>
                 )}
+                {/* Touch-band overflow. See the @media(min-width:769px) and
+                    (hover:none) block in global.css for why it exists: that band
+                    inherits the desktop VERTICAL tool column while hover:none
+                    pins it permanently open, which puts seven unlabelled icons
+                    down the top of every swatch. Only .plb-tool--key survives
+                    there; the rest move behind this one control, which opens the
+                    existing labelled "Colour actions" menu rather than adding a
+                    second surface to maintain. */}
+                <button
+                  type="button"
+                  className={ctxMenu?.kind === 'swatch' && ctxMenu.i === i ? 'plb-tool plb-tool--more plb-tool--on' : 'plb-tool plb-tool--more'}
+                  title="More colour actions"
+                  aria-label={`More actions for ${role}`}
+                  aria-haspopup="menu"
+                  aria-expanded={ctxMenu?.kind === 'swatch' && ctxMenu.i === i}
+                  onClick={(e) => {
+                    const r = e.currentTarget.getBoundingClientRect()
+                    setTintsIdx(null); setPickerIdx(null); setSwapIdx(null)
+                    setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i)
+                      ? null
+                      : { kind: 'swatch', i, x: r.left, y: r.bottom + 6 })
+                  }}
+                >
+                  <IcoMore />
+                </button>
               </div>
 
               {swapIdx === i && (
@@ -2779,7 +2807,28 @@ export default function PaletteBuilder({ onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); setCtxMenu(null) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="plb-ctx-item"
+            onClick={() => {
+              setCtxMenu(null)
+              if (!isPro) {
+                openProModal({ eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })
+                return
+              }
+              setShowContrast(v => !v)
+            }}
+          >
+            <IcoContrast /> {showContrast ? 'Hide contrast' : 'Show contrast'}
+          </button>
           <div className="plb-ctx-sep" aria-hidden="true" />
+          {ctxMenu.i > 0 && (
+            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'left'); setCtxMenu(null) }}><IcoArrowLeft /> Swap left</button>
+          )}
+          {ctxMenu.i < colors.length - 1 && (
+            <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'right'); setCtxMenu(null) }}><IcoArrowRight /> Swap right</button>
+          )}
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertAt(ctxMenu.i, midColor(colors[Math.max(0, ctxMenu.i - 1)], colors[ctxMenu.i])); setCtxMenu(null) }}><IcoPlus size={15} /> Insert left</button>
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { insertBetween(ctxMenu.i); setCtxMenu(null) }}><IcoPlus size={15} /> Insert right</button>
           {colors.length > 2 && (
