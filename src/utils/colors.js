@@ -1008,7 +1008,7 @@ export function derivePreviewRoles(allColors, opts = {}) {
       bg,
       surface,
       primary: PV_BRAND,
-      onPrimary: textColorOnSolid(PV_BRAND),
+      onPrimary: inkOnSolid(PV_BRAND),
       accent: PV_BRAND_SOFT,
       text,
       muted: mixHex(text, bg, 0.42),
@@ -1059,8 +1059,8 @@ export function derivePreviewRoles(allColors, opts = {}) {
   const warmed = mixHex(text, primary, 0.08)
   if (contrastRatio(warmed, bg) >= 7) text = warmed
 
-  // ── 7. onPrimary: legible label on the CTA. ──
-  let onPrimary = textColorOnSolid(primary)
+  // ── 7. onPrimary: legible label on the CTA — GUARANTEED, not estimated. ──
+  const onPrimary = inkOnSolid(primary)
 
   // ── 8. muted + border: derived from text↔bg, contrast-clamped. ──
   let muted = mixHex(text, bg, 0.45)
@@ -1073,12 +1073,72 @@ export function derivePreviewRoles(allColors, opts = {}) {
     muted = mixHex(text, bg, 0.45)
   }
   if (contrastRatio(muted, bg) < 4.5) muted = fixForeground(muted, bg, 4.5)
-  if (contrastRatio(onPrimary, primary) < 4.5) onPrimary = fixForeground(onPrimary, primary, 4.5)
   // CTA invisible on its card → caller draws a 1px border; we expose primaryBorder.
   const primaryLowOnSurface = contrastRatio(primary, surface) < 3
   const primaryBorder = primaryLowOnSurface ? mixHex(primary, text, 0.35) : 'transparent'
 
   return { bg, surface, primary, onPrimary, accent, text, muted, border, primaryBorder, lowChroma }
+}
+
+/**
+ * The ink for a label painted ON a solid generated colour, with a MEASURED
+ * 4.5:1 guarantee rather than an estimate.
+ *
+ * What was here before was `textColorOnSolid(primary)` followed by
+ * `fixForeground(onPrimary, primary, 4.5)`, and BOTH halves were wrong on the
+ * same narrow band of grounds, which is why the miss was rare enough to ship.
+ *
+ * textColorOnSolid picks its pole from a fixed luminance threshold (0.179).
+ * That threshold is the crossover for PURE black and white; the poles actually
+ * returned are #0A0B0D and #F2F3F5, whose crossover is 0.1749 and whose best
+ * case AT that crossover is only 4.20:1. So for any ground with relative
+ * luminance in roughly (0.16, 0.191) NEITHER near-pole clears AA, and inside
+ * that band the threshold can also hand back the worse of the two.
+ *
+ * fixForeground could not rescue it either, for the reason #341 recorded for
+ * mutedInk: it takes its direction from the GROUND (`bgLum < 0.5` => walk the
+ * ink lighter), so starting from near-black on a mid-luminance chromatic fill
+ * it walks toward the ground rather than away and tops out short. It also
+ * returns its INPUT unchanged when nothing in the walk clears the target, so
+ * the call site read like a clamp and was not one. Measured over 6,000
+ * generated palettes x 2 themes: 58 of 12,000 pairs under 4.5, worst 4.378
+ * (#0A0B0D on #506EE2).
+ *
+ * The fix is the same shape as HomeWorkbench's readableInk: choose the pole by
+ * MEASURED contrast, and where neither near-pole clears, slide it along the
+ * grey axis toward its PURE extreme by the smallest step that does. That step
+ * always exists — pure black clears 4.5 for every ground at or above 0.175 and
+ * pure white for every ground at or below 0.1833, so the two overlap and no
+ * sRGB colour falls between them; the worst ground in the gamut still gets
+ * 4.58:1. The smallest-step rule keeps the common case at the near-poles the
+ * previews already use, and the movement where it happens is at most ten
+ * levels per channel.
+ */
+function inkOnSolid(bg, target = 4.5) {
+  const poles = [[PV_NEAR_BLACK, '#000000'], [PV_NEAR_WHITE, '#FFFFFF']]
+  let near = poles[0][0]
+  for (const [p] of poles) if (contrastRatio(p, bg) > contrastRatio(near, bg)) near = p
+  if (contrastRatio(near, bg) >= target) return near
+  // Neither near-pole clears. Walk each toward its pure extreme and keep the
+  // smallest movement that does — every unit of movement is a preview showing a
+  // colour the palette did not generate, which is the trade cardGrounds makes too.
+  let winner = null
+  let winnerT = Infinity
+  for (const [pole, pure] of poles) {
+    if (contrastRatio(pure, bg) < target) continue
+    let lo = 0
+    let hi = 1   // invariant: hi always clears, so the returned mix always does
+    for (let i = 0; i < 20; i++) {
+      const mid = (lo + hi) / 2
+      if (contrastRatio(mixHex(pole, pure, mid), bg) >= target) hi = mid
+      else lo = mid
+    }
+    if (hi < winnerT) { winnerT = hi; winner = mixHex(pole, pure, hi) }
+  }
+  if (winner) return winner
+  // Unreachable for sRGB (see above), kept so the function is total: return the
+  // better pure pole rather than a value that only looks like a decision.
+  return contrastRatio('#000000', bg) >= contrastRatio('#FFFFFF', bg) ? '#000000' : '#FFFFFF'
 }
 
 // textColorForBg returns rgba() strings; for solid hex roles we want a hex pole
