@@ -68,7 +68,6 @@ const open = async (browser, theme, contrast) => {
     try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
   }, theme)
   await go(page, '/')
-  await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
   await expect
     .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme')))
     .toBe(theme)

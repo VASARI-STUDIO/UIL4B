@@ -16,7 +16,7 @@
 // tests/unit/recent-colors.test.js. What needs a browser is that the picker is
 // wired to both.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const ROUTE = '/create/gradient'
 const TRIGGER = '.cpk-trigger'
@@ -25,7 +25,7 @@ const FIELD = '.cpk-hex'
 const FORMAT = '.cpk-format'
 
 async function openPicker(page) {
-  await page.goto(ROUTE)
+  await go(page, ROUTE)
   await page.locator(TRIGGER).first().click()
   await expect(page.locator(PANEL)).toBeVisible()
 }
@@ -82,7 +82,7 @@ test.describe('colour picker', () => {
     await page.locator(FIELD).press('Enter')
     await page.keyboard.press('Escape')
 
-    await page.goto('/create/palette')
+    await go(page, '/create/palette')
     await page.locator(TRIGGER).first().click()
     await expect(page.locator(PANEL)).toBeVisible()
     await expect(page.locator('.cpk-recents .cpk-swatch').first())
@@ -165,7 +165,7 @@ test.describe('colour picker', () => {
   // recents with it - is simply not on offer.
   for (const route of ['/create/contrast', '/create/tint', '/create/palette', '/create/gradient']) {
     test(`${route} offers the app own picker and no OS colour dialog`, async ({ page }) => {
-      await page.goto(route)
+      await go(page, route)
       await expect(page.locator(TRIGGER).first()).toBeVisible()
       await expect(page.locator('input[type="color"]')).toHaveCount(0)
     })
@@ -174,14 +174,14 @@ test.describe('colour picker', () => {
   // The point of the shared list, measured across two tools that BOTH used to
   // open the OS picker and so could not participate in it at all.
   test('a colour mixed in the contrast checker reaches the tint tool', async ({ page }) => {
-    await page.goto('/create/contrast')
+    await go(page, '/create/contrast')
     await page.locator(TRIGGER).first().click()
     await expect(page.locator(PANEL)).toBeVisible()
     await page.locator(FIELD).fill('#4338e0')
     await page.locator(FIELD).press('Enter')
     await page.keyboard.press('Escape')
 
-    await page.goto('/create/tint')
+    await go(page, '/create/tint')
     await page.locator(TRIGGER).first().click()
     await expect(page.locator(PANEL)).toBeVisible()
     await expect(page.locator('.cpk-recents .cpk-swatch').first())
@@ -191,7 +191,7 @@ test.describe('colour picker', () => {
   // The panel says WHICH of the many colours on a surface it is editing. A
   // gradient opens one of these per stop, and before this they were identical.
   test('the panel names the colour it is editing', async ({ page }) => {
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await page.locator(TRIGGER).nth(1).click()
     await expect(page.locator(PANEL)).toBeVisible()
     await expect(page.locator('.cpk-head-name')).toHaveText('Stop 2 colour')

@@ -21,7 +21,7 @@
 // the gallery ever fails to render, "no paid hexes found" would be true and
 // meaningless, and that is exactly how this suite would start lying.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
 
 const ROUTE = '/discover/palettes'
@@ -60,7 +60,7 @@ async function surfaces(page) {
 test.describe('a locked library row hands nothing over', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor browsing for a palette')
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator('.pgal-card').first()).toBeVisible()
   })
 
@@ -134,7 +134,7 @@ test.describe('the same gate in the Palette Builder brands panel', () => {
   // check and has to be caught in the computed paint.
   test.beforeEach(async ({ page }) => {
     watch(page, 'a signed-out visitor looking for a brand palette')
-    await page.goto('/create/palette')
+    await go(page, '/create/palette')
     await page.locator('button[aria-label="Explore"]').click()
     await page.locator('button[role="tab"]', { hasText: 'Brands' }).click()
     await expect(page.locator('.plb-galpopup-body .plb-varrow').first()).toBeVisible()
@@ -179,7 +179,7 @@ test.describe('the locked rows in the dark theme', () => {
   test('placeholders are visible and still leak nothing', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator('.pgal-card').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark')
     await expect(page.locator('.lockt-card')).toHaveCount(3)

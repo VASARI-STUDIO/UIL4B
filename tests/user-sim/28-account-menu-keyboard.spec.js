@@ -19,7 +19,7 @@
 // The pure key→index decision is asserted separately, without a DOM, in
 // tests/unit/popover-keys.test.js.
 import { test, expect } from './base.js'
-import { restAfterMove, restingScrollY, watch } from './helpers.js'
+import { go, restAfterMove, restingScrollY, watch } from './helpers.js'
 
 const PANEL = '#pnav-account-pop'
 const TRIGGER = '.pnav-more'
@@ -96,7 +96,7 @@ async function pressAndInspect(page, key) {
 }
 
 async function openPanel(page) {
-  await page.goto('/')
+  await go(page, '/')
   await page.locator(TRIGGER).click()
   await expect(page.locator(PANEL)).toBeVisible()
   // usePopover focuses on a rAF, so the first control is not focused the

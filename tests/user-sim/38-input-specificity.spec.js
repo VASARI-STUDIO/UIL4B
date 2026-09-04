@@ -23,7 +23,7 @@
 // adds a new bare `input[type=...]` rule beside it, these fail. The source-side
 // guard against that is tests/unit/input-specificity.test.js.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const MONO = /JetBrains Mono/
 
@@ -67,7 +67,7 @@ test.describe('component input classes outrank the type reset', () => {
   for (const f of FIELDS) {
     test(`${f.name} paints its own declarations, not the global reset`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 900 })
-      await page.goto(f.route)
+      await go(page, f.route)
       const el = page.locator(f.sel).first()
       await expect(el).toBeVisible()
       const got = await el.evaluate((node) => {
@@ -94,7 +94,7 @@ test.describe('component input classes outrank the type reset', () => {
   for (const f of BARE_FIELDS) {
     test(`${f.name} draws no second box inside its own control`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 900 })
-      await page.goto(f.route)
+      await go(page, f.route)
       const el = page.locator(f.sel).first()
       await expect(el).toBeVisible()
       const painted = await el.evaluate((node) => {
@@ -125,7 +125,7 @@ test.describe('component input classes outrank the type reset', () => {
       ['/create/tint', '.tt-hex-input'],
       ['/create/palette', '.plb-hexfield'],
     ]) {
-      await page.goto(route)
+      await go(page, route)
       // Wait for the surface to hydrate — an empty list would pass vacuously.
       await expect(page.locator(field).first()).toBeVisible()
       const sizes = await page.evaluate(() => [...document.querySelectorAll(
