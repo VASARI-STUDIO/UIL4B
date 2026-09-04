@@ -1014,9 +1014,22 @@ test.describe('homepage: eleven tools, five ways of working', () => {
       }
       const bad = []
       // Every bit of text this panel paints ON a generated colour - the two
-      // elements with their own fill, and the seven inside the product card.
+      // elements with their own fill, and the eight inside the product card.
+      //
+      // .hw-ui-btn WAS MISSING FROM THIS LIST and it is the one element here
+      // that paints the role engine's own pair, role.onPrimary on role.primary,
+      // with no workbench-side guarantee in front of it: .hw-ui-mark and
+      // .hw-ui-avatar were moved onto labelGround/readableInk, the button never
+      // was. So the engine defect [preview-onprimary-unmeasured] recorded had a
+      // rendered home on this very page and this test could not see it - the
+      // same shape as the parser and the background-image bail, an answer never
+      // attempted rather than a wrong one. 13px/650 is small text, so 4.5:1.
+      // The Palette Builder's .plb-pv-cta, .plb-pvb-navcta and
+      // .plb-pvb-btn--primary read the same pair through --pv-onprimary; they
+      // are fixed by the same engine change and are not re-measured here.
       const SEL = '.hw-pal-hex, .hw-ui-avatar, .hw-ui-mark, .hw-ui-app, .hw-ui-crumb, '
-        + '.hw-ui-metric-label, .hw-ui-metric-num, .hw-ui-delta, .hw-ui-row-name, .hw-ui-row-state'
+        + '.hw-ui-metric-label, .hw-ui-metric-num, .hw-ui-delta, .hw-ui-row-name, '
+        + '.hw-ui-row-state, .hw-ui-btn'
       for (const el of document.querySelectorAll(SEL)) {
         const cs = getComputedStyle(el)
         const ground = groundOf(el)

@@ -378,15 +378,29 @@ const MIN_MEASURED = 8
  *       linear-gradient(135deg, var(--c1), var(--c2)), where c1/c2 are the
  *       curated per-item brand colours in the community seed data. The worst
  *       ground is #f9b31b at 1.74:1. Not fixable in a rule - the ground is
- *       DATA, so it needs either a scrim on .ch-thumb or darker seed colours,
- *       which is a visual-design decision. Backlog: gradient-text-below-aa.
+ *       DATA, so it needs either a scrim on .ch-thumb, a per-item ink, or
+ *       darker seed colours, and all three are visual-design decisions.
+ *       STILL OPEN ON PURPOSE, with the options priced: see
+ *       [gradient-text-below-aa]. It is also WIDER than first reported - not
+ *       eight monograms but NINE OF TWELVE below the 3.0 floor, worst 1.47:1
+ *       modelled over the whole gradient (s9, ground #6ee7b7) and 1.77:1 at
+ *       the worst point actually behind a glyph.
  *
- *   /seo .seo-social-img span   3.00:1 against a floor of 4.5
- *       "1200 x 630" at 11px in rgba(255,255,255,.7) on
- *       linear-gradient(135deg, var(--accent), color-mix(...)), worst ground
- *       #3a6bfd. Raising the ink to pure white does NOT clear it - white on
- *       --accent (#0f6fff) is 4.43:1, still under 4.5 - so this needs a darker
- *       ground or larger text, not an alpha bump. Same backlog item.
+ *   /seo .seo-social-img span   FIXED 2026-09-04, and this paragraph is kept
+ *       because the route to the fix is the useful part. It measured 2.99:1
+ *       against a floor of 4.5 - "1200 x 630" at 11px in rgba(255,255,255,.7)
+ *       on linear-gradient(135deg, var(--accent), color-mix(...)). The note on
+ *       [gradient-text-below-aa] was RIGHT that no alpha bump reaches it: pure
+ *       white on --accent measures 4.46 here, still short. Every candidate,
+ *       all on rendered pixels with the ink hidden: opaque ink alone 4.46,
+ *       --accent-strong ground with the 70% ink 3.97, a 28% black scrim 4.48.
+ *       AND THE OBVIOUS FIX WAS WRONG IN DARK. --accent-strong plus opaque
+ *       white measures 6.36 light and 3.41 DARK, because --accent-strong is the
+ *       darker member of the pair in light and the lighter one in dark. It now
+ *       carries two literals from the LIGHT accent pair and does not follow the
+ *       theme at all, which is what a mock of a 1200x630 share card should do -
+ *       scripts/og-cards.mjs scopes its reads the same way for the same reason.
+ *       5.45:1 in both themes, on the same ground #365EE2.
  *       (Reported as 3.03:1 on #2d6afd until the oklab fix below; the defect
  *       is the same one, the ground was being computed in the wrong space.)
  *
@@ -397,7 +411,6 @@ const MIN_MEASURED = 8
  */
 const KNOWN_BELOW_FLOOR = [
   '/community .ch-thumb-mono',
-  '/seo .span',
 ]
 
 const report = (route, theme, vp, bad) => bad.map((b) =>
