@@ -63,6 +63,7 @@ import {
   CATEGORY_ENTRIES,
   TOOL_ENTRIES,
   TOOL_I18N_MAP,
+  categoryPillFor,
   localiseCategoriesWith,
   localiseWith,
 } from '../../src/data/toolIndex.js'
@@ -270,4 +271,59 @@ test('THE OMISSION IS SAFE: a locale with no entry falls back to English, never 
     const registry = TOOL_ENTRIES.find((t) => t.id === tool.id)
     assert.equal(tool.label, registry.label, `${tool.id} did not fall back to the registry label`)
   }
+})
+
+// THE BADGE AND THE ROW IT LABELS MUST COME FROM THE SAME FILE.
+//
+// The search rows on the homepage and in the command palette show a tool's
+// label and description beside a pill naming its category. The words came from
+// the registry unless TOOL_I18N_MAP vouched for a translation; the pill came
+// from the locale unconditionally. In en-US that put "COLOR STUDIO" against
+// "Generate a full palette from one colour, with tints, shades and accessible
+// pairings" - four such rows, ~700px under an H1 reading "Colour, type and
+// tokens that stay one system", answering a visitor who had typed "colour".
+//
+// Asserted against a locale that translates EVERYTHING, so the two branches
+// are told apart by the map alone rather than by which keys happen to ship.
+test('a search row takes its category badge from the same source as its own words', () => {
+  const translated = (key) => `[${key}]`
+
+  const mapped = TOOL_ENTRIES.filter((tool) => TOOL_I18N_MAP[tool.id])
+  const unmapped = TOOL_ENTRIES.filter((tool) => !TOOL_I18N_MAP[tool.id])
+  assert.ok(mapped.length > 0, 'expected some tools to carry a vouched translation')
+  assert.ok(unmapped.length > 0, 'expected some tools to fall back to the registry')
+
+  for (const tool of mapped) {
+    const cat = CATEGORY_ENTRIES.find((c) => c.id === tool.category)
+    if (!cat) continue
+    // Its own label is localised, so its badge is too.
+    assert.equal(
+      categoryPillFor(tool, cat, translated), `[${cat.labelKey}]`,
+      `${tool.id} is translated but its badge ignored the locale`,
+    )
+  }
+
+  for (const tool of unmapped) {
+    const cat = CATEGORY_ENTRIES.find((c) => c.id === tool.category)
+    if (!cat) continue
+    // Its own label is the registry's, so its badge must be too.
+    assert.equal(
+      categoryPillFor(tool, cat, translated), cat.label,
+      `${tool.id} keeps the registry's words but took a localised badge`,
+    )
+  }
+
+  // The colour tools are the ones that shipped the split, so name them.
+  const colourCat = CATEGORY_ENTRIES.find((c) => c.id === 'color')
+  assert.ok(colourCat, 'the colour category should exist')
+  assert.equal(colourCat.label, 'Colour Studio', 'the registry holds the house spelling')
+  const palette = TOOL_ENTRIES.find((tool) => tool.id === 'palette')
+  assert.ok(palette, 'the Palette tool should be in the index')
+  assert.equal(
+    categoryPillFor(palette, colourCat, translated), 'Colour Studio',
+    'the Palette row still shows a badge in a spelling its own description does not use',
+  )
+
+  // A row with no category is a badge with nothing to say.
+  assert.equal(categoryPillFor(palette, null, translated), null)
 })

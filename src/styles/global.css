@@ -6259,18 +6259,30 @@ html.lenis,html.lenis body{height:auto}
 .ig-attrib code{font-family:var(--mono);font-size:.92em;color:var(--t2)}
 .ig-attrib a{color:var(--accent-strong);text-decoration:none;font-weight:600}
 .ig-attrib a:hover{text-decoration:underline}
-.ic .ic-pack{font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);line-height:1}
-/* THE PACK LABEL IS DROPPED BELOW 980px, and it is the cheapest thing in this
-   grid to give up. It rendered "LUCIDE" under EVERY cell — a third line, at
-   7.5px, carrying a value that is identical for essentially the whole grid and
-   therefore discriminates nothing, while the line that does discriminate (the
-   icon's own name) was being truncated to make room for it. Which pack is
-   active is already stated by the pack filter in the toolbar above.
-   This is Magnific's answer in the icon-browser survey: pack identity belongs
-   to the GROUP — it labels a collection once, with its author, and never the
-   individual icon. Above 980px the cell is wide enough to afford the third line,
-   and a mixed-pack result set (logo.dev, custom uploads) is where it earns its
-   place, so it is kept there rather than deleted outright. */
+/* THE PACK LABEL IS NOW RENDERED ONLY WHEN THE RESULT SET IS MIXED, and the
+   decision moved into IconLibrary.jsx because it depends on the results, not
+   on the width. Read the note there for the Mobbin evidence.
+   What was here before: #298 dropped the label below 980px and kept it above,
+   reasoning that a wide cell can afford a third line and that a mixed-pack set
+   (logo.dev, custom uploads) is where it earns its place. The first half was a
+   width answer to a content question - at 1024px and up it still drew
+   "LUCIDE" under all 120 cells of a single-pack grid, saying the same word 120
+   times while the icon's own name truncated to make room for it. The second
+   half was right, and is the rule now: the label appears when the set holds
+   more than one pack and never otherwise.
+   The width rule below SURVIVES on top of that. Under 980px the cell cannot
+   afford a third line even when the word would tell you something, which is
+   the density judgement #298 actually made.
+   AND IT GOES 9px -> --fs-micro (11px). 9px is below the smallest size in the
+   type scale, and a mono-ish uppercase label with tracking is the least
+   legible thing there is at that size - the same argument that took
+   `.ch-card-tag` from 9px to 11px. It costs nothing now that the label is
+   rare. Contrast was measured on this surface rather than assumed: --t3 is
+   4.55:1 in light and 5.77:1 in dark against the icon grid's own #EFEEE9 /
+   #101012 ground, so it clears AA and stays. (The 3.70:1 figure recorded
+   against --t3 elsewhere in this file is on --bg-3, a darker ground than
+   this one.) */
+.ic .ic-pack{font-size:var(--fs-micro);letter-spacing:.05em;text-transform:uppercase;color:var(--t3);line-height:1}
 @media(max-width:980px){
   .ic .ic-pack{display:none}
 }
@@ -9488,6 +9500,34 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .ggn-presets{display:flex}
   .ggn-preset{flex:0 0 calc((100% - 20px) / 2.4)}
 }
+/* THE DESKTOP CASE: WRAP, DO NOT SCROLL.
+   The rail above is right for a phone, where sixteen 142px tiles cannot share a
+   296px box on any terms. It is wrong from 981px up, and it was measured wrong:
+   at 1280 AND at 1440 the strip is 2422px inside a 1142px box, so 1280px of it
+   sits behind a 34px fade with SEVEN of the sixteen visible. The eight a desktop
+   visitor never reaches without a gesture are Sunset, Lagoon, Grape, Citrus,
+   Twilight, Aurora, Bloom and Ocean, and the page was holding ~300px of empty
+   ground under the card while it hid them.
+   The fix vocabulary in the `.rail-overflow` note says to wrap first where the
+   item set is small and discrete, and to keep the three layered affordances for
+   rails where wrapping is genuinely not on the table. Sixteen named presets is
+   small and discrete, and a preset strip is a BROWSE-AND-COMPARE surface: the
+   reader is working out what is on offer, which is the one job scrolling is
+   worst at. Mobbin, web, searched for the opposite pattern and it is not there
+   - Mural, Aave and Discord all lay a named-swatch library out WRAPPED and
+   entire, and none of the four references puts one in a horizontal scroller.
+   `auto-fill` at a 132px minimum lands on eight columns in the 1142px card, so
+   the sixteen become two rows of eight at 1280 and at 1440, and three rows
+   lower in the band - the whole library, no gesture, for one extra row of
+   height that the page already had spare.
+   The rail affordances are switched OFF here rather than on below, because
+   `.rail-overflow` is on the element in the markup: same shape as the
+   `.plb-toolbar-group.rail-overflow` opt-out at >=961px. */
+@media(min-width:981px){
+  .ggn-presets{display:grid;grid-auto-flow:row;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));padding-bottom:0}
+  .ggn-presets.rail-overflow{overflow:visible;scroll-snap-type:none;animation:none;-webkit-mask-image:none;mask-image:none}
+  .ggn-preset{scroll-snap-align:none}
+}
 .ggn-import:focus-visible,.ggn-css:focus-visible,.ggn-btn:focus-visible,.ggn-seg-btn:focus-visible,.ggn-copy:focus-visible,.ggn-stop-x:focus-visible,.ggn-angle-input:focus-visible,.ggn-stop-pos input:focus-visible,.ggn-stop-hex:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
 @media(max-width:980px){
   .ggn-grid{grid-template-columns:1fr}
@@ -10837,6 +10877,30 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
   .tt-config,.fpr-config{position:static;max-height:none;overflow-y:hidden}
   .tsc-config{position:static}
   .tt-output,.tt-config{grid-column:auto;grid-row:auto}
+}
+/* WRAPPED IN THE TABLET BAND TOO, FOR THE REASON THE PHONE BLOCK GIVES BELOW.
+   The slice defended on `.fg-card-pangram` above is the right call when the
+   line runs off the frame and the loss is a tail. Neither is true between 721
+   and 959px. MEASURED across the 77 families the catalogue serves, at 834px:
+   the box is 710px, the widest line wants 823px, and 48 of the 77 specimens
+   clip - Comfortaa by 113px, Sora 104, Montserrat 98, Poppins 91, Work Sans 89,
+   and the mildest survivors by 4. It is clean at 960 (836px of box) and above,
+   and clean at 720 and below where the phone block already wraps it, so this
+   band is the whole of the defect.
+   Two things make the slice wrong specifically here. `.fg-card-preview` holds
+   26px of right padding, so the cut lands 26px SHORT of the row edge rather
+   than bleeding past it - it reads as damage, not as continuation. And the loss
+   scales with the width of the face, so the specimen is least complete for
+   exactly the widest and most distinctive families, which inverts the job of
+   the page: the pangram is the sentence you read to judge a face.
+   So it takes the phone's answer at the desktop's 15px - two clamped lines, a
+   box reserved for exactly two at 24px each. It costs 24px a row and it keeps
+   the reserved-metrics contract, which is that rows agree WITH EACH OTHER: they
+   still all solve this from the same two numbers, so nothing moves as faces
+   stream in. */
+@media(min-width:721px) and (max-width:959px){
+  .fg-card-pangram,.fg-card-skeleton--body{height:48px}
+  .fg-card-pangram{-webkit-line-clamp:2;line-clamp:2;white-space:normal}
 }
 @media(max-width:720px){
   .pgl-toolbar{grid-template-columns:1fr;padding:8px}

@@ -531,6 +531,65 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
           tabIndex={-1}
           aria-label={`Your ${items.length} image${items.length > 1 ? 's' : ''} and output settings`}
         >
+          {/* THE OBJECT COMES FIRST, THEN THE DECISION, THEN THE ACTION.
+              This block used to sit BELOW Output Settings and below the
+              Convert button that acts on it. Measured at 390x844 after adding
+              one file: dropzone at 381, Output Settings at 576, "Convert 1
+              image" at 839, and the uploaded file row at 915 - past the fold,
+              and 76px BELOW its own action. So the visitor tapped browse, picked
+              a file, and was handed back a screen still reading "Drop images
+              here or click to browse", with the count inside the Convert label
+              the only evidence anything had been accepted. The thumbnail, the
+              name and the status were all off-screen.
+              Mobbin, platform web, and the references do not disagree. Whop
+              (flows/80a82326-1858-49db-99c4-7a0db3ab755a) puts the uploaded
+              thumbnail and its delete control directly beneath the upload
+              button; Magnific (flows/f1270478-c7b4-47f4-a263-3fad86a795a9) lands
+              a placeholder row in that same slot the instant the upload starts;
+              Sana AI (flows/600fc54e-85d7-4f81-98c1-4d4361343b91) puts the new
+              file at the TOP of the list with a green tick. Gamma, Fireflies and
+              Adobe Express were read the same way when this was first written
+              up. Every one of them runs object, then decision, then action.
+              This ran decision, action, object. Moving the list is the whole
+              fix: adding a file now changes the thing the visitor is looking
+              at. */}
+          <div className="sub">
+            <div className="img-grid">
+              {items.map(it => (
+                <div key={it.id} className="card fc-card">
+                  <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>×</button>
+                  <div className="fc-thumb">
+                    <img src={(it.out && !it.out.noPreview && it.out.url) || it.srcUrl} alt={it.name} />
+                  </div>
+                  <div className="fc-name" title={it.name}>{it.name}</div>
+                  {it.error ? (
+                    <div style={{ fontSize: 10, color: 'var(--err)' }}>{it.error}</div>
+                  ) : it.out ? (
+                    <>
+                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                        {it.out.note || `${it.out.w}×${it.out.h}`}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                        {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
+                        {(() => {
+                          const d = sizeDelta(it.file.size, it.out.bytes)
+                          return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
+                        })()}
+                      </div>
+                      <button className="btn btn-accent fc-dl" onClick={() => downloadOne(it)}>
+                        Download {fmt.label}
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                      {formatBytes(it.file.size)} • not converted
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="sub">
             <div className="sl">Output Settings</div>
             <div className="fc-settings">
@@ -614,43 +673,6 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                 <span style={{ color: batchDelta.color, fontWeight: 600 }}> • {batchDelta.label}</span>
               </div>
             )}
-          </div>
-
-          <div className="sub">
-            <div className="img-grid">
-              {items.map(it => (
-                <div key={it.id} className="card fc-card">
-                  <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>×</button>
-                  <div className="fc-thumb">
-                    <img src={(it.out && !it.out.noPreview && it.out.url) || it.srcUrl} alt={it.name} />
-                  </div>
-                  <div className="fc-name" title={it.name}>{it.name}</div>
-                  {it.error ? (
-                    <div style={{ fontSize: 10, color: 'var(--err)' }}>{it.error}</div>
-                  ) : it.out ? (
-                    <>
-                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                        {it.out.note || `${it.out.w}×${it.out.h}`}
-                      </div>
-                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                        {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
-                        {(() => {
-                          const d = sizeDelta(it.file.size, it.out.bytes)
-                          return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
-                        })()}
-                      </div>
-                      <button className="btn btn-accent fc-dl" onClick={() => downloadOne(it)}>
-                        Download {fmt.label}
-                      </button>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {formatBytes(it.file.size)} • not converted
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
         </section>
       )}

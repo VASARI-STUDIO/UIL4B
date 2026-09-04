@@ -358,6 +358,30 @@ export function localiseCategoriesWith(list, t) {
   })
 }
 
+// THE BADGE COMES FROM THE SAME FILE AS THE ROW IT LABELS.
+//
+// A search row shows a tool's label and description beside a pill naming its
+// category. The label and description come from the registry unless
+// TOOL_I18N_MAP says a shipped translation still names the same tool; the pill
+// was read straight off the locale regardless. In en-US that split one row in
+// half: "Palette / Generate a full palette from one COLOUR, with tints, shades
+// and accessible pairings" carried a pill reading "COLOR STUDIO", and four such
+// rows sat ~700px under a hero headed "COLOUR, type and tokens that stay one
+// system". Typing "colour" answered in US spelling.
+//
+// This is NOT a case for rewriting en-US, which legitimately holds US
+// spellings for the strings it actually translates. It is a case about which
+// file a given row reads from: a row still carrying the registry's authored
+// British keeps the registry's category name, and a row whose own words came
+// from the locale takes the locale's. Either way the pill and the words beside
+// it agree, in every locale rather than only in en.
+export function categoryPillFor(item, cat, t) {
+  if (!cat) return null
+  if (!TOOL_I18N_MAP[item.id]) return cat.label
+  const label = t(cat.labelKey)
+  return (label && label !== cat.labelKey) ? label : cat.label
+}
+
 // Group an ordered list of tools by their `subcategory` field, preserving the
 // original order both of the groups (first appearance wins) and of tools within
 // each group. Tools without a `subcategory` are collected into a trailing

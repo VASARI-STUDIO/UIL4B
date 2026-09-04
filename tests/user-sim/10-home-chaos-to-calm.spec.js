@@ -1309,6 +1309,57 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect((await scrollCalls(page)).filter((c) => c.top > 0), 'a manual upload scrolled').toEqual([])
   })
 
+  // OBJECT, THEN DECISION, THEN ACTION - and 11c above is why this needs its
+  // own test: the page deliberately does NOT scroll on upload, so whatever
+  // the visitor can see at rest is the whole of the feedback they get.
+  // Measured at 390x844 before the fix: dropzone 381, Output Settings 576,
+  // "Convert 1 image" 839, and the file row 915 - past the fold and 76px
+  // BELOW the button that acts on it, on a screen still reading "Drop images
+  // here or click to browse". Gamma, Fireflies, Adobe Express, Whop, Magnific
+  // and Sana AI all confirm the object first; this confirmed it last.
+  test('11d · the file you just added is above the button that converts it', async ({ page }) => {
+    await reducedMotion(page)
+    watch(page, 'someone converting one image on their phone')
+    await page.setViewportSize({ width: 390, height: 844 })
+
+    await go(page, '/create/file-converter')
+    await expect(page.locator('.fc-drop')).toBeVisible()
+    await page.locator('.fc-drop input[type="file"]').setInputFiles([png('holiday.png')])
+    await expect(page.locator('.fc-card')).toHaveCount(1)
+
+    const order = await page.evaluate(() => {
+      const docTop = (el) => Math.round(el.getBoundingClientRect().top + window.scrollY)
+      const settings = [...document.querySelectorAll('.sl')]
+        .find((n) => /Output Settings/i.test(n.textContent))
+      const convert = [...document.querySelectorAll('button')]
+        .find((b) => /^Convert \d/.test(b.textContent.trim()))
+      const card = document.querySelector('.fc-card')
+      return {
+        dropzone: docTop(document.querySelector('.fc-drop')),
+        card: docTop(card),
+        settings: settings ? docTop(settings) : null,
+        convert: convert ? docTop(convert) : null,
+        name: card.querySelector('.fc-name').textContent.trim(),
+        // At rest, unscrolled: is the confirmation on the screen the visitor
+        // is already looking at?
+        topInView: card.getBoundingClientRect().top < window.innerHeight,
+        scrollY: Math.round(window.scrollY),
+      }
+    })
+
+    expect(order.name, 'the row should name the file that was added').toBe('holiday.png')
+    expect(order.settings, 'Output Settings should be on the page').not.toBeNull()
+    expect(order.convert, 'the Convert button should be on the page').not.toBeNull()
+    expect(order.scrollY, 'adding a file must not move the page').toBe(0)
+    expect(order.card, 'the file lands under the dropzone that accepted it')
+      .toBeGreaterThan(order.dropzone)
+    expect(order.card, 'the object must come before the decision').toBeLessThan(order.settings)
+    expect(order.card, 'the object must come before the action that acts on it')
+      .toBeLessThan(order.convert)
+    expect(order.topInView, 'the only confirmation of the upload sits below the fold at 390x844')
+      .toBe(true)
+  })
+
   test('16 · offline: no catalogue or remote image calls, and every panel still works', async ({ page }) => {
     await reducedMotion(page)
     watch(page, 'designer working on a train')

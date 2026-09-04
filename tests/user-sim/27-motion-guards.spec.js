@@ -43,13 +43,16 @@ const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
 // The two rails that ship, at a width where each is a scroller.
-// `.plb-toolbar-group:last-child` scrolls in two bands (769–960 and ≤768);
-// `.ggn-presets` scrolls at every width, so a desktop width is included.
+// `.plb-toolbar-group:last-child` scrolls in two bands (769–960 and ≤768).
+// `.ggn-presets` used to scroll at EVERY width, and a 1440px case was listed
+// here for exactly that reason. It no longer does: from 981px up the strip
+// wraps to a grid and the sixteen presets are all on screen at once, so there
+// is no scroll position left for a snap to pull. Its phone case below is
+// still a scroller and still carries the guard pair.
 const RAILS = [
   { name: 'Palette Builder action ribbon', sel: '.plb-toolbar-group:last-child', path: '/color/palette', width: 390, height: 844 },
   { name: 'Palette Builder action ribbon (mid-band)', sel: '.plb-toolbar-group:last-child', path: '/color/palette', width: 900, height: 900 },
   { name: 'Gradient Generator preset rail', sel: '.ggn-presets', path: '/color/gradient', width: 390, height: 844 },
-  { name: 'Gradient Generator preset rail (desktop)', sel: '.ggn-presets', path: '/color/gradient', width: 1440, height: 900 },
 ]
 
 /**
