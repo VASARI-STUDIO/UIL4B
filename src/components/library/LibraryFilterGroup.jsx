@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isOn, selectionSummary, toggleSelection } from './filterSelection'
+import { trayOverflowsRow } from './filterFit'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import usePopover from '../../hooks/usePopover'
 
@@ -83,9 +84,65 @@ import usePopover from '../../hooks/usePopover'
 // usePopover — the app's non-modal disclosure contract. `arrowNav` is on: this
 // is a list of sibling options, which is exactly what it was added for.
 
-// The one band where the tray had no treatment of its own. Kept in step with
-// the `.lbry-search` cap in global.css — they are two halves of one layout.
+// ── AND THE BAND WAS NEVER THE REAL CONDITION ───────────────────────────────
+// Founder, 2026-09-04: "the header design changes height switching from the
+// emoji to icon library. the bar is broken visually on a standard desktop."
+//
+// Measured at 1440x900: /create/icons rendered a 68px toolbar and /create/emoji
+// a 213px one, so switching tabs moved the whole page by 145px. On the emoji
+// side it was exactly the shape described above — a 1321px search field alone
+// on line one, the tray wrapped to two chip rows on line two, and the skin-tone
+// control orphaned hard right on line three — except at 1440, where the band
+// below does not apply and nothing was meant to be wrong.
+//
+// The band was a proxy. What actually breaks a toolbar is a tray that cannot
+// fit the row it is on, and the emoji tray wants 1478px: twelve categories each
+// carrying a glyph, a label and a count. No desktop narrower than about 2050px
+// can give it a line, so this was never going to come right at a wider
+// breakpoint. Meanwhile the icon tray wants 493px and fits comfortably at 1440,
+// which is why five of the six surfaces looked fine and the sixth did not.
+//
+// So the condition is now MEASURED rather than assumed: collapse when this
+// group's own tray is wider than the column it has to live in. The band stays
+// as a floor — below 981px the collapse is unconditional, which is #318's
+// decision and is about touch room rather than about fit.
+//
+// WHY THIS CANNOT OSCILLATE, which is the obvious hazard in a
+// measure-then-change-layout loop. Both sides of the comparison are chosen so
+// that collapsing cannot change either of them:
+//
+//   · The tray's intrinsic width is a property of the OPTIONS. It is measured
+//     once with `flex-wrap:nowrap` and cached, so it is still known after the
+//     tray has left the DOM.
+//   · The budget is the ROW's width less the search field's CEILING (360px,
+//     from global.css) and the action's width — never the search field's or the
+//     filter container's MEASURED width. Those two do move when this group
+//     collapses, which is exactly the feedback that would make a loop; the row
+//     and the ceiling do not.
+//
+// Asking "would the tray fit if the search field were at its cap?" is also the
+// honest question, because a search field with no ceiling eats the row and then
+// every tray looks like it fits on a line of its own.
+//
+// The comparison deliberately ignores the group's siblings — a pack `<select>`,
+// a second filter group. That makes it slightly optimistic: a group can still
+// wrap when a sibling eats the room. It also makes it free of any loop between
+// two groups that would each collapse because the other had not yet. The
+// optimism costs a wrapped line in a rare layout; the loop would cost a toolbar
+// that never settles. And the cost is bounded in one direction only: collapsing
+// a group can never make the toolbar TALLER, because the trigger it collapses
+// to is the same height as the search field beside it.
+
+// The floor: below this the tray collapses whatever it measures, because the
+// reason there is touch room, not fit. Kept in step with the `.lbry-search` cap
+// in global.css — they are two halves of one layout.
 export const COLLAPSE_QUERY = '(min-width:641px) and (max-width:980px)'
+
+// Both from `.lbry-search{max-width}` and `.lbry-toolbar-row{gap}` in
+// global.css. They are the CEILING and the gap, not measurements — see the
+// oscillation note above for why that distinction is the whole trick.
+const SEARCH_CAP = 360
+const ROW_GAP = 10
 
 export default function LibraryFilterGroup({
   label,
@@ -106,7 +163,16 @@ export default function LibraryFilterGroup({
   hint,
 }) {
   const trayRef = useRef(null)
-  const collapsed = useMediaQuery(COLLAPSE_QUERY)
+  // The wrapper that exists in BOTH forms, so the column can be measured while
+  // the tray itself is not rendered.
+  const boxRef = useRef(null)
+  // Intrinsic width of the expanded tray, cached against the options identity.
+  // Call sites build `options` once at module scope (see the note in
+  // IconLibrary.jsx), so this is measured once per surface and then reused.
+  const intrinsicRef = useRef({ options: null, width: 0 })
+  const narrowBand = useMediaQuery(COLLAPSE_QUERY)
+  const [overflows, setOverflows] = useState(false)
+  const collapsed = narrowBand || overflows
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
   const { triggerRef, popRef } = usePopover(open, close, { arrowNav: true })
@@ -149,7 +215,69 @@ export default function LibraryFilterGroup({
     tray.style.setProperty('--lbry-ind-opacity', '1')
   }, [])
 
+  // Does the expanded tray fit the column it lives in? Runs whether or not the
+  // tray is currently rendered: the intrinsic width comes from the cache once it
+  // has been taken, and the column comes from the wrapper, which always is.
+  const fit = useCallback(() => {
+    const box = boxRef.current
+    if (!box) return
+    const row = box.closest('.lbry-toolbar-row')
+    if (!row) return
+    // Below the band the tray is a full-width column stack by design (#298), so
+    // there is nothing to decide and measuring would only add churn.
+    if (window.matchMedia('(max-width:640px)').matches) { setOverflows(false); return }
+
+    let intrinsic = intrinsicRef.current.width
+    if (intrinsicRef.current.options !== options) {
+      const tray = trayRef.current
+      // Only measurable while expanded. When the media query has already
+      // collapsed the group there is no tray to measure and no decision to make.
+      if (!tray) return
+      const prev = tray.style.flexWrap
+      tray.style.flexWrap = 'nowrap'
+      intrinsic = tray.scrollWidth
+      tray.style.flexWrap = prev
+      if (!intrinsic) return
+      intrinsicRef.current = { options, width: intrinsic }
+    }
+
+    const action = row.querySelector('.lbry-toolbar-action')
+    setOverflows(trayOverflowsRow({
+      intrinsic,
+      rowWidth: row.clientWidth,
+      actionWidth: action ? action.getBoundingClientRect().width : 0,
+      searchCap: SEARCH_CAP,
+      gap: ROW_GAP,
+    }))
+  }, [options])
+
   useEffect(() => { place() }, [place, value, options, collapsed])
+
+  // No separate mount-time call: ResizeObserver invokes its callback once when
+  // observation begins, which is both the first measurement and the only place
+  // this state is set. Setting it from an effect body instead would be the
+  // cascading-render shape react-hooks/set-state-in-effect exists to catch.
+  //
+  // The row's width changes with the viewport, and the tray's intrinsic width
+  // changes when the UI font swaps in. Neither implies the other, so both are
+  // watched — the same reasoning as the indicator's observers below.
+  useEffect(() => {
+    const row = boxRef.current?.closest('.lbry-toolbar-row')
+    if (!row) return undefined
+    let obs
+    if (typeof ResizeObserver !== 'undefined') {
+      obs = new ResizeObserver(fit)
+      obs.observe(row)
+    }
+    let cancelled = false
+    document.fonts?.ready?.then(() => {
+      if (cancelled) return
+      // A font swap changes the option widths, so the cached intrinsic is stale.
+      intrinsicRef.current = { options: null, width: 0 }
+      fit()
+    }).catch(() => {})
+    return () => { cancelled = true; obs?.disconnect() }
+  }, [fit])
 
   useEffect(() => {
     const tray = trayRef.current
@@ -211,7 +339,7 @@ export default function LibraryFilterGroup({
     const on = options.filter(o => isOn(value, o.id))
     const summary = selectionSummary(value, options)
     return (
-      <div className={`lbry-filterpop${className ? ` ${className}` : ''}`}>
+      <div className={`lbry-filterpop${className ? ` ${className}` : ''}`} ref={boxRef}>
         <button
           type="button"
           ref={triggerRef}
@@ -250,7 +378,7 @@ export default function LibraryFilterGroup({
       role="group"
       aria-label={multiSelect && hint ? `${label}. ${hint}` : label}
       data-active-count={activeCount}
-      ref={trayRef}
+      ref={(node) => { trayRef.current = node; boxRef.current = node }}
     >
       <span className="lbry-filter-ind" aria-hidden="true" />
       {options.map(renderOption)}

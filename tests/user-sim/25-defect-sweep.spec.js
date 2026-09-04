@@ -294,7 +294,18 @@ const FILTER_TRAYS = [
   // The two Create libraries the founder asked to match the galleries. Emoji
   // carries the widest tray in the app — 12 categories — which is what makes it
   // the surface any tray regression shows up on first.
-  ['/create/emoji', '.lbry-filters', '.lbry-filter', 1, 12],
+  // EMOJI IS MEASURED NARROW ONLY, and that is a statement about the fix rather
+  // than an exemption. Its tray wants 1478px — twelve categories each carrying a
+  // glyph, a label and a count — so it needs 1928px of toolbar row before it
+  // fits beside a capped search field and the skin-tone control. No desktop
+  // anyone has offers that, and until 2026-09-04 the tray simply wrapped and
+  // took the toolbar to 213px against 68px on the icon tab: a 145px jump on a
+  // tab switch, on one page, which is what the founder reported. It now
+  // collapses to its trigger wherever it does not fit, so at 1180px there is no
+  // expanded tray to measure and the surface is asserted in the collapsed test
+  // below instead. Below 641 it is a full-width column stack and the chips are
+  // all there, which is what 320 and 390 check.
+  ['/create/emoji', '.lbry-filters', '.lbry-filter', 1, 12, [320, 390]],
   ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7],
   // #323 moved the Prompt Library onto the shared toolbar. It mounts TWO trays
   // — sort (2 options) and category (All + 5) — which is why the totals column
@@ -311,8 +322,10 @@ const FILTER_TRAYS = [
  */
 async function chipRowDamage(browser, surfaces, widths = CHIP_WIDTHS) {
   const damage = []
-  for (const [path, box, item, rows, items] of surfaces) {
-    for (const w of widths) {
+  for (const [path, box, item, rows, items, only] of surfaces) {
+    // A surface may name the widths at which it HAS an expanded tray. Anything
+    // it does not name is covered by the collapsed test, never by nothing.
+    for (const w of (only ? widths.filter((x) => only.includes(x)) : widths)) {
       const { ctx, page } = await open(browser, w, 900, path, box, { touch: w < 800 })
       const r = await page.evaluate(([boxSel, itemSel]) => {
         const found = [...document.querySelectorAll(boxSel)]
@@ -349,9 +362,68 @@ async function chipRowDamage(browser, surfaces, widths = CHIP_WIDTHS) {
 }
 
 test('S4 · every shared Library filter is inside its own tray, on every surface that shares it', async ({ browser }) => {
-  budget(FILTER_TRAYS.length * TRAY_WIDTHS.length)
+  budget(FILTER_TRAYS.reduce((n, [, , , , , only]) => (
+    n + (only ? TRAY_WIDTHS.filter((w) => only.includes(w)).length : TRAY_WIDTHS.length)
+  ), 0))
   const damage = await chipRowDamage(browser, FILTER_TRAYS, TRAY_WIDTHS)
   expect(damage, damage.join('\n')).toEqual([])
+})
+
+// THE TAB SWITCH THE FOUNDER REPORTED, measured as one number.
+//
+// /create/icons and /create/emoji mount the same component and toggle `hidden`,
+// so a difference in toolbar height is one page moving under the cursor. It was
+// 68px against 213px at 1440 on 2026-09-04. The tray collapsing when it does not
+// fit is what removes the difference, so this asserts the OUTCOME (the two
+// toolbars agree) rather than the mechanism, and separately that the collapse
+// did not simply throw the options away.
+test('S4 · the Icon and Emoji toolbars are the same height on a desktop, and the emoji categories survive the collapse', async ({ browser }) => {
+  budget(2)
+  const heights = {}
+  for (const path of ['/create/icons', '/create/emoji']) {
+    // A FINE POINTER, deliberately, unlike the rest of this block. The founder
+    // reported this "on a standard desktop", and under coarse-pointer metrics
+    // the two tabs legitimately differ by 4px: @media(pointer:coarse) floors
+    // .lbry-filter at the WCAG 44px target, which makes the icon tray 50px tall
+    // against the 46px collapsed trigger on the emoji side. That is the touch
+    // floor doing its job, not the defect, and asserting it away would mean
+    // either loosening this threshold until it stopped measuring anything or
+    // shrinking a touch target to make a test pass.
+    const { ctx, page } = await open(browser, 1440, 900, path, '.lbry-toolbar', { touch: false })
+    // POLL UNTIL IT SETTLES. The tray re-measures itself on document.fonts.ready
+    // — the option widths move when the UI font swaps in — so a single read can
+    // catch the toolbar mid-reflow and report a height no user ever sees. Read
+    // 72px that way once while the settled value was 68px.
+    heights[path] = await page.evaluate(async () => {
+      const read = () => {
+        const t = [...document.querySelectorAll('.lbry-toolbar')].find((x) => x.offsetParent !== null)
+        return t ? Math.round(t.getBoundingClientRect().height) : null
+      }
+      await document.fonts.ready.catch(() => {})
+      let last = read()
+      for (let i = 0; i < 40; i++) {
+        await new Promise((r) => setTimeout(r, 100))
+        const next = read()
+        if (next === last) return next
+        last = next
+      }
+      return last
+    })
+    if (path === '/create/emoji') {
+      // The collapse is only an improvement if the options are still reachable.
+      const trigger = page.locator('.lbry-filtertrig').first()
+      await trigger.click()
+      const menu = page.locator('.lbry-filtermenu')
+      await menu.waitFor({ state: 'visible' })
+      const options = await menu.locator('.lbry-filter').count()
+      expect(options, 'the collapsed emoji menu must still carry all 12 categories').toBe(12)
+    }
+    await ctx.close()
+  }
+  expect(
+    Math.abs(heights['/create/icons'] - heights['/create/emoji']),
+    `the two tabs of one page render toolbars of ${heights['/create/icons']}px and ${heights['/create/emoji']}px, so switching tabs moves the page`,
+  ).toBeLessThanOrEqual(2)
 })
 
 // The same question, asked of the collapsed form, at the two widths inside the

@@ -105,7 +105,49 @@ body{font-family:var(--font);font-weight:400;background:var(--bg-0);color:var(--
    and identical in both themes. Docs: design-language-v2.md#the-highlight-is-a-new-scarce-role */
 ::selection{background:var(--hi);color:var(--hi-fg)}
 a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underline}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-s)}
+/* A FOCUS STYLE MUST NOT CHANGE THE CONTROL'S GEOMETRY.
+
+   This rule carried `border-radius:var(--radius-s)` for a long time. An
+   outline follows its own element's border-radius, so that declaration never
+   rounded the RING — it rounded the ELEMENT, and the ring then traced the
+   shape it had just been given. Every control this rule outranked changed
+   corners the moment it took focus, and the ring matched the new shape
+   rather than the one the user was looking at.
+
+   It sits near the top of the file, so a later `.class{border-radius}` at the
+   same (0,1,0) specificity beats it — which is why the pill controls were
+   never affected and the fault looked intermittent. What it DID reach was
+   every focusable element with no radius of its own, plus everything left to
+   the `:where()` element resets at (0,0,0) after #331 lowered them.
+
+   MEASURED on this branch, rest radius -> focused radius, over ten routes:
+     input[type=search].adm-search   0px -> 10px   (square field, round ring)
+     input[type=range] (fontgallery) 2px -> 10px   (2px track, 10px ring)
+     button.pgal-stripe              0px -> 10px   at outline-offset:-3px,
+                                                   so a rounded ring is drawn
+                                                   INSIDE a square swatch
+     button.plb-ramp/.plb-add/.plb-gap, button.hw-pal-copy,
+     a.pnav-logo, a.hstep-cta, a.pgal-use, a.grg-open, a.cc-more-link,
+     a.fg-hero-pair-link, a.app-footer-start, a.app-footer-attrib,
+     and bare inline <a>                        all 0px -> 10px
+   21 distinct control shapes in total.
+
+   THE RING STAYS. A visible focus indicator is WCAG 2.4.7, and the fix is a
+   ring that matches the control, never no ring. Dropping the radius means
+   the outline traces whatever shape the control actually has: square on a
+   square swatch, 2px on a slider track, pill on a pill. A control that wants
+   a soft focus ring declares its own border-radius at rest, which is where
+   that decision belongs and where it is already made for every other one.
+
+   Four search fields had each independently defended against this by killing
+   the inner input's outline (`.lbry-search input{outline:0}`,
+   `.topbar-search input{outline:none}`, `.landing-icontool-search
+   input:focus{outline:none}`, `.proj-search input:focus{outline:none}`) and
+   painting a `:focus-within` ring on the wrapper instead. Those stay: the
+   wrapper is the visible field, and a second ring on the inner input would
+   double up. Four local workarounds for one global fault is the evidence
+   that the global rule was the thing to fix. */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 :focus:not(:focus-visible){outline:none}
 
 /* ─── App Layout ─── */
@@ -377,7 +419,11 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .cs-pillnav-item:hover{color:var(--t0)}
 .cs-pillnav-item:active{transform:translateY(.5px)}
 .cs-pillnav-item.active{color:var(--accent-fg);font-weight:700}
-.cs-pillnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--radius-pill)}
+/* No radius hoisted to rest for this one: #348 left the block with no JSX
+   consumer, so there is no rendered shape to preserve and a new rule here
+   would be dead CSS added on top of dead CSS. The geometry override is just
+   dropped. */
+.cs-pillnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .cs-pillnav-thumb{position:absolute;top:5px;left:0;z-index:0;height:calc(100% - 10px);border-radius:var(--radius-pill);background:var(--brand);box-shadow:0 2px 8px -2px var(--brand-glow);transform:translateX(var(--cs-thumb-x,0));width:var(--cs-thumb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
 [data-theme="light"] .cs-pillnav{box-shadow:var(--shadow-m)}
 .cs-section-header{user-select:none;position:relative;z-index:10}
@@ -595,7 +641,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
    It is a default, and every component class outranks it. Do not unwrap it, and
    do not add a bare `input[type=...]` rule beside it — put new element defaults
    inside the :where() list. Pinned by tests/unit/input-specificity.test.js. */
-:where(input[type="text"],input[type="number"],input[type="email"],input[type="password"],select,textarea){font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--inp);color:var(--t0);outline:none;transition:all var(--dur-2) var(--ease-standard);max-width:100%}
+:where(input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],select,textarea){font-family:var(--font);font-size:13px;padding:9px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--inp);color:var(--t0);outline:none;transition:all var(--dur-2) var(--ease-standard);max-width:100%}
 :where(input[type="number"])::-webkit-inner-spin-button,:where(input[type="number"])::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 :where(input[type="number"]){-moz-appearance:textfield}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
@@ -1711,7 +1757,7 @@ img,svg,video{max-width:100%;height:auto}
      it sits in :where() and a component's own padding wins. See the note on the
      reset at the top of the Inputs section. */
   input[type="text"],input[type="number"],input[type="email"],input[type="password"],select,textarea{font-size:16px}
-  :where(input[type="text"],input[type="number"],input[type="email"],input[type="password"],select,textarea){padding:11px 14px}
+  :where(input[type="text"],input[type="search"],input[type="number"],input[type="email"],input[type="password"],select,textarea){padding:11px 14px}
 
   /* Color Studio */
   .tint-grid-responsive{grid-template-columns:repeat(auto-fill,minmax(min(56px,calc((100% - 32px)/4)),1fr))!important}
@@ -4837,7 +4883,11 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .dsc-feat-card::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--dsc-c);z-index:1}
 .dsc-feat-badge{position:absolute;top:12px;right:12px;z-index:2;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dsc-text);background:color-mix(in srgb,var(--dsc-c) 14%,var(--bg-1));border:1px solid color-mix(in srgb,var(--dsc-c) 30%,transparent);padding:4px 8px;border-radius:var(--radius-pill)}
 .dsc-feat-top{display:flex;flex-direction:column;gap:14px;padding:20px;cursor:pointer;flex:1}
-.dsc-feat-top:focus-visible{outline:2px solid var(--accent);outline-offset:-3px;border-radius:var(--radius-l)}
+/* No radius hoisted to rest for this one: #348 left the block with no JSX
+   consumer, so there is no rendered shape to preserve and a new rule here
+   would be dead CSS added on top of dead CSS. The geometry override is just
+   dropped. */
+.dsc-feat-top:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 .dsc-feat-face{display:flex;align-items:center;justify-content:center;height:96px;border-radius:var(--radius);background:linear-gradient(135deg,color-mix(in srgb,var(--dsc-c) 24%,var(--bg-2)),color-mix(in srgb,var(--dsc-c) 8%,var(--bg-2)));color:var(--dsc-c)}
 .dsc-feat-meta{display:flex;flex-direction:column;gap:8px}
 .dsc-feat-title{font-size:16px;font-weight:700;color:var(--t0);letter-spacing:-.01em;margin:0}
@@ -5001,7 +5051,14 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .dsc-menu-item:hover:not(:disabled){background:var(--hvr);color:var(--t0)}
 .dsc-menu-item:disabled{color:var(--t3);cursor:default}
 .dsc-card-body{display:flex;flex-direction:column;gap:8px;padding:14px 16px 10px;cursor:pointer;flex:1}
-.dsc-card-body:focus-visible{outline:2px solid var(--accent);outline-offset:-3px;border-radius:var(--radius-s)}
+/* Radius declared at REST, not on :focus-visible — see the note on the
+   global :focus-visible rule near the top of this file. This element paints
+   no background and no border of its own, so the radius is visually inert
+   here; it exists so the focus ring traces a shape the element actually
+   has, instead of the ring's own declaration changing the shape to match
+   itself. */
+.dsc-card-body{border-radius:var(--radius-s)}
+.dsc-card-body:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 .dsc-card-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dsc-pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dsc-text);background:color-mix(in srgb,var(--dsc-c) 12%,transparent);border:1px solid color-mix(in srgb,var(--dsc-c) 26%,transparent);padding:3px 8px;border-radius:var(--radius-pill)}
 .dsc-pill-free{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 10%,transparent);border:1px solid color-mix(in srgb,var(--ok) 24%,transparent);padding:3px 8px;border-radius:var(--radius-pill)}
@@ -6250,7 +6307,59 @@ html.lenis,html.lenis body{height:auto}
    finds the artwork itself is near-white. */
 .ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 .ig-chip--dark{background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-.ig-chip img{width:24px;height:24px;display:block}
+/* object-fit, because the request now asks the API for a HEIGHT rather than a
+   box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
+   4:3 intrinsic size, and pinning both sides of a 24px box without `contain`
+   would squash it. With it, the flag letterboxes to 24 x 18 exactly as before. */
+.ig-chip img{width:24px;height:24px;display:block;object-fit:contain}
+
+/* THE WIDE CHIP: a horizontal lockup gets the cell's width, not a 24px square.
+
+   Measured on /create/icons under the Brand logos filter at 1440x900, painted
+   glyph height inside the tile:
+
+     logos/aerospike        11.38:1   24 x 2.1px  ->  106 x 9.3px
+     logos/active-campaign   9.88:1   24 x 2.4px  ->  106 x 10.7px
+     logos/500px             4.00:1   24 x 6.0px  ->  106 x 26.5px
+     logos/adobe             3.81:1   24 x 6.3px  ->  106 x 27.8px
+     devicon/*-wordmark      square canvas, wide ink: drawn across 106px, not 24
+
+   The slot is the cell's full content width (118px cell less its 6px side
+   padding) and stays 36px TALL — the same height as the square chip — so a row
+   that contains a wide item is exactly as tall as one that does not and the
+   grid rhythm is untouched. No column span, so nothing is re-ordered: #298
+   rejected visual re-ordering on this codebase's grids on WCAG 2.4.3 grounds
+   and that reasoning holds here.
+
+   overflow:hidden with a centred, full-width image is what reaches devicon's
+   `-wordmark` entries. Their canvas is square, so `width:100%` renders them
+   106 x 106 with the lockup as a band across the middle; clipping to 36px shows
+   that band at its natural size instead of the whole empty canvas shrunk to fit.
+   Artwork that is genuinely wide never reaches the clip — at 106px wide it is
+   already shorter than 36px — so one rule serves both causes.
+
+   WHY A WIDER CELL RATHER THAN A SQUARE ONE, from the Mobbin pass: Squarespace's
+   Asset Library gives a wide logotype a double-width cell in an otherwise
+   uniform grid; Air lays assets out at a fixed row height with the cell width
+   following each asset's aspect; Google Ads' logo picker keeps a uniform
+   landscape thumbnail and fits the art inside it at its natural aspect, naming
+   the aspect on the card. Arcade's Brand Kit goes furthest and splits
+   "Logotypes" from "Icons" into two sections with different cell shapes. None of
+   them letterboxes a lockup into a square. This is the Google Ads answer, which
+   is the one that transplants into a dense icon grid without re-ordering it. */
+.ig-chip--wide{width:100%;height:36px;overflow:hidden;position:relative}
+/* NOTHING IS EVER CROPPED. `--ig-wide-cap` is measured per icon in sampleGlyph:
+   how many multiples of this slot height the element may be drawn wide before
+   the INK grows taller than the slot. A one-line lockup on a square canvas gets
+   the full 100%; a two-line one gets a narrower element instead of losing its
+   top and bottom rows; genuinely wide artwork is capped by 100% long before its
+   own limit bites. The chip clips only the artwork transparent margins. */
+/* Centred by absolute positioning rather than by the flex box: .ig-chip is
+   display:flex at its own rule but computes flow-root here, and a top-aligned
+   element that is 104px tall in a 36px slot shows its empty top margin instead
+   of the lockup. Measured as blank tiles on eleven devicon -wordmark entries
+   before this line existed. */
+.ig-chip--wide img{position:absolute;left:50%;top:50%;width:min(100%,calc(36px * var(--ig-wide-cap,1)));height:auto;max-height:none;transform:translate(-50%,-50%)}
 /* Logo.dev brand marks are raster and already coloured — size a touch larger
    than glyph icons, keep their own colours (no invert), and round the corners. */
 .ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
@@ -6805,7 +6914,14 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .htool:focus-within{border-color:var(--t0)}
 .htool-head{display:flex;align-items:center;gap:12px;text-decoration:none}
 .htool-head:hover{text-decoration:none}
-.htool-head:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--radius-xs)}
+/* Radius declared at REST, not on :focus-visible — see the note on the
+   global :focus-visible rule near the top of this file. This element paints
+   no background and no border of its own, so the radius is visually inert
+   here; it exists so the focus ring traces a shape the element actually
+   has, instead of the ring's own declaration changing the shape to match
+   itself. */
+.htool-head{border-radius:var(--radius-xs)}
+.htool-head:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .htool-glyph{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--hue,var(--accent-strong))}
 .htool-glyph svg{width:19px;height:19px}
 .htool-title{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:var(--t0)}
@@ -9808,7 +9924,14 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    Prefixed fdx- rather than fbd- because these two panels are NOT the browse
    dialog's — they are the shared component the Font Gallery specimen dialog
    uses too, and a fbd- name would have made the next person move them. */
-.fdx-panel:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:var(--radius-s)}
+/* Radius declared at REST, not on :focus-visible — see the note on the
+   global :focus-visible rule near the top of this file. This element paints
+   no background and no border of its own, so the radius is visually inert
+   here; it exists so the focus ring traces a shape the element actually
+   has, instead of the ring's own declaration changing the shape to match
+   itself. */
+.fdx-panel{border-radius:var(--radius-s)}
+.fdx-panel:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 /* A definition list, not a card grid. Nine facts in nine equally-weighted
    rounded boxes is the "every idea in a card" failure — these are rows of a
    spec, they have a natural label/value shape, and dl says so semantically. */
@@ -9969,9 +10092,12 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    hover-only affordances on touch, and the footer attribution link settled the
    same question the same way. 70% of currentColor rather than a fixed token,
    which is what measured clear of 1.4.11 there. */
-.fdx-fiu{color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
+/* Radius at REST, not on :focus-visible — see the note on the global
+   :focus-visible rule near the top of this file. An inline link paints no box,
+   so 2px is inert here and exists only so the ring has a shape to trace. */
+.fdx-fiu{border-radius:2px;color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .fdx-fiu:hover{color:var(--t0)}
-.fdx-fiu:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:2px}
+.fdx-fiu:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
   /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
@@ -10705,8 +10831,57 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
    rejected that trade on this exact layout on WCAG 2.4.3 grounds. Search →
    filters → action is the DOM order, the visual order and the focus order, at
    every width. */
-@media(min-width:641px) and (max-width:980px){
+/* PATTERN B, FOURTH INSTANCE - and the band bound above was the bug.
+
+   #318 wrote the two rules below for 641-980 because that was the range with no
+   layout of its own. The reasoning it gave - "`.lbry-search{flex:1 1 240px}` has
+   no ceiling, so with nothing to compete with on a short row it takes the WHOLE
+   row and pushes every filter group onto a line of its own", and "`margin-left:
+   auto` then strands the action on a ragged last row, hard right, alone" - is
+   not a fact about 641-980. It is a fact about a row whose filter tray cannot
+   share it. Above 980 the tray usually can, so the fault stayed hidden on five
+   of the six surfaces and shipped on the sixth.
+
+   Founder, 2026-09-04: "the header design changes height switching from the
+   emoji to icon library. the bar is broken visually on a standard desktop."
+
+   MEASURED at 1440x900 before this change:
+
+     /create/icons   toolbar  68px   tray wants  493px   one line
+     /create/emoji   toolbar 213px   tray wants 1478px   THREE lines
+
+   145px of jump on a tab switch, and on the emoji side exactly the shape #318
+   named: a 1321px search field alone on line one, the tray wrapped to two chip
+   rows on line two, and a 70px skin-tone control orphaned hard right on line
+   three. The emoji tray needs 1478px because it carries twelve categories with
+   a glyph, a label and a count each; no desktop under about 2050px can give it
+   a line, so this was never going to fix itself at a wider breakpoint.
+
+   THE CAP NOW APPLIES AT EVERY WIDTH FROM 641 UP, and that is the whole of the
+   change here. 360px was never a tablet number: it is `.pl-search-wrap`'s
+   long-standing desktop ceiling, which is to say the width this codebase
+   already decided a search field is worth. Giving the field a ceiling is also
+   what lets LibraryFilterGroup ask an honest question about the space that is
+   left - see the note on COLLAPSE_QUERY there - because the budget the tray is
+   measured against stops depending on how the tray itself laid out.
+
+   A GRID WAS TRIED HERE AND REVERTED, which is worth recording so the next
+   person does not spend the afternoon on it. Three explicit tracks
+   (`minmax(0,360px) minmax(0,1fr) auto`) do make the row deterministic, but a
+   fixed first track cannot give width back the way `flex:1 1 240px` does, and
+   flex was quietly relying on that: measured on this branch, the Prompt Library
+   at 1024px went 68px -> 124px and the Icon Library at 834px went 68px -> 120px,
+   because the search field held 360px that the filter row needed. Flex shares
+   the row correctly already. What it could not do was stop a 1478px tray from
+   wrapping, and that is fixed where the tray is, not where the row is. */
+@media(min-width:641px){
   .lbry-search{max-width:360px}
+}
+/* The auto margin is dropped only in the band #318 wrote it for. Above 980 the
+   action no longer lands on a ragged last row — the tray collapses before the
+   row runs out — so there is nothing to rescue it from, and pinning it to the
+   far edge is the resting look those five surfaces already had. */
+@media(min-width:641px) and (max-width:980px){
   .lbry-toolbar-action{margin-left:0}
 }
 
