@@ -1,6 +1,29 @@
+// Community prompts shown on /discover/prompts.
+//
+// `free` is the FREE TIER, and it is an IDENTITY rather than a position.
+//
+// It used to be a position: PromptLibrary rendered the filtered list and locked
+// everything at index >= FREE_PROMPT_LIMIT. So "free" meant the first twelve of
+// whatever you were currently looking at, and both the search box and the sort
+// control changed what that was — search a term only a locked prompt contains
+// and it arrives at index 0, unlocked. All twenty were reachable that way.
+//
+// The twelve flagged here are exactly the twelve a signed-out visitor saw for
+// free in the DEFAULT view (sort 'popular' = saves descending) before the fix,
+// so freezing them changes nothing about WHICH prompts are free. It only makes
+// the answer stop depending on the query. Pricing was not touched; a gate that
+// counted positions was replaced by one that counts identities.
+//
+// A new prompt added without `free: true` is LOCKED. That is deliberate and
+// fail-closed: forgetting the flag costs a sale, forgetting its opposite gives
+// the product away.
+//
+// `saves` is display data and no longer decides entitlement. Editing a saves
+// count re-orders the gallery; it can no longer move a prompt across the gate.
 export const COMMUNITY_PROMPTS = [
   {
     id: 'c-1',
+    free: true,
     title: 'Plumbing business website',
     text: `Design a professional one-page website for a local plumbing business called "FlowFix Plumbing". Include these sections:
 
@@ -20,6 +43,7 @@ Colour scheme: navy blue (#1B3A5C) and orange (#F47B20) on white. Clean, trustwo
   },
   {
     id: 'c-2',
+    free: true,
     title: 'Restaurant website with menu',
     text: `Design a website for a modern Italian restaurant called "Osteria Luna". Sections:
 
@@ -39,6 +63,7 @@ Style: warm and intimate — dark backgrounds (#1A1A1A), cream text (#F5F0E8), g
   },
   {
     id: 'c-3',
+    free: true,
     title: 'Dark mode analytics dashboard',
     text: `Design a data dashboard interface with a dark theme. Use a sidebar navigation with icons, a top stats bar with 4 KPI cards (revenue, users, conversion rate, active sessions), a main chart area with a line graph, and a recent activity feed below. Colour palette: charcoal backgrounds (#1a1a2e, #16213e), electric blue accents (#0f3460, #53a8b6), and clean white text. Ensure strong visual hierarchy and clear data presentation.`,
     tags: 'dashboard, dark, analytics, ui',
@@ -48,6 +73,7 @@ Style: warm and intimate — dark backgrounds (#1A1A1A), cream text (#F5F0E8), g
   },
   {
     id: 'c-4',
+    free: false,
     title: 'Freelancer portfolio',
     text: `Design a personal portfolio website for a freelance graphic designer. Keep it minimal and let the work speak.
 
@@ -66,6 +92,7 @@ Style: black and white with one accent colour. Lots of whitespace. Modern sans-s
   },
   {
     id: 'c-5',
+    free: false,
     title: 'Fitness trainer landing page',
     text: `Design a landing page for a personal fitness trainer. Goal: get visitors to book a free consultation.
 
@@ -85,6 +112,7 @@ Colours: energetic — black (#111), lime green (#CDDC39), white. Bold, motivati
   },
   {
     id: 'c-6',
+    free: false,
     title: 'SaaS pricing page',
     text: `Create a pricing comparison section with three tiers: Free, Pro, and Enterprise. Include a monthly/yearly toggle that animates the prices. The middle (Pro) plan should be visually elevated with a "Most popular" badge, a coloured border, and a slightly larger scale. Each plan card lists 5-6 features with check/cross icons. Use a clean layout with clear visual hierarchy. Add a subtle gradient background behind the section. Include a FAQ section below addressing common billing questions.`,
     tags: 'pricing, saas, component, cards',
@@ -94,6 +122,7 @@ Colours: energetic — black (#111), lime green (#CDDC39), white. Bold, motivati
   },
   {
     id: 'c-7',
+    free: false,
     title: 'Real estate property listing',
     text: `Design a property listing page for a real estate agency.
 
@@ -114,6 +143,7 @@ Style: clean and professional. White background, dark text, blue accent (#2563EB
   },
   {
     id: 'c-8',
+    free: false,
     title: 'Coffee shop brand identity',
     text: `Design a brand identity and website for an artisan coffee shop called "Grounded". The brand should feel warm, crafted, and community-focused.
 
@@ -131,6 +161,7 @@ The overall feel should be artisanal without being pretentious — friendly, loc
   },
   {
     id: 'c-9',
+    free: true,
     title: 'E-commerce product page',
     text: `Design a product detail page for a high-end fashion e-commerce store. Include:
 
@@ -149,6 +180,7 @@ Style: warm neutrals (cream, taupe) with gold accent (#B8860B) for premium feel.
   },
   {
     id: 'c-10',
+    free: false,
     title: 'Mobile app onboarding flow',
     text: `Design a mobile app onboarding flow with 4 screens:
 
@@ -165,6 +197,7 @@ Style: Light and friendly. Soft gradients, rounded illustrations, generous paddi
   },
   {
     id: 'c-11',
+    free: false,
     title: 'Construction company website',
     text: `Design a website for a commercial construction company called "Apex Build Co."
 
@@ -184,6 +217,7 @@ Style: Strong and professional. Dark navy (#0D1B2A), steel grey (#415A77), gold 
   },
   {
     id: 'c-12',
+    free: false,
     title: 'Blog article layout',
     text: `Design a long-form blog article layout optimised for reading. Include: a full-width hero image with overlay title, reading time and author byline below, a sticky table of contents in the left margin on desktop, body text set at 18px with a max-width of 680px for optimal line length, pull quotes styled with a left accent border, inline code blocks, and a "Related articles" grid at the bottom. Typography-focused, minimal distractions. The reading experience should feel like a premium publication.`,
     tags: 'blog, editorial, typography, content',
@@ -193,6 +227,7 @@ Style: Strong and professional. Dark navy (#0D1B2A), steel grey (#415A77), gold 
   },
   {
     id: 'c-13',
+    free: true,
     title: '3D hero — floating product reveal',
     text: `Design a hero section with a 3D product reveal animation for a tech product landing page. The product (a smart speaker or headphones) floats in the centre of the viewport, slowly rotating on the Y-axis. As the user scrolls, the product scales up and the camera orbits around it, revealing different angles.
 
@@ -227,6 +262,7 @@ JSON config for scene setup:
   },
   {
     id: 'c-14',
+    free: true,
     title: '3D hero — morphing blob background',
     text: `Create an animated hero background with a large morphing 3D blob shape, inspired by stripe.com and linear.app hero sections. The blob should smoothly deform using simplex noise, creating an organic, living feel.
 
@@ -272,6 +308,7 @@ The overall effect should feel premium and mesmerising — a living, breathing s
   },
   {
     id: 'c-15',
+    free: true,
     title: '3D hero — scroll-driven text extrusion',
     text: `Design a scroll-driven 3D text animation where the company name extrudes from flat 2D to full 3D as the user scrolls down the hero section. Inspired by award-winning motion sites.
 
@@ -328,6 +365,7 @@ JSON config:
   },
   {
     id: 'c-16',
+    free: true,
     title: '3D hero — interactive particle wave',
     text: `Create an interactive particle wave field for a website hero section. A grid of thousands of particles forms a wave surface that reacts to mouse movement and animates continuously.
 
@@ -378,6 +416,7 @@ The effect should feel like a digital ocean — calming but dynamic, reactive bu
   },
   {
     id: 'c-17',
+    free: true,
     title: '3D hero — glass card carousel',
     text: `Design a hero section featuring a 3D carousel of glassmorphic cards that orbit around a central point. Each card showcases a feature or product, and the user can click/drag to rotate the carousel.
 
@@ -434,6 +473,7 @@ JSON config:
   },
   {
     id: 'c-18',
+    free: true,
     title: 'Lottie animation — loading states',
     text: `Design a set of 5 micro-animation loading states for a web application. Each should be a short looping animation suitable for Lottie/After Effects export.
 
@@ -510,6 +550,7 @@ Design specs for each:
   },
   {
     id: 'c-19',
+    free: true,
     title: 'Scroll-triggered section transitions',
     text: `Design a series of scroll-triggered section transitions for a storytelling website. Each section uses a different reveal animation as it enters the viewport.
 
@@ -589,6 +630,7 @@ These can be mixed and matched. Use curtain-reveal for hero images, parallax-sta
   },
   {
     id: 'c-20',
+    free: true,
     title: 'CSS-only image hover gallery',
     text: `Create a responsive image gallery where each image has a unique hover animation — no JavaScript required. Perfect for portfolio or agency sites.
 
