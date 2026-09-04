@@ -4161,8 +4161,44 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .seo-serp.is-mobile .seo-serp-title{font-size:16px}
 .seo-serp-desc{font-size:13px;line-height:1.5;color:var(--t1)}
 .seo-social{padding:16px}
-.seo-social-img{height:150px;border-radius:var(--radius-s) var(--radius-s) 0 0;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 40%,#8B5CF6));display:flex;align-items:center;justify-content:center}
-.seo-social-img span{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.7);letter-spacing:.05em}
+/* THE ONLY TEXT IN THIS APP ON A GRADIENT THAT AN ALPHA BUMP COULD NOT FIX.
+   [gradient-text-below-aa]: the 1200x630 placeholder label measured 2.99:1
+   against the 4.5 it needs at 11px, on rendered pixels with the ink hidden and
+   the gradient sampled under the label's own rect. Every candidate, measured
+   the same way:
+     opaque white ink, gradient unchanged            4.46  still short
+     --accent-strong gradient, ink left at 70%       3.97  still short
+     --accent-strong gradient + opaque white ink     6.36  ships
+     28% black scrim over the --accent gradient      4.48  still short
+   So the ground had to move, which is why the item called this a design change
+   rather than a colour tweak.
+
+   THE FIRST FIX FOR IT WAS WRONG IN DARK, AND ONLY A RENDERED MEASUREMENT SAID
+   SO. Swapping var(--accent) for var(--accent-strong) reads like the obvious
+   move and measures 5.35:1 in light -- and 3.41:1 in dark, WORSE than the 2.99
+   it replaced was in light. --accent-strong is the darker, readable member of
+   the pair in light and the LIGHTER one in dark (#0B5ED7 against #4A90FF): in
+   dark it is the fill that steps back, not the ink that steps forward. The
+   prefers-contrast work recorded exactly this and it is worth repeating here,
+   because the arithmetic in light is right and the conclusion still does not
+   travel.
+
+   THE GROUND IS THEREFORE THEME-INDEPENDENT, and that is the real answer rather
+   than a workaround. This is a mock of a 1200x630 SOCIAL CARD. The card it
+   stands for is drawn by scripts/og-cards.mjs, which scopes its token reads to
+   the [data-theme="light"] block on purpose -- a share card is always the light
+   brand, because LinkedIn and X do not render it in the author's theme. A
+   preview that flips with the viewer's theme is showing something the card will
+   never look like. Two literals, from the light accent pair, matching that
+   generator's reasoning; measured 5.45:1 light and 5.45:1 dark on the same
+   ground #365EE2, because the surface no longer depends on the theme at all.
+
+   The 70% ink went opaque too, and that is worth 1.9 points here on its own.
+   #346 removed the same 10% haircut from textColorForBg for the same reason:
+   the last tenth of alpha is never free and is almost never a deliberate
+   design choice. */
+.seo-social-img{height:150px;border-radius:var(--radius-s) var(--radius-s) 0 0;background:linear-gradient(135deg,#0B5ED7,color-mix(in srgb,#0B5ED7 40%,#8B5CF6));display:flex;align-items:center;justify-content:center}
+.seo-social-img span{font-family:var(--mono);font-size:11px;color:#FFFFFF;letter-spacing:.05em}
 .seo-social-body{padding:12px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-s) var(--radius-s);background:var(--bg-2)}
 .seo-social-domain{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
 .seo-social-title{font-size:14px;font-weight:600;color:var(--t0);line-height:1.3;margin-bottom:3px}
