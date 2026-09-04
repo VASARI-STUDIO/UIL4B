@@ -141,13 +141,25 @@ test.describe('reflow at 320px', () => {
     await go(page, '/create/palette')
     await expect(page.locator('.plb-tool').first()).toBeVisible()
 
+    // RENDERED tools only. `.plb-tool--more` is the touch-band overflow control
+    // [palette-swatch-actions-tablet]: it is in the markup at every width but
+    // `display:none` outside @media(min-width:769px) and (hover:none), so here
+    // it measures 0x0. That is not a 2.5.8 failure — a display:none element is
+    // out of the accessibility tree and cannot be tapped, which is a different
+    // thing from the invisible-but-live target 24-mobile-overhaul hunts (opacity
+    // 0 WITH pointer-events auto, a live 32x32 hit area painting nothing).
+    // `offsetParent` is the cheap test for it and matches how that spec skips
+    // zero-box elements.
     const tools = await page.evaluate(() =>
-      [...document.querySelectorAll('.plb-tool')].map(t => {
+      [...document.querySelectorAll('.plb-tool')].filter(t => t.offsetParent !== null).map(t => {
         const r = t.getBoundingClientRect()
         return { w: Math.round(r.width), h: Math.round(r.height), right: Math.round(r.right) }
       }))
 
-    expect(tools.length, 'the per-colour tools render').toBeGreaterThan(0)
+    // A floor the filter cannot sneak under: five columns each render a row of
+    // tools at this width, so a result that collapsed to a handful would mean
+    // the filter ate the population rather than that everything passed.
+    expect(tools.length, 'the per-colour tools render').toBeGreaterThan(6)
     const vw = await page.evaluate(() => document.documentElement.clientWidth)
     for (const t of tools) {
       expect(t.right, 'every tool is on screen').toBeLessThanOrEqual(vw + 1)

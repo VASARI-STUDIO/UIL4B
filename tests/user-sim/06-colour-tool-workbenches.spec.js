@@ -264,9 +264,14 @@ test.describe('Semantic Colour system workflow', () => {
 // [contrast-checker-overhaul]. The chips are the interesting addition: they are
 // the only text on the page that SITS on the user's chosen background, and a
 // chip that painted with the pair would go unreadable at exactly the ratios
-// this page exists to warn about. They use page tokens instead, and this is
-// what holds them to it — swap `--bg-1` for `var(--cc-bg)` in .cc-verdict and
-// both themes fail here.
+// this page exists to warn about.
+//
+// THIS TEST ALONE DOES NOT HOLD THEM TO THAT, and the distinction was found by
+// mutation rather than by reasoning. Repointing .cc-verdict at var(--cc-bg)
+// still PASSES here, because the page loads at #6B7280 on #FFFFFF — 4.83:1,
+// which clears AA. Measuring the default pair can only ever prove the chip is
+// legible when the pair is already fine. The failing-pair test below is the one
+// that catches it; this one covers the page's resting state.
 test.describe('The Contrast Checker meets the standard it enforces', () => {
   for (const theme of ['light', 'dark']) {
     test(`its own verdict and check text passes AA in ${theme} theme`, async ({ browser }) => {
@@ -358,6 +363,82 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       expect(measured, `no contrast-checker text was found to measure in ${theme}`)
         .toBeGreaterThan(8)
       expect(failures, `the contrast checker's own UI must meet AA in ${theme}:\n${failures.join('\n')}`).toEqual([])
+    })
+  }
+
+  // ── The rule the verdict chips exist to obey ──────────────────────────────
+  // A chip that painted in the pair under test would go unreadable exactly when
+  // the pair fails — the moment its reader most needs it. So drive the page to a
+  // pair that fails everything and assert the chips are STILL legible.
+  //
+  // This is the assertion the test above cannot make: at the default 4.83:1 a
+  // chip drawn in the pair passes anyway, so only a deliberately broken pair
+  // separates "uses page tokens" from "got lucky".
+  for (const theme of ['light', 'dark']) {
+    test(`its verdict chips stay legible when the pair itself fails (${theme})`, async ({ browser }) => {
+      const ctx = await browser.newContext({ colorScheme: theme })
+      await ctx.addInitScript((t) => {
+        try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
+      }, theme)
+      const page = await ctx.newPage()
+      watch(page, 'a designer testing a pair that cannot pass')
+      await go(page, '/create/contrast')
+      await expect(page.locator('.cc-verdict').first()).toBeVisible()
+
+      // #F2F4F6 on #FFFFFF is about 1.1:1 — it fails every tier, so every chip
+      // flips and the preview text is effectively invisible.
+      await page.fill('#cc-fg', '#F2F4F6')
+      await expect(page.locator('.cc-verdict--fail').first()).toBeVisible()
+
+      const state = await page.evaluate(() => {
+        const lum = ([r, g, b]) => {
+          const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+          return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+        }
+        const parse = (c) => {
+          const n = (c.match(/[\d.]+/g) || []).map(Number)
+          if (n.length < 3) return []
+          return /^color\(srgb/.test(c)
+            ? [n[0] * 255, n[1] * 255, n[2] * 255, n.length > 3 ? n[3] : undefined]
+            : n.slice(0, 4)
+        }
+        const bgOf = (el) => {
+          for (let n = el; n; n = n.parentElement) {
+            const c = parse(getComputedStyle(n).backgroundColor)
+            if (c.length >= 3 && (c[3] === undefined || c[3] > 0.95)) return c.slice(0, 3)
+          }
+          return [255, 255, 255]
+        }
+        const ratioOf = (el) => {
+          const cs = getComputedStyle(el)
+          const bg = bgOf(el)
+          const raw = parse(cs.color)
+          const a = raw[3] === undefined ? 1 : raw[3]
+          const fg = [0, 1, 2].map(i => raw[i] * a + bg[i] * (1 - a))
+          const L1 = lum(fg), L2 = lum(bg)
+          return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
+        }
+        const chips = [...document.querySelectorAll('.cc-verdict')].filter(el => el.offsetParent !== null)
+        return {
+          chips: chips.length,
+          // The specimen really is unreadable — otherwise the pair was not applied
+          // and the whole test is measuring the resting state again.
+          specimen: Math.round(ratioOf(document.querySelector('.cc-spec-body')) * 100) / 100,
+          bad: chips
+            .map(el => ({ t: el.textContent.trim().slice(0, 18), r: Math.round(ratioOf(el) * 100) / 100 }))
+            .filter(x => x.r < 4.5)
+            .map(x => `${x.t} at ${x.r}:1`),
+        }
+      })
+      await ctx.close()
+
+      expect(state.chips, 'no verdict chips were found to measure').toBeGreaterThanOrEqual(4)
+      expect(state.specimen,
+        `the failing pair was not applied \u2014 the specimen measured ${state.specimen}:1, which is not a failing pair`)
+        .toBeLessThan(3)
+      expect(state.bad,
+        `a verdict chip is unreadable in ${theme} on a pair that fails: ${state.bad.join(', ')}. ` +
+        'Chips must paint with page tokens, never with --cc-fg/--cc-bg.').toEqual([])
     })
   }
 })
