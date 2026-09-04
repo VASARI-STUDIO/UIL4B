@@ -32,7 +32,37 @@ const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), '
 // global.css, are full of hex literals that would otherwise be parsed as
 // declarations. A mutation run has already caught a test that passed only
 // because a stale comment still named the old value.
-const CSS = RAW.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+const WITHOUT_COMMENTS = RAW.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+
+// Then the prefers-contrast overrides, for the same reason and with the same
+// offset-preserving blanking. This file is about the DEFAULT token roles, and
+// every lookup below takes the LAST matching declaration — so once
+// @media (prefers-contrast: more) started re-declaring the accent pair, the
+// "--accent must NOT clear AA" assertion below started reading #094AAA and
+// failing. That value is correct; it is just not the value this test is about.
+// A user asking their OS for more contrast is exactly who the pair SHOULD
+// collapse for. The prefers-contrast block has its own file:
+// tests/unit/prefers-contrast.test.js, which checks it strengthens every token
+// it touches and sits low enough in the sheet to apply at all.
+const blankMediaBlocks = (css, opener) => {
+  let out = css
+  for (;;) {
+    const at = out.indexOf(opener)
+    if (at < 0) return out
+    const open = out.indexOf('{', at)
+    if (open < 0) return out
+    let depth = 1
+    let i = open + 1
+    while (i < out.length && depth > 0) {
+      if (out[i] === '{') depth++
+      else if (out[i] === '}') depth--
+      i++
+    }
+    const span = out.slice(at, i).replace(/[^\n]/g, ' ')
+    out = out.slice(0, at) + span + out.slice(i)
+  }
+}
+const CSS = blankMediaBlocks(WITHOUT_COMMENTS, '@media (prefers-contrast')
 
 const srgb = (c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4)
 const lum = (hex) => {

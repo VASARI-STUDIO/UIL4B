@@ -118,7 +118,7 @@ test('the fonts are self-hosted, not two third-party round trips', () => {
   assert.ok(!/fonts\.googleapis\.com/.test(html),
     'the stylesheet request is back; the font URL is only discoverable after it parses')
   assert.ok(!/fonts\.gstatic\.com/.test(css), 'font files must be served from our own origin')
-  // Design Language V2 replaced Outfit with two families: Manrope (--font/--serif)
+  // Design Language V2 replaced Outfit with two families: Manrope (--font/--display)
   // and JetBrains Mono (--mono, which V2 makes load-bearing rather than decorative).
   for (const f of [
     'public/fonts/manrope-latin.woff2', 'public/fonts/manrope-latin-ext.woff2',

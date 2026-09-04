@@ -1193,7 +1193,7 @@ function ThreeDComingSoon() {
     <div className="sub">
       <div className="card fc-soon-card">
         <div className="fc-soon-badge">Coming soon</div>
-        <h2 style={{ fontFamily: 'var(--serif)', fontSize: 24, fontWeight: 500, marginBottom: 8, color: 'var(--t0)' }}>
+        <h2 style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 500, marginBottom: 8, color: 'var(--t0)' }}>
           3D model → Blender (.blend)
         </h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', lineHeight: 1.65, maxWidth: 560 }}>

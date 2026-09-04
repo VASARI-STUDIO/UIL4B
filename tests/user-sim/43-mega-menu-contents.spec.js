@@ -100,8 +100,9 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     expect(painted).toEqual(expected.map(asRgb))
 
     // The two families that genuinely ship, doing two jobs. A third specimen
-    // cannot be honest here: --serif resolves to Manrope, the same value as
-    // --font (serif-token-is-not-a-serif).
+    // cannot be honest here: --display is Manrope, the same value as --font.
+    // (The token used to be called --serif and claimed otherwise; renamed in
+    // serif-token-is-not-a-serif.)
     await expect(page.locator('.pnav-prev-ag')).toHaveText('Ag')
     const mono = await page.locator('.pnav-prev-mono').evaluate((el) => getComputedStyle(el).fontFamily)
     expect(mono.toLowerCase()).toContain('jetbrains')

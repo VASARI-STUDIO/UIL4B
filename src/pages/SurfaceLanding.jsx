@@ -54,8 +54,8 @@ const PREVIEWS = {
   // A specimen BLOCK — display line, reading line, mono line — rather than
   // three faces side by side.
   //
-  // The first attempt set three "Ag"s in var(--serif), var(--font) and
-  // var(--mono), and two of them rendered identically: `--serif` in this
+  // The first attempt set three "Ag"s in var(--display), var(--font) and
+  // var(--mono), and two of them rendered identically: `--display` in this
   // project resolves to 'Manrope', the same value as `--font`. It is a
   // misnamed token, not a serif. A Font Gallery card whose whole claim is
   // "type variety" showing the same face twice is the kind of preview that is

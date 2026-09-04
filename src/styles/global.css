@@ -2,7 +2,7 @@
 
 /* ── Manrope + JetBrains Mono, self-hosted (V2) ──────────────────────────────
    Design Language V2 retires Outfit from all three roles. Two families now:
-   Manrope carries --font/--serif (all UI and display), JetBrains Mono carries
+   Manrope carries --font/--display (all UI and display), JetBrains Mono carries
    --mono, which V2 makes load-bearing — eyebrows, meta, category pills, keycaps
    and stat lines are the texture that makes the product read as a tool.
    Spec: docs/reference/design-language-v2.md#type
@@ -40,10 +40,22 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   /* ── TYPE — two families (V2). Docs: docs/reference/design-language-v2.md#type ──
-     --serif is retired as a distinct role and aliases --font; the name stays so
-     the ~200 existing var(--serif) call sites keep resolving. Fallback stacks
-     are unchanged from the Outfit era. */
-  --font:'Manrope',system-ui,-apple-system,sans-serif;--serif:'Manrope',system-ui,-apple-system,sans-serif;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+     TWO families ship and there is no serif role. --display is an alias of
+     --font: the same Manrope face, named for the job it does (hero type,
+     section heads, wordmarks) rather than for a face we do not have.
+
+     IT WAS CALLED --serif UNTIL 2026-09-04 and resolved to Manrope the whole
+     time. That is not a cosmetic misnomer: a token name is a claim, and this
+     one made designers reach for typographic contrast that does not exist.
+     It cost a Font Gallery preview card that set three specimens in --serif,
+     --font and --mono and rendered two of them identically. Renamed rather
+     than backed by a real serif because V2 budgets exactly two self-hosted
+     families and a third is a first-paint cost, not a token edit — see the
+     @font-face note at the top of this file. If you ever DO want serif/sans
+     contrast, that is a founder call on the type system, not a token rename.
+     Contrast in this system comes from Manrope vs JetBrains Mono, plus
+     weight and scale. Fallback stacks are unchanged from the Outfit era. */
+  --font:'Manrope',system-ui,-apple-system,sans-serif;--display:'Manrope',system-ui,-apple-system,sans-serif;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   --sw:248px;--top-h:56px;
   /* ── RADIUS — V2 scale. Docs: design-language-v2.md#panels-remap-the-existing-scale ──
      Remapped in the TOKEN BLOCK ONLY (6/10/12/14/16/18/24). The ~1000 existing
@@ -162,7 +174,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .topbar-brand{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit}
 .topbar-brand:hover .topbar-title{color:var(--accent-strong)}
 .topbar-logo{width:26px;height:26px;border-radius:50%;background:#000;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
-.topbar-title{font-family:var(--serif);font-size:16px;font-weight:500;color:var(--t0);white-space:nowrap;letter-spacing:-.01em}
+.topbar-title{font-family:var(--display);font-size:16px;font-weight:500;color:var(--t0);white-space:nowrap;letter-spacing:-.01em}
 .topbar-tabs{display:flex;gap:2px;margin-left:8px}
 .topbar-tab{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-s);font-size:13px;font-weight:500;color:var(--t2);text-decoration:none!important;transition:all var(--t);white-space:nowrap}
 .topbar-tab:hover{background:var(--hvr);color:var(--t0)}
@@ -260,7 +272,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .sidebar-brand{padding:18px 16px 20px;flex-shrink:0;text-decoration:none!important;color:inherit;border-bottom:1px solid var(--border);margin-bottom:12px;display:block;transition:background var(--t)}
 .sidebar-brand:hover{background:var(--hvr)}
 .sidebar-brand-text{min-width:0}
-.sidebar-brand-name{font-family:var(--serif);font-size:20px;font-weight:500;letter-spacing:-.02em;display:block;line-height:1.2;color:var(--t0)}
+.sidebar-brand-name{font-family:var(--display);font-size:20px;font-weight:500;letter-spacing:-.02em;display:block;line-height:1.2;color:var(--t0)}
 .sidebar-brand-sub{font-size:9px;font-weight:600;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:3px}
 
 /* Navigation */
@@ -362,7 +374,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .sec{max-width:1400px;margin-left:auto;margin-right:auto;width:100%}
 .main>*:first-child{padding-top:clamp(20px,4vw,56px)}
 .sec-h{margin-bottom:48px;position:relative;padding-left:0;border-left:none}
-.sec-h h1{font-family:var(--serif);font-size:clamp(32px,5vw,52px);font-weight:500;letter-spacing:-.025em;line-height:1.3;margin-bottom:14px;color:var(--t0);padding-bottom:.1em}
+.sec-h h1{font-family:var(--display);font-size:clamp(32px,5vw,52px);font-weight:500;letter-spacing:-.025em;line-height:1.3;margin-bottom:14px;color:var(--t0);padding-bottom:.1em}
 .sec-h h1 em{font-style:italic;font-weight:400;color:var(--t1);padding-right:.06em}
 .sec-h p{font-size:15px;color:var(--t1);max-width:640px;line-height:1.65;font-weight:400}
 .sec-h-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.14em;margin-bottom:16px}
@@ -557,7 +569,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .cs-tools-footer-link span{font-size:12px;color:var(--t2)}
 @media(max-width:768px){.cs-tools-footer-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){.cs-tools-footer-grid{grid-template-columns:1fr}}
-.sub h2{font-family:var(--serif);font-size:24px;font-weight:500;letter-spacing:-.018em;margin-bottom:6px;color:var(--t0)}
+.sub h2{font-family:var(--display);font-size:24px;font-weight:500;letter-spacing:-.018em;margin-bottom:6px;color:var(--t0)}
 .sub-meta{font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6;max-width:560px}
 
 /* ─── Cards ─── */
@@ -701,7 +713,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .stc-hero-id{max-width:680px;min-width:0}
 .stc-hero-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t2)}
 .stc-hero-eyebrow::before{content:'';width:24px;height:1px;background:var(--t3)}
-.stc-hero h1{margin:0;font-family:var(--serif);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
+.stc-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
 .stc-hero-id>p{max-width:600px;margin:12px 0 0;font-size:15px;line-height:1.65;color:var(--t1)}
 .stc-hero-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
 /* The action is already a button with its own metrics; the hero must not also
@@ -807,7 +819,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
    The panels are FIXED light (#f7f8fa) and dark (#111318) grounds on purpose -
    they are a picture of two interfaces, not of this page - so both are painted
    here regardless of the app theme, and both were contrast-measured. Type is
-   var(--font) only: --serif in this project resolves to Manrope, the same face,
+   var(--font) only: --display in this project resolves to Manrope, the same face
    and is filed as [serif-token-is-not-a-serif]. */
 .stc-scene-list{display:flex;flex-direction:column;gap:10px}
 .stc-scene{min-width:0}
@@ -2002,7 +2014,7 @@ html[data-reduced-motion="true"] .rail-overflow{scroll-snap-type:none}
 .settings-content{display:flex;flex-direction:column;gap:32px;min-width:0}
 .settings-section{}
 .settings-section-h{margin-bottom:16px}
-.settings-section-h h2{font-family:var(--serif);font-size:28px;font-weight:500;letter-spacing:-.02em;margin-bottom:6px;color:var(--t0);line-height:1.35}
+.settings-section-h h2{font-family:var(--display);font-size:28px;font-weight:500;letter-spacing:-.02em;margin-bottom:6px;color:var(--t0);line-height:1.35}
 .settings-section-h p{font-size:13.5px;color:var(--t2);line-height:1.6;max-width:520px}
 .settings-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:0;box-shadow:var(--warm-shadow);overflow:hidden}
 .settings-card-h{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -2243,7 +2255,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 
 /* Profile header */
 .settings-profile{display:flex;align-items:center;gap:18px;padding:24px;background:linear-gradient(135deg,var(--accent-bg),transparent);border-bottom:1px solid var(--border)}
-.settings-profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--avatar-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:24px;font-weight:500;border:2px solid var(--border);overflow:hidden;flex-shrink:0}
+.settings-profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--avatar-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;font-weight:500;border:2px solid var(--border);overflow:hidden;flex-shrink:0}
 .settings-profile-avatar img{width:100%;height:100%;object-fit:cover}
 /* The avatar doubles as the photo-upload button: a camera glyph sweeps in on
    hover/focus over the picture. The hidden <input type=file> does the picking. */
@@ -2253,7 +2265,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .settings-avatar-remove{display:inline-block;margin-top:4px;padding:0;border:0;background:none;font-family:var(--font);font-size:12px;color:var(--t3);cursor:pointer;text-decoration:underline;text-underline-offset:2px;transition:color var(--dur-2) var(--ease-out)}
 .settings-avatar-remove:hover{color:var(--t1)}
 .settings-profile-info{flex:1;min-width:0}
-.settings-profile-name{font-family:var(--serif);font-size:22px;font-weight:500;letter-spacing:-.015em;color:var(--t0);line-height:1.35}
+.settings-profile-name{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.015em;color:var(--t0);line-height:1.35}
 .settings-profile-email{font-size:13px;color:var(--t2);margin-top:2px}
 
 /* Language picker (flags) */
@@ -2398,7 +2410,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .fg-page{min-width:0;padding-bottom:var(--s-4)}
 .fg-hero{margin-bottom:var(--s-5)}
 .fg-hero-copy{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,560px);gap:var(--s-8);align-items:end}
-.fg-hero h1{margin:0;font-family:var(--serif);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
+.fg-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
 .fg-hero-copy>p{max-width:600px;margin:0 0 4px;font-size:15px;line-height:1.65;color:var(--t1)}
 
 @keyframes fg-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
@@ -2884,7 +2896,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer{padding:var(--s-8) var(--page-inline) var(--s-5);border-top:1px solid var(--border);background:var(--bg-1)}
 .app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
-.app-footer-mark{font-family:var(--serif);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
+.app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
 .app-footer-tagline{max-width:42ch;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
 .app-footer-start{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:650;color:var(--t0);text-decoration:none}
 .app-footer-start:hover{gap:12px;color:var(--accent-strong);text-decoration:none}
@@ -3057,7 +3069,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .landing-nav-hidden{transform:translateY(-100%)}
 .landing-nav-solid{background:color-mix(in srgb,var(--bg-0) 92%,transparent);border-bottom-color:var(--border)}
 .landing-brand{display:flex;flex-direction:column;line-height:1.1}
-.landing-brand-mark{font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:-.02em}
+.landing-brand-mark{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:-.02em}
 .landing-brand-sub{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t2)}
 .landing-nav-actions{display:flex;align-items:center;gap:10px}
 .landing-tools-menu{position:relative}
@@ -3245,7 +3257,7 @@ html[data-reduced-motion="true"] .landing-hero-card{animation:none}
 .landing-footer-inner{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
 .landing-footer-inner>:first-child{display:flex;align-items:flex-start;justify-content:space-between;gap:32px;flex-wrap:wrap}
 .landing-footer-brand{display:flex;flex-direction:column;gap:4px}
-.landing-footer-mark{font-family:var(--serif);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
+.landing-footer-mark{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
 .landing-footer-tagline{font-size:12px;color:var(--t3)}
 .landing-footer-cols{display:flex;gap:48px;flex-wrap:wrap}
 .landing-footer-col{display:flex;flex-direction:column;gap:8px;min-width:120px}
@@ -3446,7 +3458,7 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .onb{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:var(--bg-0)}
 .onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:36px;position:relative;overflow:hidden}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.onb-brand{font-family:var(--serif);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
+.onb-brand{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
 
 
 .onb-step{animation:onb-fade var(--dur-3) var(--ease-entrance)}
@@ -3454,7 +3466,7 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 
 .onb-greeting{font-size:14px;color:var(--t2);margin-bottom:6px}
 .onb-greeting em{font-style:normal;color:var(--t0);font-weight:600}
-.onb-q{font-family:var(--serif);font-size:clamp(22px,3vw,28px);font-weight:500;letter-spacing:-.02em;line-height:1.2;margin-bottom:6px;color:var(--t0)}
+.onb-q{font-family:var(--display);font-size:clamp(22px,3vw,28px);font-weight:500;letter-spacing:-.02em;line-height:1.2;margin-bottom:6px;color:var(--t0)}
 .onb-sub{font-size:13px;color:var(--t2);margin-bottom:20px}
 
 .onb-options{display:flex;flex-direction:column;gap:8px}
@@ -3550,7 +3562,7 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 /* ─── Admin Dashboard ─── */
 .adm{max-width:1200px}
 .adm-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:24px}
-.adm-header-left h1{font-family:var(--serif);font-size:clamp(28px,5vw,36px);font-weight:500;letter-spacing:-.03em;margin-bottom:4px}
+.adm-header-left h1{font-family:var(--display);font-size:clamp(28px,5vw,36px);font-weight:500;letter-spacing:-.03em;margin-bottom:4px}
 .adm-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong)}
 .adm-status-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:adm-pulse 2s infinite}
 @keyframes adm-pulse{0%,100%{opacity:1}50%{opacity:.4}}
@@ -5366,6 +5378,75 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --shadow-nav:0 1px 2px rgba(10,10,11,.04),0 8px 32px -12px rgba(10,10,11,.12)
 }
 
+/* ══ prefers-contrast: more ═════════════════════════════════════
+   Until 2026-09-04 this file contained ZERO prefers-contrast rules across
+   11,000-plus lines. Rendered with the browser reporting prefers-contrast: more
+   (matchMedia confirmed true in-run), every resolved token was identical to the
+   default — --border #dad8cf, --t2 #5f5f59, --t3 #6c6c66. The preference was
+   received and ignored. The @media(forced-colors:active) block further down is
+   a different and much blunter mechanism (Windows High Contrast); it does
+   nothing for the graded preference macOS Increase Contrast and Chrome expose.
+
+   IT HAS TO SIT HERE, BELOW THE FOUNDRY BLOCKS. A media query adds no
+   specificity: these selectors are (0,1,0) exactly like the [data-theme] blocks
+   above and the two at the top of the file, so this wins only by being later.
+   Placed above the Foundry light block it would read correctly and paint
+   nothing — the same trap that made the first dark hue set dead.
+   Pinned by tests/unit/prefers-contrast.test.js, which asserts the ORDERING as
+   well as the numbers.
+
+   THE TEXT ROLES STAY A LADDER. Solved naively — every role to 7:1 — --t1, --t2
+   and --t3 all collapse to #50504B in light: one value, no hierarchy, on a
+   preference that is about legibility, not about flattening the page. They are
+   graded instead, 9 / 8 / 7, so the ladder survives and every step clears AAA.
+   Worst ground per theme (#EFEEE9 light, #212327 dark):
+     --t1  #50504A 6.99 → #3F3F3B 9.10   |  #BFBEB6 8.44 → #C5C4BD 9.00
+     --t2  #5F5F59 5.53 → #474743 8.03   |  #9F9F98 5.91 → #BABAB5 8.08
+     --t3  #6C6C66 4.55 → #4F4F4B 7.08   |  #8E8E88 4.78 → #AEAEA9 7.06
+
+   BORDERS GO TO THE 1.4.11 FLOOR, which they are nowhere near by default:
+   --border is 1.23:1 against the page in light and 1.11:1 in dark, i.e. a
+   hairline that a user asking for more contrast cannot see at all. 3:1 is the
+   non-text minimum; --bh goes to 4.5 so hover stays distinguishable from rest
+   rather than collapsing onto it (at 3:1 both solve to the same value).
+     --border #DAD8CF 1.23 → #8F896F 3.03  |  #2A2B2F 1.11 → #696C76 3.00
+     --bh     #C0BDB0 1.62 → #716C5A 4.53  |  #3C3D42 1.45 → #878992 4.51
+
+   THE ACCENT PAIR DELIBERATELY COLLAPSES HERE, and the backlog note's
+   prescription for it was HALF WRONG. It said to swap --accent for
+   --accent-strong. That is right in light (3.82 → 5.03) and BACKWARDS in dark,
+   where --accent #6FA8FF is 6.54 and --accent-strong #4A90FF is 5.04 — the
+   swap would have LOWERED contrast for the exact user asking for more. Both
+   tokens are therefore pushed to a measured 7:1 per theme instead, which also
+   lifts the fills, borders, icons and large display text --accent carries and
+   which the swap would have left alone. The white/near-black mirror on the
+   filled controls is checked, not assumed: #FFFFFF on #094AAA is 8.17, and
+   #101012 on #7AAFFF is 8.51.
+   Every figure here is measured on the ROUNDED hex, not on the float the solver
+   walked — measuring before rounding overstated three of them by ~0.03 and put
+   --t3 and --border a hair under their targets.
+
+   NOT DONE HERE, on purpose. The --hue-* category set has almost no margin
+   (worst 4.60 light / 4.56 dark on its BARE grounds — see the .smap-soon note)
+   and is exactly what this preference should lift. It is left out because
+   tests/unit/category-hue-contrast.test.js asserts there is exactly ONE dark
+   block declaring --hue-colour, so adding a second is a deliberate change to
+   that contract and belongs with the retune, not with this first pass.
+   SCOPE: the graded preference only. Real assistive-technology testing and
+   screen-reader announcement remain unrun — see [audit-coverage-not-run]. */
+@media (prefers-contrast: more){
+  [data-theme="light"]{
+    --t1:#3F3F3B;--t2:#474743;--t3:#4F4F4B;
+    --border:#8F896F;--bh:#716C5A;
+    --accent:#094AAA;--accent-strong:#094AAA;--brand:#094AAA;--info:#094AAA
+  }
+  [data-theme="dark"]{
+    --t1:#C5C4BD;--t2:#BABAB5;--t3:#AEAEA9;
+    --border:#696C76;--bh:#878992;
+    --accent:#7AAFFF;--accent-strong:#7AAFFF;--brand:#7AAFFF;--info:#7AAFFF
+  }
+}
+
 /* ── Category hue mapping (data-hue → --hue; never an inline colour) ── */
 [data-hue="colour"]{--hue:var(--hue-colour)}
 [data-hue="type"]{--hue:var(--hue-type)}
@@ -5384,7 +5465,7 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 .smap-surface{margin-top:64px}
 .smap-surface:first-of-type{margin-top:48px}
 .smap-surface-h{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.smap-surface-h h2{font-family:var(--serif);font-size:var(--fs-h2);font-weight:500;letter-spacing:-.02em;color:var(--t0);margin:0 0 6px}
+.smap-surface-h h2{font-family:var(--display);font-size:var(--fs-h2);font-weight:500;letter-spacing:-.02em;color:var(--t0);margin:0 0 6px}
 .smap-surface-h p{font-size:var(--fs-body-s);color:var(--t2);margin:0;max-width:60ch}
 .smap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
 .smap-grid--two{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
@@ -5406,7 +5487,34 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 .smap-link-a--soon:hover .smap-link-label{color:var(--t0)}
 .smap-link-route{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);text-align:right;white-space:nowrap}
 .smap-link-note{grid-column:1/-1;font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
-.smap-soon{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--hue,var(--accent-strong));background:color-mix(in srgb,var(--hue,var(--accent)) 12%,transparent);border-radius:999px;padding:2px 7px;line-height:1;flex:0 0 auto}
+/* THIS PILL PAINTS ITS INK ON A TINT OF THE SAME COLOUR, which is the shape of
+   defect [accent-tint-grounds-unmeasured] was filed for. Two things were wrong.
+
+   (1) THE FALLBACKS DISAGREED. The ink fell back to --accent-strong and the tint
+   to --accent. On .smap-soon--inline, which has no [data-hue] ancestor, that
+   painted #0B5ED7 on a 12% tint of #0F6FFF — two different tokens in one pill.
+   Both now read --accent-strong. A rule whose ink and ground disagree about
+   which token they mean is a latent bug even when the number happens to pass.
+
+   (2) 12% WAS TOO MUCH TINT TO CARRY THE INK. Measured on the rendered page
+   before this change: 4.32:1 light (#0b5ed7 on #d4dfec, the inline pill on the
+   page ground) and 4.34:1 dark (#a070f2 on #292437, --hue-component on a card).
+   Both under the 4.5 that 11px/600 needs. At 7% they measure 4.56 and 4.64.
+
+   THE BORDER IS DOING THE WORK THE TINT USED TO DO. Dropping 12% to 7% costs
+   the pill its presence, so it gains a 28% hue border — a border is OUTSIDE the
+   text's ground, so it restores the shape and the colour signal without adding
+   one point of luminance behind the letters.
+
+   READ THIS BEFORE RAISING THE PERCENTAGE BACK. The --hue-* set has almost no
+   margin to spend: on the bare grounds it is tuned against, the worst hue
+   measures 4.60 light and 4.56 dark. A tint of ANY colour behind hue-coloured
+   text — its own hue, a neutral, anything — pushes it under 4.5. Measured: a
+   neutral --t0 tint at just 5% drops the dark set to 3.98. So this 7% is a
+   ceiling, not a preference, and the structural fix is a --hue-* retune with
+   real margin. That is a founder call on the token set, pinned by
+   tests/unit/category-hue-contrast.test.js, and is deliberately NOT done here. */
+.smap-soon{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--hue,var(--accent-strong));background:color-mix(in srgb,var(--hue,var(--accent-strong)) 7%,transparent);border:1px solid color-mix(in srgb,var(--hue,var(--accent-strong)) 28%,transparent);border-radius:999px;padding:1px 6px;line-height:1;flex:0 0 auto}
 .smap-soon--inline{vertical-align:middle;margin:0 1px}
 .smap-stage{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 10%,transparent);border-radius:999px;padding:2px 7px;line-height:1;flex:0 0 auto}
 @media(max-width:520px){
@@ -5799,7 +5907,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-prev-swatch{border-radius:var(--radius-s);box-shadow:inset 0 0 0 1px var(--border)}
 .pnav-prev-type{display:flex;align-items:baseline;gap:10px}
 /* The two families that genuinely ship, doing two different jobs. No third
-   specimen: --serif is Manrope under another name.
+   specimen: --display is Manrope, the same face as --font.
    The display metrics are deliberately the same 30px / 750 / -.03em as
    .scp-type-display, the /discover specimen #340 established -- one product
    showing its own type the same way in both places, rather than a second
@@ -6291,7 +6399,7 @@ html.lenis{scroll-behavior:auto!important}
 /* Custom-icons: Pro lock + empty state */
 .ig-custom-lock{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;max-width:420px;margin:0 auto;padding:72px 24px}
 .ig-custom-lock-glyph{display:grid;place-items:center;width:56px;height:56px;border-radius:var(--radius-l);background:var(--accent-bg);color:var(--accent)}
-.ig-custom-lock-title{font-family:var(--serif);font-size:var(--fs-h4);font-weight:600;letter-spacing:-.01em;color:var(--t0)}
+.ig-custom-lock-title{font-family:var(--display);font-size:var(--fs-h4);font-weight:600;letter-spacing:-.01em;color:var(--t0)}
 .ig-custom-lock-sub{max-width:340px;font-size:var(--fs-body-s);color:var(--t2);line-height:1.55}
 .ig-custom-empty{max-width:460px;margin:0 auto;padding:56px 24px;text-align:center;font-size:var(--fs-body-s);color:var(--t2);line-height:1.6}
 
@@ -6299,7 +6407,7 @@ html.lenis{scroll-behavior:auto!important}
 .ig-myicons{display:flex;flex-direction:column;gap:32px}
 .ig-mysec{display:flex;flex-direction:column;gap:14px}
 .ig-mysec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
-.ig-mysec-title{font-family:var(--serif);font-size:var(--fs-h5);font-weight:600;letter-spacing:-.01em;color:var(--t0)}
+.ig-mysec-title{font-family:var(--display);font-size:var(--fs-h5);font-weight:600;letter-spacing:-.01em;color:var(--t0)}
 .ig-mysec .ig-custom-empty{margin:0;padding:32px 24px;text-align:left}
 .ig-mysec .ig-custom-lock{padding:48px 24px}
 /* Free-tier allowance hint under the Saved collection (non-Pro only). */
@@ -6519,7 +6627,7 @@ html.lenis{scroll-behavior:auto!important}
 .scp-tiles{display:flex;gap:6px;height:78px}
 .scp-tile{flex:1 1 0;min-width:0;border-radius:var(--radius-s);box-shadow:inset 0 0 0 1px rgb(0 0 0/.06)}
 /* Type — a specimen block in the two families the app actually ships (see the
-   note in SurfaceLanding.jsx: --serif is Manrope, not a serif). */
+   note in SurfaceLanding.jsx: --display is Manrope, the same face as --font). */
 .scp-type{display:flex;flex-direction:column;justify-content:center;gap:4px;height:78px;color:var(--t0);overflow:hidden}
 .scp-type-display{font-size:30px;font-weight:750;letter-spacing:-.03em;line-height:1}
 .scp-type-body{font-size:14px;font-weight:400;color:var(--t1);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -7630,7 +7738,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .tt-back:hover{color:var(--accent-strong);text-decoration:none}
 .tt-back:hover span{transform:translateX(-3px)}
 .tt-hero-copy{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,560px);gap:var(--s-8);align-items:end}
-.tt-hero h1{margin:0;font-family:var(--serif);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
+.tt-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
 .tt-hero-copy>p{max-width:600px;margin:0 0 4px;font-size:15px;line-height:1.65;color:var(--t1)}
 .tt-audience{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:var(--s-7);overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--ring)}
 .tt-audience-tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;min-height:116px;padding:18px 20px;text-align:left;color:var(--t1);background:transparent;border:0;cursor:pointer;transition:background var(--t),color var(--t)}
@@ -9310,18 +9418,64 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 }
 .uname-owner:hover .uname-tip,.uname-owner:focus-visible .uname-tip{opacity:1;transform:translateY(0)}
 
-/* Flair pill — --flair-c set per tone; soft-tinted so it reads as a tag. */
-.flair{--flair-c:var(--accent-strong);display:inline-flex;align-items:center;flex:none;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.01em;line-height:1.5;white-space:nowrap;color:var(--flair-c);background:color-mix(in srgb,var(--flair-c) 12%,transparent);border:1px solid color-mix(in srgb,var(--flair-c) 30%,transparent)}
+/* ── FLAIR PILL ────────────────────────────────────────────────────────────
+   10.5px BOLD text in --flair-c on a 12% tint of ITSELF, so every tone has to
+   clear 4.5:1 against its own tint, not against the bare card.
+
+   THE NAMED TONES USED TO BE RAW HEXES WITH NO DARK VALUES — the same defect
+   class as the category hues, and left by #331 because .flair renders only on
+   /settings and in signed-in community bylines, which a signed-out capture
+   cannot reach. Measured before, on the tint each actually lands on:
+     blue #2563EB 3.80 light / 2.75 dark   violet #7C3AED 4.14 / 2.54
+     rose #E11D48 3.38 / 3.12              amber  #D97706 2.44 / 4.22
+     green #15803D 3.71 / 2.82             slate  #64748B 5.49 / 2.92
+     gold  #B7791F 2.78 / 3.72
+   Eleven of the fourteen missed. Every value below is the SAME hue and
+   saturation with lightness walked until the worst real ground clears 4.60.
+
+   THE GROUNDS ARE MEASURED, NOT ASSUMED. A pill was injected into the real
+   rendered /settings and /community and its composited ground read back:
+   light #FFFFFF (rows, cards) and #EFEEE9 (page); dark #191A1D and #101012.
+   #212327 is included as a margin for inset rows. Tuning against --bg-3/--bg-4
+   as well would have forced amber to #864904 and gold to #795015, which is
+   brown, not amber — the cost of guessing at a ground you have not measured.
+
+   DO NOT MOVE THESE ONTO THE --hue-* TOKENS, which is what the backlog item
+   suggested. That was written before [accent-tint-grounds-unmeasured] measured
+   the hues themselves: --hue-component on its own 12% tint is 4.34:1, so
+   inheriting them would have imported a failure rather than fixing one.
+
+   Ordering: these are class selectors, and every dark value below is a
+   [data-theme="dark"] descendant at (0,2,0), so it beats the (0,1,0) base
+   wherever it sits in the file. That is why this block does NOT have to live
+   below the Foundry :root the way the token blocks do — but it does anyway. */
+.flair{--flair-c:var(--accent-strong);--flair-fg:#fff;display:inline-flex;align-items:center;flex:none;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.01em;line-height:1.5;white-space:nowrap;color:var(--flair-c);background:color-mix(in srgb,var(--flair-c) 12%,transparent);border:1px solid color-mix(in srgb,var(--flair-c) 30%,transparent)}
 .flair--accent{--flair-c:var(--accent-strong)}
-.flair--blue{--flair-c:#2563EB}
-.flair--violet{--flair-c:#7C3AED}
-.flair--rose{--flair-c:#E11D48}
-.flair--amber{--flair-c:#D97706}
-.flair--green{--flair-c:#15803D}
-.flair--slate{--flair-c:#64748B}
-/* Earned badges get a warmer, higher-signal gold treatment. */
-.flair--gold{--flair-c:#B7791F;background:linear-gradient(135deg,color-mix(in srgb,#D69E2E 20%,transparent),color-mix(in srgb,#B7791F 14%,transparent));border-color:color-mix(in srgb,#B7791F 42%,transparent)}
-[data-theme="light"] .flair--slate{--flair-c:#475569}
+/* Light: worst-ground ratio on the pill's own 12% tint in the comment. */
+.flair--blue{--flair-c:#1452DB}   /* 4.64 */
+.flair--violet{--flair-c:#712AEC} /* 4.63 */
+.flair--rose{--flair-c:#B7183B}   /* 4.63 */
+.flair--amber{--flair-c:#914F04}  /* 4.60 */
+.flair--green{--flair-c:#126E34}  /* 4.62 */
+.flair--slate{--flair-c:#475569}  /* 5.49 — already passing, unchanged */
+/* Earned badges get a warmer, higher-signal gold treatment. The gradient is
+   why gold was INVISIBLE to the contrast walk: groundOf() bails on any
+   background-image, so a gradient ground is skipped rather than measured, and
+   gold scored nothing at all in both themes. Its stops are now expressed
+   through --flair-c/--flair-warm so the dark override reaches them, and both
+   ends are checked by hand in tests/unit/flair-tone-contrast.test.js.
+   Light worst end 4.51; dark worst end 4.60. */
+.flair--gold{--flair-c:#835616;--flair-warm:#D69E2E;background:linear-gradient(135deg,color-mix(in srgb,var(--flair-warm) 20%,transparent),color-mix(in srgb,var(--flair-c) 14%,transparent));border-color:color-mix(in srgb,var(--flair-c) 42%,transparent)}
+/* Dark. Same hue and saturation, lightness raised until the worst ground
+   (#212327) clears 4.60 on the pill's own 12% tint. */
+[data-theme="dark"] .flair{--flair-fg:#0B0D10}
+[data-theme="dark"] .flair--blue{--flair-c:#6F98F2}   /* 4.62 */
+[data-theme="dark"] .flair--violet{--flair-c:#AE85F4} /* 4.63 */
+[data-theme="dark"] .flair--rose{--flair-c:#ED718C}   /* 4.62 */
+[data-theme="dark"] .flair--amber{--flair-c:#E57E06}  /* 4.62 */
+[data-theme="dark"] .flair--green{--flair-c:#1DAF54}  /* 4.61 */
+[data-theme="dark"] .flair--slate{--flair-c:#8E9BAE}  /* 4.60 */
+[data-theme="dark"] .flair--gold{--flair-c:#E1A54D;--flair-warm:#E8BB79} /* 4.60 */
 
 /* Flair picker (Settings › Account) --- */
 .flairpick-hint{margin:0 0 10px;font-size:12px;color:var(--t3);line-height:1.5}
@@ -9330,14 +9484,33 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 .flairpick-group-label{margin:12px 0 8px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
 .flairpick-group-label:first-of-type{margin-top:0}
 .flairpick-grid{display:flex;flex-wrap:wrap;gap:7px}
-/* Chips reuse the .flair pill look but as tappable targets; muted until picked. */
-.flairpick-chip{padding:4px 11px;font-size:11.5px;cursor:pointer;opacity:.62;transition:opacity var(--dur-2,.14s) var(--ease-out,ease),box-shadow var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
-.flairpick-chip:hover{opacity:.92}
-.flairpick-chip.is-on{opacity:1;color:#fff;background:var(--flair-c);border-color:var(--flair-c);box-shadow:0 1px 4px color-mix(in srgb,var(--flair-c) 34%,transparent)}
-.flairpick-chip.is-on:hover{opacity:1}
+/* Chips reuse the .flair pill look but as tappable targets; muted until picked.
+   MUTED BY TINT, NOT BY OPACITY, and that is the whole point of this block.
+   `opacity:.62` on the pill faded the LABEL as well as the fill, and because it
+   fades ink and ground toward each other it cannot be compensated for by any
+   choice of colour. Measured at .62 these chips carried their labels at 2.52:1
+   in light and 2.80:1 in dark; even .82 only reached 3.68 and 3.92. These are
+   real buttons a user picks their flair from, so 4.5 applies and no opacity
+   short of 1.0 could reach it. The resting state now keeps the ink at full
+   strength and mutes the SURFACE instead — half the tint and a lighter border
+   — with hover restoring the full .flair treatment. Same visual intent,
+   readable at every step. */
+.flairpick-chip{padding:4px 11px;font-size:11.5px;cursor:pointer;background:color-mix(in srgb,var(--flair-c) 6%,transparent);border-color:color-mix(in srgb,var(--flair-c) 18%,transparent);transition:background var(--dur-2,.14s) var(--ease-out,ease),border-color var(--dur-2,.14s) var(--ease-out,ease),box-shadow var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
+.flairpick-chip:hover{background:color-mix(in srgb,var(--flair-c) 12%,transparent);border-color:color-mix(in srgb,var(--flair-c) 30%,transparent)}
+/* THE SELECTED CHIP INVERTS, so its ink has to invert too. `color:#fff` was
+   correct only for as long as the tones had no dark values: the dark tones are
+   necessarily lighter, and white on them measures 2.81-2.87:1 across every
+   tone. This is the same mirror defect the state tokens carry a --*-fg token
+   for, and --flair-fg is that token: #fff in light (6.32-7.58), #0B0D10 in dark
+   (6.78-6.91). Adding dark tones without this would have CREATED the bug. */
+.flairpick-chip.is-on{color:var(--flair-fg);background:var(--flair-c);border-color:var(--flair-c);box-shadow:0 1px 4px color-mix(in srgb,var(--flair-c) 34%,transparent)}
 .flairpick-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.flairpick-chip.is-locked{cursor:default;opacity:.5}
-.flairpick-chip.is-locked:hover{opacity:.5}
+/* Earned badges are not selectable, but they ARE meant to be read — the copy
+   above them exists so people know the badges exist. So they are marked
+   unavailable by a dashed, unfilled outline rather than dimmed to 50%, which
+   would have made the one group nobody can act on the hardest group to read. */
+.flairpick-chip.is-locked{cursor:default;background:transparent;border-style:dashed;border-color:color-mix(in srgb,var(--flair-c) 34%,transparent)}
+.flairpick-chip.is-locked:hover{background:transparent;border-color:color-mix(in srgb,var(--flair-c) 34%,transparent)}
 
 /* ── Gradient Generator (/color/gradient) ───────────────────────────────────
    The --ggn-* vars alias the app design tokens so the tool follows the active
@@ -9814,7 +9987,16 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .typ-notice>div{display:flex;flex-direction:column;gap:4px;min-width:0}
 .typ-notice strong{font-size:13px;font-weight:700;color:var(--t0)}
 .typ-notice span{font-size:12.5px;color:var(--t1);line-height:1.55}
-.typ-notice-retry{align-self:flex-start;margin-top:6px;min-height:34px;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--radius-s);border:1px solid var(--brand);background:var(--brand-bg);color:var(--accent-strong);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+/* TWO TINTS WERE STACKING HERE. .typ-notice is an amber warn tint; this button
+   then laid --brand-bg (a translucent blue) on top of it, so the label sat on a
+   muddy composite of both — measured #d6d7d6 in light and #30332f in dark, for
+   4.04:1 and 4.11:1 against 12px/600 text that needs 4.5.
+   Neither tint was visible to the contrast walker before its parser learned to
+   read color-mix(), which is why this shipped. A solid --card surface removes
+   the stack entirely and is the better button anyway: a secondary action inside
+   a warning notice should read as a raised control, not as a second wash of
+   colour over the first. Measured after: 5.84:1 light, 5.57:1 dark. */
+.typ-notice-retry{align-self:flex-start;margin-top:6px;min-height:34px;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--radius-s);border:1px solid var(--brand);background:var(--card);color:var(--accent-strong);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .typ-notice-retry:hover:not(:disabled){background:var(--accent-strong);color:var(--accent-fg)}
 .typ-notice-retry:disabled{opacity:.6;cursor:progress}
 .typ-notice-retry:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
@@ -10145,7 +10327,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fpr-page{min-width:0;padding-bottom:var(--s-4)}
 .fpr-hero{margin-bottom:var(--s-5)}
 .fpr-hero-copy{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,560px);gap:var(--s-8);align-items:end}
-.fpr-hero h1{margin:0;font-family:var(--serif);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
+.fpr-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
 .fpr-hero-copy>p{max-width:600px;margin:0 0 4px;font-size:15px;line-height:1.65;color:var(--t1)}
 .fpr-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:var(--s-5);border-block:1px solid var(--border)}
 .fpr-status span{display:flex;align-items:baseline;gap:6px;min-width:0;padding:12px 16px;font-size:11px;color:var(--t2)}
@@ -10307,7 +10489,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .tsc-page{min-width:0;padding-bottom:var(--s-4)}
 .tsc-hero{margin-bottom:var(--s-5)}
 .tsc-hero-copy{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,560px);gap:var(--s-8);align-items:end}
-.tsc-hero h1{margin:0;font-family:var(--serif);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
+.tsc-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
 .tsc-hero-copy>p{max-width:600px;margin:0 0 4px;font-size:15px;line-height:1.65;color:var(--t1)}
 .tsc-status{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:var(--s-5);border-block:1px solid var(--border)}
 .tsc-status span{display:flex;align-items:baseline;gap:6px;padding:12px 16px;font-size:11px;color:var(--t2)}
@@ -10470,7 +10652,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .dgh-hero::before{content:"";position:absolute;inset:auto -10% -65% 42%;height:430px;background:radial-gradient(circle,rgba(124,92,255,.55),rgba(50,190,170,.25) 34%,transparent 68%);filter:blur(10px);pointer-events:none}
 .dgh-copy{position:relative;z-index:1;min-width:0}
 .dgh-eyebrow{display:block;margin-bottom:24px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.58)}
-.dgh-hero h1{max-width:720px;margin:0;font-family:var(--serif);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.88;letter-spacing:-.065em;overflow-wrap:break-word}
+.dgh-hero h1{max-width:720px;margin:0;font-family:var(--display);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.88;letter-spacing:-.065em;overflow-wrap:break-word}
 .dgh-hero p{max-width:630px;margin:28px 0 0;font-size:clamp(15px,1.5vw,19px);line-height:1.55;color:rgba(255,255,255,.68)}
 /* Optional inline CTA (the Gradient Library's "Open the Gradient Generator").
    Restated here because the hero is a fixed dark surface in BOTH themes, so the
@@ -10487,11 +10669,11 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .dgh-aside{position:relative;z-index:1;display:flex;flex-direction:column;gap:14px;min-width:0}
 .dgh-mark{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
 .dgh-mark span{margin-bottom:36px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:#a89bff}
-.dgh-mark strong{font-family:var(--serif);font-size:92px;font-weight:500;line-height:.8;letter-spacing:-.07em}
+.dgh-mark strong{font-family:var(--display);font-size:92px;font-weight:500;line-height:.8;letter-spacing:-.07em}
 .dgh-mark small{margin-top:12px;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5)}
 .drh-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
 .drh-head span{display:block;margin-bottom:7px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent-strong)}
-.drh-head h2{margin:0;font-family:var(--serif);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
+.drh-head h2{margin:0;font-family:var(--display);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
 .drh-head p{margin:0;font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
 @media(max-width:720px){
   /* min-height 300, NOT 430. THE 430 WAS BACKWARDS: this block hides .dgh-mark,
@@ -10903,7 +11085,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 /* Font Gallery */
 .fg-page{padding-bottom:72px}
 .fg-hero--premium{min-height:420px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
-.fg-hero--premium::after{content:"Aa";position:absolute;right:-.035em;bottom:-.31em;font-family:var(--serif);font-size:clamp(230px,32vw,470px);font-weight:500;line-height:1;color:rgba(255,255,255,.035);letter-spacing:-.1em;pointer-events:none}
+.fg-hero--premium::after{content:"Aa";position:absolute;right:-.035em;bottom:-.31em;font-family:var(--display);font-size:clamp(230px,32vw,470px);font-weight:500;line-height:1;color:rgba(255,255,255,.035);letter-spacing:-.1em;pointer-events:none}
 .fg-hero--premium{position:relative;overflow:hidden}
 .fg-hero-topline{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:clamp(64px,9vw,116px)}
 .fg-hero--premium .sec-h-eyebrow{color:rgba(255,255,255,.5)}
@@ -11086,7 +11268,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 .fpr-hero-pair{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;padding:14px 0;border-block:1px solid rgba(255,255,255,.15)}
 .fpr-hero-pair span{min-width:0;font-size:13px;font-weight:650;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fpr-hero-pair span:last-child{text-align:right}
-.fpr-hero-pair i{font-family:var(--serif);font-size:22px;font-style:normal;color:#9788ff}
+.fpr-hero-pair i{font-family:var(--display);font-size:22px;font-style:normal;color:#9788ff}
 .fpr-status{gap:8px;margin:0 0 18px;padding:8px;border:1px solid var(--border);border-radius:15px;background:var(--bg-1)}
 .fpr-status span{min-height:42px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:9px}
 .fpr-status span+span{border-left:1px solid var(--border)}
@@ -11103,7 +11285,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 .fpr-h1{font-size:clamp(42px,6vw,76px);line-height:1.01}
 .fpr-gallery-callout{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;margin:-4px 0 22px;padding:12px;color:var(--t0);background:linear-gradient(135deg,var(--brand-bg),var(--bg-1));border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:13px;text-decoration:none;transition:transform var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
 .fpr-gallery-callout:hover{transform:translateY(-2px);border-color:var(--brand)}
-.fpr-gallery-callout-mark{display:grid;place-items:center;width:48px;height:48px;font-family:var(--serif);font-size:22px;background:var(--card);border:1px solid var(--border);border-radius:10px}
+.fpr-gallery-callout-mark{display:grid;place-items:center;width:48px;height:48px;font-family:var(--display);font-size:22px;background:var(--card);border:1px solid var(--border);border-radius:10px}
 .fpr-gallery-callout>span:nth-child(2){display:flex;flex-direction:column;gap:3px;min-width:0}
 .fpr-gallery-callout strong{font-size:12.5px}
 .fpr-gallery-callout small{font-size:10.5px;line-height:1.4;color:var(--t2)}
@@ -11585,7 +11767,7 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    between the two numbers that were being argued over. `.plans-honesty` already
    uses 72ch for the same reason. */
 .legal-card{max-width:72ch;margin-inline:auto;line-height:1.8}
-.legal-h{font-family:var(--serif);font-size:22px;font-weight:500;letter-spacing:-.015em;margin-bottom:12px}
+.legal-h{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.015em;margin-bottom:12px}
 .legal-h--tight{margin-bottom:8px}
 .legal-h--sm{font-family:var(--font);font-size:16px;font-weight:700;letter-spacing:normal}
 
