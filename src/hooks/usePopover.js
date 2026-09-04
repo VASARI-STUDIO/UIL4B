@@ -41,6 +41,21 @@ export function focusablesIn(node) {
     .filter(el => el.offsetParent !== null || el === document.activeElement)
 }
 
+// Write an attribute only when it would actually change.
+//
+// This runs on every scroll event while a popover is open, and the writes are
+// the expensive half rather than the reads: a `setAttribute` invalidates layout,
+// so writing an unchanged value and then reading `getBoundingClientRect` on the
+// next event is a read-write-read cycle that forces a fresh layout each time.
+// The nav trigger sits in a FIXED bar, so its box does not move while the page
+// scrolls and every one of those writes was rewriting the value it already had.
+// Measured on the home page with the account panel open, one wheel gesture:
+// 110 attribute writes before this guard, 0 after — the placement genuinely
+// never changes during a scroll, so the whole cycle was waste.
+const setIfChanged = (el, name, value) => {
+  if (el.getAttribute(name) !== value) el.setAttribute(name, value)
+}
+
 // Decide which side the panel hangs off and whether it opens upward, by
 // measuring the TRIGGER and the panel's own size rather than the panel's
 // current position. Measuring the positioned panel would feed its own placement
@@ -61,17 +76,18 @@ export function placePopover(trigger, panel) {
   let align = 'end'
   if (!endFits && startFits) align = 'start'
   else if (!endFits && !startFits) align = 'clamp'
-  panel.setAttribute('data-pop-align', align)
+  setIfChanged(panel, 'data-pop-align', align)
 
   // Vertical: open upward only when the panel genuinely does not fit below AND
   // there is more room above. Flipping into an equally short gap helps nobody.
   const roomBelow = vh - anchor.bottom
   const roomAbove = anchor.top
   const side = h + EDGE_PAD > roomBelow && roomAbove > roomBelow ? 'top' : 'bottom'
-  panel.setAttribute('data-pop-side', side)
+  setIfChanged(panel, 'data-pop-side', side)
 
   // Whatever side it lands on, never let it grow taller than the space it has.
-  panel.style.setProperty('--pop-max-h', `${Math.max(140, Math.round((side === 'top' ? roomAbove : roomBelow) - EDGE_PAD * 2))}px`)
+  const maxH = `${Math.max(140, Math.round((side === 'top' ? roomAbove : roomBelow) - EDGE_PAD * 2))}px`
+  if (panel.style.getPropertyValue('--pop-max-h') !== maxH) panel.style.setProperty('--pop-max-h', maxH)
 }
 
 // Which control an arrow/Home/End press should move to. Pure, so the wrapping
@@ -117,15 +133,42 @@ export default function usePopover(open, onClose, { initialFocus = null, autoFoc
   }, [])
 
   // Placement runs before paint so the panel is never seen in the wrong place.
+  //
+  // The FIRST placement stays synchronous, inside the layout effect, for exactly
+  // that reason. Every LATER one is coalesced into a single animation frame.
+  //
+  // The listener is on `window` in the CAPTURE phase, which is the only position
+  // that sees a scroll event from every element in the document rather than only
+  // the page. That breadth is WANTED — an ancestor scroller moving the trigger
+  // has to move the panel with it — but it is also what makes the handler run
+  // often, and placePopover forces synchronous layout every time it does.
+  //
+  // BE HONEST ABOUT WHAT THE COALESCING BUYS, because it was measured and it is
+  // less than it looks. On the home page with the account panel open, one wheel
+  // gesture delivers 55 scroll events across 93 frames — already at most one per
+  // frame — so rAF merges nothing there, and the invocation count is identical
+  // with and without it. It is a BOUND, not a saving: it caps the work at one
+  // placement per frame for the case the capture phase exists to catch, several
+  // scrollers reporting in the same frame. The measured saving came from the
+  // idempotent writes in placePopover instead (110 attribute writes to 0).
+  //
+  // `passive` because neither handler calls preventDefault: it tells the browser
+  // it never has to wait on this listener before it scrolls.
   useLayoutEffect(() => {
     if (!open) return undefined
-    const reposition = () => placePopover(triggerRef.current, popRef.current)
-    reposition()
-    window.addEventListener('resize', reposition)
-    window.addEventListener('scroll', reposition, true)
+    let frame = 0
+    const place = () => {
+      frame = 0
+      placePopover(triggerRef.current, popRef.current)
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(place) }
+    place()
+    window.addEventListener('resize', schedule, { passive: true })
+    window.addEventListener('scroll', schedule, { capture: true, passive: true })
     return () => {
-      window.removeEventListener('resize', reposition)
-      window.removeEventListener('scroll', reposition, true)
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('resize', schedule)
+      window.removeEventListener('scroll', schedule, true)
     }
   }, [open])
 
