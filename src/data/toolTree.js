@@ -263,6 +263,24 @@ function requireTool(id, where) {
   return tool
 }
 
+// A tool id resolved to the route the router actually has.
+//
+// categoryDestination() above answers a different question — where a link to a
+// CATEGORY HEAD should land — and it is not interchangeable with this one. Four
+// of the homepage step rail's five destinations are specific tools that are not
+// their group's destination: the Colour group's head resolves to /create/color
+// (its home renders), not to /create/palette or /create/gradient, and the Type
+// group's head resolves to /create/font-gallery, not /create/type-scale. Only
+// Icons coincides. Reaching for categoryDestination() there would have quietly
+// moved four links, which is why the rule a consumer needs is stated once here
+// rather than borrowed from the one next to it.
+//
+// Unknown ids throw at import, so a typo fails `npm run build` (prerender.mjs
+// imports this module) rather than shipping a dead href.
+export function toolRoute(id) {
+  return requireTool(id, 'toolRoute').route
+}
+
 export const HOME_SATELLITES = HOME_SATELLITE_SPEC.map((sat) => {
   const tool = requireTool(sat.id, 'HOME_SATELLITE_SPEC')
   const group = CREATE_GROUPS.find((g) => g.id === tool.group)
