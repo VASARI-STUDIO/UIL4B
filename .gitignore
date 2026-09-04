@@ -85,3 +85,4 @@ __*.py
 .claude/skills/impeccable
 # ...and the lockfile that package manager writes alongside them.
 skills-lock.json
+tests/flakeprobe-a0e1/artifacts/

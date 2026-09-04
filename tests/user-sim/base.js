@@ -49,6 +49,19 @@ export const STUB_HEADER = 'x-uil4b-one-tap-stub'
 /** Per-run ledger the global teardown asserts on. Written under report/. */
 export const ONE_TAP_AUDIT_FILE = path.join(REPORT_DIR, 'one-tap-audit.jsonl')
 
+/**
+ * Per-run ledger of BUILD ASSETS that failed to load. Written under report/,
+ * asserted on by the global teardown. See watchBuildAssets below.
+ */
+export const STALE_ASSET_AUDIT_FILE = path.join(REPORT_DIR, 'stale-asset-audit.jsonl')
+
+/**
+ * Where a context's build-asset failures hang, so `ready()` in helpers.js can
+ * name the real cause in its own message without importing this file (which
+ * imports helpers.js, so a real import would be a cycle).
+ */
+export const ASSET_TROUBLE = Symbol.for('uil4b.buildAssetTrouble')
+
 /** True for any URL on the One Tap host. Takes a string. */
 export function isOneTapUrl(url) {
   try { return new URL(url).hostname === ONE_TAP_HOST } catch { return false }
@@ -156,11 +169,98 @@ export function isOneTapStubInstalled(browser) {
   return browser[PATCHED] === true
 }
 
+function appendAssetAudit(rows) {
+  try {
+    fs.mkdirSync(REPORT_DIR, { recursive: true })
+    fs.appendFileSync(STALE_ASSET_AUDIT_FILE, rows.map((r) => JSON.stringify(r) + '\n').join(''))
+  } catch { /* evidence, never a source of failure itself */ }
+}
+
+/* ── Build assets that 404 in the middle of a run ────────────────────────
+ *
+ * WHY THIS EXISTS
+ * `vite build` EMPTIES dist/ before it refills it, and `vite preview` serves
+ * dist/ live. So a second `npm run build` — or a second `npm run test:users`,
+ * which begins with one — against the same checkout deletes the content-hashed
+ * chunks the running workers are part-way through fetching. For the second or
+ * so that takes, any asset request can 404: the entry bundle, react-dom, a lazy
+ * route chunk, index.html itself.
+ *
+ * What that looks like from inside a worker is NOT `the build is broken`. It is
+ * one arbitrary assertion in one arbitrary spec failing with `element(s) not
+ * found`, on a page that renders perfectly every other time — because the app
+ * never finished loading. The victim is whichever worker happened to be
+ * mid-fetch, so it lands on a different spec each time, passes in isolation,
+ * and passes on a re-run. That is the entire signature of the flake class filed
+ * as `suite-flake-class-unreproduced`, and it is measured rather than guessed:
+ * the six spec files named in that item pass 130/130 against a stable dist/ and
+ * fail 16 times across three of them with a rebuild loop running underneath.
+ * tests/flakeprobe-a0e1/ is that experiment, kept runnable.
+ *
+ * WHY A 4xx UNDER /assets/ IS UNAMBIGUOUS
+ * Those are content-hashed build outputs, so in a healthy run they cannot 404.
+ * Nothing in this suite fulfils one with an error status either: the only two
+ * specs that interfere with a chunk use `route.abort()` (10-home, for the
+ * missing-GSAP persona) and a delayed `route.continue()`
+ * (47-lazy-route-readiness), and neither produces an HTTP response at all.
+ * Requests the app makes to /api/* are expected to 404 under `vite preview` and
+ * are deliberately NOT matched here.
+ *
+ * WHY IT FAILS THE RUN AND NOT THE TEST
+ * Because a rebuilt dist/ makes every result in the run meaningless — the
+ * passes exactly as much as the failures. A run this happened in cannot be read
+ * as evidence either way, which is the same reason the One Tap guard above
+ * fails a green run.
+ */
+export function watchBuildAssets(context) {
+  const bad = []
+  context[ASSET_TROUBLE] = bad
+  context.on('response', (res) => {
+    if (res.status() < 400) return
+    let pathname
+    try { pathname = new URL(res.url()).pathname } catch { return }
+    if (!pathname.startsWith('/assets/')) return
+    bad.push(`${res.status()} ${pathname}`)
+  })
+  context.on('close', () => { if (bad.length) appendAssetAudit(bad) })
+  return context
+}
+
+/** Every build-asset failure recorded this run, deduplicated. */
+export function readStaleAssetAudit() {
+  if (!fs.existsSync(STALE_ASSET_AUDIT_FILE)) return []
+  return fs.readFileSync(STALE_ASSET_AUDIT_FILE, 'utf8')
+    .split('\n').filter(Boolean).map((l) => JSON.parse(l))
+}
+
+/**
+ * Suite-wide observational guard, run from the global teardown: dist/ held
+ * still for the whole run. Throws, for the reasons in watchBuildAssets.
+ */
+export function assertNoStaleBuildAssets() {
+  const bad = readStaleAssetAudit()
+  if (!bad.length) return
+  const uniq = [...new Set(bad)]
+  throw new Error(
+    `${bad.length} build asset request(s) failed during this run, on ${uniq.length} distinct `
+    + 'file(s). Files under /assets/ are content-hashed build outputs and cannot 404 in a '
+    + 'healthy run:\n  '
+    + `${uniq.slice(0, 12).join('\n  ')}`
+    + `${uniq.length > 12 ? `\n  ...and ${uniq.length - 12} more` : ''}`
+    + '\n\nSomething REBUILT dist/ while this suite was running. `vite build` empties dist/ '
+    + 'before refilling it and `vite preview` serves it live, so a concurrent `npm run build` '
+    + 'or `npm run test:users` in this checkout deletes the chunks these pages were loading. '
+    + 'Every result in this run is void — the passes as much as the failures. Re-run it with '
+    + 'nothing else building, and give each concurrent agent its own PLAYWRIGHT_PORT *and* its '
+    + 'own checkout. See tests/flakeprobe-a0e1/README.md.',
+  )
+}
+
 export const test = base.extend({
   browser: [async ({ browser }, use) => {
     if (!browser[PATCHED]) {
       const newContext = browser.newContext.bind(browser)
-      browser.newContext = async (...args) => stubOneTap(await newContext(...args))
+      browser.newContext = async (...args) => watchBuildAssets(await stubOneTap(await newContext(...args)))
       browser[PATCHED] = true
     }
     await use(browser)
