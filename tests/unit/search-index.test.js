@@ -288,6 +288,55 @@ test('the cycled hints are real live tools, and every one finds itself', () => {
   }
 })
 
+test('searchHints refuses a workshop tool even when the caller forgets to filter', () => {
+  // THE SUBSTITUTION THIS CATCHES, and why the test above cannot catch it.
+  //
+  // The assertion above calls `searchHints(liveTools())` — it filters `soon`
+  // out of its OWN input and then checks the output has no `soon` in it. That
+  // passes whether the rule lives in the helper or in the caller, so it was
+  // measuring the test's own filter, not the product's.
+  //
+  // Until 2026-09-05 the rule lived only in the two callers. Both got it right,
+  // so nothing was visibly wrong — but a third surface reading the signature
+  // and passing the plain registry would have advertised every unbuilt tool in
+  // the persistent nav, on every page, which is the exact defect #332 closed.
+  //
+  // So: hand it the WHOLE registry, workshop tools included, and demand it
+  // still refuses them. Nothing here names a tool; both sides are derived.
+  const advertised = new Set(searchHints(TOOL_ENTRIES))
+  const workshop = TOOL_ENTRIES.filter((t) => t.soon)
+  assert.ok(workshop.length > 0, 'no workshop tools left — this assertion has nothing to prove')
+  for (const tool of workshop) {
+    assert.ok(!advertised.has(tool.label),
+      `searchHints advertised "${tool.label}", which has no page — the workshop filter is back in the callers`)
+  }
+  // And it must not have bought that by returning nothing at all.
+  assert.ok(advertised.size >= 6, `only ${advertised.size} hints survive — the filter is now eating live tools`)
+  // Unfiltered in must equal pre-filtered in. If these ever differ, one of the
+  // two call sites is getting a different list from the other.
+  assert.deepEqual(searchHints(TOOL_ENTRIES), searchHints(liveTools()),
+    'searchHints answers differently depending on whether the caller pre-filtered')
+})
+
+test('PillNav writes down no tool name at all, under any variable name', () => {
+  // The assertion below bans the identifier SEARCH_HINTS. That is the old array
+  // by its old name, and renaming it to NAV_HINTS would walk straight past it.
+  //
+  // This one is structural instead: take every label the registry knows and
+  // demand none of them is typed into PillNav.jsx as a literal. A hand-kept
+  // list has to write the names down somewhere — that is what makes it
+  // hand-kept — so it cannot survive this whatever it is called.
+  //
+  // NO TOOL IS NAMED HERE. The list comes from the registry, so a renamed tool
+  // moves this assertion with it rather than stranding a fourth copy in a test.
+  const src = stripComments(read('src/components/PillNav.jsx'))
+  assert.ok(src.includes('SearchPlaceholder'), 'stripping ate PillNav own code')
+  for (const tool of TOOL_ENTRIES) {
+    assert.ok(!src.includes(`'${tool.label}'`) && !src.includes(`"${tool.label}"`),
+      `PillNav writes "${tool.label}" down as a literal — that is a hand-kept tool list again`)
+  }
+})
+
 test('PillNav no longer keeps its own hint list', () => {
   // The second half of the same defect, and the reason it is in this file: the
   // hero was fixed in #320 while the persistent nav — on every page — kept a
