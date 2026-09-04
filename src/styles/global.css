@@ -10828,8 +10828,57 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
    rejected that trade on this exact layout on WCAG 2.4.3 grounds. Search →
    filters → action is the DOM order, the visual order and the focus order, at
    every width. */
-@media(min-width:641px) and (max-width:980px){
+/* PATTERN B, FOURTH INSTANCE - and the band bound above was the bug.
+
+   #318 wrote the two rules below for 641-980 because that was the range with no
+   layout of its own. The reasoning it gave - "`.lbry-search{flex:1 1 240px}` has
+   no ceiling, so with nothing to compete with on a short row it takes the WHOLE
+   row and pushes every filter group onto a line of its own", and "`margin-left:
+   auto` then strands the action on a ragged last row, hard right, alone" - is
+   not a fact about 641-980. It is a fact about a row whose filter tray cannot
+   share it. Above 980 the tray usually can, so the fault stayed hidden on five
+   of the six surfaces and shipped on the sixth.
+
+   Founder, 2026-09-04: "the header design changes height switching from the
+   emoji to icon library. the bar is broken visually on a standard desktop."
+
+   MEASURED at 1440x900 before this change:
+
+     /create/icons   toolbar  68px   tray wants  493px   one line
+     /create/emoji   toolbar 213px   tray wants 1478px   THREE lines
+
+   145px of jump on a tab switch, and on the emoji side exactly the shape #318
+   named: a 1321px search field alone on line one, the tray wrapped to two chip
+   rows on line two, and a 70px skin-tone control orphaned hard right on line
+   three. The emoji tray needs 1478px because it carries twelve categories with
+   a glyph, a label and a count each; no desktop under about 2050px can give it
+   a line, so this was never going to fix itself at a wider breakpoint.
+
+   THE CAP NOW APPLIES AT EVERY WIDTH FROM 641 UP, and that is the whole of the
+   change here. 360px was never a tablet number: it is `.pl-search-wrap`'s
+   long-standing desktop ceiling, which is to say the width this codebase
+   already decided a search field is worth. Giving the field a ceiling is also
+   what lets LibraryFilterGroup ask an honest question about the space that is
+   left - see the note on COLLAPSE_QUERY there - because the budget the tray is
+   measured against stops depending on how the tray itself laid out.
+
+   A GRID WAS TRIED HERE AND REVERTED, which is worth recording so the next
+   person does not spend the afternoon on it. Three explicit tracks
+   (`minmax(0,360px) minmax(0,1fr) auto`) do make the row deterministic, but a
+   fixed first track cannot give width back the way `flex:1 1 240px` does, and
+   flex was quietly relying on that: measured on this branch, the Prompt Library
+   at 1024px went 68px -> 124px and the Icon Library at 834px went 68px -> 120px,
+   because the search field held 360px that the filter row needed. Flex shares
+   the row correctly already. What it could not do was stop a 1478px tray from
+   wrapping, and that is fixed where the tray is, not where the row is. */
+@media(min-width:641px){
   .lbry-search{max-width:360px}
+}
+/* The auto margin is dropped only in the band #318 wrote it for. Above 980 the
+   action no longer lands on a ragged last row — the tray collapses before the
+   row runs out — so there is nothing to rescue it from, and pinning it to the
+   far edge is the resting look those five surfaces already had. */
+@media(min-width:641px) and (max-width:980px){
   .lbry-toolbar-action{margin-left:0}
 }
 
