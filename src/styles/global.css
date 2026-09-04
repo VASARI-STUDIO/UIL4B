@@ -8279,11 +8279,33 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .cc-fix-apply,.cc-fix-copy{padding:6px 12px;font-size:12px;font-weight:600;background:none;border:1px solid var(--border);border-radius:var(--radius-s);color:var(--t1);cursor:pointer;transition:all var(--t);flex-shrink:0}
 .cc-fix-apply:hover,.cc-fix-copy:hover{border-color:var(--brand);color:var(--t0)}
 /* Live preview — fg/bg arrive as custom props set via ref */
-.cc-preview{padding:28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--cc-bg);color:var(--cc-fg)}
-.cc-preview-large{font-size:24px;font-weight:700;letter-spacing:-.01em;margin:0 0 12px}
-.cc-preview-normal{font-size:16px;line-height:1.6;margin:0 0 12px}
-.cc-preview-small{font-size:12px;margin:0 0 18px}
-.cc-preview-ui{display:inline-block;padding:8px 18px;font-size:13px;font-weight:600;border:2px solid var(--cc-fg);border-radius:var(--radius-s)}
+/* ── The live preview [contrast-checker-overhaul] ──
+   The four .cc-preview-* rules this replaces styled four lines that described
+   the test instead of being one. The design specification, the Mobbin
+   references behind it and the one rule the chips obey are all in the header of
+   src/pages/ContrastChecker.jsx — kept there because it is a decision about
+   what the page SAYS, not about how it is painted. */
+.cc-lede{font-size:12.5px;color:var(--t2);line-height:1.55;margin:0 0 14px}
+.cc-preview{display:flex;flex-direction:column;gap:18px;padding:24px;border-radius:var(--radius);border:1px solid var(--border);background:var(--cc-bg);color:var(--cc-fg)}
+.cc-spec-row{display:flex;align-items:flex-start;gap:12px}
+.cc-spec-row>:first-child{flex:1;min-width:0;margin:0}
+.cc-spec-h{font-size:24px;font-weight:700;letter-spacing:-.015em;line-height:1.25}
+.cc-spec-body{font-size:16px;line-height:1.55}
+.cc-spec-small{font-size:12px;line-height:1.5}
+.cc-spec-link{text-decoration:underline}
+.cc-spec-actions{display:flex;flex-wrap:wrap;gap:8px}
+/* The solid button inverts the pair on purpose — same ratio, read the other way
+   round, which is the point the hint under the preview makes. */
+.cc-spec-btn{display:inline-block;padding:9px 16px;font-size:14px;font-weight:600;border:2px solid var(--cc-fg);border-radius:var(--radius-s);background:var(--cc-fg);color:var(--cc-bg)}
+.cc-spec-btn--ghost{background:transparent;color:var(--cc-fg)}
+/* PAGE TOKENS ONLY. A chip painted in the pair under test goes unreadable
+   exactly when the pair fails — the moment its reader needs it most. `--bg-1`
+   and `--border` are opaque, so the chip stays legible over any --cc-bg, and
+   06-colour-tool-workbenches measures these in both themes. */
+.cc-verdict{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:4px 8px;font-family:var(--mono);font-size:11px;font-weight:700;line-height:1;white-space:nowrap;border-radius:999px;background:var(--bg-1);border:1px solid var(--border);color:var(--t1)}
+.cc-verdict-mark{font-weight:700}
+.cc-verdict--pass .cc-verdict-mark{color:var(--ok-strong)}
+.cc-verdict--fail .cc-verdict-mark{color:var(--err-strong)}
 .cc-more{display:flex;gap:20px;flex-wrap:wrap;margin-top:32px}
 .cc-more-link{font-size:13px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
 .cc-more-link:hover{color:var(--accent-strong)}
@@ -8304,6 +8326,10 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
   .cc-fix-apply{grid-area:2/1}
   .cc-fix-copy{grid-area:2/2}
   .cc-fix-apply,.cc-fix-copy{min-height:40px}
+  /* Below ~520px the chip and a 24px heading fight for the same line and the
+     heading loses to a 2-3 word wrap. Stack instead: the chip reads as a
+     caption on its element, which is still the association that matters. */
+  .cc-spec-row{flex-direction:column;align-items:flex-start;gap:8px}
 }
 
 /* ══════════ Palette Builder (/color/palette) ══════════ */

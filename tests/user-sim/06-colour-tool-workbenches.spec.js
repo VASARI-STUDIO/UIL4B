@@ -259,6 +259,14 @@ test.describe('Semantic Colour system workflow', () => {
 // The check is computed the way the page itself computes it (WCAG relative
 // luminance), against the nearest opaque ancestor background, so it measures
 // what is painted rather than what the stylesheet says.
+//
+// `.cc-verdict` and `.cc-lede` joined the set with the preview overhaul
+// [contrast-checker-overhaul]. The chips are the interesting addition: they are
+// the only text on the page that SITS on the user's chosen background, and a
+// chip that painted with the pair would go unreadable at exactly the ratios
+// this page exists to warn about. They use page tokens instead, and this is
+// what holds them to it — swap `--bg-1` for `var(--cc-bg)` in .cc-verdict and
+// both themes fail here.
 test.describe('The Contrast Checker meets the standard it enforces', () => {
   for (const theme of ['light', 'dark']) {
     test(`its own verdict and check text passes AA in ${theme} theme`, async ({ browser }) => {
@@ -323,7 +331,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           return [255, 255, 255]
         }
         const out = []
-        for (const el of document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc')) {
+        for (const el of document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc, .cc-verdict, .cc-lede')) {
           const cs = getComputedStyle(el)
           const bg = bgOf(el)
           const raw = parse(cs.color)
@@ -345,10 +353,10 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       // means either that everything passed or that the walk matched no
       // elements at all, and those are not the same result.
       const measured = await page.locator(
-        '.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc').count()
+        '.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc, .cc-verdict, .cc-lede').count()
       await ctx.close()
       expect(measured, `no contrast-checker text was found to measure in ${theme}`)
-        .toBeGreaterThan(3)
+        .toBeGreaterThan(8)
       expect(failures, `the contrast checker's own UI must meet AA in ${theme}:\n${failures.join('\n')}`).toEqual([])
     })
   }
