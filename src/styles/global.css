@@ -1156,7 +1156,11 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-add-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
 
 /* Gallery grid — masonry-like with varying heights */
-.pl-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:16px;margin-top:8px}
+.pl-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));--pl-gap:16px;gap:var(--pl-gap);margin-top:8px}
+/* The locked tease continues the gallery, so its seam is the ROW GAP, not
+   the 8px that separates the first grid from the toolbar. --pl-gap is read
+   rather than repeated: the 720px band retunes it and the seam follows. */
+.pl-gallery--continues{margin-top:var(--pl-gap)}
 
 /* Card */
 .pl-card{border-radius:var(--radius-l);overflow:hidden;cursor:pointer;transition:all var(--dur-3) var(--ease-out);position:relative;background:var(--card);border:1px solid var(--border)}
@@ -1661,7 +1665,7 @@ img,svg,video{max-width:100%;height:auto}
   .sec-h h1{line-height:1.25}
   .cat-bento-hero{padding:80px 26px 26px;min-height:260px}
   .cat-bento-hero-icon{top:22px;left:26px}
-  .pl-gallery{grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:14px}
+  .pl-gallery{grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));--pl-gap:14px}
 }
 
 /* Tablet portrait → mobile transition (≤860px) — sidebar drawer */
