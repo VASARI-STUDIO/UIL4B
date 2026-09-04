@@ -220,3 +220,21 @@ test('the CTA number is derived from the data, never written as a literal', () =
     assert.ok(/Another \$\{locked/.test(src), `${file} must interpolate the remaining count into its heading`)
   }
 })
+
+test('a locked placeholder never animates, so it cannot read as a failed load', () => {
+  // PRODUCT.md forbids a decorative mock-up that "reads as a component that
+  // failed to load". A pulsing placeholder is the strongest loading signal
+  // there is, so no .lockt- rule may carry an animation or a transition — and
+  // #336 means any animation added here would also need the reduced-motion
+  // guard pair, which is a second reason not to reach for one.
+  const css = stripComments(read('src/styles/global.css'))
+  const offenders = []
+  for (const rule of css.split('}')) {
+    const [selector, body = ''] = rule.split('{')
+    if (!/\.lockt-/.test(selector)) continue
+    if (/(^|;|\s)(animation|transition)\s*:/.test(body)) offenders.push(selector.trim().slice(0, 80))
+  }
+  assert.deepEqual(offenders, [], `a locked placeholder rule animates: ${offenders.join(' / ')}`)
+  // Not vacuous: the selectors must actually be in the stylesheet.
+  assert.ok(css.includes('.lockt-stripes'), 'the locked-row CSS is missing entirely')
+})

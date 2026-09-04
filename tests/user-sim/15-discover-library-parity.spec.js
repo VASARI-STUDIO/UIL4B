@@ -8,6 +8,16 @@ import { go, watch } from './helpers.js'
 import { LIBRARY_PALETTES, BRAND_LIBRARY_PALETTES, CURATED_LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
 
+// A signed-out visitor browses the FREE side of the library. The paid brand
+// systems are not rendered at all — not blurred, not greyed, absent — because
+// their colours are withheld before the page is built (src/utils/lockedPreview.js).
+// These two constants are what a free viewer can actually see, and the tests
+// below moved onto them when the gate stopped being cosmetic.
+const FREE_BRANDS = BRAND_PALETTES.filter((brand) => brand.free === true)
+const PAID_BRANDS = BRAND_PALETTES.filter((brand) => brand.free !== true)
+const BROWSABLE = CURATED_LIBRARY_PALETTES.length + FREE_BRANDS.length
+const TEASED = 3 // LOCKED_TEASE — placeholders shown before the wall
+
 const LIBRARIES = [
   { route: '/discover/palettes', title: 'Palette Library', noun: 'palette' },
   { route: '/discover/gradients', title: 'Gradient Library', noun: 'gradient' },
@@ -255,18 +265,29 @@ test.describe('Discover libraries share one header', () => {
 // BRAND_PALETTES existed but only the Palette Builder could see them. They now
 // browse alongside the curated set, and must stay TELLABLE APART from it.
 test.describe('the Palette Library carries the brand systems', () => {
-  test('every brand palette is present and badged', async ({ page }) => {
+  test('every FREE brand palette is present and badged, and no paid one is', async ({ page }) => {
+    // This test used to assert all 36 brand cards. That assertion was pinning
+    // the leak: a Pro brand card printed its five hex codes as visible text and
+    // made each swatch a copy-to-clipboard button, so the paid product was on a
+    // public page. A paid brand now has no card at all.
     watch(page, 'designer looking for a brand palette in the library')
     await go(page, '/discover/palettes')
 
     const cards = page.locator('.pgal-card')
-    await expect(cards).toHaveCount(LIBRARY_PALETTES.length)
-    await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(BRAND_PALETTES.length)
+    await expect(cards).toHaveCount(BROWSABLE)
+    await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(FREE_BRANDS.length)
     await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(CURATED_LIBRARY_PALETTES.length)
+
+    // Not one paid brand renders a real card, by name.
+    for (const brand of PAID_BRANDS) {
+      await expect(page.locator('.pgal-card', { hasText: brand.name })).toHaveCount(0)
+    }
+    // The teased placeholders are a different component and carry no swatches.
+    await expect(page.locator('.lockt-card')).toHaveCount(TEASED)
 
     // Distinguishable: every brand card carries a visible Brand badge, and no
     // curated card does.
-    await expect(page.locator('.pgal-card[data-kind="brand"] .pgal-badge')).toHaveCount(BRAND_PALETTES.length)
+    await expect(page.locator('.pgal-card[data-kind="brand"] .pgal-badge')).toHaveCount(FREE_BRANDS.length)
     await expect(page.locator('.pgal-card[data-kind="curated"] .pgal-badge')).toHaveCount(0)
 
     // The hero count and the section headings both tell the truth about the mix.
@@ -277,10 +298,14 @@ test.describe('the Palette Library carries the brand systems', () => {
     // own count, next to the cards it is about rather than in a preamble. The
     // note still renders for a filtered or searched view, where there are no
     // sections; see tests/user-sim/34-palette-library-sections.spec.js.
+    // The hero mark stays the LIBRARY's size — 100 palettes exist and that is a
+    // fact about the collection, not a claim about this viewer's access. The
+    // wall names the locked remainder in the next breath, so the two together
+    // are honest where either alone would not be.
     await expect(page.locator('.dgh-mark strong')).toHaveText(String(LIBRARY_PALETTES.length))
     const sections = page.locator('.pgl-section-head')
     await expect(sections.filter({ hasText: 'Brand systems' }).locator('.pgl-section-count'))
-      .toHaveText(String(BRAND_PALETTES.length))
+      .toHaveText(String(FREE_BRANDS.length))
     await expect(sections.filter({ hasText: 'Curated collection' }).locator('.pgl-section-count'))
       .toHaveText(String(CURATED_LIBRARY_PALETTES.length))
   })
@@ -290,17 +315,23 @@ test.describe('the Palette Library carries the brand systems', () => {
     await go(page, '/discover/palettes')
 
     await page.getByRole('button', { name: 'Brand', exact: true }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(BRAND_LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card')).toHaveCount(FREE_BRANDS.length)
     await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(0)
     await expect(page.locator('.drh-head h2')).toHaveText('Identities you already know')
-    await expect(page.locator('.drh-head p')).toHaveText(`${BRAND_LIBRARY_PALETTES.length} palettes`)
+    await expect(page.locator('.drh-head p')).toHaveText(`${FREE_BRANDS.length} palettes`)
+    // Filtering to Brand is where the wall belongs, so it is shown here.
+    await expect(page.locator('.lockt-cta-btn')).toBeVisible()
 
     await page.getByRole('button', { name: 'Curated', exact: true }).click()
     await expect(page.locator('.pgal-card')).toHaveCount(CURATED_LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(0)
+    // …and NOT here. A curated-only view has no locked rows in it, so a wall
+    // would be an unprompted second ask rather than an offer about what the
+    // user is looking at.
+    await expect(page.locator('.lockt-cta-btn')).toHaveCount(0)
 
     await page.getByRole('button', { name: 'All palettes' }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card')).toHaveCount(BROWSABLE)
   })
 
   test('search reaches a brand by name, and no-results recovers', async ({ page }) => {
@@ -317,32 +348,53 @@ test.describe('the Palette Library carries the brand systems', () => {
     await search.fill('#1DB954')
     await expect(page.locator('.pgal-name')).toHaveText('Spotify')
 
+    // The oracle that used to be here, now closed. The search haystack indexes
+    // every palette's hex values, so filtering the FULL library let a signed-out
+    // visitor CONFIRM a locked brand's colours by typing them — a disclosure
+    // dressed as a search box. Neither a paid brand's name nor its hex may
+    // return anything.
+    const paid = PAID_BRANDS[0]
+    await search.fill(paid.name)
+    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await search.fill(paid.colors[0])
+    await expect(page.locator('.pgal-card')).toHaveCount(0)
+    await expect(page.locator('.pgal-name', { hasText: paid.name })).toHaveCount(0)
+
     await search.fill('zzzzz-not-a-palette')
     await expect(page.locator('.pgal-card')).toHaveCount(0)
     const empty = page.locator('.pgl-empty')
     await expect(empty).toBeVisible()
     await empty.getByRole('button', { name: 'Clear filters' }).click()
-    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
+    await expect(page.locator('.pgal-card')).toHaveCount(BROWSABLE)
   })
 
-  test('the Palette Builder Pro gate on brand systems survives the move', async ({ page }) => {
+  test('a Pro brand system is withheld, not routed around', async ({ page }) => {
+    // The old contract: a Pro brand rendered a full card whose only concession
+    // was that its "Open" link pointed at the builder instead of carrying ?c=.
+    // The colours were still on the page, still copyable from each stripe, and
+    // still printed as text. Routing around a gate is not a gate.
     watch(page, 'free user meeting a Pro brand system in the library')
     await go(page, '/discover/palettes')
     await page.getByRole('button', { name: 'Brand', exact: true }).click()
 
-    // Free brands hand off straight to the builder with their colours.
-    const freeBrand = BRAND_PALETTES.find((brand) => brand.free)
+    // Free brands still hand off straight to the builder with their colours.
+    const freeBrand = FREE_BRANDS[0]
     const freeCard = page.locator('.pgal-card', { hasText: freeBrand.name }).first()
     await expect(freeCard.getByRole('link', { name: new RegExp(`Open ${freeBrand.name}`) }))
       .toHaveAttribute('href', /^\/create\/palette\?c=/)
 
-    // Pro-gated brands do NOT: the builder still owns that decision, so the
-    // card routes there instead of injecting the colours via ?c=.
-    const proBrand = BRAND_PALETTES.find((brand) => !brand.free)
-    const proCard = page.locator('.pgal-card', { hasText: proBrand.name }).first()
-    await expect(proCard.locator('.pgal-badge')).toHaveText('Brand · Pro')
-    await expect(proCard.locator('.pgal-use--pro')).toHaveAttribute('href', '/create/palette')
-    await expect(proCard.locator('a[href*="?c="]')).toHaveCount(0)
+    // A Pro brand has no card, no stripes, no link and no badge — it is absent.
+    const proBrand = PAID_BRANDS[0]
+    await expect(page.locator('.pgal-card', { hasText: proBrand.name })).toHaveCount(0)
+    await expect(page.locator('.pgal-use--pro')).toHaveCount(0)
+    // Nothing anywhere on the page hands its colours over via a deep link.
+    for (const hex of proBrand.colors) {
+      await expect(page.locator(`a[href*="${hex.replace('#', '')}"]`)).toHaveCount(0)
+    }
+
+    // What replaces it: named placeholders and one wall into the canonical gate.
+    await expect(page.locator('.lockt-card')).toHaveCount(TEASED)
+    await expect(page.locator('.lockt-cta-head')).toContainText(String(PAID_BRANDS.length))
   })
 })
 

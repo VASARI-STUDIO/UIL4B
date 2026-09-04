@@ -32,6 +32,25 @@ import { useProModal } from '../../contexts/ProModalContext'
 //   testimonials or metrics, so the CTA states what Pro opens and the true
 //   remaining count, and nothing else.
 
+// ── Why this is not the mock-up PRODUCT.md forbids ──────────────────────────
+//
+// PRODUCT.md: "Decorative mock-ups count as claims. A drawing of a product UI
+// filled with grey placeholder bars is a picture of something that does not
+// exist, and it reads as a component that failed to load."
+//
+// That rule bites on a preview of something UNBUILT. These rows stand for 30
+// brand palettes that are built, are in the repo, and are listed in that same
+// document's contents table — the placeholder withholds a real thing rather
+// than illustrating an absent one, and it carries the item's REAL NAME, so it
+// is a named locked row and not an anonymous grey bar.
+//
+// The second half of the warning still applies and is designed against: a
+// locked row must not read as a failed load. Four things separate them, and
+// none is decorative — a dashed border where a skeleton is solid, a padlock, a
+// real name, and a Pro pill. The fifth is the absence of a shimmer: a pulsing
+// placeholder is the single strongest "this is still loading" signal there is,
+// which is why there is no animation anywhere in this component's CSS.
+
 // Padlock. Decorative everywhere it is used — the surrounding copy already says
 // the row is locked, so announcing it again is noise.
 function LockGlyph() {

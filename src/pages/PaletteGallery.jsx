@@ -153,7 +153,11 @@ export default function PaletteGallery({ toast }) {
           screen-reader user hears "Figma · Pro" exactly as a sighted one reads
           it. Nothing announced here is invented, because the card holds no
           values to invent. */}
-      <LibraryGrid className="pgal-grid">
+      {/* The locked grid names itself too. A screen-reader user meets three
+          more cards after the free ones and needs to know why they differ;
+          without a name this is an unexplained second grid. */}
+      <h4 className="sr-only" id="pgl-locked-brands">Brand systems included with Pro</h4>
+      <LibraryGrid className="pgal-grid" labelledBy="pgl-locked-brands">
         {lockedBrands.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} />)}
       </LibraryGrid>
       <LockedTeaseCta

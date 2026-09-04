@@ -77,7 +77,12 @@ test.describe('public route contract', () => {
 
     await go(page, '/discover/palettes')
     await expect(page.getByRole('heading', { level: 1, name: 'Palette Library' })).toBeVisible()
-    await expect(page.locator('.pgal-card')).toHaveCount(LIBRARY_PALETTES.length)
+    // The browsable count, not the library size: the Pro brand systems are
+    // withheld from a signed-out visitor rather than rendered and styled as
+    // locked, so they produce no card. The hero mark still states the full
+    // library size, and the wall states how many of it are Pro.
+    await expect(page.locator('.pgal-card'))
+      .toHaveCount(LIBRARY_PALETTES.filter((palette) => palette.pro !== true).length)
     await page.getByPlaceholder('Search by name or hex…').fill('Midnight Teal')
     await expect(page.locator('.pgal-card')).toHaveCount(1)
   })
