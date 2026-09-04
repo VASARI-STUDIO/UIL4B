@@ -437,6 +437,140 @@ current behaviour or change it.
 
 ---
 
+## P-019 · What we call design tokens on the site
+
+**Evidence: `observed` + `inferred`** — founder request 2026-09-04, recorded
+verbatim in `token-vocabulary-undersells`; competitor naming checked against 22
+shipped product surfaces via Mobbin.
+
+**The problem, in the founder's words.** "i dont like tokens being such an
+important word we are using around the site, tokens means alot of things and in
+the context we are using it doesnt make it seem like its a huge value add".
+
+**Two things are wrong, and the second one costs money.** *Token* is ambiguous
+— it reads as crypto, as an LLM billing unit, or as an auth credential before
+it reads as a design value. And it names the **mechanism** (how the value is
+stored), not the **benefit** (the hex you change in the palette builder is the
+hex your export ships). The homepage already says the benefit in plain words;
+the tools then fall back on the jargon.
+
+**The collision is internal, not just external.** UIL4B ships all three meanings
+of the word today: *design* tokens across the Create tools, the *auth* token
+(`Bearer ${token}` in Admin and the three AI tools), and the *LLM* token in
+Learn — `/learn/ai` renders stat tiles reading "Token context limit" and
+"Per session token usage". A visitor can meet two different meanings of our most
+important noun in one session.
+
+### What comparable products actually call it
+
+Checked 22 shipped surfaces on Mobbin. **Not one uses "token" in navigation or
+section headings.** Two patterns dominate:
+
+- **Name the things.** [Customer.io Design Studio](https://mobbin.com/screens/e087a5c7-06ed-4c1c-bb24-b4321127202c)
+  (Colors, Fonts, Radius, Spacing), [Retool](https://mobbin.com/screens/77a46731-0e18-442d-8fb3-5890a65a8fc1)
+  (Color, Typography, Metrics), [Gamma](https://mobbin.com/screens/2b7d6d36-9b4f-44da-a994-f005fc7f3ccf),
+  [Zendesk](https://mobbin.com/screens/c622a256-81a1-4145-b050-20ff2fa722b5),
+  [GitBook](https://mobbin.com/screens/e8cebaad-fe0b-49fc-ba51-ecdb0de2da06),
+  [Whereby](https://mobbin.com/screens/6b097ab8-61dd-4fcd-a42c-2a9545798108).
+  Every brand-kit surface does the same — Logos / Colors / Fonts in
+  [Canva](https://mobbin.com/screens/886a741b-5211-4dc3-9b41-b33f3c6418dc),
+  [Mailchimp](https://mobbin.com/screens/7b7b620b-5f21-4cbf-bbc3-9b963e71f7a3),
+  [HubSpot](https://mobbin.com/screens/6216459c-4fa2-481e-b69b-416c4773a1f4),
+  [Adobe Express](https://mobbin.com/screens/900bcf05-9fc0-4e7a-a006-1a99d319c38b),
+  [Typeform](https://mobbin.com/screens/f8b77807-61d0-4586-83c0-5f775010c7e9).
+- **A container noun tied to the outcome.** *Foundations* —
+  [Frontify](https://mobbin.com/sites/sections/b404b671-cffd-4338-a417-8dda0e513d7a)
+  (Foundations: Logo, Color, Text, Icons, Imagery, Layout) and
+  [Cash App Design](https://mobbin.com/sites/sections/b30a76a3-b180-4300-b41b-c55e590e4524)
+  (nav reads "Design Foundations"). *Global Styles* —
+  [Customer.io](https://mobbin.com/sites/sections/b055c129-1ebf-479a-8edd-73e7190634f0).
+
+**The most useful precedent is [Sketch](https://mobbin.com/sites/sections/3ea93e9a-8591-423b-aef7-d78fedddd674).**
+It calls them **Color Variables** in the editor and **Color Tokens** only at the
+export boundary: "we'll automatically generate Color Tokens... grab your tokens
+in CSS or JSON formats". That is exactly the split proposed below — plain
+words where you *choose*, the industry term where you *consume*.
+
+### Three options
+
+Each keeps rule R below. Pick the name; R applies either way.
+
+**Option A — "Foundations" (recommended).** A collective noun, with the things
+named beneath it: Colour, Type, Spacing, Icons.
+- *Wording:* hero "Colour, type and **spacing** that stay one system." ·
+  workbench row "Design tokens" → "**Foundations**" · Style Guide
+  "Tokens, components, and patterns" → "**Foundations**, components, and
+  patterns" · Landing "Design tokens at your fingertips" → "**Every value
+  your system needs**".
+- *Gains:* unambiguous; works as a nav label; industry-legible without being
+  jargon; and **it is already our word** — `CLAUDE.md` opens with "build,
+  organize, validate, and export interface **foundations**", and the simulated
+  docs nav we ship in `UiSystemLab.jsx` already reads **Foundations**. Adopting
+  it is alignment, not invention.
+- *Costs:* still a collective abstraction — it names the role, not the payoff.
+  Slightly grand for a spacing value.
+
+**Option B — name the things; no collective noun at all.** "Colour, type and
+spacing", everywhere the collective would have gone.
+- *Gains:* zero jargon, zero ambiguity, and the single most-supported pattern in
+  the evidence above. Concrete — a visitor knows what they get.
+- *Costs:* there is then **no word for the nav label or a section heading**, and
+  it is verbose in tight UI. It also drops the claim that these are *one
+  connected system*, which is the actual differentiator.
+
+**Option C — "Styles".** The plainest available word; Customer.io ("Global
+Styles"), Framer ("Shared styles"), Sketch ("Symbols and Styles"), Figma.
+- *Gains:* plain English, short, huge precedent, no ambiguity.
+- *Costs:* the weakest claim of the three — "styles" sounds cosmetic, and
+  undersells that these values are the single source of truth that ships to
+  code. It also collides with *stylesheet*.
+
+**Rule R — "token" survives only past the export boundary.** Keep the word in
+the export panel, the generated file names, the code blocks and the
+`@uil4b/tokens` package — the one place it is correct, expected, and
+searched for by the developer who consumes it. Renaming there would break users'
+code for no gain. Remove it from every sales, navigation and tool-heading
+surface.
+
+**Considered and rejected: "Brand kit"** (7 of 10 brand-kit surfaces use it). It
+is the most familiar phrase available, but it repositions UIL4B as marketing-
+asset storage rather than a UI system workspace. Wrong altitude.
+
+### Two corrections to the backlog item's own scope
+
+Both were measured on the branch, and both make this **much smaller** than the
+item claims:
+
+1. **"~390 occurrences" is a raw grep count and badly overstates the copy job.**
+   Actual user-facing English prose is **~35 strings**. The rest are internal
+   identifiers (71 lines in `UIBuilder.jsx` alone are `tokens.spacing`-style
+   template literals), plus 9 `Bearer ${token}` auth calls.
+2. **There is no translation job. The locale strings are dead code.** All four
+   "token" strings in each of the ten locale files sit under the top-level
+   `designExport` namespace — the retired Design System Export tool. **Nothing
+   in `src/` reads that namespace**, key resolution is static (`resolve()` in
+   `I18nContext.jsx` splits a literal dotted path; no dynamic key building
+   reaches it), and the only other reference in the repo is a comment in
+   `tests/unit/locale-tool-copy.test.js`. So layer (a) is English-only *by
+   construction* — the "rewriting ten locales" risk the item is built around
+   does not exist. (Worth noting separately: those dead strings translate
+   *badly*, which is itself evidence for this proposal. French renders it
+   "Jetons" — casino chips; Chinese renders it "令牌" — an
+   authorisation tally, i.e. the auth meaning. No translator could carry the
+   intended sense.)
+
+**Cost / risk.** Small. ~35 English strings, no locale work, no exported-artefact
+renames, no internal identifier churn. The homepage H1 is among them, so the
+homepage behaviour contract (`tests/user-sim/10-home-chaos-to-calm.spec.js`)
+will need its assertion updated deliberately alongside.
+
+**What would settle it:** your pick of A, B or C. Nothing was rewritten — the
+item asked for options first, and the word choice is the whole decision.
+
+**Verdict:** _(PENDING)_
+
+---
+
 ## Resolved
 
 | Date | Proposal | Verdict |
