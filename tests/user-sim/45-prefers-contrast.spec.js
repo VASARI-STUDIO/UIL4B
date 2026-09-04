@@ -19,6 +19,7 @@
 // asserting nothing. So each one first makes the page confirm, via matchMedia,
 // that it really is being asked for more contrast.
 import { test, expect } from './base.js'
+import { go } from './helpers.js'
 
 const TOKENS = ['--t1', '--t2', '--t3', '--border', '--bh', '--accent', '--accent-strong']
 
@@ -66,7 +67,7 @@ const open = async (browser, theme, contrast) => {
   await page.addInitScript((t) => {
     try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
   }, theme)
-  await page.goto('/')
+  await go(page, '/')
   await expect(page.locator('main, .landing, #root > *').first()).toBeVisible()
   await expect
     .poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme')))
