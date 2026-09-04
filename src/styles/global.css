@@ -5865,11 +5865,26 @@ html.lenis{scroll-behavior:auto!important}
 @keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-10px) scale(.975)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 .pnav-menu[data-menu="create"]{width:1260px}
 /* 940 held two columns. Discover has three groups and now gets three columns,
-   so the panel widens to carry them at a readable measure. 1200 is the width at
-   which a 252px column fits "Curated Resources" and its Soon badge on one line
-   and stops clipping the descriptions mid-word — measured, not chosen. */
+   so the panel widens to carry them at a readable measure.
+
+   1200 STANDS, but not for the reason first written here. The original note said
+   this was the width at which the descriptions stopped clipping mid-word; they
+   did not — "Reuse prompts proven by the community." was still losing its last
+   two words at exactly this width, because a -webkit-line-clamp reports overflow
+   as an ellipsis rather than as a wrap and nothing failed. Re-measured with a
+   Range (scrollWidth lies here: .pnav-tool-line is a flex child stretched to its
+   1fr column, so every stack reports the column width): the three stacks want
+   228 + 251 + 240 plus gaps = 783px of grid, and 783 + the 260px card + the
+   40px paddings and divider IS 1200, with 3px to spare. It is already the width
+   of its content. The panel reads wide because short columns leave it EMPTY
+   below, which is a vertical problem and not this number. */
 .pnav-menu[data-menu="discover"]{width:1200px}
-.pnav-menu[data-menu="learn"]{width:1020px}
+/* Learn holds two stacks wanting 240 + 261 + a 32px gap = 533px of grid, which
+   with the card and paddings is 953px of panel. 960 rather than 953 so the
+   widest row ("Help & Getting Started" + its Soon badge) is not sitting hard
+   against the edge. The 1020 this replaces was set when every Learn row still
+   carried a description; none do now, because every Learn tool is Soon. */
+.pnav-menu[data-menu="learn"]{width:960px}
 /* min-height:0 is what lets this flex child actually shrink and scroll instead
    of forcing the panel past its max-height. */
 .pnav-menu-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:32px 40px;animation:fx-fade var(--dur-2) var(--ease-entrance)}
@@ -5981,8 +5996,8 @@ html.lenis{scroll-behavior:auto!important}
 /* ── Flat icon+label tool rows — one row per tool under a column eyebrow.
    Replaces the old group-head + sub-dot list for maximum scannable density.
    The icon tile takes its colour from the row's data-hue (falls back to accent). */
-.pnav-toollist{list-style:none;display:flex;flex-direction:column;gap:2px;margin:0;padding:0}
-.pnav-tool{display:flex;align-items:flex-start;gap:11px;min-height:50px;padding:7px 8px;border-radius:var(--radius-s);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.pnav-toollist{list-style:none;display:flex;flex-direction:column;gap:1px;margin:0;padding:0}
+.pnav-tool{display:flex;align-items:center;gap:11px;min-height:44px;padding:7px 8px;border-radius:var(--radius-s);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .pnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;color:var(--hue,var(--accent-strong));transition:transform var(--dur-2) var(--ease-out)}
 .pnav-tool:hover .pnav-tool-ico{transform:translateY(-1px)}
@@ -6000,7 +6015,12 @@ html.lenis{scroll-behavior:auto!important}
 /* One line, per the Higgsfield and Hers mega-menus — both hold their rows to a
    single line of supporting copy. Unclamped, the Discover rows ran three lines
    and made an 84px row sit beside a 54px one. */
-.pnav-tool-desc{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;line-clamp:1;overflow:hidden;font-size:var(--fs-micro);line-height:1.35;color:var(--t2)}
+/* No line clamp. The clamp is what turned "Reuse prompts proven by the community."
+   into "Reuse prompts proven by the" and "Structure production-ready image prompts."
+   into "Structure production-ready image..." -- it hid the overflow instead of
+   reporting it, so both shipped. Descriptions are now rare enough to be allowed to
+   wrap, and a wrap is visible in review where an ellipsis was not. */
+.pnav-tool-desc{font-size:var(--fs-micro);line-height:1.35;color:var(--t2)}
 /* Workshop ("soon") tools read as disabled at a glance: the whole row dims and
    the hue tile goes grey. Hover lifts them just enough to stay legible — they
    remain clickable on purpose (the route lands on the honest 🤫 state). */
