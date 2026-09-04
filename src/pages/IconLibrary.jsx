@@ -1800,7 +1800,32 @@ export default function IconLibrary({ onCopy, embedded }) {
     )
   }
 
-  const renderCell = (icon, idx) => (
+  // THE PACK LABEL ONLY EARNS ITS LINE WHEN IT DISCRIMINATES.
+  // #298 dropped it below 980px; above 980px it was still drawn under EVERY
+  // cell - 120 of them on first paint, all reading "lucide" - while the line
+  // that does tell icons apart, the icon's own name, was being truncated to
+  // make room for it ("align-horizontal-…", "align-vertical-distribute-…").
+  // A value identical across the whole grid discriminates nothing.
+  // Mobbin, platform web, and no reference labels the pack on the cell:
+  // Skiff (screens/85ca7e92-1c51-401d-92ed-6942e6beaf47) and Craft
+  // (screens/992cc0ba-f9d6-41e2-98d6-c624907d6593) give their pickers bare
+  // glyphs; Notion (screens/899cb181-5770-47d2-92c8-332ca9d9a733) heads the
+  // collection once; and Magnific, which has this exact job at this exact
+  // scale (screens/c215558c-23c8-415a-8b3d-917004d27adb), states "Special
+  // Lineal by Freepik · 288.1k icons in this collection" ONCE above the grid
+  // and labels not one cell. That is the same answer the CSS note reached:
+  // pack identity belongs to the GROUP.
+  // So it is kept for the case #298 reserved it for and no other - a result
+  // set that actually holds more than one pack, which is where the word tells
+  // you something. Which pack is being browsed is already stated by the pack
+  // filter in the toolbar above.
+  const packOf = (icon) => (icon.logo ? 'logo.dev' : (icon.custom ? null : icon.pack || null))
+  const renderGrid = (list) => {
+    const showPack = new Set(list.map(packOf).filter(Boolean)).size > 1
+    return list.map((icon, idx) => renderCell(icon, idx, showPack))
+  }
+
+  const renderCell = (icon, idx, showPack = false) => (
     <div
       key={icon.id || icon.key || `${idx}-${icon.name || ''}`}
       className="ic"
@@ -1814,9 +1839,7 @@ export default function IconLibrary({ onCopy, embedded }) {
     >
       {iconGlyph(icon)}
       <span>{icon.name}</span>
-      {icon.logo
-        ? <span className="ic-pack">logo.dev</span>
-        : !icon.custom && icon.pack && <span className="ic-pack">{icon.pack}</span>}
+      {showPack && packOf(icon) && <span className="ic-pack">{packOf(icon)}</span>}
     </div>
   )
 
@@ -1965,7 +1988,7 @@ export default function IconLibrary({ onCopy, embedded }) {
                 )}
               </div>
               {icons.length > 0 ? (
-                <div className="ig">{shown.map(renderCell)}</div>
+                <div className="ig">{renderGrid(shown)}</div>
               ) : (
                 <div className="ig-custom-empty">No saved icons yet — open any icon, adjust it on the stage, and hit Save to keep it here.</div>
               )}
@@ -1988,7 +2011,7 @@ export default function IconLibrary({ onCopy, embedded }) {
                 )}
               </div>
               {recents.length > 0 ? (
-                <div className="ig">{recents.map(renderCell)}</div>
+                <div className="ig">{renderGrid(recents)}</div>
               ) : (
                 <div className="ig-custom-empty">Icons you copy show up here for quick reuse.</div>
               )}
@@ -2011,7 +2034,7 @@ export default function IconLibrary({ onCopy, embedded }) {
                     <div className="sk ig-skel-label" />
                   </div>
                 ))
-                : shown.map(renderCell)}
+                : renderGrid(shown)}
             </div>
 
             {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}

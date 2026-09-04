@@ -34,6 +34,7 @@ import { go, expectRendered, watch } from './helpers.js'
 
 const PHONE = { width: 390, height: 844 }
 const TABLET = { width: 834, height: 1112 }
+const DESKTOP = { width: 1440, height: 900 }
 
 /**
  * Settle the rail's scroll-driven edge fades.
@@ -117,6 +118,46 @@ test.describe('the primary action is reachable on a tablet (A4)', () => {
       report.insideAtRest,
       `Randomise must be visible without swiping: button ${JSON.stringify(report.btn)} vs rail ${JSON.stringify(report.rail)}`,
     ).toBe(true)
+  })
+})
+
+//   A6  /create/gradient at 1440px. The preset strip is sixteen named gradients
+//       in one `grid-auto-flow:column` row: 2422px of tiles inside a 1142px box,
+//       so SEVEN showed and 1280px of library sat behind the 34px fade with no
+//       scrollbar - on a page that had ~300px of empty ground under the card.
+//       Wrapping is the fix rather than a fourth affordance, so, as with A2, the
+//       assertion is that no gesture is needed at all.
+test.describe('the whole preset library is on screen on a desktop (A6)', () => {
+  test.use({ viewport: DESKTOP })
+
+  test('all sixteen gradient presets are visible at 1440px, with no gesture', async ({ page }) => {
+    watch(page, 'a designer picking a gradient on a laptop')
+    await go(page, '/create/gradient')
+    await expectRendered(page)
+    await expect(page.locator('.ggn-presets')).toBeVisible()
+
+    const report = await page.evaluate(() => {
+      const rail = document.querySelector('.ggn-presets')
+      const box = rail.getBoundingClientRect()
+      const cs = getComputedStyle(rail)
+      const tiles = [...rail.children]
+      return {
+        total: tiles.length,
+        needsScroll: rail.scrollWidth > rail.clientWidth + 1,
+        // A fade is a claim that there is more. There is not, so it must be off.
+        masked: (cs.maskImage || 'none') !== 'none',
+        rows: new Set(tiles.map((t) => Math.round(t.getBoundingClientRect().top))).size,
+        offscreen: tiles
+          .map((t) => ({ name: t.textContent.trim(), right: Math.round(t.getBoundingClientRect().right) }))
+          .filter((t) => t.right > Math.round(box.right) + 1),
+      }
+    })
+
+    expect(report.total, 'the curated set should still be sixteen presets').toBeGreaterThanOrEqual(16)
+    expect(report.needsScroll, 'the preset library should not need a horizontal gesture at 1440px').toBe(false)
+    expect(report.masked, 'a set that fits must not claim there is more behind a fade').toBe(false)
+    expect(report.offscreen, 'presets sitting past the right edge').toEqual([])
+    expect(report.rows, 'sixteen presets should wrap into rows, not run off in one').toBeGreaterThan(1)
   })
 })
 
