@@ -313,6 +313,102 @@ test.describe('Font Gallery', () => {
     await expect(page.getByRole('button', { name: 'Mono', exact: true })).toHaveCount(0)
   })
 
+  // The founder asked three times for "real world examples not the same UI
+  // examples for each one". These two tests are the browser half of that: the
+  // unit suite proves the RULES, this proves a real reader actually sees
+  // different examples for different typefaces, in the app, on the catalogue
+  // this runner really has.
+  //
+  // NOTE WHICH CATALOGUE THAT IS. Per the note at the top of this file, the
+  // sandboxed runner blocks googleapis.com and `vite preview` does not serve
+  // /api/fonts, so these run on the DEGRADED (category-only) path unless a test
+  // routes its own. That is the weaker of the two paths and the right one to
+  // pin here: if the examples still differ per family with classifications and
+  // stroke ABSENT, they differ everywhere.
+  test('two different typefaces get two different sets of examples', async ({ page }) => {
+    watch(page, 'designer asking what each of these faces is actually for')
+    await page.route('**/api/fonts', route => route.fulfill({ json: {
+      fonts: [
+        { family: 'Lora', category: 'serif', variants: [400, 500, 700], subsets: ['latin'], popularity: 0 },
+        { family: 'Rubik', category: 'sans-serif', variants: [400, 500, 700], subsets: ['latin'], popularity: 1 },
+        { family: 'Yesteryear', category: 'handwriting', variants: [400], subsets: ['latin'], popularity: 2 },
+      ],
+    } }))
+
+    const scenesFor = async (family) => {
+      await page.getByLabel('Search font families').fill(family)
+      await expect(page.locator('.fg-card')).toHaveCount(1)
+      await page.locator('.fg-card-open').first().click()
+      const dialog = page.getByRole('dialog')
+      await expect(dialog).toBeVisible()
+      await dialog.getByRole('tab', { name: 'Examples' }).click()
+      await expect(dialog.locator('.fdx-ex').first()).toBeVisible()
+      const scenes = await dialog.locator('.fdx-ex').evaluateAll(
+        els => els.map(el => el.dataset.scene))
+      await page.keyboard.press('Escape')
+      await expect(dialog).toBeHidden()
+      return scenes
+    }
+
+    await go(page, '/create/font-gallery')
+
+    const serif = await scenesFor('Lora')
+    const sans = await scenesFor('Rubik')
+    const script = await scenesFor('Yesteryear')
+
+    // THE ASSERTION THE FOUNDER'S REPORT REDUCES TO: not one fixed set.
+    expect(new Set([serif.join(), sans.join(), script.join()]).size,
+      `three kinds of face must not share one set of examples — got serif=${serif}, sans=${sans}, script=${script}`)
+      .toBe(3)
+
+    // And each set is the right one for that kind of face, not merely different.
+    expect(serif, 'a text serif is shown long-form reading').toContain('column')
+    expect(sans, 'a grotesque is shown interface work').toContain('ui')
+    expect(script, 'a script is shown what scripts are for').toContain('signature')
+    expect(sans, 'a grotesque is not handed an editorial column').not.toContain('column')
+    expect(script, 'a script is not handed interface chrome').not.toContain('ui')
+
+    // CAPABILITY IS NOT FAKED. Yesteryear ships ONE weight, so it gets no
+    // ladder; Lora ships three, so it does. A ladder on a single-cut family
+    // would be four rows of the same file labelled as four different weights.
+    expect(script, 'a single-weight family gets no weight ladder').not.toContain('ladder')
+    expect(serif, 'a three-weight family earns one').toContain('ladder')
+  })
+
+  test('the fonts-in-use link is offered as a search, not as a promise', async ({ page }) => {
+    watch(page, 'designer looking for this face in the wild')
+    await go(page, '/create/font-gallery')
+
+    await page.getByLabel('Search font families').fill('Lora')
+    await page.locator('.fg-card-open').first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('tab', { name: 'Examples' }).click()
+
+    const link = dialog.locator('.fdx-fiu')
+    await expect(link).toBeVisible()
+
+    // WORDED AS A SEARCH. fontsinuse.com has no derivable per-typeface URL, so
+    // this can only ever be a query — and a query can come back empty. Verified
+    // 2026-09-04 at their Crawl-delay of 10: "Chokokutai" returns HTTP 200
+    // reading "No Uses found", with 47 unrelated popular uses still on the page.
+    // "See Lora in use" would promise a result set we cannot guarantee, and the
+    // miss case does not even look like a miss.
+    await expect(link).toContainText('search fontsinuse.com for Lora')
+    await expect(link).not.toContainText(/\bin use\b/)
+    await expect(link).toHaveAttribute('href', 'https://fontsinuse.com/search?terms=Lora')
+    // `terms`, not `q`: ?q= returns a plausible 200 that is the empty-query page.
+    await expect(link).not.toHaveAttribute('href', /[?&]q=/)
+
+    // The project's full third-party convention.
+    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow')
+    await expect(link.locator('.sr-only')).toHaveText('(opens in a new tab)')
+
+    // And the panel says the miss case out loud rather than letting a reader
+    // discover it by clicking.
+    await expect(dialog.locator('.fdx-fiu-note')).toContainText('may return nothing')
+  })
+
   test('a search that matches nothing shows a real empty state with a way out', async ({ page }) => {
     watch(page, 'designer searching for a font that is not there')
     await go(page, '/create/font-gallery')
