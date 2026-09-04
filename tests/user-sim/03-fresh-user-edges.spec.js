@@ -2,7 +2,7 @@
 // presses the wrong keys. This file covers mobile usability, keyboard
 // behaviour, and garbage-input resilience (Murphy's-law states).
 import { test, expect } from './base.js'
-import { watch, expectRendered, go } from './helpers.js'
+import { watch, expectRendered, go, goReady } from './helpers.js'
 
 const PERSONA = 'fresh user (mobile & edge cases)'
 
@@ -12,7 +12,7 @@ test.describe('mobile (390×844)', () => {
   test('landing renders and navigation is reachable on a phone', async ({ page }) => {
     const fb = watch(page, PERSONA)
     await go(page, '/')
-    expect(await expectRendered(page)).toBe(true)
+    await expectRendered(page, '/')
     // Some form of nav affordance must be visible: mobile burger or the pill
     // triggers. NB: `.first()` on a comma selector returns first-in-DOM (which
     // may be a hidden desktop trigger) — count the VISIBLE matches instead.
@@ -110,15 +110,13 @@ test.describe('route sweep — every public page loads clean', () => {
   for (const url of ROUTES) {
     test(`sweep ${url}`, async ({ page }) => {
       watch(page, PERSONA)
-      await go(page, url)
-      // Live tools lazy-load their chunk; poll for rendered text instead of
-      // 'networkidle', which never settles here (blocked external hosts).
-      await expect
-        .poll(() => expectRendered(page), {
-          message: `${url} should render visible content`,
-          timeout: 10000,
-        })
-        .toBe(true)
+      // Live tools lazy-load their chunk, so this waits for the fallback to
+      // go rather than polling a text length the fallback already satisfies.
+      // The poll this replaces asked `body.innerText > 40` of a fallback state
+      // that measures 421 — it returned true on its first tick for every route
+      // in this list, arrived or not.
+      await goReady(page, url)
+      await expectRendered(page, url)
     })
   }
 })

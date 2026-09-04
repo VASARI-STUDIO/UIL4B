@@ -100,10 +100,151 @@ export function go(page, url) {
   return page.goto(url, { waitUntil: 'domcontentloaded' })
 }
 
-/** Assert-and-record helper: the page rendered real content (not a blank shell). */
-export async function expectRendered(page) {
-  const textLen = await page.evaluate(() => (document.body.innerText || '').trim().length)
-  return textLen > 40
+/* ── Waiting for a LAZY ROUTE to have actually ARRIVED ───────────────────────
+ *
+ * WHY THIS EXISTS
+ * Nineteen of this app's routes are `lazy()`, and App.jsx answers a pending
+ * chunk with `<div className="page-loading">` rendered INSIDE `<main id="main">`
+ * — so while the chunk is in flight the page still has the pill nav, the
+ * footer, a visible `main`, and a non-empty `#root`. `src/pages/CreateTool.jsx`
+ * does the same one level down for every live Create tool.
+ *
+ * Every readiness check this suite owned was satisfied by that state.
+ * 43-state-token-contrast used `main, .landing, #root > *`, and all three parts
+ * match the fallback. `expectRendered()` used `document.body.innerText > 40`,
+ * and the fallback measures 421 characters of chrome. So a spec that navigates
+ * and then MEASURES does not time out when a chunk is slow — it measures the
+ * chrome and reports a confident number about a page that is not on screen.
+ * That is how 43-state-token-contrast failed CI and blamed the branch under
+ * test: throttled to 16x CPU, /privacy and /sitemap each counted ZERO
+ * state-coloured nodes and the light total fell from 52 to 13.
+ *
+ * MEASURED, on this build, at `domcontentloaded` and again once settled
+ * (every route the suite walks; `body` / `main` are innerText lengths):
+ *
+ *     route                fallback up          arrived
+ *     /privacy             body 421  main 0     body 6537  main 6114
+ *     /sitemap             body 421  main 0     body 4124  main 3702
+ *     /plans               body 405  main 0     body 2779  main 2372
+ *     /create/palette      body 412  main 0     body  737  main  323
+ *
+ * `main` is EMPTY in the fallback state on every one of them, and `body` never
+ * is. That is the whole finding: the check was reading the shared chrome.
+ *
+ * WHY "the fallback is gone" IS NOT ENOUGH BY ITSELF
+ * `waitFor({ state: 'detached' })` on `.page-loading` is satisfied by an
+ * element that has not been ATTACHED yet — the entire pre-hydration window, in
+ * which `#root` is still the empty div `scripts/prerender.mjs` wrote (it clones
+ * the shell and rewrites the head; it does not render React). A wait that
+ * accepts "not yet" as "already finished" is the same can't-fail shape one
+ * level down. So both halves are required, and required TOGETHER: React has
+ * committed something into `#root`, AND no fallback is on screen in the same
+ * frame.
+ *
+ * Held for several FRAMES, not milliseconds, for the reason the scroll helpers
+ * below give at length — and because the nested case (`/create/*`, where the
+ * static CreateTool shell mounts first and its inner Suspense raises a second
+ * fallback in the same commit) needs the two conditions to be true at the same
+ * instant rather than at two instants a test happened to sample.
+ */
+
+// Consecutive animation frames on which the route must be mounted AND free of a
+// Suspense fallback. `waitForFunction` polls on rAF, so this is literally a
+// frame count.
+const READY_FRAMES = 3
+
+// A backstop, and only a backstop: it exists so a chunk that never arrives
+// fails with the diagnostic in `ready()` instead of hanging to the test's own
+// timeout. It never decides when a route is ready.
+const READY_BACKSTOP_MS = 20000
+
+/**
+ * What the page is currently showing, as numbers rather than as a verdict.
+ *
+ * `own` is the route's OWN content — `main` plus any open modal — with the
+ * shared chrome excluded, which is the measurement `expectRendered` used to get
+ * wrong. The modal half is not a special case for one route: /login (and every
+ * RequireAuth redirect into it) is a launcher for the app-wide login popup and
+ * renders a spinner in `main` on purpose, so its content genuinely lives in a
+ * `[role="dialog"]` outside the shell.
+ */
+export function renderState(page) {
+  return page.evaluate(() => {
+    const root = document.getElementById('root')
+    const main = document.querySelector('#main, main, .landing')
+    const parts = []
+    if (main) parts.push(main.innerText || '')
+    for (const d of document.querySelectorAll('[role="dialog"], [aria-modal="true"]')) {
+      if (d.offsetParent || getComputedStyle(d).position === 'fixed') parts.push(d.innerText || '')
+    }
+    return {
+      mounted: !!(root && root.firstElementChild),
+      loading: !!document.querySelector('.page-loading'),
+      body: (document.body.innerText || '').trim().length,
+      own: parts.join(' ').trim().length,
+    }
+  })
+}
+
+/**
+ * Wait until the route on screen is the route, not its loading fallback.
+ *
+ * Call this after any navigation that is followed by a MEASUREMENT — a
+ * `page.evaluate`, a `.count()`, a `.boundingBox()`. Navigations followed only
+ * by `expect(locator)` do not need it: those auto-wait on the thing itself,
+ * which is the same doctrine by another route.
+ */
+export async function ready(page, what) {
+  const where = what || page.url()
+  await page.evaluate(() => { window.__uilReadyFrames = 0 }).catch(() => { /* mid-navigation */ })
+  try {
+    await page.waitForFunction((frames) => {
+      const root = document.getElementById('root')
+      const clear = !!(root && root.firstElementChild) && !document.querySelector('.page-loading')
+      window.__uilReadyFrames = clear ? (window.__uilReadyFrames || 0) + 1 : 0
+      return window.__uilReadyFrames >= frames
+    }, READY_FRAMES, { polling: 'raf', timeout: READY_BACKSTOP_MS })
+  } catch {
+    const s = await renderState(page).catch(() => null)
+    throw new Error(
+      `${where}: the route never got past its lazy-loading fallback in ${READY_BACKSTOP_MS}ms`
+      + (s ? ` — mounted=${s.mounted} fallback=${s.loading} bodyChars=${s.body} ownChars=${s.own}` : ''),
+    )
+  }
+}
+
+/** `go()`, and then the route has actually arrived. Prefer this over bare `go()`. */
+export async function goReady(page, url, what) {
+  const res = await go(page, url)
+  await ready(page, what || url)
+  return res
+}
+
+/**
+ * ASSERT that the route rendered its own content. Throws; it does not report.
+ *
+ * It used to return a boolean, and of its eleven call sites eight awaited it
+ * without reading the result — so on those it decided nothing in either
+ * direction. The two that did read it compared `document.body.innerText > 40`
+ * against a fallback state that measures 421, so they could not fail either.
+ * Both halves are fixed here rather than at the call sites: the wait is
+ * structural (`ready`), and the count excludes the chrome that made the old
+ * threshold meaningless.
+ *
+ * The floor stays 40 characters, but it now sits in a gap that was measured
+ * rather than guessed: every unarrived route scores exactly 0 on `own`, and the
+ * thinnest real page in the suite is /login's popup at 127.
+ */
+export async function expectRendered(page, what) {
+  const where = what || page.url()
+  await ready(page, where)
+  const s = await renderState(page)
+  expect(
+    s.own,
+    `${where}: the route rendered ${s.own} characters of its own content`
+    + ` (the page has ${s.body} in total, but that count includes the nav and footer`
+    + ` every route carries) — that is a blank shell, not a rendered page`,
+  ).toBeGreaterThan(40)
 }
 
 /* ── Reading a scroll position that has stopped moving ───────────────────────
