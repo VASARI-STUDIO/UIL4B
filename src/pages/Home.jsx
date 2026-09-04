@@ -9,7 +9,7 @@ import HomeHeroDirections from '../components/HomeHeroDirections'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
-import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, categoryDestination } from '../data/toolTree'
+import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, categoryDestination, toolRoute } from '../data/toolTree'
 import { COMMUNITY_DESIGNS } from '../data/communityDesigns'
 
 // ── The V2 homepage ──────────────────────────────────────────────────────────
@@ -62,6 +62,13 @@ const CATALOGUE_FACTS = [
 
 // One step per workbench mode, in tab order — the left column narrates, the
 // right column IS that mode of the real workbench. `tab` is the binding.
+//
+// This table is PRESENTATION — kicker, title, body, points, CTA label — plus
+// two ids it does not own: `tab` names a workbench mode and `tool` names a tool
+// in CREATE_GROUPS. It does NOT write a route down. The five `to:` literals that
+// used to sit here were the last hand-kept copy of a route table on the homepage;
+// toolRoute() reads each one back out of the tree, throws on an unknown id, and
+// tests/unit/tool-tree-surfaces.test.js fails the build if a literal reappears.
 const STEPS = [
   {
     tab: 'palette',
@@ -70,7 +77,8 @@ const STEPS = [
     title: 'Start with a palette you can defend.',
     body: 'Generate a five-step ramp, lock the colours that are already right, and regenerate the rest. Every value is a real hex you can copy straight out.',
     points: ['Lock and regenerate individual steps', 'Copy any value to the clipboard', 'Carries into the full builder on the free Auto system'],
-    cta: { label: 'Open Palette Builder', to: '/create/palette' },
+    tool: 'palette',
+    cta: { label: 'Open Palette Builder' },
   },
   {
     tab: 'gradient',
@@ -79,7 +87,8 @@ const STEPS = [
     title: 'Tune a gradient and take the CSS.',
     body: 'Two stops and an angle, previewed live. A half-typed hex never destroys the preview — the field tells you what to correct and keeps the last valid value.',
     points: ['Live preview from real CSS', 'Invalid input explains itself', 'Copy the declaration, not a screenshot'],
-    cta: { label: 'Open Gradient Generator', to: '/create/gradient' },
+    tool: 'gradient',
+    cta: { label: 'Open Gradient Generator' },
   },
   {
     tab: 'image',
@@ -88,7 +97,8 @@ const STEPS = [
     title: 'Decide the output before you convert.',
     body: 'Set resolution, file type and compression against a reference image, then hand your own files to the converter with that draft already applied.',
     points: ['Honest limits — WebP cannot store lossless, and says so', 'Nothing is encoded here; File Converter does the work', 'Your files never touch storage or the URL'],
-    cta: { label: 'Open File Converter', to: '/create/file-converter' },
+    tool: 'file-converter',
+    cta: { label: 'Open File Converter' },
   },
   {
     tab: 'icon',
@@ -97,7 +107,8 @@ const STEPS = [
     title: 'Size and weight an icon before you commit.',
     body: 'Twelve bundled glyphs, three sizes, four stroke widths — a free taste of the editor. Nothing saves, downloads or counts against a plan.',
     points: ['No catalogue call — the preview is local', 'Opens your draft in the real editor', '200k icons once you are there'],
-    cta: { label: 'Open Icon Library', to: '/create/icons' },
+    tool: 'icons',
+    cta: { label: 'Open Icon Library' },
   },
   {
     tab: 'typography',
@@ -106,7 +117,8 @@ const STEPS = [
     title: 'Build a scale that actually computes.',
     body: 'Real modular-scale maths from your base size and ratio, previewed at every step, then carried into the full Type Scale generator.',
     points: ['Display, heading, body and caption computed live', 'Edit the specimen text', 'Family choices survive the hand-off'],
-    cta: { label: 'Open Type Scale', to: '/create/type-scale' },
+    tool: 'type-scale',
+    cta: { label: 'Open Type Scale' },
   },
 ]
 
@@ -344,7 +356,7 @@ export default function Home() {
                         </li>
                       ))}
                     </ul>
-                    <Link className="hstep-cta" to={step.cta.to}>
+                    <Link className="hstep-cta" to={toolRoute(step.tool)}>
                       {step.cta.label}
                       <span aria-hidden="true">&rarr;</span>
                     </Link>
