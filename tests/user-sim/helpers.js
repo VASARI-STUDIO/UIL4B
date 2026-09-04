@@ -244,6 +244,29 @@ export function renderState(page) {
  * by `expect(locator)` do not need it: those auto-wait on the thing itself,
  * which is the same doctrine by another route.
  */
+/**
+ * If this page's context saw build assets 404, say so — that is a far more
+ * likely explanation for a route that never arrived than anything in the route.
+ *
+ * The ledger is hung on the context by `watchBuildAssets` in base.js and read
+ * through a well-known Symbol rather than an import, because base.js imports
+ * this file and a real import would be a cycle. A context built before that
+ * wrapper was installed simply has nothing there, so this stays silent.
+ */
+const ASSET_TROUBLE = Symbol.for('uil4b.buildAssetTrouble')
+
+function buildAssetHint(page) {
+  let bad = []
+  try { bad = page.context()[ASSET_TROUBLE] || [] } catch { return '' }
+  if (!bad.length) return ''
+  const uniq = [...new Set(bad)]
+  return `\n\n  ${bad.length} build asset request(s) FAILED in this browser context`
+    + ` (${uniq.slice(0, 3).join(', ')}${uniq.length > 3 ? `, +${uniq.length - 3} more` : ''}).`
+    + ' Files under /assets/ cannot 404 in a healthy run, so dist/ was almost certainly'
+    + ' REBUILT while this suite was running — read the route below as a casualty of that,'
+    + ' not as a defect. The global teardown fails the whole run on this.'
+}
+
 export async function ready(page, what) {
   const where = what || page.url()
   await page.evaluate(() => { window.__uilReadyFrames = 0 }).catch(() => { /* mid-navigation */ })
@@ -258,7 +281,8 @@ export async function ready(page, what) {
     const s = await renderState(page).catch(() => null)
     throw new Error(
       `${where}: the route never got past its lazy-loading fallback in ${READY_BACKSTOP_MS}ms`
-      + (s ? ` — mounted=${s.mounted} fallback=${s.loading} bodyChars=${s.body} ownChars=${s.own}` : ''),
+      + (s ? ` — mounted=${s.mounted} fallback=${s.loading} bodyChars=${s.body} ownChars=${s.own}` : '')
+      + buildAssetHint(page),
     )
   }
 }
