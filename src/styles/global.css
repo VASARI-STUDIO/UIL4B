@@ -9864,7 +9864,14 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    clears nothing under 24px, and every label here is under 24px. */
 .fdx-ex-kicker{display:block;margin-bottom:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
 .fdx-ex-overline{display:block;font-weight:var(--fdx-mw,500);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
-.fdx-ex-verdict{margin:12px 0 0;padding-top:12px;font-family:var(--font);font-size:12px;line-height:1.5;color:var(--t2);border-top:1px solid var(--border)}
+/* p.fdx-ex-verdict, not .fdx-ex-verdict. This is the app COMMENTING on the
+   specimen, so it must be in the UI font by the rule stated at the top of
+   this block — but .fdx-ex-body p {font-family:inherit} is more specific than
+   a lone class and was winning, so the sentence explaining that a script is
+   hard to read at length was itself set in the script, at 12px. Caught in a
+   screenshot, not by any structural check: every assertion about fonts here
+   passed while this was wrong. */
+.fdx-ex-body p.fdx-ex-verdict{margin:12px 0 0;padding-top:12px;font-family:var(--font);font-size:12px;line-height:1.5;color:var(--t2);border-top:1px solid var(--border)}
 
 /* ── Display: poster, masthead, title card, and the same face small ───────── */
 .fdx-ex-poster{text-align:center}
