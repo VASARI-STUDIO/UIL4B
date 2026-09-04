@@ -19,6 +19,21 @@
 // composites translucent ancestors to find the true ground, and computes the
 // WCAG ratio the same way the app's own contrast checker does.
 //
+// THE MEASURING INSTRUMENT WAS BLIND UNTIL 2026-09-04, and every number this
+// spec reported before then is suspect. Its parser matched only rgba(), but
+// color-mix() computes to `color(srgb r g b / a)` in Chromium. So EVERY
+// color-mix() tinted ground returned null, was silently dropped from the
+// ground stack, and the element appeared to sit on the nearest opaque
+// ancestor — which is always a lighter, kinder ground than the tint that is
+// really there. Ink-on-its-own-tint is the single commonest accent pattern in
+// this app (pills, badges, notices, soft buttons), so the blind spot covered
+// most of what the spec was pointed at. #331 reported "0 failures after the
+// sweep"; that zero was produced by this parser, not by the page. Fixing the
+// regex surfaced three real failures that had been there the whole time.
+// If you ever add a colour form (lab(), oklch(), color(display-p3 ...)), add it
+// to parse() IN THE SAME COMMIT — an unparsed ground does not fail loudly here,
+// it just quietly stops being measured.
+//
 // It deliberately does NOT restrict itself to what the sweep touched. Any text
 // that lands under its floor on an accent-family pairing fails this, wherever
 // the colour came from. Four of the findings it pinned were exactly that:
@@ -37,10 +52,19 @@ const HELPERS = `
     const hi = Math.max(lum(a), lum(b)), lo = Math.min(lum(a), lum(b))
     return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100
   }
+  // Handles BOTH computed forms, and that is not a detail — see the
+  // THE MEASURING INSTRUMENT WAS BLIND note in this file's header.
+  // color-mix() computes to color(srgb r g b / a) in Chromium, never rgba().
   const parse = s => {
-    const m = (s || '').match(/rgba?\\(([^)]+)\\)/)
+    s = s || ''
+    const cm = s.match(/color\\(srgb\\s+([^)]+)\\)/)
+    if (cm) {
+      const p = cm[1].split(/[\\s\\/]+/).filter(Boolean).map(Number)
+      return { rgb: [p[0] * 255, p[1] * 255, p[2] * 255], a: p.length > 3 ? p[3] : 1 }
+    }
+    const m = s.match(/rgba?\\(([^)]+)\\)/)
     if (!m) return null
-    const p = m[1].split(/[,\\s/]+/).filter(Boolean).map(Number)
+    const p = m[1].split(/[,\\s\\/]+/).filter(Boolean).map(Number)
     return { rgb: [p[0], p[1], p[2]], a: p.length > 3 ? p[3] : 1 }
   }
   const over = (fg, bg) => fg.rgb.map((c, i) => c * fg.a + bg[i] * (1 - fg.a))

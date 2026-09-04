@@ -5418,7 +5418,34 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 .smap-link-a--soon:hover .smap-link-label{color:var(--t0)}
 .smap-link-route{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);text-align:right;white-space:nowrap}
 .smap-link-note{grid-column:1/-1;font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
-.smap-soon{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--hue,var(--accent-strong));background:color-mix(in srgb,var(--hue,var(--accent)) 12%,transparent);border-radius:999px;padding:2px 7px;line-height:1;flex:0 0 auto}
+/* THIS PILL PAINTS ITS INK ON A TINT OF THE SAME COLOUR, which is the shape of
+   defect [accent-tint-grounds-unmeasured] was filed for. Two things were wrong.
+
+   (1) THE FALLBACKS DISAGREED. The ink fell back to --accent-strong and the tint
+   to --accent. On .smap-soon--inline, which has no [data-hue] ancestor, that
+   painted #0B5ED7 on a 12% tint of #0F6FFF — two different tokens in one pill.
+   Both now read --accent-strong. A rule whose ink and ground disagree about
+   which token they mean is a latent bug even when the number happens to pass.
+
+   (2) 12% WAS TOO MUCH TINT TO CARRY THE INK. Measured on the rendered page
+   before this change: 4.32:1 light (#0b5ed7 on #d4dfec, the inline pill on the
+   page ground) and 4.34:1 dark (#a070f2 on #292437, --hue-component on a card).
+   Both under the 4.5 that 11px/600 needs. At 7% they measure 4.56 and 4.64.
+
+   THE BORDER IS DOING THE WORK THE TINT USED TO DO. Dropping 12% to 7% costs
+   the pill its presence, so it gains a 28% hue border — a border is OUTSIDE the
+   text's ground, so it restores the shape and the colour signal without adding
+   one point of luminance behind the letters.
+
+   READ THIS BEFORE RAISING THE PERCENTAGE BACK. The --hue-* set has almost no
+   margin to spend: on the bare grounds it is tuned against, the worst hue
+   measures 4.60 light and 4.56 dark. A tint of ANY colour behind hue-coloured
+   text — its own hue, a neutral, anything — pushes it under 4.5. Measured: a
+   neutral --t0 tint at just 5% drops the dark set to 3.98. So this 7% is a
+   ceiling, not a preference, and the structural fix is a --hue-* retune with
+   real margin. That is a founder call on the token set, pinned by
+   tests/unit/category-hue-contrast.test.js, and is deliberately NOT done here. */
+.smap-soon{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--hue,var(--accent-strong));background:color-mix(in srgb,var(--hue,var(--accent-strong)) 7%,transparent);border:1px solid color-mix(in srgb,var(--hue,var(--accent-strong)) 28%,transparent);border-radius:999px;padding:1px 6px;line-height:1;flex:0 0 auto}
 .smap-soon--inline{vertical-align:middle;margin:0 1px}
 .smap-stage{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 10%,transparent);border-radius:999px;padding:2px 7px;line-height:1;flex:0 0 auto}
 @media(max-width:520px){
@@ -9322,18 +9349,64 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 }
 .uname-owner:hover .uname-tip,.uname-owner:focus-visible .uname-tip{opacity:1;transform:translateY(0)}
 
-/* Flair pill — --flair-c set per tone; soft-tinted so it reads as a tag. */
-.flair{--flair-c:var(--accent-strong);display:inline-flex;align-items:center;flex:none;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.01em;line-height:1.5;white-space:nowrap;color:var(--flair-c);background:color-mix(in srgb,var(--flair-c) 12%,transparent);border:1px solid color-mix(in srgb,var(--flair-c) 30%,transparent)}
+/* ── FLAIR PILL ────────────────────────────────────────────────────────────
+   10.5px BOLD text in --flair-c on a 12% tint of ITSELF, so every tone has to
+   clear 4.5:1 against its own tint, not against the bare card.
+
+   THE NAMED TONES USED TO BE RAW HEXES WITH NO DARK VALUES — the same defect
+   class as the category hues, and left by #331 because .flair renders only on
+   /settings and in signed-in community bylines, which a signed-out capture
+   cannot reach. Measured before, on the tint each actually lands on:
+     blue #2563EB 3.80 light / 2.75 dark   violet #7C3AED 4.14 / 2.54
+     rose #E11D48 3.38 / 3.12              amber  #D97706 2.44 / 4.22
+     green #15803D 3.71 / 2.82             slate  #64748B 5.49 / 2.92
+     gold  #B7791F 2.78 / 3.72
+   Eleven of the fourteen missed. Every value below is the SAME hue and
+   saturation with lightness walked until the worst real ground clears 4.60.
+
+   THE GROUNDS ARE MEASURED, NOT ASSUMED. A pill was injected into the real
+   rendered /settings and /community and its composited ground read back:
+   light #FFFFFF (rows, cards) and #EFEEE9 (page); dark #191A1D and #101012.
+   #212327 is included as a margin for inset rows. Tuning against --bg-3/--bg-4
+   as well would have forced amber to #864904 and gold to #795015, which is
+   brown, not amber — the cost of guessing at a ground you have not measured.
+
+   DO NOT MOVE THESE ONTO THE --hue-* TOKENS, which is what the backlog item
+   suggested. That was written before [accent-tint-grounds-unmeasured] measured
+   the hues themselves: --hue-component on its own 12% tint is 4.34:1, so
+   inheriting them would have imported a failure rather than fixing one.
+
+   Ordering: these are class selectors, and every dark value below is a
+   [data-theme="dark"] descendant at (0,2,0), so it beats the (0,1,0) base
+   wherever it sits in the file. That is why this block does NOT have to live
+   below the Foundry :root the way the token blocks do — but it does anyway. */
+.flair{--flair-c:var(--accent-strong);--flair-fg:#fff;display:inline-flex;align-items:center;flex:none;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.01em;line-height:1.5;white-space:nowrap;color:var(--flair-c);background:color-mix(in srgb,var(--flair-c) 12%,transparent);border:1px solid color-mix(in srgb,var(--flair-c) 30%,transparent)}
 .flair--accent{--flair-c:var(--accent-strong)}
-.flair--blue{--flair-c:#2563EB}
-.flair--violet{--flair-c:#7C3AED}
-.flair--rose{--flair-c:#E11D48}
-.flair--amber{--flair-c:#D97706}
-.flair--green{--flair-c:#15803D}
-.flair--slate{--flair-c:#64748B}
-/* Earned badges get a warmer, higher-signal gold treatment. */
-.flair--gold{--flair-c:#B7791F;background:linear-gradient(135deg,color-mix(in srgb,#D69E2E 20%,transparent),color-mix(in srgb,#B7791F 14%,transparent));border-color:color-mix(in srgb,#B7791F 42%,transparent)}
-[data-theme="light"] .flair--slate{--flair-c:#475569}
+/* Light: worst-ground ratio on the pill's own 12% tint in the comment. */
+.flair--blue{--flair-c:#1452DB}   /* 4.64 */
+.flair--violet{--flair-c:#712AEC} /* 4.63 */
+.flair--rose{--flair-c:#B7183B}   /* 4.63 */
+.flair--amber{--flair-c:#914F04}  /* 4.60 */
+.flair--green{--flair-c:#126E34}  /* 4.62 */
+.flair--slate{--flair-c:#475569}  /* 5.49 — already passing, unchanged */
+/* Earned badges get a warmer, higher-signal gold treatment. The gradient is
+   why gold was INVISIBLE to the contrast walk: groundOf() bails on any
+   background-image, so a gradient ground is skipped rather than measured, and
+   gold scored nothing at all in both themes. Its stops are now expressed
+   through --flair-c/--flair-warm so the dark override reaches them, and both
+   ends are checked by hand in tests/unit/flair-tone-contrast.test.js.
+   Light worst end 4.51; dark worst end 4.60. */
+.flair--gold{--flair-c:#835616;--flair-warm:#D69E2E;background:linear-gradient(135deg,color-mix(in srgb,var(--flair-warm) 20%,transparent),color-mix(in srgb,var(--flair-c) 14%,transparent));border-color:color-mix(in srgb,var(--flair-c) 42%,transparent)}
+/* Dark. Same hue and saturation, lightness raised until the worst ground
+   (#212327) clears 4.60 on the pill's own 12% tint. */
+[data-theme="dark"] .flair{--flair-fg:#0B0D10}
+[data-theme="dark"] .flair--blue{--flair-c:#6F98F2}   /* 4.62 */
+[data-theme="dark"] .flair--violet{--flair-c:#AE85F4} /* 4.63 */
+[data-theme="dark"] .flair--rose{--flair-c:#ED718C}   /* 4.62 */
+[data-theme="dark"] .flair--amber{--flair-c:#E57E06}  /* 4.62 */
+[data-theme="dark"] .flair--green{--flair-c:#1DAF54}  /* 4.61 */
+[data-theme="dark"] .flair--slate{--flair-c:#8E9BAE}  /* 4.60 */
+[data-theme="dark"] .flair--gold{--flair-c:#E1A54D;--flair-warm:#E8BB79} /* 4.60 */
 
 /* Flair picker (Settings › Account) --- */
 .flairpick-hint{margin:0 0 10px;font-size:12px;color:var(--t3);line-height:1.5}
@@ -9342,14 +9415,33 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 .flairpick-group-label{margin:12px 0 8px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
 .flairpick-group-label:first-of-type{margin-top:0}
 .flairpick-grid{display:flex;flex-wrap:wrap;gap:7px}
-/* Chips reuse the .flair pill look but as tappable targets; muted until picked. */
-.flairpick-chip{padding:4px 11px;font-size:11.5px;cursor:pointer;opacity:.62;transition:opacity var(--dur-2,.14s) var(--ease-out,ease),box-shadow var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
-.flairpick-chip:hover{opacity:.92}
-.flairpick-chip.is-on{opacity:1;color:#fff;background:var(--flair-c);border-color:var(--flair-c);box-shadow:0 1px 4px color-mix(in srgb,var(--flair-c) 34%,transparent)}
-.flairpick-chip.is-on:hover{opacity:1}
+/* Chips reuse the .flair pill look but as tappable targets; muted until picked.
+   MUTED BY TINT, NOT BY OPACITY, and that is the whole point of this block.
+   `opacity:.62` on the pill faded the LABEL as well as the fill, and because it
+   fades ink and ground toward each other it cannot be compensated for by any
+   choice of colour. Measured at .62 these chips carried their labels at 2.52:1
+   in light and 2.80:1 in dark; even .82 only reached 3.68 and 3.92. These are
+   real buttons a user picks their flair from, so 4.5 applies and no opacity
+   short of 1.0 could reach it. The resting state now keeps the ink at full
+   strength and mutes the SURFACE instead — half the tint and a lighter border
+   — with hover restoring the full .flair treatment. Same visual intent,
+   readable at every step. */
+.flairpick-chip{padding:4px 11px;font-size:11.5px;cursor:pointer;background:color-mix(in srgb,var(--flair-c) 6%,transparent);border-color:color-mix(in srgb,var(--flair-c) 18%,transparent);transition:background var(--dur-2,.14s) var(--ease-out,ease),border-color var(--dur-2,.14s) var(--ease-out,ease),box-shadow var(--dur-2,.14s) var(--ease-out,ease),transform var(--dur-2,.14s) var(--ease-out,ease)}
+.flairpick-chip:hover{background:color-mix(in srgb,var(--flair-c) 12%,transparent);border-color:color-mix(in srgb,var(--flair-c) 30%,transparent)}
+/* THE SELECTED CHIP INVERTS, so its ink has to invert too. `color:#fff` was
+   correct only for as long as the tones had no dark values: the dark tones are
+   necessarily lighter, and white on them measures 2.81-2.87:1 across every
+   tone. This is the same mirror defect the state tokens carry a --*-fg token
+   for, and --flair-fg is that token: #fff in light (6.32-7.58), #0B0D10 in dark
+   (6.78-6.91). Adding dark tones without this would have CREATED the bug. */
+.flairpick-chip.is-on{color:var(--flair-fg);background:var(--flair-c);border-color:var(--flair-c);box-shadow:0 1px 4px color-mix(in srgb,var(--flair-c) 34%,transparent)}
 .flairpick-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.flairpick-chip.is-locked{cursor:default;opacity:.5}
-.flairpick-chip.is-locked:hover{opacity:.5}
+/* Earned badges are not selectable, but they ARE meant to be read — the copy
+   above them exists so people know the badges exist. So they are marked
+   unavailable by a dashed, unfilled outline rather than dimmed to 50%, which
+   would have made the one group nobody can act on the hardest group to read. */
+.flairpick-chip.is-locked{cursor:default;background:transparent;border-style:dashed;border-color:color-mix(in srgb,var(--flair-c) 34%,transparent)}
+.flairpick-chip.is-locked:hover{background:transparent;border-color:color-mix(in srgb,var(--flair-c) 34%,transparent)}
 
 /* ── Gradient Generator (/color/gradient) ───────────────────────────────────
    The --ggn-* vars alias the app design tokens so the tool follows the active
@@ -9826,7 +9918,16 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .typ-notice>div{display:flex;flex-direction:column;gap:4px;min-width:0}
 .typ-notice strong{font-size:13px;font-weight:700;color:var(--t0)}
 .typ-notice span{font-size:12.5px;color:var(--t1);line-height:1.55}
-.typ-notice-retry{align-self:flex-start;margin-top:6px;min-height:34px;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--radius-s);border:1px solid var(--brand);background:var(--brand-bg);color:var(--accent-strong);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+/* TWO TINTS WERE STACKING HERE. .typ-notice is an amber warn tint; this button
+   then laid --brand-bg (a translucent blue) on top of it, so the label sat on a
+   muddy composite of both — measured #d6d7d6 in light and #30332f in dark, for
+   4.04:1 and 4.11:1 against 12px/600 text that needs 4.5.
+   Neither tint was visible to the contrast walker before its parser learned to
+   read color-mix(), which is why this shipped. A solid --card surface removes
+   the stack entirely and is the better button anyway: a secondary action inside
+   a warning notice should read as a raised control, not as a second wash of
+   colour over the first. Measured after: 5.84:1 light, 5.57:1 dark. */
+.typ-notice-retry{align-self:flex-start;margin-top:6px;min-height:34px;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--radius-s);border:1px solid var(--brand);background:var(--card);color:var(--accent-strong);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .typ-notice-retry:hover:not(:disabled){background:var(--accent-strong);color:var(--accent-fg)}
 .typ-notice-retry:disabled{opacity:.6;cursor:progress}
 .typ-notice-retry:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
