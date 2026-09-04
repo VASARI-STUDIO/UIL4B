@@ -10,6 +10,53 @@ import { contrastRatio, fixForeground, fixBackground, textColorForBg } from '../
 //
 // Murphy's-law input handling: text fields accept anything but the checker only
 // recomputes from the LAST VALID hex per side — garbage never blanks the result.
+//
+// ── LIVE PREVIEW: the design specification [contrast-checker-overhaul] ────────
+//
+// THE DEFECT. The preview used to render four lines that DESCRIBED a test
+// rather than BEING one: "Large heading text (24px)", "Normal body text at
+// 16px…", "Small print at 12px — the hardest test of all", and a bordered pill
+// reading "UI component". Every line was a caption about itself. No product
+// looks like that, so it answered "what does 4.5:1 actually look like?" with a
+// specimen of nothing, and it put the sizes in WORDS while leaving the reader to
+// cross-reference the checklist in the other panel to find out which of those
+// four lines was the one failing.
+//
+// WHAT REPLACES IT. A real surface — heading, body copy, a solid button, an
+// outline button, small print with a link — rendered in the pair, with each
+// element carrying ITS OWN threshold as a chip. The thresholds genuinely
+// differ, and that difference is the single most useful thing this page can
+// teach: one pair can carry a 24px heading at 3:1 and fail the caption beneath
+// it at 4.5:1, and until the verdicts sat ON the elements that was invisible.
+// The solid button earns its place twice over — it inverts the pair, and shows
+// that the ratio is identical either way round, which is not obvious.
+//
+// REFERENCES (Mobbin, platform web). Whereby
+// (mobbin.com/screens/e86cb1da-6690-4693-bff7-5632af4a4f9c) is the model: it
+// puts the ratio and an AA badge inline beside each colour, and previews the
+// pair on the ACTUAL product surface — a real primary action, a real chat
+// input — not on lorem. Miro
+// (mobbin.com/screens/96b4bf05-95bb-4dd3-a26d-1209ed32a626) renders the
+// offending specimen itself at real size next to a plain-language remedy.
+// Typeform (mobbin.com/screens/b78e49a7-bf27-4966-b5f6-e8f7fd5033b9) writes its
+// checks as sentences about real objects rather than tier names, and Hotjar
+// (mobbin.com/screens/043235af-448c-414a-b5b9-94ef3f8376a2) makes the verdict a
+// short headline in words. Linktree
+// (mobbin.com/screens/351c283b-da2e-437a-860a-d68c5a0da8e7) offers the one-click
+// remedy this page already has, which is why the fix row is kept as it stands.
+//
+// THE ONE RULE THE CHIPS MUST OBEY. A verdict chip sits on the user's chosen
+// background but never PAINTS with it — page tokens only. This is not fussiness.
+// A chip drawn in the pair under test becomes unreadable exactly when the pair
+// fails, which is the moment its reader most needs it, and this page has
+// already shipped that class of defect once: its own verdict line measured
+// 2.94:1 against the 4.5:1 it enforces. The durable fix is not to choose the
+// colour carefully, it is to not use the colour. 06-colour-tool-workbenches
+// measures `.cc-verdict` in both themes for that reason.
+//
+// STILL OPEN, deliberately: the left panel keeps its abstract five-tier list.
+// Whereby's inline per-field ratio badge and Typeform's plain-language checks
+// belong there and are not done here — see [contrast-checker-overhaul].
 
 const HEX_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i
 
@@ -46,6 +93,23 @@ function chipRef(color) {
     el.style.setProperty('--cc-chip', color)
     el.style.setProperty('--cc-chip-ink', textColorForBg(color))
   }
+}
+
+// A per-element verdict. `min` is that element's OWN WCAG threshold, which is
+// the whole point of showing it on the element rather than in a list.
+//
+// Page tokens only — never --cc-fg/--cc-bg. See the rule in the header block.
+function Verdict({ ratio, min, what }) {
+  const pass = ratio >= min
+  return (
+    <span className={pass ? 'cc-verdict cc-verdict--pass' : 'cc-verdict cc-verdict--fail'}>
+      <span className="cc-verdict-mark" aria-hidden="true">{pass ? '✓' : '✕'}</span>
+      <span aria-hidden="true">{min}:1</span>
+      <span className="sr-only">
+        {what} needs {min} to 1; this pair is {ratio.toFixed(2)} to 1 — {pass ? 'passes' : 'fails'}
+      </span>
+    </span>
+  )
 }
 
 // One side of the pair: colour well + hex field with last-valid fallback.
@@ -211,18 +275,42 @@ export default function ContrastChecker({ onCopy }) {
         {/* ── Live preview ── */}
         <div className="card cc-panel">
           <label className="seg-label">Live preview</label>
+          <p className="cc-lede">
+            The pair on a real surface. Each chip is that element&rsquo;s own
+            threshold, not the page&rsquo;s — which is why one pair can carry a
+            heading and still fail the caption underneath it.
+          </p>
           <div className="cc-preview" ref={pairRef(fg, bg)}>
-            <p className="cc-preview-large">Large heading text (24px)</p>
-            <p className="cc-preview-normal">
-              Normal body text at 16px. The five checks on the left tell you
-              exactly where this pair is safe to use.
-            </p>
-            <p className="cc-preview-small">Small print at 12px — the hardest test of all.</p>
-            <span className="cc-preview-ui">UI component</span>
+            <div className="cc-spec-row">
+              <h2 className="cc-spec-h">Ship a palette you can defend</h2>
+              <Verdict ratio={ratio} min={3} what="a 24px heading" />
+            </div>
+            <div className="cc-spec-row">
+              <p className="cc-spec-body">
+                Every colour is checked against what sits behind it, at the size
+                it is really used. That is the whole job.
+              </p>
+              <Verdict ratio={ratio} min={4.5} what="16px body text" />
+            </div>
+            <div className="cc-spec-row">
+              <div className="cc-spec-actions">
+                <span className="cc-spec-btn">Get started</span>
+                <span className="cc-spec-btn cc-spec-btn--ghost">Read the docs</span>
+              </div>
+              <Verdict ratio={ratio} min={4.5} what="a button label" />
+            </div>
+            <div className="cc-spec-row">
+              <p className="cc-spec-small">
+                Free while in beta. <span className="cc-spec-link">Terms apply</span>.
+              </p>
+              <Verdict ratio={ratio} min={4.5} what="12px small print" />
+            </div>
           </div>
           <p className="cc-hint">
-            Large text = 24px+, or 18.5px+ bold. UI components (borders, icons,
-            focus rings) need 3:1 against adjacent colours.
+            Large text is 24px+, or 18.5px+ bold, and clears at 3:1 — everything
+            smaller needs 4.5:1. The solid button inverts the pair, and the ratio
+            is the same either way round. Borders, icons and focus rings are
+            non-text: they need 3:1 against whatever is beside them.
           </p>
         </div>
       </div>

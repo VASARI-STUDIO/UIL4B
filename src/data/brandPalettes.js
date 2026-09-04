@@ -22,6 +22,34 @@
 // the pre-rebrand values are LEFT IN PLACE rather than guessed from aggregators.
 // Backlog: [brand-palette-provenance].
 //
+// RE-CHECKED 2026-09-04, still unresolved. Recorded so the third attempt starts
+// where this one stopped instead of re-running it:
+//   BLOCKED to every fetcher tried - plain curl, the agent fetch tool, AND a
+//   real headless Chromium with a browser UA: pepsico.com (403),
+//   design.pepsico.com (403), contact.pepsico.com, investor.pepsico.com,
+//   pepsico.co.uk, pepsi.co.uk, pepsico.de, pepsicobeveragefacts.com. It is a
+//   WAF on the edge, not a user-agent check, so a better UA will not fix it.
+//   pepsi.com answers 400 to curl and geo-redirects a real browser to a
+//   Facebook page - there is no asset behind it to read.
+//   REACHABLE, and the useful find: digitalassets.pepsico.com, PepsiCo's own
+//   DAM, serves 200 directly. But every asset reachable from it via the
+//   archived corporate pages is the PEPSICO CORPORATE mark, not the Pepsi cola
+//   brand logo, and PepsiCo refreshed the corporate identity separately in
+//   2025 - so those files answer a different question. Start there next time
+//   and look for a Pepsi-brand asset id.
+//   ALSO REACHABLE but NOT usable: pepsicojobs.com, pepsicopartners.com and
+//   pepsicorecycling.com all answer 200 and all serve #0065C3 in their site
+//   chrome - which is one of this row's current values. That is a coincidence
+//   worth naming, because it is the Shopify trap from the method above: a
+//   marketing or portal theme is not the brand's logo palette, and matching an
+//   existing value does not verify it.
+//   Domain-restricted search against pepsico.com surfaces the 2023 announcement
+//   in PepsiCo's own words ("electric blue and the black of Pepsi Zero Sugar")
+//   and publishes NO hex.
+// The row therefore still asserts a palette nobody here has confirmed. Whether
+// a row we cannot substantiate should keep shipping under the bare name "Pepsi"
+// is a product call, not a data one - see [brand-palette-provenance].
+//
 // NAMING RULE, learned the hard way. A row named after a COMPANY must hold that
 // company's identity colours. `material` held Material 3's default purple under
 // the name "Material (Google)" — correct hexes, wrong promise, since nobody
