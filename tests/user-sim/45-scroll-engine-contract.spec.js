@@ -41,7 +41,7 @@
 // `lenis-scrolling` class. Never a fixed timeout, and never two equal pixel
 // readings — both go green on a page that never moved.
 import { test, expect } from './base.js'
-import { restingScrollY, restAfterMove, watch } from './helpers.js'
+import { go, restingScrollY, restAfterMove, watch } from './helpers.js'
 
 const PANEL = '#pnav-account-pop'
 const TRIGGER = '.pnav-more'
@@ -75,7 +75,7 @@ test.describe('one engine per scroller', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'a visitor who scrolls') })
 
   test('with motion on, Lenis owns the root and the browser is told not to animate it too', async ({ page }) => {
-    await page.goto('/help')
+    await go(page, '/help')
     // Lenis mounts in an effect, so wait for the engine to actually be there
     // before asking what the rules say about it.
     await expect.poll(async () => (await rootScrollState(page)).lenis, {
@@ -103,7 +103,7 @@ test.describe('one engine per scroller', () => {
     // what 04, 27 and 30 already reach for.
     test('Lenis is never instantiated and the root is still not animated', async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' })
-      await page.goto('/help')
+      await go(page, '/help')
 
       // ASSERT THE PRECONDITION. Without this the whole test passes on a
       // browser that never asked for reduced motion at all — `scroll-behavior`
@@ -160,7 +160,7 @@ test.describe('an open popover and the page behind it', () => {
   // to arrive. What this test is, then, is a live smoke check that the page
   // still scrolls with a panel open, and a record of those four mutations.
   test('a wheel aimed at the page still scrolls it while the panel is open', async ({ page }) => {
-    await page.goto('/')
+    await go(page, '/')
     await openPanel(page)
 
     const before = await restingScrollY(page, 'the home page before the wheel')
@@ -178,7 +178,7 @@ test.describe('an open popover and the page behind it', () => {
   })
 
   test('an open panel does not rewrite its placement on every scroll event', async ({ page }) => {
-    await page.goto('/')
+    await go(page, '/')
     await openPanel(page)
 
     // placePopover writes data-pop-align, data-pop-side and --pop-max-h. The
