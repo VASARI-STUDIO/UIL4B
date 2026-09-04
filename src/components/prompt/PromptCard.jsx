@@ -3,31 +3,35 @@ import UserName from '../UserName'
 
 // A single prompt tile in the gallery. Presentational — all behaviour is wired
 // through props by the parent library.
-export default function PromptCard({ p, onOpen, isCommunity, isSaved, isLocked }) {
+//
+// This component has no locked state, and that is the design. A locked prompt
+// never reaches it: PromptLibrary splits the library through
+// utils/lockedPreview before rendering, so a locked row is replaced by a
+// preview and drawn by LockedPromptCard instead.
+//
+// The branch that used to live here is worth remembering rather than
+// rediscovering. It dimmed the card, removed it from the tab order and printed
+// "Pro only" under it — while rendering `p.title || p.text.slice(0, 60)` into
+// the title AND the aria-label. For a prompt the title IS the product, so the
+// card announced the thing it was charging for. Any future lock state on this
+// surface belongs in LockedTease, which is structurally incapable of holding a
+// payload, not here.
+export default function PromptCard({ p, onOpen, isCommunity, isSaved }) {
   const pTags = parseTags(p.tags)
 
-  const open = () => { if (!isLocked) onOpen(p) }
+  const open = () => onOpen(p)
 
   return (
     <div
-      className={`pl-card no-img${isLocked ? ' pl-card-locked' : ''}`}
+      className="pl-card no-img"
       onClick={open}
-      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isLocked) { e.preventDefault(); open() } }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } }}
       role="button"
-      tabIndex={isLocked ? -1 : 0}
-      aria-disabled={isLocked || undefined}
+      tabIndex={0}
       aria-label={`Open prompt: ${p.title || p.text.slice(0, 60)}`}
-      style={isLocked ? { cursor: 'default', opacity: 0.7 } : undefined}
     >
       <div className="pl-card-text-hero">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div className="pl-card-title" style={{ flex: 1 }}>{p.title || p.text.slice(0, 60)}</div>
-          {isLocked && (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
-            </svg>
-          )}
-        </div>
+        <div className="pl-card-title">{p.title || p.text.slice(0, 60)}</div>
         {pTags.length > 0 && (
           <div className="pl-card-tags">
             {pTags.slice(0, 3).map(tag => <span key={tag} className="pl-tag">{tag}</span>)}
@@ -46,13 +50,6 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved, isLocked }
           </div>
         )}
         {!isCommunity && <div className="pl-card-date-inline">{p.date}</div>}
-        {/* --accent-strong, not --accent: #0F6FFF measures 4.43:1 on the white
-            card, under AA at 10px. Same blue, 5.84:1. */}
-        {isLocked && (
-          <div style={{ fontSize: 10, color: 'var(--accent-strong)', marginTop: 4, fontWeight: 600 }}>
-            Pro only
-          </div>
-        )}
       </div>
     </div>
   )

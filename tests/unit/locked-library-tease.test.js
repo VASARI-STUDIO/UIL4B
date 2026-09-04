@@ -27,6 +27,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { splitLockedLibrary, LOCKED_TEASE } from '../../src/utils/lockedPreview.js'
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
+import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { FREE_PROMPT_LIMIT } from '../../src/data/promptCategories.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
@@ -138,8 +140,8 @@ test('only an exact true opens the gate', () => {
 
 // ── 3. The order of the check, asserted against the source ──────────────────
 
-test('both palette surfaces split BEFORE they render, not on the control', () => {
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx']) {
+test('every gated surface splits BEFORE it renders, not on the control', () => {
+  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx']) {
     const src = stripComments(read(file))
     const split = src.indexOf('splitLockedLibrary(')
     assert.ok(split > -1, `${file} must route its library through splitLockedLibrary`)
@@ -174,12 +176,13 @@ test('every wall registers a real gate id rather than falling back to a title', 
   // silently splits its history in two — upgrade-activation-events names that
   // as outstanding work.
   const ids = []
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx']) {
+  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx']) {
     const src = stripComments(read(file))
     for (const m of src.matchAll(/gate="([a-z0-9-]+)"/g)) ids.push(m[1])
   }
   assert.ok(ids.includes('palette-library-brand-lock'), 'the Palette Library wall must name its gate')
   assert.ok(ids.includes('palette-builder-brand-lock'), 'the Palette Builder wall must name its gate')
+  assert.ok(ids.includes('prompt-library-community-lock'), 'the Prompt Library wall must name its gate')
   for (const id of ids) {
     assert.ok(id.length <= 48, `gate id ${id} is truncated at 48 chars by trackUpgradeGate`)
   }
@@ -195,7 +198,8 @@ test('the wall copy invents no scarcity, urgency, testimonial or metric', () => 
   const src = stripComments(
     read('src/components/library/LockedTease.jsx')
     + read('src/pages/PaletteGallery.jsx')
-    + read('src/pages/PaletteBuilder.jsx'),
+    + read('src/pages/PaletteBuilder.jsx')
+    + read('src/pages/PromptLibrary.jsx'),
   )
   // Positive control: if stripping ever removed the copy as well, every
   // assertion below would pass for the wrong reason.
@@ -215,7 +219,7 @@ test('the CTA number is derived from the data, never written as a literal', () =
   // A hard-coded "another 30 brand systems" goes stale the moment a row is
   // added to brandPalettes.js, and a wall that lies about its own size is the
   // cheapest possible way to lose trust.
-  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx']) {
+  for (const file of ['src/pages/PaletteGallery.jsx', 'src/pages/PaletteBuilder.jsx', 'src/pages/PromptLibrary.jsx']) {
     const src = stripComments(read(file))
     assert.ok(/Another \$\{locked/.test(src), `${file} must interpolate the remaining count into its heading`)
   }
@@ -237,4 +241,134 @@ test('a locked placeholder never animates, so it cannot read as a failed load', 
   assert.deepEqual(offenders, [], `a locked placeholder rule animates: ${offenders.join(' / ')}`)
   // Not vacuous: the selectors must actually be in the stylesheet.
   assert.ok(css.includes('.lockt-stripes'), 'the locked-row CSS is missing entirely')
+})
+
+// ── 5. The community prompt tier is an identity, not a position ─────────────
+//
+// The palette gate was always an identity (`palette.pro !== true`). The prompt
+// gate was a POSITION: the grid locked every card past the twelfth of the
+// FILTERED list, so "free" meant the first twelve of whatever view the visitor
+// had built, and the search box built the view. A position cannot be a gate,
+// because the user controls the ordering.
+
+const FREE_PROMPTS = COMMUNITY_PROMPTS.filter((p) => p.free === true)
+const LOCKED_PROMPTS = COMMUNITY_PROMPTS.filter((p) => p.free !== true)
+
+// The twelve that were free in the DEFAULT view (sort 'popular' = saves
+// descending) on 2026-09-04, the day the gate stopped counting positions.
+// They are pinned as a literal rather than recomputed from `saves`, for two
+// reasons: recomputing would make this test restate the implementation instead
+// of checking it, and the set must NOT follow a saves edit — that is precisely
+// the coupling the fix removed.
+//
+// Changing this list widens or narrows the free tier, which is a PRICING
+// decision and founder-owned. The test is here so that change has to be made
+// on purpose rather than as a side effect of editing a number in a data file.
+const PINNED_FREE = ['c-1', 'c-2', 'c-3', 'c-9', 'c-13', 'c-14', 'c-15', 'c-16', 'c-17', 'c-18', 'c-19', 'c-20']
+
+test('every community prompt declares its tier explicitly, and it is a boolean', () => {
+  // A missing flag must read as LOCKED, and `free !== true` already does that.
+  // What this pins is that the DATA never relies on it: an author adding a row
+  // states the tier, so the fail-closed default is a safety net rather than the
+  // mechanism.
+  const undeclared = COMMUNITY_PROMPTS.filter((p) => typeof p.free !== 'boolean').map((p) => p.id)
+  assert.deepEqual(undeclared, [], `prompts with no explicit free flag: ${undeclared.join(', ')}`)
+  assert.ok(COMMUNITY_PROMPTS.length > 0, 'no community prompts at all — this suite would be vacuous')
+})
+
+test('the free tier is exactly the twelve prompts it was before the gate changed', () => {
+  assert.deepEqual(
+    FREE_PROMPTS.map((p) => p.id).sort(),
+    [...PINNED_FREE].sort(),
+    'the free prompt set moved — that is a pricing change, not a refactor',
+  )
+  assert.equal(FREE_PROMPTS.length, FREE_PROMPT_LIMIT,
+    `FREE_PROMPT_LIMIT says ${FREE_PROMPT_LIMIT} but ${FREE_PROMPTS.length} prompts carry free: true`)
+  assert.ok(LOCKED_PROMPTS.length > 0, 'nothing is locked — there is no tier to sell')
+})
+
+test('the prompt gate ignores saves and ignores order, so no control can move it', () => {
+  // The old gate was decided by the array index at render time, which the sort
+  // control and the search box both rewrote. Feeding the splitter a reversed
+  // and a re-scored copy must produce the same open set.
+  const args = {
+    unlocked: false,
+    isOpen: (p) => p.free === true,
+    preview: (p) => ({ id: p.id, slots: 3 }),
+  }
+  const expected = FREE_PROMPTS.map((p) => p.id).sort()
+  const reversed = [...COMMUNITY_PROMPTS].reverse()
+  const rescored = COMMUNITY_PROMPTS.map((p, i) => ({ ...p, saves: 1000 - i }))
+  for (const [name, list] of [['reversed', reversed], ['re-scored', rescored]]) {
+    const { open } = splitLockedLibrary(list, args)
+    assert.deepEqual(open.map((p) => p.id).sort(), expected, `the ${name} library opened a different set`)
+  }
+})
+
+test('a locked prompt preview carries neither its title nor its text', () => {
+  // For a brand palette the NAME is the tease and the hexes are the product.
+  // A prompt is the opposite: the title is the idea being sold, so it is
+  // payload. The whitelist has no `title` or `text` key, so a careless mapper
+  // cannot hand either through — asserted by handing one over on purpose.
+  const { locked } = splitLockedLibrary(COMMUNITY_PROMPTS, {
+    unlocked: false,
+    isOpen: (p) => p.free === true,
+    preview: (p) => ({ id: p.id, title: p.title, text: p.text, slots: 3 }),
+  })
+  assert.ok(locked.length > 0, 'nothing was teased — this assertion would be vacuous')
+  for (const preview of locked) {
+    assert.equal(preview.title, undefined, 'a preview carried the prompt title')
+    assert.equal(preview.text, undefined, 'a preview carried the prompt text')
+  }
+  const serialised = JSON.stringify(locked).toLowerCase()
+  for (const p of LOCKED_PROMPTS) {
+    assert.ok(!serialised.includes(p.title.toLowerCase()), `preview payload names locked prompt ${p.id}`)
+  }
+})
+
+test('the prompt library gates on identity and never on a position', () => {
+  const src = stripComments(read('src/pages/PromptLibrary.jsx'))
+  // The exact defect: an index compared against the free-tier count.
+  assert.ok(!/idx\s*>=/.test(src), 'the grid still compares a render index against the tier size')
+  assert.ok(!src.includes('FREE_PROMPT_LIMIT'),
+    'the page still imports the free-tier COUNT — the gate must read the per-row flag instead')
+  assert.ok(/isOpen:\s*\(p\)\s*=>\s*p\.free === true/.test(src),
+    'the gate must be an exact per-prompt identity check')
+  // Search and grid must both read the split output. Filtering the full list
+  // is the leak: the predicate reads p.text, so it answers "does a Pro prompt
+  // contain this phrase" for anyone who types one.
+  assert.ok(src.includes('isCommunity ? browsableCommunity : prompts'),
+    'the grid source must be the split output, not the full community list')
+  assert.ok(!/isCommunity \? sortedCommunity : prompts/.test(src),
+    'the full community list must not be the grid source')
+})
+
+test('PromptCard has no locked state left to re-wire', () => {
+  // It is not enough that the branch is unused. It rendered
+  // `p.title || p.text.slice(0, 60)` into the title AND the aria-label of a
+  // card it had just declared locked, and eslint cannot see an unused React
+  // component here (varsIgnorePattern '^[A-Z_]'), so a dormant copy would sit
+  // one prop away from shipping the defect again.
+  const src = stripComments(read('src/components/prompt/PromptCard.jsx'))
+  assert.ok(!src.includes('isLocked'), 'PromptCard still carries a locked branch')
+  assert.ok(src.includes('pl-card-title'), 'PromptCard did not render at all — this assertion is vacuous')
+})
+
+test('the teased grid continues the gallery instead of hugging it', () => {
+  // Measured defect: .pl-gallery carries margin-top:8px to clear the toolbar,
+  // and the locked grid is a second .pl-gallery — so the seam between the last
+  // real row and the teased row was 8px against a 16px row gap, and the tease
+  // read as attached to the row above rather than as the next row.
+  //
+  // The seam READS the gap rather than repeating its value, because the 720px
+  // band retunes the gap to 14px and a copied number would stop matching there
+  // silently. Same drift argument the .lockt-stripes comment makes about
+  // heights.
+  const css = stripComments(read('src/styles/global.css'))
+  assert.ok(/\.pl-gallery\{[^}]*--pl-gap:16px[^}]*gap:var\(--pl-gap\)/.test(css),
+    'the gallery must publish its row gap as --pl-gap and consume it')
+  assert.ok(/\.pl-gallery--continues\{margin-top:var\(--pl-gap\)\}/.test(css),
+    'the continuation grid must take its seam from --pl-gap, not a literal')
+  assert.ok(/\.pl-gallery\{[^}]*--pl-gap:14px/.test(css),
+    'the narrow band must retune --pl-gap so the seam follows the gap')
 })

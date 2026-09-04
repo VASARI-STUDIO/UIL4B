@@ -1,13 +1,14 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { NavLink } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
-import { TAG_CATEGORIES, FREE_PROMPT_LIMIT } from '../data/promptCategories'
+import { TAG_CATEGORIES } from '../data/promptCategories'
 import { getPrompts, setPromptsStore, getSavedIds, setSavedIdsStore, parseTags } from '../utils/promptStore'
+import { splitLockedLibrary } from '../utils/lockedPreview'
+import { LockedPromptCard, LockedTeaseCta } from '../components/library/LockedTease'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
@@ -150,10 +151,50 @@ export default function PromptLibrary({ onCopy, toast }) {
     if (communitySort === 'new') return list.reverse()
     return list.sort((a, b) => (b.saves || 0) - (a.saves || 0))
   }, [communitySort])
-  const sourceList = isCommunity ? sortedCommunity : prompts
+
+  // The gate, applied BEFORE search and sort can reach the data.
+  //
+  // It used to be positional — the grid locked every card past the twelfth of
+  // the FILTERED list — so "free" meant the first twelve of whatever view you
+  // had built, and the search box built the view. Typing a phrase that only a
+  // locked prompt contained brought it back at index 0, unlocked. All twenty
+  // were reachable that way, and the sort control did the same thing more
+  // slowly.
+  //
+  // `browsable` is what this viewer may have. A locked prompt is not in it, so
+  // it has no route to the page: not the grid, not the modal, and not the
+  // search predicate, which reads `p.text` and would otherwise answer "does a
+  // locked prompt contain this phrase" for anyone who asked.
+  //
+  // `unlocked` is `isPro === true` and nothing looser: a subscription still
+  // resolving is not a subscription. See utils/lockedPreview for why a preview
+  // can never carry the payload.
+  const { open: browsableCommunity, locked: lockedPrompts, remaining: lockedCount } = useMemo(() => (
+    splitLockedLibrary(sortedCommunity, {
+      unlocked: isPro === true,
+      isOpen: (p) => p.free === true,
+      // No label. A brand palette's name is the tease and its hexes are the
+      // product; a prompt is the opposite — the TITLE is the idea being sold,
+      // so it stays behind the gate with the text. Tags are already the
+      // library's public filter facet, so they may show.
+      //
+      // `slots` is a fixed 3 rather than a measurement. On a palette it is the
+      // swatch count, a real fact about the row; a prompt has no count worth
+      // publishing, and deriving one from the text length would leak the size
+      // of what is being withheld. Three lines is the card's shape, not data.
+      preview: (p) => ({ id: p.id, tags: parseTags(p.tags).slice(0, 2), slots: 3 }),
+    })
+  ), [sortedCommunity, isPro])
+
+  const sourceList = isCommunity ? browsableCommunity : prompts
 
   const q = search.toLowerCase()
   const activeTags = activeCategory ? TAG_CATEGORIES.find(c => c.label === activeCategory)?.tags || [] : []
+
+  // Only while browsing the whole community library, and only when something
+  // is actually locked. `lockedCount` is 0 for a Pro viewer, so the block
+  // disappears for them without a second condition.
+  const lockedBlockVisible = isCommunity && lockedCount > 0 && !q.trim() && !activeCategory
 
   const filtered = sourceList.filter(p => {
     if (activeCategory) {
@@ -286,37 +327,18 @@ export default function PromptLibrary({ onCopy, toast }) {
         <SubmitPromptPanel onClose={() => setSubmitOpen(false)} user={user} userProfile={userProfile} toast={toast} />
       )}
 
-      {/* Pro CTA cards */}
-      {isCommunity && !isPro && (
-        <div className="card" style={{ padding: 20, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', borderLeft: '3px solid var(--accent)' }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Unlock all community prompts</div>
-            <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.5 }}>
-              Free users can access {FREE_PROMPT_LIMIT} prompts. Upgrade to Pro to unlock the full library and get +25 bonus AI generations for every approved prompt you submit.
-            </div>
-          </div>
-          <NavLink to="/checkout?plan=yearly" className="btn btn-accent" style={{ whiteSpace: 'nowrap' }}>
-            Upgrade to Pro
-          </NavLink>
-        </div>
-      )}
-
       {/* Gallery Grid */}
       {filtered.length > 0 ? (
         <div className="pl-gallery">
-          {filtered.map((p, idx) => {
-            const isLocked = isCommunity && !isPro && idx >= FREE_PROMPT_LIMIT
-            return (
-              <PromptCard
-                key={p.id}
-                p={p}
-                onOpen={isLocked ? () => toast?.('Upgrade to Pro to access this prompt') : setModalPrompt}
-                isCommunity={isCommunity}
-                isSaved={savedIds.has(p.id)}
-                isLocked={isLocked}
-              />
-            )
-          })}
+          {filtered.map((p) => (
+            <PromptCard
+              key={p.id}
+              p={p}
+              onOpen={setModalPrompt}
+              isCommunity={isCommunity}
+              isSaved={savedIds.has(p.id)}
+            />
+          ))}
         </div>
       ) : (
         <div className="pl-empty">
@@ -336,6 +358,40 @@ export default function PromptLibrary({ onCopy, toast }) {
             <button className="btn btn-accent" onClick={() => setAddOpen(true)}>{t('promptLibrary.addPrompt')}</button>
           )}
         </div>
+      )}
+
+      {/* The teased tail of the community library: three placeholders, then one
+          wall. Shown only while BROWSING — under a search or a category filter
+          the user has asked a narrower question, and answering it with a
+          paywall is an interruption rather than an offer (same rule as the
+          Palette Library).
+
+          It is also why the empty state stays "No prompts match your search"
+          and does not say how many locked prompts DID match. That sentence
+          would be the search oracle rebuilt in words: it answers "does a Pro
+          prompt contain my phrase" for anyone willing to type. */}
+      {lockedBlockVisible && (
+        <>
+          {/* The locked grid names itself. A screen-reader user meets three more
+              cards after the free ones and needs to know why they differ. The
+              placeholder SHAPES are hidden inside the card; nothing announced
+              here is invented, because the card holds nothing to invent. */}
+          <h3 className="sr-only" id="pl-locked-community">Community prompts included with Pro</h3>
+          <div className="pl-gallery pl-gallery--continues" role="group" aria-labelledby="pl-locked-community">
+            {lockedPrompts.map((preview) => <LockedPromptCard key={preview.id} preview={preview} />)}
+          </div>
+          <LockedTeaseCta
+            gate="prompt-library-community-lock"
+            heading={`Another ${lockedCount} community ${lockedCount === 1 ? 'prompt' : 'prompts'} with Pro`}
+            body="Each one opens as the complete brief its author wrote — the full prompt text to copy, not a preview of it."
+            action="See what Pro includes"
+            modal={{
+              eyebrow: 'Pro prompt library',
+              title: 'The full community library',
+              subtitle: `Free covers ${browsableCommunity.length} of the ${COMMUNITY_PROMPTS.length} community prompts. Pro opens the remaining ${lockedCount}, each as the full text its author submitted.`,
+            }}
+          />
+        </>
       )}
 
       {/* Detail Modal */}
