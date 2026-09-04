@@ -129,7 +129,7 @@ test('goRaw() has exactly one caller, and it is the spec that proves the wait wo
   // goRaw is the deliberate hole in the door. If it acquires other callers it
   // stops being a documented exception and becomes a second way in.
   const callers = SPECS.filter((f) => /\bgoRaw\s*\(/.test(readStripped(path.join('tests', 'user-sim', f))))
-  assert.deepEqual(callers, ['45-lazy-route-readiness.spec.js'],
+  assert.deepEqual(callers, ['47-lazy-route-readiness.spec.js'],
     'goRaw() skips the readiness wait on purpose, for the one spec that has to observe\n'
     + 'the page BEFORE its route arrives. Any other caller is opting out of the fix:\n  '
     + callers.join('\n  '))

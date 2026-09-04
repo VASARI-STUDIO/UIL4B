@@ -92,7 +92,7 @@ export function watch(page, persona) {
 
 /**
  * Navigate WITHOUT waiting for the route to arrive. There is one caller:
- * 45-lazy-route-readiness.spec.js, which exists to read the page in the moment
+ * 47-lazy-route-readiness.spec.js, which exists to read the page in the moment
  * before it has, and cannot use `go()` to get there.
  *
  * Not waiting for the full 'load' event is separate and applies to both: the
