@@ -21,6 +21,7 @@ import {
   STROKE_PX, STROKE_UNIT_PX, customIconStrokePx, draftStrokePx,
   stickyStrokePx, strokeAttrForPx, viewBoxOf,
 } from '../utils/iconStroke'
+import { WIDE_INK, inkShape } from '../utils/glyphShape'
 
 const API_LIMIT = 999
 
@@ -265,14 +266,52 @@ const prefetchIconSvg = (icon) => {
 // is near-white (Apple, OpenAI, GitHub-in-dark…) we sample its pixels once and
 // flip that icon's chip to the dark Stage gradient. Tone is remembered per icon
 // so scrolling or reopening never re-samples.
-const toneCache = new Map() // 'pack:name' → 'light' | 'dark' (chip background tone)
+const glyphCache = new Map() // 'pack:name' → { tone, ar } (chip tone + ink aspect)
 
-// Average relative luminance of the glyph's opaque pixels via a tiny canvas.
-// Near-white artwork (avg > .82) needs the dark chip; anything else reads fine
-// on the light one. Any failure (CORS taint, decode error) falls back to light.
-function sampleGlyphTone(img) {
+// A BRAND LOCKUP IS NOT A SQUARE MARK, AND THE GRID USED TO PRETEND IT WAS.
+//
+// Founder, 2026-09-04: "check our rendering for alot of the icons, alot of the
+// icons are not rendering correctly". Measured on /create/icons under the Brand
+// logos filter at 1440x900: `logos/aerospike` painted 24 x 2.1px inside its
+// 24 x 24 box and `logos/active-campaign` 24 x 2.4px. Illegible - and NOT a
+// fetch failure: all 120 mounted tiles loaded, every one the real artwork.
+//
+// TWO CAUSES, ONE SYMPTOM, and one measurement reaches both:
+//   a) `logos` ships genuinely wide viewBoxes. Censused against the Iconify API:
+//      839 of 1,880 (45%) are off-square, 625 (33%) exceed 2:1, worst `rolldown`
+//      at 11.8:1 (512 x 43.39). Requesting ?width=24&height=24 pins the box and
+//      leaves the viewBox alone, so the art letterboxes to a thin strip.
+//   b) `devicon` ships 422 `-wordmark` entries on a SQUARE 128 x 128 canvas with
+//      a horizontal lockup drawn small inside it. The aspect ratio is honest and
+//      no viewBox handling can reach it - the artwork's own margins are the
+//      problem. These are the entries the founder named: adonisjs-wordmark,
+//      aerospike-wordmark, aframe-wordmark, akka-wordmark, algolia-wordmark.
+//
+// So the signal is the INK, not the box: the bounding box of the opaque pixels.
+// That number is wide for (a) and for (b) alike. This canvas pass already ran on
+// every one of these glyphs to choose the chip tone, so the extra cost is one
+// comparison per pixel and no extra decode.
+//
+// Colored/brand artwork keeps its own colours, so the grid can't tint it for
+// contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
+// on a chip using the Stage's light gradient by default; if the artwork itself
+// is near-white (Apple, OpenAI, GitHub-in-dark...) we flip that icon's chip to
+// the dark Stage gradient. Both facts are remembered per icon, so scrolling or
+// reopening never re-samples.
+
+// Average relative luminance of the glyph's opaque pixels, plus the aspect ratio
+// of the box those pixels occupy. Near-white artwork (avg > .82) needs the dark
+// chip. Any failure (CORS taint, decode error) falls back to a light chip and a
+// square ink box - which is exactly the treatment every icon had before this
+// measurement existed, so a sampling failure degrades to the old behaviour
+// rather than to a broken one.
+//
+// S is 64 rather than 24 because a 10:1 lockup occupies two rows of a 24px
+// raster: enough to see, not enough to measure. At 64 it is a six-row band and
+// the ratio is stable.
+function sampleGlyph(img) {
   try {
-    const S = 24
+    const S = 64
     const canvas = document.createElement('canvas')
     canvas.width = S
     canvas.height = S
@@ -282,36 +321,68 @@ function sampleGlyphTone(img) {
     const toLin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
     let sum = 0
     let n = 0
+    let x0 = S, y0 = S, x1 = -1, y1 = -1
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] < 64) continue
       sum += 0.2126 * toLin(data[i]) + 0.7152 * toLin(data[i + 1]) + 0.0722 * toLin(data[i + 2])
       n++
+      const p = i / 4
+      const px = p % S
+      const py = (p - px) / S
+      if (px < x0) x0 = px
+      if (px > x1) x1 = px
+      if (py < y0) y0 = py
+      if (py > y1) y1 = py
     }
-    return n > 0 && sum / n > 0.82 ? 'dark' : 'light'
-  } catch { return 'light' }
+    if (n === 0) return { tone: 'light', ar: 1, cap: 1 }
+    // The raster is SQUARE and drawImage stretched the art to fill it, so the
+    // measured ink box is the true one divided by the image own aspect. Undoing
+    // that is what makes one number cover both causes: a square-canvas devicon
+    // wordmark contributes all of its width through the ink box (natural 1), a
+    // wide logos viewBox contributes all of its width through the natural aspect
+    // (ink box roughly square), and anything in between composes correctly.
+    const { ar, cap } = inkShape({
+      naturalW: img.naturalWidth,
+      naturalH: img.naturalHeight,
+      inkW: x1 - x0 + 1,
+      inkH: y1 - y0 + 1,
+      raster: S,
+    })
+    return { tone: sum / n > 0.82 ? 'dark' : 'light', ar, cap }
+  } catch { return { tone: 'light', ar: 1, cap: 1 } }
 }
+
 
 // Iconify-served brand glyph on a tone-aware chip. crossOrigin is safe here —
 // the same API already answers CORS fetches in fetchSvgText — but logo.dev
 // images must NOT use this component (unknown CORS policy; a crossOrigin
 // failure would blank the image entirely), so they get a plain light chip.
+//
+// THE REQUEST ASKS FOR A HEIGHT, NOT A BOX. `?width=24&height=24` pinned both
+// dimensions and left the viewBox alone, so the API returned a 24 x 24 SVG that
+// letterboxed a 512 x 45 lockup into a 2px strip. `?height=48` lets the width
+// follow the artwork, so the element's intrinsic aspect is finally the truth
+// about the art. Square glyphs are unaffected - the CSS still paints them in a
+// 24px box - and 48 gives the wide chip resolution to scale from.
 function BrandGlyph({ pack, name }) {
   const key = svgKey(pack, name)
-  const [tone, setTone] = useState(() => toneCache.get(key) || 'light')
-  const cached = toneCache.get(key)
-  if (cached && cached !== tone) setTone(cached)
+  const [shape, setShape] = useState(() => glyphCache.get(key) || { tone: 'light', ar: 1, cap: 1 })
+  const cached = glyphCache.get(key)
+  if (cached && cached !== shape) setShape(cached)
   const onLoad = (e) => {
-    if (toneCache.has(key)) return
-    const t = sampleGlyphTone(e.currentTarget)
-    toneCache.set(key, t)
-    setTone(t)
+    if (glyphCache.has(key)) return
+    const next = sampleGlyph(e.currentTarget)
+    glyphCache.set(key, next)
+    setShape(next)
   }
+  const wide = shape.ar > WIDE_INK
   return (
-    <span className={`ig-chip${tone === 'dark' ? ' ig-chip--dark' : ''}`}>
+    <span
+      className={`ig-chip${shape.tone === 'dark' ? ' ig-chip--dark' : ''}${wide ? ' ig-chip--wide' : ''}`}
+      style={wide ? { '--ig-wide-cap': shape.cap } : undefined}
+    >
       <img
-        src={`https://api.iconify.design/${pack}/${name}.svg?width=24&height=24`}
-        width="24"
-        height="24"
+        src={`https://api.iconify.design/${pack}/${name}.svg?height=48`}
         crossOrigin="anonymous"
         loading="lazy"
         alt={name}
@@ -803,18 +874,18 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   // from the shared cache (usually already populated by the grid), refined by
   // the stage image's own onLoad sampling if not.
   const brandKey = activeIcon?.cdn && !activeIcon.custom ? svgKey(activeIcon.pack, activeIcon.name) : null
-  const [brandTone, setBrandTone] = useState(() => (brandKey && toneCache.get(brandKey)) || 'light')
+  const [brandTone, setBrandTone] = useState(() => (brandKey && glyphCache.get(brandKey)?.tone) || 'light')
   const [prevBrandKey, setPrevBrandKey] = useState(brandKey)
   if (brandKey !== prevBrandKey) {
     // Derive-during-render on icon change (no effect → no cascading-render lint).
     setPrevBrandKey(brandKey)
-    setBrandTone((brandKey && toneCache.get(brandKey)) || 'light')
+    setBrandTone((brandKey && glyphCache.get(brandKey)?.tone) || 'light')
   }
   const onStageImgLoad = (e) => {
     if (!isColoredPack) return
     const key = svgKey(activeIcon.pack, activeIcon.name)
-    if (!toneCache.has(key)) toneCache.set(key, sampleGlyphTone(e.currentTarget))
-    setBrandTone(toneCache.get(key))
+    if (!glyphCache.has(key)) glyphCache.set(key, sampleGlyph(e.currentTarget))
+    setBrandTone(glyphCache.get(key).tone)
   }
 
   const effectiveColor = isColoredPack ? '#F4F4F5' : (color || themeInk)
