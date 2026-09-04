@@ -71,12 +71,13 @@ them.
   **Discover** and **Learn**; "Workspace" is an internal code name and must not
   appear in UI copy.
 - **Two typefaces ship, and only two:** Manrope and JetBrains Mono, self-hosted.
-  There is no third family and no serif — `--serif` resolves to Manrope, the
-  same value as `--font`, and is a misnamed alias rather than a face. Any design
-  that promises typographic contrast from `--serif` is promising something the
-  value does not honour. Tracked as `serif-token-is-not-a-serif` in
-  `src/data/pipeline.js`; the reasoning and two other imported-skill carve-outs
-  are in `docs/reference/doc-authority-map.md`.
+  There is no third family and no serif. The token that used to claim one,
+  `--serif`, was renamed to `--display` (2026-09-04) because it resolved to
+  Manrope — the same value as `--font` — and a token name is a claim the value
+  has to honour. `--display` is an honest alias: same face, display sizes. No
+  design may promise typographic contrast from it. Closed as
+  `serif-token-is-not-a-serif` in `src/data/pipeline.js`; the reasoning and two
+  other imported-skill carve-outs are in `docs/reference/doc-authority-map.md`.
 - Lucide is a live product surface, not a banned icon pack. See the same
   carve-out table before acting on an imported skill's ban list.
 - Voice: the founder has asked for "real australian style english to sound like

@@ -113,6 +113,60 @@ function labelGround(bg) {
 }
 
 /**
+ * ONE INK FOR THE WHOLE CARD, and the smallest ground move that lets it work.
+ *
+ * Applying labelGround to `bg` and `surface` SEPARATELY is not enough, and the
+ * reason is worth stating because it looks like it should be. Each ground then
+ * gets whichever pole suits IT, and the two can disagree — measured on the
+ * rendered page, bg #248721 (relative luminance .178) and surface #3b9738
+ * (.234). Black clears surface at 5.10 but only 4.10 on bg; white clears bg at
+ * 4.61 but only 3.70 on surface. Neither pole clears BOTH, so no single value
+ * of `muted` or `text` can be right, and the card paints one label legibly and
+ * the next one not.
+ *
+ * fixForeground cannot rescue that either: it takes its direction from the
+ * ground (`bgLum < 0.5` ⇒ walk the ink lighter), so on a mid-luminance
+ * chromatic ground, starting from black, it walks the ink toward the ground
+ * rather than away and lands further short. That is the same flaw #346
+ * documented for the single-ground case.
+ *
+ * So the pole is chosen ONCE for the card, and then whichever grounds do not
+ * clear it are walked until they do — hue and saturation kept, lightness only,
+ * by the sheet's own fixBackground. The pole that needs the LEAST total
+ * movement wins, because every unit of movement is the preview showing a
+ * colour the palette did not generate. On the pair above that is black, which
+ * needs bg lifted from .178 to .200 and leaves surface untouched — against
+ * white, which would have needed surface darkened by a fifth.
+ *
+ * THIS IS THE DESIGN COST THE BACKLOG ITEM FLAGGED, and it is real: on a
+ * palette whose steps land mid-luminance, the card's chrome is no longer
+ * exactly the generated hex. It is the same trade labelGround already makes
+ * for .hw-pal-hex and .hw-ui-avatar, applied to the two containers, and the
+ * swatch row underneath still shows every generated value untouched.
+ */
+function cardGrounds(bgIn, surfaceIn) {
+  // A monotone stand-in for lightness distance that needs no extra import:
+  // how far each ground moved, measured as its contrast against white.
+  const drift = (a, b) => Math.abs(contrastRatio(a, '#FFFFFF') - contrastRatio(b, '#FFFFFF'))
+  let best = null
+  for (const pole of ['#141414', '#FFFFFF']) {
+    const bg = contrastRatio(pole, bgIn) >= 4.5 ? bgIn : fixBackground(pole, bgIn, 4.5)
+    const surface = contrastRatio(pole, surfaceIn) >= 4.5
+      ? surfaceIn
+      : fixBackground(pole, surfaceIn, 4.5)
+    const worst = Math.min(contrastRatio(pole, bg), contrastRatio(pole, surface))
+    const moved = drift(bg, bgIn) + drift(surface, surfaceIn)
+    const clears = worst >= 4.5
+    if (best === null
+      || (clears && !best.clears)
+      || (clears === best.clears && moved < best.moved)) {
+      best = { pole, bg, surface, worst, moved, clears }
+    }
+  }
+  return best
+}
+
+/**
  * The muted role, guaranteed against EVERY ground the card actually paints it
  * on rather than only the one it was derived against.
  *
@@ -147,7 +201,20 @@ function mutedInk(muted, grounds) {
     if (contrastRatio(walked, g) < 4.5) walked = fixForeground(walked, g, 4.5)
   }
   if (worstOf(walked) >= 4.5) return walked
-  return worstOf('#141414') >= worstOf('#FFFFFF') ? '#141414' : '#FFFFFF'
+  // STEP 3 USED TO RETURN A RAW POLE and stop, which is not a guarantee — on an
+  // impossible ground the better pole is still the better FAILING value. It now
+  // walks each pole against every ground the way step 2 walks the hue, and keeps
+  // whichever ends up further clear. Walking an achromatic keeps it achromatic,
+  // so this only ever slides along the grey axis.
+  let best = null
+  for (const pole of ['#141414', '#FFFFFF']) {
+    let ink = pole
+    for (const g of grounds) {
+      if (contrastRatio(ink, g) < 4.5) ink = fixForeground(ink, g, 4.5)
+    }
+    if (best === null || worstOf(ink) > worstOf(best)) best = ink
+  }
+  return best
 }
 
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
@@ -292,15 +359,56 @@ function PaletteStage({ swatches }) {
   // the palette contains an unusable colour, when in fact the preview had taken
   // that colour for its ground. The dots compare steps against each other on
   // the card; a step that IS the card is not one of them.
-  const dots = hexes.filter((h) => h.toLowerCase() !== String(role.bg).toLowerCase())
-  // Guaranteed against both grounds this card paints muted text on.
-  const muted = mutedInk(role.muted, [role.bg, role.surface])
+  // Compared against BOTH the derived step and the ground finally painted: if
+  // labelGround moved the card background, a dot equal to the original step is
+  // no longer an exact match but is still invisible against it.
+  const cardBg = cardGrounds(role.bg, role.surface).bg
+  const dots = hexes.filter((h) => {
+    const v = h.toLowerCase()
+    return v !== String(role.bg).toLowerCase() && v !== String(cardBg).toLowerCase()
+  })
+  /*
+   * THE GROUND MOVES FIRST, AND THAT IS THE WHOLE FIX.
+   *
+   * #346 guaranteed the muted INK against both grounds and got the failure rate
+   * down, but could not reach zero, because the remaining case is one where no
+   * ink of any lightness clears 4.5:1 — a mid-luminance chromatic fill. The
+   * generator makes those constantly: L_RAMP is [34, 47, 60, 73, 86], a band
+   * centred on exactly the luminance where both poles are equidistant and
+   * neither wins. Choosing a better ink cannot solve a ground that admits no
+   * good ink; the ground has to move. labelGround does that and only that — it
+   * returns the fill unchanged in the common case and walks its lightness only
+   * as far as an achromatic ink requires, keeping hue and saturation.
+   *
+   * MEASURED ON THE RENDERED PAGE, 60 rerolls per theme, compositing the true
+   * ground rather than reading each element's own background. Dark theme only;
+   * light was already clean.
+   *   .hw-ui-app          7/60  (11.67%)  worst 3.56  #f2f3f5 on #358b9a
+   *   .hw-ui-crumb        3/60  ( 5.00%)  worst 3.95  #ffffff on #358b9a
+   *   .hw-ui-delta        3/60  ( 5.00%)  worst 3.95
+   *   .hw-ui-metric-label 2/60  ( 3.33%)  worst 4.29  #141414 on #2d8c21
+   *   .hw-ui-row-state    6/180 ( 3.33%)  worst 4.29
+   *   .hw-ui-metric-num   1/60  ( 1.67%)  worst 4.26  #f2f3f5 on #1f7e8f
+   *   .hw-ui-row-name     3/180 ( 1.67%)  worst 4.26
+   *
+   * NOTE WHAT THAT LIST CONTAINS. The backlog item was filed about the MUTED
+   * role, and its arithmetic estimate was a 2.5% residual with a 4.22 floor.
+   * Measured on the page it is worse and it is wider: role.text fails too, and
+   * .hw-ui-app is the worst offender at 3.56:1 — the product name, 14px/700, in
+   * the card the palette preview exists to sell. An arithmetic estimate that
+   * assumed the ground equalled role.surface missed it because it assumed the
+   * thing that was wrong. So role.text goes through the same guarantee as
+   * role.muted; both land on both grounds, so both need both.
+   */
+  const { bg, surface } = cardGrounds(role.bg, role.surface)
+  const muted = mutedInk(role.muted, [bg, surface])
+  const text = mutedInk(role.text, [bg, surface])
   const dotSeries = dots.length ? dots : hexes
   return (
-    <div className="hw-ui" aria-hidden="true" style={{ background: role.bg, borderColor: role.border }}>
-      <div className="hw-ui-bar" style={{ background: role.surface, borderBottomColor: role.border }}>
-        <span className="hw-ui-mark" style={{ background: role.primary, color: role.onPrimary }}>A</span>
-        <span className="hw-ui-app" style={{ color: role.text }}>Acme</span>
+    <div className="hw-ui" aria-hidden="true" style={{ background: bg, borderColor: role.border }}>
+      <div className="hw-ui-bar" style={{ background: surface, borderBottomColor: role.border }}>
+        <span className="hw-ui-mark" style={{ background: labelGround(role.primary), color: readableInk(role.primary) }}>A</span>
+        <span className="hw-ui-app" style={{ color: text }}>Acme</span>
         <span className="hw-ui-crumb" style={{ color: muted }}>Overview</span>
         <span className="hw-ui-avatar" style={{ background: labelGround(role.accent), color: readableInk(role.accent) }}>M</span>
       </div>
@@ -309,8 +417,8 @@ function PaletteStage({ swatches }) {
         <div className="hw-ui-metric">
           <span className="hw-ui-metric-label" style={{ color: muted }}>Sessions this week</span>
           <span className="hw-ui-metric-row">
-            <strong className="hw-ui-metric-num" style={{ color: role.text }}>12,480</strong>
-            <span className="hw-ui-delta" style={{ background: role.surface, color: muted, border: `1px solid ${role.border}` }}>+12.4%</span>
+            <strong className="hw-ui-metric-num" style={{ color: text }}>12,480</strong>
+            <span className="hw-ui-delta" style={{ background: surface, color: muted, border: `1px solid ${role.border}` }}>+12.4%</span>
           </span>
         </div>
 
@@ -333,7 +441,7 @@ function PaletteStage({ swatches }) {
           {UI_ROWS.map((row, i) => (
             <li className="hw-ui-row" key={row.name} style={{ borderTopColor: role.border }}>
               <span className="hw-ui-dot" style={{ background: dotSeries[i % dotSeries.length] || role.primary }} />
-              <span className="hw-ui-row-name" style={{ color: role.text }}>{row.name}</span>
+              <span className="hw-ui-row-name" style={{ color: text }}>{row.name}</span>
               <span className="hw-ui-row-state" style={{ color: muted }}>{row.state}</span>
             </li>
           ))}

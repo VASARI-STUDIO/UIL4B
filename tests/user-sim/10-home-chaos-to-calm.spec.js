@@ -951,6 +951,24 @@ test.describe('homepage: eleven tools, five ways of working', () => {
   // Main was failing 39-accent-contrast intermittently on .hw-pal-hex for this
   // reason. Rerolling samples the generator's space instead of whichever single
   // palette happened to load.
+  //
+  // WIDENED 2026-09-04. This used to check only .hw-pal-hex and .hw-ui-avatar -
+  // the two elements that carry their own background - and it read
+  // getComputedStyle(el).backgroundColor to find the ground. That is why the
+  // product card's own text was never covered: .hw-ui-crumb, .hw-ui-metric-label
+  // and .hw-ui-row-state are painted on an ANCESTOR's background, so their own
+  // backgroundColor is rgba(0,0,0,0), and the old parser would have scored them
+  // against black and reported nonsense. Compositing the ancestor stack is what
+  // makes the wider selector list measurable at all.
+  //
+  // Measured on main before the fix, 60 rerolls per theme, dark only:
+  //   .hw-ui-app 11.67% under AA, worst 3.56:1 - the product NAME, 14px/700
+  //   .hw-ui-crumb / .hw-ui-delta 5.00%, worst 3.95
+  //   .hw-ui-metric-label / .hw-ui-row-state 3.33%, worst 4.29
+  //   .hw-ui-metric-num / .hw-ui-row-name 1.67%, worst 4.26
+  // 24 rerolls is enough to catch a 5-12% rate reliably; it is NOT enough to
+  // prove the fix, which was verified separately over 200 rerolls per theme
+  // (6,800 measurements, zero under 4.5, worst 4.50).
   test('8c · every label on a generated colour clears AA, whatever is generated', async ({ page }) => {
     await reducedMotion(page)
     watch(page, PERSONA)
@@ -959,26 +977,118 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     const worstOf = async () => page.evaluate(() => {
       const chan = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
       const lum = (c) => 0.2126 * chan(c[0]) + 0.7152 * chan(c[1]) + 0.0722 * chan(c[2])
-      const rgb = (s) => s.match(/\d+/g).map(Number).slice(0, 3)
+      // Both computed colour forms. color-mix() resolves to color(srgb ...) in
+      // Chromium, and a parser that only knows rgba() silently drops the ground
+      // rather than failing - the exact blind spot 39-accent-contrast carried.
+      const parse = (s) => {
+        s = s || ''
+        const cm = s.match(/color\(srgb\s+([^)]+)\)/)
+        if (cm) {
+          const p = cm[1].split(/[\s/]+/).filter(Boolean).map(Number)
+          return { rgb: [p[0] * 255, p[1] * 255, p[2] * 255], a: p.length > 3 ? p[3] : 1 }
+        }
+        const m = s.match(/rgba?\(([^)]+)\)/)
+        if (!m) return null
+        const p = m[1].split(/[,\s/]+/).filter(Boolean).map(Number)
+        return { rgb: [p[0], p[1], p[2]], a: p.length > 3 ? p[3] : 1 }
+      }
+      const over = (fg, bg) => fg.rgb.map((c, i) => c * fg.a + bg[i] * (1 - fg.a))
       const ratio = (a, b) => {
-        const l1 = lum(rgb(a)); const l2 = lum(rgb(b))
+        const l1 = lum(a); const l2 = lum(b)
         return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
       }
+      // The card's text sits on an ANCESTOR's fill, so the ground has to be
+      // composited rather than read off the element.
+      const groundOf = (el) => {
+        const stack = []
+        for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
+          const cs = getComputedStyle(n)
+          if (cs.backgroundImage && cs.backgroundImage !== 'none') return null
+          const c = parse(cs.backgroundColor)
+          if (c && c.a > 0) stack.push(c)
+        }
+        const root = parse(getComputedStyle(document.documentElement).backgroundColor)
+        let base = root && root.a >= 1 ? root.rgb : [255, 255, 255]
+        for (let i = stack.length - 1; i >= 0; i--) base = over(stack[i], base)
+        return base
+      }
       const bad = []
-      // Every bit of text this panel paints ON a generated colour.
-      for (const el of document.querySelectorAll('.hw-pal-hex, .hw-ui-avatar')) {
+      // Every bit of text this panel paints ON a generated colour - the two
+      // elements with their own fill, and the seven inside the product card.
+      const SEL = '.hw-pal-hex, .hw-ui-avatar, .hw-ui-mark, .hw-ui-app, .hw-ui-crumb, '
+        + '.hw-ui-metric-label, .hw-ui-metric-num, .hw-ui-delta, .hw-ui-row-name, .hw-ui-row-state'
+      for (const el of document.querySelectorAll(SEL)) {
         const cs = getComputedStyle(el)
-        const r = ratio(cs.color, cs.backgroundColor)
-        if (r < 4.5) bad.push(`${el.className} ${el.textContent.trim()} ${r.toFixed(2)}:1 on ${cs.backgroundColor}`)
+        const ground = groundOf(el)
+        if (!ground) continue
+        const fg = parse(cs.color)
+        if (!fg) continue
+        const ink = fg.a < 1 ? over(fg, ground) : fg.rgb
+        const r = ratio(ink, ground)
+        const hex = (c) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
+        if (r < 4.5) {
+          bad.push(`${el.className} ${el.textContent.trim()} ${r.toFixed(2)}:1 ${hex(ink)} on ${hex(ground)}`)
+        }
       }
       return bad
     })
 
     const NL = String.fromCharCode(10)
     const failures = []
-    for (let i = 0; i < 24; i++) {
-      failures.push(...await worstOf())
-      await page.getByRole('button', { name: 'Generate' }).click()
+
+    // MEASURE ONLY A SETTLED CARD. Clicking Generate schedules a React update;
+    // reading getComputedStyle in the very next task can catch the DOM between
+    // the old palette and the new one, and the numbers that come back are then
+    // a label from one render against a ground from another. The first draft of
+    // this widening reported exactly that - #8D2046 measured on #948719, two
+    // colours from different palettes and 200 degrees of hue apart - which is a
+    // torn read, not a contrast bug. The invariant that says the card is settled
+    // is the one the component guarantees: every swatch label sits on its own
+    // hex, because .hw-pal-hex takes labelGround(s.hex) and labelGround moves it
+    // only where an ink demands, never more than a step or two of lightness.
+    const settled = async () => expect.poll(async () => page.evaluate(() => {
+      const near = (a, b) => Math.abs(a - b) <= 24
+      return [...document.querySelectorAll('.hw-pal-hex')].every((el) => {
+        const t = (el.textContent || '').trim()
+        if (!/^#[0-9A-F]{6}$/i.test(t)) return false
+        const want = [1, 3, 5].map((i) => parseInt(t.slice(i, i + 2), 16))
+        const got = (getComputedStyle(el).backgroundColor.match(/\d+/g) || []).map(Number)
+        return got.length >= 3 && want.every((v, i) => near(v, got[i]))
+      })
+    }), { message: 'the swatch labels and their grounds are from the same render' })
+      .toBe(true)
+
+    // BOTH THEMES, and that is not padding. Every failure this test was widened
+    // to catch was dark-only - light measured clean at 200 rerolls. The suite
+    // has no colorScheme set, so a single-theme run here is a light run, and
+    // this test would have passed on main while the defect it names was live.
+    //
+    // THE THEME HAS TO BE SET BEFORE THE APP BOOTS, not stamped onto the html
+    // element afterwards, and getting that wrong is a silent vacuous pass. The
+    // card's colours are INLINE STYLES that React computes from
+    // derivePreviewRoles(hexes, { mode }), and `mode` comes from useTheme() -
+    // React state, which a setAttribute on documentElement does not touch. The
+    // first draft of this loop did exactly that: the CSS tokens flipped, the
+    // page LOOKED dark, data-theme read back 'dark', and every colour under test
+    // was still computed in light mode. Verified by mutation - with the fix
+    // reverted, that version passed 8c. Seeding localStorage and reloading makes
+    // the APP set data-theme, so polling for it is then a real signal.
+    for (const theme of ['light', 'dark']) {
+      if (theme === 'dark') {
+        await page.addInitScript(() => {
+          try { localStorage.setItem('vs-t', 'dark') } catch { /* private mode */ }
+        })
+        await go(page, '/')
+      }
+      await expect.poll(
+        () => page.evaluate(() => document.documentElement.getAttribute('data-theme')),
+        { message: `the APP put itself in ${theme} - not a setAttribute from here` },
+      ).toBe(theme)
+      for (let i = 0; i < 24; i++) {
+        await settled()
+        failures.push(...(await worstOf()).map((f) => `[${theme}] ${f}`))
+        await page.getByRole('button', { name: 'Generate' }).click()
+      }
     }
     expect(failures.join(NL), 'label on a generated fill under 4.5:1').toBe('')
   })
