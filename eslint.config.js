@@ -8,7 +8,11 @@ export default defineConfig([
   // dist: build output. public: static assets served verbatim by Vite (e.g.
   // icons-data.js is loaded as a plain browser <script> from index.html, so its
   // top-level vars are runtime globals, not dead code — and it is never bundled).
-  globalIgnores(['dist', 'public', '.claude/worktrees/**']),
+  // `.agents/` holds third-party skills installed by `npx skills add`. It is
+  // gitignored, but ESLint 9's flat config does not read .gitignore, so their
+  // vendored browser bundles were linted and reported 63 errors in the main
+  // checkout while `src/` was clean. They are not our code and never reach CI.
+  globalIgnores(['dist', 'public', '.claude/worktrees/**', '.agents/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
