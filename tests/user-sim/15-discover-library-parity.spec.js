@@ -313,9 +313,14 @@ test.describe('the Palette Library carries the brand systems', () => {
     await expect(page.locator('.pgal-name')).toHaveText('Netflix')
     await expect(page.locator('.pgal-badge')).toBeVisible()
 
-    // A hex from a brand palette finds it too (Spotify green).
-    await search.fill('#1DB954')
-    await expect(page.locator('.pgal-name')).toHaveText('Spotify')
+    // A hex from a brand palette finds it too. DERIVE the hex rather than
+    // repeating it here: this test's subject is "search matches on hex", and a
+    // literal pinned a brand colour as a side effect. It broke when Spotify's
+    // green was corrected from the retired #1DB954 to #1ED760 — a true fix
+    // failing an unrelated test. brandPalettes.js is the one source now.
+    const spotify = BRAND_PALETTES.find((brand) => brand.id === 'spotify')
+    await search.fill(spotify.colors[0])
+    await expect(page.locator('.pgal-name')).toHaveText(spotify.name)
 
     await search.fill('zzzzz-not-a-palette')
     await expect(page.locator('.pgal-card')).toHaveCount(0)
