@@ -9826,41 +9826,152 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 /* Each example is the family doing a job, with the question it answers stated
    above it. Aave's brand-typography section states a role under each face
    rather than adjectives; the caption here is that idea turned into a question,
-   because an example a reader cannot interpret teaches nothing. */
+   because an example a reader cannot interpret teaches nothing.
+
+   THIS IS NOW A LIBRARY, NOT A LAYOUT. The scenes are chosen per family in
+   src/utils/fontScenes.js and any one family renders three or four of the
+   sixteen below, so these rules are grouped by the role that reaches them and
+   several groups never co-occur on screen.
+
+   WHAT IS SPECIMEN AND WHAT IS CHROME, decided once here: type set in
+   the --fdx-ff family is the one under examination and is the thing being
+   judged (written as a bare token name, not as a var() call: design-tokens
+   .test.js scans this stylesheet without stripping comments, so a var() in
+   prose reads to it as a real fallback-less usage and fails the build);
+   the small labels around it (.fdx-ex-kicker, .fdx-ex-runglabel, the gutter
+   numerals) stay in --font or --mono so a reader can always tell which letters
+   are the evidence. The one deliberate exception is .fdx-ex-overline, which is
+   set in the family: on a poster the date line really is part of the
+   composition, and how a display face behaves at 12px is worth seeing.
+
+   THREE WEIGHT CUSTOM PROPERTIES, all snapped upstream to cuts the family
+   really ships: --fdx-bw body, --fdx-mw mid, --fdx-hw bold. On a single-weight
+   family they all resolve to the same number and every scene renders flat,
+   which is the truth about that family. The fallbacks in var() are only for a
+   scene rendered outside the panel. */
 .fdx-examples{display:flex;flex-direction:column;gap:22px}
 .fdx-ex-head h4{margin:0;font-size:12px;font-weight:600;color:var(--t0)}
 .fdx-ex-head p{margin:2px 0 10px;font-size:11.5px;line-height:1.45;color:var(--t2)}
-.fdx-ex-body{padding:18px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--fdx-ff,var(--font));color:var(--t0)}
-.fdx-ex-body p,.fdx-ex-body h5,.fdx-ex-body li,.fdx-ex-body td,.fdx-ex-body th{font-family:inherit}
+.fdx-ex-body{padding:18px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--fdx-ff,var(--font));color:var(--t0);overflow-wrap:break-word}
+.fdx-ex-body p,.fdx-ex-body h5,.fdx-ex-body li,.fdx-ex-body td,.fdx-ex-body th,.fdx-ex-body dt,.fdx-ex-body dd,.fdx-ex-body blockquote{font-family:inherit}
+/* Anything that can outgrow the dialog scrolls in its OWN box. A 64-character
+   code line and a four-column table must never make the panel — or the page —
+   scroll sideways, which is the regression #350 fixed on the specimen and this
+   block is wide enough to reintroduce. */
+.fdx-ex-scroll{max-width:100%;overflow-x:auto}
 
+/* Shared chrome. --t2 not --t3 throughout: --t3 measures 4.29:1 on dark, which
+   clears nothing under 24px, and every label here is under 24px. */
 .fdx-ex-kicker{display:block;margin-bottom:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+.fdx-ex-overline{display:block;font-weight:var(--fdx-mw,500);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+/* p.fdx-ex-verdict, not .fdx-ex-verdict. This is the app COMMENTING on the
+   specimen, so it must be in the UI font by the rule stated at the top of
+   this block — but .fdx-ex-body p {font-family:inherit} is more specific than
+   a lone class and was winning, so the sentence explaining that a script is
+   hard to read at length was itself set in the script, at 12px. Caught in a
+   screenshot, not by any structural check: every assertion about fonts here
+   passed while this was wrong. */
+.fdx-ex-body p.fdx-ex-verdict{margin:12px 0 0;padding-top:12px;font-family:var(--font);font-size:12px;line-height:1.5;color:var(--t2);border-top:1px solid var(--border)}
+
+/* ── Display: poster, masthead, title card, and the same face small ───────── */
+.fdx-ex-poster{text-align:center}
+.fdx-ex-postertitle{margin:10px 0;font-weight:var(--fdx-hw,700);font-size:clamp(30px,6.5vw,48px);line-height:.98;letter-spacing:-.02em}
+.fdx-ex-posterfoot{display:block;font-weight:var(--fdx-bw,400);font-size:13px;line-height:1.4;color:var(--t1)}
+.fdx-ex-mastname{margin:0;font-weight:var(--fdx-hw,700);font-size:clamp(26px,5.5vw,38px);line-height:1.05;letter-spacing:-.02em}
+.fdx-ex-mastdeck{margin:8px 0 0;padding-top:10px;font-weight:var(--fdx-bw,400);font-size:14px;line-height:1.45;color:var(--t1);border-top:1px solid var(--border)}
+.fdx-ex-titlecard{text-align:center}
+.fdx-ex-title{margin:10px 0 0;font-weight:var(--fdx-hw,700);font-size:clamp(20px,4vw,30px);line-height:1.2;letter-spacing:.08em;text-transform:uppercase}
+/* 13px is the claim the caption makes, so it is a literal 13px and not a
+   clamp — a scene whose whole argument is a size must actually be that size. */
+.fdx-ex-smalltext{margin:0;font-weight:var(--fdx-bw,400);font-size:13px;line-height:1.55;color:var(--t1)}
+
+/* ── Editorial: article, reading column, pull quote ───────────────────────── */
 .fdx-ex-editorial h5{margin:0 0 8px;font-weight:var(--fdx-hw,700);font-size:clamp(19px,3vw,25px);line-height:1.16;letter-spacing:-.015em}
 .fdx-ex-lede{margin:0 0 10px;font-weight:var(--fdx-bw,400);font-size:15px;line-height:1.5;color:var(--t1)}
 .fdx-ex-editorial p:last-child{margin:0;font-weight:var(--fdx-bw,400);font-size:13.5px;line-height:1.6;color:var(--t1)}
+/* A REAL MEASURE, which is the entire point of this scene: 34em at 14px is
+   roughly 62 characters, inside the 45–75 the copy itself talks about. Without
+   the ch cap the column is however wide the dialog is, and the scene would be
+   asking a question it had just prevented the reader from answering. */
+.fdx-ex-column p{max-width:34em;margin:0 0 11px;font-weight:var(--fdx-bw,400);font-size:14px;line-height:1.62;color:var(--t1)}
+.fdx-ex-column p:last-child{margin-bottom:0}
+.fdx-ex-pullquote blockquote{margin:0;padding-left:14px;border-left:2px solid var(--bh)}
+.fdx-ex-pullquote blockquote p{margin:0;font-weight:var(--fdx-mw,500);font-size:clamp(17px,2.8vw,22px);line-height:1.35;letter-spacing:-.01em}
+.fdx-ex-attrib{display:block;margin-top:10px;padding-left:16px;font-family:var(--font);font-size:11.5px;color:var(--t2)}
 
+/* ── Slab: signage ────────────────────────────────────────────────────────── */
+.fdx-ex-signrow{display:flex;align-items:baseline;gap:14px}
+.fdx-ex-signnum{font-weight:var(--fdx-hw,700);font-size:clamp(34px,7vw,52px);line-height:1}
+.fdx-ex-signname{font-weight:var(--fdx-mw,500);font-size:clamp(19px,3.4vw,26px);letter-spacing:-.01em}
+.fdx-ex-signnote{margin:12px 0 0;padding-top:10px;font-weight:var(--fdx-bw,400);font-size:13px;line-height:1.5;color:var(--t1);border-top:1px solid var(--border)}
+
+/* ── Sans: interface, dense data, a form under load ───────────────────────── */
 .fdx-ex-bar{display:flex;gap:4px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
 .fdx-ex-tab{padding:5px 10px;font-weight:var(--fdx-bw,400);font-size:13px;color:var(--t2);border-radius:var(--radius-s)}
 .fdx-ex-tab--on{font-weight:var(--fdx-hw,600);color:var(--t0);background:var(--bg-2)}
+.fdx-ex-uinote{margin:0 0 12px;font-weight:var(--fdx-bw,400);font-size:13px;line-height:1.5;color:var(--t1)}
+.fdx-ex-uirow{display:flex;flex-wrap:wrap;gap:8px}
+.fdx-ex-btn{display:block;padding:9px 14px;font-weight:var(--fdx-hw,600);font-size:13px;text-align:center;color:var(--t0);background:var(--bg-2);border:1px solid var(--bh);border-radius:var(--radius-s)}
+.fdx-ex-btn--quiet{font-weight:var(--fdx-bw,400);color:var(--t2);background:none}
 .fdx-ex-table{width:100%;border-collapse:collapse;font-size:13px}
-.fdx-ex-table th{padding:0 0 7px;font-weight:var(--fdx-hw,600);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;color:var(--t2);border-bottom:1px solid var(--border)}
-.fdx-ex-table td{padding:8px 0;font-weight:var(--fdx-bw,400);color:var(--t1);border-bottom:1px solid var(--border)}
+.fdx-ex-table th{padding:0 0 7px;font-weight:var(--fdx-hw,600);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;color:var(--t2);border-bottom:1px solid var(--border);white-space:nowrap}
+.fdx-ex-table td{padding:8px 0;font-weight:var(--fdx-bw,400);color:var(--t1);border-bottom:1px solid var(--border);white-space:nowrap}
 .fdx-ex-table td:first-child{color:var(--t0)}
-.fdx-ex-table th:not(:first-child),.fdx-ex-table td:not(:first-child){text-align:right}
+.fdx-ex-table th:not(:first-child),.fdx-ex-table td:not(:first-child){padding-left:18px;text-align:right}
 .fdx-ex-table tr:last-child td{border-bottom:0}
+.fdx-ex-form{display:flex;flex-direction:column;gap:5px}
+.fdx-ex-label{font-weight:var(--fdx-hw,600);font-size:12px;color:var(--t0)}
+.fdx-ex-label--2{margin-top:12px}
+.fdx-ex-input{padding:9px 11px;font-weight:var(--fdx-bw,400);font-size:13px;color:var(--t0);background:var(--bg-2);border:1px solid var(--bh);border-radius:var(--radius-s)}
+.fdx-ex-input--bad{border-color:var(--err-strong)}
+.fdx-ex-hint{font-weight:var(--fdx-bw,400);font-size:11.5px;line-height:1.45;color:var(--t2)}
+.fdx-ex-error{font-weight:var(--fdx-mw,500);font-size:11.5px;line-height:1.45;color:var(--err-strong)}
 
-/* Two plans, not three. The point is the numerals under pressure, and a third
-   column only narrows them. */
-.fdx-ex-pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:14px}
-.fdx-ex-plan{padding:15px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius)}
-.fdx-ex-plan-name{font-weight:var(--fdx-hw,600);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--t2)}
-.fdx-ex-price{display:flex;align-items:baseline;gap:1px;margin:6px 0 12px;font-weight:var(--fdx-hw,700);font-size:clamp(30px,5vw,40px);line-height:1;letter-spacing:-.02em}
-.fdx-ex-currency{font-size:.55em;align-self:flex-start;padding-top:.22em}
-.fdx-ex-period{font-weight:var(--fdx-bw,400);font-size:.34em;color:var(--t2);padding-left:.3em}
-.fdx-ex-plan ul{margin:0 0 14px;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
-.fdx-ex-plan li{font-weight:var(--fdx-bw,400);font-size:12.5px;color:var(--t1)}
-.fdx-ex-btn{display:block;padding:9px 14px;font-weight:var(--fdx-hw,600);font-size:13px;text-align:center;color:var(--t0);background:var(--bg-1);border:1px solid var(--bh);border-radius:var(--radius-s)}
+/* ── Monospace: code, terminal, figures ───────────────────────────────────── */
+/* white-space:pre and NO tab stops, NO text-align — if the columns land, the
+   face did it. That is the only thing these two scenes are asking. */
+.fdx-ex-codelines{counter-reset:fdxln;margin:0;padding:0;list-style:none;font-size:12.5px;line-height:1.7}
+.fdx-ex-codelines li{counter-increment:fdxln;display:flex;gap:14px;white-space:pre;font-weight:var(--fdx-bw,400);color:var(--t1)}
+.fdx-ex-codelines li::before{content:counter(fdxln);flex:none;width:1.6em;text-align:right;color:var(--t2);-webkit-user-select:none;user-select:none}
+.fdx-ex-shell{margin:0;font-size:12.5px;line-height:1.7;font-weight:var(--fdx-bw,400);color:var(--t1);white-space:pre}
+.fdx-ex-figlist{margin:0}
+.fdx-ex-figrow{display:flex;justify-content:space-between;gap:24px;padding:7px 0;border-bottom:1px solid var(--border)}
+.fdx-ex-figrow:last-child{border-bottom:0}
+.fdx-ex-figrow dt{font-weight:var(--fdx-bw,400);font-size:13.5px;color:var(--t1)}
+/* NO font-variant-numeric. Forcing tabular figures onto a face that has none
+   would answer the question this scene exists to ask. */
+.fdx-ex-figrow dd{margin:0;font-weight:var(--fdx-mw,500);font-size:15px;color:var(--t0)}
 
-.fdx-ex-huge{margin:0;font-weight:var(--fdx-hw,700);font-size:clamp(30px,7.5vw,54px);line-height:1.02;letter-spacing:-.03em}
+/* ── Script: invitation, signature, and where it stops working ────────────── */
+.fdx-ex-invite{text-align:center}
+.fdx-ex-invite .fdx-ex-overline{letter-spacing:.06em;text-transform:none}
+.fdx-ex-invitetitle{margin:12px 0;font-weight:var(--fdx-hw,700);font-size:clamp(24px,5vw,38px);line-height:1.2}
+.fdx-ex-invitefoot{display:block;font-weight:var(--fdx-bw,400);font-size:14px;line-height:1.45;color:var(--t1)}
+.fdx-ex-sign{margin:0;font-weight:var(--fdx-bw,400);font-size:clamp(24px,5vw,38px);line-height:1.3}
+.fdx-ex-signfoot{display:block;margin-top:10px;font-family:var(--font);font-size:11.5px;color:var(--t2)}
+
+/* ── Symbols: the marks, because letters are not what this family draws ───── */
+/* anywhere, not break-word: a barcode family renders each character as a wide
+   block, so a 26-character run is thousands of pixels and has no spaces in it
+   for a normal break to use. */
+.fdx-ex-glyphrow{margin:0 0 10px;font-weight:var(--fdx-bw,400);font-size:clamp(17px,3.4vw,24px);line-height:1.6;overflow-wrap:anywhere}
+.fdx-ex-glyphrow:last-child{margin-bottom:0}
+
+/* ── The ladder, drawn only when the family ships three or more cuts ──────── */
+.fdx-ex-ladder{display:flex;flex-direction:column;gap:12px}
+.fdx-ex-rung{display:flex;align-items:baseline;justify-content:space-between;gap:16px;min-width:0}
+.fdx-ex-rungline{margin:0;min-width:0;font-size:clamp(19px,3.6vw,27px);line-height:1.2;overflow-wrap:anywhere}
+.fdx-ex-runglabel{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--t2)}
+
+/* ── The outbound search, worded as a search ──────────────────────────────── */
+.fdx-fiu-note{margin:18px 0 0;padding-top:14px;font-size:11.5px;line-height:1.55;color:var(--t2);border-top:1px solid var(--border)}
+/* Resting underline, not a hover one — founder direction 2026-09-02 rules out
+   hover-only affordances on touch, and the footer attribution link settled the
+   same question the same way. 70% of currentColor rather than a fixed token,
+   which is what measured clear of 1.4.11 there. */
+.fdx-fiu{color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
+.fdx-fiu:hover{color:var(--t0)}
+.fdx-fiu:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:2px}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
   /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
