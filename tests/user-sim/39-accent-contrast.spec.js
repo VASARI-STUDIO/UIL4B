@@ -123,8 +123,10 @@ const HELPERS = `
 const INK_WALK = `(() => {
   ${HELPERS}
   const bad = [], seen = new Set()
+  let measured = 0
   for (const n of textNodes()) {
     if (!isBlueInk(n.ink)) continue
+    measured++
     const large = n.size >= 24 || (n.size >= 18.66 && n.weight >= 700)
     const floor = large ? 3 : 4.5
     const value = ratio(n.ink, n.ground)
@@ -135,7 +137,7 @@ const INK_WALK = `(() => {
     bad.push({ cls: n.cls, text: n.text.slice(0, 30), fg: hex(n.ink), bg: hex(n.ground),
                size: n.size, weight: n.weight, floor, ratio: value })
   }
-  return bad
+  return { measured, bad }
 })()`
 
 // The mirror: LIGHT ink on an accent-family GROUND. Found by measurement, not
@@ -187,14 +189,24 @@ test.describe('accent-family text clears its AA floor', () => {
         try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
       }, theme)
       const failures = []
+      let measured = 0
       for (const route of ROUTES) {
         await go(page, route)
         await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
         await page.waitForTimeout(150)
-        const bad = await page.evaluate(INK_WALK)
-        if (bad.length) failures.push(report(route, theme, bad))
+        const res = await page.evaluate(INK_WALK)
+        measured += res.measured
+        if (res.bad.length) failures.push(report(route, theme, res.bad))
       }
       await ctx.close()
+      // ANTI-VACUITY. INK_WALK reports VIOLATIONS and used to say nothing about how
+      // many nodes it looked at, so a route that had not arrived contributed nothing
+      // and this called that a pass. MEASURED with every lazy chunk held back
+      // 1500ms: under the old page.goto contract NINE of these eleven routes showed
+      // zero own content and 297 accent-ink nodes were never seen, and this assertion
+      // stayed green throughout. go() closes the loading half; this closes the half
+      // that let an empty sample look like a clean one.
+      expect(measured, `no accent-family text was found to measure in ${theme}`).toBeGreaterThan(30)
       expect(failures.join('\n'), `accent text under AA in ${theme}`).toBe('')
     })
   }
@@ -208,13 +220,16 @@ test.describe('accent-family text clears its AA floor', () => {
     })
     const page = await ctx.newPage()
     const failures = []
+    let measured = 0
     for (const route of ['/', '/plans', '/create/gradient', '/sitemap']) {
       await go(page, route)
       await page.waitForTimeout(150)
-      const bad = await page.evaluate(INK_WALK)
-      if (bad.length) failures.push(report(route, '390', bad))
+      const res = await page.evaluate(INK_WALK)
+      measured += res.measured
+      if (res.bad.length) failures.push(report(route, '390', res.bad))
     }
     await ctx.close()
+    expect(measured, 'no accent-family text was found to measure at 390px').toBeGreaterThan(10)
     expect(failures.join('\n'), 'accent text under AA at 390px').toBe('')
   })
 
