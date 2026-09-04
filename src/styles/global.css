@@ -9834,7 +9834,10 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    several groups never co-occur on screen.
 
    WHAT IS SPECIMEN AND WHAT IS CHROME, decided once here: type set in
-   var(--fdx-ff) is the family under examination and is the thing being judged;
+   the --fdx-ff family is the one under examination and is the thing being
+   judged (written as a bare token name, not as a var() call: design-tokens
+   .test.js scans this stylesheet without stripping comments, so a var() in
+   prose reads to it as a real fallback-less usage and fails the build);
    the small labels around it (.fdx-ex-kicker, .fdx-ex-runglabel, the gutter
    numerals) stay in --font or --mono so a reader can always tell which letters
    are the evidence. The one deliberate exception is .fdx-ex-overline, which is
