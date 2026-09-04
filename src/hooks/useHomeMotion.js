@@ -65,6 +65,36 @@ function revealAll(scope) {
 // Owns the reveals that `useReveal()` handles elsewhere, so Home calls this
 // instead of that hook.
 //
+// C2 — WHERE THE PANEL SWAPS. Founder: "it should change when the text is
+// slighly higher on the screen maybe just before centre." One named constant,
+// because this is a feel setting and the founder will want to nudge it after
+// seeing it move; scattering the two numbers through the handler below is what
+// makes that a hunt. The tuning range is 44–56 — outside it the swap stops
+// reading as "at centre" in one direction or the other.
+//
+// The old trigger was `start:'top 55%'`, and the 55 was not the problem: `top`
+// was. A `.hstep` reserves 62vh (558px at 1440x900) and CENTRES 317–343px of
+// content inside it, so the box's top edge is ~110px above the text the reader
+// is actually looking at. Keyed to `top`, the swap fired with the text's
+// optical centre at ~86% of viewport height — the bottom seventh of the screen,
+// long after the reader had passed it. Keying to the step's own `center` puts
+// the trigger on the text, because the text is what is centred in the box.
+const STEP_SWAP = {
+  // Scrolling DOWN: the step's centre has to rise to 52% of viewport height —
+  // a hair above the middle — before its mode takes the panel.
+  down: 52,
+  // Scrolling UP: it has to fall back to 44% before it takes the panel again.
+  //
+  // The 8-point gap is HYSTERESIS and it is the whole reason there are two
+  // numbers rather than one. With a single threshold, a step resting exactly on
+  // the line re-fires on every sub-pixel scroll jitter and the panel flickers
+  // between two modes. Splitting the two directions means the band from 44% to
+  // 52% belongs to whichever step is already active: entering it changes
+  // nothing, and a scroll that hovers there cannot flip the panel at all. A
+  // step only loses the panel by leaving the band the way it came in.
+  up: 44,
+}
+
 // `options.onStepChange(tabId)` is called when the sticky section's active step
 // changes. It is invoked from a scroll callback, never from the effect body, so
 // it is a normal event-driven setState and not the set-state-in-effect
@@ -129,10 +159,17 @@ export function useHomeMotion(scopeRef, options = {}) {
               const tab = step.dataset.step
               if (!tab) return
               const activate = () => stepRef.current?.(tab)
+              // start must sit earlier in the scroll than end, and it does:
+              // scrolling down moves the step UP the viewport, so its centre
+              // reaches 52% before it reaches 44%. Down the page that makes
+              // `start` the activation; up the page `onEnterBack` fires as the
+              // centre falls back through `end`. onLeave / onLeaveBack are
+              // deliberately unhandled — a step never deactivates itself, it is
+              // replaced by the next one to claim the panel.
               ScrollTrigger.create({
                 trigger: step,
-                start: 'top 55%',
-                end: 'bottom 55%',
+                start: `center ${STEP_SWAP.down}%`,
+                end: `center ${STEP_SWAP.up}%`,
                 onEnter: activate,
                 onEnterBack: activate,
               })
