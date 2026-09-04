@@ -46,6 +46,15 @@ function guideStepLabels() {
 
 const TRIGGERS = ['Create', 'Discover', 'Learn']
 
+// Nine shapes x three menus = the 27 combinations #340 measured by hand. The
+// range starts at 1024 because below 769 the panel is not the thing on screen
+// at all -- that is the sheet, which has its own coverage.
+const DESKTOP_MATRIX = [
+  { width: 1024, height: 768 }, { width: 1024, height: 608 }, { width: 1152, height: 864 },
+  { width: 1280, height: 800 }, { width: 1280, height: 720 }, { width: 1366, height: 768 },
+  { width: 1366, height: 608 }, { width: 1440, height: 900 }, { width: 1600, height: 1200 },
+]
+
 /** Every menu item a person can actually reach: rendered ones, in DOM order. */
 function ring(page) {
   return page.evaluate(() => [...document.querySelectorAll('#pnav-mega [data-pnav-menuitem]')]
@@ -55,9 +64,30 @@ function ring(page) {
 
 const focusedText = (page) => page.evaluate(() => (document.activeElement.textContent || '').trim())
 
+/**
+ * Wait for the panel to STOP MOVING before measuring it.
+ *
+ * .pnav-menu animates in from scale(.975) and transitions its width between
+ * sections, and .pnav-tool rows fade up on a stagger. Anything read between
+ * "the region is visible" and "the animation is done" is the real geometry
+ * multiplied by whatever the scale is on that frame -- which is exactly how a
+ * 44px row measured 43 (44 x 0.975 = 42.9) and made a settled layout look like
+ * a broken one.
+ *
+ * This waits on the animation LAYER via getAnimations().finished. A timeout
+ * would be a guess that a slower machine invalidates, and two equal reads in a
+ * row can simply be two reads from the same frame.
+ */
+async function settle(page) {
+  await page.locator('#pnav-mega').evaluate((el) => Promise.all(
+    el.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})),
+  ))
+}
+
 async function openWithPointer(page, name) {
   await page.getByRole('button', { name, exact: true }).click()
   await expect(page.getByRole('region', { name: `${name} menu` })).toBeVisible()
+  await settle(page)
 }
 
 /**
@@ -361,9 +391,16 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     await expect(create).toBeFocused()
   })
 
-  test('every section still opens and closes cleanly at both ends of the range', async ({ page }) => {
+  // #340 reported 27 of 27 viewport-by-menu combinations clean and only ever
+  // committed two of the nine widths, so seven of them were a hand check that no
+  // test could repeat. DESKTOP_MATRIX x TRIGGERS is that claim, written down: nine
+  // shapes across the range where the desktop panel is the thing on screen, times
+  // the three menus. Tall AND short pairs at the same width are deliberate -- a
+  // height regression that only shows at 608 would otherwise pass at 768.
+  test('every section still opens and closes cleanly across all 27 viewport-by-menu combinations', async ({ page }) => {
     watch(page, 'a visitor on whatever machine they happen to own')
-    for (const size of [{ width: 1440, height: 900 }, { width: 1366, height: 768 }]) {
+    test.setTimeout(15000 + DESKTOP_MATRIX.length * 9000)
+    for (const size of DESKTOP_MATRIX) {
       await page.setViewportSize(size)
       await go(page, '/')
       for (const name of TRIGGERS) {
@@ -373,8 +410,28 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
         // #340's finding: a fixed panel taller than the space it has simply
         // clips, with no scrollbar to recover the bottom. The body scrolls now,
         // and the footer must stay on screen.
-        expect(box.y + box.height).toBeLessThanOrEqual(size.height + 1)
+        expect(box.y + box.height,
+          `${name} at ${size.width}x${size.height} runs past the bottom`).toBeLessThanOrEqual(size.height + 1)
         await expect(panel.locator('.pnav-menu-foot')).toBeVisible()
+
+        // NOTHING MAY CLIP. This is the assertion whose absence let two
+        // truncated descriptions ship past #340 and #352: -webkit-line-clamp
+        // renders overflow as a tidy ellipsis, so a row that has lost its last
+        // two words looks deliberate in a screenshot and identical to a row
+        // that fits. Measured, it is scrollHeight > clientHeight.
+        const clipped = await panel.evaluate((el) => [...el.querySelectorAll('.pnav-tool-desc')]
+          .filter((d) => d.scrollHeight > d.clientHeight + 1)
+          .map((d) => d.textContent))
+        expect(clipped, `${name} at ${size.width}x${size.height} clipped a description`).toEqual([])
+
+        // The 44px target-size floor the row height was relaxed TO, not past.
+        const short = await panel.evaluate((el) => [...el.querySelectorAll('.pnav-tool')]
+          .filter((r) => r.getBoundingClientRect().height < 43.5)
+          .map((r) => r.textContent.trim()))
+        expect(short,
+          `${name} at ${size.width}x${size.height} has a row under the 44px target-size floor`,
+        ).toEqual([])
+
         await page.keyboard.press('Escape')
       }
       const overflow = await page.evaluate(
@@ -382,5 +439,110 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
       )
       expect(overflow, `${size.width} should not scroll horizontally`).toBeLessThanOrEqual(1)
     }
+  })
+  // ── The second line has to earn its place ────────────────────────────────
+  //
+  // The panel was correct after #352 and still read as a directory: eighteen rows,
+  // each an icon over a title over a grey line at the same size and spacing, so
+  // the eye got no purchase on which of them mattered. Eighteen of the thirty-four
+  // description lines said nothing their label had not already said.
+
+  test('a Soon row never describes what it will do once it exists', async ({ page }) => {
+    watch(page, 'a visitor deciding what is worth clicking')
+    await go(page, '/')
+
+    for (const name of TRIGGERS) {
+      await openWithPointer(page, name)
+      const offenders = await page.evaluate(() => [...document.querySelectorAll('#pnav-mega .pnav-tool[data-soon]')]
+        .filter((r) => r.querySelector('.pnav-tool-desc'))
+        .map((r) => r.querySelector('.pnav-tool-label').textContent))
+      // A sentence about an unbuilt tool is a claim about something that does not
+      // exist. Withholding it is also what makes live and unbuilt read apart
+      // straight down a column, which is the same reasoning that already keeps a
+      // preview off the Learn card.
+      expect(offenders, `${name} describes a tool it has not built`).toEqual([])
+      await page.keyboard.press('Escape')
+    }
+  })
+
+  test('Learn carries no descriptions at all, because nothing in Learn is built', async ({ page }) => {
+    watch(page, 'a visitor checking whether the guides exist yet')
+    await go(page, '/')
+    await openWithPointer(page, 'Learn')
+
+    const rows = page.locator('#pnav-mega .pnav-tool')
+    const total = await rows.count()
+    expect(total).toBeGreaterThan(4)
+    // Every Learn tool is Soon, so the rule above empties the whole panel of
+    // prose. That is the honest state, and it is what the panel should look like
+    // until one of them ships -- at which point that row gets its line back with
+    // no edit here, because the rule reads t.soon rather than a list.
+    await expect(page.locator('#pnav-mega .pnav-tool-desc')).toHaveCount(0)
+    await expect(page.locator('#pnav-mega .pnav-tool[data-soon]')).toHaveCount(total)
+  })
+
+  test('an emptied description does not fall through to the page copy behind it', async ({ page }) => {
+    watch(page, 'a visitor reading the Typography column')
+    await go(page, '/')
+    await openWithPointer(page, 'Create')
+
+    // THIS IS THE SUBTLE ONE. menuDescription used a truthiness test, so setting a
+    // key to '' would not have dropped the line -- it would have fallen through to
+    // the group's `desc` in toolTree.js, which is page copy written for a card on
+    // /discover and runs three lines deep in a menu column. The `in` test is what
+    // makes an empty string mean "deliberately none". Deleting the key instead of
+    // emptying it would put a paragraph here and this test is the tripwire.
+    for (const label of ['Font Gallery', 'Font Pair', 'Type Scale', 'Emoji Library']) {
+      const row = page.locator('#pnav-mega .pnav-tool', { hasText: label }).first()
+      await expect(row).toBeVisible()
+      await expect(row.locator('.pnav-tool-desc')).toHaveCount(0)
+    }
+
+    // THE ROW THAT ACTUALLY BREAKS IS ON DISCOVER, and the four above would not
+    // have caught it. Mutation-checked: reverting `in` to a truthiness test left
+    // all four of them empty and green, because the fall-through only has
+    // somewhere to fall when the tool's id ALSO names a group in toolTree.js, and
+    // Create has no such group. Discover does -- id 'font-gallery' matches the
+    // Discover group of the same id, whose desc is a 79-character sentence
+    // written for a card. That is the assertion with teeth.
+    await page.keyboard.press('Escape')
+    await openWithPointer(page, 'Discover')
+    const discoverFonts = page.locator('#pnav-mega .pnav-tool', { hasText: 'Font Gallery' }).first()
+    await expect(discoverFonts).toBeVisible()
+    await expect(discoverFonts.locator('.pnav-tool-desc')).toHaveCount(0)
+    await expect(discoverFonts).not.toContainText(/Google Fonts catalogue/)
+
+    await page.keyboard.press('Escape')
+    await openWithPointer(page, 'Create')
+    // And the rows that kept a line kept it because it carries a fact the label
+    // cannot: an input, a range, a standard, a privacy claim.
+    const palette = page.locator('#pnav-mega .pnav-tool', { hasText: 'Palette' }).first()
+    await expect(palette.locator('.pnav-tool-desc')).toHaveText(/one seed/)
+    const tint = page.locator('#pnav-mega .pnav-tool', { hasText: 'Tint' }).first()
+    await expect(tint.locator('.pnav-tool-desc')).toHaveText(/50/)
+  })
+
+  test('the rows stop tiling: a row without a second line is visibly shorter', async ({ page }) => {
+    watch(page, 'a visitor scanning for the thing that matters')
+    await go(page, '/')
+    await openWithPointer(page, 'Create')
+
+    // min-height:50px was holding every row at a measured 54px whether it had
+    // anything to say or not, so removing the prose would have changed the text
+    // and left the tiling exactly as it was. The panel has to contain rows of at
+    // least two different heights for the hierarchy to be visible at all.
+    const heights = await page.evaluate(() => [...new Set([...document.querySelectorAll('#pnav-mega .pnav-tool')]
+      .map((r) => Math.round(r.getBoundingClientRect().height)))].sort((a, b) => a - b))
+    expect(heights.length, `every Create row is still ${heights[0]}px`).toBeGreaterThan(1)
+    expect(Math.min(...heights)).toBeGreaterThanOrEqual(44)
+
+    // And the short ones are the ones with no second line, not an unrelated cause.
+    const mismatched = await page.evaluate(() => [...document.querySelectorAll('#pnav-mega .pnav-tool')]
+      .filter((r) => {
+        const tall = Math.round(r.getBoundingClientRect().height) > 44
+        return tall !== Boolean(r.querySelector('.pnav-tool-desc'))
+      })
+      .map((r) => r.querySelector('.pnav-tool-label').textContent))
+    expect(mismatched).toEqual([])
   })
 })

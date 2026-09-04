@@ -5865,11 +5865,26 @@ html.lenis{scroll-behavior:auto!important}
 @keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-10px) scale(.975)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 .pnav-menu[data-menu="create"]{width:1260px}
 /* 940 held two columns. Discover has three groups and now gets three columns,
-   so the panel widens to carry them at a readable measure. 1200 is the width at
-   which a 252px column fits "Curated Resources" and its Soon badge on one line
-   and stops clipping the descriptions mid-word — measured, not chosen. */
+   so the panel widens to carry them at a readable measure.
+
+   1200 STANDS, but not for the reason first written here. The original note said
+   this was the width at which the descriptions stopped clipping mid-word; they
+   did not — "Reuse prompts proven by the community." was still losing its last
+   two words at exactly this width, because a -webkit-line-clamp reports overflow
+   as an ellipsis rather than as a wrap and nothing failed. Re-measured with a
+   Range (scrollWidth lies here: .pnav-tool-line is a flex child stretched to its
+   1fr column, so every stack reports the column width): the three stacks want
+   228 + 251 + 240 plus gaps = 783px of grid, and 783 + the 260px card + the
+   40px paddings and divider IS 1200, with 3px to spare. It is already the width
+   of its content. The panel reads wide because short columns leave it EMPTY
+   below, which is a vertical problem and not this number. */
 .pnav-menu[data-menu="discover"]{width:1200px}
-.pnav-menu[data-menu="learn"]{width:1020px}
+/* Learn holds two stacks wanting 240 + 261 + a 32px gap = 533px of grid, which
+   with the card and paddings is 953px of panel. 960 rather than 953 so the
+   widest row ("Help & Getting Started" + its Soon badge) is not sitting hard
+   against the edge. The 1020 this replaces was set when every Learn row still
+   carried a description; none do now, because every Learn tool is Soon. */
+.pnav-menu[data-menu="learn"]{width:960px}
 /* min-height:0 is what lets this flex child actually shrink and scroll instead
    of forcing the panel past its max-height. */
 .pnav-menu-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:32px 40px;animation:fx-fade var(--dur-2) var(--ease-entrance)}
