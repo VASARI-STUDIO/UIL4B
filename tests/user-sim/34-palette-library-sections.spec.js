@@ -10,7 +10,7 @@
 // a "Trending" heading over an unranked list would be an invention dressed as a
 // measurement.
 import { test, expect } from './base.js'
-import { restingScrollY, watch } from './helpers.js'
+import { go, restingScrollY, watch } from './helpers.js'
 
 const ROUTE = '/discover/palettes'
 const HEAD = '.pgl-section-head'
@@ -21,7 +21,7 @@ const headings = (page) => page.locator(`${HEAD} h3`).allTextContents()
 test.describe('palette library sections', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'someone browsing for a palette')
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator('.pgal-card').first()).toBeVisible()
   })
 

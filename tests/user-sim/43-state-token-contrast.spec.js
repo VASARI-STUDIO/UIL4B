@@ -23,6 +23,7 @@
 // With the tint restored, .smap-stage measured 4.39:1 where the rgba-only
 // parser had reported 5.02:1 and passed it.
 import { test, expect } from './base.js'
+import { go } from './helpers.js'
 
 const HELPERS = `
   const srgb = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) }
@@ -191,7 +192,7 @@ test.describe('state-colour text clears its AA floor', () => {
       const failures = []
       let measured = 0
       for (const route of ROUTES) {
-        await page.goto(route)
+        await go(page, route)
         await settle(page)
         const res = await page.evaluate(WALK)
         measured += res.measured
@@ -215,7 +216,7 @@ test.describe('state-colour text clears its AA floor', () => {
     const failures = []
     let measured = 0
     for (const route of ['/sitemap', '/privacy', '/create/contrast', '/create/semantic-color']) {
-      await page.goto(route)
+      await go(page, route)
       await settle(page)
       const res = await page.evaluate(WALK)
       measured += res.measured
@@ -230,7 +231,7 @@ test.describe('state-colour text clears its AA floor', () => {
   // actually see one. If color-mix ever computes to a form `parse` misses, this
   // fails loudly instead of quietly making every badge look safe.
   test('a tinted state badge reports a tinted ground, not the bare card', async ({ page }) => {
-    await page.goto('/sitemap')
+    await go(page, '/sitemap')
     await settle(page)
     const seen = await page.evaluate(`(() => {
       ${HELPERS}

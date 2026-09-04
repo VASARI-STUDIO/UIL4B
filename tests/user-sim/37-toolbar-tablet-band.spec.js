@@ -25,7 +25,7 @@
 // property that goes wrong when a row silently becomes four, and it is the one
 // the previous sweep had no assertion for.
 import { test, expect } from './base.js'
-import { restingScrollY, watch } from './helpers.js'
+import { go, restingScrollY, watch } from './helpers.js'
 
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -90,7 +90,7 @@ async function open(browser, width, path, waitFor) {
   })
   const page = await ctx.newPage()
   watch(page, `toolbar band ${width}px ${path}`)
-  await page.goto(path, { waitUntil: 'domcontentloaded' })
+  await go(page, path)
   await page.waitForLoadState('load').catch(() => {})
   await page.locator(waitFor).first().waitFor({ state: 'visible', timeout: 15000 })
   // Web fonts decide every control's width, and every measurement here is a

@@ -31,7 +31,7 @@
 // over the green one) and green on the fixed one.
 import zlib from 'node:zlib'
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 // ── A four-band 4:1 test image ───────────────────────────────────────────────
 // 4:1 is chosen so the old fixed 16/10 stage cropped hard (it showed only the
@@ -87,7 +87,7 @@ const MARKER = '.plb-imgpoint'
 const DIALOG = 'Pull colours from an image'
 
 async function openPickerWithImage(page) {
-  await page.goto('/create/palette')
+  await go(page, '/create/palette')
   await page.getByRole('button', { name: 'Image', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: DIALOG })
   await expect(dialog).toBeVisible()

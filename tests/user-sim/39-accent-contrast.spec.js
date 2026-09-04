@@ -42,6 +42,7 @@
 // inherited a 24px colour at 16px; and `var(--hue,var(--accent))` fell back to
 // the unreadable token whenever no category was in scope.
 import { test, expect } from './base.js'
+import { go } from './helpers.js'
 
 // Shared page-side helpers. Both walks need the same two things: the true
 // composited ground behind an element, and the WCAG ratio.
@@ -188,7 +189,7 @@ test.describe('accent-family text clears its AA floor', () => {
       }, theme)
       const failures = []
       for (const route of ROUTES) {
-        await page.goto(route)
+        await go(page, route)
         await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
         await expect(page.locator(READY).first()).toBeVisible()
         await page.waitForTimeout(150)
@@ -210,7 +211,7 @@ test.describe('accent-family text clears its AA floor', () => {
     const page = await ctx.newPage()
     const failures = []
     for (const route of ['/', '/plans', '/create/gradient', '/sitemap']) {
-      await page.goto(route)
+      await go(page, route)
       await expect(page.locator(READY).first()).toBeVisible()
       await page.waitForTimeout(150)
       const bad = await page.evaluate(INK_WALK)
@@ -224,7 +225,7 @@ test.describe('accent-family text clears its AA floor', () => {
     const seen = []
     const failures = []
     for (const route of ['/', '/plans', '/create/gradient', '/discover']) {
-      await page.goto(route)
+      await go(page, route)
       await expect(page.locator(READY).first()).toBeVisible()
       await page.waitForTimeout(150)
       for (const f of await page.evaluate(FILL_WALK)) {
