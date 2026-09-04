@@ -21,7 +21,7 @@
 // assertions are about the banner, not about a chunk. Nothing here polls a
 // network.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const BANNER = '.offline-banner'
 
@@ -51,13 +51,13 @@ test.describe('offline state', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'someone whose wifi dropped') })
 
   test('nothing is shown while the connection is fine', async ({ page }) => {
-    await page.goto('/create/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('.plb-toolbar').first()).toBeVisible()
     await expect(page.locator(BANNER)).toHaveCount(0)
   })
 
   test('losing the connection mid-session raises one app-level notice', async ({ page }) => {
-    await page.goto('/create/palette')
+    await go(page, '/create/palette')
     await expect(page.locator('.plb-toolbar').first()).toBeVisible()
 
     await goOffline(page)
@@ -74,7 +74,7 @@ test.describe('offline state', () => {
   // so it has to read the live value at mount.
   test('a page opened while already offline says so without waiting for an event', async ({ page }) => {
     await pinOnLine(page, false)
-    await page.goto('/create/palette')
+    await go(page, '/create/palette')
     await expect(page.locator(BANNER)).toBeVisible()
   })
 
@@ -82,13 +82,13 @@ test.describe('offline state', () => {
     // These take an early return past the app shell, and they are exactly the
     // pages where a dropped connection is about to be felt.
     await pinOnLine(page, false)
-    await page.goto('/create/gradient')
+    await go(page, '/create/gradient')
     await expect(page.locator(BANNER)).toBeVisible()
   })
 
   test('it names what still works rather than only what broke', async ({ page }) => {
     await pinOnLine(page, false)
-    await page.goto('/create/palette')
+    await go(page, '/create/palette')
     const text = await page.locator(BANNER).innerText()
     // Most of this product is local. A bare "you are offline" sends someone
     // away from something still almost entirely usable.
@@ -100,7 +100,7 @@ test.describe('offline state', () => {
   // is not working, and a notice covering it makes things worse.
   test('it never covers the navigation', async ({ page }) => {
     await pinOnLine(page, false)
-    await page.goto('/create/palette')
+    await go(page, '/create/palette')
     const banner = page.locator(BANNER)
     await expect(banner).toBeVisible()
 
@@ -121,7 +121,7 @@ test.describe('offline state', () => {
 
   test('it announces itself politely rather than interrupting', async ({ page }) => {
     await pinOnLine(page, false)
-    await page.goto('/create/palette')
+    await go(page, '/create/palette')
     const banner = page.locator(BANNER)
     // Losing a connection is worth announcing; it is not worth cutting across
     // whatever a screen-reader user is in the middle of.

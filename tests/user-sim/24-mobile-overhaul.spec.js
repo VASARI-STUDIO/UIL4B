@@ -20,7 +20,7 @@
 // REAL device metrics (isMobile + hasTouch), because a desktop Chromium narrowed
 // to 390px still reports `hover: hover` and hides this entire class of defect.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -48,7 +48,7 @@ async function openTouch(browser, width, height, path, tablet = false, waitFor =
   // One Tap used to be stubbed here, per page. It is now stubbed for the whole
   // suite in base.js — including contexts built by hand like this one — so this
   // spec's own copy went with it rather than racing it. See base.js for why.
-  await page.goto(path, { waitUntil: 'domcontentloaded' })
+  await go(page, path)
   await page.waitForLoadState('load').catch(() => {})
   // Wait for the thing under test to exist, rather than sleeping and hoping.
   // A fixed 600ms was enough against a `vite build` bundle and NOT enough
@@ -142,7 +142,7 @@ for (const path of ['/color/palette', '/settings']) {
     const page = await ctx.newPage()
     watch(page, `cta first paint ${path}`)
     // One Tap is stubbed suite-wide in base.js; this spec's own copy is gone.
-    await page.goto(path, { waitUntil: 'domcontentloaded' })
+    await go(page, path)
     await page.locator('.pnav-cta').first().waitFor({ state: 'attached', timeout: 15000 })
     const first = await page.evaluate(() => {
       const b = document.querySelector('.pnav-cta')
@@ -312,7 +312,7 @@ test('the hover reveal itself is preserved on pointer devices', async ({ browser
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false })
   const page = await ctx.newPage()
   watch(page, 'pointer user on the palette builder')
-  await page.goto('/color/palette', { waitUntil: 'domcontentloaded' })
+  await go(page, '/color/palette')
   await page.waitForLoadState('load').catch(() => {})
   await page.waitForTimeout(600)
 
@@ -353,7 +353,7 @@ for (const [route, sel] of REVEAL_LAYERS) {
         reducedMotion: reduced ? 'reduce' : 'no-preference',
       })
       const page = await ctx.newPage()
-      await page.goto(route, { waitUntil: 'domcontentloaded' })
+      await go(page, route)
       await page.waitForLoadState('load').catch(() => {})
       await page.waitForTimeout(500)
       const props = await page.locator(sel).first().evaluate((el) => getComputedStyle(el).transitionProperty)
@@ -373,7 +373,7 @@ test('S13 · the palette card actions are reachable by keyboard at any tab speed
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await ctx.newPage()
   watch(page, 'keyboard user in the palette library')
-  await page.goto('/discover/palettes', { waitUntil: 'domcontentloaded' })
+  await go(page, '/discover/palettes')
   await page.waitForLoadState('load').catch(() => {})
   // Wait for the card to EXIST before the settle pause, not instead of it. The
   // gallery windows its list, so on a contended runner nothing is mounted at

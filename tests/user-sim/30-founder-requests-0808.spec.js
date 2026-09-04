@@ -11,7 +11,7 @@
 // test cannot see: that the tool is actually WIRED to it, and that pressing
 // Random still reaches every type rather than getting stuck on linear.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 // ── 1 · the gradient randomiser ──────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ test.describe('gradient randomiser weighting', () => {
   // is left here is the one claim a browser is needed for and that no draw can
   // flip: every type is still reachable.
   test('Random reaches every type', async ({ page }) => {
-    await page.goto('/create/gradient')
+    await go(page, '/create/gradient')
     const random = page.getByRole('button', { name: 'Random', exact: true })
     await expect(random).toBeVisible()
 
@@ -75,7 +75,7 @@ test.describe('nav search hover', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'first-time visitor scanning the nav') })
 
   test('hovering widens the field, and leaving puts it back', async ({ page }) => {
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator(FIELD)).toBeVisible()
     const rest = await fieldWidth(page)
 
@@ -88,7 +88,7 @@ test.describe('nav search hover', () => {
   })
 
   test('the three centre menus do not move when it expands', async ({ page }) => {
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     const items = page.locator('.pnav-items')
     await expect(items).toBeVisible()
     const before = await items.boundingBox()
@@ -105,7 +105,7 @@ test.describe('nav search hover', () => {
   // a second at the end of each term) and read as "no progress", which is a
   // flake, not a finding.
   test('hovering types terms a character at a time, and cycles through them', async ({ page }) => {
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await page.locator(FIELD).hover()
     await expect(page.locator('.pnav-search-ph--typing')).toBeVisible()
 
@@ -133,7 +133,7 @@ test.describe('nav search hover', () => {
   // The button's accessible name has to stay fixed. A screen reader following a
   // half-typed word character by character is noise, not information.
   test('the typing is invisible to assistive technology', async ({ page }) => {
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     const field = page.locator(FIELD)
     await expect(field).toHaveAttribute('aria-label', 'Search UIL4B')
     await field.hover()
@@ -143,7 +143,7 @@ test.describe('nav search hover', () => {
 
   test('reduced motion gets the static label and no timer at all', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await page.locator(FIELD).hover()
     // The static placeholder stays put; nothing types.
     await expect(page.locator('.pnav-search-ph--typing')).toHaveCount(0)
@@ -155,7 +155,7 @@ test.describe('nav search hover', () => {
   // all, so the budget is doubly safe there; this asserts the general property
   // on the route that does render it.)
   test('nothing runs before the pointer arrives', async ({ page }) => {
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator(FIELD)).toBeVisible()
     await page.waitForTimeout(400)
     await expect(page.locator('.pnav-search-ph--typing')).toHaveCount(0)

@@ -23,6 +23,7 @@
 // With the tint restored, .smap-stage measured 4.39:1 where the rgba-only
 // parser had reported 5.02:1 and passed it.
 import { test, expect } from './base.js'
+import { go } from './helpers.js'
 
 const HELPERS = `
   const srgb = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) }
@@ -136,7 +137,6 @@ const WALK = `(() => {
 // and the semantic-colour ramps (the fill mirror).
 const ROUTES = ['/sitemap', '/privacy', '/create/contrast', '/create/semantic-color',
   '/create/alt-text', '/discover', '/plans', '/']
-const READY = 'main, .landing, #root > *'
 
 // EVERY ROUTE WALKED HERE IS `lazy()`, SO `READY` MATCHES THE FALLBACK.
 // `#root > *` is satisfied by `.page-loading` - the Suspense fallback App.jsx
@@ -162,12 +162,12 @@ const READY = 'main, .landing, #root > *'
 // the guard below unfalsifiable - it would spin until it found the very thing
 // it exists to prove is there, and a genuinely empty sample would time out
 // instead of failing with a count.
-const settle = async (page) => {
-  await expect(page.locator(READY).first()).toBeVisible()
-  await page.locator('.page-loading').waitFor({ state: 'detached', timeout: 15000 })
-    .catch(() => { /* never mounted: the chunk was already cached */ })
-  await page.waitForTimeout(150)
-}
+// go() now owns readiness for every navigation in this file: it holds #root-mounted
+// AND no-.page-loading for three animation frames, which is strictly stronger than
+// the READY-plus-detach pair this used to do for itself (READY was `main, .landing,
+// #root > *`, and all three of those match the fallback). What is left here is the
+// trailing PAINT settle, which was always a separate concern from hydration.
+const settle = (page) => page.waitForTimeout(150)
 
 const report = (route, theme, vp, bad) => bad.map((b) =>
   `  ${route} [${theme}@${vp}] .${b.cls} (${b.token}, ${b.kind})\n`
@@ -191,7 +191,7 @@ test.describe('state-colour text clears its AA floor', () => {
       const failures = []
       let measured = 0
       for (const route of ROUTES) {
-        await page.goto(route)
+        await go(page, route)
         await settle(page)
         const res = await page.evaluate(WALK)
         measured += res.measured
@@ -215,7 +215,7 @@ test.describe('state-colour text clears its AA floor', () => {
     const failures = []
     let measured = 0
     for (const route of ['/sitemap', '/privacy', '/create/contrast', '/create/semantic-color']) {
-      await page.goto(route)
+      await go(page, route)
       await settle(page)
       const res = await page.evaluate(WALK)
       measured += res.measured
@@ -230,7 +230,7 @@ test.describe('state-colour text clears its AA floor', () => {
   // actually see one. If color-mix ever computes to a form `parse` misses, this
   // fails loudly instead of quietly making every badge look safe.
   test('a tinted state badge reports a tinted ground, not the bare card', async ({ page }) => {
-    await page.goto('/sitemap')
+    await go(page, '/sitemap')
     await settle(page)
     const seen = await page.evaluate(`(() => {
       ${HELPERS}

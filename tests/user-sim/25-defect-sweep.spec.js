@@ -22,7 +22,7 @@
 // viewports, because a desktop Chromium narrowed to 390px still reports
 // `hover: hover` and hides this whole class of defect.
 import { test, expect } from './base.js'
-import { restingScrollY, watch } from './helpers.js'
+import { go, restingScrollY, watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -105,7 +105,7 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
   // this copy is gone rather than racing it: a page route takes precedence over
   // a context route, so leaving it would have made the per-spec stub the silent
   // winner. Same reasoning, one place; see base.js.
-  await page.goto(path, { waitUntil: 'domcontentloaded' })
+  await go(page, path)
   await page.waitForLoadState('load').catch(() => {})
   if (waitFor) await page.locator(waitFor).first().waitFor({ state: 'attached', timeout: 15000 })
   await settle(page)
@@ -1113,7 +1113,7 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   const page = await ctx.newPage()
   watch(page, 'a designer browsing icons on a laptop')
-  await page.goto('/create/icons')
+  await go(page, '/create/icons')
   await page.locator('.ic').first().waitFor({ timeout: 20000 })
 
   const read = () => page.evaluate(() => {
