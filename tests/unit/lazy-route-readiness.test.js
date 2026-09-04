@@ -71,66 +71,49 @@ test('ready() requires BOTH a mounted root and no Suspense fallback', () => {
     + 'pre-hydration window, in which #root is still the empty div prerender wrote.')
 })
 
-/* ── The specs that still navigate around the door ───────────────────────────
+/* ── The door has no way around it any more ──────────────────────────
  *
- * `page.goto()` gets no readiness wait, so these files remain exposed to the
- * defect above wherever they navigate to a lazy route and then measure without
- * waiting for something route-specific themselves. Most do wait - a locator
- * assertion auto-waits, and that is usually enough - so this is a POPULATION,
- * not a defect count.
+ * This used to be a KNOWN_RAW_GOTO allowlist of twenty spec files, pinned so
+ * the population could shrink but not grow. It has now shrunk to nothing:
+ * [raw-goto-bypasses-readiness] converted every one of the SIXTY-ONE call sites
+ * (the backlog note said fifty-one; the note undercounted by ten, and the
+ * recount is in the item).
  *
- * It is pinned rather than fixed because converting 51 call sites across 20
- * files is a mechanical change with real flake risk, and several of these waits
- * are legitimately about animation or debounce rather than about loading.
- * Pinning it means the number can only go DOWN without someone saying so.
- * Backlog: raw-goto-bypasses-readiness.
+ * So the assertion below is UNCONDITIONAL - no allowlist, no ratchet, nothing
+ * to keep in step with the tree. `page.goto()` in a spec is now simply wrong,
+ * and the reason is in the failure message rather than in a list someone has to
+ * remember to prune.
  */
-const KNOWN_RAW_GOTO = [
-  '04-premium-home.spec.js',
-  '24-mobile-overhaul.spec.js',
-  '25-defect-sweep.spec.js',
-  '27-motion-guards.spec.js',
-  '28-account-menu-keyboard.spec.js',
-  '29-image-palette-picker.spec.js',
-  '30-founder-requests-0808.spec.js',
-  '31-library-filter-multi.spec.js',
-  '32-emoji-library.spec.js',
-  '33-offline-state.spec.js',
-  '34-palette-library-sections.spec.js',
-  '35-colour-picker.spec.js',
-  '37-toolbar-tablet-band.spec.js',
-  '38-input-specificity.spec.js',
-  '39-accent-contrast.spec.js',
-  '40-gallery-hero.spec.js',
-  '41-theme-control.spec.js',
-  '42-semantic-usage-examples.spec.js',
-  '43-state-token-contrast.spec.js',
-  '44-locked-library-tease.spec.js',
-]
 
-test('no NEW spec navigates with a bare page.goto()', () => {
+test('no spec navigates with a bare page.goto()', () => {
   const found = SPECS.filter((f) => /\bpage\.goto\s*\(/.test(readStripped(path.join('tests', 'user-sim', f))))
-  const added = found.filter((f) => !KNOWN_RAW_GOTO.includes(f))
-  const gone = KNOWN_RAW_GOTO.filter((f) => !found.includes(f))
-
-  assert.deepEqual(added, [],
+  assert.deepEqual(found, [],
     'These specs navigate with a bare page.goto(), which does no readiness wait, so a\n'
     + 'slow route chunk is measured as the app rather than as a wait that ran out. Use\n'
     + '`go()` from ./helpers.js, or wait for something the ROUTE renders (not `main`,\n'
     + 'not `#root > *`, and not a character count of document.body - the loading\n'
-    + 'fallback satisfies all three):\n  ' + added.join('\n  '))
-
-  assert.deepEqual(gone, [],
-    'These specs no longer use page.goto(), which is the right direction - remove them\n'
-    + 'from KNOWN_RAW_GOTO so the list keeps meaning what it says:\n  ' + gone.join('\n  '))
+    + 'fallback satisfies all three):\n  ' + found.join('\n  '))
 })
 
-test('goRaw() has exactly one caller, and it is the spec that proves the wait works', () => {
+// Anti-vacuity for the assertion above, which would also pass on a suite that
+// had stopped navigating at all, or in which `go` had been renamed. Sixty-one
+// sites were converted across twenty files; the floor is deliberately well
+// under that so ordinary edits do not trip it.
+test('the suite really does navigate, and does it through go()', () => {
+  const callers = SPECS.filter((f) => /\bgo\s*\(page/.test(readStripped(path.join('tests', 'user-sim', f))))
+  assert.ok(callers.length >= 20,
+    `only ${callers.length} spec file(s) call go(page, ...). The no-page.goto assertion\n`
+    + 'above cannot fail on a suite that does not navigate, so this is its positive\n'
+    + 'control - if go() were renamed or the navigations removed, both would go quiet.')
+})
+
+test('goRaw() has exactly the two callers that must read a page before its route arrives', () => {
   // goRaw is the deliberate hole in the door. If it acquires other callers it
   // stops being a documented exception and becomes a second way in.
   const callers = SPECS.filter((f) => /\bgoRaw\s*\(/.test(readStripped(path.join('tests', 'user-sim', f))))
-  assert.deepEqual(callers, ['47-lazy-route-readiness.spec.js'],
-    'goRaw() skips the readiness wait on purpose, for the one spec that has to observe\n'
-    + 'the page BEFORE its route arrives. Any other caller is opting out of the fix:\n  '
-    + callers.join('\n  '))
+  assert.deepEqual(callers, ['04-premium-home.spec.js', '47-lazy-route-readiness.spec.js'],
+    'goRaw() skips the readiness wait on purpose, and only two specs may do that:\n'
+    + '47-lazy-route-readiness reads a route while its chunk is still in flight, and\n'
+    + '04-premium-home reads #boot-shell before React replaces it. Any other caller is\n'
+    + 'opting out of the fix:\n  ' + callers.join('\n  '))
 })
