@@ -1013,6 +1013,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
         return base
       }
       const bad = []
+      let measured = 0
       // Every bit of text this panel paints ON a generated colour - the two
       // elements with their own fill, and the eight inside the product card.
       //
@@ -1037,17 +1038,19 @@ test.describe('homepage: eleven tools, five ways of working', () => {
         const fg = parse(cs.color)
         if (!fg) continue
         const ink = fg.a < 1 ? over(fg, ground) : fg.rgb
+        measured++
         const r = ratio(ink, ground)
         const hex = (c) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
         if (r < 4.5) {
           bad.push(`${el.className} ${el.textContent.trim()} ${r.toFixed(2)}:1 ${hex(ink)} on ${hex(ground)}`)
         }
       }
-      return bad
+      return { measured, bad }
     })
 
     const NL = String.fromCharCode(10)
     const failures = []
+    let measured = 0
 
     // MEASURE ONLY A SETTLED CARD. Clicking Generate schedules a React update;
     // reading getComputedStyle in the very next task can catch the DOM between
@@ -1097,12 +1100,41 @@ test.describe('homepage: eleven tools, five ways of working', () => {
         () => page.evaluate(() => document.documentElement.getAttribute('data-theme')),
         { message: `the APP put itself in ${theme} - not a setAttribute from here` },
       ).toBe(theme)
-      for (let i = 0; i < 24; i++) {
+      // FOUR ROUNDS, NOT TWENTY-FOUR, AND THE COVERAGE DID NOT GO ANYWHERE.
+      // This loop used to run 24 times per theme - 48 rerolls, each with a settle
+      // poll and a full contrast walk, all inside ONE 30s budget. It passed alone
+      // and timed out under suite load, and the timeout landed on the Generate
+      // click, which is exactly where the REAL unreachable-Generate defect on
+      // [workbench-handoff-overlays-controls] lands too. Same file, same locator,
+      // same message: a flake that impersonates a live defect.
+      //
+      // Reproduced on demand rather than argued about, with Chromium
+      // Emulation.setCPUThrottlingRate: at 10x this test takes 40.1s at 24 rounds
+      // (busting the budget on the click at what was line 1092) and 18.4s at 4.
+      //
+      // The exhaustive version now lives in tests/unit/home-workbench-ink.test.js,
+      // which drives the same pure functions over ALL 16,200 colours the generator
+      // can emit plus 2,880 card-ink pairs across both modes, in about 190ms each.
+      // What stays here is the half only a browser can answer: that the COMPONENT
+      // still routes its swatch labels and card text through those functions, on
+      // the ground it actually composites. Dropping either half has already gone
+      // wrong once in this repo - the estimate that skipped the render missed
+      // role.text by assuming the ground equalled role.surface.
+      for (let i = 0; i < 4; i++) {
         await settled()
-        failures.push(...(await worstOf()).map((f) => `[${theme}] ${f}`))
+        const seen = await worstOf()
+        measured += seen.measured
+        failures.push(...seen.bad.map((f) => `[${theme}] ${f}`))
         await page.getByRole('button', { name: 'Generate' }).click()
       }
     }
+    // ANTI-VACUITY, and it is load-bearing now that the loop is four rounds
+    // rather than twenty-four. worstOf() reports VIOLATIONS and says nothing
+    // about how many labels it examined, so a panel that rendered nothing - or a
+    // renamed class in SEL - would report a clean run rather than a failure. The
+    // exhaustive sweep in tests/unit/home-workbench-ink.test.js cannot see that
+    // either: it proves the maths, not that this component still calls it.
+    expect(measured, 'no generated-colour label was found to measure').toBeGreaterThan(40)
     expect(failures.join(NL), 'label on a generated fill under 4.5:1').toBe('')
   })
 
