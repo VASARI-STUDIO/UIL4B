@@ -910,7 +910,7 @@ data:
 |---|---|---|---|
 | `src/data/paletteGallery.js` | `GALLERY_PALETTES` | 64 | `/discover/palettes` |
 | `src/data/gradientGallery.js` | `GALLERY_GRADIENTS` | 100 | `/discover/gradients` |
-| `src/data/brandPalettes.js` (via `paletteLibrary.js`) | `BRAND_LIBRARY_PALETTES` | 36 | `/discover/palettes` |
+| `src/data/brandPalettes.js` (via `paletteLibrary.js`) | `BRAND_LIBRARY_PALETTES` | 37 | `/discover/palettes` |
 
 **Change the thumbnail.** The generated `--hcomm-c1/--hcomm-c2` two-stop gradient
 is a decorative stand-in for content that does not exist. Replace it with **the

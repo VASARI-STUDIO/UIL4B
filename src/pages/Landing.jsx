@@ -98,7 +98,7 @@ const DEMO_LABELS = ['Primary', 'Dark', 'Accent', 'Light', 'Base']
 
 const DEMO_PALETTES = [
   { name: 'Stripe', colors: ['#635BFF', '#0A2540', '#00D4AA', '#7A73FF', '#FBFCFE'], hue: 244 },
-  { name: 'Spotify', colors: ['#1DB954', '#191414', '#1ED760', '#535353', '#FFFFFF'], hue: 141 },
+  { name: 'Spotify', colors: ['#1ED760', '#191414', '#B3B3B3', '#535353', '#FFFFFF'], hue: 141 },
   { name: 'Linear', colors: ['#5E6AD2', '#1B1B25', '#26B5CE', '#7B61FF', '#F2F2F2'], hue: 232 },
   { name: 'Figma', colors: ['#A259FF', '#F24E1E', '#FF7262', '#1ABCFE', '#0ACF83'], hue: 267 },
   { name: 'Sunset', colors: ['#FF6B6B', '#2B2D42', '#FFD93D', '#FF8E72', '#FFF3E0'], hue: 12 },
