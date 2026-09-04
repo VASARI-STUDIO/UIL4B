@@ -6,6 +6,10 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
+import LibraryGrid from '../components/library/LibraryGrid'
+import { LockedPaletteCard, LockedTeaseCta } from '../components/library/LockedTease'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { splitLockedLibrary } from '../utils/lockedPreview'
 import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 
 // `dot` on the two lightness filters only. Curated/Brand describe provenance
@@ -84,10 +88,27 @@ const HAYSTACKS = new Map(LIBRARY_PALETTES.map((palette) => [
 export default function PaletteGallery({ toast }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
+  const { isPro } = useSubscription()
+
+  // The gate, before the data is produced rather than on a control.
+  //
+  // `browsable` is what this viewer may have; the Pro brand systems are not in
+  // it at all. Everything downstream — the filters, the search haystack, the
+  // grid — reads from `browsable`, so a locked palette has no route to the
+  // page. That closes the search oracle in particular: the haystack indexes
+  // each palette's hex values, so filtering the FULL library would have let a
+  // signed-out visitor confirm a locked brand's colours by typing them.
+  const { open: browsable, locked: lockedBrands, remaining: lockedCount } = useMemo(() => (
+    splitLockedLibrary(LIBRARY_PALETTES, {
+      unlocked: isPro === true,
+      isOpen: (palette) => palette.pro !== true,
+      preview: (palette) => ({ id: palette.id, label: palette.name, slots: palette.colors.length }),
+    })
+  ), [isPro])
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return LIBRARY_PALETTES.filter((palette) => {
+    return browsable.filter((palette) => {
       const profile = PROFILES.get(palette.id)
       if (filter === 'brand' && palette.kind !== 'brand') return false
       if (filter === 'curated' && palette.kind !== 'curated') return false
@@ -97,7 +118,7 @@ export default function PaletteGallery({ toast }) {
       if (q && !HAYSTACKS.get(palette.id).includes(q)) return false
       return true
     })
-  }, [filter, query])
+  }, [browsable, filter, query])
 
   const brandCount = useMemo(() => visible.filter((p) => p.kind === 'brand').length, [visible])
 
@@ -117,6 +138,37 @@ export default function PaletteGallery({ toast }) {
     setQuery('')
     setFilter('all')
   }
+
+  // The teased tail of the Brand systems group: three placeholders, then one
+  // wall. Three is the gallery's desktop column count, so the tease reads as
+  // the next ROW of the collection rather than as a stub — see LOCKED_TEASE.
+  //
+  // Shown only where the brand group is shown whole. Under a search or a mood
+  // filter the user has asked a narrower question, and answering it with a
+  // paywall would be an interruption rather than an offer.
+  const lockedBlock = lockedCount > 0 ? (
+    <>
+      {/* NOT aria-hidden as a group. The placeholder SHAPES are hidden inside
+          the card, but a brand's name is a real fact and the whole tease, so a
+          screen-reader user hears "Figma · Pro" exactly as a sighted one reads
+          it. Nothing announced here is invented, because the card holds no
+          values to invent. */}
+      <LibraryGrid className="pgal-grid">
+        {lockedBrands.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} />)}
+      </LibraryGrid>
+      <LockedTeaseCta
+        gate="palette-library-brand-lock"
+        heading={`Another ${lockedCount} brand ${lockedCount === 1 ? 'system' : 'systems'} with Pro`}
+        body="Each one loads the brand’s whole colour system into the Palette Builder — its harmony and its roles, not only the five swatches."
+        action="See what Pro includes"
+        modal={{
+          eyebrow: 'Pro colour tools',
+          title: 'The full brand library',
+          subtitle: `Free covers ${LIBRARY_PALETTES.length - lockedCount} palettes including a handful of starter brands. Pro opens the remaining ${lockedCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
+        }}
+      />
+    </>
+  ) : null
 
   return (
     <div className="sec pgl-page">
@@ -166,6 +218,7 @@ export default function PaletteGallery({ toast }) {
                   palettes={section.palettes}
                   labelledBy={`pgl-section-${section.id}`}
                 />
+                {section.id === 'brand' && lockedBlock}
               </div>
             ))
           ) : (
@@ -177,6 +230,7 @@ export default function PaletteGallery({ toast }) {
                 </p>
               )}
               <PaletteGalleryGrid toast={toast} palettes={visible} />
+              {filter === 'brand' && !query.trim() && lockedBlock}
             </>
           )}
         </section>

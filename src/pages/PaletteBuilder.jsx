@@ -17,6 +17,8 @@ import { colorName, randomPaletteName } from '../utils/paletteNames'
 import { roleLabel } from '../utils/paletteRoles'
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
+import { LockedPaletteRow, LockedTeaseCta } from '../components/library/LockedTease'
+import { splitLockedLibrary } from '../utils/lockedPreview'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
@@ -818,6 +820,18 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { isPro, loading: entitlementLoading } = useSubscription()
   const { openProModal } = useProModal()
+  // The brands panel, split before it is rendered rather than styled after it.
+  // A locked brand's colours are not in `openBrands`, so they never reach
+  // barRef and never enter the DOM — see utils/lockedPreview.js. Fails closed
+  // while the entitlement is still resolving, because `unlocked` is only ever
+  // satisfied by an exact `true`.
+  const { open: openBrands, locked: lockedBrands, remaining: lockedBrandCount } = useMemo(() => (
+    splitLockedLibrary(BRAND_PALETTES, {
+      unlocked: isPro === true,
+      isOpen: (brand) => brand.free === true,
+      preview: (brand) => ({ id: brand.id, label: brand.name, slots: brand.colors.length }),
+    })
+  ), [isPro])
   const { requireLogin } = useLoginPrompt()
   const { user, loading: authLoading } = useAuth()
   // Stable primitive so the community-gate effect doesn't re-run on every
@@ -2177,31 +2191,43 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
                 {galleryTab === 'brands' && (
                   <div className="plb-galpopup-body">
-                    {BRAND_PALETTES.map(b => {
-                      const gated = !b.free && !isPro
-                      return (
-                        <div key={b.id} className={`plb-varrow${gated ? ' plb-varrow--locked' : ''}`}>
-                          <button type="button" className="plb-varrow-main" onClick={() => pickBrand(b)}>
-                            <span className="plb-strip" aria-hidden="true">
-                              {b.colors.map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
-                            </span>
-                            <span className="plb-varrow-name">{b.name}</span>
-                            {gated && <span className="plb-tab-lock"><IcoLock size={11} /></span>}
-                          </button>
-                          {!gated && (
-                            <button
-                              type="button"
-                              className="plb-varrow-cmp"
-                              title="Compare with the current palette"
-                              aria-label={`Compare ${b.name} with the current palette`}
-                              onClick={() => comparePalette(b.name, b.colors)}
-                            >
-                              <IcoEye />
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
+                    {/* openBrands holds only the rows this viewer may load. A
+                        Pro-gated brand is not in the list, so its colours never
+                        reach barRef and never enter the DOM — the lock is the
+                        absence of the row, not a style over it. */}
+                    {openBrands.map(b => (
+                      <div key={b.id} className="plb-varrow">
+                        <button type="button" className="plb-varrow-main" onClick={() => pickBrand(b)}>
+                          <span className="plb-strip" aria-hidden="true">
+                            {b.colors.map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
+                          </span>
+                          <span className="plb-varrow-name">{b.name}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="plb-varrow-cmp"
+                          title="Compare with the current palette"
+                          aria-label={`Compare ${b.name} with the current palette`}
+                          onClick={() => comparePalette(b.name, b.colors)}
+                        >
+                          <IcoEye />
+                        </button>
+                      </div>
+                    ))}
+                    {lockedBrands.map(preview => <LockedPaletteRow key={preview.id} preview={preview} />)}
+                    {lockedBrandCount > 0 && (
+                      <LockedTeaseCta
+                        gate="palette-builder-brand-lock"
+                        heading={`Another ${lockedBrandCount} brand ${lockedBrandCount === 1 ? 'system' : 'systems'} with Pro`}
+                        body="Loading a brand applies its whole colour system, not only its swatches."
+                        action="See what Pro includes"
+                        modal={{
+                          eyebrow: 'Pro colour tools',
+                          title: 'Load any brand system',
+                          subtitle: `Free covers ${BRAND_PALETTES.length - lockedBrandCount} starter brands. Pro opens the remaining ${lockedBrandCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
+                        }}
+                      />
+                    )}
                   </div>
                 )}
               </div>
