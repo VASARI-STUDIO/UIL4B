@@ -6812,7 +6812,33 @@ html[data-reduced-motion="true"] .wmap-dot,html[data-reduced-motion="true"] .wma
    said `yPercent:110` and nothing ever masked it. The padding/negative-margin
    pair buys room for descenders (line-height is .98, so `g` and `y` hang below
    the box and would be shaved off) without moving where the line sits. */
-.home-hero-line{display:block;overflow:hidden;padding-bottom:.14em;margin-bottom:-.14em}
+/* C5 (founder batch 2026-08-20, spec §2.1 / F-2). The compensation used to be
+   BOTTOM ONLY at .14em, so the --hi mark on line 2 — which paints the full
+   inline box, not the line box — was sheared by this same overflow:hidden.
+   Measured at 1440×900: a 130px painted mark against a 106.44px line box, 19px
+   off the top and 4.56px still off the bottom.
+
+   The value is derived, not chosen. `line-height:.98` against Manrope's
+   1.368em content area leaves (1.368 − .98) ÷ 2 ≈ .194em of half-leading
+   overflowing each edge — .2em covers it, and it is expressed in `em` so it
+   holds at every clamp() size (measured 19px needed / 19.01px given at 95.04px,
+   13px / 13.52px at 67.58px, 9px / 9.2px at 46px). Mirroring the old .14em
+   would have under-delivered by ~6px and the mark would still have clipped.
+
+   .28em, not .2em, because `.home-mark` now also carries `padding-block:.06em`
+   (same spec item) and that padding grows the painted box on both edges:
+   .194em half-leading + .06em mark padding = .254em. Ship .2em WITH that
+   padding and 5.7px shears off again at the 96px cap. Rounded up to .28em
+   rather than .26em because .26em was measured at 0.01px of slack — a fit that
+   thin is one font-metric rounding difference away from clipping again; .28em
+   leaves 1.9px at the 96px cap and stays proportional at every clamp size.
+
+   overflow:hidden STAYS — it is the mask for the `home-hero-clip-up` entrance,
+   and without it the two headline lines slide through one another. Widening it
+   moves where the mask starts, so the entrance is browser-verified, not just
+   measured. Do not relax `line-height` instead: .98 is the V2 display scale and
+   the overflow is a function of the font's ascent/descent, not the leading. */
+.home-hero-line{display:block;overflow:hidden;padding-block:.28em;margin-block:-.28em}
 .home-hero-line-in{display:inline-block}
 
 /* ── Hero entrance ──────────────────────────────────────────────────────────
@@ -6853,6 +6879,14 @@ html[data-reduced-motion="true"] .wmap-dot,html[data-reduced-motion="true"] .wma
 html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
 /* V2 body: 54ch measure, --mute, line-height 1.65. */
 .home-hero-sub{font-size:var(--fs-lede);font-weight:400;color:var(--t2);line-height:1.6;max-width:54ch;margin:var(--s-5) auto 0;text-wrap:pretty}
+/* C5 rhythm: the mark now occupies more of its line box and the headline's
+   collapsed bottom margin grew from -.14em to -.28em, so the sub-line needs the
+   next spacing step to keep the same optical gap. Declared BEFORE the
+   `max-height:900px` block below on purpose — that block's --s-4 override must
+   still win on short laptops, where the below-the-fold contract binds. */
+@media(min-width:981px){
+  .home-hero-sub{margin-top:var(--s-6)}
+}
 .home-hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:var(--s-6)}
 .home-hero-hint{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:var(--s-4)}
 
@@ -6965,8 +6999,15 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
    visual line painted straight over the descenders of the line above — visible
    as the "y" of "that stay" being sliced off at 390px.
    Setting it on the mark shrinks the painted box without loosening the display
-   setting on the heading itself, which is the look this hero is built on. */
-.home-mark{background:var(--hi);color:var(--hi-fg);border-radius:var(--radius-xs);line-height:1;padding:0 .1em;margin:0 -.02em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+   setting on the heading itself, which is the look this hero is built on.
+   `padding-block:.06em` is C5 and a SEPARATE fix from the line-height: it is
+   what makes the mark read as a marker pen rather than a tight underlay, and
+   it is why `.home-hero-line` compensates .28em rather than .14em. Those two
+   values are one decision and must move together. The line-height governs the
+   painted box, the padding governs the ink around the glyphs; neither
+   substitutes for the other, which is why keeping only one of them left the
+   mark clipped at the top on every desktop width. */
+.home-mark{background:var(--hi);color:var(--hi-fg);border-radius:var(--radius-xs);line-height:1;padding:0 .1em;padding-block:.06em;margin:0 -.02em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 
 /* ── Command bar (structural pattern 2) ── */
 .hcmd{max-width:660px;margin:var(--s-5) auto 0;text-align:left}
@@ -7145,23 +7186,67 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
   /* Each step gets a screen of its own to sync against. */
   .hstep{min-height:62vh;display:flex;flex-direction:column;justify-content:center;opacity:.4}
   .hstep[data-active="true"]{opacity:1}
-  .hsteps-sticky{position:sticky;top:calc(var(--nav-clear) + var(--s-4))}
-  .hsteps-sticky .hw-shell{box-shadow:var(--shadow-panel)}
-  /* ── The panel may never be taller than the screen it is stuck to ──────────
-     A position:sticky element taller than the viewport cannot be fully seen:
-     you reach its bottom only by scrolling past the whole section, and by then
-     it has unstuck. The "Continue in ..." hand-off lives at that bottom, so the
-     failure is not cosmetic — it is the panel's entire purpose becoming
-     unreachable. Measured at 1440x900 before this cap, with the modes stacked
-     one-column: image 966px against an 852px budget.
+  /* ── C3 then C1 (founder batch 2026-08-20, spec §4.1 + §3.1 / F-7),
+     rebased onto #341's two-zone panel ────────────────────────────────
+     C3 FIRST, because it is the precondition for C1. The panel was top-pinned
+     and free to resize, so `.hw-shell` measured 441.28 → 758.47px at 1440×900
+     and 466.88 → 917.98px at 1024×768. One tab click moved everything below it
+     by up to 451px — that height change, not the transition speed, is the
+     founder's "too snappy it looks jumpy", and slowing the transition would not
+     have touched it.
 
-     This is a CAP, not #262's fixed frame. #262 wants one constant height so
-     the panel stops resizing between modes at all (measured swing on main:
-     317px; 391px after the re-layout below, because a stacked mode is taller
-     than a split one). That is a bigger change and it is still its own item —
-     this rule only guarantees nothing becomes unreachable, and the swing is
-     left for #262, stated rather than implied. */
-  .hsteps-sticky .hw-shell{display:flex;flex-direction:column;max-height:calc(100vh - var(--nav-clear) - var(--s-4) - var(--s-5))}
+     #341 has since landed a CAP on the same box (max-height, so nothing becomes
+     unreachable) and stated in its own comment that the SWING was left for this
+     change. A cap and a frame are not the same guarantee: the cap says the panel
+     never exceeds the screen, the frame says it never CHANGES. The measured
+     swing under the cap alone was still 215px. So the outer sizing below is
+     #262's frame and the inner zoning is #341's, unchanged.
+
+     --hw-frame is one frame for all five modes: the screen below the nav less a
+     --s-8 breathing margin, floored at 420px and capped at 640px. `svh`, not
+     `vh`/`dvh`, so a collapsing mobile URL bar cannot resize the pinned box
+     mid-scroll — the same reasoning as `.home-hero`. The frame is LAYOUT, not
+     motion: it stays in force under reduced motion, because without it a
+     reduced-motion visitor would get the 451px jump with no transition at all.
+
+     `align-content:safe center` is load-bearing: it centres while the panel
+     fits and falls back to start-alignment if it ever cannot, so the top of the
+     panel can never end up above the viewport where it is unreachable. In an
+     engine without `safe`, the whole declaration is dropped and the item sits
+     at the start of the box — the documented fallback, never plain `center`. */
+  .hsteps-sticky{
+    /* The upper bound is 760px, not #262's original 640px. 640 was chosen in
+       August against a panel that had no internal zoning: it was the whole
+       box. Under #341 the box is chrome + tabs + a natural-height stage + a
+       scrolling control zone with a 92px STICKY hand-off pinned inside it, and
+       at 640 the control zone collapses to 140px — 48px of which is not under
+       the foot. Palette's Generate button then renders permanently beneath the
+       hand-off: measured at 1440×900, the button occupied 743–783 and the foot
+       690.6–783, and `document.elementFromPoint` at the button's own centre
+       returned the foot's note. Four user-sim tests fail on the click.
+       760 is the smallest bound that leaves every mode at least as much control
+       room as main's cap does today (main's natural Palette panel is 756px), so
+       the frame buys a constant height without spending reachability to get it.
+       The swing is killed by `height` being MODE-independent, not by the bound
+       being small — that is why raising it costs nothing this change wanted. */
+    --hw-frame:clamp(420px,calc(100svh - var(--nav-clear) - var(--s-8)),760px);
+    position:sticky;top:var(--nav-clear);
+    height:calc(100svh - var(--nav-clear));
+    display:grid;align-content:safe center;
+  }
+  /* `width:100%` restores what block layout gave for free: a grid item with
+     auto inline margins is NOT stretched, so without it `max-width:920px` +
+     `margin:0 auto` would shrink the panel to fit its content. `height`, not
+     `max-height`: the frame is the point. */
+  .hsteps-sticky .hw-shell{width:100%;height:var(--hw-frame);display:flex;flex-direction:column;box-shadow:var(--shadow-panel)}
+  .hsteps-sticky .hw-chrome,.hsteps-sticky .hw-tabs{flex:0 0 auto}
+  /* ── #341's zoning, kept verbatim ─────────────────────────────────
+     THE ARTEFACT IS NEVER SQUEEZED. #341's first attempt let the stage flex down
+     and clip, and every measurement passed while the type ladder had quietly
+     lost two of its four sizes. The stage takes its natural height and the
+     CONTROLS absorb the difference; `.hw-panel` is therefore NOT the scroller,
+     which is why #262's `overflow-y:auto` on it is dropped here rather than
+     merged. */
   .hsteps-sticky .hw-panel{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column}
   .hsteps-sticky .hw-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
   /* THE ARTEFACT IS NEVER SQUEEZED. The first version of this cap let the stage
@@ -7237,12 +7322,18 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
    every step would sit stranded at opacity .4. Below: full opacity, no sticky,
    no reserved screen height — the same content as a plain readable stack, and
    the workbench's own tablist is the control. Mirrors prefersReducedMotion() in
-   useHomeMotion.js — an explicit attribute wins over the OS query both ways. */
+   useHomeMotion.js — an explicit attribute wins over the OS query both ways.
+
+   C1/C3 addendum: the sticky box also gives up its full-screen height and its
+   centring here, so it becomes a plain in-flow block. The FRAME does not go
+   with it — `.hw-shell` keeps `height:var(--hw-frame)`, because the fixed frame
+   is the anti-jump fix itself and a reduced-motion visitor without it would get
+   the worst version of the bug: a 451px jump and no transition to soften it. */
 :where(html[data-reduced-motion="true"]) .hstep{opacity:1;min-height:0}
-:where(html[data-reduced-motion="true"]) .hsteps-sticky{position:static}
+:where(html[data-reduced-motion="true"]) .hsteps-sticky{position:static;height:auto;align-content:start}
 @media(prefers-reduced-motion:reduce){
   :where(html:not([data-reduced-motion="false"])) .hstep{opacity:1;min-height:0}
-  :where(html:not([data-reduced-motion="false"])) .hsteps-sticky{position:static}
+  :where(html:not([data-reduced-motion="false"])) .hsteps-sticky{position:static;height:auto;align-content:start}
 }
 
 
@@ -7303,14 +7394,46 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
    since been removed as a duplicate, but the artefact is real). So it stays one row and
    takes `.rail-overflow`, with the peek forced at ≤480 below. */
 .hw-tabs{display:flex;gap:2px;padding:8px 8px 0;background:var(--bg-2);border-bottom:1px solid var(--border)}
-.hw-tab{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:1 1 0;min-width:118px;height:44px;padding:0 12px;border:1px solid transparent;border-bottom:none;border-radius:var(--radius-l) var(--radius-l) 0 0;background:none;color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;white-space:nowrap;transition:color var(--t),background var(--t)}
+/* The transition names border-color as well as colour and background: the
+   active tab changes its border, and without it the border snapped while
+   the surface faded. */
+.hw-tab{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:1 1 0;min-width:118px;height:44px;padding:0 12px;border:1px solid transparent;border-bottom:none;border-radius:var(--radius-l) var(--radius-l) 0 0;background:none;color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;white-space:nowrap;transition:color var(--dur-2) var(--ease-standard),background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
 .hw-tab-icon{width:16px;height:16px;flex:0 0 auto}
 .hw-tab:hover{color:var(--t0);background:color-mix(in srgb,var(--bg-1) 62%,transparent)}
 .hw-tab:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:-3px}
 .hw-tab[data-active="true"]{background:var(--bg-1);border-color:var(--border);color:var(--t0)}
-.hw-tab[data-active="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--hue,var(--accent))}
+/* C3 (spec §4.2, motion register M7). The indicator is always in the DOM and
+   fades rather than appearing, so the selection reads as one thing moving
+   between tabs instead of two things blinking. --dur-2/--ease-standard: the
+   click is acknowledged at 200ms while the panel content behind it takes
+   --dur-3 to arrive, which is the whole separation principle. */
+.hw-tab::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--hue,var(--accent));opacity:0;transition:opacity var(--dur-2) var(--ease-standard),background var(--dur-2) var(--ease-standard)}
+.hw-tab[data-active="true"]::after{opacity:1}
 .hw-panel{padding:20px;background:var(--bg-1)}
 .hw-body{display:flex;flex-direction:column;gap:14px}
+/* C3 (spec §4.2, motion register M8 + M9). With the frame fixed, the container
+   no longer resizes; what was left was a hard content cut. React unmounts the
+   outgoing panel, so this is ENTER-ONLY — an exit fade would buy nothing (the
+   frame does not move) and cost a double mount. Compositor-only properties;
+   `transform`/`opacity` cannot shift layout, so the 0.0000 CLS baseline is
+   untouched. The stagger caps at three steps: past ~120ms the tail of a list
+   arrives after the eye has already moved on. */
+@keyframes hw-panel-in{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
+.hw-body>*{animation:hw-panel-in var(--dur-3) var(--ease-entrance) both}
+.hw-body>*:nth-child(2){animation-delay:40ms}
+.hw-body>*:nth-child(3){animation-delay:80ms}
+.hw-body>*:nth-child(n+4){animation-delay:120ms}
+/* Reduced motion, BOTH directions — the explicit in-app attribute wins over
+   the OS query either way, mirroring the hero block above. The swap becomes
+   instantaneous; the fixed frame stays, because it is layout, not motion. */
+:where(html[data-reduced-motion="true"]) .hw-body>*{animation:none}
+:where(html[data-reduced-motion="true"]) .hw-tab{transition:none}
+:where(html[data-reduced-motion="true"]) .hw-tab::after{transition:none}
+@media(prefers-reduced-motion:reduce){
+  :where(html:not([data-reduced-motion="false"])) .hw-body>*{animation:none}
+  :where(html:not([data-reduced-motion="false"])) .hw-tab{transition:none}
+  :where(html:not([data-reduced-motion="false"])) .hw-tab::after{transition:none}
+}
 
 /* ── The two zones ───────────────────────────────────────────────────────────
    Founder: "use mobbin to improve our UI preview designs."
