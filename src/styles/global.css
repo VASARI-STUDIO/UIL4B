@@ -7377,11 +7377,36 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
      scrollable and a whole hand-off was simply missing. The zone scrolls; its
      children keep their size. */
   .hsteps-sticky .hw-controls>*{flex:0 0 auto}
-  /* When a mode's controls do scroll, the hand-off must not scroll out of
-     reach — a CTA you have to go looking for is a CTA that does not get
-     pressed. Sticky inside the scroll container, on the panel's own ground so
-     the controls pass behind it rather than through it. */
-  .hsteps-sticky .hw-foot{position:sticky;bottom:0;z-index:1;margin-top:auto;padding-bottom:2px;background:var(--bg-1)}
+  /* THE HAND-OFF IS A SIBLING OF THE SCROLLER, NOT A STICKY CHILD OF IT.
+
+     #341 kept the hand-off reachable by making it `position:sticky;bottom:0`
+     as the last child of `.hw-controls`. That is the right INTENT — a CTA you
+     have to go looking for does not get pressed — reached the wrong way: a
+     sticky element inside its own scroller paints over the bottom N px of that
+     scroller at EVERY scroll position except the very end, so whatever control
+     lands there is covered. Scrolling reveals it, which is why review missed
+     it; `scrollIntoView({block:'nearest'})` does NOT, because it stops as soon
+     as the element is inside the scrollport and the scrollport includes the
+     area under the foot. Playwright scrolls exactly that way, which is how
+     #262 met it as four hard click failures rather than a cosmetic note.
+
+     MEASURED ON main AT 1440x900 BEFORE THIS CHANGE, against #262's 760px
+     frame — so this was live, not theoretical, and the earlier note saying it
+     no longer reproduced was out of date. Typography: "Continue with this live
+     scale" occupied 790.2-844.2 with the foot's top at 784, and
+     `document.elementFromPoint` at the link's own centre returned the foot.
+     Image: the compression segmented control spanned 715.4-755.4 against a
+     foot top of 750.6.
+
+     Raising the frame again would only move the boundary — the class comes
+     back the moment any mode's controls grow or the viewport shrinks. So the
+     foot is out of the scroller entirely: `.hw-controls` scrolls, `.hw-foot`
+     is its SIBLING below it in `.hw-body`, and there is no longer a scroll
+     position at which the two can overlap. The hand-off is still always
+     visible — it is outside the scrolling region rather than pinned over it,
+     which is what #341 wanted — and it costs the control zone nothing,
+     because the foot's height was already unusable space. */
+  .hsteps-sticky .hw-foot{flex:0 0 auto;background:var(--bg-1)}
   /* The reference image is the one stage item that MAY be cut, because it is a
      photograph and not information: the <img> is already absolutely positioned
      with object-fit:cover, so a shorter box crops it centred rather than losing

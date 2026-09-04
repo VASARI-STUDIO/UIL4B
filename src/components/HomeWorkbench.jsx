@@ -384,6 +384,8 @@ function PalettePanel({ swatches, onChange, announce }) {
         </p>
       )}
 
+      </div>
+
       <div className="hw-foot">
         {/* Stays a real <Link> with a real href, so middle-click / open-in-new-tab
             still work — those start a fresh module instance, which legitimately
@@ -397,7 +399,6 @@ function PalettePanel({ swatches, onChange, announce }) {
           <span aria-hidden="true">→</span>
         </Link>
         <span className="hw-foot-note">Your five swatches carry over on the free Auto system · full ramps, roles and export there.</span>
-      </div>
       </div>
     </div>
   )
@@ -543,13 +544,14 @@ function GradientPanel({ gradient, onChange, announce }) {
         </p>
       )}
 
+      </div>
+
       <div className="hw-foot">
         <Link className="hw-continue" to="/create/gradient">
           Continue in Gradient Generator
           <span aria-hidden="true">→</span>
         </Link>
         <span className="hw-foot-note">Two stops here · multi-stop, presets and gallery there.</span>
-      </div>
       </div>
     </div>
   )
@@ -804,6 +806,8 @@ function ImagePanel({ state, onChange, announce }) {
         </p>
       )}
 
+      </div>
+
       <div className="hw-foot">
         <input
           ref={fileRef}
@@ -825,7 +829,6 @@ function ImagePanel({ state, onChange, announce }) {
         </button>
         <button type="button" className="hw-btn" onClick={reset} disabled={handingOff}>Reset</button>
         <span className="hw-foot-note">Your files open in File Converter with this draft applied.</span>
-      </div>
       </div>
     </div>
   )
@@ -983,6 +986,8 @@ function IconPanel({ state, onChange, announce }) {
 
       {error && <p className="hw-alert" role="alert">{error}</p>}
 
+      </div>
+
       <div className="hw-foot">
         <button
           type="button"
@@ -994,7 +999,6 @@ function IconPanel({ state, onChange, announce }) {
           <span aria-hidden="true">→</span>
         </button>
         <span className="hw-foot-note">Opens {state.name} in the real editor · 200k+ icons there.</span>
-      </div>
       </div>
     </div>
   )
@@ -1186,18 +1190,19 @@ function TypographyPanel({ state, onChange, announce }) {
 
       {error && <p className="hw-alert" role="alert">{error}</p>}
 
-      <div className="hw-foot">
-        <button
-          type="button"
-          className="hw-continue hw-continue-go"
-          disabled={opening}
-          onClick={openScale}
-        >
-          {opening ? 'Opening Type Scale…' : 'Continue in Type Scale'}
-          <span aria-hidden="true">→</span>
-        </button>
-        <span className="hw-foot-note">Carries the {state.base}px base and {state.ratio} ratio once.</span>
-      </div>
+        </div>
+
+        <div className="hw-foot">
+          <button
+            type="button"
+            className="hw-continue hw-continue-go"
+            disabled={opening}
+            onClick={openScale}
+          >
+            {opening ? 'Opening Type Scale…' : 'Continue in Type Scale'}
+            <span aria-hidden="true">→</span>
+          </button>
+          <span className="hw-foot-note">Carries the {state.base}px base and {state.ratio} ratio once.</span>
         </div>
     </div>
   )
