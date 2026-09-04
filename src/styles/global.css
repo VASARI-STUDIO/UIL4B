@@ -7215,7 +7215,21 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
      engine without `safe`, the whole declaration is dropped and the item sits
      at the start of the box — the documented fallback, never plain `center`. */
   .hsteps-sticky{
-    --hw-frame:clamp(420px,calc(100svh - var(--nav-clear) - var(--s-8)),640px);
+    /* The upper bound is 760px, not #262's original 640px. 640 was chosen in
+       August against a panel that had no internal zoning: it was the whole
+       box. Under #341 the box is chrome + tabs + a natural-height stage + a
+       scrolling control zone with a 92px STICKY hand-off pinned inside it, and
+       at 640 the control zone collapses to 140px — 48px of which is not under
+       the foot. Palette's Generate button then renders permanently beneath the
+       hand-off: measured at 1440×900, the button occupied 743–783 and the foot
+       690.6–783, and `document.elementFromPoint` at the button's own centre
+       returned the foot's note. Four user-sim tests fail on the click.
+       760 is the smallest bound that leaves every mode at least as much control
+       room as main's cap does today (main's natural Palette panel is 756px), so
+       the frame buys a constant height without spending reachability to get it.
+       The swing is killed by `height` being MODE-independent, not by the bound
+       being small — that is why raising it costs nothing this change wanted. */
+    --hw-frame:clamp(420px,calc(100svh - var(--nav-clear) - var(--s-8)),760px);
     position:sticky;top:var(--nav-clear);
     height:calc(100svh - var(--nav-clear));
     display:grid;align-content:safe center;
