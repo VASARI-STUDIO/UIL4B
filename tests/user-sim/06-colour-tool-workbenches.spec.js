@@ -261,10 +261,34 @@ test.describe('Semantic Colour system workflow', () => {
 // what is painted rather than what the stylesheet says.
 test.describe('The Contrast Checker meets the standard it enforces', () => {
   for (const theme of ['light', 'dark']) {
-    test(`its own verdict and check text passes AA in ${theme} theme`, async ({ page }) => {
+    test(`its own verdict and check text passes AA in ${theme} theme`, async ({ browser }) => {
+      // THE THEME IS ESTABLISHED BEFORE THE FIRST PAINT, not stamped afterwards.
+      //
+      // This used to `go()` and then setAttribute('data-theme', theme). The
+      // tokens on :root do change at once - `--card-grad` reads #191a1d
+      // immediately - but `.card` carries `transition: all .2s`, so its
+      // BACKGROUND is still the previous theme's for 200ms. Reading a value
+      // that is mid-transition at whatever instant the test arrives is the same
+      // mistake helpers.js argues against at length for Lenis, and it is a
+      // measurement bug rather than a page bug.
+      //
+      // It only became visible once `go()` started waiting for the lazy route:
+      // before that this ran early enough that the verdict had not been
+      // computed yet and the ink under measurement was a different colour. With
+      // the real verdict on screen it reported the dark-theme amber
+      // rgb(250,204,21) on a white card at 1.53:1 - a combination no user is
+      // ever in. MEASURED: seeded, the same card is rgb(25,26,29) and the same
+      // amber is 11.3:1.
+      //
+      // Seeding vs-t before navigation is also what actually puts React in the
+      // theme, and it means there is no transition in flight to read through.
+      const ctx = await browser.newContext({ colorScheme: theme })
+      await ctx.addInitScript((t) => {
+        try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
+      }, theme)
+      const page = await ctx.newPage()
       watch(page, 'an accessibility reviewer auditing the auditor')
       await go(page, '/create/contrast')
-      await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
       await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
 
       const failures = await page.evaluate(() => {
@@ -272,13 +296,29 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
           return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
         }
-        const parse = (c) => (c.match(/[\d.]+/g) || []).slice(0, 4).map(Number)
+        // Handles BOTH computed colour forms. color-mix() computes to
+        // `color(srgb r g b)` in Chromium, whose components are 0..1 - a parser
+        // that scrapes numbers and treats them as 0..255 turns any such ground
+        // into near-black and reports a flattering ratio against it. Nothing on
+        // this page paints one today; it is written this way because the
+        // rgba-only version of exactly this parser is a defect the suite has
+        // already shipped once.
+        const parse = (c) => {
+          const n = (c.match(/[\d.]+/g) || []).map(Number)
+          if (n.length < 3) return []
+          return /^color\(srgb/.test(c)
+            ? [n[0] * 255, n[1] * 255, n[2] * 255, n.length > 3 ? n[3] : undefined]
+            : n.slice(0, 4)
+        }
+        // The walk INCLUDES <html>, which it used to stop one element short of.
+        // Every element here happens to sit on an opaque .card, so nothing on
+        // this page reaches the fallback today - but a constant white default
+        // is wrong in dark theme, and a walk that cannot see the one element
+        // that always carries the theme background is the wrong shape.
         const bgOf = (el) => {
-          let n = el
-          while (n && n !== document.documentElement) {
+          for (let n = el; n; n = n.parentElement) {
             const c = parse(getComputedStyle(n).backgroundColor)
             if (c.length >= 3 && (c[3] === undefined || c[3] > 0.95)) return c.slice(0, 3)
-            n = n.parentElement
           }
           return [255, 255, 255]
         }
@@ -301,6 +341,14 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
         return out
       })
 
+      // The sample must not be able to collapse to nothing: an empty `failures`
+      // means either that everything passed or that the walk matched no
+      // elements at all, and those are not the same result.
+      const measured = await page.locator(
+        '.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc').count()
+      await ctx.close()
+      expect(measured, `no contrast-checker text was found to measure in ${theme}`)
+        .toBeGreaterThan(3)
       expect(failures, `the contrast checker's own UI must meet AA in ${theme}:\n${failures.join('\n')}`).toEqual([])
     })
   }
