@@ -5441,7 +5441,18 @@ html[data-reduced-motion="true"] .home-anim{animation:none!important;opacity:1!i
 /* Lenis smooth-scroll (home only). Lenis adds these classes to <html> while it is
    mounted and removes them on teardown, so every rule here is inert elsewhere. */
 html.lenis,html.lenis body{height:auto}
-.lenis.lenis-smooth{scroll-behavior:auto!important}
+/* Scoped `html.lenis`, NOT `.lenis.lenis-smooth`. `lenis-smooth` is on the root
+   only while a Lenis smooth scroll is IN FLIGHT (lenis 1.3.25 dist/lenis.mjs:1027
+   builds the class list from `isScrolling === "smooth"`), so the old selector was
+   absent at rest and the rule never applied at the moment a key was pressed —
+   `html{scroll-behavior:smooth}` above governed keyboard scrolling instead, which
+   is the opposite of what this rule exists to do. `lenis` alone is present for as
+   long as the instance is mounted, which is exactly "Lenis owns this scroller".
+   Two engines must not animate one scroll: Lenis drives the wheel, so the browser
+   is told to leave the root alone. Reduced motion is unaffected — Lenis is never
+   instantiated there, so this never matches, and the clamp above already sets
+   `scroll-behavior:auto`. */
+html.lenis{scroll-behavior:auto!important}
 /* Scroll containment for overlays. One change from the rule this replaces: it
    was scoped to `.lenis.lenis-smooth`, so it did nothing for a visitor with
    reduced motion on — Lenis is never instantiated for them, the class is never
