@@ -6,6 +6,7 @@
 // as-is, and the icon draft can never carry markup, URLs, colours or plan data.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { read, stripComments } from './helpers/source-text.js'
 import { createHandoffSlot } from '../../src/utils/handoffSlot.js'
 import {
   DEFAULT_IMAGE_DRAFT,
@@ -250,4 +251,45 @@ test('an invalid draft is never staged', () => {
   resetIconDraft()
   assert.equal(setIconDraft({ version: 1, pack: 'lucide', name: '<script>', size: 48, stroke: 1.5 }), false)
   assert.equal(readIconDraft(), null)
+})
+
+/* ── The hand-off's PLACE in the panel, not just its payload ─────────────
+ *
+ * Everything above asserts what the hand-off CARRIES. This asserts where it
+ * SITS, because #341 put it in a position where the payload was perfect and
+ * the button could not be clicked: `position:sticky;bottom:0` as the last
+ * child of `.hw-controls`, the one zone in the panel that scrolls. A sticky
+ * element inside its own scroller permanently covers the bottom N px of that
+ * scroller, so any control that lands there is painted over at every scroll
+ * position but the last.
+ *
+ * tests/user-sim/49-workbench-handoff-clearance.spec.js measures the rendered
+ * geometry. This is the cheap half: it reads the JSX and fails the BUILD, in
+ * milliseconds, if the foot is ever nested back inside the scroller — which is
+ * the single structural fact the whole defect class depends on.
+ */
+test('the hand-off is a sibling of the scrolling control zone, never a child of it', () => {
+  const src = stripComments(read('src/components/HomeWorkbench.jsx'))
+  assert.ok(src.includes('hw-controls'), 'stripping ate the workbench own JSX')
+
+  const opens = [...src.matchAll(/<div className="hw-controls/g)].map((m) => m.index)
+  assert.equal(opens.length, 5, `expected five control zones, found ${opens.length}`)
+
+  for (const start of opens) {
+    // Walk the tags from the zone's opening <div> to the </div> that closes it.
+    let depth = 0
+    let end = -1
+    // A self-closing <div /> opens and closes in one token; counting it as an
+    // open leaves every later zone unbalanced, so it is matched first and
+    // scores nothing.
+    for (const m of src.slice(start).matchAll(/<div[^>]*\/>|<div|<\/div>/g)) {
+      if (m[0].endsWith('/>')) continue
+      depth += m[0] === '</div>' ? -1 : 1
+      if (depth === 0) { end = start + m.index; break }
+    }
+    assert.ok(end > start, 'a .hw-controls block is unbalanced')
+    assert.ok(!src.slice(start, end).includes('className="hw-foot"'),
+      'a .hw-foot is nested inside .hw-controls again — a sticky last child covers '
+      + 'the bottom of the only zone that scrolls, and every control that lands there')
+  }
 })

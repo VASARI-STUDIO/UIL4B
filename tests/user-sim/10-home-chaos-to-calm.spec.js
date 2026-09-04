@@ -762,15 +762,26 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.locator('.hprice-title')).not.toContainText('$6')
     expect(ladder[1], 'quarterly is the only $6/month row').toContain('$6')
 
-    // The community strip states real counts and never a fabricated rank.
-    await expect(page.locator('.hcomm-note')).toContainText('curated starting points')
-    await page.locator('.hcomm-tab', { hasText: 'Most saved' }).click()
-    await expect(page.locator('.hcomm-note')).toContainText('real saves')
-    // Every count is a real count, which starts at zero. A visible zero is
-    // honest; an invented 342 is not. (`text-transform` uppercases these, so
-    // the match is deliberately case-insensitive.)
-    const saves = await page.locator('.hcomm-card-saves').allInnerTexts()
-    expect(saves.every((s) => /^0 saves$/i.test(s.trim())), JSON.stringify(saves)).toBe(true)
+    // The strip below the panel makes NO social claim at all now, which is a
+    // stronger form of "does not invent proof" than the one this test used to
+    // assert. It used to check that every `{saves} saves` count read a literal
+    // zero — honest, but the weakest possible thing to say about yourself on a
+    // front page, and printed beside twelve outbound links to four competitors.
+    // Both are gone: the strip shows artefacts this product ships, the numbers
+    // it prints are catalogue sizes it can count, and no card carries a metric.
+    await expect(page.locator('.hcomm-note')).toContainText('ship with the app')
+    await expect(page.locator('.hcomm-card-saves')).toHaveCount(0)
+    await expect(page.locator('.hcomm').getByRole('tablist')).toHaveCount(0)
+
+    // Every card goes INWARD, with the artefact's values already on the URL.
+    const hrefs = await page.locator('.hcomm-card-link').evaluateAll(
+      (links) => links.map((a) => a.getAttribute('href')),
+    )
+    expect(hrefs.length, 'the strip rendered no cards').toBe(6)
+    for (const href of hrefs) {
+      expect(href, `${href} leaves the site`).toMatch(/^\/create\/(gradient|palette)\?/)
+    }
+    await expect(page.locator('.hcomm a[target="_blank"]')).toHaveCount(0)
   })
 
   test('typography mode previews real scale maths and hands the draft to Type Scale', async ({ page }) => {

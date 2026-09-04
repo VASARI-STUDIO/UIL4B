@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
@@ -9,8 +9,10 @@ import HomeHeroDirections from '../components/HomeHeroDirections'
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
-import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, categoryDestination } from '../data/toolTree'
-import { COMMUNITY_DESIGNS } from '../data/communityDesigns'
+import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, categoryDestination, toolRoute } from '../data/toolTree'
+import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
+import { LIBRARY_PALETTES } from '../data/paletteLibrary'
+import { paletteBuilderUrl } from '../data/paletteGallery'
 
 // ── The V2 homepage ──────────────────────────────────────────────────────────
 //
@@ -62,6 +64,13 @@ const CATALOGUE_FACTS = [
 
 // One step per workbench mode, in tab order — the left column narrates, the
 // right column IS that mode of the real workbench. `tab` is the binding.
+//
+// This table is PRESENTATION — kicker, title, body, points, CTA label — plus
+// two ids it does not own: `tab` names a workbench mode and `tool` names a tool
+// in CREATE_GROUPS. It does NOT write a route down. The five `to:` literals that
+// used to sit here were the last hand-kept copy of a route table on the homepage;
+// toolRoute() reads each one back out of the tree, throws on an unknown id, and
+// tests/unit/tool-tree-surfaces.test.js fails the build if a literal reappears.
 const STEPS = [
   {
     tab: 'palette',
@@ -70,7 +79,8 @@ const STEPS = [
     title: 'Start with a palette you can defend.',
     body: 'Generate a five-step ramp, lock the colours that are already right, and regenerate the rest. Every value is a real hex you can copy straight out.',
     points: ['Lock and regenerate individual steps', 'Copy any value to the clipboard', 'Carries into the full builder on the free Auto system'],
-    cta: { label: 'Open Palette Builder', to: '/create/palette' },
+    tool: 'palette',
+    cta: { label: 'Open Palette Builder' },
   },
   {
     tab: 'gradient',
@@ -79,7 +89,8 @@ const STEPS = [
     title: 'Tune a gradient and take the CSS.',
     body: 'Two stops and an angle, previewed live. A half-typed hex never destroys the preview — the field tells you what to correct and keeps the last valid value.',
     points: ['Live preview from real CSS', 'Invalid input explains itself', 'Copy the declaration, not a screenshot'],
-    cta: { label: 'Open Gradient Generator', to: '/create/gradient' },
+    tool: 'gradient',
+    cta: { label: 'Open Gradient Generator' },
   },
   {
     tab: 'image',
@@ -88,7 +99,8 @@ const STEPS = [
     title: 'Decide the output before you convert.',
     body: 'Set resolution, file type and compression against a reference image, then hand your own files to the converter with that draft already applied.',
     points: ['Honest limits — WebP cannot store lossless, and says so', 'Nothing is encoded here; File Converter does the work', 'Your files never touch storage or the URL'],
-    cta: { label: 'Open File Converter', to: '/create/file-converter' },
+    tool: 'file-converter',
+    cta: { label: 'Open File Converter' },
   },
   {
     tab: 'icon',
@@ -97,7 +109,8 @@ const STEPS = [
     title: 'Size and weight an icon before you commit.',
     body: 'Twelve bundled glyphs, three sizes, four stroke widths — a free taste of the editor. Nothing saves, downloads or counts against a plan.',
     points: ['No catalogue call — the preview is local', 'Opens your draft in the real editor', '200k icons once you are there'],
-    cta: { label: 'Open Icon Library', to: '/create/icons' },
+    tool: 'icons',
+    cta: { label: 'Open Icon Library' },
   },
   {
     tab: 'typography',
@@ -106,7 +119,8 @@ const STEPS = [
     title: 'Build a scale that actually computes.',
     body: 'Real modular-scale maths from your base size and ratio, previewed at every step, then carried into the full Type Scale generator.',
     points: ['Display, heading, body and caption computed live', 'Edit the specimen text', 'Family choices survive the hand-off'],
-    cta: { label: 'Open Type Scale', to: '/create/type-scale' },
+    tool: 'type-scale',
+    cta: { label: 'Open Type Scale' },
   },
 ]
 
@@ -146,29 +160,104 @@ const PRO_INCLUDES = [
   'Community submissions and the full prompt library',
 ]
 
-/* ── Community ────────────────────────────────────────────────────────────────
- * The seam for the community rebuild. `COMMUNITY_DESIGNS` is today's source —
- * curated platform links with REAL save counts, which start at zero. There are
- * no trending or recency signals in it yet, so `orderDesigns` returns the seed
- * order for those two modes and the strip says so rather than inventing a rank.
- * When the community backend lands, this function is the single place that
- * changes.
+/* ── Starting points ──────────────────────────────────────────────────────────────────────
+ *
+ * WHAT THIS SECTION USED TO BE, AND WHY IT CHANGED.
+ *
+ * It rendered six rows of `COMMUNITY_DESIGNS` — twelve `target=_blank`
+ * `rel=nofollow` links to dribbble.com, awwwards.com, behance.net and
+ * mobbin.com — under the heading "What other people have published", with
+ * `{design.saves} saves` printed on every card. Every one of those counts was
+ * zero, because nobody has saved anything yet.
+ *
+ * Both halves were doing damage on the FRONT PAGE. The links sent a first-time
+ * visitor to four competitors from the homepage of a product that wants them
+ * to start here. The metric printed a zero beside each one, which reads as
+ * "nobody uses this" — the strip copy was honest about the zero, but an honest
+ * zero is still the weakest possible thing to say about yourself.
+ *
+ * WHAT IT IS NOW. The same grid, pointed INWARD at artefacts this product
+ * already ships: real gradients out of GALLERY_GRADIENTS and real palettes out
+ * of LIBRARY_PALETTES. The card art is the artefact ITSELF rather than a
+ * decorative two-stop gradient standing in for it, and the link opens the
+ * matching tool with the values already loaded — gradientToolUrl() and
+ * paletteBuilderUrl() are the same hand-offs the Discover galleries use, so
+ * there is no second encoding of a tool URL here.
+ *
+ * The line under each card is a fact about the artefact (its stops and angle,
+ * or how many colours it carries), not a social metric. Nothing here claims
+ * anyone else has used it, because nobody has, and the fix for empty social
+ * proof is to stop making a social claim — not to find a better zero.
+ *
+ * THE COMMUNITY SEAM HAS MOVED, NOT GONE. `COMMUNITY_DESIGNS` is untouched and
+ * still seeds /community, which is the surface that can legitimately say
+ * "until real submissions exist" and marks every curated row as curated. When
+ * the community backend lands (feat/community-rebuild is building its
+ * identity, queue and trending logic right now), a real feed can take this
+ * grid back — HOME_STARTERS is the single place that would change. This is
+ * deliberately NOT wired to that work in flight: nothing here reads
+ * src/utils/community*.
+ *
+ * The Trending / Newest / Most saved tablist went with the old data. Two of
+ * its three modes had no signal to sort on and said so in a note underneath;
+ * a control that cannot do the thing it names is worse than no control.
  */
-const COMMUNITY_TABS = [
-  { id: 'trending', label: 'Trending' },
-  { id: 'newest', label: 'Newest' },
-  { id: 'saved', label: 'Most saved' },
+
+// PRESENTATION, keyed by an artefact's own id — the same split
+// HOME_SATELLITE_SPEC makes in toolTree.js. It chooses WHICH artefacts appear
+// and in what order. It cannot invent one, and it never writes a colour, a URL
+// or a name down: all three are read back out of the gallery that owns it.
+const HOME_STARTER_SPEC = [
+  { kind: 'gradient', id: 'sunset-blaze' },
+  { kind: 'palette', id: 'midnight-teal' },
+  { kind: 'gradient', id: 'deep-sea' },
+  { kind: 'palette', id: 'terracotta-dusk' },
+  { kind: 'gradient', id: 'sun-flare' },
+  { kind: 'palette', id: 'paper-ink' },
 ]
 
-function orderDesigns(items, mode) {
-  if (mode === 'saved') return [...items].sort((a, b) => (b.saves || 0) - (a.saves || 0))
-  if (mode === 'newest') return [...items].slice().reverse()
-  return items
-}
+// An unknown id THROWS at import, which fails `npm run build` — prerender.mjs
+// renders this page. Silently dropping a row is how a homepage section quietly
+// loses a third of itself; the same reasoning as requireTool() in toolTree.js.
+const HOME_STARTERS = HOME_STARTER_SPEC.map(({ kind, id }) => {
+  if (kind === 'gradient') {
+    const g = GALLERY_GRADIENTS.find((x) => x.id === id)
+    if (!g) throw new Error(`HOME_STARTER_SPEC names gradient "${id}", which is not in GALLERY_GRADIENTS`)
+    return {
+      id: g.id,
+      name: g.name,
+      kind: 'Gradient',
+      // The artefact rendered for real, not a stand-in for it.
+      art: gradientCss(g.type, g.angle, g.stops),
+      fact: g.type === 'Linear'
+        ? `${g.stops.length} stops · ${g.angle}°`
+        : `${g.type} · ${g.stops.length} stops`,
+      to: gradientToolUrl(g),
+      opens: 'Gradient Generator',
+    }
+  }
+  const p = LIBRARY_PALETTES.find((x) => x.id === id)
+  if (!p) throw new Error(`HOME_STARTER_SPEC names palette "${id}", which is not in LIBRARY_PALETTES`)
+  // Hard stops, so the swatches read as swatches rather than as a blend, out of
+  // one background value — the card art stays a single element for both kinds.
+  const step = 100 / p.colors.length
+  const bands = p.colors
+    .map((c, i) => `${c} ${(i * step).toFixed(2)}% ${((i + 1) * step).toFixed(2)}%`)
+    .join(', ')
+  return {
+    id: p.id,
+    name: p.name,
+    kind: 'Palette',
+    art: `linear-gradient(90deg, ${bands})`,
+    fact: `${p.colors.length} colours`,
+    to: paletteBuilderUrl(p.colors),
+    opens: 'Palette Builder',
+  }
+})
 
-// True only for `saved`, which sorts on a real field. The other two have no
-// signal in today's data and must not pretend otherwise.
-const RANK_IS_REAL = { trending: false, newest: false, saved: true }
+// Real catalogue sizes, counted off the arrays. The only numbers this section
+// prints are ones it can count.
+const STARTER_TOTALS = { gradients: GALLERY_GRADIENTS.length, palettes: LIBRARY_PALETTES.length }
 
 /* ── Tool → workbench-mode relationship ──────────────────────────────────────
  * The old hero carried this with `aria-describedby` on each of eleven satellite
@@ -184,7 +273,6 @@ export default function Home() {
   // Once the visitor drives the tablist themselves, scroll stops overriding
   // them. Nothing is more irritating than a control that keeps changing back.
   const pinnedRef = useRef(false)
-  const [community, setCommunity] = useState('trending')
 
   const onStepChange = useCallback((tab) => {
     if (pinnedRef.current) return
@@ -197,11 +285,6 @@ export default function Home() {
   }, [])
 
   useHomeMotion(rootRef, { onStepChange })
-
-  const designs = useMemo(
-    () => orderDesigns(COMMUNITY_DESIGNS, community).slice(0, 6),
-    [community],
-  )
 
   const activeStep = STEPS.findIndex((s) => s.tab === mode)
 
@@ -344,7 +427,7 @@ export default function Home() {
                         </li>
                       ))}
                     </ul>
-                    <Link className="hstep-cta" to={step.cta.to}>
+                    <Link className="hstep-cta" to={toolRoute(step.tool)}>
                       {step.cta.label}
                       <span aria-hidden="true">&rarr;</span>
                     </Link>
@@ -444,80 +527,57 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Community ── */}
+        {/* ── Starting points ── */}
         <section className="hcomm" aria-labelledby="hcomm-title">
           <div className="home-container">
             <div className="hcomm-head" data-reveal>
-              {/* "Systems worth stealing." A designer-flavoured quip that says
-                  nothing about what is in the list. */}
               <div>
-                <h2 className="hh2" id="hcomm-title">What other people have published.</h2>
-              </div>
-              <div className="hcomm-tabs" role="tablist" aria-label="Community ordering">
-                {COMMUNITY_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    className="hcomm-tab"
-                    aria-selected={tab.id === community}
-                    tabIndex={tab.id === community ? 0 : -1}
-                    onClick={() => setCommunity(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                <h2 className="hh2" id="hcomm-title">Start from something that already works.</h2>
               </div>
             </div>
 
-            {/* Honest about what the ordering can and cannot do yet. */}
+            {/* The only numbers on this strip are ones the page can count. */}
             <p className="hcomm-note">
-              {RANK_IS_REAL[community]
-                ? 'Ordered by real saves. Counts start at zero — nothing here is inflated.'
-                : 'Ranking arrives with member submissions. Until then these are curated starting points, in a fixed order.'}
+              {STARTER_TOTALS.gradients} gradients and {STARTER_TOTALS.palettes} palettes ship with the
+              app. Open one and it arrives in the tool with its values already loaded — nothing
+              to copy across, nothing to sign up for.
             </p>
 
             <ul className="hcomm-grid" data-reveal-group>
-              {designs.map((design) => (
-                <li className="hcomm-card" key={design.id}>
-                  <a
-                    className="hcomm-card-link"
-                    href={design.url}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                  >
+              {HOME_STARTERS.map((item) => (
+                <li className="hcomm-card" key={`${item.kind}-${item.id}`}>
+                  <Link className="hcomm-card-link" to={item.to}>
                     <span
                       className="hcomm-card-art"
                       aria-hidden="true"
                       ref={(node) => {
-                        // Generated gradient thumbnails — no external assets, no
-                        // Storage dependency, renders offline. The two stops are
-                        // data, so they arrive as custom properties rather than
-                        // as an inline background declaration.
+                        // The artefact itself, rendered from the gallery’s own
+                        // values. It arrives as a custom property rather than an
+                        // inline background so the card keeps one paint surface
+                        // for both kinds.
                         if (!node) return
-                        node.style.setProperty('--hcomm-c1', design.c1)
-                        node.style.setProperty('--hcomm-c2', design.c2)
+                        node.style.setProperty('--hcomm-art', item.art)
                       }}
                     />
                     <span className="hcomm-card-body">
-                      <span className="hcomm-card-name">{design.name}</span>
+                      <span className="hcomm-card-name">{item.name}</span>
                       <span className="hcomm-card-meta">
-                        <span className="hcomm-card-source">{design.source}</span>
-                        <span className="hcomm-card-cat">{design.category}</span>
+                        <span className="hcomm-card-source">{item.kind}</span>
+                        <span className="hcomm-card-cat">{item.fact}</span>
                       </span>
                     </span>
                     <span className="hcomm-card-foot">
-                      <span className="hcomm-card-saves">{design.saves} saves</span>
-                      {design.curated && <span className="hcomm-card-tag">Curated</span>}
+                      <span className="hcomm-card-opens">Opens in {item.opens}</span>
+                      <span className="hcomm-card-go" aria-hidden="true">&rarr;</span>
                     </span>
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
 
             <div className="hcomm-cta">
-              <Link className="ui-pill ui-pill-quiet ui-pill-md" to="/discover">
-                Explore Discover
+              <Link className="ui-pill ui-pill-quiet ui-pill-md" to="/discover/palettes">
+                Browse the full library
                 <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
               </Link>
             </div>
