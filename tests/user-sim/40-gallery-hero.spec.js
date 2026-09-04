@@ -24,6 +24,7 @@
 //    band this app breaks at most. It also pushed the glow out of frame, so the
 //    masthead's one decorative gesture was invisible on a phone.
 import { test, expect } from './base.js'
+import { go } from './helpers.js'
 
 // Every surface that renders the shared masthead. Two are Create routes, which
 // is exactly why the component is shared and why a fix here has to be checked
@@ -67,7 +68,7 @@ test.describe('the shared Discover gallery masthead', () => {
         viewport: { width, height: 900 }, isMobile: width <= 834, hasTouch: width <= 834,
       })
       const page = await ctx.newPage()
-      await page.goto('/discover/palettes')
+      await go(page, '/discover/palettes')
       await expect(page.locator('.dgh-hero')).toBeVisible()
       await page.waitForTimeout(150)
 
@@ -97,7 +98,7 @@ test.describe('the shared Discover gallery masthead', () => {
       const page = await ctx.newPage()
       const bad = []
       for (const route of SURFACES) {
-        await page.goto(route)
+        await go(page, route)
         await expect(page.locator('.dgh-hero')).toBeVisible()
         await page.waitForTimeout(150)
         const m = await page.evaluate(MEASURE)
@@ -117,7 +118,7 @@ test.describe('the shared Discover gallery masthead', () => {
   test('the stacked masthead keeps enough height to read as a masthead', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 641, height: 900 }, isMobile: true, hasTouch: true })
     const page = await ctx.newPage()
-    await page.goto('/discover/palettes')
+    await go(page, '/discover/palettes')
     await expect(page.locator('.dgh-hero')).toBeVisible()
     await page.waitForTimeout(150)
     const m = await page.evaluate(MEASURE)

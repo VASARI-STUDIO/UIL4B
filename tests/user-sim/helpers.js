@@ -91,16 +91,29 @@ export function watch(page, persona) {
 }
 
 /**
- * Navigate WITHOUT waiting for the route to arrive. There is one caller:
- * 47-lazy-route-readiness.spec.js, which exists to read the page in the moment
- * before it has, and cannot use `go()` to get there.
+ * Navigate WITHOUT waiting for the route to arrive.
  *
- * Not waiting for the full 'load' event is separate and applies to both: the
- * blocked external hosts (fonts, Firebase, iconify) can hold 'load', and
+ * This is the ONE documented hole in the door below, and it has exactly two
+ * callers, both of which exist to read the page in a moment that `go()` is
+ * defined to wait past:
+ *
+ *   47-lazy-route-readiness.spec.js — reads a route while its chunk is still
+ *     in flight, to state the old contract's vacuity as two numbers from one
+ *     instant (body 421 passes, the route's own 0 does not).
+ *   04-premium-home.spec.js — reads `#boot-shell`, the static markup
+ *     `scripts/prerender.mjs` writes into the shell, BEFORE React replaces it.
+ *     It needs `waitUntil: 'commit'` rather than the default: module scripts
+ *     run before DOMContentLoaded fires, so by 'domcontentloaded' the shell it
+ *     is asserting on can already be gone. That is why `opts` exists here — the
+ *     alternative was leaving a bare `page.goto()` in the suite, which is the
+ *     thing the unit guard is for.
+ *
+ * Not waiting for the full 'load' event is separate and applies to all of them:
+ * the blocked external hosts (fonts, Firebase, iconify) can hold 'load', and
  * 'networkidle' never settles at all inside the sandboxed runner.
  */
-export function goRaw(page, url) {
-  return page.goto(url, { waitUntil: 'domcontentloaded' })
+export function goRaw(page, url, opts) {
+  return page.goto(url, { waitUntil: 'domcontentloaded', ...opts })
 }
 
 /**

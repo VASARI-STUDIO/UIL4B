@@ -16,7 +16,7 @@
 //   3. the grid actually widens — the filter is wired to the data, not just to
 //      the pills.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const ROUTE = '/discover/gradients'
 const TRAY = '[aria-label^="Filter by gradient type"]'
@@ -34,7 +34,7 @@ const cardCount = (page) => page.locator('.lbry-grid .lbry-card').count()
 test.describe('library filter multi-select', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'designer narrowing the gradient library')
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator(TRAY)).toBeVisible()
   })
 

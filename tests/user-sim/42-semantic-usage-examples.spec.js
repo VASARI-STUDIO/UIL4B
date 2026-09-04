@@ -26,6 +26,7 @@
 // fixed light/dark grounds by design — they depict two interfaces, not this
 // page — so both are measured on one load.
 import { test, expect } from './base.js'
+import { go } from './helpers.js'
 
 const ROLES = ['success', 'warning', 'error', 'info', 'pending']
 
@@ -79,7 +80,7 @@ const WALK = `(() => {
 })()`
 
 async function open(page) {
-  await page.goto('/create/semantic-color')
+  await go(page, '/create/semantic-color')
   await expect(page.locator('.stc-scene').first()).toBeVisible()
 }
 

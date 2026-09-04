@@ -37,7 +37,7 @@
 // fabricated attribute, so the fallback selector is proven independently of the
 // boot script. All three keep passing once #273 lands.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -82,7 +82,7 @@ async function open(browser, { width, height, path, reduced }) {
       try { localStorage.setItem('vs-appearance', JSON.stringify({ reducedMotion: true })) } catch { /* private mode */ }
     })
   }
-  await page.goto(path, { waitUntil: 'domcontentloaded' })
+  await go(page, path)
   await page.waitForLoadState('load').catch(() => {})
   return { ctx, page }
 }

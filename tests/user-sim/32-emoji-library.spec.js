@@ -14,7 +14,7 @@
 // that the page wires the index up at all, that the grid stays windowed, and
 // that the surface never silently does nothing.
 import { test, expect } from './base.js'
-import { watch } from './helpers.js'
+import { go, watch } from './helpers.js'
 
 const ROUTE = '/create/emoji'
 const SEARCH = 'input[type="search"]'
@@ -23,7 +23,7 @@ const CELL = '.emoji-cell'
 test.describe('emoji library', () => {
   test.beforeEach(async ({ page }) => {
     watch(page, 'someone looking for one emoji')
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator(SEARCH)).toBeVisible()
   })
 
@@ -73,7 +73,7 @@ test.describe('emoji library', () => {
     const indexRequests = []
     page.on('request', (r) => { if (/emojiIndex|emoji-index/i.test(r.url())) indexRequests.push(r.url()) })
 
-    await page.goto(ROUTE)
+    await go(page, ROUTE)
     await expect(page.locator(CELL).first()).toBeVisible()
     expect(indexRequests, 'the index was fetched on load').toHaveLength(0)
 
