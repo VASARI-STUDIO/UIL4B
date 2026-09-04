@@ -5378,6 +5378,75 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --shadow-nav:0 1px 2px rgba(10,10,11,.04),0 8px 32px -12px rgba(10,10,11,.12)
 }
 
+/* ══ prefers-contrast: more ═════════════════════════════════════
+   Until 2026-09-04 this file contained ZERO prefers-contrast rules across
+   11,000-plus lines. Rendered with the browser reporting prefers-contrast: more
+   (matchMedia confirmed true in-run), every resolved token was identical to the
+   default — --border #dad8cf, --t2 #5f5f59, --t3 #6c6c66. The preference was
+   received and ignored. The @media(forced-colors:active) block further down is
+   a different and much blunter mechanism (Windows High Contrast); it does
+   nothing for the graded preference macOS Increase Contrast and Chrome expose.
+
+   IT HAS TO SIT HERE, BELOW THE FOUNDRY BLOCKS. A media query adds no
+   specificity: these selectors are (0,1,0) exactly like the [data-theme] blocks
+   above and the two at the top of the file, so this wins only by being later.
+   Placed above the Foundry light block it would read correctly and paint
+   nothing — the same trap that made the first dark hue set dead.
+   Pinned by tests/unit/prefers-contrast.test.js, which asserts the ORDERING as
+   well as the numbers.
+
+   THE TEXT ROLES STAY A LADDER. Solved naively — every role to 7:1 — --t1, --t2
+   and --t3 all collapse to #50504B in light: one value, no hierarchy, on a
+   preference that is about legibility, not about flattening the page. They are
+   graded instead, 9 / 8 / 7, so the ladder survives and every step clears AAA.
+   Worst ground per theme (#EFEEE9 light, #212327 dark):
+     --t1  #50504A 6.99 → #3F3F3B 9.10   |  #BFBEB6 8.44 → #C5C4BD 9.00
+     --t2  #5F5F59 5.53 → #474743 8.03   |  #9F9F98 5.91 → #BABAB5 8.08
+     --t3  #6C6C66 4.55 → #4F4F4B 7.08   |  #8E8E88 4.78 → #AEAEA9 7.06
+
+   BORDERS GO TO THE 1.4.11 FLOOR, which they are nowhere near by default:
+   --border is 1.23:1 against the page in light and 1.11:1 in dark, i.e. a
+   hairline that a user asking for more contrast cannot see at all. 3:1 is the
+   non-text minimum; --bh goes to 4.5 so hover stays distinguishable from rest
+   rather than collapsing onto it (at 3:1 both solve to the same value).
+     --border #DAD8CF 1.23 → #8F896F 3.03  |  #2A2B2F 1.11 → #696C76 3.00
+     --bh     #C0BDB0 1.62 → #716C5A 4.53  |  #3C3D42 1.45 → #878992 4.51
+
+   THE ACCENT PAIR DELIBERATELY COLLAPSES HERE, and the backlog note's
+   prescription for it was HALF WRONG. It said to swap --accent for
+   --accent-strong. That is right in light (3.82 → 5.03) and BACKWARDS in dark,
+   where --accent #6FA8FF is 6.54 and --accent-strong #4A90FF is 5.04 — the
+   swap would have LOWERED contrast for the exact user asking for more. Both
+   tokens are therefore pushed to a measured 7:1 per theme instead, which also
+   lifts the fills, borders, icons and large display text --accent carries and
+   which the swap would have left alone. The white/near-black mirror on the
+   filled controls is checked, not assumed: #FFFFFF on #094AAA is 8.17, and
+   #101012 on #7AAFFF is 8.51.
+   Every figure here is measured on the ROUNDED hex, not on the float the solver
+   walked — measuring before rounding overstated three of them by ~0.03 and put
+   --t3 and --border a hair under their targets.
+
+   NOT DONE HERE, on purpose. The --hue-* category set has almost no margin
+   (worst 4.60 light / 4.56 dark on its BARE grounds — see the .smap-soon note)
+   and is exactly what this preference should lift. It is left out because
+   tests/unit/category-hue-contrast.test.js asserts there is exactly ONE dark
+   block declaring --hue-colour, so adding a second is a deliberate change to
+   that contract and belongs with the retune, not with this first pass.
+   SCOPE: the graded preference only. Real assistive-technology testing and
+   screen-reader announcement remain unrun — see [audit-coverage-not-run]. */
+@media (prefers-contrast: more){
+  [data-theme="light"]{
+    --t1:#3F3F3B;--t2:#474743;--t3:#4F4F4B;
+    --border:#8F896F;--bh:#716C5A;
+    --accent:#094AAA;--accent-strong:#094AAA;--brand:#094AAA;--info:#094AAA
+  }
+  [data-theme="dark"]{
+    --t1:#C5C4BD;--t2:#BABAB5;--t3:#AEAEA9;
+    --border:#696C76;--bh:#878992;
+    --accent:#7AAFFF;--accent-strong:#7AAFFF;--brand:#7AAFFF;--info:#7AAFFF
+  }
+}
+
 /* ── Category hue mapping (data-hue → --hue; never an inline colour) ── */
 [data-hue="colour"]{--hue:var(--hue-colour)}
 [data-hue="type"]{--hue:var(--hue-type)}
