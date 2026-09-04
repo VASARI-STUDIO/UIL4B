@@ -6307,7 +6307,59 @@ html.lenis,html.lenis body{height:auto}
    finds the artwork itself is near-white. */
 .ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
 .ig-chip--dark{background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-.ig-chip img{width:24px;height:24px;display:block}
+/* object-fit, because the request now asks the API for a HEIGHT rather than a
+   box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
+   4:3 intrinsic size, and pinning both sides of a 24px box without `contain`
+   would squash it. With it, the flag letterboxes to 24 x 18 exactly as before. */
+.ig-chip img{width:24px;height:24px;display:block;object-fit:contain}
+
+/* THE WIDE CHIP: a horizontal lockup gets the cell's width, not a 24px square.
+
+   Measured on /create/icons under the Brand logos filter at 1440x900, painted
+   glyph height inside the tile:
+
+     logos/aerospike        11.38:1   24 x 2.1px  ->  106 x 9.3px
+     logos/active-campaign   9.88:1   24 x 2.4px  ->  106 x 10.7px
+     logos/500px             4.00:1   24 x 6.0px  ->  106 x 26.5px
+     logos/adobe             3.81:1   24 x 6.3px  ->  106 x 27.8px
+     devicon/*-wordmark      square canvas, wide ink: drawn across 106px, not 24
+
+   The slot is the cell's full content width (118px cell less its 6px side
+   padding) and stays 36px TALL — the same height as the square chip — so a row
+   that contains a wide item is exactly as tall as one that does not and the
+   grid rhythm is untouched. No column span, so nothing is re-ordered: #298
+   rejected visual re-ordering on this codebase's grids on WCAG 2.4.3 grounds
+   and that reasoning holds here.
+
+   overflow:hidden with a centred, full-width image is what reaches devicon's
+   `-wordmark` entries. Their canvas is square, so `width:100%` renders them
+   106 x 106 with the lockup as a band across the middle; clipping to 36px shows
+   that band at its natural size instead of the whole empty canvas shrunk to fit.
+   Artwork that is genuinely wide never reaches the clip — at 106px wide it is
+   already shorter than 36px — so one rule serves both causes.
+
+   WHY A WIDER CELL RATHER THAN A SQUARE ONE, from the Mobbin pass: Squarespace's
+   Asset Library gives a wide logotype a double-width cell in an otherwise
+   uniform grid; Air lays assets out at a fixed row height with the cell width
+   following each asset's aspect; Google Ads' logo picker keeps a uniform
+   landscape thumbnail and fits the art inside it at its natural aspect, naming
+   the aspect on the card. Arcade's Brand Kit goes furthest and splits
+   "Logotypes" from "Icons" into two sections with different cell shapes. None of
+   them letterboxes a lockup into a square. This is the Google Ads answer, which
+   is the one that transplants into a dense icon grid without re-ordering it. */
+.ig-chip--wide{width:100%;height:36px;overflow:hidden;position:relative}
+/* NOTHING IS EVER CROPPED. `--ig-wide-cap` is measured per icon in sampleGlyph:
+   how many multiples of this slot height the element may be drawn wide before
+   the INK grows taller than the slot. A one-line lockup on a square canvas gets
+   the full 100%; a two-line one gets a narrower element instead of losing its
+   top and bottom rows; genuinely wide artwork is capped by 100% long before its
+   own limit bites. The chip clips only the artwork transparent margins. */
+/* Centred by absolute positioning rather than by the flex box: .ig-chip is
+   display:flex at its own rule but computes flow-root here, and a top-aligned
+   element that is 104px tall in a 36px slot shows its empty top margin instead
+   of the lockup. Measured as blank tiles on eleven devicon -wordmark entries
+   before this line existed. */
+.ig-chip--wide img{position:absolute;left:50%;top:50%;width:min(100%,calc(36px * var(--ig-wide-cap,1)));height:auto;max-height:none;transform:translate(-50%,-50%)}
 /* Logo.dev brand marks are raster and already coloured — size a touch larger
    than glyph icons, keep their own colours (no invert), and round the corners. */
 .ic img.ig-logo{width:28px;height:28px;object-fit:contain;border-radius:5px}
