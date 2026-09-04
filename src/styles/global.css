@@ -8279,11 +8279,33 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .cc-fix-apply,.cc-fix-copy{padding:6px 12px;font-size:12px;font-weight:600;background:none;border:1px solid var(--border);border-radius:var(--radius-s);color:var(--t1);cursor:pointer;transition:all var(--t);flex-shrink:0}
 .cc-fix-apply:hover,.cc-fix-copy:hover{border-color:var(--brand);color:var(--t0)}
 /* Live preview — fg/bg arrive as custom props set via ref */
-.cc-preview{padding:28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--cc-bg);color:var(--cc-fg)}
-.cc-preview-large{font-size:24px;font-weight:700;letter-spacing:-.01em;margin:0 0 12px}
-.cc-preview-normal{font-size:16px;line-height:1.6;margin:0 0 12px}
-.cc-preview-small{font-size:12px;margin:0 0 18px}
-.cc-preview-ui{display:inline-block;padding:8px 18px;font-size:13px;font-weight:600;border:2px solid var(--cc-fg);border-radius:var(--radius-s)}
+/* ── The live preview [contrast-checker-overhaul] ──
+   The four .cc-preview-* rules this replaces styled four lines that described
+   the test instead of being one. The design specification, the Mobbin
+   references behind it and the one rule the chips obey are all in the header of
+   src/pages/ContrastChecker.jsx — kept there because it is a decision about
+   what the page SAYS, not about how it is painted. */
+.cc-lede{font-size:12.5px;color:var(--t2);line-height:1.55;margin:0 0 14px}
+.cc-preview{display:flex;flex-direction:column;gap:18px;padding:24px;border-radius:var(--radius);border:1px solid var(--border);background:var(--cc-bg);color:var(--cc-fg)}
+.cc-spec-row{display:flex;align-items:flex-start;gap:12px}
+.cc-spec-row>:first-child{flex:1;min-width:0;margin:0}
+.cc-spec-h{font-size:24px;font-weight:700;letter-spacing:-.015em;line-height:1.25}
+.cc-spec-body{font-size:16px;line-height:1.55}
+.cc-spec-small{font-size:12px;line-height:1.5}
+.cc-spec-link{text-decoration:underline}
+.cc-spec-actions{display:flex;flex-wrap:wrap;gap:8px}
+/* The solid button inverts the pair on purpose — same ratio, read the other way
+   round, which is the point the hint under the preview makes. */
+.cc-spec-btn{display:inline-block;padding:9px 16px;font-size:14px;font-weight:600;border:2px solid var(--cc-fg);border-radius:var(--radius-s);background:var(--cc-fg);color:var(--cc-bg)}
+.cc-spec-btn--ghost{background:transparent;color:var(--cc-fg)}
+/* PAGE TOKENS ONLY. A chip painted in the pair under test goes unreadable
+   exactly when the pair fails — the moment its reader needs it most. `--bg-1`
+   and `--border` are opaque, so the chip stays legible over any --cc-bg, and
+   06-colour-tool-workbenches measures these in both themes. */
+.cc-verdict{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:4px 8px;font-family:var(--mono);font-size:11px;font-weight:700;line-height:1;white-space:nowrap;border-radius:999px;background:var(--bg-1);border:1px solid var(--border);color:var(--t1)}
+.cc-verdict-mark{font-weight:700}
+.cc-verdict--pass .cc-verdict-mark{color:var(--ok-strong)}
+.cc-verdict--fail .cc-verdict-mark{color:var(--err-strong)}
 .cc-more{display:flex;gap:20px;flex-wrap:wrap;margin-top:32px}
 .cc-more-link{font-size:13px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
 .cc-more-link:hover{color:var(--accent-strong)}
@@ -8304,6 +8326,10 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
   .cc-fix-apply{grid-area:2/1}
   .cc-fix-copy{grid-area:2/2}
   .cc-fix-apply,.cc-fix-copy{min-height:40px}
+  /* Below ~520px the chip and a 24px heading fight for the same line and the
+     heading loses to a 2-3 word wrap. Stack instead: the chip reads as a
+     caption on its element, which is still the association that matters. */
+  .cc-spec-row{flex-direction:column;align-items:flex-start;gap:8px}
 }
 
 /* ══════════ Palette Builder (/color/palette) ══════════ */
@@ -8511,6 +8537,53 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-col:hover .plb-tool,.plb-col:focus-within .plb-tool,.plb-tool--on{opacity:1}
 .plb-tool:hover{background:color-mix(in srgb,var(--plb-ink) 14%,transparent)}
 .plb-tool--on{background:color-mix(in srgb,var(--plb-ink) 18%,transparent)}
+/* ── The 834px anomaly [palette-swatch-actions-tablet] ──
+   Two rules that are each correct on their own compose into a third layout
+   nobody designed. Above 768px a column is VERTICAL and the tool stack runs
+   down it; `@media(hover:hover)` hides that stack at rest. An iPad in landscape
+   is 834px wide AND reports hover:none, so it takes the desktop vertical stack
+   and the permanent visibility together: seven unlabelled 32px icons stacked
+   over roughly 450px of swatch, times five columns — 35 icon buttons sitting on
+   top of the colours the page exists to show. Neither of the other two widths
+   does this. 1280 hides them until hover, so the palette is the whole screen;
+   390 lays them out as a short horizontal row under the name and hex.
+
+   Persistent controls on touch are the right call (founder direction
+   2026-09-02) and are not in question — the defect is that the touch treatment
+   was never DESIGNED, it is the desktop treatment with the hover guard removed.
+
+   Mobbin, platform web, is unanimous that seven persistent unlabelled per-object
+   icons is not a shape anyone ships. Magnific
+   (mobbin.com/screens/130b455d-80b8-4971-8cb9-75cf5039d82d) is the closest
+   match and the model here: a short horizontal action bar UNDER the object,
+   with the long tail behind one "..." that opens a LABELLED menu. Google Drive
+   (mobbin.com/screens/f20af80a-306c-498e-af04-6c73c1acd19e) makes the same
+   split — a few inline icons for the selection, one overflow for the rest — and
+   Cosmos (mobbin.com/screens/13584351-6cb4-47ef-ac9c-02a717c4056e) puts a
+   single "..." on the object itself. The note's own references (VEED, Jitter,
+   Adobe Express, Slite) reach the same two shapes.
+
+   So: keep the two actions used constantly — Lock and Copy — inline, move the
+   rest behind one control, and put the row at the BOTTOM under the name and
+   hex, which is where 390 already puts it. The top of the swatch goes back to
+   being colour. Three targets replace seven, and the five that leave are not
+   lost: `.plb-tool--more` opens `.plb-ctx`, the labelled "Colour actions" menu
+   that already existed for right-click, so the touch path gains no second
+   surface to keep in sync — and every entry there has a WORD next to its icon,
+   which is the actual complaint answered.
+
+   `order:2` with the auto margin cleared is what moves the row: `.plb-col` is
+   `justify-content:flex-end`, so once the stack stops eating the free space
+   below it, it falls to the bottom of the column with everything else and
+   `order` puts it last. Scoped on the CAPABILITY, not a width — the same
+   lesson as the base `.plb-tool` rule above, which was born as a
+   `max-width:768px` correction that stopped being true at exactly 769px. */
+.plb-tool--more{display:none}
+@media(min-width:769px) and (hover:none){
+  .plb-col-tools{order:2;margin-bottom:0;margin-top:12px;flex-direction:row;flex-wrap:nowrap;justify-content:center;gap:2px}
+  .plb-col-tools>*{display:none}
+  .plb-col-tools>.plb-tool--key,.plb-col-tools>.plb-tool--more{display:flex}
+}
 /* The ramp is ONE button (N8, responsive-audit-2026-08). It was five, and the
    five were identical — same label, same handler — so a 14px-wide target that
    also failed 2.5.8's spacing exception (14 + 4 gap = 18px between centres,
