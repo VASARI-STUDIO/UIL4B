@@ -4242,6 +4242,23 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .ch-card{position:relative;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .ch-card:hover{border-color:var(--bh);transform:translateY(-3px)}
 .ch-thumb{display:flex;align-items:center;justify-content:center;height:150px;text-decoration:none!important;position:relative;background:linear-gradient(135deg,var(--c1,var(--accent)),var(--c2,var(--accent-strong)))}
+/* THE FALLBACK GROUND IS A THEME PAIR, AND IT FLIPS. When a card's stops are
+   not a usable hex pair CommunityCard omits --c1/--c2 and the rule above
+   draws linear-gradient(135deg,var(--accent),var(--accent-strong)) instead -
+   so the ground stops being per-item DATA and becomes a THEME token, which is
+   the one ground per-item ink could not see. Measured over the whole of that
+   ground, sampled across the ramp: the old hard-coded #FFFFFF is 4.43:1 on the
+   light pair and 2.41:1 on the dark one, and 2.23:1 under prefers-contrast:
+   more in dark, both under the 3:1 large-text floor. So the fallback ink is
+   chosen per theme by the same measurement the per-item one uses, from the
+   same near-poles inkOnGrounds walks: #F2F3F5 is 3.99:1 on the light pair
+   (7.36:1 under prefers-contrast) and #0A0B0D is 6.31:1 on the dark pair
+   (8.82:1 under prefers-contrast). An inline --mono-ink always wins over both,
+   so a card WITH usable stops is untouched by this. Pinned in
+   tests/unit/community-monogram-ink.test.js, which reads the accent pair off
+   this sheet rather than repeating it. */
+.ch-thumb{--mono-ink:#F2F3F5;--mono-glow:rgba(0,0,0,.25)}
+[data-theme="dark"] .ch-thumb{--mono-ink:#0A0B0D;--mono-glow:rgba(255,255,255,.38)}
 /* Ink and glow are set PER CARD by CommunityCard.jsx from that card's own
    gradient — the ground is per-item data, so no fixed ink clears 3:1 on all
    of them. The colour is OPAQUE now: the old .92 alpha composited toward the
