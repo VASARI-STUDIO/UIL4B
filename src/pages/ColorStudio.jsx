@@ -5,7 +5,6 @@ import { useProject } from '../contexts/ProjectContext'
 import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
-import UIKitGuide from '../components/UIKitGuide'
 
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 
@@ -1219,7 +1218,6 @@ ${stateVars}
           </svg>
         </NavLink>
       </div>
-      <UIKitGuide step="color" />
 
       {undoToast && (
         <div className="cs-undo-toast">
