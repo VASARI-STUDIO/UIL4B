@@ -99,14 +99,23 @@ async function settle(locator) {
  * the Icons step caught the library still printing "Opening the icon library".
  */
 async function inView(locator) {
-  await locator.evaluate((el) => new Promise((resolve) => {
-    const check = () => {
-      const r = el.getBoundingClientRect()
-      if (r.top < window.innerHeight && r.bottom > 0 && r.height > 0) return resolve()
-      requestAnimationFrame(check)
-    }
-    check()
-  }))
+  // expect.poll RE-RESOLVES the locator on every attempt, and that is the point
+  // rather than a detail. The first version captured the node once and span a
+  // requestAnimationFrame loop on it; when React re-rendered the rail while the
+  // Icons step was still arriving — which four parallel workers make likely —
+  // the captured node detached, a detached node measures all zeros, and the loop
+  // could never finish. It failed as a 30s timeout inside the helper, which
+  // points at the wrong thing.
+  await expect.poll(async () => {
+    const box = await locator.boundingBox()
+    if (!box || box.height <= 0) return false
+    const vh = await locator.page().evaluate(() => window.innerHeight)
+    return box.y < vh && box.y + box.height > 0
+  }, {
+    timeout: 15000,
+    message: 'the walkthrough rail never came on screen — it is sticky at the foot of '
+      + 'the page, and being present in the document is not the same as being to hand',
+  }).toBe(true)
 }
 
 test.describe('Brand kit walkthrough', () => {
