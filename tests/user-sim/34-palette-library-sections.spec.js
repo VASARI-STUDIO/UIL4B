@@ -96,6 +96,78 @@ test.describe('palette library sections', () => {
     await expect(page.locator(HEAD)).toHaveCount(0)
   })
 
+  // ── The results row above the sections ────────────────────────────────────
+  //
+  // Sectioning the grid changed what the row above it is describing, and the
+  // row was not updated with it. These three exercise the CALL SITE in
+  // PaletteGallery.jsx — the eyebrow the page passes to DiscoverResultHead —
+  // rather than the component, which will render whatever string it is handed
+  // and cannot tell a true label from a false one.
+  test('the results row does not restate the heading directly beneath it', async ({ page }) => {
+    const eyebrow = page.locator('.drh-head span')
+    const firstHeading = page.locator(`${HEAD} h3`).first()
+
+    // Positive controls. Without both of these the inequality below is
+    // satisfied by two elements that never rendered.
+    await expect(eyebrow).toHaveText(/\S/)
+    await expect(firstHeading).toHaveText('Curated collection')
+
+    const [above, below] = await Promise.all([eyebrow.innerText(), firstHeading.innerText()])
+    expect(
+      above.trim().toLowerCase(),
+      'a taxonomy eyebrow sitting directly on top of a heading that repeats it — the motif the founder marked "AI"',
+    ).not.toBe(below.trim().toLowerCase())
+  })
+
+  test('the results row describes the page, not one of its two groups', async ({ page }) => {
+    // Browse mode shows curated AND brand, so naming either one here would
+    // describe the first of two groups as if it were the whole library.
+    await expect(page.locator(HEAD)).toHaveCount(2) // positive control: both groups really are on the page
+    await expect(page.locator('.drh-head span')).not.toHaveText(/curated collection|brand systems/i)
+  })
+
+  test('the results row names a category only when the view IS that category', async ({ page }) => {
+    const eyebrow = page.locator('.drh-head span')
+    await expect(eyebrow).toHaveText('Everything you can browse')
+
+    await page.locator(TRAY).getByRole('button', { name: 'Brand', exact: true }).click()
+    await expect(page.locator('.pgal-card[data-kind="brand"]').first()).toBeVisible()
+    await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(0)
+    await expect(eyebrow).toHaveText('Brand systems')
+
+    await page.locator(TRAY).getByRole('button', { name: 'Curated', exact: true }).click()
+    await expect(page.locator('.pgal-card[data-kind="curated"]').first()).toBeVisible()
+    await expect(page.locator('.pgal-card[data-kind="brand"]')).toHaveCount(0)
+    await expect(eyebrow).toHaveText('Curated collection')
+
+    // A mood filter selects on the colours themselves, so it reaches into both
+    // groups — measured: Dark matches 3 brand and 24 curated. Labelling that
+    // "Curated collection", as the page did, was simply false, and the flat
+    // grid meant there was no heading under it to disagree.
+    await page.locator(TRAY).getByRole('button', { name: 'Dark', exact: true }).click()
+    await expect(page.locator('.pgal-card[data-kind="brand"]').first()).toBeVisible()
+    await expect(page.locator('.pgal-card[data-kind="curated"]').first()).toBeVisible()
+    await expect(eyebrow).not.toHaveText(/curated collection|brand systems/i)
+  })
+
+  test('the section blurbs tell the two groups apart instead of restating the hero', async ({ page }) => {
+    const hero = (await page.locator('.dgh-hero p').first().innerText()).trim()
+    const blurbs = await page.locator('.pgl-section-blurb').allInnerTexts()
+
+    // Positive controls: there really are two blurbs and a hero to compare.
+    expect(blurbs).toHaveLength(2)
+    expect(hero.length).toBeGreaterThan(40)
+
+    const opener = (s) => s.toLowerCase().replace(/[^a-z ]+/g, ' ').split(/\s+/).filter(Boolean).slice(0, 5).join(' ')
+    for (const blurb of blurbs) {
+      expect(
+        opener(blurb),
+        'a section blurb opening on the same words as the hero description ~200px above it',
+      ).not.toBe(opener(hero))
+    }
+    expect(opener(blurbs[0]), 'the two blurbs say the same thing').not.toBe(opener(blurbs[1]))
+  })
+
   test('each section grid names itself to assistive technology', async ({ page }) => {
     const labelled = await page.locator('.pgl-section .lbry-grid').evaluateAll(
       (grids) => grids.map((g) => {
