@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
+import { LEARN_ARTICLES } from '../data/learnIndex'
 
 // The full visual site map — a single page that lays out every destination in
 // UIL4B so a visitor (or the founder) can see the whole product at a glance.
@@ -142,14 +143,21 @@ export default function SiteMap() {
               ))}
             </ul>
           </div>
+          {/* Learn carried a category-level "Soon" badge over eight rows that
+              all pointed at /learn. The live guides go first with their own
+              URLs; the topic roadmap keeps its per-row Soon badges below them,
+              so the map states what exists and what does not in one column. */}
           <div className="smap-cat" data-hue="accent" data-sitemap-section="learn">
             <div className="smap-cat-h">
               <span className="smap-cat-dot" aria-hidden="true" />
               <h3>Learn</h3>
-              <span className="smap-soon">Soon</span>
             </div>
-            <p className="smap-cat-desc">Principles, theme systems and guides that make interfaces hold up.</p>
+            <p className="smap-cat-desc">Reference guides on colour, type and accessibility, plus the topics still to be written.</p>
             <ul className="smap-links">
+              {LEARN_ARTICLES.map((a) => (
+                <MapLink key={a.slug} label={a.title} route={`/learn/${a.slug}`} note={a.dek} />
+              ))}
+              <MapLink label="Learn" route="/learn" note="The section landing, and what is on the way." />
               {LEARN_GROUPS.map((g) => (
                 <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}

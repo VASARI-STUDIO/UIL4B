@@ -7,6 +7,13 @@
 // They are plain data here so scripts/prerender.mjs and the runtime import the
 // SAME table and cannot drift.
 //
+// The Learn articles bring their own titles and descriptions. They are spread
+// in rather than typed out again because this table is what decides whether a
+// route is prerendered at all (scripts/route-matrix.mjs excludes anything with
+// no entry here), and an article that exists but is missing from this file
+// would render fine in the browser and be invisible to every crawler.
+import { LEARN_PAGE_DESCRIPTIONS, LEARN_PAGE_TITLES } from './learnIndex.js'
+
 // Titles/descriptions for real destinations only. Legacy redirect-only paths
 // (/dashboard, /resources, /docs-*) are intentionally absent — they render a
 // <Navigate> and inherit their target's metadata, so an entry here would only
@@ -58,6 +65,7 @@ export const PAGE_TITLES = {
   '/admin': 'UI L4B | Admin',
   '/create/auto-builder': 'UI L4B | UI Auto-Builder',
   '/create/file-converter': 'UI L4B | File Converter',
+  ...LEARN_PAGE_TITLES,
 }
 export const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion, video frames, and production-ready CSS exports.'
 export const PAGE_DESCRIPTIONS = {
@@ -79,7 +87,7 @@ export const PAGE_DESCRIPTIONS = {
   '/discover': 'The best external design resources — gradients, palettes, fonts and inspiration — with a one-tap hand-off into the UI L4B tools that use them.',
   '/discover/gradients': 'A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.',
   '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
-  '/learn': 'The why behind good interfaces — design principles, theme systems and practical guides for UI foundations that hold up. The Learn library is on the way.',
+  '/learn': 'Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.',
   '/create/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
   '/create/ai-prompt': 'Generate detailed AI image prompts with style, lighting, and composition controls. Copy-ready for Midjourney, DALL-E, and Stable Diffusion.',
   '/create/ai-tools': 'AI-powered design tools — image prompt generation, alt text, and landing page copy. Powered by OpenRouter and Gemini.',
@@ -109,4 +117,5 @@ export const PAGE_DESCRIPTIONS = {
   '/sitemap': 'The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.',
   '/admin': DEFAULT_DESCRIPTION,
   '/create/file-converter': 'Convert files between formats directly in your browser. Fast, private, client-side processing.',
+  ...LEARN_PAGE_DESCRIPTIONS,
 }

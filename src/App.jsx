@@ -55,6 +55,10 @@ const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 // you operate, so it belongs beside the palette and gradient libraries.
 const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
 const CuratedResources = lazy(() => import('./pages/CuratedResources'))
+// One Learn article, rendered inside the PillNav app-shell. /learn itself is
+// chromeless (SurfaceLanding mounts its own nav); its articles are not, the same
+// way /discover is chromeless and /discover/palettes is not.
+const LearnArticle = lazy(() => import('./pages/LearnArticle'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 // Create tool routes come straight from the single tool-tree source, so adding a
@@ -351,6 +355,11 @@ function AppInner() {
                   “Soon” since Slice 2 while the data sat unrendered; this is the
                   route that makes the menu entry true. */}
               <Route path="/discover/resources" element={<CuratedResources />} />
+
+              {/* Learn articles. An unknown slug renders NotFound from inside
+                  LearnArticle rather than matching here, so /learn/nonsense is a
+                  real 404 instead of a 200 with the landing page's content. */}
+              <Route path="/learn/:slug" element={<LearnArticle />} />
 
               {/* Account, billing, legal and system pages — rendered inside the
                   PillNav app-shell (the wrapper return below). */}
