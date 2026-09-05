@@ -46,6 +46,25 @@ The main thread is the **Director**: it executes what I ask, and it also brings 
 ideas. Full operating model: [`director.md`](docs/reference/director.md).
 Proposals for me to approve or deny: [`PROPOSALS.md`](docs/PROPOSALS.md).
 
+**Writing anything I have to read.** 2026-09-05, verbatim: *“when leaving
+information for me or questions make sure to make them easy to understand as i
+dont have lots of time to figure out what you are asking.”* That is a standing
+constraint on `OWNER-ACTIONS.md`, `PROPOSALS.md`, PR descriptions and anything
+else addressed to me:
+
+- **Lead with the question.** “Do you want X or Y?” first; the reasoning after,
+  and short. Never make me read the background to find out what is being asked.
+- **Options as a short list, with a recommendation** and the one-line reason.
+- **Say what happens if I do nothing.** Cost of delay, plainly.
+- **No jargon without a plain gloss.** Not *“the rgba-only parser dropped
+  color-mix grounds”* — say *“our contrast test was silently skipping most of
+  the app”*.
+- **One screen per decision.** If it needs more, it is two decisions, or it is
+  not ready to ask.
+
+Engineering detail belongs in engineering docs. `OWNER-ACTIONS.md` is a to-do
+list, not a report.
+
 ## Decision rules
 
 - Action over asking · Concise over verbose · Automation over manual · Execute
