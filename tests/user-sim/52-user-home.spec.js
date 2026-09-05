@@ -12,7 +12,7 @@
 //   THE SIGNED-IN PAGE is covered through the mounted fixture, the same way
 //   12-ui-system-builder and the type-save flow are.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, expectRendered } from './helpers.js'
 
 const SESSION_HINT = 'vs-session'
 const FIXTURE = '/tests/user-sim/fixtures/user-home.html'
@@ -35,9 +35,7 @@ test.describe('the front door', () => {
     await expect(page.locator('.uh-tip')).toHaveCount(0)
   })
 
-  test('a returning visitor is taken to the User Home, and never sees the sales page', async ({ browser }) => {
-    const context = await browser.newContext()
-    const page = await context.newPage()
+  test('a returning visitor is taken to the User Home, and never sees the sales page', async ({ page }) => {
     watch(page, 'a signed-in visitor opening the site')
     await withSessionHint(page)
 
@@ -48,28 +46,27 @@ test.describe('the front door', () => {
     // loaded at all. If it were made after auth resolved, .home would paint
     // first and this would catch it.
     await expect(page.locator('.home')).toHaveCount(0)
-    await context.close()
   })
 
-  test('/home is the sales page for EVERYONE, session or not', async ({ browser }) => {
+  test('/home is the sales page for EVERYONE, session or not', async ({ page }) => {
     // The founder's stated exception: "unless they click they home button or
     // navigate to specifly /home".
-    for (const hinted of [false, true]) {
-      const context = await browser.newContext()
-      const page = await context.newPage()
-      watch(page, `a visitor at /home (${hinted ? 'with' : 'without'} a session)`)
-      if (hinted) await withSessionHint(page)
+    //
+    // Both states on one page, unhinted first: addInitScript accumulates, so
+    // once the hint is installed it stays installed for every later load. That
+    // is exactly the order this needs, and it avoids a second browser context.
+    watch(page, 'a visitor at /home')
+    await go(page, '/home')
+    await expect(page, '/home must never redirect for a signed-out visitor').toHaveURL(/\/home$/)
+    await expect(page.locator('.home')).toBeVisible()
 
-      await go(page, '/home')
-      await expect(page, '/home must never redirect').toHaveURL(/\/home$/)
-      await expect(page.locator('.home')).toBeVisible()
-      await context.close()
-    }
+    await withSessionHint(page)
+    await go(page, '/home')
+    await expect(page, '/home must never redirect for a signed-in visitor either').toHaveURL(/\/home$/)
+    await expect(page.locator('.home')).toBeVisible()
   })
 
-  test('the nav Home control reaches the sales page from inside the app', async ({ browser }) => {
-    const context = await browser.newContext()
-    const page = await context.newPage()
+  test('the nav Home control reaches the sales page from inside the app', async ({ page }) => {
     watch(page, 'a signed-in visitor clicking Home')
     await withSessionHint(page)
 
@@ -78,17 +75,14 @@ test.describe('the front door', () => {
     await page.getByRole('link', { name: 'UIL4B home' }).first().click()
     await expect(page, 'the Home control must land on the sales page and stay there').toHaveURL(/\/home$/)
     await expect(page.locator('.home')).toBeVisible()
-    await context.close()
   })
 
-  test('a stale hint settles without looping', async ({ browser }) => {
+  test('a stale hint settles without looping', async ({ page }) => {
     // The hint says there is a session; there is not (Firebase resolves to
     // signed out here, which is exactly the lapsed-session case). The visitor
     // must land somewhere and STOP. This is why the User Home renders its own
     // signed-out state instead of redirecting to /login: / -> /projects ->
     // /login -> dismiss -> /projects would be a loop.
-    const context = await browser.newContext()
-    const page = await context.newPage()
     watch(page, 'a visitor whose session lapsed between loads')
     await withSessionHint(page)
 
@@ -98,7 +92,6 @@ test.describe('the front door', () => {
     // And the hint is corrected, so the next cold load goes to the sales page.
     const hint = await page.evaluate((key) => localStorage.getItem(key), SESSION_HINT)
     expect(hint, 'resolved auth must clear a hint it disagrees with').toBeNull()
-    await context.close()
   })
 })
 
@@ -109,6 +102,7 @@ test.describe('the User Home does not wait on auth', () => {
     // this page ever starts gating its whole body on a session, this fails.
     watch(page, 'a visitor reading the User Home')
     await go(page, '/projects')
+    await expectRendered(page, '/projects')
 
     await expect(page.locator('.uh-tip')).toBeVisible()
     const tip = (await page.locator('.uh-tip').innerText()).trim()
@@ -121,6 +115,10 @@ test.describe('the User Home does not wait on auth', () => {
   test('every starter points INWARD, at a real tool, with values loaded', async ({ page }) => {
     watch(page, 'a visitor opening a suggested starter')
     await go(page, '/projects')
+    // Before the measurement, not after: a lazy chunk that fails to load leaves
+    // the ErrorBoundary card, which satisfies every other readiness check and
+    // would make this report “0 starters” as if it were a product defect.
+    await expectRendered(page, '/projects')
 
     const hrefs = await page.locator('.uh-starter').evaluateAll(
       (nodes) => nodes.map((n) => n.getAttribute('href')),
@@ -139,10 +137,12 @@ test.describe('the User Home does not wait on auth', () => {
   test('the day\u2019s suggestions are stable, not reshuffled on every visit', async ({ page }) => {
     watch(page, 'a visitor reloading the User Home')
     await go(page, '/projects')
+    await expectRendered(page, '/projects')
     const first = await page.locator('.uh-starter-name').allInnerTexts()
     const tip = await page.locator('.uh-tip').innerText()
 
     await go(page, '/projects')
+    await expectRendered(page, '/projects')
     expect(await page.locator('.uh-starter-name').allInnerTexts()).toEqual(first)
     expect(await page.locator('.uh-tip').innerText()).toEqual(tip)
   })
@@ -152,6 +152,7 @@ test.describe('a project, read at a glance', () => {
   test('each card says what is IN the project, not just its name', async ({ page }) => {
     watch(page, 'a returning user scanning their projects')
     await go(page, FIXTURE)
+    await expectRendered(page, FIXTURE)
 
     const complete = page.locator('.uh-card').filter({ hasText: 'Violet Lime' })
     // Both families, the scale and the counts — the founder's "palette, fonts,
@@ -190,6 +191,7 @@ test.describe('a project, read at a glance', () => {
   test('the progress reading is announced, not left to four dots', async ({ page }) => {
     watch(page, 'a screen-reader user on the User Home')
     await go(page, FIXTURE)
+    await expectRendered(page, FIXTURE)
 
     const dots = page.locator('.uh-card').filter({ hasText: 'Harbour Rebrand' }).locator('.uh-parts-dots')
     const label = await dots.getAttribute('aria-label')
