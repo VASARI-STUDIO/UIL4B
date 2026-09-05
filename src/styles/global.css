@@ -3268,14 +3268,14 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 /* THE RAIL. All four steps at once, each carrying the artefact it produced, so
    step four can see what step one built. Reference: Cofounder's bottom "Design
    Roadmap" and Klaviyo's ticked setup checklist. */
-.bkit-rail{position:sticky;bottom:20px;z-index:60;margin:32px auto 0;width:min(880px,calc(100% - 32px));display:flex;align-items:center;gap:18px;padding:12px 16px;background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg)}
+.bkit-rail{position:sticky;bottom:20px;z-index:60;margin:32px auto 0;width:min(960px,calc(100% - 32px));display:flex;align-items:center;gap:18px;padding:12px 16px;background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg)}
 .bkit-rail-head{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
 .bkit-rail-eyebrow{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
 .bkit-rail-count{font-size:12px;font-weight:600;color:var(--t0);white-space:nowrap}
 
 .bkit-steps{list-style:none;margin:0;padding:0;display:flex;align-items:stretch;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
 .bkit-steps::-webkit-scrollbar{display:none}
-.bkit-steps li{min-width:0;flex:1 1 0}
+.bkit-steps li{min-width:0;flex:0 0 auto}
 .bkit-step{display:flex;align-items:center;gap:8px;min-width:0;height:100%;padding:6px 9px;border-radius:var(--radius-s);border:1px solid transparent;color:var(--t2);text-decoration:none;transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
 .bkit-step:hover{background:var(--hvr);color:var(--t0)}
 .bkit-step.is-current{border-color:var(--border);background:var(--bg-2);color:var(--t0)}
@@ -3302,7 +3302,6 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 @media(max-width:820px){
   .bkit-rail{flex-wrap:wrap;gap:10px}
   .bkit-steps{order:3;flex-basis:100%}
-  .bkit-steps li{flex:0 0 auto}
   .bkit-rail-actions{margin-left:auto}
   .bkit-card{bottom:150px}
 }

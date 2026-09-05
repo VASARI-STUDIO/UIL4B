@@ -68,6 +68,47 @@ async function pressBrandKit(page) {
 const rail = (page) => page.getByRole('region', { name: 'Brand kit walkthrough' })
 const card = (page) => page.getByRole('dialog', { name: 'Four steps to a full system.' })
 
+/**
+ * Wait for an element's entrance animation to FINISH before measuring or
+ * capturing it.
+ *
+ * The card animates cp-rise, which runs opacity 0 -> 1. The first capture of it
+ * caught the fade part-way and the palette board's swatch labels ghosted
+ * through a card that is fully opaque once settled — a screenshot that would
+ * have been read as a stacking bug.
+ *
+ * Asks the ANIMATION LAYER whether it has finished rather than sleeping for a
+ * plausible number of milliseconds: a stopwatch passes on a fast machine and
+ * lies on a slow one, and two equal pixel reads prove only that nothing moved
+ * between them.
+ */
+async function settle(locator) {
+  await locator.evaluate((el) => Promise.all(
+    el.getAnimations({ subtree: true }).map((a) => a.finished.catch(() => {})),
+  ))
+}
+
+/**
+ * Wait until the element is actually ON SCREEN, not merely in the document.
+ *
+ * `toBeVisible()` means "has a box and is not hidden" — it says nothing about
+ * the viewport. The rail is `position:sticky; bottom:20px` at the end of pages
+ * from 1154px to 3189px tall, so "present" and "on screen" are genuinely
+ * different questions here, and the one that matters to a person is the second.
+ * It also gives the destination time to finish arriving: the first capture of
+ * the Icons step caught the library still printing "Opening the icon library".
+ */
+async function inView(locator) {
+  await locator.evaluate((el) => new Promise((resolve) => {
+    const check = () => {
+      const r = el.getBoundingClientRect()
+      if (r.top < window.innerHeight && r.bottom > 0 && r.height > 0) return resolve()
+      requestAnimationFrame(check)
+    }
+    check()
+  }))
+}
+
 test.describe('Brand kit walkthrough', () => {
   test('the nav CTA lands on a working step one, not on a sales page', async ({ page }) => {
     watch(page, 'designer starting a brand system from the navigation')
@@ -87,6 +128,8 @@ test.describe('Brand kit walkthrough', () => {
     // And the flow is actually running on it.
     await expect(rail(page)).toBeVisible()
     await expect(rail(page)).toContainText('0 of 4 built')
+    await inView(rail(page))
+    await settle(rail(page))
 
     await page.screenshot({
       path: test.info().outputPath('brand-kit-step-one.png'),
@@ -111,6 +154,7 @@ test.describe('Brand kit walkthrough', () => {
     await expect(seed).toHaveValue('#3366FF')
     await expect(card(page)).toBeVisible()      // still there, still not in the way
     await expect(page.locator('.plb-col').first()).toBeVisible()
+    await settle(card(page))
 
     // No scrim layer, and the page is not scroll-locked. Both are how the old
     // version blocked the step: position:fixed inset:0 with a backdrop blur.
@@ -194,6 +238,10 @@ test.describe('Brand kit walkthrough', () => {
     await expect(colourChip).toHaveClass(/is-done/)
     await expect(colourChip.locator('.bkit-step-swatch').first()).toBeVisible()
     await expect(rail(page)).toContainText(/[1-9] of 4 built/)
+    // The rail has to be ON SCREEN here, on the tallest page in the flow — this
+    // is the claim that it is always to hand, not merely always rendered.
+    await inView(rail(page))
+    await settle(rail(page))
 
     await page.screenshot({
       path: test.info().outputPath('brand-kit-step-four-sees-step-one.png'),
