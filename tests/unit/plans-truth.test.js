@@ -23,7 +23,7 @@
 //   · the page may not go back to typing numbers it should be importing.
 //
 // The rendered half of this — that the DOM a visitor actually receives obeys the
-// same rule — is tests/user-sim/52-plans-truth.spec.js. Both halves exist
+// same rule — is tests/user-sim/54-plans-truth.spec.js. Both halves exist
 // because a source-text assertion cannot see a component that stopped
 // rendering, and a DOM assertion cannot see a claim that only appears when
 // signed in.

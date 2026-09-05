@@ -152,7 +152,7 @@ export default function Plans() {
   // `visibility:visible`, so Playwright still considers it visible and clicks
   // it happily — 18-signup-intent.spec.js has been clicking an invisible
   // button and passing. Opacity is what was wrong, so opacity is what
-  // 52-plans-truth.spec.js now asserts.
+  // 54-plans-truth.spec.js now asserts.
   useReveal()
 
   const selectTab = (index) => {
