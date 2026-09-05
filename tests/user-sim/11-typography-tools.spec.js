@@ -90,8 +90,9 @@ test.describe('Type Scale Generator', () => {
 
     // The audience control is now the switch that sits above the panel it
     // changes, not the pair of hero cards that used to sit two screens away
-    // from it. (Tint Scale still has its own "For designers" hero tabs — see
-    // 05-tint-scale-workflows.spec.js. Only Type Scale's duplicate went.)
+    // from it. (Tint Scale carried the identical pair and lost it in the same
+    // way in #surface-headers-read-as-ai — see 05-tint-scale-workflows.spec.js
+    // and 55-header-sweep.spec.js. Neither page has hero cards now.)
     await expect(page.getByRole('tab', { name: /Design preview/i })).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('.tsc-article')).toBeVisible()
   })
@@ -221,7 +222,14 @@ test.describe('Font Pair', () => {
     const chosen = (await first.locator('.fpr-card-name').innerText()).split('\n')[0].trim()
     await first.getByRole('button', { name: 'Use this pair' }).click()
     await expect(first.getByRole('button', { name: 'In use' })).toBeVisible()
-    await expect(page.locator('.fpr-status')).toContainText(chosen)
+    // `.fpr-status` used to be read here. It was a four-cell strip that
+    // restated the hero readout 350px above it, and it went with the rest of
+    // the header sweep (#surface-headers-read-as-ai). The replacement is
+    // stronger, not weaker: `applyPair` sets the BODY family, and the hero
+    // readout has a heading slot and a body slot, so naming the slot fails if
+    // the handler ever writes the pick into the wrong one. `toContainText` on
+    // the old four-cell container could not tell them apart.
+    await expect(page.locator('.fpr-hero-pair span').nth(1)).toHaveText(chosen)
   })
 
   test('the specimen re-lays out and honours custom preview text', async ({ page }) => {
@@ -899,8 +907,12 @@ test.describe('typography hand-offs', () => {
     await page.getByRole('dialog').getByRole('button', { name: /Find a pairing/ }).click()
 
     await expect.poll(() => new URL(page.url()).pathname).toBe('/create/font-pair')
-    // Never an empty tool: the chosen family arrives as the heading.
-    await expect(page.locator('.fpr-status')).toContainText('Merriweather')
+    // Never an empty tool: the chosen family arrives as the HEADING, which is
+    // the first slot of the hero readout. Read off `.fpr-status` before the
+    // header sweep deleted it - and that assertion would have passed on a
+    // hand-off that landed in the body slot instead, because the strip put
+    // both families in one container.
+    await expect(page.locator('.fpr-hero-pair span').nth(0)).toHaveText('Merriweather')
     await expect(page.locator('.fpr-card')).not.toHaveCount(0)
 
     await page.getByRole('button', { name: /Build a scale from this pair/ }).click()

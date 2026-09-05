@@ -280,11 +280,42 @@ export default function TintTool({ onCopy, toast }) {
 
   return (
     <div className="sec tt-page">
+      {/* THE TAXONOMY EYEBROW AND THE HERO TABLIST ARE BOTH GONE.
+          ------------------------------------------------------------------
+          THE EYEBROW. `<div className="sec-h-eyebrow">Create / Colour</div>`,
+          10px mono caps at 1.4px tracking, measured at y=102 directly above an
+          h1 that says "Tint Scale Generator", on the route /create/tint, with
+          the Create menu already lit in the nav. It is the same element #382
+          deleted from the Font Gallery ("Discover / Typography") and Font Pair,
+          and #386 from the Type Scale ("Create / Typography") - the founder
+          marked that exact element "AI". A real control sits 5px above it: the
+          `.tt-back` link to the Palette Builder, which you can press.
+          Hierarchy is a control, not a label. Ditto's editor on Mobbin
+          (mobbin.com/screens/357963ee-4c35-4860-88d4-fc5a0b2cefc3) does carry a
+          breadcrumb, and every segment of it is a link to a place the user has
+          actually been - not the section name repeated at them.
+
+          THE HERO TABLIST, and the state it sets is not going with it. This is
+          the Type Scale defect from #386, on the sibling page: `audience` had
+          TWO controls. This one - `.tt-audience`, a pair of 673x116px cards
+          captioned "For designers" / "For developers" under role="tablist" -
+          measured 1348x118px at y=261, and the panel it declared via
+          aria-controls="tt-audience-panel" started at y=1183. That is 922px
+          below it: more than one 900px viewport, so pressing it changed
+          nothing you could see. The other control - a plain segmented switch
+          with aria-pressed and no tablist - sat at y=1125, 58px above that
+          same panel, setting the same variable in a different visual language.
+
+          One piece of state, two controls, disagreeing about what kind of
+          control they were. The survivor is the one adjacent to the thing it
+          changes, and it is promoted to the real tablist below. The
+          designer/developer split itself is kept: it is a genuine either/or on
+          one output panel, and the hero paragraph already tells both audiences
+          what the tool does. */}
       <header className="tt-hero">
         <NavLink to="/create/palette" className="tt-back" aria-label="Back to Palette Builder">
           <span aria-hidden="true">←</span> Palette Builder
         </NavLink>
-        <div className="sec-h-eyebrow">Create / Colour</div>
         <div className="tt-hero-copy">
           <h1>Tint Scale Generator</h1>
           <p>
@@ -293,46 +324,43 @@ export default function TintTool({ onCopy, toast }) {
             inspect real interface roles or copy production-ready CSS.
           </p>
         </div>
-        <div className="tt-audience" role="tablist" aria-label="Choose your tint scale workflow">
-          <button
-            type="button"
-            role="tab"
-            id="tt-tab-designer"
-            aria-selected={audience === 'designer'}
-            aria-controls="tt-audience-panel"
-            tabIndex={audience === 'designer' ? 0 : -1}
-            className={audience === 'designer' ? 'tt-audience-tab tt-audience-tab--on' : 'tt-audience-tab'}
-            onClick={() => setAudience('designer')}
-            onKeyDown={handleAudienceKeyDown}
-          >
-            <span className="tt-audience-kicker">For designers</span>
-            <strong>Preview the system</strong>
-            <span>See hierarchy and semantic roles in context.</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="tt-tab-developer"
-            aria-selected={audience === 'developer'}
-            aria-controls="tt-audience-panel"
-            tabIndex={audience === 'developer' ? 0 : -1}
-            className={audience === 'developer' ? 'tt-audience-tab tt-audience-tab--on' : 'tt-audience-tab'}
-            onClick={() => setAudience('developer')}
-            onKeyDown={handleAudienceKeyDown}
-          >
-            <span className="tt-audience-kicker">For developers</span>
-            <strong>Ship the CSS</strong>
-            <span>Inspect names and copy a complete CSS handoff.</span>
-          </button>
-        </div>
       </header>
 
-      <div className="tt-status" aria-live="polite">
-        <span><strong>{bases.length}</strong> base colour{bases.length > 1 ? 's' : ''}</span>
-        <span><strong>{labels.length}</strong> stops per scale</span>
-        <span><strong>{mode === 'perceived' ? 'HCT' : 'HSL'}</strong> lightness curve</span>
-        <span><strong>{ramps.length * labels.length}</strong> generated tints</span>
-      </div>
+      {/* THE FOUR-UP FIGURE STRIP IS GONE (`.tt-status`).
+          ------------------------------------------------------------------
+          It was the Font Gallery's three-up strip with a fourth column, and
+          the founder marked that motif "AI". Measured at 1440x900, bottom edge
+          y=449, every one of its four figures was restated on the same screen
+          or duplicated inside the strip itself:
+
+            "1 base colour"       the source colours it counts are the rows of
+                                  panel 01 immediately below it, and "Scale 1"
+                                  is named again at +202px.
+            "11 stops per scale"  restated VERBATIM at +520px by `.tt-hint`
+                                  ("11 stops per ramp.") and a third time at
+                                  +929px ("11 stops available").
+            "HCT lightness curve" restated at +227px by the hint under the
+                                  control that sets it ("Spaced by HCT tone..."),
+                                  and the strip called the value "HCT" while
+                                  that control labels it "Perceived" - two
+                                  vocabularies for one piece of state.
+            "11 generated tints"  ramps x labels. With one base that is the
+                                  same 11 as the figure before it, so the strip
+                                  printed one number twice.
+
+          It also carried aria-live="polite", so a screen reader re-announced
+          four facts that are readable at their own controls every time any one
+          of them moved. Framer's gradient inspector
+          (mobbin.com/screens/4ade6802-3d3f-4adb-a256-2fb85fa62782) and
+          Pipedrive's content editor
+          (mobbin.com/screens/d4222186-082c-4994-9aa7-e493756857be) both keep
+          every value at the control that sets it, and neither carries a band of
+          them above the canvas.
+
+          WHAT IS NOT REMOVED, and why it is different: the ramp labels, the
+          role mapping and the copy-count buttons further down are each the only
+          place their number appears. Deleting a true, unrestated fact is not
+          the change that was asked for. */}
 
       <div className="tt-grid">
         {/* ── Ramps ── */}
@@ -573,20 +601,36 @@ export default function TintTool({ onCopy, toast }) {
                 </p>
               </div>
             </div>
-            <div className="tt-view-switch" aria-label="Output view">
+            {/* THE REAL TABLIST, now that the hero pair is gone. It keeps the
+                ids the panel below already points at with aria-labelledby, and
+                it takes over the roving tabindex and the arrow keys the hero
+                cards used to advertise - so the keyboard contract now lands on
+                a control the user can see from the panel it drives, 58px away
+                instead of 922px. Same promotion #386 made on the Type Scale. */}
+            <div className="tt-view-switch" role="tablist" aria-label="Output view">
               <button
                 type="button"
+                role="tab"
+                id="tt-tab-designer"
+                aria-selected={audience === 'designer'}
+                aria-controls="tt-audience-panel"
+                tabIndex={audience === 'designer' ? 0 : -1}
                 className={audience === 'designer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
-                aria-pressed={audience === 'designer'}
                 onClick={() => setAudience('designer')}
+                onKeyDown={handleAudienceKeyDown}
               >
                 Design preview
               </button>
               <button
                 type="button"
+                role="tab"
+                id="tt-tab-developer"
+                aria-selected={audience === 'developer'}
+                aria-controls="tt-audience-panel"
+                tabIndex={audience === 'developer' ? 0 : -1}
                 className={audience === 'developer' ? 'tt-view-btn tt-view-btn--on' : 'tt-view-btn'}
-                aria-pressed={audience === 'developer'}
                 onClick={() => setAudience('developer')}
+                onKeyDown={handleAudienceKeyDown}
               >
                 Developer handoff
               </button>

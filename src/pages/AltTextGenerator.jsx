@@ -284,7 +284,9 @@ export default function AltTextGenerator({ toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">AI Tools</div>
+        {/* NO TAXONOMY EYEBROW. It read "AI Tools" at y=102 — the Create group
+            the visitor clicked through, above an h1 that names the tool.
+            #surface-headers-read-as-ai. */}
         <h1>Alt Text <em>Generator</em></h1>
         {/* Both plans resolve to the same model (see MODELS in
             api/_lib/plans.js), so the old "upgrade for higher-quality models"

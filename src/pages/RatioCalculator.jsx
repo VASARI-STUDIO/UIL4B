@@ -326,7 +326,9 @@ export default function RatioCalculator({ onCopy }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">Imagery</div>
+        {/* NO TAXONOMY EYEBROW. It read "Imagery" at y=102 — the name of the
+            Create group the visitor clicked through to get here, above an h1
+            that names the tool. #surface-headers-read-as-ai. */}
         <h1>Aspect &amp; Resolution Calculator</h1>
         <p>Start from anything — a device, a screen, a social format, a ratio, or a couple of pixels — and get the matching dimensions, simplified ratio, PPI and diagonal.</p>
       </div>

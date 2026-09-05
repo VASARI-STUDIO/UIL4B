@@ -10,16 +10,21 @@ test.describe('Tint Scale designer and developer workflows', () => {
     await go(page, '/create/tint')
 
     await expect(page.getByRole('heading', { level: 1, name: 'Tint Scale Generator' })).toBeVisible()
-    await expect(page.getByRole('tab', { name: /For designers/i })).toHaveAttribute('aria-selected', 'true')
+    // The audience tabs used to be a pair of hero cards captioned "For
+    // designers" / "For developers", 922px above the panel they declared with
+    // aria-controls. They are gone (#surface-headers-read-as-ai) and the ROLE
+    // moved onto the switch that already sat beside that panel, so these read
+    // its labels. Same tab ids, same panel, same contract - 58px away.
+    await expect(page.getByRole('tab', { name: 'Design preview' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByText('Interface preview', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: /Copy Primary role colour/i })).toBeVisible()
     await expect(page.locator('.tt-cell')).toHaveCount(11)
     await expect(page.getByRole('radio', { name: /Scale 1/i })).toHaveAttribute('aria-checked', 'true')
 
-    const designerTab = page.getByRole('tab', { name: /For designers/i })
+    const designerTab = page.getByRole('tab', { name: 'Design preview' })
     await designerTab.focus()
     await page.keyboard.press('ArrowRight')
-    await expect(page.getByRole('tab', { name: /For developers/i })).toBeFocused()
+    await expect(page.getByRole('tab', { name: 'Developer handoff' })).toBeFocused()
     await page.keyboard.press('ArrowLeft')
     await expect(designerTab).toBeFocused()
 
@@ -38,8 +43,8 @@ test.describe('Tint Scale designer and developer workflows', () => {
     watch(page, 'front-end developer')
     await go(page, '/create/tint')
 
-    await page.getByRole('tab', { name: /For developers/i }).click()
-    await expect(page.getByRole('tab', { name: /For developers/i })).toHaveAttribute('aria-selected', 'true')
+    await page.getByRole('tab', { name: 'Developer handoff' }).click()
+    await expect(page.getByRole('tab', { name: 'Developer handoff' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByRole('heading', { name: 'Prepare the handoff' })).toBeVisible()
     await expect(page.locator('#tt-export')).toContainText('--tint-50:')
 
@@ -47,7 +52,13 @@ test.describe('Tint Scale designer and developer workflows', () => {
     await expect(page.locator('.tt-ramp-block')).toHaveCount(2)
     await expect(page.locator('#tt-export')).toContainText('--tint-1-50:')
     await expect(page.locator('#tt-export')).not.toContainText('--tint-2-50:')
-    await expect(page.getByText('22 generated tints')).toBeVisible()
+    // This read "22 generated tints" off `.tt-status`, the four-up figure
+    // strip removed in #surface-headers-read-as-ai. The replacement is the
+    // thing the label was a claim ABOUT: two scales of eleven stops are 22
+    // rendered cells. The old assertion would have passed on a strip that said
+    // 22 above a grid that had drawn 11 - which is exactly the failure a
+    // handoff test exists to catch.
+    await expect(page.locator('.tt-cell')).toHaveCount(22)
 
     const secondScale = page.getByRole('radio', { name: /Scale 2/i })
     await secondScale.focus()
@@ -71,7 +82,9 @@ test.describe('Tint Scale designer and developer workflows', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await go(page, '/create/tint')
 
-    await expect(page.getByRole('button', { name: 'Design preview' })).toBeVisible()
+    // A tab, not a button, since the hero cards gave up the role to the
+    // control beside the panel (#surface-headers-read-as-ai).
+    await expect(page.getByRole('tab', { name: 'Design preview' })).toBeVisible()
     await expect(page.locator('.tt-preview')).toBeVisible()
     const hasPageOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth + 1,

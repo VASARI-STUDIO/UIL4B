@@ -169,42 +169,53 @@ test.describe('Semantic Colour system workflow', () => {
     })
   })
 
-  // The founder asked for the Semantic Colour HERO specifically (2026-09-03).
-  // The four colour tools ran two hero languages: Tint and Gradient open with an
-  // eyebrow, a large title, a description, the tool's own action and a strip of
-  // live facts; Semantic Colours and the Contrast Checker were on the site-wide
-  // `.sec-h`, which has none of that.
+  // The founder asked for the Semantic Colour HERO specifically (2026-09-03),
+  // and then marked the two motifs it had been given "AI"
+  // (#surface-headers-read-as-ai). This test used to assert both of them:
+  // `.stc-hero-eyebrow` reading "Create / Colour", and the four cells of
+  // `.stc-status`. Both are now deleted, so it pins the CORRECTED shape.
   //
-  // This pins the SHAPE, not the styling: the parts a person can name. It also
-  // pins the numbers in the strip against their real sources, because the copy
-  // it replaced said "40 canonical tokens" as a hard-coded string and the ramp
-  // it describes is 10 stops of 11 possible ones - the kind of number that goes
-  // quietly wrong when a scale changes.
-  test('the Semantic Colours hero carries the same parts as its sibling colour tools', async ({ page }) => {
+  // THE OLD STRIP ASSERTIONS WERE WEAK, WHICH IS PART OF WHY THE STRIP WENT.
+  // `facts.nth(1)).toContainText('5')` passed on any cell containing the digit
+  // 5 - including the cell that said 50 - and `stateRoleIds`, `STATE_LABELS`
+  // and their product are module constants, so three of the four could not
+  // change however the tool was rewired. Only the bundle name was live, and
+  // the selected bundle CARD 47px below it said the same word.
+  //
+  // So the replacement for "the strip is live" is the card and the radio
+  // state, which is the actual wiring: `selected` is computed by comparing
+  // `stateColors` against `bundle.config`, so breaking the onClick that sets
+  // `stateColors` turns this red. It is also two-sided - the old bundle must
+  // give up its selection, which the single-cell assertion never checked.
+  test('the Semantic Colours hero states its name and its action, and counts nothing', async ({ page }) => {
     watch(page, 'a designer landing on the semantic tool')
     await go(page, '/create/semantic-color')
 
     const hero = page.locator('.stc-hero')
     await expect(hero).toBeVisible()
-    await expect(hero.locator('.stc-hero-eyebrow')).toHaveText('Create / Colour')
     await expect(hero.getByRole('heading', { level: 1, name: 'Semantic Colours' })).toBeVisible()
     // The action belongs to the hero, the way Gradient's Random/Reset do.
     await expect(hero.getByRole('button', { name: 'Copy all CSS variables' })).toBeVisible()
 
-    const facts = page.locator('.stc-status span')
-    await expect(facts).toHaveCount(4)
-    await expect(facts.nth(0)).toContainText('Balanced')
-    await expect(facts.nth(1)).toContainText('5')
-    await expect(facts.nth(2)).toContainText('10')
-    await expect(facts.nth(3)).toContainText('50')
-    // Same numbers, same sources, in the handoff block - which used to type
-    // "40" as a literal and name info as the last role.
+    // The two motifs the founder marked.
+    await expect(hero.locator('.stc-hero-eyebrow')).toHaveCount(0)
+    await expect(page.getByText('Create / Colour', { exact: true })).toHaveCount(0)
+    await expect(page.locator('.stc-status')).toHaveCount(0)
+
+    // 50 SURVIVES, on the control it is about to act on. This is the figure
+    // that is NOT furniture: it is the size of what reaches the clipboard,
+    // and the copy it replaced typed "40" as a literal.
     await expect(page.getByRole('button', { name: 'Copy 50 CSS variables' })).toBeVisible()
 
-    // Choosing another bundle re-reports the first fact - the strip is live, not
-    // a decorative constant.
-    await page.getByRole('radio', { name: /Tailwind/ }).click()
-    await expect(facts.nth(0)).toContainText('Tailwind')
+    // Choosing another bundle moves the selection - on the cards, which are
+    // where a person chooses and where the answer was always visible.
+    const balanced = page.getByRole('radio', { name: /Balanced/ })
+    const tailwind = page.getByRole('radio', { name: /Tailwind/ })
+    await expect(balanced).toHaveAttribute('aria-checked', 'true')
+    await tailwind.click()
+    await expect(tailwind).toHaveAttribute('aria-checked', 'true')
+    await expect(balanced).toHaveAttribute('aria-checked', 'false')
+    await expect(tailwind).toContainText('Selected')
   })
 
   // The three onward-navigation blocks this page used to end with offered

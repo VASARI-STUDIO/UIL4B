@@ -945,20 +945,25 @@ ${stateVars}
 
   return (
     <div className="sec">
-      {/* THE SOLO TOOL HEADER. The four colour tools ran TWO hero languages: the
-          Tint Scale Generator (.tt-hero) and the Gradient Generator (.ggn-head)
-          both open with an eyebrow, a large serif title, a description and the
-          page's own actions, then a live status strip that reports the tool's
-          current state in four facts. Semantic Colours and the Contrast Checker
-          were still on `.sec-h`, the site-wide section header, which has no
-          actions and no status and says nothing about the tool you are in.
+      {/* THE SOLO TOOL HEADER, minus the two things the founder marked "AI".
+          ------------------------------------------------------------------
+          This header used to converge on a shape the Tint Scale Generator and
+          the Gradient Generator already shipped: an eyebrow, a large title, a
+          description, the page's own action, then a four-fact status strip.
+          The eyebrow and the strip have now been deleted from all three, so the
+          convergence holds — on the corrected shape.
 
-          This is convergence on the shape two of the four already shipped, not a
-          fifth pattern. `.sec-h` itself is untouched — it is site-wide, and
-          restyling it here would reach every page that uses it. */}
+          THE EYEBROW. `.stc-hero-eyebrow` rendered "Create / Colour" in 10px
+          mono caps at y=102, directly above an h1 that says "Semantic Colours",
+          on /create/semantic-color with the Create menu already lit. It is the
+          element #382 deleted from the Font Gallery and Font Pair and #386 from
+          the Type Scale, under a different class name — which is why grepping
+          for `sec-h-eyebrow` alone does not find this page.
+
+          `.sec-h` itself is still untouched: it is site-wide, and restyling it
+          here would reach every page that uses it. */}
       <div className="stc-hero">
         <div className="stc-hero-id">
-          <div className="stc-hero-eyebrow">Create / Colour</div>
           <h1>Semantic Colours</h1>
           <p>
             Dial in success, warning, error, info and pending colours. Start from a
@@ -1014,19 +1019,31 @@ ${stateVars}
         )}
       </div>
 
-      {/* The live status strip the sibling colour tools carry (.ggn-status on the
-          Gradient Generator, the stat row on the Tint Scale Generator): four
-          facts about what the tool currently holds, so the header reports state
-          rather than only naming the page. The bundle name was previously the
-          only one of these on the page and it was buried in the section header
-          below, next to the copy button. */}
+      {/* THE FOUR-UP FIGURE STRIP IS GONE (`.stc-status`), AND IT WAS THE
+          WORST OF THE FOUR.
+          ------------------------------------------------------------------
+          Three of its four figures could not change. `stateRoleIds` is
+          `Object.keys(STATE_META)` and `STATE_LABELS` is a ten-item module
+          constant, so "5 state roles" was always 5, "10 stops per ramp" was
+          always 10, and "50 canonical variables" was always their product.
+          They sat inside aria-live="polite" — a region that announces change,
+          wrapped around three numbers that are fixed at build time.
 
-        <div className="stc-status" aria-live="polite">
-          <span><strong>{activeStateBundle?.name || 'Custom mix'}</strong> bundle</span>
-          <span><strong>{stateRoleIds.length}</strong> state roles</span>
-          <span><strong>{STATE_LABELS.length}</strong> stops per ramp</span>
-          <span><strong>{stateTokenCount}</strong> canonical variables</span>
-        </div>
+          The fourth was live, and it was restated 47px below: measured at
+          1440x900 the strip ended at y=331 and the selected bundle card at
+          y=378 reads "Balanced" with a "Selected" badge on it. The old comment
+          here claimed the bundle name "was previously the only one of these on
+          the page"; the card below has said it the whole time.
+
+          So the strip counted the product rather than helping anyone choose a
+          state colour — the motif the founder marked "AI" on the Font Gallery
+          ("1,798 families / 4 classifications / 5,458 weights"). Pipedrive's
+          content editor (mobbin.com/screens/d4222186-082c-4994-9aa7-e493756857be)
+          puts every value at the control that sets it and carries no such band.
+
+          WHAT STAYS: the "Copy N CSS variables" button further down. N is the
+          same 50, but there it is the size of the thing the button is about to
+          put on your clipboard, which is a fact you act on. */}
 
 
       {/* ═══ SECTION 2: UI STATE COLORS ═══ */}
