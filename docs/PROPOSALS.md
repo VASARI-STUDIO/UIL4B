@@ -380,7 +380,9 @@ longer exists. Recapture them, or accept them as an archive and say so.
 
 ## P-014 · Icon-grid density — long icon names truncate at every width
 
-**Evidence: `measured`** — `docs/qa/responsive-audit-2026-08.md` N5.
+**Evidence: `measured`** — the August 2026 responsive audit, finding N5. That
+audit was deleted on 2026-09-05; the finding survives in
+`docs/qa/defect-register-2026-08.md`.
 
 On `/create/icons`, `align-center-horizontal` needs 117px against a 79px cell;
 **51–75 labels are truncated at any given width**, from 320px to 1920px. The

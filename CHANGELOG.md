@@ -176,6 +176,21 @@ underneath a running suite (#370). Two assertions that could not fail were found
 and made able to (#361). ESLint was reporting 63 errors from third-party skill
 bundles that are not ours (#353).
 
+**Two spent QA documents retired, on the #295 rule.** `docs/qa/mobile-audit-2026-08.md`
+(609 lines) and `docs/qa/responsive-audit-2026-08.md` (417) were diagnosis-only
+passes whose 25 findings are fixed and held by three regression specs, and whose
+route tables still named pre-#266 URLs. Replaced by `docs/qa/defect-register-2026-08.md`,
+117 lines, because roughly twenty CSS comments, three specs, a page component and
+`.gitignore` cite those audits **by finding number** — so what had to survive was
+an index of numbers, not a summary. Two of the findings recorded as open turned
+out already fixed (M5, N6), one is genuinely open (N5, which is P-014) and one is
+unverified (N7). **The step that would have lost something** was the responsive
+audit’s Director addendum: two accepted decisions recorded nowhere else in the
+repository, now migrated into the 2026-08-20 section above **before** the file was
+deleted. The three homepage documents were assessed the same way and kept, each
+with the condition that makes it deletable written into its row in
+`doc-authority-map.md` — “archive later” is not a verdict.
+
 **Documentation.** The authority map itself (#311) — which file is authoritative
 for which question, and which files look authoritative and are not.
 `PRODUCT.md` records what nothing else owns (#352). Twelve backlog-sync commits
@@ -228,6 +243,50 @@ carry a footer credit rather than being blocked, so `positioning.md`'s
 
 Decisions 1 and 5 are discharged: the stack merged in order, and the sticky
 trigger ships at 52/44.
+
+### Two Director decisions from the same day, migrated here 2026-09-05
+
+These were taken by the Director on 2026-08-20 under standing authority, after
+the Palette Builder blocker was fixed. They lived only in an addendum to
+`docs/qa/responsive-audit-2026-08.md`, which has now been deleted — so they are
+moved here rather than lost. Both overturn something previously asserted, which
+is why they are worth a record at all.
+
+**1 — Accept the toolbar wrap.** The audit measured Palette Builder with the
+default harmony selected. The trigger renders `System · <label>`, so its width
+depends on the *selected* harmony — a free choice any user can make. With
+**Monochromatic** selected the pre-fix build is still partly covered at
+**1060–1119px**. The crossover is therefore content-dependent — 1123px with
+"Auto", 1180px with "Monochromatic" — and **no fixed media band can be correct
+for both**, which is why extending the 769–960px fix upward, the approach both
+the audit and the routing brief assumed, could not have worked.
+
+The fix lets the toolbar wrap its action group to a second row rather than
+shrinking a group below its content. That is a visible change — the toolbar
+grows 57px to 105px inside the affected band — and it overturns the invariant
+the old CSS comment asserted, *"a single line, always — it never wraps"*.
+Accepted because a control that **cannot be clicked at all** is a worse defect
+than a taller toolbar in a narrow band; because that invariant was written
+before the harmony label could grow the trigger, and was recorded nowhere but
+the comment the fix replaced; and because the alternative would push bottom
+sheets and swipe-to-reach onto 1024–1180px **laptops** that currently show all
+eleven controls at once — trading a narrow-band defect for a broad-band
+regression.
+
+**2 — The two-column threshold moves to 1344px, with the single column capped
+at 940px.** The reasoning is forced rather than chosen. A sidebar appearing at
+any threshold *T* costs the working column `gap + sidebar` (364px) at that exact
+pixel, so moving *T* relocates the cliff and never removes it. "Widening never
+shrinks the working column" is only satisfiable if the single-column band stops
+growing before the sidebar arrives — hence the 940px cap, which is the width the
+column already has at the existing 980px stack point. That makes 980 → 981
+seamless and changes nothing at or below 980px.
+
+**Two residuals were reported and deliberately not fixed**, both pre-existing
+and outside that slice: Font Pair’s specimen drifts 889 → 874px (1.7%) from
+`.fpr-panel`’s `clamp(20px,2.5vw,32px)` viewport padding, where pinning it would
+convert a gradual drift into a hard step; and `--page-gutter` costs every page
+~48px crossing 1440px, which is page-wide and unrelated.
 
 ### One home per fact: four spent planning documents retired
 

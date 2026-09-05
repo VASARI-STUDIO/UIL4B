@@ -10,6 +10,13 @@ Written 2026-09-03 in response to the founder: *"review our subagent MD files
 and our other MD files to ensure nothing is stale as i feel like we have been
 going in circles sometimes."*
 
+**Revised 2026-09-05**, on the founder: *"clean up old docs update all docs with
+recent information also when leaving information for me or questions make sure to
+make them easy to understand as i dont have lots of time to figure out what you
+are asking."* That pass deleted the two QA audits, re-verified the three homepage
+documents rather than deferring them again, rewrote `OWNER-ACTIONS.md` for a
+reader in a hurry, and added the fifth trap below.
+
 ---
 
 ## Why this file exists
@@ -103,6 +110,25 @@ it was correct when written and reads as authoritative.
 > **Rule.** When a doc describes a *gap*, check the queue item it names before
 > acting. The 404 paragraph pointed at an item that had read `done` for weeks.
 
+**5. A status signal that means one thing and reads as another.** Found
+2026-09-05 and new in kind, because nothing in this file is wrong — the *tool* is.
+GitHub Actions stopped starting jobs on 2026-09-04 for a **billing** reason, so
+`gh pr view` reports every open PR as **`UNSTABLE`**. `UNSTABLE` reads as "the
+code is broken". It means "the gate never ran". Any agent or human triaging by
+check status draws the exact wrong conclusion about **every open PR at once**,
+and the honest signal — a local gate run — is invisible on the PR.
+
+> **Rule.** A red or amber check is evidence only if you have confirmed the check
+> *ran*. When CI is down, the only evidence a change is green is a local
+> lint/build/test:unit/test:users run pasted into the PR body, and the reviewer
+> has to be told to look there. The state is on the App condition board in
+> `src/data/pipeline.js` (`ci` and `deploy`) and is an owner action in
+> `docs/OWNER-ACTIONS.md` §1.
+
+The same shape, one layer out: **76 merged changes are not deployed**, because
+Vercel is rate-limiting. "Merged" is not "live", and no document said so until
+this one did.
+
 ## Per-file register
 
 Verdicts from this pass. **KEEP** = accurate and needed · **UPDATE** = fixed here
@@ -142,14 +168,15 @@ Verdicts from this pass. **KEEP** = accurate and needed · **UPDATE** = fixed he
 | File | Verdict | Why |
 |---|---|---|
 | `PROPOSALS.md` | KEEP | Founder verdict queue. |
-| `OWNER-ACTIONS.md` | KEEP | Founder-gated actions. |
+| `OWNER-ACTIONS.md` | **REWRITTEN 2026-09-05** | Founder-gated actions, restructured on the founder’s instruction that our writing takes too long to parse. Every item now carries Do / Time / Why / If you do nothing, and the *questions* are separated from the *console work*. It links to `PROPOSALS.md` for the working rather than restating it. `tests/unit/ai-provider-path.test.js` still pins the OpenRouter procedure. |
 | `build-plan/tool-tree.md` | KEEP | Derived from `toolTree.js` and says so. |
-| `design/homepage-spec-2026-08.md` | KEEP | **Live spec** — PRs #262/#264/#269/#270 are still open against it. Not spent. |
-| `design/anti-slop-and-hero-2026-08.md` | KEEP | Live spec for the same open PRs. Note it references `src/data/homeGallery.js`, which does not exist on `main` — it ships with #264. Read it as a spec, not as a description of `main`. |
+| `design/homepage-spec-2026-08.md` | KEEP, **re-verified 2026-09-05** | Still a live spec, but its consumer list has changed and the old one would mislead. #262 **merged**. #269 is **empty** (C2 shipped as #363) and closable. #264 **cannot be rebased** — it edits `src/components/TopBar.jsx`, deleted from `main`. Only **#270** is genuinely open against it. **Deletable when #270 lands or closes**, and not before. |
+| `design/anti-slop-and-hero-2026-08.md` | KEEP, **re-verified 2026-09-05** | Same correction. Two things keep it alive rather than one: §2.3 is the spec for #270’s specimen band, and §2.12 is the source of `PROPOSALS.md` P-006, P-008, P-009 and P-010 — four open founder verdicts, each of which names a section of it as its evidence. **Do not delete while those are PENDING**, or four proposals lose their evidence line. (P-011 cites the spec, not this file.) It still references `src/data/homeGallery.js`, which does not exist on `main` and now never will, since #264 is not landing; read it as a spec, not a description of `main`. |
 | `design/motion-reference-2026-08-23.md` | KEEP | Founder-supplied reference; frames deliberately uncommitted. |
-| `research/homepage-patterns-2026-08.md` | KEEP → ARCHIVE later | 95 cited Mobbin captures backing the open homepage PRs. Archive once they land. |
-| `qa/mobile-audit-2026-08.md` | **ARCHIVE (proposed)** | Diagnosis-only pass; its fixes shipped in #271/#274 and are held by regression specs. See the archive note below. |
-| `qa/responsive-audit-2026-08.md` | **ARCHIVE (proposed)** | Same. Its durable knowledge — the breakpoint bands and the recurring-defect pattern — is migrated into `uil4b-surface-review/references/responsive-bands.md`. |
+| `research/homepage-patterns-2026-08.md` | KEEP, **verified 2026-09-05** | 1,371 lines, 95 Mobbin captures. Checked for deletion this pass and **kept**: it is the cited Inputs line of `homepage-spec-2026-08.md` and the Sources line of `anti-slop-and-hero-2026-08.md`, both of which are still live. Deleting it would leave two live specs citing nothing. **Delete it in the same commit as those two**, not before — it has no other consumer. |
+| `qa/mobile-audit-2026-08.md` | **DELETED 2026-09-05** | 609 lines of diagnosis for defects that are fixed and held by `24-mobile-overhaul.spec.js` and `25-defect-sweep.spec.js`. Its route table named pre-#266 URLs. |
+| `qa/responsive-audit-2026-08.md` | **DELETED 2026-09-05** | 417 lines, same reason, held by `23-responsive-mid-band.spec.js` and `25-defect-sweep.spec.js`. Its Director addendum carried two decisions that existed nowhere else; those moved to `CHANGELOG.md` under 2026-08-20 **before** the delete. |
+| `qa/defect-register-2026-08.md` | **NEW** | What replaced the two above, at 117 lines instead of 1,026. Roughly twenty CSS comments, three specs, a page component and `.gitignore` cite those audits **by finding number** (`S14`, `N4`); this is what each number was and what holds it now. Migrate-then-delete, per #295. |
 
 ### `.claude/agents/`
 
@@ -311,6 +338,35 @@ the recurring scrollbar-less-rail pattern are now in
 `uil4b-surface-review/references/responsive-bands.md`, readable without opening
 either audit.
 
+### What happened on 2026-09-05
+
+**The two QA audits were deleted, and no `docs/archive/` directory was created.**
+The proposal above still stands unadopted, and this pass is the argument that it
+should stay unadopted: everything worth keeping fitted in 117 lines beside the
+code that cites it, which is a better home than a directory nobody opens.
+
+The procedure was #295’s, in order:
+
+1. **Establish what still cites them.** Twenty places, and almost all cite by
+   *finding number* rather than by path — `S14, mobile-audit-2026-08` in a CSS
+   comment, `N4 (responsive-audit-2026-08)` in another. That decided the shape of
+   the successor: an index of numbers, not a summary of prose.
+2. **Establish what is still true.** Every one of the 25 findings was checked
+   against `main`, not against the audit. Two of the "open" ones turned out fixed
+   — M5 (`.hw-pal-copy` has `min-width:0` now, with 360 and 320 overrides) and N6
+   (`.hw-tabs` is on the shared `.rail-overflow` utility). One is genuinely still
+   open (N5, which is `PROPOSALS.md` P-014) and one is unverified (N7).
+3. **Find what exists ONLY there.** The responsive audit’s Director addendum
+   held two accepted decisions — the toolbar wrap and the 1344px/940px threshold
+   — recorded nowhere else in the repository. Those moved to `CHANGELOG.md`
+   first. **This is the step that would have lost something**, and it was found
+   only by reading the tail of the file rather than its finding list.
+4. **Delete, then read the facts back in their new home.**
+
+The three homepage documents were assessed the same way and **kept**, with the
+condition that makes each deletable written into its row above. "Archive later"
+is not a verdict; "delete in the same commit as #270" is.
+
 ## Keeping this file true
 
 It has the same failure mode as everything it documents. Three defences:
@@ -320,8 +376,9 @@ It has the same failure mode as everything it documents. Three defences:
 2. **Every verdict says what evidence produced it**, so the next reader can
    re-check rather than re-derive.
 3. **When you find a stale instruction, fix the instruction and add the trap
-   here** if it is a new *kind* of trap. Four kinds are listed above. A fifth
-   would be worth knowing about.
+   here** if it is a new *kind* of trap. Five kinds are listed above; the fifth
+   was added on 2026-09-05 and is the first one where the repository is right and
+   an external tool is the thing lying. A sixth would be worth knowing about.
 
 If this file and the thing it points at disagree, **the thing it points at
 wins** — and this file is the bug.
