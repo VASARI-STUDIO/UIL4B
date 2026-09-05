@@ -13185,14 +13185,15 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    "0" in the current font, so a cap expressed in it tracks the face and the
    size instead of encoding a guess about them.
 
-   The number was measured, not guessed, and the first guess was wrong: 68ch
-   rendered an 80-character line, because Manrope's "0" is wider than its
-   average glyph, so a cap in `ch` buys more characters than it names. Measured
-   in the browser with the real face loaded: 1ch is 10.37px in Manrope at 17px,
-   so 56ch renders 581px, and a four-line paragraph in it averages 60 characters
-   a line — inside Bringhurst's range where 68ch (80 characters) was not. This is
-   also the article about line length practising what it states, which is the
-   cheapest way to keep the two honest.
+   The number was measured in the browser with the real face loaded, and the
+   first guess was wrong. 1ch is 10.37px in Manrope at 17px, but the average
+   glyph is nearer 9px — "0" is wider than most letters — so a cap in `ch` buys
+   more characters than it names. 56ch renders 581px and measures 65 characters
+   a line, which is where Bringhurst puts the ideal; the original 68ch would be
+   705px, near 79 characters, past the top of his range. This is also the article
+   about line length practising what it states, which is the cheapest way to keep
+   the two honest. The measurement is on the page: ReadingMeasure.jsx takes it
+   live.
 
    ── Layout, and the reference behind it ──
    At >=1080px a 200px contents rail sits immediately left of the prose and the
@@ -13356,6 +13357,18 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .lart-spec{padding-left:var(--s-4)}
   .lart-table th,.lart-table td{padding:9px 12px}
 }
+
+/* ── The type ladder. A LIST, not a table: the specimen carries its own row's
+      clamp() as a font-size, so the sizes here move with the window exactly the
+      way the exported CSS does. A table would have forced every specimen into a
+      cell of the same height and turned a scale into a column of numbers. ── */
+.lart-ladder-wrap{margin:var(--s-5) 0}
+.lart-ladder{list-style:none;margin:0;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.lart-ladder-row{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:baseline;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--border)}
+.lart-ladder-row:last-child{border-bottom:0}
+.lart-ladder-name{grid-row:1;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--t3)}
+.lart-ladder-specimen{grid-row:1;grid-column:2;font-family:var(--display);font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--t0);overflow-wrap:anywhere}
+.lart-ladder-nums{grid-row:2;grid-column:2;display:flex;gap:var(--s-4);font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--t3);margin-top:2px}
 
 /* ══ /learn article index (.lidx-*) ═════════════════════════════════════════
    The three live guides on the Learn landing, above the roadmap grid. Card

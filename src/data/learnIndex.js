@@ -87,6 +87,33 @@ export const LEARN_ARTICLES = Object.freeze([
       { id: 'blind-spots', title: 'What a contrast ratio cannot see' },
     ],
   },
+  {
+    slug: 'type-scales',
+    title: 'Modular type scales',
+    navLabel: 'Type scales',
+    topic: 'Typography',
+    dek: 'Two numbers generate every size in a type system. What the ratio does to the far end of the scale, and why one scale cannot serve a phone and a desktop.',
+    description: 'How a modular type scale works: size = base x ratio^step, which ratio suits which interface, why a ratio compounds, and how clamp() joins two scales.',
+    file: 'typeScales.jsx',
+    words: 1343,
+    updated: '2026-09-05',
+    toolTo: '/create/type-scale',
+    toolLabel: 'Type Scale Generator',
+    sources: [
+      { label: 'WCAG 2.2 â SC 1.4.4 Resize Text', href: 'https://www.w3.org/TR/WCAG22/#resize-text' },
+      { label: 'WCAG 2.2 â SC 1.4.12 Text Spacing', href: 'https://www.w3.org/TR/WCAG22/#text-spacing' },
+      { label: 'Bringhurst, The Elements of Typographic Style â 2.1.2, Choose a comfortable measure', href: 'http://webtypography.net/2.1.2' },
+      { label: 'MDN â CSS length units, including the ch definition and its 0.5em fallback', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/length' },
+      { label: 'MDN â clamp()', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/clamp' },
+    ],
+    sections: [
+      { id: 'the-formula', title: 'The formula' },
+      { id: 'choosing-a-ratio', title: 'Choosing a ratio' },
+      { id: 'compounding', title: 'The ratio compounds' },
+      { id: 'two-scales', title: 'Two scales, joined by clamp()' },
+      { id: 'line-length', title: 'Line length and line height' },
+    ],
+  },
 ])
 
 /** Every article route, sorted — what routeMetaMap and the router consume. */

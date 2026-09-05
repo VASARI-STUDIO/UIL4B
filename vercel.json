@@ -366,6 +366,10 @@
       "destination": "/learn/colour-contrast/index.html"
     },
     {
+      "source": "/learn/type-scales",
+      "destination": "/learn/type-scales/index.html"
+    },
+    {
       "source": "/plans",
       "destination": "/plans/index.html"
     },

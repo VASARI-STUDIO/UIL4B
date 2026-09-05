@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import NotFound from './NotFound'
 import { findArticle, nextArticle, readingMinutes } from '../data/learnIndex'
 import ColourContrast from '../data/learn/colourContrast'
+import TypeScales from '../data/learn/typeScales'
 
 // The Learn article shell: one layout, every article.
 //
@@ -39,6 +40,7 @@ import ColourContrast from '../data/learn/colourContrast'
 
 const BODIES = {
   'colour-contrast': ColourContrast,
+  'type-scales': TypeScales,
 }
 
 // One sentence saying what the tool does with what the reader has just read.
@@ -46,6 +48,7 @@ const BODIES = {
 // learnIndex.js has to stay parseable by the Node build scripts.
 const TOOL_LEDE = {
   'colour-contrast': 'The Contrast Checker runs the formula above on any pair, gives the verdict against all four thresholds at once, and offers the nearest passing colour when a pair falls short.',
+  'type-scales': 'The Type Scale Generator builds the ladder from a base and a ratio at each end of the range, previews it at three viewport widths in real families, and exports the clamp() for every step.',
 }
 
 export default function LearnArticle() {
