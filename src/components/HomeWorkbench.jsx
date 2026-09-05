@@ -798,6 +798,7 @@ function ImagePanel({ state, onChange, announce }) {
   const [failed, setFailed] = useState({})
   const [error, setError] = useState('')
   const [handingOff, setHandingOff] = useState(false)
+  const [dropping, setDropping] = useState(false)
   // A second activation must not create a second transfer, even before React
   // has re-rendered the disabled button.
   const lockRef = useRef(false)
@@ -843,9 +844,11 @@ function ImagePanel({ state, onChange, announce }) {
     fileRef.current?.click()
   }
 
-  const onFiles = (event) => {
-    const { accepted, rejected } = partitionImageFiles(event.target.files)
-    event.target.value = ''
+  // ONE PATH FOR BOTH WAYS IN - the OS picker and a drop on the zone. Anything
+  // that diverged here would be a second, less-tested route to the same
+  // hand-off, and the drop zone is new.
+  const handOff = (fileList) => {
+    const { accepted, rejected } = partitionImageFiles(fileList)
     if (!accepted.length) {
       // Cancelling produces no change event at all, so reaching here with no
       // accepted file means a real unsupported selection.
@@ -876,6 +879,15 @@ function ImagePanel({ state, onChange, announce }) {
     }
   }
 
+  const onFiles = (event) => {
+    const files = event.target.files
+    // Reset before handing over: navigation may unmount this input, and a
+    // stale value would resubmit the same files on a later visit.
+    const list = files ? [...files] : []
+    event.target.value = ''
+    handOff(list)
+  }
+
   const activeRef = IMAGE_REFERENCES[activeIndex] || IMAGE_REFERENCES[0]
 
   return (
@@ -883,7 +895,10 @@ function ImagePanel({ state, onChange, announce }) {
       {/* The reference picker belongs to the ARTEFACT, not the controls — it
           chooses what the canvas shows, so it travels with the canvas. */}
       <div className="hw-stage">
-      <div className="hw-subtabs" role="tablist" aria-label="Built-in reference images">
+      {/* `.fc-tabs` / `.fc-tab`, File Converter's own pill group, not the
+          bespoke `.hw-subtab` pills. Same control, same shape, and the mode bar
+          is the first thing on the converter's page. */}
+      <div className="fc-tabs" role="tablist" aria-label="Built-in reference images">
         {IMAGE_REFERENCES.map((r, index) => (
           <button
             key={r.id}
@@ -894,7 +909,7 @@ function ImagePanel({ state, onChange, announce }) {
             aria-controls="hw-ref-panel"
             aria-selected={r.id === reference}
             tabIndex={r.id === reference ? 0 : -1}
-            className="hw-subtab"
+            className={r.id === reference ? 'fc-tab on' : 'fc-tab'}
             onClick={() => selectReference(r.id)}
             onKeyDown={(event) => onRefKeyDown(event, index)}
           >
@@ -903,11 +918,44 @@ function ImagePanel({ state, onChange, announce }) {
         ))}
       </div>
 
+        {/* THE DROP ZONE IS THE THING THAT SAYS "FILE CONVERTER".
+            ──────────────────────────────────────────────────────────────────
+            Open /create/file-converter and the page is a mode bar over one big
+            dashed `.img-drop-zone.fc-drop` reading "Drop images here or click
+            to browse". The mini had no drop zone at all - a photograph in a
+            plain bordered box, and a "Try your image" button two zones away -
+            so the single most recognisable element of the tool was missing
+            from its own preview.
+
+            The reference photo now lives INSIDE that zone, which costs no
+            height (it replaces `.hw-ref`'s own frame rather than adding an
+            element) and claims no capability: clicking runs the same
+            `openPicker` the foot button runs, and this panel already handed
+            files to File Converter.
+
+            DRAG AND DROP IS WIRED FOR REAL, and that is a requirement rather
+            than a bonus. A control that looks exactly like a drop target and
+            silently swallows a drop is a lie told by a lookalike, which is the
+            precise failure this whole change exists to stop. Dropped files take
+            the same `handOff` path as picked ones, so every honesty guarantee -
+            nothing encoded here, nothing stored, nothing in the URL - is
+            unchanged.
+
+            The hint says WHOSE images it means: "Drop images here" would be
+            ambiguous beside a reference photograph the panel supplied itself. */}
         <div
-          className="hw-ref"
+          className={`img-drop-zone fc-drop hw-ref${dropping ? ' fc-drop-on' : ''}`}
           id="hw-ref-panel"
           role="tabpanel"
           aria-labelledby={`hw-ref-tab-${activeRef.id}`}
+          onClick={openPicker}
+          onDragOver={(event) => { event.preventDefault(); setDropping(true) }}
+          onDragLeave={() => setDropping(false)}
+          onDrop={(event) => {
+            event.preventDefault()
+            setDropping(false)
+            if (event.dataTransfer.files?.length) handOff(event.dataTransfer.files)
+          }}
         >
           {failed[activeRef.id] ? (
             <p className="hw-ref-msg">
@@ -931,17 +979,37 @@ function ImagePanel({ state, onChange, announce }) {
               onError={() => setFailed((s) => ({ ...s, [r.id]: true }))}
             />
           ))}
+
+          <div className="hw-ref-drop">
+            <span className="fc-drop-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" />
+              </svg>
+            </span>
+            <p className="fc-drop-hint">Drop your own images here, or click to browse</p>
+            <p className="fc-drop-sub">They open in File Converter with this draft · nothing is converted on this page</p>
+          </div>
         </div>
 
       </div>
 
       <div className="hw-controls">
-        {/* File type is a closed set of OPTIONS, so a rail. Resolution and
-            compression are PROPERTIES with a described value, so rows. The
-            rail also collapses a label+select pair onto one line, which is
-            most of the vertical room this mode was short of. */}
+        {/* `.seg-label` IS FILE CONVERTER'S OWN CAPTION - 8.5px, 700, .1em
+            tracked, uppercase - and it is a SHARED class, already worn by nine
+            surfaces including the converter's own Output Format, Quality and
+            Max Dimension. The mini captioned the same three settings in
+            sentence case, at a different size, in a different weight: the
+            mismatch in miniature. Not a wrong decision, a second one.
+
+            The CONTROLS keep their existing forms. File type is a closed set of
+            OPTIONS, so a rail; resolution and compression are PROPERTIES with a
+            described value, so rows. The converter uses a <select> for all
+            three, but it owns a page and this owns 152px of a fixed frame - a
+            rail collapses a caption and a control onto one line, and this
+            control zone measures 2.2px at 1280x660 before anything is added
+            to it. */}
         <div className="hw-rail-group">
-          <span className="hw-rail-label" id="hw-img-fmt-label">File type</span>
+          <span className="seg-label" id="hw-img-fmt-label">File type</span>
           <div className="hw-rail" role="group" aria-labelledby="hw-img-fmt-label">
             {DRAFT_FORMATS.map((f) => (
               <button
@@ -958,7 +1026,7 @@ function ImagePanel({ state, onChange, announce }) {
         </div>
 
         <div className="hw-prop">
-          <label className="hw-prop-label" htmlFor="hw-img-res">Resolution</label>
+          <label className="seg-label" htmlFor="hw-img-res">Resolution</label>
           <select
             id="hw-img-res"
             className="hw-select hw-prop-select"
@@ -972,7 +1040,7 @@ function ImagePanel({ state, onChange, announce }) {
         </div>
 
         <div className="hw-prop">
-          <label className="hw-prop-label" htmlFor="hw-img-comp">Compression</label>
+          <label className="seg-label" htmlFor="hw-img-comp">Compression</label>
           <select
             id="hw-img-comp"
             className="hw-select hw-prop-select"

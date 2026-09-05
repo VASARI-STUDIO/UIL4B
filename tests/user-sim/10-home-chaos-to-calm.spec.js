@@ -1224,7 +1224,10 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="image"]').click()
 
-    const subtabs = page.locator('.hw-subtab')
+    // `.fc-tab` since 2026-09-05: the reference picker wears File Converter's
+    // own pill group rather than a bespoke `.hw-subtab` row. Scoped to the
+    // workbench, because the converter's own page uses the same class.
+    const subtabs = page.locator('.hw-panel .fc-tab')
     await expect(subtabs).toHaveCount(3)
     expect(await subtabs.allInnerTexts()).toEqual(['Architecture', 'People', 'Nature'])
     await expect(subtabs.first()).toHaveAttribute('aria-selected', 'true')
@@ -1234,6 +1237,24 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.locator('.hw-intent')).toContainText('Nothing is converted here')
     // WebP cannot honour Lossless in the real converter, and says so up front.
     await expect(page.locator('.hw-limit')).toContainText('cannot store a')
+
+    // THE DROP ZONE HAS TO BE A REAL DROP TARGET, NOT A PICTURE OF ONE.
+    // It wears File Converter's `.img-drop-zone.fc-drop`, so it now looks
+    // exactly like the control that accepts a drop on the converter's own page.
+    // A lookalike that silently swallowed a drop would be the precise failure
+    // this panel was rebuilt to stop, so the handlers are asserted rather than
+    // assumed: the zone reacts to a dragover by taking the converter's own
+    // `.fc-drop-on` state, and it releases that state on dragleave.
+    const zone = page.locator('.hw-ref')
+    await expect(zone).toHaveClass(/fc-drop/)
+    await expect(page.locator('.fc-drop-hint')).toContainText('Drop your own images here')
+    // The zone must not claim to convert anything - the whole panel's honesty
+    // rests on File Converter doing the encoding.
+    await expect(page.locator('.fc-drop-sub')).toContainText('nothing is converted on this page')
+    await zone.dispatchEvent('dragover', { dataTransfer: {} })
+    await expect(zone, 'a dragover is acknowledged, so the target is live').toHaveClass(/fc-drop-on/)
+    await zone.dispatchEvent('dragleave')
+    await expect(zone).not.toHaveClass(/fc-drop-on/)
 
     // The bundled thumbnail carries its intrinsic size, so nothing shifts.
     const active = page.locator('.hw-ref-img:not([hidden])')
@@ -1603,7 +1624,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
       await page.locator(`.hw-tab[data-tab="${id}"]`).click()
     }
     await page.locator('.hw-tab[data-tab="image"]').click()
-    for (const index of [1, 2, 0]) await page.locator('.hw-subtab').nth(index).click()
+    for (const index of [1, 2, 0]) await page.locator('.hw-panel .fc-tab').nth(index).click()
 
     expect(remote.filter((u) => /iconify|logo\.dev|logodev/i.test(u)),
       'the homepage never calls an icon or logo catalogue').toEqual([])
