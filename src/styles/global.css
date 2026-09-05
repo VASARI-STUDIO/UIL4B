@@ -8726,7 +8726,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 /* No `.plb-tools` rule on the row: the wrapper is not rendered there at all.
    `display:contents` was tried and reverted — it removes the box, not the
    element, so every `>` selector aimed at the rail stopped matching. */
-.plb-tools--panel{display:flex;position:absolute;top:calc(100% + 6px);left:0;z-index:60;flex-direction:column;align-items:stretch;gap:4px;min-width:210px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-m);box-shadow:var(--shadow-3, 0 12px 32px rgba(0,0,0,.18))}
+.plb-tools--panel{display:flex;position:absolute;top:calc(100% + 6px);left:0;z-index:60;flex-direction:column;align-items:stretch;gap:4px;min-width:210px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
 /* Inside the panel every control is a full-width row with its label showing —
    a menu of five named things, which is what the collapsed form is for. The
    icon-only treatment the row uses would just move the founder's complaint. */
