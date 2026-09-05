@@ -73,15 +73,17 @@ test.describe('Type Scale · the overhaul', () => {
     expect(barTop, 'the scale bar leads the ladder').toBeLessThan(ladderTop)
 
     // WIRING. The ratio is a control in the bar; the range beside it and the
-    // top row of the ladder are both computed from it. 16 x 1.25^6 = 61.04 and
-    // 16 x 1.5^6 = 182.25, at the default nearest-0.5px rounding.
+    // top row of the ladder are both computed from it. At the default
+    // nearest-0.5px rounding: 16 x 1.25^6 = 61.04 -> 61 and 16 / 1.25^2 = 10.24
+    // -> 10; 16 x 1.5^6 = 182.25 -> 182.5 and 16 / 1.5^2 = 7.11 -> 7; then
+    // 20 x 1.5^6 = 227.81 -> 228.
     const range = page.locator('.tsc-scale-range')
     const largest = page.locator('.tsc-row').first().locator('.tsc-row-num')
     await expect(range).toHaveText('10px – 61px')
     await expect(largest).toContainText('61px')
 
     await page.getByLabel('Scale ratio').selectOption('1.5')
-    await expect(range).toHaveText('10.5px – 182.5px')
+    await expect(range).toHaveText('7px – 182.5px')
     await expect(largest).toContainText('182.5px')
 
     // And the base, from its own control in the same bar.
@@ -89,7 +91,7 @@ test.describe('Type Scale · the overhaul', () => {
     await page.getByRole('spinbutton', { name: /Base font size/ }).fill('20')
     await page.getByRole('spinbutton', { name: /Base font size/ }).press('Enter')
     await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('20px')
-    await expect(largest).toContainText('227.5px')
+    await expect(largest).toContainText('228px')
   })
 
   test('the ladder comes before the rail, at every width', async ({ page }) => {
