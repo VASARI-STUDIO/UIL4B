@@ -48,7 +48,9 @@ const DEFAULT_FEATURES = [
   `${AI_LIMITS.pro.daily} AI generations a day, ${AI_LIMITS.pro.monthly} a month`,
   `Unlimited saved projects (Free keeps ${FREE_SAVE_LIMITS.projects})`,
   'Pro colour tools — HCT editing, light + dark contrast repair',
-  'Clean, watermark-free exports and full design JSON',
+  // "…and full design JSON" removed 2026-09-05: the JSON export is not built.
+  // See the note in src/pages/Checkout.jsx.
+  'The design system book (PDF), and style guides with no credit line',
 ]
 
 export default function ProUpgradeModal({ opts = {}, onClose }) {

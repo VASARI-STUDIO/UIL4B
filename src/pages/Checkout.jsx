@@ -37,8 +37,14 @@ const FEATURES = [
   `${AI_LIMITS.pro.daily} AI generations a day · ${AI_LIMITS.pro.monthly} a month`,
   'Unlimited project and custom-icon saves',
   'Advanced colour controls',
-  'Full design JSON export',
-  'Watermark-free palette export',
+  // WAS 'Full design JSON export', removed 2026-09-05. There is no JSON export
+  // to sell: `json` in ExportPanel's FORMATS has no `live: true`, renders a
+  // "Soon" badge and a disabled button, and runExport() has no branch that
+  // could build one. This list is read at the moment money changes hands, so
+  // it was the single worst place in the product for that claim to sit.
+  // What Pro's export entitlement actually IS, and all it is:
+  'The design system book (PDF) — a 12-page A4 manual',
+  'Style guides with no UIL4B credit line',
 ]
 
 function Check() {
