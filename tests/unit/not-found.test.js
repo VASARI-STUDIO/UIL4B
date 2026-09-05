@@ -20,6 +20,7 @@ import { isUnknownRoute, isPrivateRoute, robotsFor, canonicalUrl } from '../../s
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { buildRewrites, prerenderRoutes } from '../../scripts/sync-vercel-rewrites.mjs'
 import { sitemapRoutes } from '../../scripts/route-matrix.mjs'
+import { LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 // ── "prerendered" and "advertised" are no longer the same set ───────────────
 //
 // scripts/route-matrix.mjs now decides which routes get a shell, and
@@ -168,22 +169,25 @@ test('the two genuinely-missing pages are now advertised, and the thin one is no
     assert.ok(routes.includes(route), `${route} is a real indexable page and is missing from sitemap.xml`)
   }
 
-  // /learn is NOT, and the 2026-08-11 audit was wrong to group it with those
-  // two. Every entry in LEARN_GROUPS carries `soon: true` and the page reads
-  // "Learn is coming soon", so advertising it would be advertising an empty
-  // library — a worse SEO outcome than omitting it.
+  // /learn used to be excluded here, because every entry in LEARN_GROUPS
+  // carried `soon: true` and the page read "Learn is coming soon" — advertising
+  // it would have been advertising an empty library.
   //
-  // CORRECTION, measured rather than assumed: this comment used to claim
-  // /learn "resolves to noindex". It does not. isSoonRoute() only understands
-  // the Create tree (by design, per its own comment), so robotsFor('/learn')
-  // returns `index,follow`. The conclusion was right and the stated reason was
-  // false, which is the more dangerous of the two — the test was green for a
-  // mechanism that does not exist. What actually keeps /learn out is
-  // SOON_SURFACES in scripts/route-matrix.mjs, which excludes it explicitly.
-  // Left as a founder question there: the served shell says noindex and the
-  // hydrated page says index, and those should agree.'
-  assert.ok(!routes.includes('/learn'),
-    '/learn is a coming-soon page and must not be advertised until it has content')
+  // It has content now: the Learn articles render at /learn/<slug> and the
+  // landing lists them above the roadmap. So the condition this test was
+  // written around ("until it has content") is met, and both /learn and every
+  // article it lists are advertised.
+  //
+  // The correction recorded here before still stands and is worth keeping: it
+  // was never `robotsFor('/learn')` that kept the route out. isSoonRoute() only
+  // understands the Create tree, so robotsFor('/learn') has always returned
+  // `index,follow`; what excluded it was SOON_SURFACES in
+  // scripts/route-matrix.mjs. That list is now empty, so the served shell and
+  // the hydrated page finally agree — which was the open founder question.
+  for (const route of ['/learn', ...LEARN_ARTICLE_ROUTES]) {
+    assert.ok(routes.includes(route),
+      `${route} is published Learn content and should be advertised`)
+  }
 })
 
 test('the sitemap never advertises a private route', async () => {
