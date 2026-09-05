@@ -335,7 +335,10 @@ const DISCOVER_SPEC = [
   { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search 200,000+ icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
   { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/discover', soon: true },
   { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
-  { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab.', route: '/discover', soon: true },
+  // Live as of this change. The 22 curated resources in discoverResources.js
+  // have existed since Slice 2; only the page was missing, so this entry
+  // pointed at /discover and said “Soon” while the content sat unrendered.
+  { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab, each with a way into the tool that finishes the job.', route: '/discover/resources', soon: false },
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
 ]
 
