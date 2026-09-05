@@ -30,10 +30,14 @@ import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
-import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
+import { boardDraftAge, consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
 // colours and the slider values are persisted separately.
 import useModalDialog from '../hooks/useModalDialog'
+import useMediaQuery from '../hooks/useMediaQuery'
+// The measured collapse for the action rail — the rule, the measurements that
+// found the band nobody had reported, and why one band is exempt.
+import { railOverflowsToolbar, RIBBON_QUERY } from '../utils/toolbarFit'
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
 // What a fresh board and a Reset open on, plus the ?c= > hand-off > saved >
 // random precedence — kept pure so the free-settings default and “a shared link
@@ -47,6 +51,33 @@ import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBo
 // HCT edit, tints, right-click menu), and a bottom global-adjust bar. Runs on
 // the exact same colour engine as the merged Colour Studio (utils/colors.js),
 // so palettes built here match the studio's output.
+
+// The action rail's exploratory cluster, in one of its two forms.
+//
+// ON THE ROW it renders its children and NOTHING ELSE — no wrapper, not even a
+// `display:contents` one. That is the point: the five controls stay direct
+// children of the rail, so every `>` selector aimed at the rail keeps matching
+// and the row is laid out to the pixel as it was before this existed. See the
+// markup note in utils/toolbarFit.js for what happened when a wrapper was
+// there — a band this change does not touch moved by 54px.
+//
+// COLLAPSED it is a panel behind one labelled trigger. Each control keeps its
+// own `.plb-menuwrap` and its own popover, so nothing about how any of them
+// works changes; only where they live does.
+function ToolCluster({ collapsed, open, children }) {
+  if (!collapsed) return children
+  return (
+    <div
+      className="plb-tools plb-tools--panel"
+      id="plb-tools-panel"
+      role="menu"
+      aria-label="More palette tools"
+      hidden={!open}
+    >
+      {children}
+    </div>
+  )
+}
 
 const DEFAULT_SEED = '#4338E0'
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
@@ -219,26 +250,59 @@ function colorsFromQuery() {
 const rgbToHex = (r, g, b) =>
   '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase()
 
-// "From image" — draw the upload onto a canvas capped for cheap sampling and
-// hand back its pixel data (plus the source object URL for the preview). The
-// caller keeps the ImageData so picker points can re-sample it live on drag.
+// Browser canvases have a maximum dimension (4096 is the smallest limit still
+// in the wild). The source canvas below is capped there rather than at the
+// histogram's 320: everything the LOUPE shows and everything a marker reports
+// is read from it, so it has to hold real pixels, not an approximation of them.
+const IMG_SOURCE_MAX = 4096
+
+// "From image" — two canvases, deliberately.
+//
+//   `data`   a 320px ImageData. Cheap enough to histogram in a loop for the
+//            automatic extraction, and that is all it is for.
+//   `source` the image at (near) its own resolution. EVERY value a marker
+//            reports and every pixel the loupe draws comes from here.
+//
+// They used to be one, and the 320px one was doing both jobs. That was
+// invisible while a marker was a 26px dot over a 400px preview — the dot
+// covered dozens of pixels, so nobody could tell which one it claimed. The
+// moment a loupe magnifies the sample it becomes very visible: at 320px a
+// 4000px-wide photo is sampled one pixel in twelve, so the loupe would draw a
+// smooth region of the photo and the readout would name a colour from a
+// different pixel. The founder asked to see "exactly what pixel im selecting",
+// and a loupe fed by a thumbnail cannot answer that question honestly.
 function loadImageData(file, maxSize = 320) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
       try {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
-        const w = Math.max(1, Math.round(img.width * scale))
-        const h = Math.max(1, Math.round(img.height * scale))
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        const ctx = canvas.getContext('2d', { willReadFrequently: true })
-        ctx.drawImage(img, 0, 0, w, h)
+        const draw = (w, h) => {
+          const c = document.createElement('canvas')
+          c.width = w; c.height = h
+          // Read frequently: the drag handler takes a 1x1 sample per pointermove.
+          c.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, w, h)
+          return c
+        }
+        const fit = (cap) => {
+          const scale = Math.min(1, cap / Math.max(img.width, img.height))
+          return [Math.max(1, Math.round(img.width * scale)), Math.max(1, Math.round(img.height * scale))]
+        }
+        const [sw, sh] = fit(maxSize)
+        const small = draw(sw, sh)
+        const [fw, fh] = fit(IMG_SOURCE_MAX)
+        // Reuse the small canvas when the image is already tiny — drawing the
+        // same pixels twice buys nothing.
+        const source = (fw === sw && fh === sh) ? small : draw(fw, fh)
         // The natural dimensions, not the capped canvas's: the preview stage
         // is sized from this ratio, and rounding 4000x2999 down to 320x240
         // would tilt every picker point by a fraction of the image.
-        resolve({ data: ctx.getImageData(0, 0, w, h), url, aspect: img.naturalWidth / img.naturalHeight })
+        resolve({
+          data: small.getContext('2d').getImageData(0, 0, sw, sh),
+          source,
+          url,
+          aspect: img.naturalWidth / img.naturalHeight,
+        })
       } catch (err) { URL.revokeObjectURL(url); reject(err) }
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Couldn’t read that image')) }
@@ -274,14 +338,25 @@ function dominantSwatches(imageData, count) {
   return picks.map(p => ({ hex: p.hex, x: p.x, y: p.y }))
 }
 
-// Colour of the pixel under a normalised (0–1) point — used while dragging a
-// picker point across the previewed image.
-function sampleImageData(imageData, nx, ny) {
-  const { data, width, height } = imageData
-  const px = Math.min(width - 1, Math.max(0, Math.round(nx * width)))
-  const py = Math.min(height - 1, Math.max(0, Math.round(ny * height)))
-  const i = (py * width + px) * 4
-  return rgbToHex(data[i], data[i + 1], data[i + 2])
+// Which SOURCE pixel does a normalised (0–1) point land on? One function, used
+// by the sampler and by the loupe, so the value under the crosshair and the
+// value on the swatch can never come from two different roundings.
+function sourcePixel(canvas, nx, ny) {
+  const px = Math.min(canvas.width - 1, Math.max(0, Math.floor(nx * canvas.width)))
+  const py = Math.min(canvas.height - 1, Math.max(0, Math.floor(ny * canvas.height)))
+  return { px, py }
+}
+
+// Colour of the pixel under a normalised (0–1) point, read at SOURCE
+// resolution — used while dragging or nudging a picker point, and by the loupe
+// for the value it prints under the crosshair.
+function sampleSourcePixel(canvas, nx, ny) {
+  if (!canvas) return null
+  const { px, py } = sourcePixel(canvas, nx, ny)
+  try {
+    const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(px, py, 1, 1).data
+    return rgbToHex(d[0], d[1], d[2])
+  } catch { return null }
 }
 
 // WCAG level for a raw ratio (AAA ≥7, AA ≥4.5, AA18 large-text ≥3, else LOW).
@@ -863,7 +938,27 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // `source` is what the persist effect below reads to tell an untouched draw
   // apart from a palette a person actually chose.
   const [initial] = useState(() => initialPaletteBoard({ queryColors, handoff, saved }))
-  useEffect(() => { consumeBoardDraft() }, [])
+  // Age of the hand-off that won, captured during the same render that read it
+  // — after the mount effect consumes the slot there is nothing left to ask.
+  const [handoffAge] = useState(boardDraftAge)
+  useEffect(() => {
+    consumeBoardDraft()
+    // One line, once per mount, saying WHY this board looks the way it does.
+    // The founder's report is intermittent and state-shaped, so the thing worth
+    // shipping is not a guess about which branch misfired but a record that
+    // names it the next time it happens. `handoff` in particular should only
+    // ever be minutes-fresh; an age near the ttl in a report is the smoking gun
+    // for a stager that leaked. Colours are deliberately NOT logged — the count
+    // is what the report was about, and a console is not a place to put a
+    // user's work.
+    try {
+      console.info('[palette] board source=%s cols=%d handoffAge=%s', initial.source, initial.colors.length, handoffAge ?? '—')
+    } catch { /* a console that throws is not a reason to fail a mount */ }
+  // Mount-only by design. `initial` and `handoffAge` are frozen first-render
+  // reads held in useState, so naming them here would fire exactly once anyway
+  // and would only imply this effect re-runs on values it cannot see change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Colours are the source of truth (positional: index 0–4 = the five ROLES,
   // beyond = ALTERNATIVE n). They stay the RAW base: the adjust lens never
@@ -918,6 +1013,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [saveOpen, setSaveOpen] = useState(false)  // merged Save & share menu
   const [harmOpen, setHarmOpen] = useState(false)
   const [visionOpen, setVisionOpen] = useState(false)
+  const [toolsOpen, setToolsOpen] = useState(false)  // the collapsed Tools panel
 
   // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
   // it stays nested in the menu with draggable picker points sampling its
@@ -931,9 +1027,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // point's normalised (x, y) in the SOURCE lands on the same spot of the
   // DISPLAYED image — see the CSS note on .plb-imgstage.
   const [imgAspect, setImgAspect] = useState(16 / 10)
-  const imgDataRef = useRef(null)               // ImageData kept for live sampling
+  const imgDataRef = useRef(null)               // 320px ImageData — histogram only
+  const imgSourceRef = useRef(null)             // full-resolution canvas — every sample and the loupe
   const imgDragIdx = useRef(null)               // point index being dragged
   const imgStageRef = useRef(null)              // the preview stage element
+  const imgLoupeRef = useRef(null)              // the loupe <canvas>
+  // Which marker the loupe is following. Set by a drag, a click, a focus or an
+  // arrow-key nudge, so the mouse and the keyboard drive one thing rather than
+  // two. Null means no marker is being worked on and the loupe stays away.
+  const [imgActive, setImgActive] = useState(null)
   // Variation persistence: `varBase` is the frozen palette snapshot the current
   // variation list is derived from, `activeVar` the id of the one the user picked.
   // Picking a variation preserves the base (via the skip guard) so reopening the
@@ -1236,7 +1338,109 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // Close every toolbar menu in one call — used by the dismiss layer and by each
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
-    setSaveOpen(false); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+    setSaveOpen(false); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false); setToolsOpen(false)
+  }, [])
+
+  /* ── Does the action rail fit? (palette-toolbar-rendering) ────────────────
+   *
+   * The rule and the whole argument for it live in utils/toolbarFit.js. This
+   * is only the measuring half, and it follows LibraryFilterGroup's contract
+   * exactly, because that contract is what keeps a measure-then-change-layout
+   * loop from oscillating:
+   *
+   *   · the intrinsic width is taken ONCE per band, while the cluster is
+   *     still on the row, and cached. It is never re-read while collapsed,
+   *     where the cluster is a vertical menu and would measure as one.
+   *   · the budget comes from the toolbar's width and a CONSTANT ceiling, so
+   *     nothing on that side of the comparison moves when the cluster
+   *     collapses.
+   *
+   * The band is part of the cache key: below 961px the rail's buttons carry
+   * visible labels and the same five controls measure 964px instead of 712px,
+   * so one cached number would be wrong on one side of that line.
+   */
+  const railRef = useRef(null)
+  const intrinsicRef = useRef({ band: null, width: 0 })
+  const ribbonBand = useMediaQuery(RIBBON_QUERY)
+  const [railOverflows, setRailOverflows] = useState(false)
+  const toolsCollapsed = railOverflows && !ribbonBand
+
+  // Closing the panel when the band changes is adjust-state-during-render (the
+  // documented React pattern), not an effect: a resize that un-collapses the
+  // cluster while its panel is open would otherwise leave a menu mounted with
+  // no trigger to hand focus back to.
+  const [wasCollapsed, setWasCollapsed] = useState(toolsCollapsed)
+  if (wasCollapsed !== toolsCollapsed) {
+    setWasCollapsed(toolsCollapsed)
+    setToolsOpen(false)
+  }
+
+  const fitRail = useCallback(() => {
+    const rail = railRef.current
+    const row = rail?.closest('.plb-toolbar')
+    if (!rail || !row) return
+    const band = window.matchMedia('(min-width:961px)').matches ? 'wide' : 'narrow'
+    let intrinsic = intrinsicRef.current.width
+    if (intrinsicRef.current.band !== band) {
+      // Only measurable while the cluster is on the row. `scrollWidth` is the
+      // rail's own content width — it is a scroll container below 961px, so
+      // this is the one number that reports the full line rather than the
+      // visible slice of it.
+      // The intrinsic width can only be read while the cluster is ON THE ROW.
+      // Returning here — the obvious guard — is a trap: it leaves the previous
+      // answer standing AND leaves the cache empty, so once collapsed the rail
+      // could never re-measure and never expand again. Measured: after the
+      // font-swap invalidation below, the toolbar froze collapsed at every
+      // width up to 1920.
+      //
+      // So say "I cannot answer yet" by expanding, and answer on the next pass
+      // with a row that can be measured. This cannot loop: it runs only when
+      // the BAND has changed, and the pass that follows caches a number, after
+      // which the branch is not taken again until the band changes once more.
+      if (toolsCollapsed) { setRailOverflows(false); return }
+      intrinsic = rail.scrollWidth
+      if (!intrinsic) return
+      intrinsicRef.current = { band, width: intrinsic }
+    }
+    setRailOverflows(railOverflowsToolbar({ intrinsic, rowWidth: row.clientWidth }))
+  }, [toolsCollapsed])
+
+  // No separate mount call: ResizeObserver fires once when observation begins,
+  // which is both the first measurement and the only place this state is set.
+  // Setting it from an effect body instead would be the cascading-render shape
+  // `react-hooks/set-state-in-effect` exists to catch.
+  useEffect(() => {
+    const row = railRef.current?.closest('.plb-toolbar')
+    if (!row || typeof ResizeObserver === 'undefined') return undefined
+    const obs = new ResizeObserver(fitRail)
+    obs.observe(row)
+    return () => obs.disconnect()
+  }, [fitRail])
+
+  // THE FONT-SWAP INVALIDATION IS ITS OWN EFFECT, AND RUNS ONCE.
+  //
+  // It began life inside the observer effect above, which was wrong in a way
+  // that only a rendered browser shows. That effect re-runs whenever the
+  // collapse flips, `document.fonts.ready` is an ALREADY-RESOLVED promise by
+  // then, and so every flip re-registered a callback that fired immediately,
+  // invalidated the cache and expanded the row — which measured, collapsed,
+  // flipped, and started again. Measured: 981, 1000, 1080 and 662 never
+  // settled, and 981 sat in the broken 105px two-row form half the time.
+  //
+  // A font swap happens once. So does this.
+  const fontsSettled = useRef(false)
+  useEffect(() => {
+    let cancelled = false
+    document.fonts?.ready?.then(() => {
+      if (cancelled || fontsSettled.current) return
+      fontsSettled.current = true
+      // Every control width has changed, so the cached number is stale.
+      // Expanding alongside the invalidation is what makes the re-measure
+      // possible at all — see the guard in fitRail.
+      intrinsicRef.current = { band: null, width: 0 }
+      setRailOverflows(false)
+    }).catch(() => {})
+    return () => { cancelled = true }
   }, [])
   useEffect(() => {
     if (!anyPopover) return
@@ -1434,11 +1638,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
       setImgError(`That image is over ${IMG_MAX_MB} MB — pick a smaller one.`); return
     }
     try {
-      const { data, url, aspect } = await loadImageData(file)
+      const { data, source, url, aspect } = await loadImageData(file)
       imgDataRef.current = data
+      imgSourceRef.current = source
       setImgAspect(Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 10)
       setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return url })
-      setImgPoints(dominantSwatches(data, Math.min(colors.length, PRO_MAX)))
+      setImgActive(null)
+      setImgPoints(trueToSource(dominantSwatches(data, Math.min(colors.length, PRO_MAX))))
     } catch (err) {
       setImgError(err?.message || 'Couldn’t read that image')
     }
@@ -1455,37 +1661,93 @@ export default function PaletteBuilder({ onCopy, toast }) {
     loadImageFile(e.dataTransfer.files?.[0])
   }
 
+  // ONE INVARIANT, and the loupe exists to make it checkable: the colour a
+  // marker reports is the colour of the SOURCE pixel it is standing on.
+  //
+  // `dominantSwatches` cannot honour it on its own. Its hex is a bucket AVERAGE
+  // and its position is that bucket's centroid, so the two describe a region
+  // rather than a point — a ring of one colour puts its centroid in the middle,
+  // where the photo is some other colour entirely. That was invisible under a
+  // 26px dot and is the first thing a magnifier would expose: crosshair on one
+  // colour, swatch showing another, and no way for the user to tell which of
+  // the two is lying. The extraction still CHOOSES the points; this only makes
+  // each one tell the truth about where it ended up.
+  const trueToSource = useCallback((points) => {
+    const src = imgSourceRef.current
+    if (!src) return points
+    return points.map(p => ({ ...p, hex: sampleSourcePixel(src, p.x, p.y) || p.hex }))
+  }, [])
+
   // Re-run automatic extraction over the current image (reset / auto).
   const autoExtractImage = () => {
     if (!imgDataRef.current) return
-    setImgPoints(dominantSwatches(imgDataRef.current, Math.min(imgPoints.length || colors.length, PRO_MAX)))
+    setImgActive(null)
+    setImgPoints(trueToSource(dominantSwatches(imgDataRef.current, Math.min(imgPoints.length || colors.length, PRO_MAX))))
   }
 
   const clearImage = () => {
     setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return '' })
     imgDataRef.current = null
-    setImgPoints([]); setImgError(''); setImgAspect(16 / 10)
+    imgSourceRef.current = null
+    setImgPoints([]); setImgError(''); setImgAspect(16 / 10); setImgActive(null)
   }
 
   const addImagePoint = () => {
-    if (!imgDataRef.current || imgPoints.length >= PRO_MAX) return
-    setImgPoints(prev => [...prev, { x: 0.5, y: 0.5, hex: sampleImageData(imgDataRef.current, 0.5, 0.5) }])
+    if (!imgSourceRef.current || imgPoints.length >= PRO_MAX) return
+    const hex = sampleSourcePixel(imgSourceRef.current, 0.5, 0.5) || '#808080'
+    setImgPoints(prev => {
+      setImgActive(prev.length)
+      return [...prev, { x: 0.5, y: 0.5, hex }]
+    })
   }
   const removeImagePoint = () => {
     setImgPoints(prev => (prev.length > 2 ? prev.slice(0, -1) : prev))
+    setImgActive(null)
   }
 
+  // Put marker `idx` at a normalised position and re-sample it at source
+  // resolution. The single write path — drag, keyboard nudge and the +
+  // button all come through here, so they cannot drift apart.
+  const placeImagePoint = useCallback((idx, x, y) => {
+    const src = imgSourceRef.current
+    if (idx == null || !src) return
+    const cx = Math.min(1, Math.max(0, x))
+    const cy = Math.min(1, Math.max(0, y))
+    const hex = sampleSourcePixel(src, cx, cy)
+    setImgPoints(prev => prev.map((p, i) => (i === idx ? { x: cx, y: cy, hex: hex || p.hex } : p)))
+  }, [])
+
   // Drag a picker point across the image; re-sample the pixel under it live.
-  const moveImagePoint = (clientX, clientY) => {
+  const moveImagePoint = useCallback((clientX, clientY) => {
     const idx = imgDragIdx.current
     const stage = imgStageRef.current
-    if (idx == null || !stage || !imgDataRef.current) return
+    if (idx == null || !stage) return
     const r = stage.getBoundingClientRect()
-    const x = Math.min(1, Math.max(0, (clientX - r.left) / r.width))
-    const y = Math.min(1, Math.max(0, (clientY - r.top) / r.height))
-    const hex = sampleImageData(imgDataRef.current, x, y)
-    setImgPoints(prev => prev.map((p, i) => (i === idx ? { x, y, hex } : p)))
+    placeImagePoint(idx, (clientX - r.left) / r.width, (clientY - r.top) / r.height)
+  }, [placeImagePoint])
+
+  // Keyboard parity. The markers were <button>s with a pointerdown handler and
+  // nothing else, so a keyboard user could focus one and then had no way to
+  // move it at all — the tool's only sampling gesture was mouse-only. Arrows
+  // step ONE SOURCE PIXEL, which is the unit the loupe is showing; Shift steps
+  // ten, so crossing a large photo does not take four thousand presses.
+  const nudgeImagePoint = (idx, dxPx, dyPx) => {
+    const src = imgSourceRef.current
+    const p = imgPoints[idx]
+    if (!src || !p) return
+    setImgActive(idx)
+    placeImagePoint(idx, p.x + dxPx / src.width, p.y + dyPx / src.height)
   }
+
+  const onImagePointKey = (e, i) => {
+    const step = e.shiftKey ? 10 : 1
+    const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }
+    const move = moves[e.key]
+    if (!move) return
+    e.preventDefault()
+    nudgeImagePoint(i, move[0], move[1])
+  }
+
   useEffect(() => {
     if (!imgSrc) return
     const onMove = (e) => { if (imgDragIdx.current != null) { e.preventDefault(); moveImagePoint(e.clientX, e.clientY) } }
@@ -1493,7 +1755,56 @@ export default function PaletteBuilder({ onCopy, toast }) {
     window.addEventListener('pointermove', onMove, { passive: false })
     window.addEventListener('pointerup', onUp)
     return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp) }
-  }, [imgSrc])
+  }, [imgSrc, moveImagePoint])
+
+  // ── The loupe ────────────────────────────────────────────────────────────
+  //
+  // Founder: "show me a large zoomed in view so i can [see] exactly what pixel
+  // im selecting". Five markers over a ~400px preview of a 4000px photo means
+  // one marker covers roughly a hundred source pixels, so "which one am I on"
+  // was genuinely unanswerable.
+  //
+  // References (Mobbin): Alan's crop screen parks its magnifier in a FIXED
+  // CORNER with a crosshair at the centre rather than floating it under the
+  // finger — a loupe that follows the pointer covers the thing it is
+  // magnifying, which is the failure mode a first attempt always ships.
+  // Shopee's ring loupe is the reason for a thick neutral rim: it has to read
+  // over any photograph, light or dark. beehiiv's web colour picker is why the
+  // hex sits ON the loupe rather than across the panel — the value and the
+  // pixel are one piece of information and get read together.
+  //
+  // The corner is chosen per-frame, opposite the marker, so the loupe never
+  // sits on top of the region being sampled.
+  const LOUPE_PX = 13          // source pixels across the loupe (odd: one true centre)
+  const drawLoupe = useCallback(() => {
+    const cv = imgLoupeRef.current
+    const src = imgSourceRef.current
+    const p = imgActive != null ? imgPoints[imgActive] : null
+    if (!cv || !src || !p) return
+    const ctx = cv.getContext('2d')
+    if (!ctx) return
+    const size = cv.width                       // backing store is square
+    const cell = size / LOUPE_PX
+    const { px, py } = sourcePixel(src, p.x, p.y)
+    const half = (LOUPE_PX - 1) / 2
+    ctx.clearRect(0, 0, size, size)
+    // Nearest-neighbour: a smoothed loupe is a picture of an interpolation,
+    // not of the pixels, and the whole point is to show the pixels.
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(src, px - half, py - half, LOUPE_PX, LOUPE_PX, 0, 0, size, size)
+    // The sampled pixel, outlined in both inks so it survives any photo under
+    // it — a single white box vanishes on a white pixel, which is exactly the
+    // pixel a user is most likely to be hunting for.
+    const x0 = half * cell
+    ctx.lineWidth = 3
+    ctx.strokeStyle = 'rgba(0,0,0,.75)'
+    ctx.strokeRect(x0 - 1.5, x0 - 1.5, cell + 3, cell + 3)
+    ctx.lineWidth = 2
+    ctx.strokeStyle = '#fff'
+    ctx.strokeRect(x0 - 1, x0 - 1, cell + 2, cell + 2)
+  }, [imgActive, imgPoints])
+
+  useEffect(() => { drawLoupe() }, [drawLoupe])
   // Release the preview object URL when the picker unmounts.
   useEffect(() => () => { if (imgSrc) URL.revokeObjectURL(imgSrc) }, [imgSrc])
 
@@ -2008,7 +2319,18 @@ export default function PaletteBuilder({ onCopy, toast }) {
   }
 
   return (
-    <div className="plb">
+    // `data-board-source` is the instrumentation for
+    // `palette-opens-with-wrong-state`. The report — "sometimes I open the
+    // palette builder and it has added many colours and it's a different
+    // swatch" — was impossible to triage because the four ways a board can be
+    // populated (a ?c= link, a hand-off, this device's saved project, a fresh
+    // random draw) are indistinguishable once painted. This attribute names the
+    // branch that won, and `data-board-cols` the count the founder was
+    // counting, so a screenshot of the inspector or one line in the console
+    // settles which path produced the board instead of the next reporter having
+    // to reconstruct it. It is inert: nothing reads it to decide anything, and
+    // it carries no colour values, so it stays safe to leave on in production.
+    <div className="plb" data-board-source={initial.source} data-board-cols={colors.length}>
       <p className="sr-only" aria-live="polite">{liveMsg}</p>
 
       {/* ── Toolbar ── */}
@@ -2089,7 +2411,40 @@ export default function PaletteBuilder({ onCopy, toast }) {
             global.css, where this group must not be a scroll container at all —
             its dropdowns are absolutely-positioned popups and a scroll
             container would clip them. */}
-        <div className="plb-toolbar-group rail-overflow">
+        <div className="plb-toolbar-group rail-overflow" ref={railRef}>
+          {/* THE EXPLORATORY CLUSTER.
+              Uncollapsed this wrapper is `display:contents` — it has no box, so
+              the row is laid out exactly as it was before it existed and every
+              measurement, rule and shipped test that reads this rail sees the
+              same geometry. Collapsed it becomes a panel behind one labelled
+              trigger. Each control keeps its own `.plb-menuwrap` and its own
+              popover, so nothing about how they work changes; only where they
+              live does. */}
+          {toolsCollapsed && (
+            <div className="plb-menuwrap plb-toolswrap">
+              <button
+                type="button"
+                className="btn btn-s plb-toolsbtn"
+                aria-expanded={toolsOpen}
+                aria-haspopup="menu"
+                aria-controls={toolsOpen ? 'plb-tools-panel' : undefined}
+                title="Image, Explore, Preview, Gradient and History"
+                onClick={() => { const n = !toolsOpen; closeAllMenus(); setToolsOpen(n) }}
+              >
+                <IcoSliders />
+                {/* A WORD, not a tenth icon. The founder's desktop complaint is
+                    a run of icon-only buttons reading as unresolved; answering
+                    an overflow with one more glyph would deepen exactly that.
+                    Mobbin: Substack's editor toolbar collapses to "More ▾" set
+                    beside its other labelled dropdowns, so the overflow reads
+                    as a peer of Style and Button rather than as another
+                    mystery square. */}
+                <span className="plb-harm-k">Tools</span>
+                <IcoChevron />
+              </button>
+            </div>
+          )}
+          <ToolCluster collapsed={toolsCollapsed} open={toolsOpen}>
           <div className="plb-menuwrap">
             <button
               type="button"
@@ -2271,6 +2626,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
           >
             <IcoGradient /><span className="plb-lbl"><span className="plb-lbl-i">Gradient</span></span>
           </button>
+          </ToolCluster>
+          {/* ── end of the exploratory cluster ─────────────────────────────────
+              What stays on the row is what a person is mid-task with: generate,
+              step back, and commit. What collapses is what they went LOOKING
+              for. That split is also why the cluster is contiguous in the DOM:
+              a collapse that reordered the row would move focus order for
+              everyone to buy space for one band. */}
           {canUseUiSystem && (
             <button type="button" className="btn btn-s" onClick={() => setUiMode(true)} title="Build a complete UI colour system from Brand 500"><IcoSliders /> Build UI system</button>
           )}
@@ -2879,16 +3241,43 @@ export default function PaletteBuilder({ onCopy, toast }) {
                     <button
                       key={i}
                       type="button"
-                      className="plb-imgpoint"
+                      className={imgActive === i ? 'plb-imgpoint plb-imgpoint--on' : 'plb-imgpoint'}
                       style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, background: p.hex }}
-                      onPointerDown={(e) => { e.preventDefault(); imgDragIdx.current = i }}
-                      aria-label={`Picker point ${i + 1}: ${p.hex}`}
+                      onPointerDown={(e) => { e.preventDefault(); imgDragIdx.current = i; setImgActive(i) }}
+                      // Focus, not click, arms the loupe for a keyboard user:
+                      // arriving on the marker is the moment they need to see
+                      // where it is, and it is the only cue they get that the
+                      // arrow keys now do something.
+                      onFocus={() => setImgActive(i)}
+                      onKeyDown={(e) => onImagePointKey(e, i)}
+                      aria-label={`Picker point ${i + 1}: ${p.hex}. Use the arrow keys to move it a pixel at a time, or hold Shift for ten.`}
                       title={p.hex}
                       data-hex={p.hex}
                     />
                   ))}
+                  {/* Parked in a corner rather than under the pointer (Alan),
+                      and on the side AWAY from the marker, so the magnifier
+                      never covers the region it is magnifying. */}
+                  {imgActive != null && imgPoints[imgActive] && (
+                    <div
+                      className="plb-loupe"
+                      data-side={imgPoints[imgActive].x > 0.5 ? 'left' : 'right'}
+                      aria-hidden="true"
+                    >
+                      <canvas ref={imgLoupeRef} className="plb-loupe-cv" width={208} height={208} />
+                      <span className="plb-loupe-hex">{imgPoints[imgActive].hex}</span>
+                    </div>
+                  )}
                 </div>
-                <p className="plb-imghint">Drag a marker to sample a different pixel.</p>
+                {/* One live region for both input methods — a keyboard nudge is
+                    silent otherwise, and the loupe it arms is aria-hidden
+                    because a canvas of pixels is not something to read out. */}
+                <p className="sr-only" aria-live="polite">
+                  {imgActive != null && imgPoints[imgActive]
+                    ? `Point ${imgActive + 1} is on ${imgPoints[imgActive].hex}`
+                    : ''}
+                </p>
+                <p className="plb-imghint">Drag a marker, or focus one and use the arrow keys, to sample a different pixel.</p>
                 <div className="plb-imgstrip">
                   {imgPoints.map((p, i) => (
                     <div key={i} className="plb-imgswatch" style={{ background: p.hex }} title={p.hex} />
