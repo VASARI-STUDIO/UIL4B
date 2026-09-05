@@ -498,10 +498,11 @@ current behaviour or change it.
 > code for no gain. It comes out of every sales, navigation and tool-heading
 > surface.
 >
-> **Implementation is in flight in a separate pull request.** Do not start a
-> second one. The homepage behaviour contract
-> (`tests/user-sim/10-home-chaos-to-calm.spec.js`) needs its assertion updated
-> deliberately alongside the H1.
+> **Implementation is complete as of 2026-09-06.** It shipped in two slices —
+> 22 strings on 2026-09-05, then the homepage on 2026-09-06 — and the backlog
+> item `token-vocabulary-undersells` carries the full record of what changed,
+> what was deliberately kept, and the three borderline occurrences that were
+> classified and left.
 >
 > The evidence and the full working are below.
 
@@ -633,7 +634,7 @@ will need its assertion updated deliberately alongside.
 **What would settle it:** your pick of A, B or C. Nothing was rewritten — the
 item asked for options first, and the word choice is the whole decision.
 
-**Verdict:** _(DECIDED 2026-09-05 — **C, “Styles”**.)_ Chosen by the founder over our recommendation of A. Rule R stands: `token` survives past the export boundary only. **Shipped 2026-09-05** — 22 user-facing strings across 10 files, plus the 2 spec assertions that named the old copy. One thing is deliberately NOT in it: the homepage H1 (`Colour, type and tokens`) and the `Design tokens` workbench row, because `Home.jsx` and `HomeWorkbench.jsx` were held by another agent. They move together with `public/previews/cards.json` and the hero assertion in `10-home-chaos-to-calm.spec.js`.
+**Verdict:** _(DECIDED 2026-09-05 — **C, “Styles”**.)_ Chosen by the founder over our recommendation of A. Rule R stands: `token` survives past the export boundary only. **Shipped in two slices.** 2026-09-05 — 22 user-facing strings across 10 files, plus the 2 spec assertions that named the old copy. 2026-09-06 — the homepage, which the first slice could not take because another agent held the files: the H1 is now `Colour, type and icons that stay one system`, the tools heading dropped the noun rather than replacing it (`Colour, type, icons, imagery, export.`), the workbench UI-preview row reads `Styles`, `public/llms.txt` lost one more instance found by enumeration, and `public/previews/cards.json` was regenerated so the share card and the page agree. **Where the H1 names `icons` rather than `Styles`, that is this rule applied, not waived:** Styles is the collective noun where a collective is needed, and a list of three concrete things is not one — Styles is a superset of the two nouns beside it there. The hero's *shape* is a separate open question and stays with `hero-copy-still-reads-ai`.
 
 ---
 
