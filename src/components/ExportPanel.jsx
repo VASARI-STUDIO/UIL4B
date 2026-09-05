@@ -6,6 +6,7 @@ import { useProModal } from '../contexts/ProModalContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS } from '../config/exportFormats'
+import BrandLogoField from './BrandLogoField'
 
 // The Export dialog. It works from any page (it reads nothing from the current
 // tool) and is opened from the PillNav search cluster.
@@ -30,6 +31,43 @@ import { EXPORT_FORMATS } from '../config/exportFormats'
 // flags and their meanings are unchanged; the file-top note here still applies.
 const FORMATS = EXPORT_FORMATS
 
+// WHAT EACH PAID DOCUMENT SAYS WHEN IT IS BEHIND THE WALL.
+//
+// One entry per Pro format, because P-001 wants the funnel to say WHICH wall
+// converted, and because two documents with one shared modal would sell neither:
+// somebody who clicked "Brand guidelines" and was answered with a description of
+// a 12-page A4 token manual has been told the wrong thing about what they are
+// buying. `gate` is the analytics id and is deliberately distinct per document.
+//
+// Keyed by format id and looked up, not branched on, so adding a third Pro
+// document cannot silently inherit the book's copy.
+const PRO_GATE = {
+  book: {
+    gate: 'design-system-book-export',
+    eyebrow: 'UIL4B Pro',
+    title: 'Export the design system book',
+    subtitle: 'A 12-page A4 manual of your system — cover, contents, numbered sections, full-bleed colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
+    features: [
+      'Cover, contents and numbered section openings',
+      'Every colour with its role, three notations and its reading ink',
+      'A contrast matrix measuring every pair in the palette',
+      'Type specimens set in your own families, and all your tokens',
+    ],
+  },
+  guidelines: {
+    gate: 'brand-guidelines-export',
+    eyebrow: 'UIL4B Pro',
+    title: 'Export the brand guidelines',
+    subtitle: 'A 16:9 landscape brand book of your system — cover, numbered sections, swatches carrying a name as well as a hex, boxed alphabet grids, and your palette set in your own type. Add a logo and it gains a logo section. The style guide stays free.',
+    features: [
+      'A cover and numbered section openings, with a rationale beside every page',
+      'Named swatches — “Optic White”, not just #FCFCFC — with the ink measured on each',
+      'Alphabet grids and a type scale set in your own families',
+      'Your logo on white, on black and on every brand colour, with a clear-space rule',
+    ],
+  },
+}
+
 export default function ExportPanel({ onClose }) {
   const [format, setFormat] = useState('html')
   const [busy, setBusy] = useState(false)
@@ -38,7 +76,7 @@ export default function ExportPanel({ onClose }) {
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   const activeFormat = FORMATS.find(f => f.id === format)
-  const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', book: 'book' }
+  const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', book: 'book', guidelines: 'guidelines' }
   // P-003, "every gate EXPLICIT rather than silent". The free user is told what
   // they are about to hit BEFORE they click, by the button's own label, rather
   // than finding out from a modal after it.
@@ -112,16 +150,7 @@ export default function ExportPanel({ onClose }) {
     // Pro" groups every wall into one.
     if (FORMATS.find(f => f.id === format)?.pro && !isPro) {
       openProModal({
-        gate: 'design-system-book-export',
-        eyebrow: 'UIL4B Pro',
-        title: 'Export the design system book',
-        subtitle: 'A 12-page A4 manual of your system — cover, contents, numbered sections, full-bleed colour specimens with roles and measured contrast, type specimens and every token. The style guide stays free.',
-        features: [
-          'Cover, contents and numbered section openings',
-          'Every colour with its role, three notations and its reading ink',
-          'A contrast matrix measuring every pair in the palette',
-          'Type specimens set in your own families, and all your tokens',
-        ],
+        ...PRO_GATE[format],
         seed: design?.palette?.colors?.[0],
       })
       return
@@ -143,6 +172,18 @@ export default function ExportPanel({ onClose }) {
           // The book WAS produced, so this is a notice and not an error — the
           // panel stays open to carry it rather than closing over it.
           setError('Your browser blocked the print window, so the book was downloaded instead. Open it and print to PDF.')
+          setBusy(false)
+          keepOpen = true
+        }
+      } else if (format === 'guidelines') {
+        // The second Pro document. Loaded on demand for the same reason as the
+        // book, and separately from it: the two generators share no code path,
+        // so someone exporting guidelines never downloads the book's.
+        const { buildBrandGuidelines } = await import('../utils/brandGuidelines')
+        const html = buildBrandGuidelines(design, { projectName })
+        activation = 'brand-guidelines'
+        if (!printBook(html, `${slug}-brand-guidelines.html`)) {
+          setError('Your browser blocked the print window, so the guidelines were downloaded instead. Open the file and print to PDF.')
           setBusy(false)
           keepOpen = true
         }
@@ -235,7 +276,8 @@ export default function ExportPanel({ onClose }) {
             <span className="exp-eyebrow">Export</span>
             <h2 className="exp-title" id="exp-title">Export your design system</h2>
             <p className="exp-sub">
-              The book and the style guide export for real. The token formats are still on their way and say so.
+              The Pro documents and the style guide export for real. The token formats are still on
+              their way and say so.
             </p>
           </div>
           <button type="button" className="exp-close" onClick={onClose} aria-label="Close export">
@@ -268,6 +310,13 @@ export default function ExportPanel({ onClose }) {
             )
           })}
         </div>
+
+        {/* Its own block under the format list, not a control inside the
+            guidelines row — the Pitch "Export as" reading. It appears only for a
+            format whose document actually has logo pages, so the ask is never
+            made of someone exporting a token file, and the flag that decides it
+            is the same table that renders the rows. */}
+        {activeFormat?.logo && <BrandLogoField />}
 
         {error && <p className="exp-error" role="alert">{error}</p>}
 
