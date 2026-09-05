@@ -21,6 +21,7 @@ import {
   buildDesignSystemBook, readBook, bookTokens,
 } from '../../src/utils/designSystemBook.js'
 import { contrast, grade } from '../../src/utils/styleGuideExport.js'
+import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 // Block comments AND line comments go before any assertion runs. A source
@@ -267,10 +268,23 @@ test('project names and font families cannot inject markup', () => {
 const PANEL = stripComments(read('src/components/ExportPanel.jsx'))
 
 test('the book is a Pro format and the flag drives badge AND gate', () => {
-  assert.match(PANEL, /id: 'book'[^}]*pro: true/, 'the format declares itself paid')
-  // One flag for both, so a format can never be badged-but-ungated.
+  // The DECLARATION moved to src/config/exportFormats.js on 2026-09-05 so the
+  // pricing page could read the same table the panel renders. Asserted as a
+  // value rather than as source text, which is stronger than the regex it
+  // replaces: `/id: 'book'[^}]*pro: true/` would have been satisfied by a
+  // commented-out entry or a second array.
+  const book = EXPORT_FORMATS.find((f) => f.id === 'book')
+  assert.ok(book, 'the book format has been removed from the export table')
+  assert.equal(book.pro, true, 'the format declares itself paid')
+  assert.equal(book.live, true, 'a paid format that is not live is a promise of a file that cannot be made')
+
+  // The CONSUMPTION stays here: one flag for both, so a format can never be
+  // badged-but-ungated.
   assert.match(PANEL, /f\.pro && !isPro && <span className="exp-fmt-pro">Pro<\/span>/)
   assert.match(PANEL, /const locked = Boolean\(activeFormat\?\.pro\) && !isPro/)
+  // …and the panel must still be rendering the table this test just inspected.
+  assert.match(PANEL, /const FORMATS = EXPORT_FORMATS/,
+    'ExportPanel no longer renders the shared table, so the flags asserted above drive nothing')
 })
 
 test('THE GATE FAILS CLOSED: it runs before the artefact is ever built', () => {

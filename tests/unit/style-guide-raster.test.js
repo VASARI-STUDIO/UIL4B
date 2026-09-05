@@ -10,6 +10,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { buildStyleGuideLayout, A4, MARGIN } from '../../src/utils/styleGuideRaster.js'
 import { contrast, typeLadder, readDesign } from '../../src/utils/styleGuideExport.js'
+import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -175,12 +176,27 @@ test('the sheet is deterministic — the same design draws the same pixels', () 
 // ── Wiring ──────────────────────────────────────────────────────────────────
 
 test('the export panel offers the raster formats and loads them on demand', () => {
-  const src = read('src/components/ExportPanel.jsx')
-  assert.ok(/id: 'png'/.test(src) && /id: 'jpeg'/.test(src), 'both raster formats must be offered')
-  assert.ok(/await import\('\.\.\/utils\/styleGuideRaster'\)/.test(src),
+  // The format table moved out of ExportPanel.jsx into src/config/exportFormats.js
+  // on 2026-09-05 so /plans could read the same array it renders from, rather
+  // than describing the export offer in prose. The offer is therefore asserted
+  // against the table, and the code-splitting against the panel that consumes
+  // it — which also makes "is PNG live?" a question about a value rather than
+  // about the 200 characters that happen to follow a string match.
+  const formats = read('src/config/exportFormats.js')
+  assert.ok(/id: 'png'/.test(formats) && /id: 'jpeg'/.test(formats),
+    'both raster formats must be offered')
+
+  const png = EXPORT_FORMATS.find((f) => f.id === 'png')
+  const jpeg = EXPORT_FORMATS.find((f) => f.id === 'jpeg')
+  assert.equal(png?.live, true, 'PNG must be marked live, not "Soon"')
+  assert.equal(jpeg?.live, true, 'JPEG must be marked live, not "Soon"')
+  assert.ok(!png.pro && !jpeg.pro, 'the raster style guides are free-tier formats')
+
+  const panel = read('src/components/ExportPanel.jsx')
+  assert.ok(/await import\('\.\.\/utils\/styleGuideRaster'\)/.test(panel),
     'the raster path must be code-split so an HTML export does not pay for it')
-  assert.ok(/live: true/.test(src.split("id: 'png'")[1].slice(0, 200)),
-    'PNG must be marked live, not "Soon"')
+  assert.ok(/const FORMATS = EXPORT_FORMATS/.test(panel),
+    'the panel must render the shared table, or the assertions above describe an array nobody uses')
 })
 
 test('a failed export keeps the panel open and explains itself', () => {

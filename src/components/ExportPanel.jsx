@@ -5,31 +5,30 @@ import { useProject } from '../contexts/ProjectContext'
 import { useProModal } from '../contexts/ProModalContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
+import { EXPORT_FORMATS } from '../config/exportFormats'
 
-// The Export shell — a polished, accessible dialog that previews the handoff
-// formats UIL4B will ship. There is NO real export logic yet: every format is a
-// selectable preview and the primary action is a disabled "Soon" so we never lie
-// about a capability that isn't wired. It works from any page (it reads nothing
-// from the current tool) and is opened from the PillNav search cluster.
+// The Export dialog. It works from any page (it reads nothing from the current
+// tool) and is opened from the PillNav search cluster.
+//
+// THIS COMMENT USED TO SAY "there is NO real export logic yet: every format is
+// a selectable preview". That stopped being true when the style guide and the
+// design system book shipped, and it stayed on the file — which is part of how
+// /plans came to describe the export offer wrongly. The live count is not
+// restated here on purpose; read src/config/exportFormats.js, which is the one
+// place that knows, and which the pricing page now derives its claims from.
+//
+// What holds regardless: a format without `live` renders a disabled "Soon" so
+// we never advertise a capability that is not wired.
 //
 // Accessibility: role="dialog" + aria-modal, focus moves into the panel on open,
 // Tab is trapped, Escape and a backdrop click close it, and focus is restored to
 // the opener (the Export button) on unmount.
 
-const FORMATS = [
-  // The Pro deliverable, listed first because it is the best thing this panel
-  // makes. `pro: true` drives BOTH the badge and the gate — one flag, so a
-  // format can never be badged and ungated, or gated and unbadged.
-  { id: 'book', name: 'Design system book (PDF)', desc: 'A 12-page A4 manual — cover, contents, numbered sections, full-bleed colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true },
-  { id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true },
-  { id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true },
-  { id: 'png', name: 'Style guide (PNG)', desc: 'A single A4 sheet at 2× — palette, contrast grades and the type ladder. For pasting into a deck or a handoff ticket.', live: true },
-  { id: 'jpeg', name: 'Style guide (JPEG)', desc: 'The same sheet, smaller file — for anywhere that will not take a PNG.', live: true },
-  { id: 'css', name: 'CSS tokens', desc: 'Custom properties for colour, type, spacing and radii — drop into any stylesheet.' },
-  { id: 'json', name: 'JSON tokens', desc: 'Design tokens as JSON for pipelines and Style Dictionary.' },
-  { id: 'tailwind', name: 'Tailwind theme', desc: 'A tailwind.config theme extension mapped to your system.' },
-  { id: 'assets', name: 'Asset bundle', desc: 'Icons and swatches exported together as SVG + PNG.' },
-]
+// Moved to src/config/exportFormats.js on 2026-09-05 so /plans can read the
+// same array instead of describing the export offer from memory — which it had
+// been doing wrongly, selling a JSON export that has never been built. The
+// flags and their meanings are unchanged; the file-top note here still applies.
+const FORMATS = EXPORT_FORMATS
 
 export default function ExportPanel({ onClose }) {
   const [format, setFormat] = useState('html')

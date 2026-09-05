@@ -127,8 +127,41 @@ test('3 · every export and copy action stays ungated', () => {
       `${name} can raise an upgrade modal; every copy and export on it is meant to be free`)
   }
   // And the promise it has to keep.
-  assert.match(PLANS, /Unlimited palettes, font pairings, type scales, gradients and exports/)
-  assert.match(PLANS, /<td>Palettes, font pairings, type scales and exports<\/td><td>Unlimited<\/td>/)
+  //
+  // ── CHANGED 2026-09-05, and the reason matters more than the strings ───────
+  //
+  // These two assertions used to pin the words "…, gradients and exports" and
+  // "…, type scales and exports". Both sentences were removed from /plans in
+  // the pricing-page overhaul, because "and exports" was READ as all nine
+  // export formats when four of them are not built and one is Pro-gated. The
+  // page was overstating the free tier.
+  //
+  // What is pinned here instead is the PROPERTY those sentences existed to
+  // guarantee, which has not changed and must not: on Free, using these tools
+  // is UNLIMITED AND UNMETERED. That is the whole justification for the
+  // typography tools having no gate on copy or export, which is what the rest
+  // of this test enforces. The quantity promise is intact; only the claim about
+  // which FORMATS you get was removed, and formats are not what this test is
+  // about.
+  //
+  // Written as two halves rather than one long literal so a future copy edit
+  // fails on the half it actually broke.
+  assert.match(PLANS, /Unlimited palettes, font pairings, type scales and gradients/,
+    'the Free card no longer promises unlimited use of the typography tools — '
+    + 'if that promise is really gone, the ungated copy/export assertions above must be reconsidered too')
+  assert.match(PLANS, /none of it metered/,
+    'the Free card no longer says the typography tools are unmetered')
+  assert.match(PLANS, /<td>Palettes, font pairings, type scales and gradients<\/td><td>Unlimited<\/td>/,
+    'the comparison table no longer repeats the unlimited promise')
+
+  // The export promise is now format-specific and is guarded separately, by
+  // tests/unit/plans-truth.test.js, against src/config/exportFormats.js — the
+  // array that renders the buttons. It is deliberately NOT restated here: this
+  // file is about the typography paywall, and a copy of that rule living in two
+  // places is how the two drift apart.
+  assert.match(PLANS, /Number of exports<\/td><td>Unlimited<\/td>/,
+    'the page no longer states that the NUMBER of exports is unlimited on Free — '
+    + 'that is the half of the export promise this test depends on')
 })
 
 test('4 · the tools that build a type system offer a way to keep it', () => {

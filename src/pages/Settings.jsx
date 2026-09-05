@@ -743,7 +743,8 @@ export default function Settings({ toast }) {
                       <li><Check /> {AI_LIMITS.pro.daily} AI generations a day · {AI_LIMITS.pro.monthly} a month</li>
                       <li><Check /> Unlimited project and custom-icon saves</li>
                       <li><Check /> Advanced colour controls</li>
-                      <li><Check /> Full design JSON and watermark-free palette export</li>
+                      {/* "Full design JSON" removed 2026-09-05 — not built. See src/pages/Checkout.jsx. */}
+                      <li><Check /> The design system book (PDF), and watermark-free style guides</li>
                     </ul>
                     <button
                       className="btn btn-accent sub-tier-btn"
