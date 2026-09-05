@@ -82,7 +82,7 @@
 export const BRAND_PALETTES = [
   { id: 'apple', name: 'Apple', free: true, system: 'custom', colors: ['#1D1D1F', '#F5F5F7', '#0071E3', '#86868B', '#2997FF'] },
   { id: 'material', name: 'Material 3 Baseline', free: true, system: 'custom', colors: ['#6750A4', '#625B71', '#7D5260', '#FEF7FF', '#1D1B20'] },
-  { id: 'google', name: 'Google', free: false, system: 'custom', colors: ['#4285F4', '#EA4335', '#FBBC04', '#34A853', '#202124'] },
+  { id: 'google', name: 'Google', free: true, system: 'custom', colors: ['#4285F4', '#EA4335', '#FBBC04', '#34A853', '#202124'] },
   { id: 'netflix', name: 'Netflix', free: true, system: 'custom', colors: ['#E50914', '#221F1F', '#F5F5F1', '#B81D24', '#000000'] },
   { id: 'discord', name: 'Discord', free: true, system: 'custom', colors: ['#5865F2', '#EB459E', '#FEE75C', '#57F287', '#23272A'] },
   { id: 'stripe', name: 'Stripe', free: true, system: 'custom', colors: ['#635BFF', '#0A2540', '#00D4FF', '#F6F9FC', '#425466'] },

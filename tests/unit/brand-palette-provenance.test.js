@@ -58,9 +58,17 @@ test('brand ids are unique', () => {
 // Which rows are free is a pricing call, not a data detail, and `free` is one
 // keystroke from flipping in a file that gets edited for colour reasons. Pin the
 // SET, so giving a brand away (or taking one back) has to be deliberate.
-test('the free brand set is exactly the six the founder chose', () => {
+//
+// `google` was added 2026-09-05 by founder decision, taking the set from six to
+// seven. Renaming "Material (Google)" to "Material 3 Baseline" had left the free
+// tier with nothing called Google in it, and Google's logo colours are both
+// public and among the most recognisable in the library — a strong free-tier
+// draw. This flag decides which side of splitLockedLibrary the row lands on:
+// free rows ship their `colors`, gated rows are stripped to id/label/slots, so
+// flipping it is a disclosure change as well as a pricing one.
+test('the free brand set is exactly the seven the founder chose', () => {
   const free = BRAND_PALETTES.filter(b => b.free).map(b => b.id).sort()
-  assert.deepEqual(free, ['apple', 'discord', 'material', 'netflix', 'spotify', 'stripe'])
+  assert.deepEqual(free, ['apple', 'discord', 'google', 'material', 'netflix', 'spotify', 'stripe'])
 })
 
 // ── Retired values stay retired ─────────────────────────────────────────────
