@@ -158,8 +158,15 @@ function seriesPath(values, close) {
 
 // Three rows is enough to put ramp steps side by side in a real context and
 // short enough that the card never becomes the page.
+//
+// The first row read "Design tokens" until 2026-09-06. This is the one place in
+// this slice where a COLLECTIVE noun is what the row needs — it sits beside
+// "Component library" and "Documentation", the other two things a design system
+// ships — so it takes the founder's word directly (P-019, option C: Styles).
+// That trio is also the structure the P-019 evidence found on Customer.io
+// Design Studio, which heads its panel "Styles" and names the values beneath it.
 const UI_ROWS = [
-  { name: 'Design tokens', state: 'Shipped' },
+  { name: 'Styles', state: 'Shipped' },
   { name: 'Component library', state: 'In review' },
   { name: 'Documentation', state: 'Draft' },
 ]

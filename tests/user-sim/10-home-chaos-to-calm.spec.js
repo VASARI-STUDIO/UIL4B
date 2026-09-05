@@ -236,7 +236,59 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // The headline names what the product makes. Not a pinned sentence — a
     // check that it is about this product rather than about a category, which
     // is the failure the rewrite was for.
-    await expect(heading).toContainText(/colour|color|type|token|system/i)
+    //
+    // WHAT WAS HERE, AND WHY IT WAS NOT A TEST:
+    //
+    //   await expect(heading).toContainText(/colour|color|type|token|system/i)
+    //
+    // The h1's second line is "that stay one system." and never varied, so
+    // `system` satisfied the alternation on its own. It passed for EVERY
+    // possible first line — including "Every design tool, one search box away",
+    // the category headline this block was written to catch, and including the
+    // word the 2026-09-06 rename removed. Same shape as the `.tsc-status`
+    // assertion PR #386 found, where a `<select>` carried every option label in
+    // its textContent: an assertion whose subject can never move.
+    //
+    // Replaced, not weakened. The two halves of the intent are asserted apart.
+    const headline = (await heading.innerText()).replace(/\s+/g, ' ').trim()
+
+    // POSITIVE CONTROL. Both checks below are a subset test and an absence
+    // test, and both are free wins on a heading that rendered nothing.
+    expect(headline.length, 'the h1 rendered no text').toBeGreaterThan(20)
+
+    // DERIVED FROM THE PAGE, not from a list typed here: at least two of the
+    // tool families the page's own tools heading names must appear in the
+    // headline. That is the wiring — the hero and the section that lists the
+    // tools cannot drift apart, and a headline that describes a category
+    // instead of this product names none of them.
+    const wordsIn = (s) => new Set(s.toLowerCase().match(/[a-z]+/g) || [])
+    const families = wordsIn(await page.locator('#htools-title').innerText())
+    expect(families.size, 'the tools heading rendered no words').toBeGreaterThan(3)
+    const familiesNamed = [...wordsIn(headline)].filter((w) => families.has(w))
+    expect(familiesNamed.length,
+      `the h1 "${headline}" names ${familiesNamed.length} of the tool families in the `
+      + `tools heading (${[...families].join(', ')}) — it should name at least two, or it `
+      + 'is describing a category rather than this product',
+    ).toBeGreaterThanOrEqual(2)
+
+    // ── "token" is off this page ────────────────────────────────────────────
+    //
+    // P-019 rule R, the founder's decision of 2026-09-05: the word survives
+    // past the EXPORT BOUNDARY only — the export panel, the generated file
+    // names, the code blocks, the `@uil4b/tokens` package. None of those is on
+    // the homepage, which makes the homepage the one surface where the rule is
+    // checkable whole. So this covers all three strings the rename moved — the
+    // h1, the tools heading, and the "Design tokens" row in the workbench's UI
+    // preview — instead of pinning three sentences that are free to be edited.
+    //
+    // `innerText`, not `textContent`, on purpose: this is a rule about what a
+    // visitor READS, and textContent would also return the hidden-but-mounted
+    // panels the five workbench modes leave in the DOM.
+    const readable = (await page.locator('#main').innerText()).toLowerCase()
+    expect(readable.length, 'the homepage rendered no visible text').toBeGreaterThan(2000)
+    expect(readable.includes('token'),
+      'the homepage sells with the word "token" again — P-019 rule R keeps it past the export boundary only',
+    ).toBe(false)
 
     // ── The bar's two framing lines are gone; its accessible name is not ─────
     //
