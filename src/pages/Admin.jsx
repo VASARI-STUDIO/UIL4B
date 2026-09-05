@@ -4,6 +4,12 @@ import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeed
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import CommunityQueue from '../components/admin/CommunityQueue'
+import { listFeedback, setFeedbackStatus, setFeedbackNotes, deleteFeedbackDoc } from '../utils/feedbackQueueApi'
+import { useModerationRole } from '../hooks/useModerationRole'
+import {
+  FEEDBACK_STATUSES, FEEDBACK_STATUS_LABELS, nextFeedbackStatus,
+  canReview, canSeeReporterEmail,
+} from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
@@ -13,8 +19,11 @@ import { resolvePromptProfileLink } from '../utils/promptSubmission'
 import { toCsv } from '../utils/csv'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
-const STATUSES = ['new', 'in-progress', 'done']
-const STATUS_LABELS = { new: 'New', 'in-progress': 'In Progress', done: 'Done' }
+// The triage vocabulary now lives in utils/moderation.js, so the moderation
+// decisions and this dashboard cannot drift into two meanings of "done".
+// The strings are unchanged; only where they are defined moved.
+const STATUSES = FEEDBACK_STATUSES
+const STATUS_LABELS = FEEDBACK_STATUS_LABELS
 // 'in-progress' and 'help' used to be var(--accent) and the raw hex #a855f7
 // (with rgba(168,85,247,.1) behind it, and the same hex again as DONUT slice 5).
 // Both were the app reaching for a fifth signal colour it had no token for -
@@ -65,18 +74,6 @@ function fmtDate(iso) {
 function fmtDateTime(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
-// Older feedback docs predate the current schema: createdAt may be a Firestore
-// Timestamp, a numeric epoch, or missing entirely. Normalise to an ISO string
-// so sorting/display never silently drop items (orderBy on the query would).
-function toIso(raw) {
-  if (!raw) return ''
-  if (typeof raw === 'string') return raw
-  if (typeof raw === 'number') return new Date(raw).toISOString()
-  if (typeof raw?.toDate === 'function') return raw.toDate().toISOString()
-  if (typeof raw?.seconds === 'number') return new Date(raw.seconds * 1000).toISOString()
-  return ''
 }
 
 // Tiny glyphs for the Submissions filter chips.
@@ -237,11 +234,13 @@ function Sparkline({ data }) {
 
 // ── Sub-components ──────────────────────────────────────────
 
-function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expanded, onToggle }) {
+function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expanded, onToggle, canSeeEmail = true }) {
   const [notes, setNotes] = useState(item.adminNotes || '')
   const [editingNotes, setEditingNotes] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
-  const nextStatus = () => STATUSES[(STATUSES.indexOf(item.status) + 1) % STATUSES.length]
+  // The shared helper, so the cycle a reviewer clicks through and the cycle
+  // utils/moderation.js validates are the same one.
+  const nextStatus = () => nextFeedbackStatus(item.status)
 
   return (
     <div className={`adm-card adm-submission${item.status === 'done' ? ' done' : ''}`} style={{ borderLeftColor: STATUS_COLORS[item.status] }}>
@@ -265,7 +264,31 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
       {expanded && (
         <div className="adm-submission-body">
           <div className="adm-submission-msg">{item.message}</div>
-          {item.email && <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong></div>}
+          {/* The reporter's address is founder-only (utils/moderation.js,
+              canSeeReporterEmail). It arrives through /api/support from a
+              PUBLIC form with no session, so it is personal data handed to the
+              site owner and not verified to belong to the sender. A moderator
+              can triage from the subject and message; a mailbox to answer from
+              is a separate permission nobody has asked for. The row is still
+              rendered, saying what is withheld — a silently missing field
+              reads as a report with no sender. */}
+          {item.email && (canSeeEmail
+            ? <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>From: <strong>{item.email}</strong></div>
+            : <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 12 }}>From: <span style={{ fontStyle: 'italic' }}>address withheld from moderators</span></div>)}
+
+          {/* WHO ACTED ON THIS.
+              Mobbin: Aboard's whistleblowing table carries a Handler column
+              that reads "Unassigned" until somebody takes it
+              (https://mobbin.com/screens/cb4c0d02-dfb6-4138-aaac-ff9e4cf78082).
+              While one person moderated, this was never a question. The moment
+              a second person can act, an unattributed decision is a decision
+              nobody can be asked about. Rendered as meta type rather than a
+              badge: it is provenance, not a status. */}
+          <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 12 }}>
+            {item.reviewedBy
+              ? <>Last actioned by <strong style={{ color: 'var(--t2)' }}>{item.reviewedBy}</strong>{item.updatedAt ? ` · ${fmtDateTime(item.updatedAt)}` : ''}</>
+              : 'Not actioned by anyone yet'}
+          </div>
           <div className="adm-submission-notes">
             <div className="adm-submission-notes-title">Admin Notes</div>
             {editingNotes ? (
@@ -1231,6 +1254,12 @@ function UsersPanel({ localUsers, toast }) {
 export default function Admin({ toast }) {
   const { user } = useAuth()
   const isAdminUser = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  // The SERVER-VERIFIED role, from the ID token's custom claims. isAdminUser
+  // above compares an email against a list that ships in the browser bundle —
+  // fine for deciding what to render, worthless as a fact. This hook is also
+  // what finally reads /api/verify-admin's `claimUpdated` and forces the token
+  // refresh that makes a freshly minted claim usable in the same session.
+  const { role, loading: roleLoading } = useModerationRole()
   const [unlocked, setUnlocked] = useState(false)
   const [code, setCode] = useState('')
   const [tab, setTab] = useState('overview')
@@ -1255,6 +1284,16 @@ export default function Admin({ toast }) {
   const [timeRange, setTimeRange] = useState('7d')
   const [data, setData] = useState(null)
   const [feedback, setFeedback] = useState([])
+  // How many documents the SERVER actually returned, and why it did not.
+  // null means unread — never 0. Mobbin: Circle's Content > Moderation states
+  // the report count on its own line above the table body, so "0 reports" and
+  // "No data available" are two separate claims rather than one ambiguous
+  // empty state. https://mobbin.com/screens/d695963e-5465-44f1-8a86-171fd1f7c121
+  const [serverFeedbackCount, setServerFeedbackCount] = useState(null)
+  const [feedbackError, setFeedbackError] = useState('')
+  // '' = fine. Non-empty = the last triage write was REFUSED and the row on
+  // screen no longer matches the server.
+  const [writeError, setWriteError] = useState('')
   const [filterType, setFilterType] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [subSearch, setSubSearch] = useState('')
@@ -1300,25 +1339,26 @@ export default function Admin({ toast }) {
       })
       .finally(() => setAggregateLoaded(true))
     const localFeedback = getFeedback()
-    let merged = [...localFeedback]
+    const merged = [...localFeedback]
+    // A REFUSED READ IS NOT AN EMPTY QUEUE — the same fault the aggregate block
+    // above was fixed for, in the one place it is most expensive. This read is
+    // gated by firestore.rules on `request.auth.token.admin == true`, and it
+    // used to sit inside `catch { /* firestore unavailable */ }` with an EMPTY
+    // body: a permission-denied rendered as the localStorage list alone, with
+    // nothing on screen to say the server half had been refused. listFeedback()
+    // throws, and the failure is reported rather than absorbed.
     try {
-      // No orderBy here on purpose: Firestore drops docs missing the ordered
-      // field, which hid older submissions written before createdAt existed.
-      const snap = await getDocs(collection(db, 'feedback'))
-      const fsFeedback = snap.docs.map(d => {
-        const raw = d.data()
-        return {
-          ...raw,
-          id: d.id,
-          _fs: true,
-          source: raw.source || 'firestore',
-          createdAt: toIso(raw.createdAt ?? raw.ts ?? raw.timestamp),
-          updatedAt: toIso(raw.updatedAt),
-        }
-      })
+      const fsFeedback = await listFeedback()
       const localIds = new Set(localFeedback.map(f => f.id))
       fsFeedback.forEach(f => { if (!localIds.has(f.id)) merged.push(f) })
-    } catch { /* firestore unavailable */ }
+      setServerFeedbackCount(fsFeedback.length)
+      setFeedbackError('')
+    } catch (err) {
+      // null, not 0. "We read the server and there was nothing" and "we could
+      // not read the server" must never render as the same sentence.
+      setServerFeedbackCount(null)
+      setFeedbackError(String(err?.message || err || 'Unknown error').slice(0, 200))
+    }
     setFeedback(merged)
     try {
       const promptSnap = await getDocs(query(collection(db, 'community-prompts'), orderBy('createdAt', 'desc')))
@@ -1331,7 +1371,12 @@ export default function Admin({ toast }) {
   const [verifyError, setVerifyError] = useState('')
 
   useEffect(() => {
-    if (!isAdminUser || serverVerified) return
+    // useModerationRole already performs this handshake, and a founder whose
+    // role came back 'founder' has all the proof this effect could gather — so
+    // skipping it there removes a duplicate POST to /api/verify-admin on every
+    // admin page load. It still runs when the role did NOT resolve to founder,
+    // which is exactly when the diagnostic banner below is worth showing.
+    if (!isAdminUser || serverVerified || roleLoading || role === 'founder') return
     ;(async () => {
       try {
         const { auth: fbAuth } = await import('../utils/firebase')
@@ -1346,7 +1391,7 @@ export default function Admin({ toast }) {
         else { setVerifyError(data.error || `Server returned ${res.status}`); toast?.('Admin verification failed') }
       } catch { /* offline */ }
     })()
-  }, [isAdminUser, serverVerified]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAdminUser, serverVerified, roleLoading, role]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── AI provider health ──
   // The diagnostic at GET /api/ai?diag=1 is already gated on a VERIFIED
@@ -1377,7 +1422,16 @@ export default function Admin({ toast }) {
     })()
   }, [isAdminUser, tab, aiHealth])
 
-  const effectiveUnlocked = unlocked || isAdminUser
+  // The gate gains a SERVER-VERIFIED path. `isAdminUser` is an email compared
+  // against a list that ships in the bundle and ADMIN_CODE is a shared secret
+  // sitting in the same bundle; canReview(role) is a signed custom claim, which
+  // is the only one of the three a browser cannot fake. It is an OR, so nothing
+  // that opened before is closed now — this only adds a way in that is true.
+  //
+  // It admits `moderator` as well as `founder`, which is inert until the claim
+  // is granted AND firestore.rules honours it — both founder-gated changes, both
+  // proposed rather than taken. Today the branch that fires is `founder`.
+  const effectiveUnlocked = unlocked || isAdminUser || canReview(role)
 
   useEffect(() => {
     if (effectiveUnlocked) refresh()
@@ -1508,38 +1562,84 @@ export default function Admin({ toast }) {
     setCode('')
   }
 
+  // ── Triage writes ─────────────────────────────────────────────────────────
+  // These three used to update local state optimistically, send the write
+  // inside `catch { /* offline */ }`, and then fire the success toast
+  // UNCONDITIONALLY. A write Firestore rejected therefore produced a row that
+  // moved to Done and a toast that said so — and reverted on the next refresh.
+  // A lying success is worse than a visible failure: nothing prompts anyone to
+  // look. Each now restores the previous row and reports what the server said.
+  //
+  // `role` rather than `user.uid` is not what is recorded — the uid is — but
+  // the decision is attributed at all for the reason the role exists: the
+  // moment a second person can act on a report, an unattributed decision is a
+  // decision nobody can be asked about.
+  const reviewerUid = user?.uid || null
+
   const handleStatusChange = async (id, status) => {
     const item = feedback.find(f => f.id === id)
-    if (item?._fs) {
-      setFeedback(prev => prev.map(f => f.id === id ? { ...f, status, updatedAt: new Date().toISOString() } : f))
-      try { await updateDoc(doc(db, 'feedback', id), { status, updatedAt: new Date().toISOString() }) } catch { /* offline */ }
-    } else {
+    if (!item?._fs) {
       setFeedback(updateFeedbackStatus(id, status))
+      toast(`Marked as ${STATUS_LABELS[status]}`)
+      return
     }
-    toast(`Marked as ${STATUS_LABELS[status]}`)
+    const before = item
+    setFeedback(prev => prev.map(f => f.id === id
+      ? { ...f, status, updatedAt: new Date().toISOString(), reviewedBy: reviewerUid }
+      : f))
+    try {
+      await setFeedbackStatus(id, status, reviewerUid)
+      setWriteError('')
+      toast(`Marked as ${STATUS_LABELS[status]}`)
+    } catch (err) {
+      setFeedback(prev => prev.map(f => (f.id === id ? before : f)))
+      setWriteError(String(err?.message || err || 'Unknown error').slice(0, 200))
+      toast('Could not save that — the server refused the change')
+    }
   }
 
   const handleNotesChange = async (id, notes) => {
     const item = feedback.find(f => f.id === id)
-    if (item?._fs) {
-      setFeedback(prev => prev.map(f => f.id === id ? { ...f, adminNotes: notes, updatedAt: new Date().toISOString() } : f))
-      try { await updateDoc(doc(db, 'feedback', id), { adminNotes: notes, updatedAt: new Date().toISOString() }) } catch { /* offline */ }
-    } else {
+    if (!item?._fs) {
       setFeedback(updateFeedbackNotes(id, notes))
+      toast('Notes saved')
+      return
     }
-    toast('Notes saved')
+    const before = item
+    setFeedback(prev => prev.map(f => f.id === id
+      ? { ...f, adminNotes: notes, updatedAt: new Date().toISOString(), reviewedBy: reviewerUid }
+      : f))
+    try {
+      await setFeedbackNotes(id, notes, reviewerUid)
+      setWriteError('')
+      toast('Notes saved')
+    } catch (err) {
+      setFeedback(prev => prev.map(f => (f.id === id ? before : f)))
+      setWriteError(String(err?.message || err || 'Unknown error').slice(0, 200))
+      toast('Could not save those notes — the server refused the change')
+    }
   }
 
   const handleDelete = async (id) => {
     const item = feedback.find(f => f.id === id)
-    if (item?._fs) {
-      setFeedback(prev => prev.filter(f => f.id !== id))
-      try { await deleteDoc(doc(db, 'feedback', id)) } catch { /* offline */ }
-    } else {
+    if (!item?._fs) {
       setFeedback(deleteFeedback(id))
+      setExpandedId(null)
+      toast('Submission deleted')
+      return
     }
+    const before = feedback
+    setFeedback(prev => prev.filter(f => f.id !== id))
     setExpandedId(null)
-    toast('Submission deleted')
+    try {
+      await deleteFeedbackDoc(id)
+      setWriteError('')
+      toast('Submission deleted')
+    } catch (err) {
+      setFeedback(before)
+      setWriteError(String(err?.message || err || 'Unknown error').slice(0, 200))
+      toast('Could not delete that — the server refused the change')
+    }
   }
 
   const exportCSV = () => {
@@ -1576,6 +1676,22 @@ export default function Admin({ toast }) {
   }
 
   // ── Lock screen ──
+
+  // Never accuse somebody of not having access while still finding out. A
+  // moderator's claim is read from their token asynchronously, so rendering the
+  // lock screen first and the dashboard a moment later would tell them they are
+  // not a moderator and then contradict itself.
+  if (!effectiveUnlocked && roleLoading && user) {
+    return (
+      <div className="sec">
+        <div className="adm-lock">
+          <div className="adm-lock-eyebrow">Admin Access</div>
+          <h1>Developer Dashboard</h1>
+          <p>Checking what your account is allowed to do…</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!effectiveUnlocked) {
     return (
@@ -2231,6 +2347,56 @@ export default function Admin({ toast }) {
               <span style={{ color: 'var(--ok)' }}>{statusCounts.done || 0} done</span>
             </div>
           </div>
+
+          {/* WHERE THESE ROWS CAME FROM.
+              Mobbin: Circle's Content > Moderation prints the report count on
+              its own line above the table, so the count and the body are two
+              separate statements rather than one ambiguous empty state
+              (https://mobbin.com/screens/d695963e-5465-44f1-8a86-171fd1f7c121).
+              That distinction is the whole fix here: the server read is gated
+              on the `admin` claim, and when it is refused this panel used to
+              render the browser's own copy in silence. One quiet sentence, in
+              the dashboard's existing meta type — not a card, because it is a
+              caption on the list below and not an object of its own. */}
+          {feedbackError ? (
+            <div className="adm-card" style={{ marginBottom: 8, borderLeft: '2px solid var(--err)' }}>
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>
+                  The server&apos;s copy could not be read
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{feedbackError}</div>
+                <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+                  Only reports saved in this browser are listed below. Reports submitted through the
+                  site are missing from this list, not absent from the site.
+                </div>
+              </div>
+            </div>
+          ) : serverFeedbackCount === null ? (
+            // Before the first read returns, the honest sentence is that we do
+            // not know yet. `null` is also the refused value, so rendering the
+            // arithmetic here would print an empty count and NaN on first paint.
+            <div className="adm-cat-desc" style={{ marginBottom: 8 }}>
+              Checking the server&apos;s copy…
+            </div>
+          ) : (
+            <div className="adm-cat-desc" style={{ marginBottom: 8 }}>
+              {serverFeedbackCount} from the server · {Math.max(0, feedback.length - serverFeedbackCount)} from this browser
+            </div>
+          )}
+
+          {writeError && (
+            <div className="adm-card" style={{ marginBottom: 8, borderLeft: '2px solid var(--err)' }}>
+              <div className="adm-card-body">
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--err)', marginBottom: 6 }}>
+                  The last change was refused
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.7 }}>{writeError}</div>
+                <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+                  The row was put back the way the server has it. Nothing on screen is pretending to be saved.
+                </div>
+              </div>
+            </div>
+          )}
           <div className="adm-sub-toolbar">
             <input type="search" className="adm-search" placeholder="Search subject, message, email…" value={subSearch} onChange={e => setSubSearch(e.target.value)} />
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2265,12 +2431,23 @@ export default function Admin({ toast }) {
               </button>
             </div>
           </div>
-          {filteredFeedback.length === 0 && <div className="adm-card"><div className="adm-empty">{feedback.length === 0 ? 'No submissions yet.' : 'No submissions match filters.'}</div></div>}
+          {filteredFeedback.length === 0 && (
+            <div className="adm-card">
+              <div className="adm-empty">
+                {feedback.length > 0
+                  ? 'No submissions match filters.'
+                  : feedbackError
+                    ? 'Nothing to show — the server read was refused, so this is not "no submissions".'
+                    : 'No submissions yet.'}
+              </div>
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filteredFeedback.map(item => (
               <SubmissionCard
                 key={item.id}
                 item={item}
+                canSeeEmail={canSeeReporterEmail(role)}
                 expanded={expandedId === item.id}
                 onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
                 onStatusChange={handleStatusChange}
