@@ -344,6 +344,23 @@ Chromium via `npx playwright install --with-deps chromium`, and runs
 If a gate goes red in CI, treat it exactly like a red local build: NO-GO, fix
 the root cause, don't route around it.
 
+### First check that it RAN
+
+**A red or amber check is evidence only once you have confirmed the job started.**
+Since 2026-09-04 no Actions run in this repository has started at all — the
+annotation is *“The job was not started because recent account payments have
+failed or your spending limit needs to be increased.”* Both jobs die in 1–3
+seconds, and `gh pr view` then reports the pull request as **`UNSTABLE`**.
+
+`UNSTABLE` reads as “the code is broken”. It means **the gate never ran.** Anyone
+triaging by check status draws the wrong conclusion about every open PR at once.
+
+While that is true, **the only evidence a change is green is a local run of the
+four commands above, pasted into the PR body** — and the reviewer has to be told
+to look there, because the honest signal is invisible on the PR itself. The live
+state is on the App condition board (`ci` and `deploy` in `src/data/pipeline.js`);
+clearing it is §1 of `docs/OWNER-ACTIONS.md` and needs the account owner.
+
 ## Commands
 
 ```bash

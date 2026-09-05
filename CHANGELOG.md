@@ -13,6 +13,284 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### Founder decisions — 2026-09-05
+
+Taken in an interview with the Director on 2026-09-05. **Ten decisions.** Four
+answer questions this repository had put to him; six are new. Quoted where he
+was quoted; nothing inferred. **Two of the ten went against our recommendation,
+and both are marked as such** — a record that only shows the agreements is not a
+record.
+
+| # | Decision | Ours? |
+|---|---|---|
+| 1 | **The word *tokens* becomes “Styles”** on every sales, navigation and tool-heading surface | **No — we recommended “Foundations”** |
+| 2 | **The `pepsi` palette is renamed to its era.** The palette stays; the claim about today’s brand goes | Yes |
+| 3 | **`google` becomes a free palette** | **No — we recommended leaving it paid** |
+| 4 | **`/community` tiles pick their lettering ink per tile.** Ten of twelve flip white → black | Yes |
+| 5 | **Typography: browsing is free, saving is Pro** | New question, no prior recommendation |
+| 6 | **Learn is proper design education** — real articles on colour theory, typography and accessibility | New |
+| 7 | **Learn’s voice is neutral and factual, not the founder’s.** No first person | New |
+| 8 | **Discover ends as a community gallery, built in stages** — curated first, community publishing later | New |
+| 9 | **Moderation is an approval queue.** Nothing publishes until he approves it | New |
+| 10 | **The founder note is not a popup.** Opt-in only | New |
+
+**1 — “Styles”, not “Foundations”.** He was shown all three options in
+`docs/PROPOSALS.md` P-019 with the reasoning and the competitor evidence, and
+picked **C**. Our recommendation was A. **Rule R is unchanged and was never in
+question:** the word *token* survives past the **export boundary** only — the
+export panel, the generated file names, the code blocks, the `@uil4b/tokens`
+package — because that is the one place it is correct and renaming it there
+would break customers’ code. Implementation is in flight in a separate pull
+request; the homepage behaviour contract
+(`tests/user-sim/10-home-chaos-to-calm.spec.js`) needs its assertion moved
+deliberately alongside the H1.
+
+**3 — `google` becomes free, and he chose it knowing the cost.** He was told the
+free tier already held six palettes and that we recommended leaving Google paid.
+**The history is worth keeping, because it is the useful part:** the row named
+`google` was never Google — it was holding **Material 3’s** default purple. #354
+split them into `material` (Material 3 Baseline) and a correct `google` row. That
+split was a *data correction*; which side of the paywall Google then landed on
+was never chosen by anybody, and this decision is where it finally was.
+
+**5 — typography pricing, which had been open since 2026-08-15.** Browse fonts,
+pair them and build a type scale for free; **Pro to save, to export, or to keep a
+type system in a project.** He picked it because it is exactly how the colour
+tools already gate — so it introduces no new concept, and it satisfies the P-003
+lesson that whatever is gated must stay visible and named. This closes
+`PROPOSALS.md` P-016, which had recorded that **no gate could be built at all**
+until it was answered.
+
+**6 and 7 — what Learn is, and whose voice it is in.** Real articles on colour
+theory, typography and accessibility: **not** how-to guides for our tools, and
+**not** product documentation. The voice is **neutral and factual, not his** —
+no first person — chosen deliberately so the content can be written at scale and
+he only has to fact-check it.
+
+**That is not in tension with decision 10, and the distinction is the useful
+part:** an educational article is not his to sign, and a welcome from the founder
+is nothing but his. The same reasoning is why hero direction C ships a flagged
+placeholder rather than an agent’s attempt at his voice.
+
+**8 — Discover ships curated before it ships social.** Galleries he fills
+himself now, rather than launching an empty community feature and waiting for it
+to fill.
+
+**9 — moderation is an approval queue, and the reason is liability, not taste.**
+Nothing publishes until he approves it. He chose this over publish-then-remove
+**on liability grounds, as a solo developer**. It is a constraint on how community
+publishing gets built rather than a feature of its own — and it raises the
+priority of the admin custom claim in `docs/OWNER-ACTIONS.md` §4.4, because an
+approval queue is an admin surface with the same unmet requirement.
+
+**10 — the founder note, in his words:** *"maybe we make it visable when a user
+clicks a certian section or button, it will just be a short welcome from me and a
+what this app is for and what state its in also asking for feedback support as im
+a solo developr"*. **Opt-in only** — it never auto-opens, and there is no timer,
+no scroll trigger and no first-visit trigger. It is **blocked on four sentences
+only he can write** (who he is, what UIL4B is for, what state it is in, what help
+he wants), which is `docs/OWNER-ACTIONS.md` §2.3 and is deliberately not
+ghostwritten.
+
+### Five more requests from the same session — 2026-09-05
+
+Recorded by #374 in `src/data/pipeline.js`, and listed here so the record of that
+session is not only its decisions. **These are requests, not verdicts** — each
+names a want and leaves the design open. The queue row carries the working; this
+table is only so you can find it.
+
+| The request, in his words | Queue row |
+|---|---|
+| *"lets remove the build UI system from the colour pallete also, lets make the one in the navigation the create Brand system should start a guided walkthrough to build a full system"* | `palette-ui-system-cta-removed` and `brand-system-guided-walkthrough` — two halves of one request |
+| *"for our enhanced exporting system … i want multiple export variations for premium users"* | `brand-kit-export-variations`. The references he supplied are **brand guidelines documents**, not token files |
+| *"we need to make a moderator role i can assign to people to moderate the community submissions and feedback"* | `moderator-role` — this is how the approval queue in decision 9 stops being a one-person bottleneck |
+| *"the plans page needs a full overhaul"* | `plans-page-overhaul`. It has to absorb decisions 1 and 5 above: the page must say **Styles**, and must state that typography browsing is free and saving is Pro |
+
+**Two of the five are downstream of the decisions above**, which is why they
+belong in the same record: the moderator role exists to serve the approval queue,
+and the plans page has to carry both the new vocabulary and the new typography
+gate.
+
+### Still open after that interview — 2026-09-05
+
+Two questions and one writing task, all on one screen each in
+[`docs/OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) §2. Listed here because this
+file is the record of where a call was **asked for** as well as where one was
+made.
+
+1. **The hero shape** — A, B or C, at `/?hero=a|b|c`. Note that direction C is
+   rendered at 45% opacity **as a placeholder marker**; the shape is what is being
+   judged, not the paleness.
+2. **The muted-text trade-off** — keep as shipped, reverse it, or say so on
+   screen. (`PROPOSALS.md` P-023.)
+3. **The founder note’s four sentences** — not a decision, a piece of writing,
+   and the only part of that feature that is blocked.
+### Founder requests recorded — 2026-09-03 and 2026-09-04
+
+Quoted verbatim from conversation with the Director. **These are requests, not
+decisions** — each names a problem and leaves the answer open. Where an answer
+was needed to keep working, the Director took it under standing authority and
+that is said so explicitly below.
+
+| Date | The request, in the founder's words | Where it went |
+|---|---|---|
+| 2026-09-03 | *"review our subagent MD files and our other MD files to ensure nothing is stale as i feel like we have been going in circles sometimes"* | `docs/reference/doc-authority-map.md` (#311), and the four traps it names |
+| 2026-09-03 | *"i sohuld also be able to access icon library from the discober tab"* | #306, #317 |
+| 2026-09-04 | *"the mega menu could use a UI redesign as it feels a bit AI slop"* | #345 recorded it, #352 and #364 answered it |
+| 2026-09-04 | *"i dont like tokens being such an important word we are using around the site, tokens means alot of things and in the context we are using it doesnt make it seem like its a huge value add"* | Three named options in `docs/PROPOSALS.md` P-019. **ANSWERED 2026-09-05: “Styles”** — see the decisions above |
+| 2026-09-04 | *"for the font examples i want real world examples not the same UI examples for each one"* | #356 |
+| 2026-09-04 | The hero copy still reads as AI-generated — **the third report of the same thing** | #320 built three shapes at `/?hero=a\|b\|c` — **still open** |
+| 2026-09-04 | *"real australian style english to sound like me not an AI written statement"* | Standing constraint. It is why hero direction C ships a flagged placeholder line rather than an agent's attempt at the founder's voice |
+
+**Nothing in this table is a verdict** — every row is a problem he named, not a
+call he made. The token-vocabulary row was answered on 2026-09-05 and the hero
+row still is not; both outcomes are in the decisions section above.
+
+### 2026-09-02 → 2026-09-05 — everything on `main` since #295, none of it live
+
+**Read the second half of that heading first.** Everything below is merged and
+**not deployed**. It is deliberately anchored to #295 rather than counted: the
+count was "seventy-six" when this section was written and #374 made it wrong
+within the hour, which is the first failure mode `doc-authority-map.md` lists. Vercel is rate-limiting deployments, so uil4b.com still serves
+the 2 September build. And since 2026-09-04 GitHub Actions has run no tests at
+all — a billing failure, not a test failure — so every open pull request reads
+`UNSTABLE` while meaning only that the gate never started. Both are owner
+actions; both are §1 of `docs/OWNER-ACTIONS.md`.
+
+This section reconstructs the period from `git log` on `main` and from the rows
+in `src/data/pipeline.js` that moved to `done`. It is a summary by theme, not one
+entry per pull request; the per-change detail is in each row's note.
+
+**Colour, contrast and the token layer.** The largest single thread, and the one
+that found the most.
+
+- **The contrast test was silently skipping most of the app** (#362). Our
+  checker could only read colours written as `rgba(...)`, and most of the app's
+  grounds are written as `color-mix(...)`. Everything painted on one of those was
+  never measured. Five token and contrast items sat behind that blindness and
+  moved once it was fixed.
+- **Small state text and filled state controls** now use dedicated `--ok-strong`
+  / `--warn-strong` / `--err-strong` inks, and a filled control's lettering flips
+  with the theme (#346).
+- **The dark theme is now reachable by a visitor** — a three-state Light / Dark /
+  System control, shipped with the measurement that says it is safe (#343).
+- **Seven brand palettes were wrong** and were corrected (#354). The row named
+  `google` was holding **Material 3's** default purple rather than Google's
+  colours, so the two were split: `material` (Material 3 Baseline) stays free,
+  and a correct `google` row is paid. That is the origin of open decision 3
+  above — it was a data correction with a pricing consequence nobody chose.
+- **`pepsi` could not be verified and is still shipping** (#366). Every PepsiCo
+  host refuses automated access, and PepsiCo's own asset library serves the
+  corporate mark rather than the cola brand, so the pre-2023 values were **left
+  in place rather than guessed from an aggregator**. The file says so at the top,
+  and open decision 2 asks what to do about it.
+- **The paid brand palettes stopped being readable on a public page** (#355) —
+  `/discover/palettes` was printing every Pro brand's five hex codes as visible
+  text with copy-to-clipboard swatches.
+- **The preview role engine now states its grounds instead of assuming one**
+  (#372), and guarantees both ink roles against every one of them. Measured
+  across 6,000 generated palettes in both themes and an sRGB grid sweep of 48,778
+  more. **The trade-off is deliberate and is open decision 6:** text and muted
+  text now look alike on 19.10% of palettes, up from 3.02%, because on a
+  saturated canvas the whole ink budget goes on being readable at all. Three
+  options were priced and (a) *ship as is* was taken **by the Director under
+  standing authority**, on measured evidence plus eight comparable products.
+- Category hues split, `onPrimary` guaranteed, the `/seo` gradient fixed (#367);
+  the icon stroke control now means real pixels (#303); one colour picker,
+  matching the app, used by every surface (#319).
+
+**Homepage.** Four pull requests had been parked since August.
+
+- **#365 re-triaged all four by actually rebasing them**, not by estimating, and
+  three of the previous pass's conclusions changed.
+- **#262 was revived, rebased and merged** — one fixed workbench frame (the panel
+  had been swinging 215px across its five tabs), a centred panel, and a brand
+  mark that no longer has 18px sheared off its top by its own clip.
+- **#269's one good change shipped as #363**: the workbench panel now swaps as a
+  step reaches the centre of the screen rather than the bottom seventh. **#269 is
+  now empty and can be closed.**
+- **#264 is unsalvageable as a branch**, with evidence rather than advice: one of
+  its commits is already on `main`, the other two conflict across eleven
+  `Home.jsx` hunks, and it edits `src/components/TopBar.jsx`, **which no longer
+  exists**. Its survivors are re-filed as separate items; do not rebase it.
+- **#270's specimen band is not blocked on the hero choice.** The earlier note
+  said direction A had no room for it. Measured at 1440×900, A has 183.9px of
+  empty flow, B 256.6px and C 253.2px, against a band budget of 96–144px — it
+  fits in all three, on desktop and on phone. That correction matters because
+  "wait for the hero" was the stated reason to park it.
+- Also: the hero bar types for itself and three shapes were built at
+  `/?hero=a|b|c` (#320); the strip points inward, the step rail is derived rather
+  than hand-typed, and the hand-off left the scroller (#368); the first win moved
+  into the slot the pricing step held, and three questions nobody answered were
+  deleted (#349).
+
+**Navigation, search and the six copies of the tool list.** Search could not find
+the app's own tools, and the nav advertised tools that do not exist (#332). The
+cause was that the list of tools was written out by hand in six more places.
+Every one of them now derives from the single table and fails the build if it
+drifts: the ten locale files (#335, which were advertising five tools the product
+does not have), `public/sitemap.xml` (#337), the two tables beside
+`CREATE_GROUPS` (#338), and five links that were routing visitors through a
+redirect to reach where a direct link already went (#339). The mega menus stopped
+falling off a laptop screen (#340), then stopped describing the product and
+started showing it (#352, #364).
+
+**Typography and the libraries.** The Font Gallery went to one specimen per row
+(#305); the Icon Library joined the gallery masthead (#306) and then Discover
+(#317); font popups, Font Pair and Type Scale were reviewed end to end (#327);
+and font examples are now chosen from what a family actually is, rather than the
+same UI sample repeated for all 1,946 (#356).
+
+**Commerce, account and trust.** A silent OpenRouter failover stopped being
+silent — a badge on the result, seven days of counts in Admin, and an opt-in
+daily email (#322), after #314 established that the diagnostic **cannot** close
+that owner action because it reports key presence, which is what a dead key also
+looks like. The community prompt gate counted positions rather than identities,
+so a search walked straight through it (#358). Right-click anywhere to report
+what is under the pointer, with the context shown before it is sent (#313). The
+footer credits its author and the project cap stopped being silent (#315). A
+design system book that prints like a studio manual, as a Pro export (#326). SEO
+prices derive from the ladder, with an explicit prerender matrix and per-route
+share cards (#325); the favicon became the brand mark and the share card stopped
+quoting a headline that had been deleted (#351).
+
+**Dead code.** `UIPreviewModal`, `TopBar`, `Sidebar` and three of ColorStudio's
+four sections were deleted (#348) — none was reachable from any route. This is
+the second time an unrouted file has cost real work; the first is the reason
+`doc-authority-map.md` carries the rule *grep for the import before editing a
+page file*.
+
+**The test suite and the gate.** The gate doc now states a **property** — zero
+errors, zero failures, zero skipped — instead of a hand-carried count that had
+drifted four times, one of them undetected the whole time; `tests/unit/gate-doc.test.js`
+fails the build if a count comes back (#312). The arrow-key flake that blocked
+every second pull request was split into a held contract and a real defect
+(#329). The full-suite flake class was finally reproduced: a rebuild of `dist/`
+underneath a running suite (#370). Two assertions that could not fail were found
+and made able to (#361). ESLint was reporting 63 errors from third-party skill
+bundles that are not ours (#353).
+
+**Two spent QA documents retired, on the #295 rule.** `docs/qa/mobile-audit-2026-08.md`
+(609 lines) and `docs/qa/responsive-audit-2026-08.md` (417) were diagnosis-only
+passes whose 25 findings are fixed and held by three regression specs, and whose
+route tables still named pre-#266 URLs. Replaced by `docs/qa/defect-register-2026-08.md`,
+117 lines, because roughly twenty CSS comments, three specs, a page component and
+`.gitignore` cite those audits **by finding number** — so what had to survive was
+an index of numbers, not a summary. Two of the findings recorded as open turned
+out already fixed (M5, N6), one is genuinely open (N5, which is P-014) and one is
+unverified (N7). **The step that would have lost something** was the responsive
+audit’s Director addendum: two accepted decisions recorded nowhere else in the
+repository, now migrated into the 2026-08-20 section above **before** the file was
+deleted. The three homepage documents were assessed the same way and kept, each
+with the condition that makes it deletable written into its row in
+`doc-authority-map.md` — “archive later” is not a verdict.
+
+**Documentation.** The authority map itself (#311) — which file is authoritative
+for which question, and which files look authoritative and are not.
+`PRODUCT.md` records what nothing else owns (#352). Twelve backlog-sync commits
+corrected rows that had shipped but still read `todo`; that recurring correction
+is itself the evidence for the map's first rule.
+
 ### Founder decisions — 2026-08-20
 
 Answers given by Dylan in conversation with the Director on 2026-08-20, in
@@ -59,6 +337,50 @@ carry a footer credit rather than being blocked, so `positioning.md`'s
 
 Decisions 1 and 5 are discharged: the stack merged in order, and the sticky
 trigger ships at 52/44.
+
+### Two Director decisions from the same day, migrated here 2026-09-05
+
+These were taken by the Director on 2026-08-20 under standing authority, after
+the Palette Builder blocker was fixed. They lived only in an addendum to
+`docs/qa/responsive-audit-2026-08.md`, which has now been deleted — so they are
+moved here rather than lost. Both overturn something previously asserted, which
+is why they are worth a record at all.
+
+**1 — Accept the toolbar wrap.** The audit measured Palette Builder with the
+default harmony selected. The trigger renders `System · <label>`, so its width
+depends on the *selected* harmony — a free choice any user can make. With
+**Monochromatic** selected the pre-fix build is still partly covered at
+**1060–1119px**. The crossover is therefore content-dependent — 1123px with
+"Auto", 1180px with "Monochromatic" — and **no fixed media band can be correct
+for both**, which is why extending the 769–960px fix upward, the approach both
+the audit and the routing brief assumed, could not have worked.
+
+The fix lets the toolbar wrap its action group to a second row rather than
+shrinking a group below its content. That is a visible change — the toolbar
+grows 57px to 105px inside the affected band — and it overturns the invariant
+the old CSS comment asserted, *"a single line, always — it never wraps"*.
+Accepted because a control that **cannot be clicked at all** is a worse defect
+than a taller toolbar in a narrow band; because that invariant was written
+before the harmony label could grow the trigger, and was recorded nowhere but
+the comment the fix replaced; and because the alternative would push bottom
+sheets and swipe-to-reach onto 1024–1180px **laptops** that currently show all
+eleven controls at once — trading a narrow-band defect for a broad-band
+regression.
+
+**2 — The two-column threshold moves to 1344px, with the single column capped
+at 940px.** The reasoning is forced rather than chosen. A sidebar appearing at
+any threshold *T* costs the working column `gap + sidebar` (364px) at that exact
+pixel, so moving *T* relocates the cliff and never removes it. "Widening never
+shrinks the working column" is only satisfiable if the single-column band stops
+growing before the sidebar arrives — hence the 940px cap, which is the width the
+column already has at the existing 980px stack point. That makes 980 → 981
+seamless and changes nothing at or below 980px.
+
+**Two residuals were reported and deliberately not fixed**, both pre-existing
+and outside that slice: Font Pair’s specimen drifts 889 → 874px (1.7%) from
+`.fpr-panel`’s `clamp(20px,2.5vw,32px)` viewport padding, where pinning it would
+convert a gradual drift into a hard step; and `--page-gutter` costs every page
+~48px crossing 1440px, which is page-wide and unrelated.
 
 ### One home per fact: four spent planning documents retired
 

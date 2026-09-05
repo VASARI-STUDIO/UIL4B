@@ -1486,7 +1486,7 @@ evidence any of it was verified.
 captures in either research pass, and the 641–980px range currently inherits
 whichever of the two neighbours the breakpoint happens to catch. Nothing about
 tablet here is evidenced — treat it as the starting hypothesis for the responsive
-audit (batch item B2, `docs/qa/responsive-audit-2026-08.md`) and verify before
+audit (batch item B2, now `docs/qa/defect-register-2026-08.md`) and verify before
 committing.
 
 ---
