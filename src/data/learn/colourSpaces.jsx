@@ -222,7 +222,8 @@ H = 29.23   hue in degrees`}</Formula>
           <code>color(srgb 1 0 1)</code>, and <code>in oklab</code> stays in the
           interpolation space as <code>oklab(0.539974 0.0962086 -0.0928316)</code>.
           Anything that reads a colour back and expects to parse{' '}
-          <code>rgb(&hellip;)</code> — a test assertion, a token extractor, a
+          <code>rgb(&hellip;)</code> — a test assertion, a build step that
+          harvests colour values, a
           contrast checker fed a computed value — sees a string it does not
           recognise, and the failure is usually silent.
         </p>
