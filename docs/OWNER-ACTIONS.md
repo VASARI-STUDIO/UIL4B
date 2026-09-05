@@ -69,7 +69,8 @@ it counts yet.
 # 2 · Six decisions. Each one is a single answer.
 
 Write your answer on the line under the question, or just say it in conversation
-— either counts as the record.
+— either counts as the record. Each one also has a longer working-out in
+[`PROPOSALS.md`](PROPOSALS.md); you do not need to read it to answer.
 
 ## 2.1 · What do we call design tokens on the site?
 
@@ -125,6 +126,8 @@ codes. So our row holds pre-2023 colours nobody here has confirmed.
 **If you do nothing.** A paying customer can buy colours that are two brand
 refreshes out of date, sold to them under the brand's name.
 
+**Full working:** [`PROPOSALS.md` P-020](PROPOSALS.md).
+
 **Your answer:** _______________
 
 ## 2.3 · The free tier now has nothing called "Google" in it. Intended?
@@ -152,6 +155,8 @@ Discord · Stripe · Spotify.
 **If you do nothing.** It stays as it is, which is defensible. This is a check,
 not a fire.
 
+**Full working:** [`PROPOSALS.md` P-021](PROPOSALS.md).
+
 **Your answer:** _______________
 
 ## 2.4 · The `/community` thumbnails are unreadable. Fix them? (yes / no)
@@ -177,6 +182,8 @@ changing the tile colours themselves, which changes the look of the page.
 
 **If you do nothing.** Three-quarters of that page's thumbnails stay hard to
 read, and `/community` is a page we point new visitors at.
+
+**Full working:** [`PROPOSALS.md` P-022](PROPOSALS.md).
 
 **Your answer:** _______________
 
@@ -241,6 +248,8 @@ use the **same** ink for both levels and separate them by size and weight. Not o
 of the eight paints a faint tint on a saturated ground.
 
 **If you do nothing.** A stays.
+
+**Full working:** [`PROPOSALS.md` P-023](PROPOSALS.md).
 
 **Your answer:** _______________
 
