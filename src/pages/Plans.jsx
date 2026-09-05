@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { AI_LIMITS, FREE_SAVE_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { refreshPrices, useProPrice } from '../hooks/usePrices'
+import { useReveal } from '../hooks/useReveal'
 import SystemCTA from '../components/SystemCTA'
 
 // The One-off ("lifetime") tier is GONE from this page. It was a third tab that
@@ -72,6 +73,20 @@ export default function Plans() {
   const [openFaq, setOpenFaq] = useState(null)
   const tabRefs = useRef([])
   const price = useProPrice()
+  // SystemCTA's content sits in a `[data-reveal]` div, and the stylesheet
+  // starts every one of those at `opacity:0`. Something has to add `.is-in`.
+  // Home drives it with useHomeMotion; ColorLanding and SurfaceLanding — the
+  // only other SystemCTA consumers — call useReveal(). This page called
+  // NEITHER, so the entire closing block (eyebrow, headline, lede, both
+  // buttons, hint) rendered as a 472px blank white box at the foot of the
+  // pricing page, in every browser, for every visitor.
+  //
+  // Nothing caught it: the element has a real bounding box and
+  // `visibility:visible`, so Playwright still considers it visible and clicks
+  // it happily — 18-signup-intent.spec.js has been clicking an invisible
+  // button and passing. Opacity is what was wrong, so opacity is what
+  // 52-plans-truth.spec.js now asserts.
+  useReveal()
 
   const selectTab = (index) => {
     const wrapped = (index + BILLING_OPTIONS.length) % BILLING_OPTIONS.length
