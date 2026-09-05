@@ -125,9 +125,10 @@ and the honest signal — a local gate run — is invisible on the PR.
 > `src/data/pipeline.js` (`ci` and `deploy`) and is an owner action in
 > `docs/OWNER-ACTIONS.md` §1.
 
-The same shape, one layer out: **76 merged changes are not deployed**, because
-Vercel is rate-limiting. "Merged" is not "live", and no document said so until
-this one did.
+The same shape, one layer out: **everything merged since #295 is not deployed**,
+because Vercel is rate-limiting. "Merged" is not "live", and no document said so
+until this one did. Anchored to a PR rather than counted — the count was wrong
+within the hour of being written, when #374 landed.
 
 ## Per-file register
 

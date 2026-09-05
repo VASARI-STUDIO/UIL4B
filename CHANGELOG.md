@@ -92,6 +92,25 @@ only he can write** (who he is, what UIL4B is for, what state it is in, what hel
 he wants), which is `docs/OWNER-ACTIONS.md` §2.3 and is deliberately not
 ghostwritten.
 
+### Five more requests from the same session — 2026-09-05
+
+Recorded by #374 in `src/data/pipeline.js`, and listed here so the record of that
+session is not only its decisions. **These are requests, not verdicts** — each
+names a want and leaves the design open. The queue row carries the working; this
+table is only so you can find it.
+
+| The request, in his words | Queue row |
+|---|---|
+| *"lets remove the build UI system from the colour pallete also, lets make the one in the navigation the create Brand system should start a guided walkthrough to build a full system"* | `palette-ui-system-cta-removed` and `brand-system-guided-walkthrough` — two halves of one request |
+| *"for our enhanced exporting system … i want multiple export variations for premium users"* | `brand-kit-export-variations`. The references he supplied are **brand guidelines documents**, not token files |
+| *"we need to make a moderator role i can assign to people to moderate the community submissions and feedback"* | `moderator-role` — this is how the approval queue in decision 9 stops being a one-person bottleneck |
+| *"the plans page needs a full overhaul"* | `plans-page-overhaul`. It has to absorb decisions 1 and 5 above: the page must say **Styles**, and must state that typography browsing is free and saving is Pro |
+
+**Two of the five are downstream of the decisions above**, which is why they
+belong in the same record: the moderator role exists to serve the approval queue,
+and the plans page has to carry both the new vocabulary and the new typography
+gate.
+
 ### Still open after that interview — 2026-09-05
 
 Two questions and one writing task, all on one screen each in
@@ -127,10 +146,12 @@ that is said so explicitly below.
 call he made. The token-vocabulary row was answered on 2026-09-05 and the hero
 row still is not; both outcomes are in the decisions section above.
 
-### 2026-09-02 → 2026-09-05 — seventy-six changes on `main`, none of them live
+### 2026-09-02 → 2026-09-05 — everything on `main` since #295, none of it live
 
 **Read the second half of that heading first.** Everything below is merged and
-**not deployed**. Vercel is rate-limiting deployments, so uil4b.com still serves
+**not deployed**. It is deliberately anchored to #295 rather than counted: the
+count was "seventy-six" when this section was written and #374 made it wrong
+within the hour, which is the first failure mode `doc-authority-map.md` lists. Vercel is rate-limiting deployments, so uil4b.com still serves
 the 2 September build. And since 2026-09-04 GitHub Actions has run no tests at
 all — a billing failure, not a test failure — so every open pull request reads
 `UNSTABLE` while meaning only that the gate never started. Both are owner

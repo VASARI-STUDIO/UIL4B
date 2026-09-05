@@ -49,7 +49,7 @@ new change keeps looking broken, and the only proof anything works is an agent
 running the tests on their own machine and pasting the output into the pull
 request.
 
-## 1.2 · Vercel will not deploy. 76 merged changes are not live.
+## 1.2 · Vercel will not deploy. Nothing merged since 2 September is live.
 
 **Do.** Vercel → your team → Usage / Billing. Clear the deployment limit, or wait
 out the window Vercel names.
@@ -57,8 +57,9 @@ out the window Vercel names.
 **Time.** A few minutes to upgrade; 24 hours if you would rather wait.
 
 **Why.** Vercel answered *"Deployment rate limited — retry in 24 hours"*.
-Everything merged since 2026-09-02 is sitting on `main` and has never reached
-uil4b.com.
+**Every change merged since 2 September** is sitting on `main` and has never
+reached uil4b.com — around eighty pull requests, and it grows every day this
+stays unfixed.
 
 **If you do nothing.** The live site keeps serving the 2 September build. Every
 fix listed in the changelog since then is invisible to real visitors, so none of
