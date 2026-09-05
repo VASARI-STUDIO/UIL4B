@@ -25,6 +25,7 @@ import {
 import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
 import { stepName } from '../utils/fluidType'
 import { setBoardDraft } from '../utils/colorHandoff'
+import { navigatesThisTab } from '../utils/handoffSlot'
 import { derivePreviewRoles, tonalRamp } from '../utils/colors'
 import { colorName } from '../utils/paletteNames'
 import { roleLabel } from '../utils/paletteRoles'
@@ -476,11 +477,22 @@ function PalettePanel({ swatches, onChange, announce }) {
       <div className="hw-foot">
         {/* Stays a real <Link> with a real href, so middle-click / open-in-new-tab
             still work — those start a fresh module instance, which legitimately
-            finds no staged draft and opens the builder in its normal state. */}
+            finds no staged draft and opens the builder in its normal state.
+            That was true of the NEW tab and false of this one. React Router's
+            Link calls this onClick unconditionally and only then asks
+            shouldProcessLinkClick whether to navigate; for a Ctrl/Cmd/Shift/Alt
+            click, or a non-primary button, the answer is no. So the old handler
+            staged a draft in a tab that stayed put, and the draft waited there
+            for the life of the tab until some later, unrelated visit to
+            /create/palette imported it over the visitor's own board — the
+            founder's intermittent "it has added many colours and it's a
+            different swatch". Stage only when this tab is the one that moves;
+            the new tab gets the URL, which is the whole point of opening one.
+            utils/colorHandoff gives the slot a ttl as the backstop. */}
         <Link
           className="hw-continue"
           to="/create/palette"
-          onClick={() => setBoardDraft(swatches.map((s) => s.hex), HANDOFF_SYSTEM)}
+          onClick={(e) => { if (navigatesThisTab(e)) setBoardDraft(swatches.map((s) => s.hex), HANDOFF_SYSTEM) }}
         >
           Continue in Palette Builder
           <span aria-hidden="true">→</span>

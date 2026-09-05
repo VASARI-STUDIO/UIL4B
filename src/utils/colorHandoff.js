@@ -103,7 +103,18 @@ export const BOARD_HANDOFF_MAX = 10
 
 const SYSTEM_ID_RE = /^[a-z][a-z0-9-]{0,23}$/
 
-const boardSlot = createHandoffSlot()
+// A board hand-off means "the visitor pressed Continue seconds ago", so it is
+// the one slot that expires. See the EXPIRE note in utils/handoffSlot.js: a
+// Ctrl/Cmd-click on the homepage's Continue link stages a draft in a tab that
+// then does not navigate, and without a ttl that draft waits for the life of
+// the tab and lands on whatever visit to /create/palette comes next — the
+// founder's intermittent "different swatch". The call site is guarded now, so
+// this is the backstop rather than the fix: 30s is far longer than the route
+// change it has to survive (a lazy chunk on a cold cache is ~1s) and far
+// shorter than the gap that made the bug reportable.
+export const BOARD_HANDOFF_TTL_MS = 30_000
+
+const boardSlot = createHandoffSlot({ ttlMs: BOARD_HANDOFF_TTL_MS })
 
 /** Re-validate on the way in AND on the way out; null when unusable. */
 export function validateBoardDraft(draft) {
@@ -134,6 +145,8 @@ export const readBoardDraft = () => validateBoardDraft(boardSlot.peek())
 export const consumeBoardDraft = () => boardSlot.consume()
 /** Drop a staged draft that will never be delivered (e.g. a failed navigation). */
 export const resetBoardDraft = () => boardSlot.clear()
+/** Age in ms of a live staged draft, or null. Diagnostics only. */
+export const boardDraftAge = () => boardSlot.stagedAgo()
 
 /* ── Palette → Gradient Generator ─────────────────────────────────────────── */
 

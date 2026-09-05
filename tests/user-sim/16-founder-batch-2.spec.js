@@ -158,9 +158,23 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
       // incremental relayout after a viewport change.
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/palette')
-      await expect(page.locator('.plb-icobtn').first()).toBeVisible()
+      await expect(page.locator('.plb-icobtn:visible').first()).toBeVisible()
       const state = await page.evaluate(() => {
-        const rows = [...document.querySelectorAll('.plb-icobtn')].map((el) => {
+        // ONLY THE CONTROLS ACTUALLY ON THE ROW.
+        //
+        // `palette-toolbar-rendering` collapses the exploratory cluster —
+        // Image, Explore, Preview, Vision type, Gradient — behind one labelled
+        // trigger wherever the rail cannot fit, which is every width in this
+        // list. Those five are still mounted, inside a closed panel, so an
+        // unfiltered querySelector returns buttons that measure as all zeros
+        // and the `inside` proxy below reads that as "clipped".
+        //
+        // The contract is unchanged, only its subject is stated properly: of
+        // the controls a user can SEE, every displayed label is open and
+        // inside its button, and exactly Undo and Reset are icon-only. The
+        // collapsed five get their own assertion after this loop, where the
+        // requirement is stronger — a menu of five named things.
+        const rows = [...document.querySelectorAll('.plb-icobtn')].filter(el => el.offsetParent !== null).map((el) => {
           const inner = el.querySelector('.plb-lbl-i')
           const b = el.getBoundingClientRect()
           const i = inner.getBoundingClientRect()
@@ -181,13 +195,48 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
       const hidden = state.rows.filter((r) => r.hidden).map((r) => r.name).sort()
 
       expect(hidden, `${width}px · exactly Undo and Reset may be icon-only`).toEqual(['Reset', 'Undo'])
-      expect(shown.length).toBeGreaterThan(3)
+      // Was `> 3`, when all nine icon buttons sat on the row. Where the
+      // cluster collapses, the row's labelled icon buttons are History and
+      // Save / export — the two that must never be behind anything, since one
+      // is the way back and the other is the way out. The floor says so.
+      expect(shown.length, `${width}px · History and Save / export stay on the row`).toBeGreaterThanOrEqual(2)
       for (const row of shown) {
         expect(row.width, `${width}px · ${row.name}: label is open at its real width`)
           .toBeGreaterThanOrEqual(row.natural - 1)
         expect(row.inside, `${width}px · ${row.name}: label is inside its button, not clipped beside it`).toBe(true)
       }
       expect(state.overflow, `no horizontal overflow at ${width}px`).toBeLessThanOrEqual(0)
+    }
+  })
+
+  // The other half of the contract above. The five controls that collapse are
+  // not exempt from "a label that is open and inside its button" — the panel
+  // exists so they can be NAMED, and a menu of five icon squares would just
+  // move the founder's desktop complaint into a popup.
+  test('the collapsed cluster shows full labels, not icons', async ({ page }) => {
+    watch(page, 'designer opening the toolbar overflow on a narrow laptop')
+    await page.setViewportSize({ width: 662, height: 900 })
+    await go(page, '/create/palette')
+    await page.locator('.plb-toolsbtn').click()
+    const state = await page.evaluate(() => (
+      [...document.querySelectorAll('.plb-tools--panel .plb-icobtn')]
+        .filter(el => el.offsetParent !== null)
+        .map((el) => {
+          const inner = el.querySelector('.plb-lbl-i')
+          const b = el.getBoundingClientRect()
+          const i = inner.getBoundingClientRect()
+          return {
+            name: el.getAttribute('aria-label'),
+            width: i.width,
+            natural: inner.scrollWidth,
+            inside: i.left >= b.left - 0.5 && i.right <= b.right + 0.5,
+          }
+        })
+    ))
+    expect(state.map(r => r.name).sort()).toEqual(['Explore', 'Gradient', 'Image', 'Preview'])
+    for (const row of state) {
+      expect(row.width, `${row.name}: label open at its real width in the panel`).toBeGreaterThanOrEqual(row.natural - 1)
+      expect(row.inside, `${row.name}: label inside its button in the panel`).toBe(true)
     }
   })
 })
@@ -226,6 +275,77 @@ test.describe('Home mini-builder · Continue in Palette Builder', () => {
 
     // …and Continue actually continued.
     expect(await page.locator('.plb-hex').allInnerTexts()).toEqual(handedOver)
+
+    // THE POSITIVE CONTROL for the modified-click test below. That test asserts
+    // the board did NOT come from the hand-off, which would also be true if the
+    // hand-off had simply stopped working, or if the attribute never read
+    // `handoff` at all. This is the half that says the instrument responds:
+    // when a hand-off really happens, the board says so.
+    await expect(page.locator('.plb')).toHaveAttribute('data-board-source', 'handoff')
+  })
+
+  /* ── The modified click (palette-opens-with-wrong-state) ──────────────────
+   *
+   * Founder: "somtimes i open the pallete builder and it has added many colours
+   * and its a different swatch."
+   *
+   * React Router's Link calls the caller's onClick UNCONDITIONALLY and only
+   * then asks its own shouldProcessLinkClick whether to navigate — which for a
+   * Ctrl/Cmd/Shift/Alt click, or any non-primary button, is no, because the
+   * browser is opening a new tab instead. The new tab starts a fresh module
+   * instance and correctly finds nothing. THIS tab was left holding a draft
+   * nothing would ever consume, in a slot with no expiry, and it ambushed
+   * whatever visit to /create/palette came next.
+   *
+   * WHY THIS TEST EXISTS SEPARATELY FROM THE UNIT TESTS. tests/unit/
+   * board-handoff.test.js proves `navigatesThisTab` gives the right answer for
+   * every modifier. It cannot prove the homepage ASKS IT — and the defect was
+   * never in the helper, it was in the call site. Reverting
+   * HomeWorkbench.jsx's onClick to its unconditional form left the whole unit
+   * suite green (1190 pass) and 16-founder-batch-2 green (13 passed), which is
+   * the gap this closes.
+   *
+   * TWO THINGS THIS TEST HAS TO GET RIGHT OR IT ASSERTS NOTHING:
+   *   · the second visit must be an IN-APP navigation. A reload starts a fresh
+   *     module instance, which finds no staged draft whether or not the bug is
+   *     present, and the test would pass on the broken build.
+   *   · it must arrive by a DIFFERENT link. Clicking Continue again would stage
+   *     a fresh, legitimate draft and `handoff` would be the correct answer.
+   */
+  test('a click that opens a NEW TAB must not arm the board in THIS one', async ({ page }) => {
+    watch(page, 'visitor ctrl-clicking Continue to keep the homepage open')
+    await go(page, '/')
+    await page.locator('.hw-tab[data-tab="palette"]').click()
+    await expect(page.locator('.hw-board .plb-hex')).toHaveCount(5)
+
+    const cont = page.getByRole('link', { name: /Continue in Palette Builder/ })
+    const [popup] = await Promise.all([
+      page.context().waitForEvent('page'),
+      cont.click({ modifiers: ['ControlOrMeta'] }),
+    ])
+    // The browser opened the link somewhere else, which is what the visitor
+    // asked for and is not the problem.
+    await expect(popup).toHaveURL(/\/create\/palette/)
+    await popup.close()
+    // …and THIS tab did not move, which is the whole setup.
+    await expect(page).not.toHaveURL(/\/create\/palette/)
+
+    // Reach the builder later, by another route, in the same module instance —
+    // the nav, a gallery link or, here, the homepage's own step CTA.
+    const other = page.getByRole('link', { name: /Open Palette Builder/ })
+    await expect(other, 'the second route must not be the Continue link').toHaveClass(/hstep-cta/)
+    await other.click()
+    await page.waitForURL('**/create/palette')
+
+    const board = page.locator('.plb')
+    await expect(board).toBeVisible()
+    // The founder's bug, in one attribute: `handoff` here means this board was
+    // painted from swatches the visitor generated somewhere else, minutes ago,
+    // on a page they never navigated away from.
+    await expect(
+      board,
+      'a draft staged by a click that opened a new tab was delivered to this one',
+    ).not.toHaveAttribute('data-board-source', 'handoff')
   })
 
   test('the hand-off does not fire again when the visitor keeps working', async ({ page }) => {
