@@ -101,6 +101,20 @@ import { projectQuota } from '../utils/projectQuota'
 // control: in its Fonts panel "Save theme" is the panel's terminal action,
 // after the live editing rather than above it. Both tools mount this in their
 // delivery section for that reason.
+//
+// -- Why this file exports two components -----------------------------------
+//
+// SaveTypeSystemMenu is the VIEW and holds no entitlement logic at all. It is
+// handed a resolved quota and renders what that quota allows; at the cap it is
+// given nothing to draw a save control WITH. SaveTypeSystem is the connected
+// half that resolves the quota from the real store and owns every refusal.
+//
+// That is the same split utils/lockedPreview.js makes and for the same reason:
+// a view that cannot receive a payload cannot leak one by mistake. It also
+// makes the wall reachable in a real browser -- the acceptance fixture at
+// tests/user-sim/fixtures/type-save.html mounts the view at 'clear',
+// 'approaching' and 'full' side by side, which is the only way to SEE the
+// at-cap state without a signed-in Firebase account in the suite.
 
 // How many existing projects the overwrite list offers. Matches
 // PaletteBuilder's `projects.slice(-5)` so the two menus behave alike.
@@ -116,7 +130,95 @@ function BookmarkIcon() {
 }
 
 /**
- * The "Save to a project" control for a typography tool.
+ * THE VIEW. No contexts, no entitlement checks, no store -- everything it knows
+ * arrives as a prop, so it is incapable of deciding who may save.
+ *
+ * The one rule it does carry is structural rather than logical: when
+ * `quota.atLimit` is true it renders the wall INSTEAD OF the name field and the
+ * save button, not alongside them and not around them. There is no hidden
+ * input, no `disabled` attribute and no CSS-hidden control, so nothing here can
+ * be revealed by editing a stylesheet or flipping a class.
+ */
+export function SaveTypeSystemMenu({
+  quota, projects, isPro, label, summary, name, onName, onSave, onOverwrite, onUpgrade,
+}) {
+  const recent = projects.slice(-OVERWRITE_SHOWN)
+  return (
+    <div className="svt-menu" role="dialog" aria-label={`Save ${label} to a project`}>
+      {summary && <p className="svt-summary">{summary}</p>}
+
+      {quota.atLimit ? (
+        // THE WALL. No input, no save button -- absent, not disabled.
+        <div className="svt-wall" data-testid="type-save-wall">
+          <p className="svt-wall-head">
+            You&rsquo;ve used all {quota.limit} projects on the free plan
+          </p>
+          <p className="svt-wall-body">
+            Nothing has been removed and nothing here is locked &mdash; {label} is still
+            yours to build, copy and export. To keep it as its own project, free a slot
+            on <NavLink to="/projects" className="svt-link">your projects</NavLink>, or
+            overwrite one below.
+          </p>
+          <button type="button" className="btn btn-accent btn-s svt-wall-btn" onClick={onUpgrade}>
+            See what Pro adds
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="svt-menu-title">Save to a project</div>
+          <div className="svt-row">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => onName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') onSave() }}
+              placeholder="Project name&hellip;"
+              aria-label="Project name"
+              className="svt-input"
+            />
+            <button type="button" className="btn btn-s btn-accent svt-save" onClick={onSave}>Save</button>
+          </div>
+          {/* Silent while the allowance is comfortable -- projectQuota owns that
+              judgement, and it is pinned across every cap from 1 to 40 in
+              tests/unit/project-quota.test.js. A countdown that starts on the
+              first project turns a foot in the door into a meter (P-003). */}
+          {quota.shouldTell && (
+            <p className="svt-allowance" data-testid="type-save-allowance">
+              {quota.remaining} more project{quota.remaining === 1 ? '' : 's'} on the free
+              plan. <NavLink to="/plans" className="svt-link">Pro lifts the cap</NavLink>.
+            </p>
+          )}
+        </>
+      )}
+
+      {recent.length > 0 && (
+        <>
+          {/* Survives into the wall on purpose. Savee blocks the paid step over a
+              toast that still reads "Site saved": at the cap the NEW slot is
+              withheld, never the work. */}
+          <div className="svt-menu-sub">Overwrite existing</div>
+          <div className="svt-list">
+            {recent.map((p) => (
+              <button key={p.id} type="button" className="svt-item" onClick={() => onOverwrite(p)}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!isPro && (
+        <p className="svt-foot">
+          Browsing, pairing, scales and exports stay free &mdash; the plan only decides
+          how many systems you can keep.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The connected control. Owns the store, the entitlement and every refusal.
  *
  * @param {string} gate     the id this wall reports to trackUpgradeGate. Names
  *                          WHICH surface converted, so two tools sharing one
@@ -138,10 +240,10 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
   const [name, setName] = useState('')
   const wrapRef = useRef(null)
 
-  // The count that refuses the save is the same array saveProject() counts, so
+  // The count that refuses the save is the SAME array saveProject() counts, so
   // the number shown and the rule enforced cannot drift apart. Pro resolves to
-  // Infinity upstream, which projectQuota answers as 'unlimited' — no count, no
-  // wall, nothing to dismiss.
+  // Infinity upstream, which projectQuota answers as 'unlimited' -- no count,
+  // no wall, nothing to dismiss.
   const quota = useMemo(
     () => projectQuota(projects.length, projectLimit),
     [projects.length, projectLimit],
@@ -178,7 +280,7 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
   }, [gate, openProModal, quota.limit])
 
   // Saving is free and only needs an account, exactly as in PaletteBuilder and
-  // IconLibrary. `free: true` keeps the login popup's copy off the Pro pitch —
+  // IconLibrary. `free: true` keeps the login popup's copy off the Pro pitch --
   // this is not the upsell, it is the prerequisite.
   const trigger = useCallback(async () => {
     if (!canSaveProjects) {
@@ -189,7 +291,7 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
   }, [canSaveProjects, label, requireLogin])
 
   // Re-resolve rather than trust the render that drew the button. The at-cap
-  // branch renders no save control at all, so this is belt-and-braces — but it
+  // branch renders no save control at all, so this is belt-and-braces -- but it
   // is the brace that survives someone reintroducing a disabled button later.
   const commit = useCallback(() => {
     const trimmed = name.trim()
@@ -206,8 +308,8 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
       toast?.(`${trimmed} saved — fonts and type scale included`)
     } catch {
       // saveProject throws only on the cap. Name the paid edge rather than
-      // showing its raw message as a failure (P-003: a gate must never read as
-      // the product breaking).
+      // surfacing its raw message as a failure (P-003: a gate must never read
+      // as the product breaking).
       setOpen(false)
       raiseWall()
     }
@@ -218,8 +320,6 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
     setOpen(false)
     toast?.(`Updated: ${project.name}`)
   }, [overwriteProject, toast])
-
-  const recent = projects.slice(-OVERWRITE_SHOWN)
 
   return (
     <div className="svt-wrap" ref={wrapRef}>
@@ -234,74 +334,18 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
       </button>
 
       {open && (
-        <div className="svt-menu" role="dialog" aria-label={`Save ${label} to a project`}>
-          {summary && <p className="svt-summary">{summary}</p>}
-
-          {quota.atLimit ? (
-            // THE WALL. No input, no save button — not disabled ones, absent
-            // ones. There is nothing here for a CSS toggle to reveal.
-            <div className="svt-wall" data-testid="type-save-wall">
-              <p className="svt-wall-head">
-                You’ve used all {quota.limit} projects on the free plan
-              </p>
-              <p className="svt-wall-body">
-                Nothing has been removed and nothing here is locked — {label} is still
-                yours to build, copy and export. To keep it as its own project, free a
-                slot on{' '}
-                <NavLink to="/projects" className="svt-link">your projects</NavLink>, or
-                overwrite one below.
-              </p>
-              <button type="button" className="btn btn-accent btn-s svt-wall-btn" onClick={raiseWall}>
-                See what Pro adds
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="svt-menu-title">Save to a project</div>
-              <div className="svt-row">
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') commit() }}
-                  placeholder="Project name…"
-                  aria-label="Project name"
-                  className="svt-input"
-                />
-                <button type="button" className="btn btn-s btn-accent" onClick={commit}>Save</button>
-              </div>
-              {/* Silent while the allowance is comfortable — projectQuota owns
-                  that judgement, and it is pinned across every cap from 1 to 40
-                  in tests/unit/project-quota.test.js. */}
-              {quota.shouldTell && (
-                <p className="svt-allowance" data-testid="type-save-allowance">
-                  {quota.remaining} more project{quota.remaining === 1 ? '' : 's'} on the free
-                  plan. <NavLink to="/plans" className="svt-link">Pro lifts the cap</NavLink>.
-                </p>
-              )}
-            </>
-          )}
-
-          {recent.length > 0 && (
-            <>
-              <div className="svt-menu-sub">Overwrite existing</div>
-              <div className="svt-list">
-                {recent.map((p) => (
-                  <button key={p.id} type="button" className="svt-item" onClick={() => overwrite(p)}>
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {!isPro && (
-            <p className="svt-foot">
-              Browsing, pairing, scales and exports stay free — the plan only decides how
-              many systems you can keep.
-            </p>
-          )}
-        </div>
+        <SaveTypeSystemMenu
+          quota={quota}
+          projects={projects}
+          isPro={isPro}
+          label={label}
+          summary={summary}
+          name={name}
+          onName={setName}
+          onSave={commit}
+          onOverwrite={overwrite}
+          onUpgrade={raiseWall}
+        />
       )}
     </div>
   )
