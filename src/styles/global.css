@@ -7748,7 +7748,6 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
    ~76px, and every value becomes one click instead of two. */
 .hw-prop{display:grid;grid-template-columns:minmax(72px,auto) minmax(0,1fr) auto;align-items:center;gap:10px;min-height:34px}
 .hw-prop-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
-.hw-prop-range{min-width:0}
 .hw-prop-select,.hw-prop-text{grid-column:2 / -1;width:100%}
 .hw-prop-num{display:inline-flex;align-items:center;justify-content:flex-end;justify-self:end;gap:2px;min-height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
 .hw-prop-num:focus-within{border-color:var(--hue,var(--accent))}
@@ -7776,9 +7775,6 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .hw-tile:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:2px}
 .hw-tile[aria-pressed="true"]{background:var(--t0);border-color:transparent;color:var(--bg-1)}
 .hw-tile[aria-pressed="true"] .hw-tile-unit{opacity:.75}
-/* Names the colour space rather than just "Hex" — four characters, and correct
-   for a product whose pitch is defensible colour systems. */
-.hw-label-space{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.04em;color:var(--t3);text-transform:none}
 .hw-btn{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:580;cursor:pointer;transition:background var(--t),border-color var(--t)}
 .hw-btn:hover{background:var(--hvr);border-color:var(--bh)}
 .hw-btn:disabled{opacity:.55;cursor:not-allowed}
@@ -7796,13 +7792,15 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .hw-continue:disabled{opacity:.55;cursor:not-allowed}
 .hw-continue:disabled:hover{gap:8px}
 
-/* Fields */
-.hw-fields{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
-.hw-field{display:flex;flex-direction:column;gap:5px;min-width:0}
-.hw-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--t2)}
+/* Fields. `.hw-fields` / `.hw-field` / `.hw-label` / `.hw-field-err` and
+   `.hw-label-space` went with the Gradient rewrite — the stop rows now use the
+   tool's `.ggn-stop` and `.ggn-field` / `.ggn-label` grammar, and an invalid hex
+   is reported through the tool's `.ggn-field-error`, which is absolutely
+   positioned and so costs the control zone no height. `.hw-select` /
+   `.hw-input` stay: the Image panel's two selects and Typography's specimen
+   field are ordinary form controls with no counterpart to borrow. */
 .hw-select,.hw-input{min-height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s)}
 .hw-select:focus-visible,.hw-input:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:1px}
-.hw-field-err{margin:0;font-size:var(--fs-caption);line-height:1.45;color:var(--err-strong)}
 
 /* 1 · Palette — THE REAL BOARD, NOT A LOOKALIKE OF IT
    Founder, 2026-09-05: the mini tools "don't look like the real tool". This
@@ -7853,15 +7851,30 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .hw-prev{display:flex;flex-direction:column;gap:6px}
 .hw-prev-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
 
-/* 2 · Gradient */
-.hw-grad-preview{height:132px;border-radius:var(--radius);box-shadow:var(--shadow-s)}
-.hw-stop{display:flex;align-items:center;gap:8px}
-/* Holds the 48px width the base `input[type="color"]` rule used to give this
-   well, so swapping it for the shared picker's trigger did not move the row. */
-.hw-stop-well{flex:0 0 auto;width:48px}
-.hw-input-hex{width:104px;font-family:var(--mono);text-transform:uppercase}
-.hw-out{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-0)}
-.hw-code{flex:1 1 240px;min-width:0;font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--t0);word-break:break-all;user-select:all}
+/* 2 · Gradient — THE TOOL'S OWN INSPECTOR, SAME REASONING AS THE BOARD ABOVE
+   `.hw-grad-preview` (a plain filled rectangle), `.hw-stop` and `.hw-input-hex`
+   are gone. The panel renders `.ggn-preview` with the tool's `.ggn-pill`
+   overlays, `.ggn-stop` rows, `.ggn-field` / `.ggn-label` inspector grammar,
+   the `.ggn-dial` angle control and `.ggn-css` / `.ggn-copy` for the output.
+   `.hw-ggn` on `.hw-body` brings the --ggn-* aliases into scope; see the split
+   rule in the Gradient Generator block below.
+
+   Geometry only, again. `.ggn-preview` is `aspect-ratio:16/11`, which at this
+   panel's width would claim 379px of a stage that has 132px to give — the tool
+   owns a page, this owns a slot. Everything else about it (radius, border,
+   shadow, the pills) is the tool's. */
+.hw-stage .ggn-preview{aspect-ratio:auto;height:132px;border-radius:var(--radius)}
+/* The stop rows are a two-column grid on the tool's own narrow-panel
+   breakpoint; the mini's control zone is always that narrow, so it takes the
+   two-up form at every width. Two stops, side by side, is also the shape that
+   says "start and end" without a caption. */
+.hw-ggn .ggn-stops{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.hw-ggn .ggn-stop{min-width:0;cursor:default}
+/* The tool's dial is 64px in a full-height inspector. 52px here, for the same
+   reason the board is 248px rather than the height of a screen. */
+.hw-ggn .ggn-dial{width:52px;height:52px}
+.hw-ggn .ggn-dial-hand{height:21px}
+.hw-ggn .ggn-css{padding:10px 12px}
 
 /* 3 · Image */
 .hw-subtabs{display:flex;gap:6px;flex-wrap:wrap}
@@ -7929,9 +7942,7 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
   .hw-stage .hw-board{height:auto}
   .hw-ui-metric-num{font-size:22px}
   .hw-ui-chart{height:48px}
-  .hw-fields{gap:10px}
-  .hw-field,.hw-select,.hw-input{width:100%}
-  .hw-input-hex{width:auto;flex:1 1 auto;min-width:0}
+  .hw-select,.hw-input{width:100%}
   .hw-continue,.hw-btn{width:100%;justify-content:center}
   .hw-foot{gap:10px}
 }
@@ -9965,9 +9976,21 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 
 /* ── Gradient Generator (/color/gradient) ───────────────────────────────────
    The --ggn-* vars alias the app design tokens so the tool follows the active
-   light/dark theme like every other tool page. */
-.ggn{--ggn-accent:var(--accent);--ggn-accent-text:var(--accent-strong);--ggn-bg:var(--inp);--ggn-panel:var(--card);--ggn-panel-2:var(--bg-2);--ggn-line:var(--border);--ggn-line-2:var(--bh);--ggn-t0:var(--t0);--ggn-t1:var(--t1);--ggn-t2:var(--t2);max-width:1120px;margin:0 auto;padding:28px 24px 56px;color:var(--ggn-t0);font-family:var(--font);min-height:100%}
-.ggn *{box-sizing:border-box}
+   light/dark theme like every other tool page.
+
+   SPLIT INTO TWO RULES 2026-09-05. The aliases and the PAGE LAYOUT used to
+   share one declaration, which meant a second surface could not take the
+   vocabulary without also taking `max-width:1120px` and 56px of page padding.
+   The homepage workbench's Gradient mode now renders `.ggn-stop`, `.ggn-field`,
+   `.ggn-label`, `.ggn-dial`, `.ggn-angle-num`, `.ggn-copy` and `.ggn-css` for
+   real - the founder's complaint was that the mini tools share nothing with the
+   tools they open - so `.hw-ggn` joins the alias rule and takes none of the
+   layout. Nothing about `.ggn` itself changed; the declarations were only
+   separated along the line between "what these tokens mean" and "where this
+   page sits". */
+.ggn,.hw-ggn{--ggn-accent:var(--accent);--ggn-accent-text:var(--accent-strong);--ggn-bg:var(--inp);--ggn-panel:var(--card);--ggn-panel-2:var(--bg-2);--ggn-line:var(--border);--ggn-line-2:var(--bh);--ggn-t0:var(--t0);--ggn-t1:var(--t1);--ggn-t2:var(--t2);color:var(--ggn-t0);font-family:var(--font)}
+.ggn{max-width:1120px;margin:0 auto;padding:28px 24px 56px;min-height:100%}
+.ggn *,.hw-ggn *{box-sizing:border-box}
 /* Header */
 .ggn-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:24px}
 .ggn-eyebrow{display:block;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ggn-accent-text);margin-bottom:10px}

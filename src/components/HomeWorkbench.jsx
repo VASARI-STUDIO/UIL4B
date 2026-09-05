@@ -510,8 +510,39 @@ function GradientPanel({ gradient, onChange, announce }) {
   const [drafts, setDrafts] = useState({ from: gradient.from, to: gradient.to })
   const [invalid, setInvalid] = useState({ from: false, to: false })
   const [copyState, setCopyState] = useState('')
+  const dialRef = useRef(null)
+  // The hand is rotated through a ref rather than an inline `style`, matching
+  // the no-inline-styles route the rest of this file takes for generated
+  // values; the transform is recomputed on every render, which is every frame
+  // of a drag.
+  const handRef = (node) => { node?.style.setProperty('transform', `rotate(${gradient.angle}deg)`) }
 
   const css = gradientCss(gradient)
+
+  const setAngle = (deg) => onChange({ ...gradient, angle: ((Math.round(deg) % 360) + 360) % 360 })
+
+  // Pointer maths lifted from `dragDial` in GradientGenerator.jsx so the two
+  // dials answer a drag identically: atan2 from the dial's centre, +90 so that
+  // 0deg points up, wrapped into [0, 360).
+  const dragDial = (event) => {
+    const compute = (ev) => {
+      const rect = dialRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const cx = rect.left + rect.width / 2
+      const cy = rect.top + rect.height / 2
+      setAngle(Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI + 90)
+    }
+    compute(event)
+    const move = (ev) => compute(ev)
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+  }
 
   const commitStop = (stop, value) => {
     setDrafts((d) => ({ ...d, [stop]: value }))
@@ -537,96 +568,165 @@ function GradientPanel({ gradient, onChange, announce }) {
     if (ok) announce('Gradient CSS copied.')
   }
 
-  // "sRGB hex", not "Hex". For a product whose pitch is defensible colour
-  // systems, naming the space is both more correct and a credibility signal,
-  // and it costs four characters.
-  const stopField = (stop, label) => (
-    <div className="hw-field">
-      <label className="hw-label" htmlFor={`hw-grad-${stop}`}>
-        {label} <span className="hw-label-space">sRGB hex</span>
-      </label>
-      <div className="hw-stop">
-        {/* The shared picker — the homepage demo is the first colour control
+  // THE STOP ROW IS THE PRODUCT'S OWN, `.ggn-stop`.
+  //
+  // It used to be `.hw-field` + `.hw-label` + `.hw-stop` + `.hw-input-hex`,
+  // captioned "START sRGB hex" / "END sRGB hex" - a vocabulary and a shape that
+  // exist nowhere in Gradient Generator, where a stop is a bordered row carrying
+  // its index, its swatch and its hex. Same row here now, minus the three
+  // controls this panel genuinely does not have: position, lock and remove. A
+  // two-stop preview cannot move a stop, so it does not draw a control that
+  // says it can.
+  //
+  // The index is the visible label, as in the tool. "Start" and "End" survive
+  // as the accessible name, which is where a first-time visitor who cannot see
+  // the gradient actually needs them.
+  //
+  // The ERROR COPY stays the mini's, in the tool's `.ggn-field-error` shell.
+  // The tool says "Use a 6-digit hex"; this says which value is still on screen,
+  // which is the more useful sentence and was fought for. Borrowing the shell
+  // and keeping the better words is the point of reuse, not a compromise of it.
+  // `.ggn-field-error` is absolutely positioned inside `.ggn-stop-hex-field`,
+  // so an invalid hex costs the control zone no height - which matters, because
+  // that zone measures 0px at 1280x660 already.
+  const stopField = (stop, index, label) => (
+    <div className="ggn-stop">
+      <span className="ggn-stop-idx" aria-hidden="true">{index}</span>
+      <span className="ggn-stop-swatch">
+        {/* The shared picker - the homepage demo is the first colour control
             most visitors ever touch here, so it must be the same one the tools
             use rather than the operating system's. */}
         <ColorPickerPop
           value={gradient[stop]}
           ariaLabel={`${label} colour picker`}
           onChange={(hex) => pickStop(stop, hex)}
-          triggerClassName="hw-stop-well"
         />
+      </span>
+      <span className="ggn-stop-hex-field">
         <input
           id={`hw-grad-${stop}`}
           type="text"
-          className="hw-input hw-input-hex"
+          className="ggn-stop-hex"
           value={drafts[stop]}
           spellCheck="false"
           autoComplete="off"
           maxLength={7}
+          aria-label={`${label} colour, sRGB hex`}
           aria-invalid={invalid[stop] || undefined}
           aria-describedby={invalid[stop] ? `hw-grad-${stop}-err` : undefined}
           onChange={(e) => commitStop(stop, e.target.value)}
         />
-      </div>
-      {invalid[stop] && (
-        <p className="hw-field-err" id={`hw-grad-${stop}-err`}>
-          Use a hex value like #7C3AED. The preview still shows {gradient[stop]}.
-        </p>
-      )}
+        {invalid[stop] && (
+          <span className="ggn-field-error" role="status" id={`hw-grad-${stop}-err`}>
+            Use a hex value like #7C3AED. The preview still shows {gradient[stop]}.
+          </span>
+        )}
+      </span>
     </div>
   )
 
   return (
-    <div className="hw-body">
+    <div className="hw-body hw-ggn">
+      {/* THE CANVAS, WITH THE TOOL'S OWN PILLS ON IT.
+          `.hw-grad-preview` was a plain filled rectangle. Gradient Generator
+          overlays two glass pills top-left reading the type and the angle, and
+          they are the first thing that tells you what you are looking at. Both
+          are true of this gradient - it IS linear, and that IS its angle - so
+          they carry over as facts rather than as decoration. */}
       <div className="hw-stage">
-        <div className="hw-grad-preview" style={{ background: css }} aria-hidden="true" />
-      </div>
-
-      <div className="hw-controls">
-      <div className="hw-fields">
-        {stopField('from', 'Start')}
-        {stopField('to', 'End')}
-      </div>
-
-      {/* A property, so a label-left / control-right row with the number as a
-          real input. On this column a slider alone cannot land on 135 degrees,
-          so the readout is the precise control and the slider the coarse one —
-          the arrangement Salesforce uses for Border Radius and MagicPath for
-          every type-scale value. The range keeps the id, so the existing
-          contract (`#hw-grad-angle`) still points at the slider. */}
-      <div className="hw-prop">
-        <label className="hw-prop-label" htmlFor="hw-grad-angle">Angle</label>
-        <input
-          id="hw-grad-angle"
-          className="hw-prop-range"
-          type="range"
-          min="0"
-          max="360"
-          step="1"
-          value={gradient.angle}
-          onChange={(e) => onChange({ ...gradient, angle: Number(e.target.value) })}
-        />
-        <div className="hw-prop-num">
-          <input
-            className="hw-num"
-            type="number"
-            min="0"
-            max="360"
-            step="1"
-            value={gradient.angle}
-            aria-label="Gradient angle in degrees"
-            onChange={(e) => {
-              const next = Number(e.target.value)
-              if (Number.isFinite(next)) onChange({ ...gradient, angle: Math.min(360, Math.max(0, next)) })
-            }}
-          />
-          <span className="hw-num-unit" aria-hidden="true">&deg;</span>
+        <div className="ggn-preview" style={{ background: css }}>
+          <div className="ggn-preview-pills" aria-hidden="true">
+            <span className="ggn-pill">Linear</span>
+            <span className="ggn-pill">{gradient.angle}&deg;</span>
+          </div>
         </div>
       </div>
 
-      <div className="hw-out">
-        <code className="hw-code">background: {css};</code>
-        <button type="button" className="hw-btn" onClick={copy}>Copy CSS</button>
+      <div className="hw-controls">
+      {/* THE INSPECTOR, IN THE TOOL'S OWN GRAMMAR: a tracked-caps `.ggn-label`
+          over the control it names, one `.ggn-field` per setting. That grammar
+          is what a visitor meets again the moment they press Continue. */}
+      <div className="ggn-field">
+        <span className="ggn-label" id="hw-grad-stops-label">Stops</span>
+        <div className="ggn-stops" role="group" aria-labelledby="hw-grad-stops-label">
+          {stopField('from', 1, 'Start')}
+          {stopField('to', 2, 'End')}
+        </div>
+      </div>
+
+      {/* THE ANGLE IS A DIAL, BECAUSE IN THE TOOL IT IS A DIAL.
+          This was a linear range slider beside a number box. Gradient Generator
+          uses a 64px circular dial with a hand, dragged or arrowed, next to a
+          mono readout with a degree suffix - and an angle is the one quantity a
+          dial reads better than a track, because the control has the same shape
+          as the thing it sets. Same markup, same classes, same pointer maths as
+          `dragDial` in GradientGenerator.jsx.
+
+          `#hw-grad-angle` MOVED FROM THE SLIDER TO THE NUMBER INPUT, and that is
+          the only contract change: the id has always pointed at whichever
+          control types an exact angle, and after this change that is the number
+          box. `fill()` works on it exactly as it did on the range. */}
+      <div className="ggn-field">
+        <span className="ggn-label" id="hw-grad-angle-label">Angle</span>
+        <div className="ggn-angle">
+          <div
+            className="ggn-dial"
+            ref={dialRef}
+            role="slider"
+            aria-labelledby="hw-grad-angle-label"
+            aria-valuenow={gradient.angle}
+            aria-valuemin={0}
+            aria-valuemax={360}
+            aria-valuetext={`${gradient.angle} degrees`}
+            tabIndex={0}
+            onPointerDown={dragDial}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setAngle(gradient.angle + 1) }
+              else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setAngle(gradient.angle + 359) }
+              else if (e.key === 'Home') { e.preventDefault(); setAngle(0) }
+              else if (e.key === 'End') { e.preventDefault(); setAngle(180) }
+            }}
+          >
+            <div className="ggn-dial-hand" ref={handRef} />
+            <div className="ggn-dial-center" />
+          </div>
+          <div className="ggn-angle-ctrl">
+            <div className="ggn-angle-num">
+              <input
+                id="hw-grad-angle"
+                type="number"
+                min="0"
+                max="360"
+                className="ggn-angle-input"
+                value={gradient.angle}
+                aria-label="Gradient angle in degrees"
+                onChange={(e) => {
+                  const next = Number(e.target.value)
+                  if (Number.isFinite(next)) onChange({ ...gradient, angle: Math.min(360, Math.max(0, Math.round(next))) })
+                }}
+              />
+              <span className="ggn-angle-deg" aria-hidden="true">&deg;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CODE, laid out as the tool lays it out: the label row carries the Copy
+          action on its right, and the declaration sits in a `.ggn-css` block
+          below. The mini used to put a "Copy CSS" button inside the box. The
+          tool's format tablist (CSS / Tailwind / SVG) is deliberately NOT here -
+          this panel emits CSS and only CSS, and three tabs where two do nothing
+          would be the first dishonest thing in the workbench. */}
+      <div className="ggn-field">
+        <div className="ggn-label-row">
+          <span className="ggn-label">Code</span>
+          <button type="button" className="ggn-copy" onClick={copy}>
+            {copyState === 'ok' ? '✓ Copied' : 'Copy'}
+          </button>
+        </div>
+        <button type="button" className="ggn-css ggn-css--block" onClick={copy} aria-label="Copy the gradient CSS">
+          <code>background: {css};</code>
+        </button>
       </div>
 
       {copyState === 'fail' && (
@@ -640,9 +740,9 @@ function GradientPanel({ gradient, onChange, announce }) {
       <div className="hw-foot">
         <Link className="hw-continue" to="/create/gradient">
           Continue in Gradient Generator
-          <span aria-hidden="true">→</span>
+          <span aria-hidden="true">&rarr;</span>
         </Link>
-        <span className="hw-foot-note">Two stops here · multi-stop, presets and gallery there.</span>
+        <span className="hw-foot-note">Two stops here · multi-stop, radial, conic and export there.</span>
       </div>
     </div>
   )

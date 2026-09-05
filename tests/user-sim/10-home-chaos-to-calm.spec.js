@@ -889,19 +889,36 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(after[0])
 
     // Gradient: editable stops, a real CSS value, and copy.
+    //
+    // SELECTORS RE-POINTED 2026-09-05, ASSERTIONS UNCHANGED. This panel now
+    // renders Gradient Generator's own inspector - `.ggn-stop` rows, a
+    // `.ggn-dial` angle control, `.ggn-css` for the declaration - so the code
+    // block is `.ggn-css code`, an invalid hex is reported through the tool's
+    // `.ggn-field-error`, and the copy control is the label row's "Copy", named
+    // as the tool names it. `#hw-grad-from` and `#hw-grad-angle` both survive:
+    // the angle id moved from the range input to the number input beside the
+    // dial, which is still the control that takes an exact value, and `fill()`
+    // drives it identically.
     await page.locator('.hw-tab[data-tab="gradient"]').click()
     const startHex = page.locator('#hw-grad-from')
+    const cssBlock = page.locator('.hw-ggn .ggn-css code')
     await startHex.fill('#FF0000')
-    await expect(page.locator('.hw-code')).toContainText('#FF0000')
+    await expect(cssBlock).toContainText('#FF0000')
     await page.locator('#hw-grad-angle').fill('90')
-    await expect(page.locator('.hw-code')).toContainText('linear-gradient(90deg')
+    await expect(cssBlock).toContainText('linear-gradient(90deg')
+
+    // The dial is not decoration beside the number: it is a real slider, and it
+    // has to report the same angle the declaration does. This assertion is NEW -
+    // the control it describes did not exist before - and it is the one that
+    // fails if the dial is ever left painting a fixed hand.
+    await expect(page.locator('.hw-ggn .ggn-dial')).toHaveAttribute('aria-valuenow', '90')
 
     // Invalid input keeps the last valid preview and explains the correction.
     await startHex.fill('not-a-colour')
-    await expect(page.locator('.hw-field-err')).toContainText('#FF0000')
-    await expect(page.locator('.hw-code')).toContainText('#FF0000')
+    await expect(page.locator('.hw-ggn .ggn-field-error')).toContainText('#FF0000')
+    await expect(cssBlock).toContainText('#FF0000')
 
-    await page.getByRole('button', { name: 'Copy CSS' }).click()
+    await page.locator('.hw-ggn .ggn-copy').click()
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('linear-gradient(90deg')
   })
 
@@ -1587,7 +1604,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     await page.locator('.hw-tab[data-tab="gradient"]').click()
     await page.locator('#hw-grad-angle').fill('45')
-    await expect(page.locator('.hw-code')).toContainText('linear-gradient(45deg')
+    await expect(page.locator('.hw-ggn .ggn-css code')).toContainText('linear-gradient(45deg')
 
     await page.locator('.hw-tab[data-tab="icon"]').click()
     await page.getByRole('button', { name: /Preview the star icon/ }).click()
