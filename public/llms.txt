@@ -11,7 +11,7 @@
 - [Box Shadow Generator](https://www.uil4b.com/create/box-shadow): Design layered CSS box shadows with live preview and Tailwind output.
 - [File Converter](https://www.uil4b.com/create/file-converter): Convert images (PNG/JPEG/WebP/AVIF), turn video into GIFs, and extract video frames — fully in-browser, nothing uploaded.
 - [Emoji Library](https://www.uil4b.com/create/emoji): Search and copy emoji by category with skin-tone variants.
-- [UI Builder](https://www.uil4b.com/create/component-designer): Assemble a complete design system (colour, type, scale, tokens) and export production-ready CSS.
+- [UI Builder](https://www.uil4b.com/create/component-designer): Assemble a complete design system (colour, type and scale) and export production-ready CSS.
 
 ## AI tools
 - [AI Image Prompt Generator](https://www.uil4b.com/create/ai-prompt): Build structured, high-quality image prompts; scan a reference photo to extract its style.

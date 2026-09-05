@@ -326,9 +326,25 @@ export default function Home() {
             <p className="home-hero-kicker">UI system toolkit</p>
 
             {/* The mark lands on "one system", which is the actual claim and the
-                one a visitor can check: the same values move between tools. */}
+                one a visitor can check: the same values move between tools.
+
+                THE THIRD NOUN WAS "tokens" UNTIL 2026-09-06, and it is "icons"
+                rather than "Styles" on purpose. The founder's decision (P-019,
+                option C) names Styles as the COLLECTIVE noun; this line is not a
+                collective, it is a list of three concrete things, and Styles is
+                a superset of the two beside it — "Colour, type and styles" reads
+                as leftovers, not as a third family. So the rule the rest of the
+                rename applied holds here too: where the sentence already sits
+                beside concrete artefacts, name the artefact. Icons are a live
+                Create group, a workbench tab on this very page, and already in
+                the tools heading below and in the Plans comparison table.
+
+                The SHAPE of this headline is a separate, open question —
+                [hero-copy-still-reads-ai] owns it and is blocked on the
+                founder's pick of direction A, B or C. This slice changes one
+                word and deliberately does not touch the structure. */}
             <h1 className="home-hero-h1">
-              <span className="home-hero-line"><span className="home-hero-line-in">Colour, type and tokens</span></span>
+              <span className="home-hero-line"><span className="home-hero-line-in">Colour, type and icons</span></span>
               <span className="home-hero-line"><span className="home-hero-line-in">
                 that stay <mark className="home-mark">one system</mark>.
               </span></span>
@@ -528,10 +544,21 @@ export default function Home() {
           <div className="home-container">
             {/* "Six categories. One account." — the N-nouns/one-noun fragment
                 pair, which appeared three times on this page in three different
-                sizes. Naming the six is shorter to read and tells the visitor
-                something the count does not. */}
+                sizes. Naming them is shorter to read and tells the visitor
+                something the count does not.
+
+                THIS LIST LOST A NOUN, not gained a replacement. It read
+                "Colour, type, icons, imagery, tokens, export." — and "tokens"
+                was never a sibling of the four beside it, it is how those four
+                are stored. Swapping in "styles" would repeat the same category
+                error with a different word, so the word is simply gone (P-019
+                rule R: token comes out of every sales, navigation and
+                tool-heading surface, and survives past the export boundary
+                only). What is left is four live tool families and the thing
+                they end in. Components are absent on purpose — the lede
+                directly below is where they are named, as coming next. */}
             <div className="htools-head" data-reveal>
-              <h2 className="hh2" id="htools-title">Colour, type, icons, imagery, tokens, export.</h2>
+              <h2 className="hh2" id="htools-title">Colour, type, icons, imagery, export.</h2>
               {/* Canonical founder direction (uil4b-brand-design →
                   surface-principles.md): component tooling must be NAMED as
                   coming next, and must never appear as a live preview mode. It
