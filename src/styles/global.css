@@ -12890,3 +12890,47 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .plb-galpopup-body .lockt-cta-head{font-size:12.5px}
 .plb-galpopup-body .lockt-cta-body{font-size:11.5px}
 .plb-galpopup-body .lockt-cta-btn{width:100%;margin-top:10px}
+
+/* ── Save a type system (components/SaveTypeSystem.jsx) ──────────────────────
+   The typography half of the paywall the colour tools already have. Borrows
+   .plb-menu's geometry rather than inventing a second popover language: same
+   offset, same card, same shadow, so the Font Pair and Type Scale menus read as
+   the Palette save menu moved rather than as a new control.
+
+   NOTE FOR ANYONE TEMPTED TO GATE WITH CSS HERE: there is deliberately no
+   `.svt-wall .svt-row{display:none}` or any rule of that shape. At the project
+   cap the component renders no name field and no save button at all, so this
+   stylesheet has no power to reveal one. A gate that lives in a stylesheet is
+   one devtools toggle from being no gate — see utils/lockedPreview.js. */
+.svt-wrap{position:relative;display:inline-flex}
+.svt-trigger{white-space:nowrap}
+.svt-menu{position:absolute;bottom:calc(100% + 8px);left:0;z-index:40;width:min(320px,calc(100vw - 32px));max-height:min(72vh,560px);overflow-y:auto;overscroll-behavior:contain;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+.svt-summary{margin:0 2px 10px;font-size:11.5px;line-height:1.5;color:var(--t2)}
+.svt-menu-title{font-size:12px;font-weight:700;color:var(--t0);margin:2px 2px 10px}
+.svt-row{display:flex;gap:8px}
+.svt-input{flex:1;min-width:0;padding:8px 10px;font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
+.svt-input:focus{outline:none;border-color:var(--brand)}
+.svt-menu-sub{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:12px 2px 6px}
+.svt-list{display:flex;flex-direction:column;gap:2px;max-height:min(40vh,220px);overflow-y:auto;overscroll-behavior:contain}
+.svt-item{display:block;width:100%;padding:8px 10px;font-size:13px;font-weight:500;text-align:left;color:var(--t1);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.svt-item:hover{background:var(--bg-2);color:var(--t0)}
+.svt-allowance{margin:10px 2px 0;font-size:11.5px;line-height:1.55;color:var(--t2)}
+.svt-link{color:var(--accent-strong);font-weight:600}
+/* The wall. An accent edge and a solid border, never a dashed skeleton: this is
+   a stated limit, not a row that failed to load. */
+.svt-wall{padding:12px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-l);background:var(--cbg)}
+.svt-wall-head{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--t0)}
+.svt-wall-body{margin:0;font-size:11.5px;line-height:1.6;color:var(--t1)}
+.svt-wall-btn{margin-top:12px;width:100%}
+.svt-foot{margin:12px 2px 0;padding-top:10px;border-top:1px solid var(--border);font-size:11px;line-height:1.55;color:var(--t2)}
+
+/* The row each tool mounts it in. The save sits after the export block on both
+   surfaces, so the reading order is build - copy - keep. */
+.fpr-keep,.tsc-keep{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.fpr-keep-note,.tsc-keep-note{flex:1;min-width:200px;margin:0;font-size:11.5px;line-height:1.5;color:var(--t2)}
+@media (max-width:560px){
+  .svt-menu{width:min(320px,calc(100vw - 24px))}
+  .svt-wrap{width:100%}
+  .svt-trigger{width:100%;justify-content:center}
+  .fpr-keep,.tsc-keep{gap:10px}
+}
