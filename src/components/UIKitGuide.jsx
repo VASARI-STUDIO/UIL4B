@@ -49,10 +49,14 @@ import {
 //     focus to whatever opened it.
 //
 // That is the correct contract for a NON-modal dialog, and it is honest: the old
-// version declared `aria-modal="true"` over a scrim while trapping nothing,
-// which tests/unit/modal-contract.test.js was written to catch. Declaring the
-// attribute here and not trapping would fail that guard; trapping would block
-// the step. Not declaring it is the only answer that is both.
+// version declared the aria-modal attribute over a scrim while trapping
+// nothing, which tests/unit/modal-contract.test.js was written to catch.
+// Declaring it here and not trapping would fail that guard; trapping would
+// block the step. Not declaring it is the only answer that is both.
+//
+// (That guard scans RAW source for the attribute, so this note names it in
+// words rather than spelling out the declaration -- prose that reads like code
+// is precisely what it exists to flag.)
 //
 // Escape is bound to the CARD, not the window, and that follows from the same
 // decision: while the card is open the tool behind is live, and PaletteBuilder

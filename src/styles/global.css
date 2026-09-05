@@ -3309,8 +3309,9 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 @media(max-width:520px){
   .bkit-rail-help{display:none}
 }
+html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){
-  .bkit-card{animation:none}
+  html:not([data-reduced-motion="false"]) .bkit-card{animation:none;opacity:1;transform:none}
 }
 
 /* ─── Landing / welcome page ─── */

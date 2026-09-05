@@ -81,6 +81,7 @@
 // testable without a browser.
 
 import { partsPresent } from './userHome.js'
+import { DEFAULT_DESIGN } from '../data/designDefaults.js'
 
 /** Live under localStorage, not sessionStorage — see the resumability note. */
 export const GUIDE_KEY = 'vs-uikit-guide'
@@ -149,7 +150,7 @@ export const BRAND_KIT_STEPS = Object.freeze([
 const SWATCH_CAP = 5
 
 export function stepArtefacts(design) {
-  const d = design || {}
+  const d = withDefaults(design)
   const colors = (Array.isArray(d.palette?.colors) ? d.palette.colors : [])
     .filter((c) => typeof c === 'string' && c)
     .slice(0, SWATCH_CAP)
@@ -175,6 +176,34 @@ export function stepArtefacts(design) {
 }
 
 /**
+ * Fill a partial design out of the defaults before reading it.
+ *
+ * A FOUND DEFECT, and it is worth stating because the fix looks like paranoia.
+ * `partsPresent()` decides a part is present when it DIFFERS from the default,
+ * so an ABSENT part differs too: `norm(undefined) === ''`, which is not
+ * `'inter'`, so `{}` reports its fonts as chosen. The User Home never sees that
+ * because ProjectContext hands out `{ ...DEFAULT_DESIGN, ...parsed }` and a
+ * saved project always carries a whole design — but this module is also called
+ * from the nav on every render, before anything is loaded, and "nothing built"
+ * must never render as "one of four built".
+ *
+ * Group-by-group rather than a top-level spread: the four groups are what
+ * `partsPresent` reads, and a shallow spread would leave `{ palette: null }`
+ * as null.
+ */
+function withDefaults(design) {
+  const d = design && typeof design === 'object' ? design : {}
+  const out = { ...DEFAULT_DESIGN, ...d }
+  for (const key of ['palette', 'fonts', 'typeScale', 'tints']) {
+    const group = d[key]
+    out[key] = group && typeof group === 'object'
+      ? { ...DEFAULT_DESIGN[key], ...group }
+      : DEFAULT_DESIGN[key]
+  }
+  return out
+}
+
+/**
  * The four steps with `done` resolved, in order.
  *
  * `iconsTouched` is injected rather than read here because the only honest
@@ -183,8 +212,9 @@ export function stepArtefacts(design) {
  * Injecting keeps this module DOM-free and lets a test pin the value.
  */
 export function guideSteps(design, { iconsTouched = false } = {}) {
-  const present = partsPresent(design || {})
-  const artefacts = stepArtefacts(design)
+  const full = withDefaults(design)
+  const present = partsPresent(full)
+  const artefacts = stepArtefacts(full)
   return BRAND_KIT_STEPS.map((step, index) => ({
     ...step,
     index,
