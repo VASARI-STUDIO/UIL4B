@@ -19,6 +19,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
+import { SIGNED_IN_HOME } from '../../src/utils/onboardingState.js'
 import path from 'node:path'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -62,11 +63,17 @@ test('every onboarding exit lands somewhere that acknowledges the account', () =
     'an onboarding exit still sends a brand-new account to the anonymous sales page')
 })
 
-test('the sales page is still auth-unaware, which is why nobody is sent there', () => {
+test('the sales page is still auth-unaware, which is why the routing lives in App', () => {
   // Not a regression to fix — the homepage is deliberately a sales page
   // (CLAUDE.md: "The homepage is a sales page with a working mini-workspace,
-  // not a dashboard"). It is the REASON a signed-in user must not be routed to
-  // it. If this ever changes, the constant above can be revisited.
+  // not a dashboard"), and that is still exactly what it is.
+  //
+  // It is also load-bearing for the 2026-09-05 routing change. Because Home.jsx
+  // cannot see auth, it renders identically for everybody and CANNOT re-render
+  // into a different page once auth resolves — so there is no flash of the wrong
+  // page to engineer around. The decision lives one level up, in App.jsx, where
+  // it is made once from a synchronous hint. Push auth awareness into this file
+  // and that guarantee is gone.
   const home = read('src/pages/Home.jsx')
   assert.ok(!/useAuth/.test(home),
     'Home.jsx now knows about auth — reconsider FIRST_RUN_DESTINATION')
@@ -79,19 +86,26 @@ test('a new customer is sent to build, not to a redirect back to the sales page'
   assert.match(src, /to="\/projects"/)
 })
 
-test('/dashboard really is just a redirect, so the fixes above are warranted', () => {
-  // Asserted rather than assumed: if it ever becomes a real page, these
-  // destinations deserve rethinking rather than silently staying put.
-  //
+test('/dashboard reaches the dashboard, not the page selling it', () => {
   // Read from the redirect TABLE, not from App.jsx's source text. This used to
-  // grep for the literal `path="/dashboard" element={<Navigate to="/home"`,
-  // which stopped being true the moment the redirect routes were generated from
-  // src/data/legacyRoutes.js — while /dashboard still redirected to /home
-  // exactly as before. The behaviour is the subject; the spelling was not.
+  // grep for a literal <Navigate>, which stopped being true the moment the
+  // redirect routes were generated from src/data/legacyRoutes.js — while the
+  // behaviour was unchanged. The behaviour is the subject; the spelling was not.
+  //
+  // The DESTINATION changed on 2026-09-05 and the reasoning inverted with it.
+  // This test used to assert /dashboard was ‘just a redirect’ to /home, as
+  // evidence that CheckoutReturn and onboarding were right to avoid it. There
+  // is a real User Home now, so the honest answer to /dashboard is that home —
+  // and the two exits above, which already point at /projects, agree with it
+  // rather than route around it.
   assert.deepEqual(
     LEGACY_REDIRECTS.find(([from]) => from === '/dashboard'),
-    ['/dashboard', '/home'],
+    ['/dashboard', SIGNED_IN_HOME],
   )
+  // It must stay a redirect rather than becoming a second dashboard: two pages
+  // claiming to be the home is how the destinations drifted apart in the first
+  // place (audit B6).
+  assert.notEqual(SIGNED_IN_HOME, '/dashboard')
 })
 
 test('the projects empty state still teaches, since it is now the first thing seen', () => {

@@ -149,30 +149,39 @@ test.describe('billing banner layout', () => {
    * What only a browser can check is the half that is not quota maths at all —
    * that nothing on the way in leaks a free-plan allowance at a stranger.
    *
-   * Worth recording, because it surprised this change twice: /projects is
-   * wrapped in RequireAuth (App.jsx), so the `!canSaveProjects` sign-in panel
-   * INSIDE Projects.jsx is unreachable for a signed-out visitor — the route
-   * redirects to /login instead. And that redirect is NOT immediate: RequireAuth
-   * holds a loader until Firebase's onAuthStateChanged fires (measured at ~1s
-   * here), so a check that samples the URL on first paint reads /projects and
-   * concludes the wrong thing. Both assertions below are therefore auto-retrying
-   * and wait for the SETTLED signed-out state, never a fixed timeout.
+   * THIS TEST CHANGED SHAPE ON 2026-09-05, and the property did not.
    *
-   * Unwrap that route, or hoist the quota block somewhere public, and a person
-   * who has never signed in gets told what their plan allows. */
-  test('a signed-out visitor is redirected and never told about a project allowance', async ({ page }) => {
+   * It used to assert that /projects REDIRECTS a signed-out visitor to /login,
+   * and recorded that the redirect was not immediate: RequireAuth held a loader
+   * until Firebase's onAuthStateChanged fired, MEASURED AT ~1s HERE. That
+   * measurement is why /projects is no longer behind RequireAuth — it is the page
+   * signed-in visitors now land on, and a second of blank loader on the front
+   * door is worse than the sales page it replaced. The route renders its own
+   * signed-out state instead, which also removes a redirect loop (see the route
+   * note in App.jsx).
+   *
+   * So the visitor now STAYS on /projects and sees the sign-in panel that has sat
+   * unreachable inside Projects.jsx since it was written. What must not change is
+   * the thing in this test's title: the free-plan allowance lives BELOW that
+   * early return and a stranger must never be told what their plan allows. That
+   * is asserted more directly than before — against the page they actually reach,
+   * rather than against a page they never did.
+   *
+   * Hoist the quota block above the `canSaveProjects` return and this fails. */
+  test('a signed-out visitor gets the page, and is never told about a project allowance', async ({ page }) => {
     watch(page, 'a stranger opening Projects before signing in')
     for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/projects')
 
-      // Wait for the redirect to SETTLE. Both of these retry, so neither reads
-      // the loader RequireAuth shows while auth is still resolving.
-      await expect(page, `${width}px: /projects is behind RequireAuth`).toHaveURL(/\/login/)
+      // Auto-retrying, so this reads the SETTLED signed-out state rather than
+      // whatever is on screen while auth is still resolving.
       await expect(
         page.getByRole('button', { name: /sign in/i }).first(),
-        `${width}px: the signed-out destination must actually render`,
+        `${width}px: the signed-out state must actually render`,
       ).toBeVisible()
+      await expect(page, `${width}px: /projects must not bounce a stranger anywhere`)
+        .toHaveURL(/\/projects$/)
 
       await expect(
         page.getByTestId('project-quota-note'),

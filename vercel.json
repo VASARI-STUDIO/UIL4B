@@ -132,7 +132,7 @@
     },
     {
       "source": "/dashboard",
-      "destination": "/home",
+      "destination": "/projects",
       "permanent": true
     },
     {

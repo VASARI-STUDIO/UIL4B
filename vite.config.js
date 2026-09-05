@@ -59,6 +59,7 @@ export default defineConfig(({ mode }) => ({
         index: resolve(import.meta.dirname, 'index.html'),
         'ui-system-pro-fixture': resolve(import.meta.dirname, 'tests/user-sim/fixtures/ui-system-pro.html'),
         'type-save-fixture': resolve(import.meta.dirname, 'tests/user-sim/fixtures/type-save.html'),
+        'user-home-fixture': resolve(import.meta.dirname, 'tests/user-sim/fixtures/user-home.html'),
       },
     } : undefined,
   },
