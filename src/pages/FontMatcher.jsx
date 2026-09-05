@@ -292,18 +292,55 @@ export default function FontMatcher({ onCopy, toast }) {
         count={catalog.length}
       />
 
-      <div className="fpr-status" aria-live="polite">
-        <span>Heading <strong>{headingFont.family}</strong></span>
-        <span>Body <strong>{bodyFont.family}</strong></span>
-        <span><strong>{suggestions.length}</strong> suggestion{suggestions.length === 1 ? '' : 's'}</span>
-        <span><strong>{catalog.length.toLocaleString()}</strong> families</span>
-      </div>
+      {/* THE FOUR-UP FIGURE STRIP IS GONE (`.fpr-status`), AND THE HERO
+          READOUT #382 KEPT IS WHY.
+          ------------------------------------------------------------------
+          #382 deleted this page's eyebrow and reseated its action, and kept
+          `.fpr-hero-pair` on the grounds that the two selected families are
+          live state "you cannot get anywhere else on screen". That was true of
+          the readout and false of the page: this strip sat 350px under it and
+          said the same two families again. Measured at 1440x900, hero pair at
+          y=274, strip at y=624.
+
+          The other two figures were the motif itself:
+
+            "N suggestions"  counts the `.fpr-card`s rendered in the panel
+                             below it. The eye orders them without help.
+            "N families"     the CATALOGUE COUNTER. This is the same figure the
+                             founder marked "AI" on the Font Gallery ("1,798
+                             text families"), reading off the same catalogue.
+                             #382 moved it into the Gallery's search
+                             placeholder, where it tells you the size of what
+                             you are about to search; here it told you the size
+                             of the product. On a degraded catalogue it was also
+                             restated 207px ABOVE itself by FontCatalogNotice
+                             ("Showing a bundled list of 84 families.").
+
+          `.fpr-hero-pair` stays, and it is now true that it is the only place
+          the current pair is stated. */}
 
       <div className="fpr-grid">
         {/* ── Controls ── */}
         <section className="card fpr-panel fpr-config" aria-labelledby="fpr-config-title">
+          {/* THE 01 / 02 / 03 / 04 BADGES ARE GONE FROM ALL FOUR PANELS, AND
+              THE REASON IS THE ONE #386 FOUND ON THE TYPE SCALE.
+              ------------------------------------------------------------
+              THEY READ RIGHT TO LEFT. Measured at 1440x900 before this change:
+              "01 Choose the pair" had its badge at x=1087 and "02 Read the
+              pairing" at x=79, both on the same line at y=735. `.fpr-grid`
+              puts the config rail in the right-hand column at this width, so
+              the sequence a reader meets is 02, 01, 03, 04. A numbered
+              sequence that has to be read against the reading direction is
+              worse than no numbering — which is the identical measurement
+              #386 recorded on the Type Scale (01 at x=1079, 02 at x=71) and
+              the identical fix.
+
+              AND THEY WERE DECORATION DOING HIERARCHY'S JOB: four panels, two
+              of them nested inside a third, ranked by a mono numeral in a
+              tinted box rather than by size, position or weight. The headings
+              already name the order in words — choose, read, compare, hand
+              off — and they still do. */}
           <div className="fpr-section-head">
-            <span className="fpr-section-num">01</span>
             <div>
               <h2 id="fpr-config-title">Choose the pair</h2>
               <p>The heading drives the suggestions; the body is yours to override.</p>
@@ -393,7 +430,6 @@ export default function FontMatcher({ onCopy, toast }) {
         {/* ── Specimen + suggestions ── */}
         <section className="card fpr-panel fpr-output" aria-labelledby="fpr-output-title">
           <div className="fpr-section-head">
-            <span className="fpr-section-num">02</span>
             <div>
               <h2 id="fpr-output-title">Read the pairing</h2>
               <p>The two faces together, at the sizes and weights they&rsquo;ll actually ship at.</p>
@@ -461,7 +497,6 @@ export default function FontMatcher({ onCopy, toast }) {
 
           <div className="fpr-suggest">
             <div className="fpr-section-head fpr-section-head--sub">
-              <span className="fpr-section-num">03</span>
               <div>
                 <h2>Body faces that work under {headingFont.family}</h2>
                 <p>Scored on popularity and weight range, filtered by what actually contrasts with a {headingFont.category} heading.</p>
@@ -528,7 +563,6 @@ export default function FontMatcher({ onCopy, toast }) {
 
           <div className="fpr-delivery">
             <div className="fpr-section-head fpr-section-head--sub">
-              <span className="fpr-section-num">04</span>
               <div>
                 <h2>Prepare the handoff</h2>
                 <p>One import and one block of CSS — both families at the weights you chose.</p>
