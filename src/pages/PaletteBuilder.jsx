@@ -2,7 +2,6 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { Link, useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
-import UiSystemBuilder from '../components/UiSystemBuilder'
 import {
   adjustHandleColors, adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
   autoTonalFromSeed, contrastRatio, derivePreviewRoles, generateHarmony, hctToHex,
@@ -25,7 +24,8 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
-import { getOwnerHandle, isAdminEmail, PUBLIC_OWNER_ID } from '../utils/constants'
+import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
+import UIKitGuide from '../components/UIKitGuide'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
@@ -885,7 +885,7 @@ const SUBMIT_SURFACE = 'palette'
 
 export default function PaletteBuilder({ onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
-  const { isPro, loading: entitlementLoading } = useSubscription()
+  const { isPro } = useSubscription()
   const { openProModal } = useProModal()
   // The brands panel, split before it is rendered rather than styled after it.
   // A locked brand's colours are not in `openBrands`, so they never reach
@@ -1060,18 +1060,27 @@ export default function PaletteBuilder({ onCopy, toast }) {
   })
   const [handleInput, setHandleInput] = useState('')
   const [handleErr, setHandleErr] = useState('')
-  // UI System mode leaves every ordinary Palette state value mounted and
-  // untouched until the user explicitly applies its Brand scale back.
+  // UI SYSTEM MODE IS GONE FROM THIS PAGE. Founder instruction, 2026-09-05:
+  // “lets remove the build UI system from the colour pallete also, lets make the
+  // one in the navigation the create Brand system should start a guided
+  // walkthrough to build a full system”. Both halves are one decision — the
+  // palette tool stops being a side door into system-building, and the nav
+  // becomes the single front door (see components/UIKitGuide.jsx).
   //
-  // ADMIN-ONLY while the tool is unfinished. Both entry points (the "UI System
-  // Pro" breadcrumb and the "Build UI system" toolbar button) are removed for
-  // everyone else rather than shown-and-blocked: a Pro badge on a control that
-  // then refuses to deliver is worse than no control, and this one was
-  // advertising a paid upgrade for something not ready to be sold. The mode
-  // itself, its Pro entitlement checks and applyUiBrandScale are all untouched
-  // — this only decides who can reach them.
-  const [uiMode, setUiMode] = useState(false)
-  const canUseUiSystem = isAdminEmail(user?.email)
+  // BOTH entry points went, not one: the “UI System / Admin” breadcrumb beside
+  // the title AND the “Build UI system” toolbar button. They were already
+  // admin-only, so no visitor loses a control they could see.
+  //
+  // WHAT WAS CARRIED THROUGH IT, AND WHY IT IS DROPPED DELIBERATELY RATHER THAN
+  // SILENTLY: `applyUiBrandScale` transferred the generated nine-shade Brand
+  // scale back onto this board (Pro-gated, seed and swatches replaced). Nothing
+  // else ever called it, and the mode was the only producer of a scale to
+  // apply, so with the doors closed the hand-off has no source — it is removed
+  // with them rather than left as an unreachable branch. components/
+  // UiSystemBuilder.jsx and its children stay on disk, unimported and unbuilt,
+  // with tests/user-sim/12-ui-system-builder.spec.js still describing the
+  // contract; re-entering the tool means giving it its own route, not putting
+  // this button back.
   // Combined community-gallery popup (Discover hand-in): one large popup with
   // Community / Variations / Brands tabs, applying a pick straight onto the board.
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -1317,11 +1326,11 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const previewDialogRef = useModalDialog(closePreview, { enabled: preview != null })
   const submitDialogRef = useModalDialog(closeSubmit, { enabled: Boolean(submitOpen && uid) })
 
-  // Spacebar = randomise only from the idle Palette canvas. Buttons, links,
-  // popovers and the in-place UI System own Space for activation or copy.
+  // Spacebar = randomise only from the idle Palette canvas. Buttons, links and
+  // popovers own Space for activation or copy.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.code !== 'Space' || e.defaultPrevented || e.repeat || uiMode || anyPopover) return
+      if (e.code !== 'Space' || e.defaultPrevented || e.repeat || anyPopover) return
       if (document.querySelector('[aria-modal="true"]')) return
       const target = e.target instanceof Element ? e.target : null
       if (target?.closest('input,textarea,select,button,a,summary,[contenteditable="true"],[role="button"],[role="menuitem"],[role="option"],[role="tab"],[role="gridcell"]')) return
@@ -1330,7 +1339,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [randomize, uiMode, anyPopover])
+  }, [randomize, anyPopover])
 
   // One dismiss layer for every popover: outside pointerdown or Escape closes
   // toolbar menus (anything not inside a .plb-menuwrap) and board popovers
@@ -2276,48 +2285,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const activeHarmony = HARMONIES.find(h => h.id === harmony) || HARMONIES[0]
   const activeVision = VISION_MODES.find(([id]) => id === vision) || VISION_MODES[0]
 
-  const applyUiBrandScale = scale => {
-    if (entitlementLoading || !isPro) {
-      openProModal({
-        eyebrow: 'UI System · Pro',
-        title: 'Apply a complete Brand scale',
-        subtitle: 'Pro can transfer all nine Brand shades into the editable Palette while keeping Brand 500 as its first swatch and seed.',
-      })
-      return false
-    }
-    const next = scale.map(normaliseHex).filter(Boolean).slice(0, HARD_MAX)
-    if (next.length !== 9) return false
-    setColors(next)
-    setSeed(next[0])
-    setSeedInput(next[0])
-    setHarmony('custom')
-    setLocked(new Set())
-    setAdjust(ZERO_ADJUST)
-    setImportedGalleryId(null)
-    setLiveMsg('Brand 500 and the remaining Brand scale applied to Palette.')
-    setUiMode(false)
-    return true
-  }
-
-  // Belt and braces: the entry points are gone for non-admins, so this can only
-  // fire if the flag is reached some other way. It renders the ordinary board
-  // rather than an error, because there is nothing here a visitor did wrong.
-  if (uiMode && canUseUiSystem) {
-    return (
-      <div className="plb plb--ui-system">
-        <UiSystemBuilder
-          initialSeed={seed}
-          isPro={isPro}
-          entitlementLoading={entitlementLoading}
-          onBack={() => setUiMode(false)}
-          onApplyBrand={applyUiBrandScale}
-          onCopy={onCopy}
-          toast={toast}
-        />
-      </div>
-    )
-  }
-
   return (
     // `data-board-source` is the instrumentation for
     // `palette-opens-with-wrong-state`. The report — "sometimes I open the
@@ -2338,14 +2305,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
         <div className="plb-toolbar-group">
           <div className="plb-mode-switch">
             <h1 className="plb-title">Palette</h1>
-            {canUseUiSystem && (
-              <>
-                <span aria-hidden="true">/</span>
-                <button type="button" aria-label="Open UI System mode" onClick={() => setUiMode(true)}>
-                  UI System <span>Admin</span>
-                </button>
-              </>
-            )}
           </div>
           <div className="plb-seedpick">
             <ColorPickerPop
@@ -2633,9 +2592,6 @@ export default function PaletteBuilder({ onCopy, toast }) {
               for. That split is also why the cluster is contiguous in the DOM:
               a collapse that reordered the row would move focus order for
               everyone to buy space for one band. */}
-          {canUseUiSystem && (
-            <button type="button" className="btn btn-s" onClick={() => setUiMode(true)} title="Build a complete UI colour system from Brand 500"><IcoSliders /> Build UI system</button>
-          )}
           <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
@@ -3526,6 +3482,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
         </button>
         <button type="button" className="btn btn-s plb-copycss" onClick={() => onCopy?.(cssExport)}>Copy CSS</button>
       </footer>
+
+      {/* Step 1 of the brand-kit walkthrough (colours → fonts → type scale →
+          icons). Renders nothing unless the visitor is in the flow. This page is
+          the step because it is the tool that writes `design.palette`, which is
+          what the walkthrough reads to know the step is done. */}
+      <UIKitGuide step="color" />
     </div>
   )
 }
