@@ -5913,8 +5913,27 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-cta-i{overflow:hidden;min-width:0;white-space:nowrap}
 .pnav-cta.is-waiting{opacity:0;transform:translateY(-6px);grid-template-columns:0fr;padding-left:0;padding-right:0;margin-left:-8px;pointer-events:none}
 .pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto}
-.pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
-.pnav-mobile:hover{background:var(--hvr)}
+/* THE MENU BUTTON IS A CONTROL, NOT A GLYPH ON THE BACKGROUND.
+   Founder, 2026-09-05, marked screenshot at 662px: the search circle, the
+   avatar and the hamburger "are misaligned". Their BOXES are not — all three
+   are 40x40 in one `align-items:center` row, and box centres measured a 0.00px
+   spread at every width. What is misaligned is the INK.
+   Measured at 662 (ink centroid, weighted by departure from the bar ground):
+   the search field paints 40x40 (a bordered disc) and the avatar the same,
+   while this button painted 16x10 — a bare glyph floating in an invisible box.
+   Two consequences, and they are what a marked-up screenshot looks like:
+   the visible gap between the disc and the glyph measured 30px against the
+   16px the row actually sets, and the glyph stopped 28px from the bar edge
+   while the logotype starts 16px from the other one, so the right end of the
+   bar read as pulled in and dropped out of the row.
+   The answer is not to nudge it. A circle, a photograph and a three-line
+   glyph have different intrinsic mass and will never align by matching
+   heights, so the glyph is given the same optical container its neighbours
+   already carry — the identical border/background/radius as .pnav-iconbtn,
+   .pnav-more and .pnav-search-field. Ink then fills the box, both margins
+   come out at 16px, and the three read as one row of equal controls. */
+.pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-mobile:hover{background:var(--hvr);border-color:var(--t2);color:var(--t0)}
 
 /* Centre search — sits between the nav triggers and the right-hand actions
    cluster; it takes the bar's spare width (flex:1) so the fixed-width field
