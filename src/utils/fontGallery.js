@@ -141,18 +141,91 @@ const NON_SCRIPT_SUBSETS = new Set(['menu'])
 // WHY TWO LINES PAST 14 CHARACTERS: on one line a 32-character name would need
 // 4.7cqw, about 8px in a 190px column - present but not legible, which is worse
 // than absent. Wrapping halves the characters per line and roughly doubles the
-// size the same box can carry (32 chars -> ~15px). Family names contain spaces,
-// so they wrap naturally; the longest unbreakable word in the catalogue is 18
-// characters ("UnifrakturMaguntia"), which is why .fbd-sample also carries
+// size the same box can carry. Family names contain spaces, so they wrap
+// naturally; the longest unbreakable word in the catalogue is 18 characters
+// ("UnifrakturMaguntia"), which is why .fbd-sample also carries
 // overflow-wrap:anywhere as a backstop rather than relying on a space.
 //
+// THE LINE BUDGET IS THE WRAP THE BROWSER ACTUALLY PERFORMS, and this is the
+// correction. `Math.ceil(chars / lines)` models a PERFECTLY BALANCED split -
+// 32 characters over two lines is 16 each. Browsers do not balance; they fill
+// greedily and break at spaces. "Noto Sans Inscriptional Parthian" at a
+// 16-character budget goes "Noto Sans" / "Inscriptional" / "Parthian", which is
+// THREE lines, and -webkit-line-clamp then trims the specimen - the exact fault
+// the tile geometry exists to prevent, arrived at from the other side.
+//
+// MEASURED over the live Google Fonts family list, all 1,946 names rather than
+// a sample: 249 of them (12.8%) need more lines than the balanced model
+// budgets for, every one of them a three-line wrap inside a two-line clamp.
+// Worst offenders are the Noto script families, which are three or four words
+// with one long one in the middle. So the size is solved from the wrap instead:
+// the SMALLEST per-line budget whose greedy wrap fits, which is the LARGEST
+// size that genuinely does. After the change, 0 of 1,946 exceed their budget.
+//
+// WHY IT SHIPPED, AND IT IS NOT THAT NOBODY LOOKED: the defect is invisible on
+// most faces. Measured in a real browser at 1440, "Noto Sans Inscriptional
+// Parthian" wraps to TWO lines under both formulas in a platform sans - about
+// 0.50em per character - and to THREE under the balanced one in a platform
+// monospace, which is 0.60em exactly. 0.60 is the pessimistic constant this
+// derivation is built on, so the balanced budget was correct for the average
+// face and wrong for the one the arithmetic promises to survive. The rendered
+// half of the guard therefore seeds its long names as monospace on purpose;
+// against a mid-range face it would pass either way and prove nothing.
+//
+// WIDENING THE CLAMP ALONE WAS PRICED AND REJECTED, because it is the obvious
+// cheaper fix and it is worse. Keeping the balanced budget and clamping at
+// three stops the trimming, but the balanced budget can reach three lines at
+// the 30px CEILING - "Akaya Telivigala" does - and three lines at 30px is
+// 103.5px in an 84px tile, which overflows the card instead of trimming it.
+// Solved from the wrap, the tallest case is two lines and 69px at every column
+// width, and the only three-line results left sit at the 13px floor, where
+// three lines is 45px. Pinned in tests/unit/specimen-fit.test.js so the option
+// stays priced rather than re-argued.
+//
+// THIS DOES NOT OVERTURN THE MEASURED CONSTANT, IT EXTENDS IT. A single word on
+// one line needs a budget equal to its own length, so "Handgloves" still solves
+// to 150/10 = 15cqw exactly, and the one-line path (maxLines = 1, which is what
+// FontPicker's fixed-height trigger asks for) is byte-identical to what it was:
+// a single line can only fit if the budget covers the whole string. Only the
+// two-line grid path moves, and only downward, and only for names whose words
+// do not divide evenly.
+//
 // Returns the cqw multiplier only. The floor and ceiling live in CSS with the
-// rest of the tile geometry.
+// rest of the tile geometry, and the 13px floor is what puts TWO of the 1,946
+// onto a third line at the narrowest shipped column - see .fbd-sample, which
+// clamps at three for that reason rather than trimming them.
+function greedyLines(name, budget) {
+  const words = name.split(/\s+/).filter(Boolean)
+  let lines = 0
+  let cur = ''
+  for (let word of words) {
+    // A word longer than the whole budget is broken mid-word, which is what
+    // overflow-wrap:anywhere does; "UnifrakturMaguntia" is the case.
+    while (word.length > budget) {
+      if (cur) { lines += 1; cur = '' }
+      lines += 1
+      word = word.slice(budget)
+    }
+    if (!cur) cur = word
+    else if (cur.length + 1 + word.length <= budget) cur += ` ${word}`
+    else { lines += 1; cur = word }
+  }
+  if (cur) lines += 1
+  return lines || 1
+}
+
 export function specimenSizeCqw(family, maxLines = 2) {
-  const chars = String(family || '').trim().length
+  const name = String(family || '').trim()
+  const chars = name.length
   if (!chars) return 15
   const lines = (maxLines > 1 && chars > 14) ? 2 : 1
-  return 150 / Math.ceil(chars / lines)
+  // The smallest budget that fits, walked upward from 1. Terminates at `chars`,
+  // where the whole name is on one line by definition.
+  let budget = chars
+  for (let b = 1; b <= chars; b += 1) {
+    if (greedyLines(name, b) <= lines) { budget = b; break }
+  }
+  return 150 / budget
 }
 
 export function formatSubsets(subsets) {

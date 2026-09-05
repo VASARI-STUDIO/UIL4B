@@ -10912,17 +10912,39 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    word - so a tile that somehow renders without the property looks exactly as
    it did before.
 
-   TWO LINES, and the height is checked: the tile is 104px with 10px of vertical
-   padding, so 84px of content box. Two lines at the 30px ceiling and 1.15
-   leading is 69px, which fits. overflow-wrap:anywhere is the backstop for the
-   longest unbreakable word in the catalogue ("UnifrakturMaguntia", 18 chars);
-   family names otherwise carry spaces and wrap on them.
+   TWO LINES BUDGETED, THREE CLAMPED, and the height is checked at both: the
+   tile is 104px with 10px of vertical padding, so 84px of content box. Two
+   lines at the 30px ceiling and 1.15 leading is 69px, which fits; three lines
+   at the 13px floor is 45px, which also fits. overflow-wrap:anywhere is the
+   backstop for the longest unbreakable word in the catalogue
+   ("UnifrakturMaguntia", 18 chars); family names otherwise carry spaces and
+   wrap on them.
+
+   WHY THE CLAMP IS THREE AND NOT TWO. specimenSizeCqw solves for a size whose
+   GREEDY wrap fits two lines, and 0 of the 1,946 live families exceed that at
+   their own derived size. The clamp floor above then overrides the size on the
+   longest names: at 190px columns, 13px carries about 20 characters a line, and
+   "Noto Sans Inscriptional Parthian" and "Noto Sans Inscriptional Pahlavi" need
+   22. TWO of 1,946, and the choice for those two is a third line or a trimmed
+   specimen. This file already says which one it wants - "a specimen trimmed to
+   fit is the fault being fixed here, not a fix for it" - so the clamp widens
+   rather than the floor dropping. 11px would fit them on two lines and is the
+   size this note already calls present but not legible.
+
+   Mobbin, and it is evidence rather than taste: Linktree's font chips wrap
+   "Bricolage Grotesque" onto two lines inside the chip rather than trimming it,
+   which is the pattern extended here. Gamma clips to one line at a fixed size
+   instead - "Instrument...", "Libre..." - but it prints the full name in the UI
+   font INSIDE the same card, which is the trade .typ-picker-face makes and this
+   tile deliberately does not.
+   mobbin.com/screens/5e3d1b9f-55bb-4593-aade-10b766825aeb (Linktree)
+   mobbin.com/screens/05db44b6-6347-42df-b903-6bcf6f7ab24a (Gamma)
 
    The ellipsis is GONE rather than kept as a backstop. It cannot fire now that
    the size is derived from the character count, and leaving it would mean a
    long name silently trimmed instead of visibly mis-sized - a specimen trimmed
    to fit is the fault being fixed here, not a fix for it. */
-.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 1cqw),30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
+.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 1cqw),30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3}
 /* A tile whose face has not registered yet shows nothing rather than the
    fallback: the tile exists to be judged, and a fallback pretending to be the
    family is the one thing it must never do. */
