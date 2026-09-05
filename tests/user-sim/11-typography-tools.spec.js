@@ -56,8 +56,18 @@ test.describe('Type Scale Generator', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Type Scale Generator' })).toBeVisible()
     // Default scale: 6 steps up + base + 2 down.
     await expect(page.locator('.tsc-row')).toHaveCount(9)
-    await expect(page.locator('.tsc-status')).toContainText('16px')
-    await expect(page.locator('.tsc-status')).toContainText('1.25')
+
+    // The five-up `.tsc-status` figure strip is gone (#type-scale-ui-overhaul);
+    // the two numbers it reported are the two live controls in `.tsc-scale-bar`
+    // and the range it reported is the RESULT of them.
+    //
+    // Read off the control's own value rather than the bar's text: a <select>
+    // carries every option's label in its textContent, so `toContainText('1.25')`
+    // on the bar would pass with any ratio selected. That is the assertion this
+    // replaces and it is why it is not replaced in kind.
+    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('16px')
+    await expect(page.getByLabel('Scale ratio')).toHaveValue('1.25')
+    await expect(page.locator('.tsc-scale-range')).toHaveText('10px – 61px')
 
     // The ratio genuinely drives the maths: a bigger ratio must move the top step.
     // 16 × 1.25^6 = 61.04 and 16 × 1.5^6 = 182.25, both snapped to the default
@@ -69,7 +79,10 @@ test.describe('Type Scale Generator', () => {
     await page.getByLabel('Scale ratio').selectOption('1.25')
     await expect(largest).toContainText('61px')
 
-    // Rounding is an explicit decision, not a hidden .toFixed().
+    // Rounding is an explicit decision, not a hidden .toFixed(). It is one of
+    // the four controls that moved behind the "Fine tuning" disclosure, so
+    // reaching it is now a step the test has to take, exactly as a user does.
+    await page.getByRole('button', { name: 'Fine tuning' }).click()
     await page.getByLabel('Rounding').selectOption('whole')
     await expect(largest).toContainText('61px')
     await page.getByLabel('Rounding').selectOption('none')
@@ -115,6 +128,7 @@ test.describe('Type Scale Generator', () => {
     // a single media query raises it, rather than desktop values being the
     // default and mobile an override.
     await page.getByRole('button', { name: 'CSS variables' }).click()
+    await page.getByRole('button', { name: 'Fine tuning' }).click()
     await page.getByRole('button', { name: /Fixed · media query/ }).click()
     await expect(code).not.toContainText('clamp(')
     await expect(code).toContainText(`@media (min-width: 1440px)`)
@@ -164,6 +178,7 @@ test.describe('Type Scale Generator', () => {
     await page.locator('#tsc-base + .snapv-value').click()
     await page.getByRole('spinbutton', { name: /Base font size/ }).fill('40')
     await page.getByRole('spinbutton', { name: /Base font size/ }).press('Enter')
+    await page.getByRole('button', { name: 'Fine tuning' }).click()
     await page.getByLabel('Number of steps above the base size').fill('9')
 
     await expect(page.locator('.tsc-row').first().locator('.tsc-row-num')).toContainText('787320px')
