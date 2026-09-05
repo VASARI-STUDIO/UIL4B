@@ -32,11 +32,15 @@ test.describe('Discover libraries share one header', () => {
       const hero = page.locator('.dgh-hero')
       await expect(hero).toBeVisible()
       await expect(hero.getByRole('heading', { level: 1, name: library.title })).toBeVisible()
-      // Eyebrow + description + numeric mark are the parts that make the two
-      // pages read as one surface.
-      await expect(hero.locator('.dgh-eyebrow')).toHaveText('Discover / Colour')
+      // Title + description are what make the two pages read as one surface.
       await expect(hero.locator('p')).not.toBeEmpty()
-      await expect(hero.locator('.dgh-mark strong')).not.toBeEmpty()
+      // REGRESSION GUARD (#surface-headers-read-as-ai). The founder marked both
+      // of these "AI" on the Font Gallery masthead: a taxonomy eyebrow above an
+      // h1 that already says it, and a display numeral counting the catalogue.
+      // They are asserted GONE rather than merely un-asserted, so a future hero
+      // edit cannot quietly reinstate them.
+      await expect(hero.locator('.dgh-eyebrow')).toHaveCount(0)
+      await expect(hero.locator('.dgh-mark')).toHaveCount(0)
 
       // Shared results row, with the live count announced politely.
       const resultHead = page.locator('.drh-head')
@@ -64,7 +68,7 @@ test.describe('Discover libraries share one header', () => {
           eyebrow: !!hero.querySelector('.dgh-eyebrow'),
           h1: !!hero.querySelector('h1'),
           description: !!hero.querySelector('p'),
-          mark: !!hero.querySelector('.dgh-mark strong'),
+          mark: !!hero.querySelector('.dgh-mark'),
           radius: styles.borderTopLeftRadius,
           background: styles.backgroundColor,
           resultHead: !!document.querySelector('.drh-head h2'),
@@ -101,8 +105,10 @@ test.describe('Discover libraries share one header', () => {
 
       // The page's own identity, through the shared slots.
       await expect(hero.getByRole('heading', { level: 1, name: surface.title })).toBeVisible()
-      await expect(hero.locator('.dgh-eyebrow')).not.toBeEmpty()
       await expect(hero.locator('p')).not.toBeEmpty()
+      // Same regression guard as above, across all four browse surfaces.
+      await expect(hero.locator('.dgh-eyebrow')).toHaveCount(0)
+      await expect(hero.locator('.dgh-mark')).toHaveCount(0)
 
       // Title case, no trailing full stop — the agreed library vocabulary. This
       // is what "Icons for every interface." used to fail.
@@ -136,17 +142,19 @@ test.describe('Discover libraries share one header', () => {
     }
   })
 
-  // The right-hand column carries a decorative count on the galleries and the
-  // library tablist on the Icon/Emoji surface. The count may vanish on a narrow
-  // screen; the tablist may not — it is the only route to the other library, and
-  // a control that only exists above 720px is a control half the users lack.
-  test('the masthead drops its count on a phone but never its controls', async ({ page }) => {
+  // The right-hand column used to carry a decorative count on the galleries and
+  // the library tablist on the Icon/Emoji surface. The count is gone at every
+  // width now (#surface-headers-read-as-ai); the tablist may never go — it is
+  // the only route to the other library, and a control that only exists above
+  // 720px is a control half the users lack. That asymmetry was the whole point
+  // of the old mark/aside split, and it is what this test still protects.
+  test('the masthead carries no count on a phone but keeps its controls', async ({ page }) => {
     watch(page, 'designer opening the libraries on a phone')
     await page.setViewportSize({ width: 390, height: 844 })
 
     await go(page, '/discover/palettes')
     await expect(page.locator('.dgh-hero')).toBeVisible()
-    await expect(page.locator('.dgh-mark')).toBeHidden()
+    await expect(page.locator('.dgh-mark')).toHaveCount(0)
 
     await go(page, '/create/icons')
     const aside = page.locator('.dgh-aside')
@@ -298,11 +306,11 @@ test.describe('the Palette Library carries the brand systems', () => {
     // own count, next to the cards it is about rather than in a preamble. The
     // note still renders for a filtered or searched view, where there are no
     // sections; see tests/user-sim/34-palette-library-sections.spec.js.
-    // The hero mark stays the LIBRARY's size — 100 palettes exist and that is a
-    // fact about the collection, not a claim about this viewer's access. The
-    // wall names the locked remainder in the next breath, so the two together
-    // are honest where either alone would not be.
-    await expect(page.locator('.dgh-mark strong')).toHaveText(String(LIBRARY_PALETTES.length))
+    // The hero used to restate the LIBRARY's size next to this. That numeral is
+    // gone (#surface-headers-read-as-ai), and the honesty argument did not
+    // depend on it: the section counts below name the free and locked halves,
+    // and the upgrade wall names the remainder in the next breath.
+    await expect(page.locator('.dgh-mark')).toHaveCount(0)
     const sections = page.locator('.pgl-section-head')
     await expect(sections.filter({ hasText: 'Brand systems' }).locator('.pgl-section-count'))
       .toHaveText(String(FREE_BRANDS.length))

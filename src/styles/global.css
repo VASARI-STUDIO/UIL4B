@@ -11207,10 +11207,11 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    src/components/discover/DiscoverGalleryHero.jsx and DiscoverResultHead.jsx —
    the Palette Library and Gradient Library both consume them, so this block is
    the single home for the pattern. Page-specific chrome stays in pgl-/grg-. */
-.dgh-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:clamp(32px,7vw,110px);align-items:end;min-height:390px;margin:-4px 0 24px;padding:clamp(28px,5vw,64px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 28px 80px rgba(6,6,10,.18)}
+.dgh-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,7vw,110px);align-items:end;min-height:300px;margin:-4px 0 24px;padding:clamp(28px,5vw,64px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 28px 80px rgba(6,6,10,.18)}
 .dgh-hero::before{content:"";position:absolute;inset:auto -10% -65% 42%;height:430px;background:radial-gradient(circle,rgba(124,92,255,.55),rgba(50,190,170,.25) 34%,transparent 68%);filter:blur(10px);pointer-events:none}
 .dgh-copy{position:relative;z-index:1;min-width:0}
-.dgh-eyebrow{display:block;margin-bottom:24px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.58)}
+/* RETIRED (#surface-headers-read-as-ai): .dgh-eyebrow. A taxonomy path in
+   mono caps restating the h1 underneath it. */
 .dgh-hero h1{max-width:720px;margin:0;font-family:var(--display);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.88;letter-spacing:-.065em;overflow-wrap:break-word}
 .dgh-hero p{max-width:630px;margin:28px 0 0;font-size:clamp(15px,1.5vw,19px);line-height:1.55;color:rgba(255,255,255,.68)}
 /* Optional inline CTA (the Gradient Library's "Open the Gradient Generator").
@@ -11226,16 +11227,26 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    read as a list rather than as a display number. */
 .dgh-hero--controls{grid-template-columns:minmax(0,1fr) 264px;gap:clamp(28px,4vw,56px)}
 .dgh-aside{position:relative;z-index:1;display:flex;flex-direction:column;gap:14px;min-width:0}
-.dgh-mark{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
-.dgh-mark span{margin-bottom:36px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:#a89bff}
-.dgh-mark strong{font-family:var(--display);font-size:92px;font-weight:500;line-height:.8;letter-spacing:-.07em}
-.dgh-mark small{margin-top:12px;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+/* RETIRED (#surface-headers-read-as-ai): .dgh-mark, the 92px display numeral
+   counting the catalogue. It is the one-up cousin of the Font Gallery's
+   three-up figure strip and it failed the same test - it measured the
+   product, not the reader's problem. It was already aria-hidden and already
+   dropped below 720px on the grounds that losing it 'costs nothing'; that
+   argument does not stop at 720px. The live count still exists where it does
+   work, in DiscoverResultHead's aria-live region.
+   Its 230px grid track went with it, which is why .dgh-hero is now a single
+   column and only --controls declares a second one. */
 .drh-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
 .drh-head span{display:block;margin-bottom:7px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent-strong)}
 .drh-head h2{margin:0;font-family:var(--display);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
 .drh-head p{margin:0;font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
 @media(max-width:720px){
-  /* min-height 300, NOT 430. THE 430 WAS BACKWARDS: this block hides .dgh-mark,
+  /* min-height 0 now, and the long argument that used to live here is
+     obsolete rather than wrong. #331 spent it working out a floor that would
+     not leave dead black above the copy once .dgh-mark was hidden on a phone.
+     .dgh-mark no longer exists at ANY width (#surface-headers-read-as-ai), so
+     the copy is the tallest thing in the box everywhere and there is nothing
+     left for a floor to hold open. Kept for the record: this block hid .dgh-mark,
      the 92px serif numeral the 390px desktop floor was sized around, and then
      raised the floor by 40px anyway. So the layout with LESS in it got a TALLER
      box, and the difference was dead black above the copy — measured 125px at
@@ -11251,8 +11262,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
      the glow 10% past the right edge ON PURPOSE, where `overflow:hidden` on the
      same element clips it. Suppress ::before and the figure is exactly 0 at
      every width; the document itself never scrolls horizontally. */
-  .dgh-hero{grid-template-columns:1fr;min-height:300px;border-radius:20px}
-  .dgh-mark{display:none}
+  .dgh-hero{grid-template-columns:1fr;min-height:0;border-radius:20px}
   /* The mark is dropped here; the aside is NOT. It carries the only route to
      the other library, so it stacks under the copy instead of disappearing, and
      that stacked aside already gives the box more height than the floor above
@@ -11642,8 +11652,15 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 }
 
 /* Font Gallery */
+/* min-height 320, not 420 (#surface-headers-read-as-ai). The 420 was sized
+   around a topline row plus a clamp(64px,9vw,116px) gap plus a three-up figure
+   strip, all of which are gone. Measured at 1440 with the old floor: content
+   ended at y=346 and the slab ran to y=508 - 162px of nothing, only 62px of it
+   padding. Same failure mode #331 fixed on .dgh-hero: the layout with LESS in
+   it kept the TALLER box. The narrow-viewport floor drops to 0 for the same
+   reason it did there - the copy is the tallest thing on a phone anyway. */
 .fg-page{padding-bottom:72px}
-.fg-hero--premium{min-height:420px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
+.fg-hero--premium{min-height:320px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
 .fg-hero--premium::after{content:"Aa";position:absolute;right:-.035em;bottom:-.31em;font-family:var(--display);font-size:clamp(230px,32vw,470px);font-weight:500;line-height:1;color:rgba(255,255,255,.035);letter-spacing:-.1em;pointer-events:none}
 .fg-hero--premium{position:relative;overflow:hidden}
 /* RETIRED (#surface-headers-read-as-ai): .fg-hero-topline, its
@@ -11827,7 +11844,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 
 /* Font Pair */
 .fpr-page{padding-bottom:72px}
-.fpr-hero--premium{position:relative;min-height:400px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
+.fpr-hero--premium{position:relative;min-height:340px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
 .fpr-hero--premium::after{content:"";position:absolute;right:-8%;bottom:-74%;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,rgba(118,91,255,.38),rgba(54,189,171,.14) 38%,transparent 68%);pointer-events:none}
 /* RETIRED (#surface-headers-read-as-ai): .fpr-hero-topline, its
    .sec-h-eyebrow override and .fpr-gallery-link - the same corner-parked
@@ -11964,7 +11981,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
   .pgl-filters button{flex:0 0 auto}
   .pgl-page .pgal-grid{grid-template-columns:1fr}
   .pgl-page .pgal-stripes,.pgl-page .lockt-stripes{height:230px}
-  .fg-hero--premium,.fpr-hero--premium{min-height:420px;padding:26px 22px;border-radius:20px}
+  .fg-hero--premium,.fpr-hero--premium{min-height:0;padding:26px 22px;border-radius:20px}
   .fg-hero--premium h1,.fpr-hero--premium h1{font-size:clamp(54px,17vw,86px)}
   .fg-command{grid-template-columns:1fr;padding:8px}
   .fg-command-size{order:initial}

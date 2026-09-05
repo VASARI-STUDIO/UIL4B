@@ -74,7 +74,6 @@ export default function IconEmojiLibrary({ onCopy }) {
           each other, which is the constraint that matters: /create/icons and
           /create/emoji are two indexable URLs and must not share an h1. */}
       <DiscoverGalleryHero
-        eyebrow="Create / Assets"
         title={tab === 'icon' ? 'Icon Library' : 'Emoji Library'}
         description={tab === 'icon' ? t('iconLibrary.subtitle') : t('emojiLibrary.subtitle')}
         aside={(

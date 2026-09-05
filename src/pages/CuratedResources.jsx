@@ -226,10 +226,8 @@ export default function CuratedResources() {
   return (
     <div className="sec cur-wrap">
       <DiscoverGalleryHero
-        eyebrow="Discover / Resources"
         title="Curated Resources"
         description="Hand-picked tools from outside UI L4B that are genuinely worth a tab — each one with the reason it earned its place, and a way straight into the UI L4B tool that finishes the job."
-        mark={{ label: 'curated', value: DISCOVER_RESOURCES.length, caption: 'external tools' }}
         action={(
           <Link className="btn" to="/feedback">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
