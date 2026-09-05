@@ -96,6 +96,12 @@ const DEFAULTS = {
   rounding: 'half',
 }
 
+// The default specimen. It is the SAME string on every row, and that is a
+// decision rather than an oversight: a scale is judged by holding the text
+// constant and letting only the size vary, which is what makes two adjacent
+// steps comparable at a glance. #327 examined this and kept it; this change
+// does not overturn it. What it adds is the ability to swap the string for
+// your own words — see `sample` — which is the part that was missing.
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
 
 // (stepName lived here. It is now in utils/fluidType.js beside stepPx, because
@@ -167,6 +173,22 @@ export default function TypeScale({ onCopy, toast }) {
   const [width, setWidth] = useState('full')
   const [audience, setAudience] = useState('designer')
   const [format, setFormat] = useState('css')
+  // THE WORDS IN THE PREVIEW. Empty means the pangram below.
+  //
+  // This tool judged type with a string the visitor could not change, while the
+  // homepage panel that mirrors it — HomeWorkbench's Typography tab — has
+  // carried a "Preview text" input all along, and so has Font Pair. The tool
+  // whose entire job is deciding whether a size is usable was the only one of
+  // the three that would not show you your own words at it.
+  //
+  // One string drives BOTH previews — the ladder and the article heading below
+  // it — because they are two views of one decision, and two preview-text boxes
+  // is how they would come to disagree.
+  const [sample, setSample] = useState('')
+  // The fine-tuning disclosure. Closed on arrival: the two numbers that make a
+  // modular scale are the base and the ratio, and every other control here
+  // adjusts a scale that already exists. See the rail comment for the count.
+  const [tuning, setTuning] = useState(false)
 
   // The two families the preview and the export use. Seeded from the hand-off,
   // then the saved kit — the tool never opens on a font the user didn't choose.
@@ -301,6 +323,7 @@ export default function TypeScale({ onCopy, toast }) {
     setHeadingTrack(DEFAULTS.headingTrack)
     setBodyTrack(DEFAULTS.bodyTrack)
     setRounding(DEFAULTS.rounding)
+    setSample('')
     persistScale({
       base: DEFAULTS.base,
       ratio: DEFAULTS.ratio,
@@ -430,6 +453,10 @@ export default function TypeScale({ onCopy, toast }) {
     )
   }
 
+  // The string every preview on the page is set in. Trimmed, because a space
+  // typed and deleted is not a choice to preview a space.
+  const specimen = sample.trim() || PANGRAM
+
   const previewVars = {
     '--tsc-heading-ff': headingStack,
     '--tsc-body-ff': bodyStack,
@@ -443,16 +470,38 @@ export default function TypeScale({ onCopy, toast }) {
 
   return (
     <div className="sec tsc-page">
-      <header className="tsc-hero">
-        <div className="sec-h-eyebrow">Create / Typography</div>
-        <div className="tsc-hero-copy">
+      {/* THE TAXONOMY EYEBROW IS GONE, AND SO IS THE DISPLAY-SIZED h1.
+          ──────────────────────────────────────────────────────────────────
+          #382 deleted `<div className="sec-h-eyebrow">` from every tool
+          masthead it reached — the founder marked that exact element "AI" on
+          the Font Gallery, where it also announced the wrong section — and it
+          did not reach this page. "Create / Typography" was still sitting above
+          an h1 that says the same thing in fewer words, on a route the nav
+          already shows you are in.
+
+          The h1 came down from clamp(38px,5vw,64px). On a page whose whole
+          subject is type, the biggest type on it was the one string the visitor
+          cannot change, and it was setting the scale the specimen then had to
+          compete with. The specimen is the largest thing here now.
+
+          The paragraph lost two of its three clauses. What it said — tune the
+          curve, read it back, copy the properties — was the page describing its
+          own workflow to someone who can see it. What is left is the one fact a
+          first-time visitor needs and cannot infer: what a modular scale is.
+
+          Reset moved up here because it acts on the whole page, and it was
+          previously the last control in a rail of thirteen. */}
+      <header className="tsc-masthead">
+        <div className="tsc-masthead-copy">
           <h1>Type Scale Generator</h1>
           <p>
-            Two numbers — a base size and a ratio — generate every size in your
-            interface. Tune the curve, read it back in a real layout, then copy a
-            complete set of CSS custom properties.
+            One base size and one ratio. Every step below is that multiplication,
+            set in the families you have chosen.
           </p>
         </div>
+        <button type="button" className="tsc-reset" onClick={reset}>
+          Reset scale
+        </button>
         {/* THE HERO TABLIST IS GONE, AND THE STATE IT SET IS NOT.
             `audience` had TWO controls. This one — a pair of large cards
             captioned "For designers" and "For developers" — sat at the top of
@@ -490,120 +539,57 @@ export default function TypeScale({ onCopy, toast }) {
         count={catalog.length}
       />
 
-      <div className="tsc-status" aria-live="polite">
-        <span><strong>{steps.length}</strong> size{steps.length === 1 ? '' : 's'}</span>
-        <span><strong>{base}px</strong> base</span>
-        <span><strong>{trim(ratio, 3)}</strong> ratio</span>
-        <span><strong>{steps[0].px}px</strong> largest</span>
-        <span><strong>{steps[steps.length - 1].px}px</strong> smallest</span>
-      </div>
+      {/* ── The scale, stated ────────────────────────────────────────────────
+          THIS REPLACES A FIVE-UP FIGURE STRIP, and the strip is not restyled —
+          it is replaced by the thing it was describing.
 
-      <div className="tsc-grid">
-        {/* ── Controls ── */}
-        <section className="card tsc-panel tsc-config" aria-labelledby="tsc-config-title">
-          <div className="tsc-section-head">
-            <span className="tsc-section-num">01</span>
-            <div>
-              <h2 id="tsc-config-title">Tune the scale</h2>
-              <p>A base and a ratio at each end. Everything between is interpolated.</p>
-            </div>
-          </div>
+          What stood here was `.tsc-status`, a 1348x46px band reading
+          "9 sizes · 16px base · 1.25 ratio · 61px largest · 10px smallest".
+          #382 deleted the three-up version of that motif from the Font Gallery
+          because the founder marked it "AI", and moved its one working figure
+          into the search placeholder where it does a job. This instance was
+          worse than the Gallery's, because every one of its five figures was
+          restated within 150px of it: "61px largest" and "10px smallest" ARE
+          the top and bottom rows of the ladder underneath, "16px base" and
+          "1.25 ratio" were the two controls, and "9 sizes" counted rows you can
+          see. Nothing there survived the test the Gallery fix applied.
 
-          {/* ── The mobile end ──
-              A ratio compounds, so one ratio cannot serve both breakpoints: at
-              1.333 the sixth step is 5.6× the base, which reads as confident on
-              a 1440px desktop and as shouting on a 375px phone. Mobile gets its
-              own base and its own gentler ratio, and the two ladders are joined
-              by clamp() — that is what makes an h1 genuinely different at each
-              breakpoint instead of merely previewed in a narrower box. */}
-          <fieldset className="tsc-bp">
-            <legend className="seg-label">Mobile · {FLUID_VIEWPORTS.min}px</legend>
-            <div className="tsc-bp-row">
-              <div className="tsc-slider-row">
-                <div className="tsc-slider-head">
-                  <label className="seg-label" htmlFor="tsc-mbase">Base size</label>
-                </div>
-                <SnapSlider
-                  id="tsc-mbase"
-                  min={12}
-                  max={22}
-                  step={0.5}
-                  decimals={1}
-                  unit="px"
-                  value={mobileBase}
-                  defaultValue={DEFAULTS.mobileBase}
-                  snaps={[14, 15, 16, 18]}
-                  snapRadius={0.6}
-                  onChange={setMobileBase}
-                  ariaLabel="Mobile base size"
-                />
-              </div>
-              <div>
-                <label className="seg-label" htmlFor="tsc-mratio">Ratio</label>
-                <select
-                  id="tsc-mratio"
-                  className="tsc-select"
-                  value={mobileRatioId}
-                  onChange={e => setMobileRatioId(e.target.value)}
-                >
-                  {RATIOS.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.label}{r.value ? ` — ${r.value}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {mobileRatioId === 'custom' && (
-              <div className="tsc-slider-row">
-                <div className="tsc-slider-head">
-                  <label className="seg-label" htmlFor="tsc-mcustom">Custom mobile ratio</label>
-                </div>
-                <SnapSlider
-                  id="tsc-mcustom"
-                  min={1.05}
-                  max={2}
-                  step={0.001}
-                  decimals={3}
-                  value={mobileCustomRatio}
-                  defaultValue={DEFAULTS.custom}
-                  snaps={[1.1, 1.125, 1.2, 1.25, 1.333]}
-                  snapRadius={0.012}
-                  inputMin={1.01}
-                  inputMax={3}
-                  onChange={setMobileCustomRatio}
-                  ariaLabel="Custom mobile scale ratio"
-                />
-              </div>
-            )}
-          </fieldset>
+          So the two numbers come out of the rail and become the statement.
+          `base x ratio` is the whole of the maths this tool does, and here the
+          two terms are the live controls rather than a readout of them — you
+          edit the sentence that describes the scale. The range is the one
+          figure the strip carried that was not visible anywhere else, and it
+          stays, as the RESULT of the multiplication rather than a fourth and
+          fifth item in a row of equals.
 
-          {/* How the two ladders are joined. Fluid is the default; fixed is for
-              teams whose specs are stated per breakpoint. Both are honest — the
-              preview and every export follow whichever is chosen. */}
-          <div className="tsc-bp-mode" role="group" aria-label="How the two scales are joined">
-            <button
-              type="button"
-              className={fluid ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
-              aria-pressed={fluid}
-              onClick={() => setFluid(true)}
-            >
-              Fluid · clamp()
-            </button>
-            <button
-              type="button"
-              className={!fluid ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
-              aria-pressed={!fluid}
-              onClick={() => setFluid(false)}
-            >
-              Fixed · media query
-            </button>
-          </div>
-
-          <label className="seg-label tsc-bp-desktop-label" htmlFor="tsc-ratio">Desktop · {FLUID_VIEWPORTS.max}px — scale ratio</label>
+          It spans the full width above the grid, so the two controls that make
+          the scale are adjacent to the ladder they drive at EVERY width. #327
+          fixed the same adjacency problem for the rail by reordering the DOM so
+          two columns arrive at 1344px; the primary controls no longer depend on
+          that at all. */}
+      <section className="tsc-scale-bar" aria-label="The scale">
+        <div className="tsc-scale-term">
+          <label className="seg-label" htmlFor="tsc-base">Base size</label>
+          <SnapSlider
+            id="tsc-base"
+            min={10}
+            max={28}
+            value={base}
+            defaultValue={DEFAULTS.base}
+            snaps={[14, 16, 18, 20]}
+            unit="px"
+            inputMin={8}
+            inputMax={40}
+            onChange={changeBase}
+            ariaLabel="Base font size in pixels"
+          />
+        </div>
+        <span className="tsc-scale-x" aria-hidden="true">&times;</span>
+        <div className="tsc-scale-term tsc-scale-term--ratio">
+          <label className="seg-label" htmlFor="tsc-ratio">Scale ratio</label>
           <select
             id="tsc-ratio"
-            className="tsc-select"
+            className="tsc-select tsc-scale-select"
             value={ratioId}
             onChange={e => changeRatioId(e.target.value)}
           >
@@ -613,161 +599,85 @@ export default function TypeScale({ onCopy, toast }) {
               </option>
             ))}
           </select>
-          {/* The interval name is a fact about music, not guidance about
-              layout. This is the line that answers "should I pick this one?" */}
+        </div>
+        {/* The result of the two terms above, not a statistic about the page.
+            The interval name is a fact about music; this line is the one that
+            answers "should I pick this one?", so it rides with the range. */}
+        <p className="tsc-scale-out" aria-live="polite">
+          <strong>{steps.length} step{steps.length === 1 ? '' : 's'}</strong>
+          <span className="tsc-scale-range">
+            {steps[steps.length - 1].px}px – {steps[0].px}px
+          </span>
           {RATIOS.find(r => r.id === ratioId)?.hint && (
-            <p className="tsc-ratio-hint">{RATIOS.find(r => r.id === ratioId).hint}</p>
+            <span className="tsc-scale-hint">{RATIOS.find(r => r.id === ratioId).hint}</span>
           )}
-          {ratioId === 'custom' && (
-            <div className="tsc-slider-row">
-              <div className="tsc-slider-head">
-                <label className="seg-label" htmlFor="tsc-custom">Custom ratio</label>
-              </div>
-              <SnapSlider
-                id="tsc-custom"
-                min={1.05}
-                max={2}
-                step={0.001}
-                decimals={3}
-                value={customRatio}
-                defaultValue={DEFAULTS.custom}
-                snaps={[1.1, 1.125, 1.2, 1.25, 1.333, 1.5, 1.618, 2]}
-                snapRadius={0.012}
-                inputMin={1.01}
-                inputMax={3}
-                onChange={changeCustomRatio}
-                ariaLabel="Custom scale ratio"
-              />
-            </div>
-          )}
-          <p className="typ-hint">
-            Smaller ratios keep long pages calm; anything past a perfect fifth needs
-            room to breathe or the headings start shouting.
-          </p>
+        </p>
+      </section>
+      {ratioId === 'custom' && (
+        <div className="tsc-scale-custom">
+          <label className="seg-label" htmlFor="tsc-custom">Custom ratio</label>
+          <SnapSlider
+            id="tsc-custom"
+            min={1.05}
+            max={2}
+            step={0.001}
+            decimals={3}
+            value={customRatio}
+            defaultValue={DEFAULTS.custom}
+            snaps={[1.1, 1.125, 1.2, 1.25, 1.333, 1.5, 1.618, 2]}
+            snapRadius={0.012}
+            inputMin={1.01}
+            inputMax={3}
+            onChange={changeCustomRatio}
+            ariaLabel="Custom scale ratio"
+          />
+        </div>
+      )}
 
-          <div className="tsc-slider-row">
-            <div className="tsc-slider-head">
-              <label className="seg-label" htmlFor="tsc-base">Base size</label>
-            </div>
-            <SnapSlider
-              id="tsc-base"
-              min={10}
-              max={28}
-              value={base}
-              defaultValue={DEFAULTS.base}
-              snaps={[14, 16, 18, 20]}
-              unit="px"
-              inputMin={8}
-              inputMax={40}
-              onChange={changeBase}
-              ariaLabel="Base font size in pixels"
-            />
-          </div>
+      <div className="tsc-grid">
+        {/* ── The rail ──────────────────────────────────────────────────────
+            THIRTEEN LABELLED CONTROLS USED TO STAND HERE AT ONE WEIGHT.
+            Measured before this change: a 340x1592px column holding, in order,
+            a mobile base, a mobile ratio, a fluid/fixed pair, the desktop
+            ratio, the base size, steps above, steps below, line height,
+            heading tracking, body tracking, rounding, and two family pickers.
+            Every one of them was a `.tsc-slider-row` or a `.tsc-select` of
+            identical size, spacing and colour.
 
-          <div className="tsc-slider-row">
-            <div className="tsc-slider-head">
-              <label className="seg-label" htmlFor="tsc-up">Steps above base</label>
-            </div>
-            <SnapSlider
-              id="tsc-up"
-              min={1}
-              max={9}
-              value={up}
-              defaultValue={DEFAULTS.up}
-              snaps={[3, 6, 9]}
-              onChange={setUp}
-              ariaLabel="Number of steps above the base size"
-            />
-          </div>
-          <div className="tsc-slider-row">
-            <div className="tsc-slider-head">
-              <label className="seg-label" htmlFor="tsc-down">Steps below base</label>
-            </div>
-            <SnapSlider
-              id="tsc-down"
-              min={0}
-              max={5}
-              value={down}
-              defaultValue={DEFAULTS.down}
-              snaps={[0, 2, 4]}
-              onChange={setDown}
-              ariaLabel="Number of steps below the base size"
-            />
-          </div>
+            That is the flat, evenly-spaced stack the anti-slop bar calls
+            "spacing, hierarchy and state behaviour that feel generated section
+            by section", and it had a specific cost here rather than only a
+            look: the two numbers that ARE a modular scale — the base and the
+            ratio — sat fifth and fourth in that list, between "Steps below
+            base" and "Body tracking", weighted exactly the same as letter
+            spacing. Nothing in the rail said what to do first, so the tool
+            answered "what am I trying to do with a type scale?" with a
+            settings screen.
 
-          <div className="tsc-slider-row">
-            <div className="tsc-slider-head">
-              <label className="seg-label" htmlFor="tsc-leading">Line height</label>
-            </div>
-            <SnapSlider
-              id="tsc-leading"
-              min={1}
-              max={2.2}
-              step={0.01}
-              decimals={2}
-              value={lineHeight}
-              defaultValue={DEFAULTS.lineHeight}
-              snaps={[1.2, 1.4, 1.5, 1.6, 1.75]}
-              snapRadius={0.03}
-              onChange={changeLineHeight}
-              ariaLabel="Line height multiplier"
-            />
-          </div>
-          <div className="tsc-slider-row">
-            <div className="tsc-slider-head">
-              <label className="seg-label" htmlFor="tsc-htrack">Heading tracking</label>
-            </div>
-            <SnapSlider
-              id="tsc-htrack"
-              min={-0.06}
-              max={0.12}
-              step={0.005}
-              decimals={3}
-              value={headingTrack}
-              defaultValue={DEFAULTS.headingTrack}
-              snaps={[-0.04, -0.02, 0, 0.04]}
-              snapRadius={0.006}
-              unit="em"
-              onChange={changeHeadingTrack}
-              ariaLabel="Letter spacing for heading sizes"
-            />
-          </div>
-          <div className="tsc-slider-row">
-            <div className="tsc-slider-head">
-              <label className="seg-label" htmlFor="tsc-btrack">Body tracking</label>
-            </div>
-            <SnapSlider
-              id="tsc-btrack"
-              min={-0.03}
-              max={0.08}
-              step={0.002}
-              decimals={3}
-              value={bodyTrack}
-              defaultValue={DEFAULTS.bodyTrack}
-              snaps={[-0.01, 0, 0.02]}
-              snapRadius={0.004}
-              unit="em"
-              onChange={changeBodyTrack}
-              ariaLabel="Letter spacing for body sizes"
-            />
-          </div>
+            The base and the ratio are now the scale bar above the ladder. What
+            is left here is the two families — which drive what the specimen and
+            the article are set in, and are the reason this tool previews with
+            real type rather than a stand-in — and everything else behind one
+            plain text disclosure.
 
-          <label className="seg-label" htmlFor="tsc-round">Rounding</label>
-          <select
-            id="tsc-round"
-            className="tsc-select"
-            value={rounding}
-            onChange={e => setRounding(e.target.value)}
-          >
-            {ROUNDING.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-          </select>
-          <p className="typ-hint">
-            An unrounded modular scale produces values like 40.96px. Rounding is a
-            decision — make it here rather than in the stylesheet.
+            The disclosure is a text toggle rather than another card or an
+            accordion chevron, per Dialpad's settings screen on Mobbin
+            (mobbin.com/screens/6087e60e-1bc3-44dd-9f6b-252fb48706ab), which
+            puts its primary control at the top and hides the ring-duration and
+            call-handling detail behind a bare "Hide advanced options" link in
+            accent text. Adding a twelfth container to a page already criticised
+            for containers would have been the wrong instrument.
+
+            NOTHING IS REMOVED FROM THE TOOL. Every control that existed still
+            exists, keeps its id, its label and its aria-label, and drives the
+            same maths. */}
+        <section className="card tsc-panel tsc-config" aria-labelledby="tsc-config-title">
+          <h2 id="tsc-config-title" className="tsc-panel-title">Preview families</h2>
+          <p className="tsc-panel-note">
+            The ladder and the page preview are set in these two faces, at these weights.
           </p>
 
           <div className="tsc-fonts">
-            <span className="tsc-fonts-title">Preview families</span>
             <FontPicker
               label="Heading family"
               fonts={catalog}
@@ -815,33 +725,301 @@ export default function TypeScale({ onCopy, toast }) {
             </button>
           </div>
 
-          <button type="button" className="tsc-reset" onClick={reset}>
-            Reset scale
+          {/* `hidden` rather than conditional rendering, so `aria-controls`
+              always names a node that exists — a control pointing at an absent
+              id is a broken relationship, not a collapsed one. */}
+          <button
+            type="button"
+            className="tsc-tuning-toggle"
+            aria-expanded={tuning}
+            aria-controls="tsc-tuning"
+            onClick={() => setTuning(open => !open)}
+          >
+            {tuning ? 'Hide fine tuning' : 'Fine tuning'}
           </button>
+          <div id="tsc-tuning" className="tsc-tuning" hidden={!tuning}>
+            <fieldset className="tsc-bp">
+              <legend className="seg-label">How far the scale runs</legend>
+              <div className="tsc-slider-row">
+                <div className="tsc-slider-head">
+                  <label className="seg-label" htmlFor="tsc-up">Steps above base</label>
+                </div>
+                <SnapSlider
+                  id="tsc-up"
+                  min={1}
+                  max={9}
+                  value={up}
+                  defaultValue={DEFAULTS.up}
+                  snaps={[3, 6, 9]}
+                  onChange={setUp}
+                  ariaLabel="Number of steps above the base size"
+                />
+              </div>
+              <div className="tsc-slider-row">
+                <div className="tsc-slider-head">
+                  <label className="seg-label" htmlFor="tsc-down">Steps below base</label>
+                </div>
+                <SnapSlider
+                  id="tsc-down"
+                  min={0}
+                  max={5}
+                  value={down}
+                  defaultValue={DEFAULTS.down}
+                  snaps={[0, 2, 4]}
+                  onChange={setDown}
+                  ariaLabel="Number of steps below the base size"
+                />
+              </div>
+            </fieldset>
+
+            {/* ── The mobile end ──
+                A ratio compounds, so one ratio cannot serve both breakpoints:
+                at 1.333 the sixth step is 5.6x the base, which reads as
+                confident on a 1440px desktop and as shouting on a 375px phone.
+                Mobile gets its own base and its own gentler ratio, and the two
+                ladders are joined by clamp() — that is what makes an h1
+                genuinely different at each breakpoint instead of merely
+                previewed in a narrower box.
+
+                Fluid/fixed sits in this group rather than beside the preview
+                width switch because it is a fact about THIS end of the scale:
+                it decides whether the mobile ladder interpolates up to the
+                desktop one or is swapped for it at a breakpoint. */}
+            <fieldset className="tsc-bp">
+              <legend className="seg-label">Mobile &middot; {FLUID_VIEWPORTS.min}px</legend>
+              <div className="tsc-bp-row">
+                <div className="tsc-slider-row">
+                  <div className="tsc-slider-head">
+                    <label className="seg-label" htmlFor="tsc-mbase">Base size</label>
+                  </div>
+                  <SnapSlider
+                    id="tsc-mbase"
+                    min={12}
+                    max={22}
+                    step={0.5}
+                    decimals={1}
+                    unit="px"
+                    value={mobileBase}
+                    defaultValue={DEFAULTS.mobileBase}
+                    snaps={[14, 15, 16, 18]}
+                    snapRadius={0.6}
+                    onChange={setMobileBase}
+                    ariaLabel="Mobile base size"
+                  />
+                </div>
+                <div>
+                  <label className="seg-label" htmlFor="tsc-mratio">Ratio</label>
+                  <select
+                    id="tsc-mratio"
+                    className="tsc-select"
+                    value={mobileRatioId}
+                    onChange={e => setMobileRatioId(e.target.value)}
+                  >
+                    {RATIOS.map(r => (
+                      <option key={r.id} value={r.id}>
+                        {r.label}{r.value ? ` — ${r.value}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {mobileRatioId === 'custom' && (
+                <div className="tsc-slider-row">
+                  <div className="tsc-slider-head">
+                    <label className="seg-label" htmlFor="tsc-mcustom">Custom mobile ratio</label>
+                  </div>
+                  <SnapSlider
+                    id="tsc-mcustom"
+                    min={1.05}
+                    max={2}
+                    step={0.001}
+                    decimals={3}
+                    value={mobileCustomRatio}
+                    defaultValue={DEFAULTS.custom}
+                    snaps={[1.1, 1.125, 1.2, 1.25, 1.333]}
+                    snapRadius={0.012}
+                    inputMin={1.01}
+                    inputMax={3}
+                    onChange={setMobileCustomRatio}
+                    ariaLabel="Custom mobile scale ratio"
+                  />
+                </div>
+              )}
+              {/* Their own class. These two buttons are not preview widths,
+                  and they used to borrow the preview switch's class — which
+                  made the segmented control beside the ladder and this pair
+                  indistinguishable to anything reading the DOM, tests
+                  included, and would have been actively wrong once one of the
+                  two moved inside a disclosure. */}
+              <div className="tsc-bp-mode" role="group" aria-label="How the two scales are joined">
+                <button
+                  type="button"
+                  className={fluid ? 'tsc-mode-btn tsc-mode-btn--on' : 'tsc-mode-btn'}
+                  aria-pressed={fluid}
+                  onClick={() => setFluid(true)}
+                >
+                  Fluid &middot; clamp()
+                </button>
+                <button
+                  type="button"
+                  className={!fluid ? 'tsc-mode-btn tsc-mode-btn--on' : 'tsc-mode-btn'}
+                  aria-pressed={!fluid}
+                  onClick={() => setFluid(false)}
+                >
+                  Fixed &middot; media query
+                </button>
+              </div>
+            </fieldset>
+
+            <fieldset className="tsc-bp">
+              <legend className="seg-label">Rhythm</legend>
+              <div className="tsc-slider-row">
+                <div className="tsc-slider-head">
+                  <label className="seg-label" htmlFor="tsc-leading">Line height</label>
+                </div>
+                <SnapSlider
+                  id="tsc-leading"
+                  min={1}
+                  max={2.2}
+                  step={0.01}
+                  decimals={2}
+                  value={lineHeight}
+                  defaultValue={DEFAULTS.lineHeight}
+                  snaps={[1.2, 1.4, 1.5, 1.6, 1.75]}
+                  snapRadius={0.03}
+                  onChange={changeLineHeight}
+                  ariaLabel="Line height multiplier"
+                />
+              </div>
+              <div className="tsc-slider-row">
+                <div className="tsc-slider-head">
+                  <label className="seg-label" htmlFor="tsc-htrack">Heading tracking</label>
+                </div>
+                <SnapSlider
+                  id="tsc-htrack"
+                  min={-0.06}
+                  max={0.12}
+                  step={0.005}
+                  decimals={3}
+                  value={headingTrack}
+                  defaultValue={DEFAULTS.headingTrack}
+                  snaps={[-0.04, -0.02, 0, 0.04]}
+                  snapRadius={0.006}
+                  unit="em"
+                  onChange={changeHeadingTrack}
+                  ariaLabel="Letter spacing for heading sizes"
+                />
+              </div>
+              <div className="tsc-slider-row">
+                <div className="tsc-slider-head">
+                  <label className="seg-label" htmlFor="tsc-btrack">Body tracking</label>
+                </div>
+                <SnapSlider
+                  id="tsc-btrack"
+                  min={-0.03}
+                  max={0.08}
+                  step={0.002}
+                  decimals={3}
+                  value={bodyTrack}
+                  defaultValue={DEFAULTS.bodyTrack}
+                  snaps={[-0.01, 0, 0.02]}
+                  snapRadius={0.004}
+                  unit="em"
+                  onChange={changeBodyTrack}
+                  ariaLabel="Letter spacing for body sizes"
+                />
+              </div>
+            </fieldset>
+
+            <label className="seg-label" htmlFor="tsc-round">Rounding</label>
+            <select
+              id="tsc-round"
+              className="tsc-select"
+              value={rounding}
+              onChange={e => setRounding(e.target.value)}
+            >
+              {ROUNDING.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+            </select>
+            <p className="typ-hint">
+              An unrounded modular scale produces values like 40.96px. Rounding is a
+              decision — make it here rather than in the stylesheet.
+            </p>
+          </div>
         </section>
 
         {/* ── Scale + delivery ── */}
         <section className="card tsc-panel tsc-output" aria-labelledby="tsc-output-title">
-          <div className="tsc-section-head tsc-section-head--output">
-            <span className="tsc-section-num">02</span>
+          {/* THE 01 / 02 / 03 BADGES ARE GONE FROM ALL THREE PANELS.
+              ──────────────────────────────────────────────────────────────
+              They were `.tsc-section-num`: a 30x24px mono numeral in a
+              brand-tinted box with its own border, one per panel head. Two
+              things were wrong with them, and only the second is a look.
+
+              THEY READ RIGHT TO LEFT. Measured at 1440x1000 before this
+              change: "01 Tune the scale" had its box at x=1079 and "02 Read the
+              scale" at x=71, both on the same line at y=494. #327 introduced
+              the numbers to fix a DOM-order problem and reordered the DOM so
+              they would read 01-02-03; the two-column grid at 1344px+ then puts
+              the rail on the right, so on the widest screens the sequence runs
+              backwards. A numbered sequence that has to be read against the
+              reading direction is worse than no numbering.
+
+              AND THEY WERE DECORATION DOING HIERARCHY'S JOB. Three panels, one
+              of them nested INSIDE another (03 lived in 02's card), given rank
+              by a coloured numeral rather than by size, position or weight —
+              which is the motif the anti-slop bar names as "decoration that
+              pretends to be product proof". MagicPath's design-system editor on
+              Mobbin (mobbin.com/screens/8284a8ac-b530-4b95-8d12-ba78a1a905fb)
+              titles the equivalent block with a plain small-caps "TYPE SCALE"
+              and nothing else, and its hierarchy is legible without it.
+
+              The width switch moves up onto the title line because it belongs
+              to the ladder rather than to the page: it says which end of the
+              scale you are reading. */}
+          <div className="tsc-ladder-head">
             <div>
               <h2 id="tsc-output-title">Read the scale</h2>
               <p>Every step at its real size, weight and tracking. Select one to copy its declaration.</p>
             </div>
+            <div className="tsc-width-switch" role="group" aria-label="Preview width">
+              {WIDTHS.map(w => (
+                <button
+                  key={w.id}
+                  type="button"
+                  className={width === w.id ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
+                  aria-pressed={width === w.id}
+                  onClick={() => setWidth(w.id)}
+                >
+                  {w.label}{w.px ? ` · ${w.px}px` : ''}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="tsc-width-switch" role="group" aria-label="Preview width">
-            {WIDTHS.map(w => (
-              <button
-                key={w.id}
-                type="button"
-                className={width === w.id ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
-                aria-pressed={width === w.id}
-                onClick={() => setWidth(w.id)}
-              >
-                {w.label}{w.px ? ` · ${w.px}px` : ''}
-              </button>
-            ))}
+          {/* YOUR WORDS, NOT OURS. "Is this step usable?" is a question about
+              the content that will sit at that size, and a pangram cannot
+              answer it for a nav label, a price or a German compound noun.
+              Font Pair has had this control since it shipped, and so has the
+              homepage Typography panel that mirrors this tool — this page, the
+              one whose only job is judging sizes, was the exception.
+
+              It is one input for the whole page: the ladder below and the
+              article heading further down both read it, because they are two
+              views of one decision. Empty falls back to the pangram, which is
+              why the placeholder IS the pangram rather than a description of
+              it. */}
+          <div className="tsc-sample-row">
+            <label className="seg-label" htmlFor="tsc-sample">Preview text</label>
+            <input
+              id="tsc-sample"
+              type="text"
+              className="tsc-sample-input"
+              value={sample}
+              maxLength={60}
+              placeholder={PANGRAM}
+              autoComplete="off"
+              onChange={e => setSample(e.target.value)}
+            />
           </div>
 
           <div
@@ -877,7 +1055,7 @@ export default function TypeScale({ onCopy, toast }) {
                   className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
                   ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
                 >
-                  {PANGRAM}
+                  {specimen}
                 </span>
               </button>
             ))}
@@ -886,15 +1064,12 @@ export default function TypeScale({ onCopy, toast }) {
           <div className="tsc-delivery">
             <div className="tsc-delivery-head">
               <div>
-                <span className="tsc-section-num">03</span>
-                <div>
-                  <h2>{audience === 'designer' ? 'Evaluate the hierarchy' : 'Prepare the handoff'}</h2>
-                  <p>
-                    {audience === 'designer'
-                      ? 'The same scale, laid out as a page — check the jumps actually read.'
-                      : `${steps.length} sizes plus leading, tracking and both families, ready to paste.`}
-                  </p>
-                </div>
+                <h2>{audience === 'designer' ? 'Evaluate the hierarchy' : 'Prepare the handoff'}</h2>
+                <p>
+                  {audience === 'designer'
+                    ? 'The same scale, laid out as a page — check the jumps actually read.'
+                    : `${steps.length} sizes plus leading, tracking and both families, ready to paste.`}
+                </p>
               </div>
               {/* Now the ONLY control for `audience`, and a real tablist: it
                   sits immediately above the tabpanel it switches, so the
@@ -937,9 +1112,19 @@ export default function TypeScale({ onCopy, toast }) {
             >
               {audience === 'designer' ? (
                 <article className="tsc-article" ref={varsRef(previewVars)}>
-                  <span className="tsc-article-eyebrow">Article preview</span>
+                  {/* The eyebrow said "Article preview" directly beneath a tab
+                      that says "Design preview", above an article. Three labels
+                      for one thing.
+
+                      The heading said "A scale you can defend in a review",
+                      which is the product arguing for itself inside its own
+                      specimen — the anti-slop bar's "headings that sound
+                      polished but do not help the user predict the product".
+                      What replaces it is what the block is, and it takes the
+                      typed preview text when there is any, exactly as the
+                      ladder does. */}
                   <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.px || steps[0].px, { max: 72 })}px` })}>
-                    A scale you can defend in a review
+                    {sample.trim() || 'A page set on this scale'}
                   </h3>
                   <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.px || base, { max: 28 })}px` })}>
                     Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
@@ -951,7 +1136,6 @@ export default function TypeScale({ onCopy, toast }) {
                   <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(base, { max: 24 })}px` })}>
                     A ratio that looks elegant in isolation can flatten a page: if the step between
                     body copy and a subheading is too small, the hierarchy stops doing its job.
-                    Read this paragraph at each preview width before you copy the scale.
                   </p>
                   <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.px || base, { max: 18 })}px` })}>
                     Captions and helper text live down here — check they are still comfortably legible.
@@ -1017,17 +1201,17 @@ export default function TypeScale({ onCopy, toast }) {
         </section>
       </div>
 
-      {/* Cross-links keep the standalone page part of the typography suite. */}
+      {/* Cross-links keep the standalone page part of the typography suite.
+          The band used to open with a mono-caps kicker ("Continue your
+          typography system") and an aphorism in bold ("A scale is half the
+          system — the families carry the rest") above the same three links.
+          Neither told the visitor anything the links do not, and the aphorism
+          is the register the anti-slop bar calls generic aspirational copy.
+          Three links, which is what this is. */}
       <nav className="tsc-more" aria-label="More typography tools">
-        <div>
-          <span className="tsc-more-kicker">Continue your typography system</span>
-          <strong>A scale is half the system — the families carry the rest.</strong>
-        </div>
-        <div className="tsc-more-links">
-          <NavLink to="/create/font-pair" className="tsc-more-link">Pair two families &rarr;</NavLink>
-          <NavLink to="/create/font-gallery" className="tsc-more-link">Browse the font gallery &rarr;</NavLink>
-          <NavLink to="/create/palette" className="tsc-more-link">Build a colour palette &rarr;</NavLink>
-        </div>
+        <NavLink to="/create/font-pair" className="tsc-more-link">Pair two families &rarr;</NavLink>
+        <NavLink to="/create/font-gallery" className="tsc-more-link">Browse the font gallery &rarr;</NavLink>
+        <NavLink to="/create/palette" className="tsc-more-link">Build a colour palette &rarr;</NavLink>
       </nav>
 
       {/* Step 3 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
