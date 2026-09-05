@@ -577,8 +577,11 @@ function ModuleBoard() {
 }
 
 const PRIORITY_COLOR = { P0: 'var(--err)', P1: 'var(--warn)', P2: 'var(--t2)' }
-const TODO_STATUS_COLOR = { todo: 'var(--t3)', doing: 'var(--brand)', review: 'var(--warn)', blocked: 'var(--err)' }
-const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', blocked: 'Blocked' }
+// `deferred` is NOT `blocked`: blocked means something unknown is in the way,
+// deferred means the founder decided to wait. They read differently on this
+// board, so they get different colours — deferred is muted, not alarming.
+const TODO_STATUS_COLOR = { todo: 'var(--t3)', doing: 'var(--brand)', review: 'var(--warn)', blocked: 'var(--err)', deferred: 'var(--t2)' }
+const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', blocked: 'Blocked', deferred: 'Deferred' }
 
 // Pipeline — the owner's ops view: current app condition, the workstreams
 // moving through the pipeline, and the prioritised next-to-do queue. Renders
@@ -586,7 +589,7 @@ const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', blo
 // tracks each feature module.
 function PipelineBoard() {
   const [todoFilter, setTodoFilter] = useState('all')
-  const todoFilters = ['all', 'doing', 'todo', 'review', 'blocked']
+  const todoFilters = ['all', 'doing', 'todo', 'review', 'blocked', 'deferred']
   const visibleTodos = NEXT_TODO.filter(t => todoFilter === 'all' || t.status === todoFilter)
 
   return (
