@@ -424,6 +424,121 @@ test.describe('Font Gallery', () => {
     await expect(dialog.locator('.fdx-fiu-note')).toContainText('may return nothing')
   })
 
+  test('the two example tabs are separate, adjacent, and read as different kinds of thing', async ({ page }) => {
+    // The founder's ask, 2026-09-05: "1 tab showing Usage examples using some
+    // made mockup use cases, but ... a tab showing real world use applications
+    // for each font and an image to show it". Two tabs, and a reader has to be
+    // able to tell from the strip which one is invented.
+    watch(page, 'designer looking for what this face does in the world')
+    await go(page, '/create/font-gallery')
+    await page.getByLabel('Search font families').fill('Lora')
+    await page.locator('.fg-card-open').first().click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    const tabs = await dialog.locator('[role="tab"]').allTextContents()
+    expect(tabs.map((s) => s.trim())).toEqual(['Specimen', 'About', 'Examples', 'In use'])
+
+    // The mockup tab is UNCHANGED and still full. Without this control, "the In
+    // use tab is empty" would be true of a dialog that renders nothing at all.
+    await dialog.getByRole('tab', { name: 'Examples' }).click()
+    await expect(dialog.locator('.fdx-ex').first()).toBeVisible()
+    expect(await dialog.locator('.fdx-ex').count(),
+      'the mockup examples tab lost its scenes').toBeGreaterThan(1)
+    // And it still says outright that those are drawn, not photographed.
+    await expect(dialog.locator('.fdx-source--lead'))
+      .toContainText('not screenshots of anyone')
+  })
+
+  test('the In use tab is empty on purpose, and never says the typeface is unused', async ({ page }) => {
+    // THE SENTENCE THIS PANEL MUST NOT SAY. An empty tab called "In use" is one
+    // careless line from telling a reader that nobody uses this family — a
+    // false claim about a real person's work, made from a table this product
+    // has never filled in. The empty state is about what WE have cleared.
+    watch(page, 'designer opening a tab that has nothing in it yet')
+    await go(page, '/create/font-gallery')
+    await page.getByLabel('Search font families').fill('Lora')
+    await page.locator('.fg-card-open').first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('tab', { name: 'In use' }).click()
+
+    const empty = dialog.locator('.fdx-empty')
+    await expect(empty).toBeVisible()
+    await expect(dialog.locator('.fdx-empty-head')).toHaveText('No cleared photographs of Lora yet')
+    await expect(empty).toContainText('not a statement about the typeface')
+    await expect(empty).toContainText('Plenty of families with nothing on this tab are in wide use')
+    // The claims it must never make.
+    await expect(empty).not.toContainText('No uses of Lora')
+    await expect(empty).not.toContainText(/is not used|nobody uses/i)
+
+    // SHIPS NO PLACEHOLDER IMAGE. Not a stock photo, not a grey box with a
+    // picture glyph in it — in a panel about a missing picture, that is
+    // indistinguishable from an image that failed to load.
+    expect(await dialog.locator('.fdx-panel img, .fdx-panel svg').count(),
+      'the empty In-use tab drew a placeholder image').toBe(0)
+    expect(await dialog.locator('.fdx-use, .fdx-use-img').count(),
+      'the empty tab rendered a use row with nothing in it').toBe(0)
+
+    // It sends the reader to the tab that DOES have something.
+    await expect(empty).toContainText('Examples tab beside this one')
+  })
+
+  test('the In use tab still offers fontsinuse only as a search', async ({ page }) => {
+    // Same measured trap as the Examples tab: a miss returns HTTP 200 reading
+    // "No Uses found" with 47 unrelated popular uses underneath, so the miss
+    // case is a page that still looks full. It can only be offered as a query.
+    watch(page, 'designer following the off-site link')
+    await go(page, '/create/font-gallery')
+    await page.getByLabel('Search font families').fill('Lora')
+    await page.locator('.fg-card-open').first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('tab', { name: 'In use' }).click()
+
+    const link = dialog.locator('.fdx-empty .fdx-fiu')
+    await expect(link).toBeVisible()
+    await expect(link).toContainText('search fontsinuse.com for Lora')
+    await expect(link).toHaveAttribute('href', 'https://fontsinuse.com/search?terms=Lora')
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer nofollow')
+    await expect(link).toHaveAttribute('target', '_blank')
+    await expect(link.locator('.sr-only')).toHaveText('(opens in a new tab)')
+    await expect(dialog.locator('.fdx-empty .fdx-fiu-note')).toContainText('may return nothing')
+  })
+
+  test('the fourth tab is reachable by arrow keys and the strip stays one tab stop', async ({ page }) => {
+    // The APG tabs contract is written once in FontDossierTabs and a fourth
+    // entry must not break the wrap. Driven rather than read: the roving
+    // tabindex is the kind of thing that survives a source grep and fails in a
+    // browser.
+    watch(page, 'keyboard-only visitor walking the dossier tabs')
+    await go(page, '/create/font-gallery')
+    await page.getByLabel('Search font families').fill('Lora')
+    await page.locator('.fg-card-open').first().click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('tab', { name: 'Specimen' }).focus()
+
+    for (const name of ['About', 'Examples', 'In use']) {
+      await page.keyboard.press('ArrowRight')
+      await expect(dialog.getByRole('tab', { name, exact: true })).toBeFocused()
+      await expect(dialog.getByRole('tab', { name, exact: true })).toHaveAttribute('aria-selected', 'true')
+    }
+    // Wraps from the last back to the first.
+    await page.keyboard.press('ArrowRight')
+    await expect(dialog.getByRole('tab', { name: 'Specimen', exact: true })).toBeFocused()
+    // And back the other way, onto the new tab.
+    await page.keyboard.press('ArrowLeft')
+    await expect(dialog.getByRole('tab', { name: 'In use', exact: true })).toBeFocused()
+
+    // One tab stop: exactly one tab in the strip is in the tab order.
+    const tabbable = await dialog.locator('[role="tab"]').evaluateAll(
+      (els) => els.filter((el) => el.tabIndex === 0).length)
+    expect(tabbable, 'the tab strip is not a single tab stop').toBe(1)
+
+    // The selected tab points at a panel that exists and is labelled by it.
+    const controls = await dialog.getByRole('tab', { name: 'In use', exact: true }).getAttribute('aria-controls')
+    await expect(page.locator(`#${controls}`)).toBeVisible()
+    await expect(page.locator(`#${controls}`)).toHaveAttribute('role', 'tabpanel')
+  })
+
   test('a search that matches nothing shows a real empty state with a way out', async ({ page }) => {
     watch(page, 'designer searching for a font that is not there')
     await go(page, '/create/font-gallery')
@@ -902,6 +1017,32 @@ test.describe('the font picker is browsable', () => {
 
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(trigger.locator('.typ-picker-name')).toHaveText('Lora')
+  })
+
+  test('the picker dialog carries the same four tabs, In use included', async ({ page }) => {
+    // Two dialogs show this dossier and they have drifted once before. The tab
+    // is wired into both, so it is checked in both — a component that exists
+    // is not a component that is mounted.
+    watch(page, 'designer inspecting a face from inside the picker')
+    await go(page, '/fontpairs')
+    await page.locator('.typ-picker-trigger').first().click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await dialog.getByLabel('Search font families').fill('Lora')
+    // The info button lives in LibraryCard's actions slot, which is real DOM at
+    // all times but revealed on hover and focus-within — so the card is hovered
+    // first, exactly as a pointer user reaches it.
+    const card = dialog.locator('.fbd-card', { hasText: 'Lora' }).first()
+    await expect(card).toBeVisible()
+    await card.hover()
+    await dialog.getByRole('button', { name: /^About Lora/ }).first().click()
+
+    const tabs = await dialog.locator('[role="tab"]').allTextContents()
+    expect(tabs.map((s) => s.trim())).toEqual(['Specimen', 'About', 'Examples', 'In use'])
+    await dialog.getByRole('tab', { name: 'In use' }).click()
+    await expect(dialog.locator('.fdx-empty-head')).toHaveText('No cleared photographs of Lora yet')
+    expect(await dialog.locator('.fdx-panel img').count(),
+      'the picker dialog drew a placeholder image').toBe(0)
   })
 
   test('the browser closes from the keyboard and hands focus back', async ({ page }) => {

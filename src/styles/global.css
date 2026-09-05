@@ -11067,6 +11067,54 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fdx-fiu{border-radius:2px;color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .fdx-fiu:hover{color:var(--t0)}
 .fdx-fiu:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* ── The "In use" tab ────────────────────────────────────────────────────────
+   Photographs of real work set in the family. It ships EMPTY for every family
+   and will stay that way until an image arrives with its provenance attached —
+   see src/data/fontRealWorldUses for the rule and the founder's decision.
+
+   THE EMPTY STATE HAS NO ILLUSTRATION, AND THAT IS THE DESIGN DECISION HERE.
+   Jira's and Xero's empty states both draw one and both work, but neither of
+   them is a panel ABOUT A MISSING PICTURE: a grey box with a picture glyph in
+   it, in this panel, is indistinguishable from an image that failed to load —
+   the exact failure PRODUCT.md names when it says a decorative mock-up "reads
+   as a component that failed to load". So the shape taken is Lyssna's: a
+   heading naming what is absent, prose naming the CONDITION under which it
+   would appear, and one outbound link. Type only, on the panel's own ground,
+   with no dashed box and no frame — a frame would be an empty slot, and an
+   empty slot is a thing waiting to be filled rather than a thing that is
+   deliberately not there yet.
+
+   Held at a reading measure rather than run to the full dialog width: this is
+   three short paragraphs of explanation, and 60ch is where they stop being a
+   wall. */
+.fdx-empty{max-width:60ch;padding:6px 0 2px}
+.fdx-empty-head{margin:0 0 10px;font-size:14.5px;font-weight:650;letter-spacing:-.01em;color:var(--t0)}
+.fdx-empty-body{margin:0 0 10px;font-size:12.5px;line-height:1.6;color:var(--t2)}
+.fdx-empty-body--last{margin-bottom:0}
+
+/* The filled state. One column: these are photographs of printed matter and
+   signage, and a two-up grid at dialog width would render each one too small to
+   read the type in — which is the only reason the picture is there. */
+.fdx-uses{display:flex;flex-direction:column;gap:22px;margin:0;padding:0;list-style:none}
+.fdx-use figure{margin:0}
+/* CAPPED, and `contain` rather than `cover`. MEASURED with a 1200px-wide test
+   image seeded into the registry: uncapped it rendered 797px tall inside a
+   792px dialog and pushed the caption — which carries the LICENCE, the reason
+   the photograph is allowed to be on the page at all — off the bottom. A
+   licence that scrolls away from its picture is not attached to anything.
+   `cover` would have solved the height by cropping, which on a photograph of
+   type in use removes the thing the reader came to look at, so the whole image
+   is shown letterboxed on the panel ground instead. */
+.fdx-use-img{display:block;width:100%;height:auto;max-height:min(56vh,420px);object-fit:contain;border-radius:var(--radius);border:1px solid var(--border);background:var(--cbg)}
+/* The caption is a stack rather than a run of separated spans: the credit and
+   the licence are two different facts about who may show this, and running them
+   together with middots invites a reader to skim past the one that matters. */
+.fdx-use-cap{display:flex;flex-direction:column;gap:3px;margin-top:10px}
+.fdx-use-title{font-size:12.5px;font-weight:600;color:var(--t0)}
+.fdx-use-credit{font-size:11.5px;color:var(--t1)}
+.fdx-use-licence{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t2)}
+.fdx-use-src{align-self:flex-start;margin-top:3px;font-size:11.5px}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
   /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
