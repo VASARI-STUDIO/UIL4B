@@ -15,6 +15,7 @@ import {
 import {
   DEFAULT_ICON_DRAFT,
   ICON_DRAFT_NAMES,
+  ICON_DRAFT_PACK,
   ICON_DRAFT_SIZES,
   ICON_DRAFT_STROKES,
   buildIconDraft,
@@ -1050,19 +1051,14 @@ const DEFAULT_ICON_STATE = {
   stroke: DEFAULT_ICON_DRAFT.stroke,
 }
 
-function IconGlyph({ name, size, stroke }) {
+// Size, stroke, cap and join come from CSS, not from SVG attributes. That is
+// how `.icust-stage` and `.ic` both paint a glyph - `--ig-size` / `--ig-stroke`
+// on the stage, fixed values on a grid cell - so one glyph component sits
+// correctly in either, and the stage resizes the preview through a transition
+// rather than by re-rendering a new attribute.
+function IconGlyph({ name }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={stroke}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
       <path d={ICON_PATHS[name]} />
     </svg>
   )
@@ -1073,6 +1069,14 @@ function IconPanel({ state, onChange, announce }) {
   const [error, setError] = useState('')
   const [opening, setOpening] = useState(false)
   const lockRef = useRef(false)
+  // The same two properties IconCustomizer's effect writes onto its own stage,
+  // written the same way - the no-inline-styles route this file already takes
+  // for generated values.
+  const stageRef = (node) => {
+    if (!node) return
+    node.style.setProperty('--ig-size', `${state.size}px`)
+    node.style.setProperty('--ig-stroke', String(state.stroke))
+  }
 
   const draft = buildIconDraft(state)
 
@@ -1108,65 +1112,112 @@ function IconPanel({ state, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      <div className="hw-stage hw-icon-stage">
-        <div className="hw-icon-preview">
-          <IconGlyph name={state.name} size={state.size} stroke={state.stroke} />
+      {/* THE STAGE IS THE EDITOR'S STAGE.
+          ────────────────────────────────────────────────────────────────────
+          `Continue in Icon Editor` opens IconCustomizer, whose spotlight is
+          `.icust-stage`: a dark radial-gradient panel with the glyph sized and
+          weighted through --ig-size / --ig-stroke / --ig-color, a row of
+          `.icust-tag` chips under it naming the pack and the icon, and
+          `.icust-row` settings below that. The mini used a light-grey
+          `.hw-icon-stage` box with a mono caption reading "heart · 48px · 1.5
+          stroke" - a sentence where the editor has chips, on a ground the
+          editor does not use.
+
+          Same stage now, driven by the SAME custom properties: --ig-size and
+          --ig-stroke on the stage, exactly as IconCustomizer's effect writes
+          them, so the glyph is sized by CSS rather than by an SVG attribute and
+          the two surfaces resize a preview the same way. */}
+      <div className="hw-stage">
+        <div className="icust-stage hw-icust-stage" ref={stageRef}>
+          <div className="icust-stage-host" aria-hidden="true">
+            <IconGlyph name={state.name} />
+          </div>
         </div>
-        <p className="hw-icon-meta">{state.name} · {state.size}px · {state.stroke} stroke</p>
+        <div className="icust-meta">
+          <span className="icust-tag">{ICON_DRAFT_PACK}</span>
+          <span className="icust-tag">{state.name}</span>
+          <span className="icust-tag">{state.size}px</span>
+          <span className="icust-tag">{state.stroke} stroke</span>
+        </div>
       </div>
 
       <div className="hw-controls">
-        <div className="hw-icon-grid" role="group" aria-label="Preview icon">
+        {/* THE PICKER IS THE LIBRARY GRID: `.ig` with `.ic` cells, which is a
+            glyph over its NAME in mono, on no card, filling on hover. The mini
+            drew twelve bordered boxes with no names at all - and the name is
+            the thing you search for, the thing you copy and the thing the
+            hand-off carries, so leaving it out made the grid harder to use as
+            well as unlike the library. */}
+        <div className="ig hw-ig" role="group" aria-label="Preview icon">
           {ICON_DRAFT_NAMES.map((name) => (
-            <button
+            <div
               key={name}
-              type="button"
-              className="hw-icon-cell"
+              className="ic"
+              role="button"
+              tabIndex={0}
               aria-pressed={state.name === name}
               aria-label={`Preview the ${name.replace(/-/g, ' ')} icon`}
               onClick={() => patch({ name })}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); patch({ name }) } }}
             >
-              <IconGlyph name={name} size={22} stroke={state.stroke} />
-            </button>
+              <IconGlyph name={name} />
+              <span>{name}</span>
+            </div>
           ))}
         </div>
 
-        {/* Sizes and strokes are OPTIONS, so rails rather than a stack of
-            selects. Two selects with labels cost ~130px, two rails ~76px, and
-            every value is now one click instead of two. */}
-        <div className="hw-rail-group">
-          <span className="hw-rail-label" id="hw-icon-size-label">Size</span>
-          <div className="hw-rail" role="group" aria-labelledby="hw-icon-size-label">
-            {ICON_DRAFT_SIZES.map((sz) => (
-              <button
-                key={sz}
-                type="button"
-                className="hw-tile"
-                aria-pressed={state.size === sz}
-                aria-label={`Icon size ${sz} pixels`}
-                onClick={() => patch({ size: sz })}
-              >
-                {sz}<span className="hw-tile-unit" aria-hidden="true">px</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* SIZE AND STROKE ARE `.icust-row` + `.icust-seg`, THE EDITOR'S OWN
+            SETTING ROW: a 56px mono tracked label on the left, a segmented
+            control filling the rest.
 
-        <div className="hw-rail-group">
-          <span className="hw-rail-label" id="hw-icon-stroke-label">Stroke</span>
-          <div className="hw-rail" role="group" aria-labelledby="hw-icon-stroke-label">
-            {ICON_DRAFT_STROKES.map((st) => (
-              <button
-                key={st}
-                type="button"
-                className="hw-tile"
-                aria-pressed={state.stroke === st}
-                aria-label={`Stroke width ${st}`}
-                onClick={() => patch({ stroke: st })}
-              >
-                {st}
-              </button>
-            ))}
+            WHAT THIS DELIBERATELY IS NOT. The editor drives both of these with
+            SnapSlider - a continuous track with magnetic snap points and a
+            click-to-type readout - and reusing that component was the obvious
+            move. It would break the hand-off. `validateIconDraft` is a strict
+            allowlist (ICON_DRAFT_SIZES [24,32,48], ICON_DRAFT_STROKES
+            [1,1.5,2,2.5]) and SnapSlider leaves the values BETWEEN its snaps
+            reachable on purpose, so any drag that landed off a snap would
+            produce a draft the editor refuses and a Continue button that
+            disables itself with no explanation the visitor can act on. A
+            control that can express an intent the product then rejects is
+            worse than one that cannot express it, so this stays a closed set -
+            rendered in the editor's own segmented shell rather than in a
+            `.hw-rail` that exists nowhere else. */}
+        <div className="icust-controls hw-icust-controls">
+          <div className="icust-row">
+            <label id="hw-icon-size-label">Size</label>
+            <div className="icust-seg" role="group" aria-labelledby="hw-icon-size-label">
+              {ICON_DRAFT_SIZES.map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  className={state.size === sz ? 'active' : ''}
+                  aria-pressed={state.size === sz}
+                  aria-label={`Icon size ${sz} pixels`}
+                  onClick={() => patch({ size: sz })}
+                >
+                  {sz}px
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="icust-row">
+            <label id="hw-icon-stroke-label">Stroke</label>
+            <div className="icust-seg" role="group" aria-labelledby="hw-icon-stroke-label">
+              {ICON_DRAFT_STROKES.map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  className={state.stroke === st ? 'active' : ''}
+                  aria-pressed={state.stroke === st}
+                  aria-label={`Stroke width ${st}`}
+                  onClick={() => patch({ stroke: st })}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

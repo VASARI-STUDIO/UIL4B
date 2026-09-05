@@ -7900,15 +7900,33 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
    editor uses and it needs no breakpoint to be right. */
 .hw-controls .hw-intent{flex-direction:column;gap:4px}
 
-/* 4 · Icon */
-.hw-icon-stage{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0)}
-.hw-icon-preview{display:grid;place-items:center;min-height:96px;color:var(--t0)}
-.hw-icon-meta{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.05em;color:var(--t2);text-align:center}
-.hw-icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:7px}
-.hw-icon-cell{display:grid;place-items:center;aspect-ratio:1;min-height:44px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
-.hw-icon-cell:hover{color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));border-color:var(--bh)}
-.hw-icon-cell:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:2px}
-.hw-icon-cell[aria-pressed="true"]{color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--t0));border-color:color-mix(in srgb,var(--hue,var(--accent)) 55%,var(--border));background:color-mix(in srgb,var(--hue,var(--accent)) 10%,var(--bg-1));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--hue,var(--accent)) 40%,transparent)}
+/* 4 · Icon — THE EDITOR'S STAGE, THE LIBRARY'S GRID
+   `.hw-icon-stage`, `.hw-icon-preview`, `.hw-icon-meta`, `.hw-icon-grid` and
+   `.hw-icon-cell` are gone. The panel renders `.icust-stage` +
+   `.icust-stage-host` (the editor's dark spotlight, driven by the SAME
+   --ig-size / --ig-stroke properties IconCustomizer writes), `.icust-meta` +
+   `.icust-tag` for the pack/name/size/stroke chips, `.icust-controls` +
+   `.icust-row` + `.icust-seg` for the settings, and the library's own `.ig`
+   grid of `.ic` cells for the picker.
+
+   Geometry only below, as with the board and the gradient. */
+/* The editor's stage is a 220px-floor spotlight in a 600px modal that can
+   scroll; this one lives in a fixed frame beside a grid and a settings block,
+   so it takes a shorter, fixed height instead of a floor. */
+.hw-icust-stage{min-height:0;height:150px;margin:0}
+/* The full editor pads its controls to the modal's 24px gutter. The panel has
+   its own. */
+.hw-icust-controls{padding:0;gap:10px}
+.hw-ggn .ggn-stop-swatch .cpk-trigger,.hw-icust-controls .icust-seg button{white-space:nowrap}
+/* Twelve icons, not two hundred thousand: the library's auto-fill grid would
+   give this handful of cells a whole row each at panel width. Six across keeps
+   the picker two tidy rows and leaves the cell itself - glyph over mono name,
+   no card, fill on hover - exactly as the library draws it. */
+.hw-ig{grid-template-columns:repeat(6,minmax(0,1fr))}
+.hw-ig .ic{min-height:62px;padding:10px 4px 8px}
+.hw-ig .ic[aria-pressed="true"]{background:var(--bg-2);border-color:var(--bh)}
+.hw-ig .ic[aria-pressed="true"] span{color:var(--t0)}
+@media(max-width:640px){.hw-ig{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 /* 5 · Typography */
 .hw-type-preview{min-width:0;padding:16px 18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0);overflow:hidden}

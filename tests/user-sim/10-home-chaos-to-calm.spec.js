@@ -1390,17 +1390,31 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // 14 · controls mutate the preview and nothing else.
     await page.getByRole('button', { name: /Preview the zap icon/ }).click()
-    // Size and stroke are OPTIONS rails now. Each is scoped by its own rail's
-    // label so "32" cannot match a tile in the other rail, and the stroke
-    // filter is anchored so /^2$/ does not also select 2.5.
-    const size32 = page.locator('[aria-labelledby="hw-icon-size-label"] .hw-tile', { hasText: '32' })
-    const stroke2 = page.locator('[aria-labelledby="hw-icon-stroke-label"] .hw-tile').filter({ hasText: /^2$/ })
+    // Size and stroke are the ICON EDITOR'S OWN setting rows since 2026-09-05 -
+    // `.icust-row` with an `.icust-seg` segmented control - rather than a
+    // `.hw-rail` of `.hw-tile`s that existed nowhere else in the product. Each
+    // is still scoped by its own label so "32" cannot match the other row, and
+    // the stroke filter is still anchored so /^2$/ does not also select 2.5.
+    const size32 = page.locator('[aria-labelledby="hw-icon-size-label"] button', { hasText: '32' })
+    const stroke2 = page.locator('[aria-labelledby="hw-icon-stroke-label"] button').filter({ hasText: /^2$/ })
     await size32.click()
     await stroke2.click()
     await expect(size32).toHaveAttribute('aria-pressed', 'true')
     await expect(stroke2).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.locator('.hw-icon-meta')).toContainText('zap · 32px · 2 stroke')
-    await expect(page.locator('.hw-icon-preview svg')).toHaveAttribute('width', '32')
+    // The mono caption "zap · 32px · 2 stroke" became the editor's own
+    // `.icust-tag` chips, so the same four facts are asserted as four chips
+    // rather than as one sentence.
+    const tags = page.locator('.hw-panel .icust-meta .icust-tag')
+    await expect(tags).toHaveText(['lucide', 'zap', '32px', '2 stroke'])
+    // SIZE IS NOW MEASURED, NOT READ OFF AN ATTRIBUTE, and that is a stronger
+    // check than the one it replaces. The glyph used to carry width="32" on the
+    // SVG; it now takes its size from --ig-size on `.icust-stage`, exactly as
+    // IconCustomizer's own stage does. Asserting the attribute would no longer
+    // be possible, and asserting the custom property would only prove the value
+    // was written - the rendered box proves the editor's CSS actually consumed
+    // it, which is the thing that was silently untested before.
+    const glyph = await page.locator('.icust-stage-host svg').boundingBox()
+    expect(Math.round(glyph.width), 'the stage paints the selected size').toBe(32)
     expect(await snapshot(), 'no storage, recents or quota write').toBe(before)
 
     // 15 · a valid draft opens the real editor with the supported values.
@@ -1608,7 +1622,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     await page.locator('.hw-tab[data-tab="icon"]').click()
     await page.getByRole('button', { name: /Preview the star icon/ }).click()
-    await expect(page.locator('.hw-icon-meta')).toContainText('star')
+    await expect(page.locator('.hw-panel .icust-meta')).toContainText('star')
 
     await page.locator('.hw-tab[data-tab="image"]').click()
     await expect(page.locator('.hw-intent')).toBeVisible()
