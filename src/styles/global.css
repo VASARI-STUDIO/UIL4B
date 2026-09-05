@@ -13280,7 +13280,12 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .lart-prose i{font-style:italic}
 .lart-prose a{color:var(--accent-strong);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px;text-decoration-color:color-mix(in srgb,var(--accent-strong) 45%,transparent)}
 .lart-prose a:hover{text-decoration-color:currentColor}
-.lart-prose code{font-family:var(--mono);font-size:.88em;padding:1px 5px;border-radius:var(--radius-xs);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);white-space:nowrap}
+/* NOT white-space:nowrap. A long declaration — clamp(1.5rem, 1.1479rem +
+   0.0939vw, 2.5rem) is 39 characters of mono — overflowed the 358px column at
+   390px and was clipped, so the reader saw a truncated value in an article
+   whose point was the exact value. It wraps at its own spaces now; short chips
+   are unaffected because there is nothing in them to wrap at. */
+.lart-prose code{font-family:var(--mono);font-size:.88em;padding:1px 5px;border-radius:var(--radius-xs);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);overflow-wrap:break-word}
 .lart-prose ul,.lart-prose ol{margin:0 0 var(--s-4) 1.15em;display:flex;flex-direction:column;gap:var(--s-2)}
 .lart-prose li{padding-left:4px}
 .lart-dim{color:var(--t3)}
@@ -13321,8 +13326,15 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .lart-table-cap code{font-family:var(--mono);font-size:.92em}
 
 .lart-swatch{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;border-radius:var(--radius-xs);border:1px solid var(--border);font-size:12px;font-weight:600;margin-right:10px;vertical-align:middle}
+.lart-swatch--wide{width:56px}
 .lart-hex{font-family:var(--mono);font-size:11.5px;color:var(--t2);white-space:nowrap}
-.lart-verdict{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+/* position:relative is load-bearing, not tidiness. The .sr-only text inside is
+   position:absolute, and with no positioned ancestor it resolved against the
+   initial containing block — so it escaped the table's overflow container and
+   widened the DOCUMENT by 39px, giving /learn/colour-contrast a horizontal
+   scrollbar at 390px and 320px while every visible box was inside the viewport.
+   A containing block on the parent puts it back inside the scroller. */
+.lart-verdict{position:relative;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 /* The -strong companions, not --ok/--err. The base state tokens are tuned to
    clear 3:1 as fills, dots and glyphs; this is 11px text, so it needs the 4.5:1
    pair. tests/unit/state-token-contrast.test.js caught this exact rule, which
@@ -13331,8 +13343,8 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .lart-verdict[data-pass="false"]{color:var(--err-strong)}
 /* The verdict is a word first and a colour second — SC 1.4.1 applies to this
    table as much as to anything the article describes. The ratio and threshold
-   ride along for assistive tech, where the colour carries nothing at all. */
-.lart-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+   ride along for assistive tech, in the site's existing .sr-only, where the
+   colour carries nothing at all. */
 
 /* ── Sources, next step, read next ── */
 .lart-sources{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border)}

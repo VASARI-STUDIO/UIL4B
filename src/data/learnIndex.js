@@ -114,6 +114,33 @@ export const LEARN_ARTICLES = Object.freeze([
       { id: 'line-length', title: 'Line length and line height' },
     ],
   },
+  {
+    slug: 'colour-spaces',
+    title: 'Colour spaces for interface work',
+    navLabel: 'Colour spaces',
+    topic: 'Colour',
+    dek: 'sRGB, HSL and OKLCH describe the same screen in different coordinates. Which coordinate lies to you, and where.',
+    description: 'sRGB, HSL and OKLCH for UI work: why an HSL lightness of 50% is not a lightness, what OKLCH measures instead, and what CSS does between two colours.',
+    file: 'colourSpaces.jsx',
+    words: 1284,
+    updated: '2026-09-05',
+    toolTo: '/create/tint',
+    toolLabel: 'Tint Scale Generator',
+    sources: [
+      { label: 'CSS Color Module Level 4 â oklab() and oklch()', href: 'https://www.w3.org/TR/css-color-4/#ok-lab' },
+      { label: 'CSS Color Module Level 5 â color-mix()', href: 'https://www.w3.org/TR/css-color-5/#color-mix' },
+      { label: 'BjÃ¶rn Ottosson â A perceptual color space for image processing (Oklab, 2020)', href: 'https://bottosson.github.io/posts/oklab/' },
+      { label: 'MDN â the oklch() colour function', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/oklch' },
+      { label: 'WCAG 2.2 â relative luminance, for the contrast figures used here', href: 'https://www.w3.org/TR/WCAG22/#dfn-relative-luminance' },
+    ],
+    sections: [
+      { id: 'one-screen', title: 'One screen, several coordinate systems' },
+      { id: 'hsl-lightness', title: 'HSL lightness is not lightness' },
+      { id: 'oklch', title: 'What OKLCH measures instead' },
+      { id: 'gamut', title: 'Gamut: colours you can name but not show' },
+      { id: 'interpolation', title: 'What CSS does between two colours' },
+    ],
+  },
 ])
 
 /** Every article route, sorted — what routeMetaMap and the router consume. */

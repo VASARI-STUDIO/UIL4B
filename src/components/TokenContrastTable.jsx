@@ -115,7 +115,7 @@ function verdict(ratio, min) {
   return (
     <span className="lart-verdict" data-pass={pass ? 'true' : 'false'}>
       {pass ? 'Pass' : 'Fail'}
-      <span className="lart-sr"> — {ratio.toFixed(2)}:1 against a {min}:1 minimum</span>
+      <span className="sr-only"> — {ratio.toFixed(2)}:1 against a {min}:1 minimum</span>
     </span>
   )
 }
