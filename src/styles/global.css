@@ -5913,8 +5913,27 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-cta-i{overflow:hidden;min-width:0;white-space:nowrap}
 .pnav-cta.is-waiting{opacity:0;transform:translateY(-6px);grid-template-columns:0fr;padding-left:0;padding-right:0;margin-left:-8px;pointer-events:none}
 .pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto}
-.pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:none;color:var(--t0);border-radius:var(--radius-pill);cursor:pointer}
-.pnav-mobile:hover{background:var(--hvr)}
+/* THE MENU BUTTON IS A CONTROL, NOT A GLYPH ON THE BACKGROUND.
+   Founder, 2026-09-05, marked screenshot at 662px: the search circle, the
+   avatar and the hamburger "are misaligned". Their BOXES are not — all three
+   are 40x40 in one `align-items:center` row, and box centres measured a 0.00px
+   spread at every width. What is misaligned is the INK.
+   Measured at 662 (ink centroid, weighted by departure from the bar ground):
+   the search field paints 40x40 (a bordered disc) and the avatar the same,
+   while this button painted 16x10 — a bare glyph floating in an invisible box.
+   Two consequences, and they are what a marked-up screenshot looks like:
+   the visible gap between the disc and the glyph measured 30px against the
+   16px the row actually sets, and the glyph stopped 28px from the bar edge
+   while the logotype starts 16px from the other one, so the right end of the
+   bar read as pulled in and dropped out of the row.
+   The answer is not to nudge it. A circle, a photograph and a three-line
+   glyph have different intrinsic mass and will never align by matching
+   heights, so the glyph is given the same optical container its neighbours
+   already carry — the identical border/background/radius as .pnav-iconbtn,
+   .pnav-more and .pnav-search-field. Ink then fills the box, both margins
+   come out at 16px, and the three read as one row of equal controls. */
+.pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-mobile:hover{background:var(--hvr);border-color:var(--t2);color:var(--t0)}
 
 /* Centre search — sits between the nav triggers and the right-hand actions
    cluster; it takes the bar's spare width (flex:1) so the fixed-width field
@@ -8697,11 +8716,80 @@ button.plb-varrow:hover{background:var(--bg-2)}
    derives the height, and a `max-height` alone would clamp the height and
    silently break the ratio again. Capping the WIDTH at the height cap times the
    ratio means whichever limit binds, both stay consistent. */
+/* ── The action rail's exploratory cluster ────────────────────────────────
+   UNCOLLAPSED THIS WRAPPER HAS NO BOX. `display:contents` is the whole
+   reason this change is safe to make in the most heavily pinned area of the
+   app: the five controls stay direct flex children of the rail, so the row
+   is laid out to the pixel as it was before the wrapper existed and every
+   shipped assertion about this rail measures what it measured before.
+   Collapsed it becomes a panel. See utils/toolbarFit.js for the rule. */
+/* No `.plb-tools` rule on the row: the wrapper is not rendered there at all.
+   `display:contents` was tried and reverted — it removes the box, not the
+   element, so every `>` selector aimed at the rail stopped matching. */
+.plb-tools--panel{display:flex;position:absolute;top:calc(100% + 6px);left:0;z-index:60;flex-direction:column;align-items:stretch;gap:4px;min-width:210px;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+/* Inside the panel every control is a full-width row with its label showing —
+   a menu of five named things, which is what the collapsed form is for. The
+   icon-only treatment the row uses would just move the founder's complaint. */
+/* An author display declaration beats the UA [hidden] rule, so the panel has
+   to opt back in — otherwise the closed menu renders as an open one. */
+.plb-tools--panel[hidden]{display:none}
+.plb-tools--panel>*{width:100%}
+.plb-tools--panel .btn{width:100%;justify-content:flex-start;gap:9px}
+.plb-tools--panel .plb-lbl,.plb-tools--panel .plb-lbl-i{display:inline!important;position:static!important;width:auto!important;height:auto!important;overflow:visible!important;clip:auto!important;clip-path:none!important}
+/* The panel is anchored to the trigger, so the trigger owns the positioning
+   context. It also must not scroll away with the rail. */
+.plb-toolswrap{position:relative;flex:0 0 auto}
+.plb-toolsbtn{flex:0 0 auto;white-space:nowrap}
+
+/* ── Desktop rhythm ───────────────────────────────────────────────────────
+   Founder, 2026-09-05: the toolbar "is a run of icon-only buttons of uneven
+   weight and spacing sitting beside two labelled buttons and a select, and
+   it reads as unresolved rather than designed."
+   Measured at 1440: ten 36px icon squares interleaved with three controls of
+   135, 171 and 152px in no order, at a uniform 10px gap except a stray 21px
+   before Save / export. Every gap said the same thing, so nothing said which
+   controls belonged together.
+   Mobbin: Substack and Frame both answer a long icon run the same way — keep
+   the run TIGHT within a group and open a wider gap between groups, so the
+   row reads as three or four deliberate clusters instead of ten loose
+   squares. That is a spacing system, not more chrome, so it costs the row no
+   width at the very widths where width is short. The clusters here are:
+   explore (what you go looking for) · generate · step back · commit. */
+@media (min-width:961px){
+  .plb-toolbar-group.rail-overflow{gap:6px}
+  /* The three cluster boundaries. Each is the FIRST control of a new group,
+     so the rule stays true however many controls a group grows. */
+  .plb-toolbar-group.rail-overflow>.plb-random,
+  .plb-toolbar-group.rail-overflow>.plb-undo,
+  .plb-toolbar-group.rail-overflow>.plb-savewrap{margin-left:16px}
+  /* Commit is the end of the journey and the only irreversible control on
+     the row; a hairline says so without adding a fourth kind of button. */
+  .plb-toolbar-group.rail-overflow>.plb-savewrap{position:relative}
+  .plb-toolbar-group.rail-overflow>.plb-savewrap::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:1px;height:20px;background:var(--border)}
+}
 .plb-imgstage{position:relative;width:100%;aspect-ratio:var(--plb-img-ar,1.6);max-width:calc(min(48vh,420px) * var(--plb-img-ar,1.6));margin-inline:auto;overflow:hidden;border-radius:var(--radius-s);background:var(--bg-2);touch-action:none;user-select:none}
 .plb-imgstage-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .plb-imghint{margin:0;font-size:11px;font-weight:500;color:var(--t2);text-align:center}
 .plb-imgpoint{position:absolute;width:26px;height:26px;transform:translate(-50%,-50%);border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.4);cursor:grab;padding:0}
 .plb-imgpoint:active{cursor:grabbing}
+/* The active marker reads as the one being worked on — a keyboard user gets
+   this from focus, so the ring is the same cue for both input methods. */
+.plb-imgpoint--on{border-color:var(--brand);box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 0 0 4px color-mix(in srgb,var(--brand) 45%,transparent),0 2px 6px rgba(0,0,0,.4);z-index:3}
+.plb-imgpoint:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+/* ── The eyedropper loupe ──────────────────────────────────────────────────
+   Parked in a stage corner (Mobbin: Alan crop) rather than tracking the
+   pointer, so it never covers the region it magnifies; `data-side` flips it
+   to whichever corner the marker is NOT near. `pointer-events:none` is
+   load-bearing — the loupe sits inside the drag surface, and a drag that
+   carried a marker under it would otherwise stop dead on its own magnifier. */
+.plb-loupe{position:absolute;top:8px;width:104px;pointer-events:none;z-index:4;border-radius:var(--radius-s);overflow:hidden;background:var(--bg-1);border:1px solid color-mix(in srgb,#fff 55%,transparent);box-shadow:0 0 0 1px rgba(0,0,0,.45),0 6px 18px rgba(0,0,0,.35)}
+.plb-loupe[data-side="right"]{right:8px}
+.plb-loupe[data-side="left"]{left:8px}
+.plb-loupe-cv{display:block;width:104px;height:104px;image-rendering:pixelated}
+/* The value rides ON the loupe (Mobbin: beehiiv) — the pixel and its hex are
+   one piece of information, and a readout across the panel is a second look. */
+.plb-loupe-hex{display:block;padding:3px 0 4px;font-size:11px;font-weight:700;letter-spacing:.02em;text-align:center;color:var(--t0);background:var(--bg-1);font-variant-numeric:tabular-nums}
+@media (max-width:560px){.plb-loupe,.plb-loupe-cv{width:84px}.plb-loupe-cv{height:84px}}
 .plb-imgstrip{display:flex;gap:3px;margin-top:8px}
 .plb-imgswatch{flex:1;height:22px;border-radius:5px;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
 .plb-imgcount{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
