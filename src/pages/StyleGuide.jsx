@@ -29,7 +29,7 @@ const TOKENS = {
     families: [
       { var: '--font', label: 'Primary (UI)', value: 'Manrope' },
       { var: '--display', label: 'Display', value: 'Manrope' },
-      { var: '--mono', label: 'Technical (tokens)', value: 'JetBrains Mono' },
+      { var: '--mono', label: 'Technical (code)', value: 'JetBrains Mono' },
     ],
     scale: [
       { size: 40, weight: 800, label: 'Display', tracking: '-.04em' },
@@ -94,7 +94,7 @@ export default function StyleGuide({ toast }) {
       <div className="sec-h">
         <div className="sec-h-eyebrow" style={{ color: 'var(--warn)' }}>Admin Only</div>
         <h1>Design System</h1>
-        <p>UIL4B's internal style reference. Tokens, components, and patterns.</p>
+        <p>UIL4B's internal style reference. Styles, components, and patterns.</p>
       </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -170,7 +170,7 @@ export default function StyleGuide({ toast }) {
                 <li><strong>Headings:</strong> 800 weight, negative letter-spacing (-.03em to -.04em)</li>
                 <li><strong>Body:</strong> 200 weight, default tracking, 1.65 line-height</li>
                 <li><strong>Eyebrow / labels:</strong> 10px, 700 weight, uppercase, .08em tracking</li>
-                <li><strong>Tokens &amp; code:</strong> Outfit everywhere — one family across UI, tokens, numbers, and technical values</li>
+                <li><strong>Styles &amp; code:</strong> Outfit everywhere — one family across UI, style names, numbers, and technical values</li>
                 <li><strong>Subtitles:</strong> 14px, 600 weight for section headings in cards</li>
               </ul>
             </div>

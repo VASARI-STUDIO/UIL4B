@@ -47,7 +47,7 @@ test.describe('Tint Scale designer and developer workflows', () => {
     await expect(page.locator('.tt-ramp-block')).toHaveCount(2)
     await expect(page.locator('#tt-export')).toContainText('--tint-1-50:')
     await expect(page.locator('#tt-export')).not.toContainText('--tint-2-50:')
-    await expect(page.getByText('22 generated tokens')).toBeVisible()
+    await expect(page.getByText('22 generated tints')).toBeVisible()
 
     const secondScale = page.getByRole('radio', { name: /Scale 2/i })
     await secondScale.focus()

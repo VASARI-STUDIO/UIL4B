@@ -633,7 +633,7 @@ will need its assertion updated deliberately alongside.
 **What would settle it:** your pick of A, B or C. Nothing was rewritten — the
 item asked for options first, and the word choice is the whole decision.
 
-**Verdict:** _(DECIDED 2026-09-05 — **C, “Styles”**.)_ Chosen by the founder over our recommendation of A. Rule R stands: `token` survives past the export boundary only. Implementation in flight in a separate PR.
+**Verdict:** _(DECIDED 2026-09-05 — **C, “Styles”**.)_ Chosen by the founder over our recommendation of A. Rule R stands: `token` survives past the export boundary only. **Shipped 2026-09-05** — 22 user-facing strings across 10 files, plus the 2 spec assertions that named the old copy. One thing is deliberately NOT in it: the homepage H1 (`Colour, type and tokens`) and the `Design tokens` workbench row, because `Home.jsx` and `HomeWorkbench.jsx` were held by another agent. They move together with `public/previews/cards.json` and the hero assertion in `10-home-chaos-to-calm.spec.js`.
 
 ---
 
@@ -752,7 +752,7 @@ if a new community row lands below the floor. Risk is aesthetic only.
 
 **What would settle it:** yes or no to the white → black flip on ten tiles.
 
-**Verdict:** _(DECIDED 2026-09-05 — **yes, per-item ink**.)_ Matches the recommendation. Ten of the twelve monograms flip white → black; no colour changes. Needs a test that fails the build if a new community row lands below the floor.
+**Verdict:** _(DECIDED 2026-09-05 — **yes, per-item ink**.)_ Matches the recommendation. Ten of the twelve monograms flip white → black; no colour changes. **Shipped 2026-09-05** — worst 1.47:1 → 3.46:1 against a 3.0 floor, identical in both themes because the ground is per-item data rather than a theme token. The test asked for is `tests/unit/community-monogram-ink.test.js` (the guarantee is about the function, so it holds for a new row too), and `KNOWN_BELOW_FLOOR` in `48-text-over-gradients.spec.js` is now an empty exact-match list, which fails the moment any new surface drops below its floor.
 
 ---
 
