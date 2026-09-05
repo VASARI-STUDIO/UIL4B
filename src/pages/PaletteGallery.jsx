@@ -177,10 +177,8 @@ export default function PaletteGallery({ toast }) {
   return (
     <div className="sec pgl-page">
       <DiscoverGalleryHero
-        eyebrow="Discover / Colour"
         title="Palette Library"
         description="Colour systems with a point of view — ours, plus the published brand palettes behind the interfaces you already know. Copy a swatch, save a favourite, or open the complete palette in the builder and make it yours."
-        mark={{ label: '#4338E0', value: LIBRARY_PALETTES.length, caption: 'palettes' }}
       />
 
       <LibraryToolbar

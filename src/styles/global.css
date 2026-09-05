@@ -10569,13 +10569,23 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    104px face box clipped "Handgloves" mid-word, which reads as a broken
    control rather than a preview. Full width the specimen gets ~290px in the
    narrowest panel that hosts this, which is enough for a real word. */
-.typ-picker-trigger{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;align-items:center;width:100%;padding:10px 12px 10px 14px;text-align:left;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.typ-picker-trigger{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;align-items:center;width:100%;padding:10px 12px 10px 14px;container-type:inline-size;text-align:left;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .typ-picker-trigger:hover:not(:disabled){border-color:var(--bh);background:var(--hvr)}
 .typ-picker-trigger:focus-visible{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 .typ-picker-trigger:disabled{opacity:.55;cursor:not-allowed}
 /* Fixed height: the specimen changes family on every pick, and letting it size
-   the row would bounce the whole panel each time you chose something. */
-.typ-picker-face{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;height:34px;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:26px;line-height:1.05;letter-spacing:-.02em;color:var(--t0);white-space:nowrap}
+   the row would bounce the whole panel each time you chose something.
+
+   The face now sets the FAMILY NAME (#font-picker-shows-handgloves), so its
+   width varies from 4 to 32 characters where "Handgloves" was always 10. Same
+   derivation as the browse tile, at one line rather than two: --fbd-cap comes
+   from specimenSizeCqw(family, 1). The 0.72 factor is the share of the trigger
+   this cell actually gets - the "Browse" pill and the two gaps take the rest,
+   and cqw resolves against the whole trigger, not this column.
+   The ellipsis IS kept here, unlike .fbd-sample: .typ-picker-name repeats the
+   full name in the UI font on the very next line, so a trimmed specimen costs
+   the reader nothing. */
+.typ-picker-face{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;height:34px;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 0.72cqw),26px);line-height:1.05;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
 .typ-picker-id{grid-column:1;grid-row:2;display:flex;align-items:baseline;gap:7px;min-width:0}
 .typ-picker-name{flex-shrink:0;max-width:60%;font-size:12px;font-weight:650;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .typ-picker-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -10608,30 +10618,36 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fbd-tile:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .fbd-card.is-selected .fbd-tile{border-color:var(--brand);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--brand)}
 /* THE SPECIMEN IS THE CONTROL, SO IT MUST NEVER BE TRUNCATED.
-   At 390px this read "Hand…", "Handgl…", "Handg…" — a different amount of a
-   different word per family, so the tiles stopped being comparable at exactly
-   the width where comparing them is hardest. A fixed 30px inside a column that
-   drops to 150px cannot fit ten characters, and the ellipsis quietly hid that.
+   At 390px this read "Hand...", "Handgl...", "Handg..." - a different amount of
+   a different word per family, so the tiles stopped being comparable at exactly
+   the width where comparing them is hardest.
 
-   `cqw` sizes the word off the TILE, so the specimen shrinks with its own box
-   instead of overflowing it, at any column count and any viewport. Note cqw
-   resolves against the container's CONTENT box, so the tile's 14px side padding
-   is already discounted — calibrating against the border box gets this wrong by
-   exactly that much, which is how the first attempt landed on the floor.
+   `cqw` sizes the specimen off the TILE, so it shrinks with its own box instead
+   of overflowing it, at any column count and any viewport. Note cqw resolves
+   against the container's CONTENT box, so the tile's 14px side padding is
+   already discounted - calibrating against the border box gets this wrong by
+   exactly that much.
 
-   15cqw is measured, not guessed: "Handgloves" renders between 4.8× and 6.0×
-   its font-size across the five categories (serif narrowest, some display and
-   mono faces widest), so the widest face needs 15cqw × 6.0 = 90% of the box and
-   keeps ~10% headroom. The 30px ceiling keeps every tile from ~228px up
-   identical to what shipped; the floor never binds at any shipped column count.
+   THE MULTIPLIER IS NOW PER-FAMILY (#font-picker-shows-handgloves). The tile
+   sets the family's own NAME, not the fixed word "Handgloves", so the specimen
+   is no longer one width: 1,941 families run from 4 characters to 32. A single
+   constant cannot serve both, so JS supplies --fbd-cap per tile and the
+   derivation lives with it in specimenSizeCqw (src/utils/fontGallery.js).
+   The 15 fallback is the value that shipped for "Handgloves" - a 10-character
+   word - so a tile that somehow renders without the property looks exactly as
+   it did before.
 
-   The ellipsis stays as the backstop. It is genuinely last-resort now rather
-   than the normal case, but it is NOT claimed to be unreachable: "Handgloves"
-   is 6.3× its font-size in the widest face measured across the loaded corpus,
-   and nothing stops family 1,947 being wider. If it ever fires again the
-   answer is this ratio, not a shorter word — a specimen trimmed to fit is the
-   fault being fixed here, not a fix for it. */
-.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(17px,15cqw,30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
+   TWO LINES, and the height is checked: the tile is 104px with 10px of vertical
+   padding, so 84px of content box. Two lines at the 30px ceiling and 1.15
+   leading is 69px, which fits. overflow-wrap:anywhere is the backstop for the
+   longest unbreakable word in the catalogue ("UnifrakturMaguntia", 18 chars);
+   family names otherwise carry spaces and wrap on them.
+
+   The ellipsis is GONE rather than kept as a backstop. It cannot fire now that
+   the size is derived from the character count, and leaving it would mean a
+   long name silently trimmed instead of visibly mis-sized - a specimen trimmed
+   to fit is the fault being fixed here, not a fix for it. */
+.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 1cqw),30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
 /* A tile whose face has not registered yet shows nothing rather than the
    fallback: the tile exists to be judged, and a fallback pretending to be the
    family is the one thing it must never do. */
@@ -11207,10 +11223,11 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    src/components/discover/DiscoverGalleryHero.jsx and DiscoverResultHead.jsx —
    the Palette Library and Gradient Library both consume them, so this block is
    the single home for the pattern. Page-specific chrome stays in pgl-/grg-. */
-.dgh-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:clamp(32px,7vw,110px);align-items:end;min-height:390px;margin:-4px 0 24px;padding:clamp(28px,5vw,64px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 28px 80px rgba(6,6,10,.18)}
+.dgh-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,7vw,110px);align-items:end;min-height:300px;margin:-4px 0 24px;padding:clamp(28px,5vw,64px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 28px 80px rgba(6,6,10,.18)}
 .dgh-hero::before{content:"";position:absolute;inset:auto -10% -65% 42%;height:430px;background:radial-gradient(circle,rgba(124,92,255,.55),rgba(50,190,170,.25) 34%,transparent 68%);filter:blur(10px);pointer-events:none}
 .dgh-copy{position:relative;z-index:1;min-width:0}
-.dgh-eyebrow{display:block;margin-bottom:24px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.58)}
+/* RETIRED (#surface-headers-read-as-ai): .dgh-eyebrow. A taxonomy path in
+   mono caps restating the h1 underneath it. */
 .dgh-hero h1{max-width:720px;margin:0;font-family:var(--display);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.88;letter-spacing:-.065em;overflow-wrap:break-word}
 .dgh-hero p{max-width:630px;margin:28px 0 0;font-size:clamp(15px,1.5vw,19px);line-height:1.55;color:rgba(255,255,255,.68)}
 /* Optional inline CTA (the Gradient Library's "Open the Gradient Generator").
@@ -11226,33 +11243,48 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    read as a list rather than as a display number. */
 .dgh-hero--controls{grid-template-columns:minmax(0,1fr) 264px;gap:clamp(28px,4vw,56px)}
 .dgh-aside{position:relative;z-index:1;display:flex;flex-direction:column;gap:14px;min-width:0}
-.dgh-mark{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
-.dgh-mark span{margin-bottom:36px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:#a89bff}
-.dgh-mark strong{font-family:var(--display);font-size:92px;font-weight:500;line-height:.8;letter-spacing:-.07em}
-.dgh-mark small{margin-top:12px;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+/* RETIRED (#surface-headers-read-as-ai): .dgh-mark, the 92px display numeral
+   counting the catalogue. It is the one-up cousin of the Font Gallery's
+   three-up figure strip and it failed the same test - it measured the
+   product, not the reader's problem. It was already aria-hidden and already
+   dropped below 720px on the grounds that losing it 'costs nothing'; that
+   argument does not stop at 720px. The live count still exists where it does
+   work, in DiscoverResultHead's aria-live region.
+   Its 230px grid track went with it, which is why .dgh-hero is now a single
+   column and only --controls declares a second one. */
 .drh-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
 .drh-head span{display:block;margin-bottom:7px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent-strong)}
 .drh-head h2{margin:0;font-family:var(--display);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
 .drh-head p{margin:0;font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
 @media(max-width:720px){
-  /* min-height 300, NOT 430. THE 430 WAS BACKWARDS: this block hides .dgh-mark,
+  /* min-height 280, NOT 300 and NOT 0 (#surface-headers-read-as-ai).
+     #331 worked this floor out at 300 against a copy block that still carried
+     an eyebrow. Removing the eyebrow took ~38px out of that copy, so 300 would
+     now leave ~88px of dead black at 641 - past the 72px its sibling test
+     allows. Dropping the floor entirely goes wrong the other way: the masthead
+     collapses onto its copy at 211px, which the guard below this one catches.
+     280 satisfies both ends - about 2px of dead space at 641, and still a slab
+     rather than a bare heading. Both numbers are asserted in
+     tests/user-sim/40-gallery-hero.spec.js; if you change the type scale here,
+     re-measure against both rather than either.
+     Kept for the record: this block hid .dgh-mark,
      the 92px serif numeral the 390px desktop floor was sized around, and then
      raised the floor by 40px anyway. So the layout with LESS in it got a TALLER
      box, and the difference was dead black above the copy — measured 125px at
      390, 163px at 480 and 180px at 641, where it was 42% of the whole hero. The
      radial glow got pushed out of frame with it, so the one decorative gesture
      the masthead has was invisible on a phone.
-     300 is the floor that still binds where the copy is shortest (252px of
-     content at 641) and stays out of the way where it is longest (307px at 390).
-     If you change the type scale here, re-measure both ends.
+     300 was the floor that bound where the copy was shortest (252px of content
+     at 641) and stayed out of the way where it was longest (307px at 390) -
+     with the eyebrow still in the box. See the top of this comment for why it
+     is 280 now.
      NOT A DEFECT, checked and recorded so it is not re-reported: .dgh-hero
      reports scrollWidth - clientWidth of 36px at 390 and 61px at 641, scaling
      with the viewport. That is ::before, whose `inset:auto -10% -65% 42%` puts
      the glow 10% past the right edge ON PURPOSE, where `overflow:hidden` on the
      same element clips it. Suppress ::before and the figure is exactly 0 at
      every width; the document itself never scrolls horizontally. */
-  .dgh-hero{grid-template-columns:1fr;min-height:300px;border-radius:20px}
-  .dgh-mark{display:none}
+  .dgh-hero{grid-template-columns:1fr;min-height:280px;border-radius:20px}
   /* The mark is dropped here; the aside is NOT. It carries the only route to
      the other library, so it stacks under the copy instead of disappearing, and
      that stacked aside already gives the box more height than the floor above
@@ -11642,24 +11674,44 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 }
 
 /* Font Gallery */
+/* min-height 320, not 420 (#surface-headers-read-as-ai). The 420 was sized
+   around a topline row plus a clamp(64px,9vw,116px) gap plus a three-up figure
+   strip, all of which are gone. Measured at 1440 with the old floor: content
+   ended at y=346 and the slab ran to y=508 - 162px of nothing, only 62px of it
+   padding. Same failure mode #331 fixed on .dgh-hero: the layout with LESS in
+   it kept the TALLER box. The narrow-viewport floor drops to 0 for the same
+   reason it did there - the copy is the tallest thing on a phone anyway. */
 .fg-page{padding-bottom:72px}
-.fg-hero--premium{min-height:420px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
+.fg-hero--premium{min-height:320px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
 .fg-hero--premium::after{content:"Aa";position:absolute;right:-.035em;bottom:-.31em;font-family:var(--display);font-size:clamp(230px,32vw,470px);font-weight:500;line-height:1;color:rgba(255,255,255,.035);letter-spacing:-.1em;pointer-events:none}
 .fg-hero--premium{position:relative;overflow:hidden}
-.fg-hero-topline{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:clamp(64px,9vw,116px)}
-.fg-hero--premium .sec-h-eyebrow{color:rgba(255,255,255,.5)}
-.fg-hero-pair-link{display:inline-flex;align-items:center;gap:8px;padding-bottom:4px;color:#fff;border-bottom:1px solid rgba(255,255,255,.32);font-size:11px;font-weight:650;text-decoration:none}
-.fg-hero-pair-link:hover{color:#b8adff;border-color:#b8adff}
+/* RETIRED (#surface-headers-read-as-ai): .fg-hero-topline, its
+   .sec-h-eyebrow override, and .fg-hero-pair-link. The topline was a flex row
+   pinning a decorative taxonomy eyebrow left and the page's onward action
+   right, then holding a clamp(64px,9vw,116px) gap of nothing underneath.
+   Measured at 1440: the "Build a font pair" link was 98x23px in the top-right
+   of a 1343x472px slab - 0.35% of the masthead - 146px above the h1, diagonally
+   opposite the paragraph that justifies it, sharing an optical line with a
+   label you cannot press. It read as breadcrumb chrome, not as an action.
+   The action now lives in the copy column as .fg-hero-cta. */
 .fg-hero--premium .fg-hero-copy{position:relative;z-index:1;grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);gap:clamp(40px,8vw,120px);align-items:end}
 .fg-hero--premium h1{font-size:clamp(62px,9vw,128px);line-height:.76;letter-spacing:-.07em;color:#fff}
 .fg-hero-intro>p{max-width:520px;margin:0 0 34px;font-size:clamp(15px,1.5vw,19px);line-height:1.6;color:rgba(255,255,255,.66)}
-.fg-hero-stats{display:grid;grid-template-columns:repeat(3,1fr);border-block:1px solid rgba(255,255,255,.15)}
-/* 9px is the floor used by every other mono kicker in the app, and .66 white on
-   the hero's near-black clears AA — .42 did not, and 8px was smaller than
-   anything else we ship. */
-.fg-hero-stats span{display:flex;flex-direction:column;gap:4px;padding:14px 12px 14px 0;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.66)}
-.fg-hero-stats span+span{padding-left:14px;border-left:1px solid rgba(255,255,255,.15)}
-.fg-hero-stats strong{font-family:var(--font);font-size:14px;letter-spacing:-.01em;text-transform:none;color:#fff}
+/* RETIRED (#surface-headers-read-as-ai): .fg-hero-stats, the three-up figure
+   strip. It measured the CATALOGUE rather than the reader's problem.
+   "classifications" counted the filter tabs rendered a few hundred pixels
+   below it, and "weights to preview" is not a number a visitor can act on.
+   The one useful figure - how much type there is to search - moved into the
+   search placeholder, which is where Readymag puts it ("Search 1638 fonts"):
+   the same number, now scoping a search instead of decorating a masthead. */
+
+/* The onward action, moved out of the corner. A real button under the copy -
+   where the shared DiscoverGalleryHero has always put its `action`, and where
+   GoDaddy's Font Library, Hume AI's and ElevenLabs' voice libraries put theirs.
+   Light-on-dark because the slab is near-black; .btn supplies the geometry. */
+.fg-hero-cta,.fpr-hero-cta{display:inline-flex;align-items:center;gap:8px;background:#fff;color:#0a0a0b;border:0;font-weight:650}
+.fg-hero-cta:hover,.fpr-hero-cta:hover{background:#d8d1ff;color:#0a0a0b}
+.fg-hero-cta:focus-visible,.fpr-hero-cta:focus-visible{outline:2px solid #b8adff;outline-offset:3px}
 /* The whole control block pins, not just its first row. The wrapper carries an
    opaque page-coloured backdrop so the filters sitting under the panel are not
    transparent to the specimen list scrolling behind them. */
@@ -11814,12 +11866,12 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 
 /* Font Pair */
 .fpr-page{padding-bottom:72px}
-.fpr-hero--premium{position:relative;min-height:400px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
+.fpr-hero--premium{position:relative;min-height:340px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
 .fpr-hero--premium::after{content:"";position:absolute;right:-8%;bottom:-74%;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,rgba(118,91,255,.38),rgba(54,189,171,.14) 38%,transparent 68%);pointer-events:none}
-.fpr-hero-topline{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:clamp(48px,7vw,88px)}
-.fpr-hero--premium .sec-h-eyebrow{color:rgba(255,255,255,.5)}
-.fpr-gallery-link{display:inline-flex;align-items:center;gap:8px;padding-bottom:4px;color:#fff;border-bottom:1px solid rgba(255,255,255,.32);font-size:11px;font-weight:650;text-decoration:none}
-.fpr-gallery-link:hover{color:#b8adff;border-color:#b8adff}
+/* RETIRED (#surface-headers-read-as-ai): .fpr-hero-topline, its
+   .sec-h-eyebrow override and .fpr-gallery-link - the same corner-parked
+   action and duplicate taxonomy eyebrow as the Font Gallery, which is the
+   masthead this one was copied from. Action is now .fpr-hero-cta in the copy. */
 .fpr-hero--premium .fpr-hero-copy{position:relative;z-index:1;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:clamp(40px,8vw,120px);align-items:end}
 .fpr-hero--premium h1{font-size:clamp(62px,9vw,124px);line-height:.8;letter-spacing:-.07em;color:#fff}
 .fpr-hero-signature{position:absolute;left:43%;bottom:-.32em;margin:0;font-family:var(--fpr-h-ff);font-size:clamp(190px,27vw,390px);font-weight:var(--fpr-h-fw);line-height:1;color:rgba(255,255,255,.035);letter-spacing:-.1em;pointer-events:none}
@@ -11951,12 +12003,8 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
   .pgl-filters button{flex:0 0 auto}
   .pgl-page .pgal-grid{grid-template-columns:1fr}
   .pgl-page .pgal-stripes,.pgl-page .lockt-stripes{height:230px}
-  .fg-hero--premium,.fpr-hero--premium{min-height:420px;padding:26px 22px;border-radius:20px}
-  .fg-hero-topline,.fpr-hero-topline{align-items:flex-start;margin-bottom:54px}
+  .fg-hero--premium,.fpr-hero--premium{min-height:0;padding:26px 22px;border-radius:20px}
   .fg-hero--premium h1,.fpr-hero--premium h1{font-size:clamp(54px,17vw,86px)}
-  .fg-hero-stats{grid-template-columns:1fr}
-  .fg-hero-stats span{padding:9px 0}
-  .fg-hero-stats span+span{padding-left:0;border-left:0;border-top:1px solid rgba(255,255,255,.15)}
   .fg-command{grid-template-columns:1fr;padding:8px}
   .fg-command-size{order:initial}
   .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
@@ -12037,7 +12085,6 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
      supposed to underline. `white-space:nowrap` keeps the label and its arrow on
      one line, which is what makes the border match the text; the link is ~150px
      and its row has the space once it is not being squeezed into 128. */
-  .fg-hero-pair-link,.fpr-gallery-link{text-align:right;white-space:nowrap}
   .fg-filter-right{width:100%}
   .fg-sort{width:100%;overflow-x:auto}
   .fg-sort-btn{flex:1}
