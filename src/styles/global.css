@@ -6854,76 +6854,10 @@ html.lenis{scroll-behavior:auto!important}
    dead letter — which is exactly what happened on the first attempt. */
 .home-hero.home-hero--surface{min-height:0;padding-bottom:var(--s-7)}
 
-/* ══ Surface sales — value pillars (sl-) ══ */
-.sl-pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4);margin-top:var(--s-7)}
-.sl-pillar{display:flex;flex-direction:column;gap:10px;padding:22px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow-xs)}
-.sl-pillar-num{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:var(--radius-s);background:var(--accent-bg);color:var(--accent-strong);font-family:var(--mono);font-size:13px;font-weight:600}
-.sl-pillar-title{font-size:var(--fs-h3);font-weight:600;letter-spacing:-.016em;color:var(--t0)}
-.sl-pillar-desc{font-size:var(--fs-body-s);color:var(--t2);line-height:1.55}
-
-/* ══ Stylized world map (wmap-) — decorative social proof, no user data ══ */
-.wmap{margin:var(--s-7) auto 0;max-width:1000px}
-.wmap-frame{position:relative;width:100%;aspect-ratio:1000/500}
-.wmap-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.wmap-dot{fill:var(--t3);opacity:.28;transition:opacity var(--dur-3) var(--ease-out)}
-.wmap[data-region] .wmap-dot{opacity:.15}
-.wmap-hubs{position:absolute;inset:0}
-.wmap-blip{position:absolute;display:grid;place-items:center;width:24px;height:24px;transform:translate(-50%,-50%);padding:0;border:none;background:none;cursor:pointer;color:var(--accent-strong);line-height:0}
-.wmap-blip-dot{display:block;width:11px;height:11px;border-radius:50%;background:currentColor;box-shadow:0 0 0 4px color-mix(in srgb,currentColor 22%,transparent);position:relative;transition:transform var(--dur-2) var(--ease-out)}
-.wmap-blip-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:currentColor;animation:wmap-ping 2.6s var(--ease-out) infinite}
-.wmap-blip:hover{z-index:5}
-.wmap-blip:hover .wmap-blip-dot,.wmap-blip:focus-visible .wmap-blip-dot{transform:scale(1.25)}
-.wmap-blip:focus-visible{outline:none}
-.wmap-blip:focus-visible .wmap-blip-dot{box-shadow:0 0 0 4px var(--accent-bg),0 0 0 6px var(--accent)}
-.wmap-blip[data-dim="true"]{opacity:.34;filter:grayscale(.45)}
-.wmap-blip.is-on{z-index:4}
-.wmap-blip.is-on .wmap-blip-dot{transform:scale(1.3)}
-.wmap-blip.is-on .wmap-blip-dot::after{animation-duration:1.6s}
-.wmap-blip.is-home{width:auto;min-width:24px;color:var(--t0);z-index:6}
-.wmap-pin{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px 0 8px;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);box-shadow:var(--warm-shadow-lg,var(--shadow-l));position:relative}
-.wmap-pin::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
-.wmap-pin::after{content:"";position:absolute;left:50%;bottom:-4px;width:9px;height:9px;background:var(--t0);transform:translateX(-50%) rotate(45deg);border-radius:2px}
-.wmap-pin-word{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.02em;line-height:1}
-.wmap-tip{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);white-space:nowrap;padding:5px 9px;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-0);font-size:11px;font-weight:600;letter-spacing:.01em;box-shadow:var(--shadow-s);opacity:0;visibility:hidden;transition:opacity var(--dur-2) var(--ease-out);pointer-events:none;z-index:7}
-.wmap-blip.is-home .wmap-tip{bottom:calc(100% + 9px)}
-.wmap-blip:hover .wmap-tip,.wmap-blip:focus-visible .wmap-tip{opacity:1;visibility:visible}
-.wmap-tip::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--t0)}
-/* N4 (responsive-audit-2026-08): the tip is centred on its blip with
-   `left:50%; translateX(-50%)`, so the rightmost blip's tip ran past `.home`,
-   which carries `overflow-x:clip` — the last few characters were cut and could
-   not be scrolled to. Measured 9px past at 320px, 6px at 360, 4px at 390, 3px at
-   400, 1px at 430, clean from 480.
-
-   Clamping the tip to its container is not expressible from here: its containing
-   block is the blip, not the map, so no `inset` value can see the map's edge.
-   What is available is making the tip narrow enough that being centred cannot
-   push it out — letting it take two lines instead of one. Measured after: 0 of
-   15 tips past the edge at every width on both /discover and /learn.
-
-   Note `visibility` stays a plain state property on the rule above and is NOT in
-   its transition — that pairing is deliberate and is left exactly as it is. */
-@media(max-width:480px){
-  .wmap-tip{white-space:normal;max-width:min(130px,36vw);text-align:center}
-}
-.wmap-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px 18px;margin-top:var(--s-5);text-align:center;min-height:34px}
-.wmap-cap{font-size:var(--fs-caption);color:var(--t3);max-width:56ch;line-height:1.5}
-.wmap-callout{display:inline-flex;align-items:center;gap:10px;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);box-shadow:var(--shadow-xs)}
-.wmap-callout-region{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
-.wmap-callout-cities{font-size:var(--fs-caption);color:var(--t2)}
-.wmap-callout-clear{border:none;background:none;color:var(--accent-strong);font-family:var(--font);font-size:var(--fs-caption);font-weight:600;cursor:pointer;padding:2px 4px;border-radius:var(--radius-xs)}
-.wmap-callout-clear:hover{text-decoration:underline}
-@keyframes wmap-ping{0%{transform:scale(1);opacity:.5}70%,100%{transform:scale(2.6);opacity:0}}
-html[data-reduced-motion="true"] .wmap-blip-dot::after{animation:none}
-html[data-reduced-motion="true"] .wmap-dot,html[data-reduced-motion="true"] .wmap-blip-dot,html[data-reduced-motion="true"] .wmap-tip{transition:none}
-@media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .wmap-blip-dot::after{animation:none}
-  html:not([data-reduced-motion="false"]) .wmap-dot,html:not([data-reduced-motion="false"]) .wmap-blip-dot,html:not([data-reduced-motion="false"]) .wmap-tip{transition:none}
-}
-@media (max-width:640px){
-  .sl-pillars{grid-template-columns:1fr}
-  .wmap-pin-word{font-size:10px}
-  .wmap-blip-dot{width:9px;height:9px}
-}
+/* The value-pillar cards (sl-pillar-) and the decorative world map (wmap-)
+   were deleted with the sections that used them — see the header comments in
+   SurfaceLanding.jsx and ColorLanding.jsx. Neither selector has a element
+   left in src/, and src/components/WorldMap.jsx went with them. */
 
 /* ══ Sales / home page (home-) ══ */
 /* The accent radial wash is GONE. V2's ground is warm bone (--bg-0 #EFEEE9) and
@@ -7197,6 +7131,46 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
    mark clipped at the top on every desktop width. */
 .home-mark{background:var(--hi);color:var(--hi-fg);border-radius:var(--radius-xs);line-height:1;padding:0 .1em;padding-block:.06em;margin:0 -.02em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 
+/* ── The drawn "give it a try" mark (tim-) ──
+   Founder, 2026-09-05: "i like the Give it try drawn text". See the header
+   comment in components/TryItMark.jsx for the Mobbin references (Cake Equity's
+   arrow-into-the-button, Harvest's hand-printed chart labels) and for why the
+   mark is anchored to the command bar rather than floated in the hero.
+
+   The anchor is a plain positioning context. It sets no width, no margin and no
+   padding, so `.hcmd`'s own `max-width:660px; margin:var(--s-5) auto 0` still
+   does exactly what it did before this wrapper existed — the bar does not move
+   by a pixel. */
+.tim-anchor{position:relative}
+
+/* The mark hangs in the margin to the LEFT of the bar. `.hcmd` is 660px wide and
+   centred, so its left edge sits at `50% - 330px`; anchoring the mark's right
+   edge at `50% + 342px` from the right leaves a 12px gap and lets the arrowhead
+   land just off the prompt.
+
+   `bottom` rather than `top`: the mark reads as an aside written beside the bar
+   after the fact, and hanging it from the bar's baseline keeps the arrowhead on
+   the field however the headline above wraps. */
+.tim{position:absolute;right:calc(50% + 342px);bottom:-14px;width:196px;color:var(--t3);pointer-events:none}
+.tim-svg{display:block;width:100%;height:auto;overflow:visible}
+
+/* The two halves carry different weight on purpose: the words are an aside and
+   stay quiet, the arrow is the part that does the pointing and is allowed to be
+   seen. One drawn mark per viewport, and it is this one — the highlighter on
+   the headline above is the hero's other mark and they must not compete, which
+   is why this is --t3 ink rather than --hi. */
+.tim-ink{opacity:.72}
+.tim-arrow{opacity:.86}
+
+/* BELOW 1180px THE MARGIN IS GONE. The hero is centred and the bar is 660px, so
+   under about 1180px there is no longer 200px of clear space beside it, and the
+   mark would either overlap the bar or push the page into a horizontal scroll.
+   It is emphasis, not information — the bar is the most prominent thing in the
+   hero on a narrow screen anyway — so it simply goes. */
+@media(max-width:1180px){
+  .tim{display:none}
+}
+
 /* ── Command bar (structural pattern 2) ── */
 .hcmd{max-width:660px;margin:var(--s-5) auto 0;text-align:left}
 /* Short laptop screens: the hero's own rhythm tightens so the primary CTA and
@@ -7256,7 +7230,47 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 
 /* ── Sticky scroll section (structural pattern 3) ── */
 .hsteps{padding-top:var(--sec-pad);scroll-margin-top:calc(var(--nav-clear) + var(--s-4))}
-.hsteps-head{max-width:720px}
+/* The heading keeps its 720px measure; the step ticks take the space beside it
+   that the cap used to leave empty. `align-items:end` seats the ticks on the
+   heading's last baseline rather than its top, so a two-line heading and a
+   five-row list still read as one band. */
+.hsteps-head{display:grid;grid-template-columns:minmax(0,720px) 220px;justify-content:space-between;align-items:end;gap:var(--s-5) var(--s-7)}
+
+/* The set of five, with the one you are on marked. See the note in Home.jsx for
+   the Buffer reference and for why this is aria-hidden.
+
+   Deliberately NOT a card, a pill or a tab: those are all roles this system
+   already spends on things you can click, and this cannot be clicked. It is a
+   ruled list — the same hairline-row treatment the Font Gallery and the Curated
+   Resources list already use for "a short set you read rather than operate". */
+.hsteps-ticks{list-style:none;display:flex;flex-direction:column}
+.hsteps-tick{display:flex;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t3);transition:color var(--dur-2) var(--ease-standard)}
+.hsteps-tick:last-child{border-bottom:1px solid var(--border)}
+.hsteps-tick-num{opacity:.6}
+.hsteps-tick-name{font-weight:700}
+
+/* The active row is the only coloured thing in the list, which is what makes it
+   findable at a glance. --accent-strong is the same ink the step's own 01/COLOUR
+   kicker uses below, so the mark and the thing it marks match. */
+.hsteps-tick[data-active]{color:var(--accent-strong)}
+.hsteps-tick[data-active] .hsteps-tick-num{opacity:1}
+
+/* Under 1000px the heading has the full column and there is no margin to hang
+   the list in. It is an orientation aid for a scroll narrative that only runs
+   as a two-column sticky layout on wide screens — stacking it above the steps
+   on a phone would just be the same five words twice. */
+@media(max-width:1000px){
+  .hsteps-head{grid-template-columns:minmax(0,1fr)}
+  .hsteps-ticks{display:none}
+}
+
+/* Reduced motion: the colour swap is the only transition here and it is a state
+   change rather than movement, but it is bound to scroll position, so it goes
+   with everything else that scroll drives. */
+html[data-reduced-motion="true"] .hsteps-tick{transition:none}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .hsteps-tick{transition:none}
+}
 .hsteps-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-7);margin-top:var(--s-8)}
 .hsteps-rail{list-style:none;display:flex;flex-direction:column;gap:var(--s-8)}
 .hsteps-sticky{min-width:0}
