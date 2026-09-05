@@ -7,44 +7,42 @@
 // beyond whatever `action` / `aside` node the caller hands it. That keeps it
 // usable from any browse page without dragging that page's concerns in.
 //
-// `mark` vs `aside` — both occupy the right-hand column, and they are mutually
-// exclusive because there is only one column. The difference is what may go in
-// it, and that difference is load-bearing:
-//   • `mark` is a decorative counter. It is aria-hidden (the announced count
-//     lives in the result head's aria-live region) and it is DROPPED below
-//     720px, because losing a duplicate number costs nothing.
-//   • `aside` holds real controls — the Icon/Emoji surface puts its library
-//     tablist here. So it is never aria-hidden and never dropped at any width:
-//     on a phone it stacks under the copy. A control you can only reach on a
-//     wide screen is a control half the users do not have.
+// THE EYEBROW AND THE COUNTER ARE GONE (#surface-headers-read-as-ai). The
+// founder marked both motifs “AI” on the Font Gallery masthead and asked for
+// the change to reach every header that matches. This one matched twice:
+//
+//   • `eyebrow` rendered a taxonomy path (“Discover / Colour”) in letter-spaced
+//     mono caps directly above an <h1> that said the same thing. No browse
+//     catalogue on Mobbin carries one — GoDaddy’s Font Library opens on a real
+//     back control plus the title; Hume AI’s and ElevenLabs’ voice libraries
+//     open on the title and their tabs. Hierarchy is a control you can press,
+//     not a label you cannot.
+//
+//   • `mark` was the one-up cousin of the Font Gallery’s three-up figure strip:
+//     a 92px display numeral counting the catalogue. It was ALREADY
+//     `aria-hidden` and ALREADY dropped below 720px, and the old comment here
+//     said losing it “costs nothing”. A figure that costs nothing to lose on a
+//     phone costs nothing to lose on a desktop. The live, announced count still
+//     exists where it does work — DiscoverResultHead’s aria-live region.
+//
+// `aside` STAYS and is unchanged: it holds real controls (the Icon/Emoji
+// surface puts its library tablist there), so it is never aria-hidden and never
+// dropped at any width. That was always the load-bearing half of the old
+// mark/aside distinction, and removing `mark` is what makes it plain.
 export default function DiscoverGalleryHero({
-  eyebrow,
   title,
   description,
-  mark,
   action,
   aside,
 }) {
   return (
     <header className={`dgh-hero${aside ? ' dgh-hero--controls' : ''}`}>
       <div className="dgh-copy">
-        {eyebrow && <span className="dgh-eyebrow">{eyebrow}</span>}
         <h1>{title}</h1>
         {description && <p>{description}</p>}
         {action && <div className="dgh-action">{action}</div>}
       </div>
-      {aside
-        ? <div className="dgh-aside">{aside}</div>
-        : mark && (
-          // Decorative counter — the real, announced count lives in the result
-          // head's aria-live region, so this is hidden from assistive tech to
-          // avoid reading the same number twice.
-          <div className="dgh-mark" aria-hidden="true">
-            {mark.label && <span>{mark.label}</span>}
-            <strong>{mark.value}</strong>
-            {mark.caption && <small>{mark.caption}</small>}
-          </div>
-        )}
+      {aside && <div className="dgh-aside">{aside}</div>}
     </header>
   )
 }

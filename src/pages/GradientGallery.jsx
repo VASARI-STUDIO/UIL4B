@@ -108,10 +108,8 @@ export default function GradientGallery({ toast }) {
   return (
     <div className="sec grg-wrap">
       <DiscoverGalleryHero
-        eyebrow="Discover / Colour"
         title="Gradient Library"
         description="Production-ready CSS gradients with a point of view. Copy the rule in one tap, save a favourite, or open any of them in the Gradient Generator and make it yours."
-        mark={{ label: 'linear-gradient()', value: GALLERY_GRADIENTS.length, caption: 'curated gradients' }}
         action={(
           <Link className="btn" to="/create/gradient">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>

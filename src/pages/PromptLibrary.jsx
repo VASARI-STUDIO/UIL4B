@@ -219,12 +219,8 @@ export default function PromptLibrary({ onCopy, toast }) {
           statistic about the collection, and a number that moved on every
           keystroke would be neither. */}
       <DiscoverGalleryHero
-        eyebrow="Discover / Prompts"
         title={t('promptLibrary.title')}
         description={t('promptLibrary.subtitle')}
-        mark={isCommunity
-          ? { label: 'community', value: COMMUNITY_PROMPTS.length, caption: 'shared prompts' }
-          : { label: 'yours', value: prompts.length, caption: 'saved prompts' }}
         action={isCommunity ? (
           <button
             className="btn pl-add-btn"
