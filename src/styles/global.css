@@ -4079,7 +4079,12 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .ch-card{position:relative;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .ch-card:hover{border-color:var(--bh);transform:translateY(-3px)}
 .ch-thumb{display:flex;align-items:center;justify-content:center;height:150px;text-decoration:none!important;position:relative;background:linear-gradient(135deg,var(--c1,var(--accent)),var(--c2,var(--accent-strong)))}
-.ch-thumb-mono{font-family:var(--mono);font-size:30px;font-weight:700;color:rgba(255,255,255,.92);letter-spacing:.04em;text-shadow:0 1px 8px rgba(0,0,0,.25)}
+/* Ink and glow are set PER CARD by CommunityCard.jsx from that card's own
+   gradient — the ground is per-item data, so no fixed ink clears 3:1 on all
+   of them. The colour is OPAQUE now: the old .92 alpha composited toward the
+   ground and cost about 0.1-0.2:1 for nothing. Fallbacks match the rule's own
+   --c1/--c2 accent fallback above. See tests/unit/community-monogram-ink. */
+.ch-thumb-mono{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--mono-ink,#FFFFFF);letter-spacing:.04em;text-shadow:0 1px 8px var(--mono-glow,rgba(0,0,0,.25))}
 /* Visible at rest; the hover reveal is an enhancement for devices that have a
    hover, exactly as .grg-like does it. It used to hide for everyone and come
    back on .ch-card:hover or its own :focus-visible — one of which never fires on

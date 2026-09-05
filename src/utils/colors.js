@@ -1258,6 +1258,33 @@ function inkOnGrounds(grounds, target = 4.5) {
   return pvWorstOn('#000000', grounds) >= pvWorstOn('#FFFFFF', grounds) ? '#000000' : '#FFFFFF'
 }
 
+/**
+ * The ink for text painted ON a two-stop linear gradient.
+ *
+ * WHY THE ENDPOINTS ARE NOT ENOUGH, which is the whole reason this samples.
+ * A CSS gradient between two opaque stops interpolates per channel in
+ * gamma-encoded sRGB, and relative luminance is CONVEX along that path (the
+ * x^2.4 linearisation is). A convex function attains its MAXIMUM at an
+ * endpoint but its minimum can sit anywhere inside — so testing the two stops
+ * bounds a light ink correctly and can miss the worst ground for a dark one.
+ * Sampling the line costs nothing and removes the class of error entirely.
+ *
+ * Both stops are opaque, so there is no premultiplied-alpha term here and no
+ * `color-mix()` stop to drag the interpolation into oklab. Both of those DID
+ * produce plausible wrong answers on this codebase's other gradients (see
+ * tests/user-sim/48-text-over-gradients.spec.js) — they are absent by
+ * construction rather than by luck, and the model is checked against rendered
+ * pixels there regardless.
+ *
+ * `target` is the caller's floor, not a constant: 4.5:1 for body text, 3:1 for
+ * large text (WCAG 1.4.3 — 24px, or 18.66px bold and up).
+ */
+export function inkOnGradient(from, to, target = 4.5, samples = 33) {
+  const grounds = []
+  for (let i = 0; i < samples; i++) grounds.push(mixHex(from, to, i / (samples - 1)))
+  return inkOnGrounds(grounds, target)
+}
+
 // textColorForBg returns rgba() strings; for solid hex roles we want a hex pole
 // so downstream mixHex/contrast maths stay in hex space. Pure, never throws.
 function textColorOnSolid(hex) {
