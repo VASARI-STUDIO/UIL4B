@@ -8646,9 +8646,20 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 }
 
 /* ─── Colour Contrast Checker (/color/contrast) — cc- ─── */
-.cc-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+/* NOT 1fr 1fr. The two panels do not hold comparable content: the left one is
+   controls — two fields, a radio pair, three one-line-ish sentences — and the
+   right one is a rendered PAGE that has to look like a page, with a 24px
+   heading, a paragraph, two buttons and a caption, each with a chip beside it
+   on the same line. Equal halves starved the specimen and left slack under the
+   controls. Whereby's settings/preview split is the same shape and the same
+   ratio (mobbin.com/screens/e86cb1da-6690-4693-bff7-5632af4a4f9c). */
+.cc-grid{display:grid;grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);gap:24px;align-items:start}
 .cc-panel{display:flex;flex-direction:column}
-.cc-fields{display:flex;gap:12px;align-items:flex-end}
+/* `align-items:center`, not `flex-end`. Each field now carries Whereby's
+   verdict badge UNDER its input, so the tallest thing in the row is no longer
+   the input — bottom-aligning put the swap button level with the badges
+   instead of the controls it swaps. */
+.cc-fields{display:flex;gap:12px;align-items:center}
 .cc-field{flex:1;min-width:0}
 .cc-field-row{display:flex;gap:8px;align-items:center}
 .cc-picker{width:42px;height:42px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);cursor:pointer;flex-shrink:0}
@@ -8659,7 +8670,11 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .cc-swap:hover{border-color:var(--brand);color:var(--t0)}
 .cc-hint{font-size:12px;color:var(--t2);line-height:1.5;margin:10px 0 0}
 .cc-ratio{display:flex;align-items:baseline;gap:14px;margin:24px 0 16px}
-.cc-ratio-num{font-family:var(--mono);font-size:36px;font-weight:700;letter-spacing:-.02em;color:var(--t0)}
+/* `nowrap` because this is ONE token. The verdict beside it is a full sentence
+   now rather than the two words it used to be, so it wins more of the row, and
+   at 390px that broke "3.81 : 1" across two lines with the ": 1" orphaned
+   underneath — measured, not guessed. The 560px rule stacks them instead. */
+.cc-ratio-num{font-family:var(--mono);font-size:36px;font-weight:700;letter-spacing:-.02em;color:var(--t0);white-space:nowrap}
 .cc-ratio-verdict{font-size:13px;font-weight:600}
 /* THE CONTRAST CHECKER WAS FAILING ITS OWN TEST. Measured on the white card in
    light theme, against the 4.5:1 that 13px/600 text needs and that this page
@@ -8685,15 +8700,46 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .cc-mixed{color:var(--warn-strong)}
 .cc-fail{color:var(--err-strong)}
 .cc-checks{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:6px}
-.cc-check{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
+.cc-check{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
 .cc-check-mark{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0}
 /* The glyph sits on its own tint over --bg-2, which is a LIGHTER ground than the
    card - so it needs to be darker than the verdict text, not the same colour.
    Measured before: pass 2.70:1, fail 3.43:1 on those tints. */
 .cc-check--pass .cc-check-mark{background:rgba(46,158,91,.14);color:var(--ok-strong)}
 .cc-check--fail .cc-check-mark{background:rgba(214,69,69,.12);color:var(--err-strong)}
-.cc-check-label{font-weight:600;color:var(--t0)}
-.cc-check-min{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--t2)}
+/* Was `.cc-check-label`, holding a tier name ("AA · normal text") on one line.
+   It is now a full sentence about a real object, so it wraps, and the row it
+   sits in aligns to the top rather than the middle. The class was RENAMED
+   rather than restyled: 06-colour-tool-workbenches' AA sweep has always listed
+   `.cc-check-name` in its selector set and no such element existed, so the
+   check labels on the page that enforces contrast were the one thing that
+   sweep never measured. The OR-list hid it — the other five selectors kept the
+   positive control above its floor. */
+.cc-check-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cc-check-name{font-weight:600;color:var(--t0);line-height:1.45}
+.cc-check-foot{font-size:11.5px;line-height:1.45;color:var(--t2)}
+.cc-check-min{margin-left:auto;padding-top:1px;font-family:var(--mono);font-size:11px;color:var(--t2);white-space:nowrap}
+
+/* ── The level in force (Whereby's `AA ⌄`) ──
+   Two values, both worth showing, so a radio pair rather than a select. */
+.cc-level{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.cc-level .seg-label{margin-bottom:0}
+.cc-level-opts{display:inline-flex;padding:2px;border:1px solid var(--border);border-radius:999px;background:var(--bg-2)}
+.cc-level-opt{padding:5px 14px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--t2);background:none;border:none;border-radius:999px;cursor:pointer;transition:color var(--t),background var(--t)}
+.cc-level-opt:hover{color:var(--t0)}
+.cc-level-opt.is-on{color:var(--bg-1);background:var(--t0)}
+
+/* ── Whereby's inline per-field verdict ──
+   Page tokens only, exactly like `.cc-verdict`: this sits beside a field whose
+   value is the user's colour, and the moment it borrowed that colour it would
+   go unreadable at the ratios it exists to report. 06-colour-tool-workbenches
+   measures it in both themes with the rest. */
+.cc-field-badge{display:flex;align-items:center;gap:6px;margin:8px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t1)}
+.cc-field-badge-mark{font-weight:700}
+.cc-field-badge--pass .cc-field-badge-mark{color:var(--ok-strong)}
+.cc-field-badge--fail .cc-field-badge-mark{color:var(--err-strong)}
+.cc-field-badge-vs{font-family:var(--font);font-weight:500;color:var(--t2)}
+.cc-unfixable{margin-top:14px}
 /* Fix rows — chip colour + ink arrive as custom props set via ref */
 .cc-fixes{display:flex;flex-direction:column;gap:8px}
 .cc-fix{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
@@ -8732,7 +8778,12 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .cc-more{display:flex;gap:20px;flex-wrap:wrap;margin-top:32px}
 .cc-more-link{font-size:13px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
 .cc-more-link:hover{color:var(--accent-strong)}
-@media(max-width:900px){.cc-grid{grid-template-columns:1fr}}
+/* Collapsed at 1040px rather than 900px. The left column grew three sentences
+   and a radio pair, and measured at 900px the narrower of the two asymmetric
+   columns is ~400px, where "Buttons, borders and focus rings are visible
+   against it." wraps to three lines and its ≥ 3:1 stack drifts off the row it
+   belongs to. One column earlier is better than two bad ones. */
+@media(max-width:1040px){.cc-grid{grid-template-columns:1fr}}
 /* The "make it pass" row stops being a single non-wrapping strip. Chip, copy and
    two buttons in one row left the description ~85px at 390px, so
    "AAA (7:1) — adjust the text" wrapped onto two lines while the buttons either
@@ -8743,6 +8794,10 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 @media(max-width:560px){
   .cc-fields{flex-direction:column;align-items:stretch}
   .cc-swap{width:100%}
+  /* The 36px numeral and a sentence do not share a 315px row. Stacked, the
+     number keeps its size and the headline gets the full width it reads best
+     at. */
+  .cc-ratio{flex-direction:column;align-items:flex-start;gap:4px}
   .cc-fix{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
   .cc-fix-chip{grid-area:1/1}
   .cc-fix-desc{grid-area:1/2;align-self:center}
