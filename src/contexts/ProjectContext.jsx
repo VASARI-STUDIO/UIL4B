@@ -4,43 +4,24 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { useAuth } from './AuthContext'
 import { useSubscription } from './SubscriptionContext'
 import { db } from '../utils/firebase'
+import { DEFAULT_DESIGN } from '../data/designDefaults'
 
 const ProjectContext = createContext()
 
 const CURRENT_KEY = 'vs-current-design'
 const PROJECTS_KEY = 'vs-projects'
 
-export const DEFAULT_DESIGN = {
-  palette: {
-    base: '#0051FF',
-    // P-004: Auto, not Analogous. Analogous is a PAID system, and the engine
-    // silently collapses it to Auto for a free user — so a new board's first
-    // impression was a system that did not do what its label said. Auto is free
-    // for everyone and is what the board was actually rendering anyway.
-    harmony: 'auto',
-    extraColors: [],
-    activeIdx: 0,
-    colors: ['#0051FF'],
-  },
-  states: { success: 1, warning: 0, error: 0, info: 0 },
-  tints: { lumBias: 82, satDecay: 12, oled: true, scale: [] },
-  gradient: {
-    stops: [{ color: null, position: 0 }, { color: null, position: 100 }],
-    angle: 135,
-    type: 'Linear',
-  },
-  fonts: {
-    heading: { family: 'Inter', weight: 700, category: 'sans-serif' },
-    body: { family: 'Inter', weight: 400, category: 'sans-serif' },
-  },
-  typeScale: {
-    base: 16,
-    ratio: 1.25,
-    lineHeight: 1.5,
-    headingSpacing: 0,
-    bodySpacing: 0,
-  },
-}
+// DEFAULT_DESIGN moved to src/data/designDefaults.js and is re-exported here, so
+// every existing `import { DEFAULT_DESIGN } from '../contexts/ProjectContext'`
+// keeps working unchanged.
+//
+// It moved because the User Home now COMPARES a saved project against it to
+// answer “which parts of this system has anyone actually built?”, and that read
+// has to be DOM-free to be testable — importing this file pulls in React, the
+// auth context and the Firestore SDK. The alternative was hard-coding ‘Inter’,
+// 16 and 1.25 into the progress logic, where a change to the defaults would
+// silently make the progress display lie.
+export { DEFAULT_DESIGN }
 
 function loadCurrent() {
   try {

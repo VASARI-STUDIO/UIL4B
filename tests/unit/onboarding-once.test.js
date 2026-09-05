@@ -16,6 +16,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   onboardingDestination, profileOnboardingState, localOnboardingFlag, ONBOARDED_KEY,
+  SIGNED_IN_HOME,
 } from '../../src/utils/onboardingState.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -30,7 +31,7 @@ const done = { onboarding: { completedAt: 1_760_000_000_000 } }
 
 test('a completed account skips onboarding even on a browser that has never seen it', () => {
   // The exact reported symptom: same person, new browser, onboarding again.
-  assert.equal(onboardingDestination(done, store(null)), '/home')
+  assert.equal(onboardingDestination(done, store(null)), SIGNED_IN_HOME)
 })
 
 test('an account with no completion still gets onboarding on a fresh browser', () => {
@@ -40,7 +41,7 @@ test('an account with no completion still gets onboarding on a fresh browser', (
 test('a local flag rescues an account whose completion write has not landed', () => {
   // This browser watched them finish; the profile write is in flight or was
   // rejected. Re-running it would be the same bug pointing the other way.
-  assert.equal(onboardingDestination({ displayName: 'A' }, store('1')), '/home')
+  assert.equal(onboardingDestination({ displayName: 'A' }, store('1')), SIGNED_IN_HOME)
 })
 
 test('an unloaded profile never re-runs onboarding', () => {
@@ -49,8 +50,8 @@ test('an unloaded profile never re-runs onboarding', () => {
   // exactly the established users this bug kept catching — and a brand-new
   // sign-up does not depend on this path at all (App.jsx routes them from the
   // auth event via pendingOnboarding).
-  assert.equal(onboardingDestination(null, store(null)), '/home')
-  assert.equal(onboardingDestination(undefined, store(null)), '/home')
+  assert.equal(onboardingDestination(null, store(null)), SIGNED_IN_HOME)
+  assert.equal(onboardingDestination(undefined, store(null)), SIGNED_IN_HOME)
   assert.equal(profileOnboardingState(null), null)
 })
 
@@ -64,7 +65,16 @@ test('a malformed completedAt is not treated as completion', () => {
 test('storage that throws does not crash the router', () => {
   const hostile = { getItem() { throw new Error('blocked') } }
   assert.equal(localOnboardingFlag(hostile), false)
-  assert.equal(onboardingDestination(done, hostile), '/home')
+  assert.equal(onboardingDestination(done, hostile), SIGNED_IN_HOME)
+})
+
+test('the signed-in home is the User Home, not the sales page', () => {
+  // Founder direction, 2026-09-05, approved explicitly: a signed-in visitor
+  // who navigates to the site lands on the dashboard, not on the page selling
+  // it to them. Onboarding’s exit shares that destination, so it is pinned
+  // here rather than left as a literal in five assertions above.
+  assert.equal(SIGNED_IN_HOME, '/projects')
+  assert.notEqual(SIGNED_IN_HOME, '/home')
 })
 
 // ── The wiring ──────────────────────────────────────────────────────────────
