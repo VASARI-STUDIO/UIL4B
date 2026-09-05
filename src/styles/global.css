@@ -11646,20 +11646,33 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 .fg-hero--premium{min-height:420px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
 .fg-hero--premium::after{content:"Aa";position:absolute;right:-.035em;bottom:-.31em;font-family:var(--display);font-size:clamp(230px,32vw,470px);font-weight:500;line-height:1;color:rgba(255,255,255,.035);letter-spacing:-.1em;pointer-events:none}
 .fg-hero--premium{position:relative;overflow:hidden}
-.fg-hero-topline{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:clamp(64px,9vw,116px)}
-.fg-hero--premium .sec-h-eyebrow{color:rgba(255,255,255,.5)}
-.fg-hero-pair-link{display:inline-flex;align-items:center;gap:8px;padding-bottom:4px;color:#fff;border-bottom:1px solid rgba(255,255,255,.32);font-size:11px;font-weight:650;text-decoration:none}
-.fg-hero-pair-link:hover{color:#b8adff;border-color:#b8adff}
+/* RETIRED (#surface-headers-read-as-ai): .fg-hero-topline, its
+   .sec-h-eyebrow override, and .fg-hero-pair-link. The topline was a flex row
+   pinning a decorative taxonomy eyebrow left and the page's onward action
+   right, then holding a clamp(64px,9vw,116px) gap of nothing underneath.
+   Measured at 1440: the "Build a font pair" link was 98x23px in the top-right
+   of a 1343x472px slab - 0.35% of the masthead - 146px above the h1, diagonally
+   opposite the paragraph that justifies it, sharing an optical line with a
+   label you cannot press. It read as breadcrumb chrome, not as an action.
+   The action now lives in the copy column as .fg-hero-cta. */
 .fg-hero--premium .fg-hero-copy{position:relative;z-index:1;grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);gap:clamp(40px,8vw,120px);align-items:end}
 .fg-hero--premium h1{font-size:clamp(62px,9vw,128px);line-height:.76;letter-spacing:-.07em;color:#fff}
 .fg-hero-intro>p{max-width:520px;margin:0 0 34px;font-size:clamp(15px,1.5vw,19px);line-height:1.6;color:rgba(255,255,255,.66)}
-.fg-hero-stats{display:grid;grid-template-columns:repeat(3,1fr);border-block:1px solid rgba(255,255,255,.15)}
-/* 9px is the floor used by every other mono kicker in the app, and .66 white on
-   the hero's near-black clears AA — .42 did not, and 8px was smaller than
-   anything else we ship. */
-.fg-hero-stats span{display:flex;flex-direction:column;gap:4px;padding:14px 12px 14px 0;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.66)}
-.fg-hero-stats span+span{padding-left:14px;border-left:1px solid rgba(255,255,255,.15)}
-.fg-hero-stats strong{font-family:var(--font);font-size:14px;letter-spacing:-.01em;text-transform:none;color:#fff}
+/* RETIRED (#surface-headers-read-as-ai): .fg-hero-stats, the three-up figure
+   strip. It measured the CATALOGUE rather than the reader's problem.
+   "classifications" counted the filter tabs rendered a few hundred pixels
+   below it, and "weights to preview" is not a number a visitor can act on.
+   The one useful figure - how much type there is to search - moved into the
+   search placeholder, which is where Readymag puts it ("Search 1638 fonts"):
+   the same number, now scoping a search instead of decorating a masthead. */
+
+/* The onward action, moved out of the corner. A real button under the copy -
+   where the shared DiscoverGalleryHero has always put its `action`, and where
+   GoDaddy's Font Library, Hume AI's and ElevenLabs' voice libraries put theirs.
+   Light-on-dark because the slab is near-black; .btn supplies the geometry. */
+.fg-hero-cta,.fpr-hero-cta{display:inline-flex;align-items:center;gap:8px;background:#fff;color:#0a0a0b;border:0;font-weight:650}
+.fg-hero-cta:hover,.fpr-hero-cta:hover{background:#d8d1ff;color:#0a0a0b}
+.fg-hero-cta:focus-visible,.fpr-hero-cta:focus-visible{outline:2px solid #b8adff;outline-offset:3px}
 /* The whole control block pins, not just its first row. The wrapper carries an
    opaque page-coloured backdrop so the filters sitting under the panel are not
    transparent to the specimen list scrolling behind them. */
@@ -11816,10 +11829,10 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
 .fpr-page{padding-bottom:72px}
 .fpr-hero--premium{position:relative;min-height:400px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
 .fpr-hero--premium::after{content:"";position:absolute;right:-8%;bottom:-74%;width:620px;height:620px;border-radius:50%;background:radial-gradient(circle,rgba(118,91,255,.38),rgba(54,189,171,.14) 38%,transparent 68%);pointer-events:none}
-.fpr-hero-topline{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:clamp(48px,7vw,88px)}
-.fpr-hero--premium .sec-h-eyebrow{color:rgba(255,255,255,.5)}
-.fpr-gallery-link{display:inline-flex;align-items:center;gap:8px;padding-bottom:4px;color:#fff;border-bottom:1px solid rgba(255,255,255,.32);font-size:11px;font-weight:650;text-decoration:none}
-.fpr-gallery-link:hover{color:#b8adff;border-color:#b8adff}
+/* RETIRED (#surface-headers-read-as-ai): .fpr-hero-topline, its
+   .sec-h-eyebrow override and .fpr-gallery-link - the same corner-parked
+   action and duplicate taxonomy eyebrow as the Font Gallery, which is the
+   masthead this one was copied from. Action is now .fpr-hero-cta in the copy. */
 .fpr-hero--premium .fpr-hero-copy{position:relative;z-index:1;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:clamp(40px,8vw,120px);align-items:end}
 .fpr-hero--premium h1{font-size:clamp(62px,9vw,124px);line-height:.8;letter-spacing:-.07em;color:#fff}
 .fpr-hero-signature{position:absolute;left:43%;bottom:-.32em;margin:0;font-family:var(--fpr-h-ff);font-size:clamp(190px,27vw,390px);font-weight:var(--fpr-h-fw);line-height:1;color:rgba(255,255,255,.035);letter-spacing:-.1em;pointer-events:none}
@@ -11952,11 +11965,7 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
   .pgl-page .pgal-grid{grid-template-columns:1fr}
   .pgl-page .pgal-stripes,.pgl-page .lockt-stripes{height:230px}
   .fg-hero--premium,.fpr-hero--premium{min-height:420px;padding:26px 22px;border-radius:20px}
-  .fg-hero-topline,.fpr-hero-topline{align-items:flex-start;margin-bottom:54px}
   .fg-hero--premium h1,.fpr-hero--premium h1{font-size:clamp(54px,17vw,86px)}
-  .fg-hero-stats{grid-template-columns:1fr}
-  .fg-hero-stats span{padding:9px 0}
-  .fg-hero-stats span+span{padding-left:0;border-left:0;border-top:1px solid rgba(255,255,255,.15)}
   .fg-command{grid-template-columns:1fr;padding:8px}
   .fg-command-size{order:initial}
   .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
@@ -12037,7 +12046,6 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
      supposed to underline. `white-space:nowrap` keeps the label and its arrow on
      one line, which is what makes the border match the text; the link is ~150px
      and its row has the space once it is not being squeezed into 128. */
-  .fg-hero-pair-link,.fpr-gallery-link{text-align:right;white-space:nowrap}
   .fg-filter-right{width:100%}
   .fg-sort{width:100%;overflow-x:auto}
   .fg-sort-btn{flex:1}

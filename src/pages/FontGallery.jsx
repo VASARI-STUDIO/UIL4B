@@ -261,19 +261,36 @@ function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewTe
 
 // One header for every state of the page. The loading branch renders it too, so
 // the Gallery never blinks out of existence and back while the catalogue
-// resolves — only the numbers are unknown, and they say so with an em dash.
+// resolves.
 //
-// The three figures are all counted off the catalogue that is actually on
-// screen. Nothing here is a hand-written marketing number.
-function GalleryHero({ families, classifications, weights, pending }) {
-  const stat = (value) => (pending ? '—' : value.toLocaleString())
-
+// WHAT WAS REMOVED HERE, AND WHY — founder marked TWO elements of this exact
+// header "AI" (#surface-headers-read-as-ai):
+//
+//   • THE EYEBROW ("Discover / Typography"). A decorative taxonomy path in
+//     letter-spaced mono caps, sitting directly above an <h1> that says the
+//     same thing. It was also WRONG: this page lives at /create/font-gallery,
+//     and the eyebrow announced "Discover". No browse catalogue on Mobbin
+//     carries one — GoDaddy's Font Library opens on a real back control plus
+//     the title, Hume AI's and ElevenLabs' voice libraries open on the title
+//     and their tabs. Hierarchy is expressed by a control you can press, not
+//     by a label you cannot.
+//
+//   • THE THREE-UP FIGURE STRIP (families / classifications / weights). The
+//     standard generated-landing motif, and it measured the CATALOGUE rather
+//     than helping anyone choose a typeface. Two of the three figures were
+//     empty on inspection: "classifications" counted the filter tabs rendered
+//     immediately below it, and "weights to preview" is not a number a visitor
+//     can act on. The one figure that does work — how much type there is to
+//     search — moved into the search placeholder, which is where Readymag puts
+//     it ("Search 1638 fonts"): the same number, now scoping the search you are
+//     about to run instead of decorating a masthead.
+//
+// The pair link is no longer in the top-right corner. See `.fg-hero-cta` in
+// global.css for that argument; in short, it is the page's onward action and
+// it now sits under the copy that motivates it, as a real button.
+function GalleryHero() {
   return (
     <header className="fg-hero fg-hero--premium">
-      <div className="fg-hero-topline">
-        <span className="sec-h-eyebrow">Discover / Typography</span>
-        <NavLink to="/create/font-pair" className="fg-hero-pair-link">Build a font pair <span aria-hidden="true">↗</span></NavLink>
-      </div>
       <div className="fg-hero-copy">
         <h1>Font<br />Gallery</h1>
         <div className="fg-hero-intro">
@@ -281,11 +298,9 @@ function GalleryHero({ families, classifications, weights, pending }) {
             A live catalogue for choosing type with confidence. Test your own words,
             compare families side by side, then take the winner into a real pairing.
           </p>
-          <div className="fg-hero-stats">
-            <span><strong>{stat(families)}</strong> text families</span>
-            <span><strong>{stat(classifications)}</strong> classifications</span>
-            <span><strong>{stat(weights)}</strong> weights to preview</span>
-          </div>
+          <NavLink to="/create/font-pair" className="btn fg-hero-cta">
+            Build a font pair <span aria-hidden="true">↗</span>
+          </NavLink>
         </div>
       </div>
     </header>
@@ -742,18 +757,13 @@ export default function FontGallery({ onCopy, toast }) {
 
   const galleryCatalog = useMemo(() => filterGalleryTypefaces(catalog), [catalog])
 
-  // Every headline figure is derived from the catalogue on screen, so a
-  // degraded fallback list reports its own smaller numbers rather than the ones
-  // the full catalogue would have had.
-  const totalWeights = useMemo(
-    () => galleryCatalog.reduce((sum, f) => sum + f.variants.length, 0),
-    [galleryCatalog],
-  )
-  const heroStats = {
-    families: galleryCatalog.length,
-    classifications: CATS.length - 1, // CATS carries an "All" entry that is not a classification
-    weights: totalWeights,
-  }
+  // The one catalogue figure that survived the hero (#surface-headers-read-as-ai).
+  // It is derived from the catalogue actually on screen, so a degraded fallback
+  // list scopes the search honestly rather than quoting the full catalogue's
+  // number. Rendered into the search placeholder, never as a standalone stat.
+  const searchPlaceholder = galleryCatalog.length
+    ? `Search ${galleryCatalog.length.toLocaleString()} families…`
+    : 'Search families…'
 
   const filtered = useMemo(() => {
     let out = galleryCatalog
@@ -832,7 +842,7 @@ export default function FontGallery({ onCopy, toast }) {
   if (status === 'loading') {
     return (
       <div className="sec fg-page">
-        <GalleryHero {...heroStats} pending />
+        <GalleryHero />
         <FontCatalogLoading label="Opening the Font Gallery" />
         <SkeletonRows />
       </div>
@@ -841,7 +851,7 @@ export default function FontGallery({ onCopy, toast }) {
 
   return (
     <div className="sec fg-page">
-      <GalleryHero {...heroStats} />
+      <GalleryHero />
 
       <FontCatalogNotice
         online={online}
@@ -863,7 +873,7 @@ export default function FontGallery({ onCopy, toast }) {
         search={{
           value: query,
           onChange: setQuery,
-          placeholder: 'Search families…',
+          placeholder: searchPlaceholder,
           label: 'Search font families',
         }}
         extra={(
