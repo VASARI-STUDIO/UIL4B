@@ -7,7 +7,7 @@ import LibraryGrid from '../components/library/LibraryGrid'
 import LibraryCard from '../components/library/LibraryCard'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
-import { FontAboutPanel, FontDossierTabs, FontExamplesPanel } from '../components/FontDossier'
+import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from '../components/FontDossier'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
@@ -680,6 +680,10 @@ function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare
 
         {tab === 'examples' && (
           <FontExamplesPanel font={font} id="fg-panel-examples" labelledBy="fg-tab-examples" />
+        )}
+
+        {tab === 'inuse' && (
+          <FontInUsePanel font={font} id="fg-panel-inuse" labelledBy="fg-tab-inuse" />
         )}
 
         </div>
