@@ -860,20 +860,28 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await go(page, '/')
 
     // Palette: real generated hex values, locking, and copy that reports truth.
-    const hexes = page.locator('.hw-pal-hex')
+    //
+    // SELECTORS RE-POINTED 2026-09-05, ASSERTIONS UNCHANGED. This panel used to
+    // render a bespoke `.hw-pal` swatch strip; it now renders the product's own
+    // `.plb-board`, so the hex readout is `.plb-hex` (which is also the copy
+    // button - one control, as on the real board) and the lock is
+    // `.plb-tool--key`. Every property checked below is the property that was
+    // checked before: five real hexes, a locked colour survives Generate, and
+    // copy reports only what the clipboard accepted.
+    const hexes = page.locator('.hw-board .plb-hex')
     await expect(hexes).toHaveCount(5)
     const before = await hexes.allInnerTexts()
     expect(before.every((h) => /^#[0-9A-F]{6}$/.test(h))).toBe(true)
 
-    await page.locator('.hw-pal-lock').first().click()
-    await expect(page.locator('.hw-pal-lock').first()).toHaveAttribute('aria-pressed', 'true')
+    await page.locator('.hw-board .plb-tool--key').first().click()
+    await expect(page.locator('.hw-board .plb-tool--key').first()).toHaveAttribute('aria-pressed', 'true')
     await page.getByRole('button', { name: 'Generate' }).click()
     const after = await hexes.allInnerTexts()
     expect(after[0], 'a locked colour survives generate').toBe(before[0])
     expect(after.slice(1).join()).not.toBe(before.slice(1).join())
 
     // Copy announces success without renaming the swatch's control.
-    const copyButton = page.locator('.hw-pal-copy').first()
+    const copyButton = page.locator('.hw-board .plb-hex').first()
     const name = await copyButton.getAttribute('aria-label')
     await copyButton.click()
     await expect(copyButton).toHaveAttribute('aria-label', name)
@@ -906,7 +914,13 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    const stage = page.locator('.hw-stage .hw-ui')
+    // `.hw-panel .hw-ui`, not `.hw-stage .hw-ui`. 2026-09-05 the artefact of
+    // this mode became the real `.plb-board` and this card moved down into the
+    // controls zone under a "Preview" label - which is the status its
+    // equivalent holds in Palette Builder, where it sits behind a Preview
+    // button in a modal whose later scenes are Pro. Nothing this test asserts
+    // about the card depends on which zone it is in; only the path does.
+    const stage = page.locator('.hw-panel .hw-ui')
     await expect(stage).toBeVisible()
 
     // Decorative and inert: the swatch buttons below carry every value for
@@ -920,7 +934,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // dot at all and the preview implied the palette held an unusable colour,
     // when in fact the preview had taken that colour for its own ground.
     const dotsMatchCard = async () => page.evaluate(() => {
-      const card = document.querySelector('.hw-stage .hw-ui')
+      const card = document.querySelector('.hw-panel .hw-ui')
       const bg = getComputedStyle(card).backgroundColor
       const dots = [...card.querySelectorAll('.hw-ui-dot')]
       return { count: dots.length, clashes: dots.filter((d) => getComputedStyle(d).backgroundColor === bg).length }
@@ -1039,7 +1053,16 @@ test.describe('homepage: eleven tools, five ways of working', () => {
       // The Palette Builder's .plb-pv-cta, .plb-pvb-navcta and
       // .plb-pvb-btn--primary read the same pair through --pv-onprimary; they
       // are fixed by the same engine change and are not re-measured here.
-      const SEL = '.hw-pal-hex, .hw-ui-avatar, .hw-ui-mark, .hw-ui-app, .hw-ui-crumb, '
+      //
+      // `.plb-hex` REPLACED `.hw-pal-hex` 2026-09-05 - the board is the product's
+      // own now, and the hex is the string a visitor copies, which is what the
+      // old selector was defending. It is the only board element measured here,
+      // deliberately: `.plb-name` (opacity .95) and `.plb-role` (opacity .6)
+      // carry their opacity from the SHARED component, so a strict AA gate on
+      // them would fail this build on a property of Palette Builder that has
+      // always shipped and is not this change's to decide. Recorded rather than
+      // quietly dropped - see the report on [home-mini-tools-fidelity].
+      const SEL = '.plb-hex, .hw-ui-avatar, .hw-ui-mark, .hw-ui-app, .hw-ui-crumb, '
         + '.hw-ui-metric-label, .hw-ui-metric-num, .hw-ui-delta, .hw-ui-row-name, '
         + '.hw-ui-row-state, .hw-ui-btn'
       for (const el of document.querySelectorAll(SEL)) {
@@ -1070,19 +1093,23 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // this widening reported exactly that - #8D2046 measured on #948719, two
     // colours from different palettes and 200 degrees of hue apart - which is a
     // torn read, not a contrast bug. The invariant that says the card is settled
-    // is the one the component guarantees: every swatch label sits on its own
-    // hex, because .hw-pal-hex takes labelGround(s.hex) and labelGround moves it
-    // only where an ink demands, never more than a step or two of lightness.
+    // is the one the component guarantees, and on the board that invariant got
+    // STRICTER rather than merely moving. It used to be a tolerance check -
+    // .hw-pal-hex carried its own labelGround() background, so the label and its
+    // ground could only be compared to within a couple of steps of lightness
+    // (`near`, +/-24 per channel). The board paints the column from --plb-c and
+    // prints that same hex in .plb-hex, so the two can be compared for EXACT
+    // equality: a torn read is a column whose custom property and whose printed
+    // value disagree, full stop, with no tolerance to hide inside.
     const settled = async () => expect.poll(async () => page.evaluate(() => {
-      const near = (a, b) => Math.abs(a - b) <= 24
-      return [...document.querySelectorAll('.hw-pal-hex')].every((el) => {
-        const t = (el.textContent || '').trim()
+      const cols = [...document.querySelectorAll('.hw-board .plb-col')]
+      if (cols.length !== 5) return false
+      return cols.every((col) => {
+        const t = (col.querySelector('.plb-hex')?.textContent || '').trim()
         if (!/^#[0-9A-F]{6}$/i.test(t)) return false
-        const want = [1, 3, 5].map((i) => parseInt(t.slice(i, i + 2), 16))
-        const got = (getComputedStyle(el).backgroundColor.match(/\d+/g) || []).map(Number)
-        return got.length >= 3 && want.every((v, i) => near(v, got[i]))
+        return col.style.getPropertyValue('--plb-c').trim().toUpperCase() === t.toUpperCase()
       })
-    }), { message: 'the swatch labels and their grounds are from the same render' })
+    }), { message: 'every column and its printed hex are from the same render' })
       .toBe(true)
 
     // BOTH THEMES, and that is not padding. Every failure this test was widened
@@ -1556,7 +1583,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await page.context().setOffline(true)
     await page.locator('.hw-tab[data-tab="palette"]').click()
     await page.getByRole('button', { name: 'Generate' }).click()
-    await expect(page.locator('.hw-pal-hex').first()).toHaveText(/^#[0-9A-F]{6}$/)
+    await expect(page.locator('.hw-board .plb-hex').first()).toHaveText(/^#[0-9A-F]{6}$/)
 
     await page.locator('.hw-tab[data-tab="gradient"]').click()
     await page.locator('#hw-grad-angle').fill('45')

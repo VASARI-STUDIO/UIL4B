@@ -138,7 +138,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
      button.pgal-stripe              0px -> 10px   at outline-offset:-3px,
                                                    so a rounded ring is drawn
                                                    INSIDE a square swatch
-     button.plb-ramp/.plb-add/.plb-gap, button.hw-pal-copy,
+     button.plb-ramp/.plb-add/.plb-gap, button.plb-hex,
      a.pnav-logo, a.hstep-cta, a.pgal-use, a.grg-open, a.cc-more-link,
      a.fg-hero-pair-link, a.app-footer-start, a.app-footer-attrib,
      and bare inline <a>                        all 0px -> 10px
@@ -7804,31 +7804,54 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .hw-select:focus-visible,.hw-input:focus-visible{outline:2px solid var(--hue,var(--accent));outline-offset:1px}
 .hw-field-err{margin:0;font-size:var(--fs-caption);line-height:1.45;color:var(--err-strong)}
 
-/* 1 · Palette */
-/* 154px → 96px. The strip is no longer the preview, it is the palette RAIL
-   under the canvas, and at its old height it out-weighed the artefact it is
-   supposed to be driving. 96px still clears the 40px lock target plus the hex
-   label with room, so nothing about the controls got tighter. */
-.hw-pal{display:flex;gap:0;height:96px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-s);list-style:none}
-/* V2 signature: a hovered swatch grows and pushes its neighbours (flex 1 → 1.8).
-   Geometry, so it takes --dur-3, never anything faster. */
-.hw-pal-sw{position:relative;flex:1 1 0;min-width:0;display:flex;transition:flex-grow var(--dur-3) var(--ease-standard)}
-.hw-pal-sw:hover,.hw-pal-sw:focus-within{flex-grow:1.8}
-.hw-pal-lock{position:absolute;top:0;right:0;display:grid;place-items:center;width:40px;height:40px;border:none;background:none;border-radius:50%;cursor:pointer;opacity:.5;transition:opacity var(--t)}
-.hw-pal-sw:hover .hw-pal-lock,.hw-pal-lock[aria-pressed="true"],.hw-pal-lock:focus-visible{opacity:1}
-/* `min-width:0` is the structural half of the 320px fix below: without it a
-   flex item refuses to shrink under its content, so the label's intrinsic width
-   sets the swatch's floor and five of them push the row past the viewport. */
-.hw-pal-copy{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;padding:0 6px 12px;border:none;background:none;cursor:pointer}
-/* The hex label carries its own ground (set inline by labelGround), because on
-   a mid-luminance chromatic swatch NO ink clears 4.5:1 — the fill is the
-   problem, not the ink. Usually that ground is the swatch colour itself and
-   nothing is visible; where it differs it is the same hue a shade deeper, and
-   the padding and radius are what make that read as a chip rather than as an
-   artefact. `opacity` is gone from the resting state: it was dimming ink whose
-   contrast had just been guaranteed, which is the one thing that can undo it. */
-.hw-pal-hex{padding:2px 7px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.02em}
-.hw-pal-tick{padding:1px 7px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+/* 1 · Palette — THE REAL BOARD, NOT A LOOKALIKE OF IT
+   Founder, 2026-09-05: the mini tools "don't look like the real tool". This
+   panel was the clearest case. PaletteBuilder has 153 `plb-` classes and the
+   homepage reused none of them, so a visitor who pressed "Continue in Palette
+   Builder" arrived somewhere that shared not one shape with what they had just
+   been using.
+
+   THE WHOLE `.hw-pal*` BLOCK IS GONE — a 96px strip of swatches with a hex
+   chip and a round lock, invented here and existing nowhere else in the
+   product. The markup now renders `.plb-board` / `.plb-col` / `.plb-ramp` /
+   `.plb-name` / `.plb-hex` / `.plb-role` directly, so the board on the homepage
+   IS the board in the tool: same columns, same tonal ramp, same deterministic
+   colour name, same big mono hex, same tracked role eyebrow, and the same
+   --plb-c / --plb-ink / --plb-rc ink contract through utils/paletteBoard.js.
+
+   WHAT IS LEFT HERE IS GEOMETRY AND NOTHING ELSE. `.plb-board` is written for a
+   page that owns the viewport: `flex:1` in a full-height column, square-
+   cornered, full-bleed. Inside a rounded card it needs a height, a radius and a
+   clip, and that is all `.hw-board` says. No colour, no type scale, no borders
+   — anything past geometry here would be the parallel system starting again. */
+/* `.hw-stage .hw-board`, not `.hw-board`. `.plb-board` carries `flex:1` for the
+   full-height page it was written for, it is defined LATER in this file, and at
+   equal specificity source order wins — so a bare `.hw-board{height:248px}`
+   loses its height to a 0% flex-basis and the board renders at whatever the
+   content happens to be (measured: 181px, names wrapping to two lines). The
+   descendant selector is the smallest thing that outranks it. */
+.hw-stage .hw-board{flex:0 0 auto;height:248px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-s)}
+/* The column's own padding assumes a tall board. At 248px the tool stack, ramp,
+   name, hex and role share that height instead, so the breathing room comes
+   down with it. Still geometry. */
+.hw-board .plb-col{padding:10px 6px 14px;gap:4px}
+.hw-board .plb-ramp{margin-bottom:6px}
+.hw-board .plb-ramp-bar{height:24px;width:11px}
+/* The lock is this panel's ONLY editing affordance and the step copy beside it
+   names it ("Lock and regenerate individual steps"), so it stays visible at
+   rest. The full board hides its tools until hover for a reason that does not
+   apply here — five columns times seven tools would bury the colours — and
+   this board has one tool per column. Same class, same look, one declared
+   difference. */
+@media(hover:hover){.hw-board .plb-tool{opacity:.55}}
+.hw-board .plb-col:hover .plb-tool,.hw-board .plb-col:focus-within .plb-tool,.hw-board .plb-tool--on{opacity:1}
+
+/* The palette preview, demoted. Its equivalent in Palette Builder sits behind a
+   Preview button, in a modal, with its later scenes gated to Pro — so on the
+   homepage it belongs under the board, not above it. The label is what keeps a
+   secondary view from reading as a stray decorative card. */
+.hw-prev{display:flex;flex-direction:column;gap:6px}
+.hw-prev-label{font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
 
 /* 2 · Gradient */
 .hw-grad-preview{height:132px;border-radius:var(--radius);box-shadow:var(--shadow-s)}
@@ -7895,16 +7918,15 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 
 @media (max-width:640px){
   .hw-panel{padding:16px}
-  .hw-pal{height:88px}
-  /* The label chip costs horizontal room the widest phones do not have: at
-     320px the panel gives each of five swatches 57.6px, and "#215C8C" at
-     12.5px plus 14px of chip padding wants 66px. Measured as a 1px overflow
-     (.hw-pal-copy right:321 in a 320 viewport) — small, and still an element
-     pushed out of reach. The chip shrinks rather than the hex truncating,
-     because a truncated hex is not a value you can read or copy. */
-  .hw-pal-hex{padding:1px 3px;font-size:11px;letter-spacing:0}
-  .hw-pal-tick{padding:1px 3px}
-  .hw-pal-copy{padding:0 2px 10px}
+  /* THE BOARD TURNS INTO ROWS HERE, AND THAT IS THE SHARED RULE DOING IT.
+     `@media(max-width:768px)` already restacks `.plb-board` into full-width
+     rows for Palette Builder, because five vertical columns cannot hold
+     "Bauhaus Parchment" and "#E6E0EC" side by side on a phone. The mini board
+     inherits that for free — same breakpoint, same layout, same tool row — so
+     all this has to do is release the desktop height it was clipping to. Which
+     is the whole argument for reusing the classes: the responsive answer was
+     already solved once and did not have to be solved again here. */
+  .hw-stage .hw-board{height:auto}
   .hw-ui-metric-num{font-size:22px}
   .hw-ui-chart{height:48px}
   .hw-fields{gap:10px}
@@ -7914,18 +7936,10 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
   .hw-foot{gap:10px}
 }
 
-/* Below 380 the five swatches share ~51px each, so the hex chip is sized
-   against the SWATCH, not the panel. This block must sit AFTER the 640 one and
-   inside the hw- section: an identical rule placed in the homepage's own 380
-   block earlier in the sheet lost to the 640 rule on source order, at equal
-   specificity, and silently did nothing. */
-@media (max-width:380px){
-  .hw-pal-hex{padding:1px 0;font-size:10px;letter-spacing:0}
-  .hw-pal-tick{padding:1px 0;font-size:9px}
-  .hw-pal-copy{padding:0 1px 9px}
-}
-
-
+/* The @media(max-width:380px) block that used to sit here shrank the hex chip
+   twice over, because five vertical swatches sharing ~51px could not hold a
+   label. The board is a stack of full-width rows below 768px, so the constraint
+   it was defending against no longer exists and the block went with the strip. */
 
 /* The grade badges state a WCAG result, so they had better pass one themselves.
    --ok (#16a34a) on its own 14% tint measured 4.15:1 and --warn (#ca8a04) on a
@@ -12131,12 +12145,16 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    ring with a near-black outer one. Every colour is far from at least one end
    of that pair, so at least one edge of the indicator always clears 3:1.
 
-   The homepage swatch overlays (.hw-pal-lock / .hw-pal-copy) sit on the same
-   kind of user-chosen fill and get the same treatment. */
+   `.plb-hex` JOINED THIS LIST 2026-09-05 and it is a real fix, not a rename.
+   The homepage used to carry its own swatch overlays (.hw-pal-lock /
+   .hw-pal-copy) and they were covered here; it now renders the shared board, so
+   dropping them without adding `.plb-hex` would have quietly removed a
+   guarantee the homepage already had. `.plb-hex` sits directly on the column
+   fill in BOTH surfaces — so Palette Builder's copy button, which was never in
+   this list, gains the ring too. */
 .plb-tool:focus-visible,
 .plb-ramp:focus-visible,
-.hw-pal-lock:focus-visible,
-.hw-pal-copy:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}
+.plb-hex:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}
 
 /* Curated inspiration links credit the PLATFORM they open, not a person.
    Twelve invented designers used to render through the same <UserName> as real

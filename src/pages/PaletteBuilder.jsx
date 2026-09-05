@@ -15,6 +15,7 @@ import { FREE_VARIATIONS, paletteVariations, scorePalette } from '../utils/palet
 // `randomPaletteName` deliberately is not.
 import { colorName, randomPaletteName } from '../utils/paletteNames'
 import { roleLabel } from '../utils/paletteRoles'
+import { barRef, colRef } from '../utils/paletteBoard'
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import PaletteGalleryGrid from '../components/discover/PaletteGalleryGrid'
 import { LockedPaletteRow, LockedTeaseCta } from '../components/library/LockedTease'
@@ -296,21 +297,9 @@ function contrastPair(hex) {
   return { light: rate('#FFFFFF'), dark: rate('#000000') }
 }
 
-// Column colour + legible ink through CSS custom properties — the
-// no-inline-styles route (same pattern as TintTool's swatchRef). `sim` is the
-// colour-vision-simulated shade painted on the bottom half when a vision type
-// is active; it equals `color` when vision is Normal (so the split is seamless).
-function colRef(color, ink, sim) {
-  return (el) => {
-    if (!el) return
-    el.style.setProperty('--plb-c', color)
-    el.style.setProperty('--plb-ink', ink)
-    el.style.setProperty('--plb-sim', sim || color)
-  }
-}
-function barRef(color) {
-  return (el) => { if (el) el.style.setProperty('--plb-rc', color) }
-}
+// `colRef` / `barRef` moved to utils/paletteBoard.js — the homepage workbench's
+// Palette mode now renders a real `.plb-board` with these same classes, and two
+// private copies of the property contract is how two boards drift apart.
 // Right-click menu position (clamped to the viewport) through custom props.
 function ctxPosRef(x, y) {
   return (el) => {

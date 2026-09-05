@@ -50,10 +50,62 @@ export function hslToHex(h, s, l) {
  * it until it clears 4.5:1. Same two starting colours, but the result is a
  * guarantee instead of an estimate, and it uses the sheet's own maths rather
  * than a private copy of it.
+ *
+ * EVERY CANDIDATE IS TRIED, NOT JUST THE ONE THAT MEASURED BEST, and that is
+ * the difference between a guarantee and a near miss.
+ *
+ * The first version compared #141414 against #FFFFFF, took the winner, walked
+ * it with fixForeground and returned whatever came back. Two things make that
+ * a silent failure on a mid-luminance chromatic fill:
+ *
+ *   1. fixForeground walks in ONE direction, chosen from the background's own
+ *      luminance — `isDk = bgLum < 0.5`, then lighter for a dark ground and
+ *      darker for a light one. On #D1491F (luminance .184) it therefore only
+ *      ever looks for a LIGHTER ink, and the search starts at white and has
+ *      nowhere to go: [100,100] in HSL lightness returns white unchanged.
+ *   2. #141414 is not black, and those missing 20 units of lightness are worth
+ *      about half a contrast point.
+ *
+ * So on #D1491F white measures 4.48, #141414 measures 4.11, white wins the
+ * comparison, the walk cannot improve it, and 4.48 ships. Pure black on that
+ * same fill is 4.688 and was never asked. #000000 is now an explicit candidate
+ * for exactly this case, tried LAST among the passing options so that the
+ * house ink keeps its place everywhere it already works and only the fills
+ * that genuinely need a harder pole get one.
+ *
+ * WHY IT WENT UNSEEN. Every caller until 2026-09-05 painted its ink on
+ * labelGround(bg) rather than on bg, and labelGround's whole job is to move a
+ * ground that admits no good ink — so it absorbed this, and the unit sweep,
+ * which measures ink against the MOVED ground, could not see it. The homepage
+ * Palette panel now renders the product's own `.plb-board`, where `.plb-name`,
+ * `.plb-hex` and `.plb-role` sit on the raw generated fill with no chip
+ * underneath, and the miss surfaced at once. Caught by the new sweep in
+ * tests/unit/home-workbench-ink.test.js, which is what that test is for.
+ *
+ * Strictly an improvement for the older callers: a better ink means labelGround
+ * moves a ground less often, never more.
  */
 export function readableInk(bg) {
-  const pole = contrastRatio('#141414', bg) >= contrastRatio('#FFFFFF', bg) ? '#141414' : '#FFFFFF'
-  return contrastRatio(pole, bg) >= 4.5 ? pole : fixForeground(pole, bg, 4.5)
+  const softer = contrastRatio('#141414', bg) >= contrastRatio('#FFFFFF', bg) ? '#141414' : '#FFFFFF'
+  const other = softer === '#141414' ? '#FFFFFF' : '#141414'
+  // Order is preference order: the house ink, then its opposite, then each of
+  // them walked, and only then the absolute poles.
+  const tries = [
+    softer,
+    other,
+    fixForeground(softer, bg, 4.5),
+    fixForeground(other, bg, 4.5),
+    '#000000',
+    '#FFFFFF',
+  ]
+  for (const ink of tries) {
+    if (contrastRatio(ink, bg) >= 4.5) return ink
+  }
+  // Nothing clears AA on this fill: the fill is the problem, not the ink, which
+  // is the case labelGround() exists for. Hand back the best available, so a
+  // caller that cannot move its ground still gets the maximum and the shortfall
+  // stays a measurable number rather than an exception.
+  return tries.reduce((best, ink) => (contrastRatio(ink, bg) > contrastRatio(best, bg) ? ink : best), tries[0])
 }
 
 /**

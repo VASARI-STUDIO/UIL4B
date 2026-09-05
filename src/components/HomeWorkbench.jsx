@@ -23,7 +23,10 @@ import {
 } from '../utils/iconHandoff'
 import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
 import { setBoardDraft } from '../utils/colorHandoff'
-import { derivePreviewRoles } from '../utils/colors'
+import { derivePreviewRoles, tonalRamp } from '../utils/colors'
+import { colorName } from '../utils/paletteNames'
+import { roleLabel } from '../utils/paletteRoles'
+import { barRef, colRef } from '../utils/paletteBoard'
 import {
   L_RAMP, cardGrounds, hslToHex, labelGround, mutedInk, readableInk,
 } from '../utils/workbenchInk'
@@ -161,13 +164,15 @@ const UI_ROWS = [
 /**
  * Zone 1 of the Palette mode: the artefact.
  *
- * This panel used to BE the five swatches — a labelled colour row presented as
- * a live product preview. Every comparable token editor sampled on Mobbin
- * (v0, Lovable, GitBook, Gamma) previews a palette on real application UI and
- * none of them previews it as a swatch row, for the reason the row cannot
- * answer: swatches show you five colours, a UI shows you whether they COMPOSE.
- * The swatch row is still here — it moved to the controls zone, where it is the
- * input it always was.
+ * NOTE ON ITS PLACE, 2026-09-05. This card is no longer the panel's artefact
+ * and no longer sits in `.hw-stage`. The artefact is the real `.plb-board` — see
+ * the long note in PalettePanel for why. It is still worth rendering, because a
+ * palette on real UI answers "do these compose", which a column of swatches
+ * cannot. But that is a SECOND question, asked after the board, and in the
+ * product it is asked inside a modal behind a Preview button whose later scenes
+ * are Pro. So it moved into the controls zone under a `Preview` label, which is
+ * the status it actually holds. Everything below about how it derives its
+ * colours is unchanged and still load-bearing.
  *
  * ROLES COME FROM derivePreviewRoles(), THE SAME ENGINE THE FULL TOOLS USE.
  * The first version of this hand-rolled its own luminance sort and picked
@@ -334,47 +339,120 @@ function PalettePanel({ swatches, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      {/* Zone 1 — the artefact. See the `.hw-stage` / `.hw-controls` block in
-          global.css: the stage holds what the mode produces, the controls hold
-          what changes it, and the two are never interleaved. */}
+      {/* Zone 1 — the artefact, and it is now THE REAL BOARD.
+          ────────────────────────────────────────────────────────────────────
+          Founder, 2026-09-05: the mini tools "don't look like the real tool".
+          Measured on this panel, that was literally true — it shared ZERO class
+          names with PaletteBuilder's 153.
+
+          WHAT WAS HERE AND WHY IT WENT. The stage was `PaletteStage`, a mocked
+          "Acme" product card, and the palette itself was a 96px `.hw-pal` strip
+          filed under CONTROLS. Both halves of that were upside down against the
+          tool this panel hands off to:
+
+            · In Palette Builder the BOARD is the screen — full-height colour
+              columns carrying a tonal ramp, the colour's name, its hex and its
+              role. That is what "Continue in Palette Builder" opens on.
+            · The UI preview is NOT on screen there at all. It lives behind a
+              Preview button, in a modal, and past the third scene it is Pro.
+
+          So the mini led with the thing the real tool hides behind a click and
+          a paywall, and shrank the thing the real tool IS into a strip. The two
+          are now the right way up: the board is the artefact, and the preview
+          moved down into the controls zone — which is the same "there if you go
+          looking" status it has in the product.
+
+          Mobbin drove the shape of this, as it drove the card it replaces.
+          monday.com's "Try it out! See how monday.com works"
+          (sites/sections/cb5efa4f-8757-45c7-a26f-ffadd272a4fb) embeds the
+          literal board UI — real column headers, real status pills in the real
+          brand colours — and adds exactly one coaching callout; Framer
+          (sites/sections/9caf7169-91a3-419e-a787-6f61843eeda0) puts its actual
+          canvas on the page with real page-tree routes and real breakpoint
+          labels and no marketing chrome inside the frame. Neither restyles the
+          product for the marketing page. MagicPath's design-system panel
+          (screens/e7a8b966-6fad-474a-ac17-53efda7268e8) is the reason each
+          column carries three lines rather than one: every tile there shows the
+          role name, the value in a named space, and what the role is FOR —
+          which is `.plb-name` / `.plb-hex` / `.plb-role`, already built here.
+
+          THE CLASSES AND THE ENGINES ARE THE REAL ONES, not lookalikes:
+          `.plb-board` / `.plb-col` / `.plb-col-tools` / `.plb-tool` /
+          `.plb-ramp` / `.plb-name` / `.plb-hex` / `.plb-role` straight out of
+          global.css, painted through the shared `colRef` / `barRef` contract
+          (utils/paletteBoard.js), with `colorName()` for the title,
+          `roleLabel()` for the eyebrow and `tonalRamp()` for the bars — the
+          same functions PaletteBuilder calls. Only `.hw-board` is new, and it
+          is four geometry declarations (a height, a radius, a clip) so a
+          full-bleed board sits inside a rounded card.
+
+          HONESTY, WHICH IS WHERE A HIGHER-FIDELITY MOCK GETS DANGEROUS. Reusing
+          a class must not import a capability. The real column offers grip,
+          lock, HCT, contrast and a More menu; this one renders ONLY the lock,
+          because the lock is the only one that works here. The real `.plb-ramp`
+          is a <button> that opens a tints popover; here it is an inert
+          aria-hidden <div>, so it shows the ramp — genuinely computed by
+          `tonalRamp` — while claiming no action it cannot perform.
+
+          INK. The board takes `readableInk`, not PaletteBuilder's
+          `textColorForBg`. The real board picks the better of black/white and
+          accepts whatever ratio that gives; `readableInk` picks the same pole
+          and then guarantees 4.5:1. The mini matches the real board's LOOK
+          while keeping the homepage's own contrast floor, which is the one
+          place it should be stricter than the tool it previews. */}
       <div className="hw-stage">
-        <PaletteStage swatches={swatches} />
+        <div className="plb-board hw-board" role="group" aria-label="Generated palette">
+          {swatches.map((s, i) => {
+            const ink = readableInk(s.hex)
+            return (
+              <section className="plb-col" key={i} ref={colRef(s.hex, ink)} aria-label={`${roleLabel(HANDOFF_SYSTEM, i)} ${s.hex}`}>
+                <div className="plb-col-tools">
+                  <button
+                    type="button"
+                    className={s.locked ? 'plb-tool plb-tool--key plb-tool--on' : 'plb-tool plb-tool--key'}
+                    aria-pressed={s.locked}
+                    aria-label={`${s.locked ? 'Unlock' : 'Lock'} ${s.hex}`}
+                    title={s.locked ? 'Unlock — allow generate to change it' : 'Lock — keep this colour through generate'}
+                    onClick={() => toggleLock(i)}
+                  >
+                    <IconLock open={!s.locked} />
+                  </button>
+                </div>
+
+                {/* Inert by design — see the honesty note above. */}
+                <div className="plb-ramp" aria-hidden="true">
+                  {tonalRamp(s.hex).map((rc, k) => (
+                    <span key={k} className="plb-ramp-bar" ref={barRef(rc)} />
+                  ))}
+                </div>
+
+                <div className="plb-name">{colorName(s.hex)}</div>
+                <button
+                  type="button"
+                  className="plb-hex"
+                  aria-label={`Copy ${s.hex}`}
+                  onClick={() => copy(s.hex)}
+                >
+                  {s.hex}
+                </button>
+                <div className="plb-role">{roleLabel(HANDOFF_SYSTEM, i)}</div>
+                {copiedHex === s.hex && <span className="plb-badge" aria-hidden="true">Copied</span>}
+              </section>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Zone 2 — the controls. The swatch row is an INPUT: lock, copy, and
-          the value each button announces. It reads as the palette rail under
-          the canvas, which is where every sampled editor puts it. */}
+      {/* Zone 2 — the controls. */}
       <div className="hw-controls">
-      <ul className="hw-pal">
-        {swatches.map((s, i) => (
-          <li className="hw-pal-sw" key={i} style={{ background: s.hex }}>
-            <button
-              type="button"
-              className="hw-pal-lock"
-              style={{ color: readableInk(s.hex) }}
-              aria-pressed={s.locked}
-              aria-label={`${s.locked ? 'Unlock' : 'Lock'} ${s.hex}`}
-              onClick={() => toggleLock(i)}
-            >
-              <IconLock open={!s.locked} />
-            </button>
-            <button
-              type="button"
-              className="hw-pal-copy"
-              style={{ color: readableInk(s.hex) }}
-              aria-label={`Copy ${s.hex}`}
-              onClick={() => copy(s.hex)}
-            >
-              <span className="hw-pal-hex" style={{ background: labelGround(s.hex) }}>{s.hex}</span>
-              {copiedHex === s.hex && <span className="hw-pal-tick" aria-hidden="true" style={{ background: labelGround(s.hex) }}>Copied</span>}
-            </button>
-          </li>
-        ))}
-      </ul>
-
       <div className="hw-row">
         <button type="button" className="hw-btn hw-btn-go" onClick={generate}>Generate</button>
-        <p className="hw-note">Lock a colour to keep it through the next generate.</p>
+        {/* Carries "nothing saves" for this panel. It used to live in the
+            section lede above the workbench, which the founder rejected on
+            2026-09-05 as "MEGA AI generated"; the claim was load-bearing, so it
+            moved to the point of use rather than being dropped with it. The
+            board reading as the real board makes this MORE necessary, not less. */}
+        <p className="hw-note">Lock a colour to keep it through the next generate. Nothing here is saved.</p>
       </div>
 
       {copyError && (
@@ -383,6 +461,13 @@ function PalettePanel({ swatches, onChange, announce }) {
           <code className="hw-code-inline">{copyError}</code>
         </p>
       )}
+
+      {/* The preview, in the position it holds in the product: secondary, and
+          reached by going looking rather than by arriving. */}
+      <div className="hw-prev">
+        <span className="hw-prev-label">Preview</span>
+        <PaletteStage swatches={swatches} />
+      </div>
 
       </div>
 
@@ -398,7 +483,13 @@ function PalettePanel({ swatches, onChange, announce }) {
           Continue in Palette Builder
           <span aria-hidden="true">→</span>
         </Link>
-        <span className="hw-foot-note">Your five swatches carry over on the free Auto system · full ramps, roles and export there.</span>
+        {/* "full ramps, roles and export there" stopped being true on
+            2026-09-05: the mini board now shows the tonal ramp and the role of
+            every step, because it is the real board. What the full tool adds
+            beyond this is what it names now — kept to the old line's length,
+            because a second line here costs the control zone 21px it does not
+            have at 1280x660 (measured). */}
+        <span className="hw-foot-note">Your five swatches carry over on the free Auto system · more systems, HCT and export there.</span>
       </div>
     </div>
   )
