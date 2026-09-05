@@ -34,6 +34,8 @@
 // over far more palettes than a browser could render.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import { contrastRatio, derivePreviewRoles, hslToHex, mixHex } from '../../src/utils/colors.js'
 
 const AA = 4.5
@@ -324,3 +326,309 @@ test('9 . the surface step is only ever SHORTENED, never flipped or lengthened',
   assert.ok(shortened > 0 && shortened < n * 0.2,
     `${shortened} of ${n} surfaces were shortened - expected a small minority (measured 2.09%)`)
 })
+
+// ──────────────────────────────────────────────────────────────────────────
+// role.accentInk and role.primaryInk — the READABLE halves of the two FILL
+// roles, on every ground the engine declares.
+//
+// [preview-accent-ink-unmeasured]. role.accent and role.primary carried no
+// ink guarantee at all and were then painted as TEXT by five rules:
+// .plb-pv-n--accent (16px/700), .plb-pvb-eyebrow and .plb-pvg-kicker
+// (10.5px/700), .plb-pv-settings nav .is-active (8px) and .plb-pv-reply span
+// (8px/750). NONE of those is large text — AA-large starts at 18.66px bold or
+// 24px — so the floor is 4.5 for all five.
+//
+// WHY IT IS NOT THE SAME FIX AS muted. accent is chosen by CHROMA and primary
+// by chroma subject to a 3:1 floor on surface, and both are FILL colours
+// first: they paint the CTA, the chips, the disc and the shapes, where 1.4.11
+// asks 3:1 and the palette colour is the whole point. Moving THEM is what
+// [hue-set-has-no-tint-margin] refused to do. The margin goes to a second
+// role and every fill value stays where it was — the same split already
+// ratified as --accent/--accent-strong, as the state -strong pair, and as the
+// category hue -strong set.
+//
+// Measured before the fix over the 6,000-palette generator x 2 themes:
+//   accent  as ink  22,621 of 24,000 ground pairs under 4.5:1
+//   primary as ink  18,504 of 24,000 ground pairs under 4.5:1
+// The rendered half is tests/user-sim/50-palette-preview-ink.spec.js, which
+// measured 22 of 22 accent- and primary-inked nodes below 4.5 across three
+// tabs and both preview themes, worst 1.031:1.
+// ──────────────────────────────────────────────────────────────────────────
+
+const FILL_INK_ROLES = ['accentInk', 'primaryInk']
+
+// Relative luminance, so test 13 can state which DIRECTION an ink moved.
+function lumOf(hex) {
+  const [r, g, b] = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+// Source reads for the wiring test. Comments are stripped first: this file
+// itself now quotes the old declarations in prose, and a wiring assertion that
+// matches its own documentation is not a wiring assertion.
+const readSource = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
+const stripSourceComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+function ruleFor(css, selector) {
+  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const m = css.match(new RegExp('(?:^|[\\r\\n,}])' + esc + '\\{([^}]*)\\}'))
+  return m ? m[1] : null
+}
+
+test('10 . accentInk and primaryInk clear AA on every declared ground, over the generated palettes', () => {
+  const rnd = mulberry32(20260905)
+  const misses = []
+  let worst = Infinity
+  let checks = 0
+  // The fixture has to DISCRIMINATE: if the raw fills already cleared, every
+  // assertion below would pass on an engine that changed nothing.
+  let fillMisses = 0
+  for (let i = 0; i < 6000; i += 1) {
+    const pal = generatedPalette(rnd)
+    for (const mode of ['light', 'dark']) {
+      const r = derivePreviewRoles(pal, { mode })
+      for (const ground of r.inkGrounds) {
+        if (contrastRatio(r.accent, ground) < AA) fillMisses += 1
+        if (contrastRatio(r.primary, ground) < AA) fillMisses += 1
+        for (const role of FILL_INK_ROLES) {
+          const cr = contrastRatio(r[role], ground)
+          checks += 1
+          if (cr < worst) worst = cr
+          if (cr < AA && misses.length < 10) {
+            misses.push(`  ${mode} ${role} ${r[role]} on ${ground} = ${cr.toFixed(3)}:1`)
+          }
+        }
+      }
+    }
+  }
+  assert.equal(checks, 48000, 'the sweep did not run the pairs it claims to')
+  assert.ok(fillMisses > 24000,
+    `the raw fills now clear ${AA}:1 on all but ${48000 - fillMisses} of 48,000 ground pairs `
+    + '- they missed 41,125 of them when this was written, so if that has collapsed the fixture no longer discriminates and this test proves nothing')
+  assert.equal(misses.length, 0,
+    `these ink roles miss ${AA}:1 on a ground the engine itself declares:\n` + misses.join(`\n`)
+    + `\n  worst overall ${worst.toFixed(3)}:1 over ${checks} pairs`)
+})
+
+test('11 . and for an arbitrary user bg, not only a generated one', () => {
+  // Same probe as test 6 and for the same reason: alone, the swept hex IS bg,
+  // so this reaches grounds the generator never produces. PaletteBuilder takes
+  // arbitrary hexes, so the guarantee has to hold across the cube and not only
+  // across the ramp the homepage happens to build.
+  const misses = []
+  let worst = Infinity
+  let reached = 0
+  let attempts = 0
+  for (let r = 0; r <= 255; r += 9) {
+    for (let g = 0; g <= 255; g += 9) {
+      for (let b = 0; b <= 255; b += 9) {
+        const hex = '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')
+        for (const mode of ['light', 'dark']) {
+          attempts += 1
+          const role = derivePreviewRoles([hex], { mode })
+          if (role.bg.toLowerCase() !== hex.toLowerCase()) continue
+          reached += 1
+          for (const name of FILL_INK_ROLES) {
+            for (const ground of role.inkGrounds) {
+              const cr = contrastRatio(role[name], ground)
+              if (cr < worst) worst = cr
+              if (cr < AA && misses.length < 10) {
+                misses.push(`  ${mode} ${name} ${role[name]} on ${ground} (bg ${role.bg}) = ${cr.toFixed(3)}:1`)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  assert.ok(reached > attempts * 0.9,
+    `only ${reached} of ${attempts} colours reached the bg role - this sweep is not measuring the colour under test`)
+  assert.equal(misses.length, 0,
+    `these grounds carry a fill-derived ink under ${AA}:1:\n` + misses.join(`\n`)
+    + `\n  worst overall ${worst.toFixed(3)}:1 over ${reached} palettes`)
+})
+
+test('12 . NOT ONE FILL MOVES - the ink is a second role, never a replacement', () => {
+  // The whole reason for a second role rather than a clamp on the first. If
+  // accent or primary shifted, every CTA, chip, disc, rail and shape in the
+  // previews would shift with it, which is exactly what
+  // [hue-set-has-no-tint-margin] priced and rejected.
+  const rnd = mulberry32(20260905)
+  let moved = 0
+  let checked = 0
+  for (let i = 0; i < 3000; i += 1) {
+    const pal = generatedPalette(rnd)
+    for (const mode of ['light', 'dark']) {
+      const r = derivePreviewRoles(pal, { mode })
+      checked += 1
+      // accent and primary must still be palette members (or the declared
+      // brand fallbacks, or the documented accent blend) - never a value
+      // derived from a contrast walk.
+      const fromPalette = (hex) => pal.some((c) => c.toLowerCase() === hex.toLowerCase())
+      const FALLBACKS = ['#3b82f6', '#60a5fa']
+      const legitimate = (hex) => fromPalette(hex) || FALLBACKS.includes(hex.toLowerCase())
+      if (!legitimate(r.primary)) moved += 1
+      // accent may be a documented 50% blend of primary and the brand soft
+      // partner when no second chroma exists; that is a SELECTION rule, not a
+      // contrast walk, so it is allowed and named here rather than waved past.
+      if (!legitimate(r.accent) && r.accent !== mixHex(r.primary, '#60A5FA', 0.5)) moved += 1
+      // And the ink is genuinely a different property, not an alias.
+      assert.ok(typeof r.accentInk === 'string' && /^#[0-9a-fA-F]{6}$/.test(r.accentInk),
+        `accentInk is not a colour: ${r.accentInk}`)
+      assert.ok(typeof r.primaryInk === 'string' && /^#[0-9a-fA-F]{6}$/.test(r.primaryInk),
+        `primaryInk is not a colour: ${r.primaryInk}`)
+    }
+  }
+  assert.equal(moved, 0,
+    `${moved} of ${checked * 2} fill roles are no longer a palette colour - the ink walk has `
+    + 'leaked into the fills, which is the trade this split exists to avoid')
+})
+
+// A reference walk, written here so the claim below is a COMPARISON against a
+// named alternative rather than a statistic about the shipped code. Returns the
+// smallest step toward `pole` that clears `target` on every ground, or null when
+// that pole cannot get there at all.
+const clearsAll = (ink, grounds) => grounds.every((g) => contrastRatio(ink, g) >= AA)
+function walkToward(seed, pole, grounds) {
+  for (let i = 1; i <= 256; i += 1) {
+    const t = i / 256
+    const m = mixHex(seed, pole, t)
+    if (clearsAll(m, grounds)) return { t, hex: m }
+  }
+  return null
+}
+
+test('13 . BOTH DIRECTIONS are searched, and the one a ground-derived rule would pick often CANNOT get there', () => {
+  // THE LESSON THIS FILE ALREADY RECORDS FOR onPrimary, MEASURED AGAIN HERE AS
+  // A COMPARISON. fixForeground takes its direction from the GROUND — `bgLum <
+  // 0.5` means walk the ink LIGHTER — and 0.5 is not the crossover. Black and
+  // white are equally readable at relative luminance 0.179, so on every ground
+  // between 0.179 and 0.5 that rule walks away from the answer, and it returns
+  // its INPUT unchanged when the walk tops out short. On this codebase that
+  // left 6,376 of 16,200 colours under 4.5:1, every one of which pure black
+  // cleared and none of which was ever tried.
+  //
+  // The two counters below are the two ways one direction is not enough:
+  //   RESCUED  — the ground-derived pole cannot clear at all and the other can.
+  //              This is the 6,376 case exactly.
+  //   CLOSER   — both poles can clear, and the one the rule would have refused
+  //              is the SMALLER movement, so a single-direction walk would ship
+  //              a colour further from the palette's own than it needed to.
+  //
+  // A statistical claim about the shipped inks was tried here first and was
+  // TOOTHLESS: pvInkFromFill falls back to the shared pole walk when its own
+  // search fails, and that fallback searches both directions, so a mutation
+  // that reduced the search to one direction still produced two-directional
+  // answers often enough to keep the statistic healthy. Comparing against a
+  // named reference implementation is what makes this discriminate.
+  const rnd = mulberry32(20260905)
+  let rescued = 0
+  let closer = 0
+  let considered = 0
+  for (let i = 0; i < 3000; i += 1) {
+    const pal = generatedPalette(rnd)
+    for (const mode of ['light', 'dark']) {
+      const r = derivePreviewRoles(pal, { mode })
+      const groundDerived = lumOf(r.bg) < 0.5 ? '#FFFFFF' : '#000000'   // what fixForeground would ask for
+      const other = groundDerived === '#FFFFFF' ? '#000000' : '#FFFFFF'
+      for (const [fill, ink] of [[r.accent, r.accentInk], [r.primary, r.primaryInk]]) {
+        if (fill === ink) continue     // already legible; no direction was needed
+        considered += 1
+        const a = walkToward(fill, groundDerived, r.inkGrounds)
+        const b = walkToward(fill, other, r.inkGrounds)
+        if (!a && b) rescued += 1
+        else if (a && b && b.t < a.t) closer += 1
+
+        // THE ENGINE RETURNS THE BETTER OF THE TWO WALKS, ASSERTED EXACTLY.
+        //
+        // This equality is the load-bearing line. A softer version — "the ink
+        // it returned clears" — passes under a one-directional search, because
+        // pvInkFromFill falls back to the shared pole walk when its own search
+        // finds nothing and that fallback tries both poles anyway. The
+        // guarantee survives; what is lost is the SMALLEST MOVE, which is the
+        // whole reason the ink stays recognisably the palette's colour. Only
+        // comparing the exact hex catches that.
+        //
+        // Ties go to white, matching the pole order pvInkFromFill iterates.
+        const white = groundDerived === '#FFFFFF' ? a : b
+        const black = groundDerived === '#FFFFFF' ? b : a
+        const expected = (white && black) ? (black.t < white.t ? black.hex : white.hex)
+          : (white || black) ? (white || black).hex
+            : null
+        if (expected) {
+          assert.equal(ink, expected,
+            `${mode}: the engine did not take the smallest clearing move from ${fill}. `
+            + `Expected ${expected}, got ${ink}. `
+            + (white && black ? `(white at t=${white.t.toFixed(4)}, black at t=${black.t.toFixed(4)})`
+              : `(only the ${white ? 'white' : 'black'} direction can clear at all)`))
+        }
+      }
+    }
+  }
+  assert.ok(considered > 5000,
+    `only ${considered} inks moved at all - if this collapses the comparisons below are vacuous`)
+  assert.ok(rescued + closer > considered * 0.1,
+    `only ${rescued + closer} of ${considered} moved inks needed the direction a ground-derived rule `
+    + `would have refused (${rescued} rescued outright, ${closer} reached with a smaller move; measured `
+    + '4,662 of 21,596, 21.6%, on the 6,000-palette sweep). If this is near zero, either the search '
+    + 'stopped trying both poles or the palettes stopped reaching the band where it matters - and the '
+    + 'guarantee above is then being met by luck.')
+})
+
+test('14 . the empty and junk fallbacks carry the new roles too', () => {
+  for (const input of [[], null, undefined, ['nope'], [42], ['#12345']]) {
+    for (const mode of ['light', 'dark']) {
+      const r = derivePreviewRoles(input, { mode })
+      for (const name of FILL_INK_ROLES) {
+        for (const ground of r.inkGrounds) {
+          const cr = contrastRatio(r[name], ground)
+          assert.ok(cr >= AA,
+            `${JSON.stringify(input)} ${mode}: ${name} ${r[name]} on ${ground} is ${cr.toFixed(3)}:1`)
+        }
+      }
+    }
+  }
+})
+
+test('15 . the engine is WIRED to the page: the hand-off and the five rules', () => {
+  // Correct-but-orphaned arithmetic is a failure this repo has shipped twice.
+  // Reverting any one of these three call sites has to turn this red.
+  const jsx = stripSourceComments(readSource('src/pages/PaletteBuilder.jsx'))
+  assert.match(jsx, /setProperty\('--pv-accent-ink', roles\.accentInk\)/,
+    'PaletteBuilder no longer hands accentInk to the scene')
+  assert.match(jsx, /setProperty\('--pv-primary-ink', roles\.primaryInk\)/,
+    'PaletteBuilder no longer hands primaryInk to the scene')
+
+  const css = stripSourceComments(readSource('src/styles/global.css'))
+  const TEXT_RULES = [
+    ['.plb-pv-n--accent', '--pv-accent-ink'],
+    ['.plb-pvb-eyebrow', '--pv-accent-ink'],
+    ['.plb-pvg-kicker', '--pv-accent-ink'],
+    ['.plb-pv-settings nav .is-active', '--pv-primary-ink'],
+    ['.plb-pv-reply span', '--pv-primary-ink'],
+  ]
+  for (const [selector, token] of TEXT_RULES) {
+    const rule = ruleFor(css, selector)
+    assert.ok(rule, `${selector} has gone from the stylesheet`)
+    assert.ok(rule.includes(`color:var(${token})`),
+      `${selector} sets text in a FILL role again instead of ${token} - that is the defect returning`)
+  }
+
+  // AND THE FILLS STILL READ THE FILL TOKENS. A "fix" that swapped every
+  // --pv-accent for --pv-accent-ink would pass the loop above and repaint
+  // every chip, disc and CTA in the previews, which is the outcome this split
+  // exists to prevent.
+  const FILL_RULES = [
+    ['.plb-pv-cta', '--pv-primary'],
+    ['.plb-pvb-btn--primary', '--pv-primary'],
+    ['.plb-pv-logo', '--pv-primary'],
+  ]
+  for (const [selector, token] of FILL_RULES) {
+    const rule = ruleFor(css, selector)
+    assert.ok(rule, `${selector} has gone from the stylesheet`)
+    assert.ok(rule.includes(`background:var(${token})`),
+      `${selector} no longer fills with ${token} - the ink split has leaked into the fills`)
+  }
+})
+

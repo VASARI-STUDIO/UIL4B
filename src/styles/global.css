@@ -9239,7 +9239,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pv-settings nav{display:flex;flex-direction:column;gap:7px;padding:18px;background:var(--pv-surface);border-right:1px solid var(--pv-border);font-size:8px}
 .plb-pv-settings nav strong{margin-bottom:10px}
 .plb-pv-settings nav span{padding:7px;color:var(--pv-muted)}
-.plb-pv-settings nav .is-active{color:var(--pv-primary);background:var(--pv-raised)}
+.plb-pv-settings nav .is-active{color:var(--pv-primary-ink);background:var(--pv-raised)}
 .plb-pv-settings form{display:grid;align-content:start;gap:8px;padding:18px}
 .plb-pv-settings label{display:flex;justify-content:space-between;padding:8px;font-size:8px;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:4px}
 .plb-pv-settings label i{font-style:normal;color:var(--pv-muted)}
@@ -9254,7 +9254,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pv-inbox>main{padding:18px}
 .plb-pv-message{max-width:250px;padding:12px;margin-top:16px;color:var(--pv-text)!important;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:5px}
 .plb-pv-reply{display:flex;justify-content:space-between;padding:10px;margin-top:16px;font-size:8px;color:var(--pv-muted);border:1px solid var(--pv-border);border-radius:5px}
-.plb-pv-reply span{font-weight:750;color:var(--pv-primary)}
+.plb-pv-reply span{font-weight:750;color:var(--pv-primary-ink)}
 .plb-pv-finance{display:grid;grid-template-columns:1fr .75fr;gap:12px;padding:18px}
 .plb-pv-finance header{grid-column:1/-1}
 .plb-pv-finance-chart{display:flex;align-items:flex-end;gap:5px;height:116px;padding:12px;background:var(--pv-surface);border:1px solid var(--pv-border)}
@@ -9405,7 +9405,22 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pv-card{display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:10px}
 .plb-pv-k{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pv-muted)}
 .plb-pv-n{font-size:16px;font-weight:800;color:var(--pv-text)}
-.plb-pv-n--accent{color:var(--pv-accent)}
+/* THE FIVE RULES THAT SET TEXT IN A FILL ROLE READ THE INK ROLE, NOT THE FILL.
+   #preview-accent-ink-unmeasured. --pv-accent and --pv-primary are chosen by
+   CHROMA and are FILL colours first - they paint the CTA, the chips, the disc
+   and the shapes below, where 1.4.11 asks 3:1 and the palette colour is the
+   point. They were also being read as ink by these five rules, with no
+   guarantee of any kind. Measured on the rendered page across all three
+   preview tabs and both preview themes: 22 of 22 accent- and primary-inked
+   samples below 4.5:1, worst 1.031. None of the five is large text - the KPI
+   number is 16px/700 and AA-large starts at 18.66px bold - so the floor is 4.5
+   for all of them. derivePreviewRoles now emits accentInk/primaryInk,
+   guaranteed on inkGrounds; every fill value below is unchanged. Same split as
+   --accent and --accent-strong, and the -strong split on the category hues.
+   (Spelling that second pair out rather than abbreviating it: the short form
+   contains a star-slash, which ends this comment early and takes the build
+   with it.) */
+.plb-pv-n--accent{color:var(--pv-accent-ink)}
 .plb-pv-bars{display:flex;align-items:flex-end;gap:6px;height:64px;margin-top:auto}
 .plb-pv-bar{flex:1;border-radius:6px 6px 2px 2px;background:var(--plb-rc)}
 .plb-pv-bar--1{height:44%}
@@ -9424,7 +9439,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pvb-navlink{width:36px;height:7px;border-radius:999px;background:var(--pv-muted);opacity:.55}
 .plb-pvb-navcta{padding:6px 13px;font-size:11px;font-weight:700;color:var(--pv-onprimary);background:var(--pv-primary);border:1px solid var(--pv-pborder);border-radius:8px}
 .plb-pvb-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px 22px;text-align:center}
-.plb-pvb-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--pv-accent)}
+.plb-pvb-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--pv-accent-ink)}
 .plb-pvb-head{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.02em;color:var(--pv-text)}
 .plb-pvb-sub{max-width:340px;font-size:12.5px;line-height:1.5;color:var(--pv-muted)}
 .plb-pvb-btns{display:flex;gap:10px;margin-top:2px}
@@ -9440,7 +9455,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pvg-square{position:absolute;bottom:64px;right:34px;width:70px;height:70px;border-radius:12px;background:var(--plb-rc);transform:rotate(12deg)}
 .plb-pvg-tri{position:absolute;top:96px;left:18px;width:0;height:0;border-left:34px solid transparent;border-right:34px solid transparent;border-bottom:58px solid var(--plb-rc);opacity:.85}
 .plb-pvg-body{position:relative;z-index:1;margin-top:auto}
-.plb-pvg-kicker{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--pv-accent)}
+.plb-pvg-kicker{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--pv-accent-ink)}
 .plb-pvg-title{margin-top:6px;font-size:46px;font-weight:900;line-height:.92;letter-spacing:-.03em;color:var(--pv-text)}
 .plb-pvg-lead{margin-top:10px;max-width:280px;font-size:12px;line-height:1.5;color:var(--pv-muted)}
 .plb-pvg-swatches{position:relative;z-index:1;display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--pv-border)}
