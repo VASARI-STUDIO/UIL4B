@@ -165,7 +165,7 @@ const SURFACES = {
     groups: DISCOVER_GROUPS,
     primaryLabel: 'Browse palettes',
     primaryTo: '/discover/palettes',
-    hint: `${DISCOVER_LIVE} libraries are open now. ${DISCOVER_SOON} more are still being built, and say so.`,
+    hint: `${DISCOVER_LIVE} libraries open · ${DISCOVER_SOON} still being built`,
     gridTitle: 'Every library, and what is in it.',
   },
   learn: {
@@ -179,7 +179,7 @@ const SURFACES = {
     groups: LEARN_GROUPS,
     primaryLabel: `Start with ${FIRST_GUIDE.navLabel.toLowerCase()}`,
     primaryTo: `/learn/${FIRST_GUIDE.slug}`,
-    hint: `${LEARN_ARTICLES.length === 1 ? 'One guide is' : `${LEARN_ARTICLES.length} guides are`} live. Every figure in them is quoted from a linked specification or computed on the page as you read it.`,
+    hint: `${LEARN_ARTICLES.length} guides live · free, no account`,
     gridTitle: 'Topics still being written.',
     gridLede: 'Nothing in this grid is written yet — that is what Soon means.',
   },
