@@ -212,6 +212,43 @@ export function ProjectProvider({ children }) {
     return id
   }, [design, userKey, allProjects, projectLimit])
 
+  /**
+   * Copy a project, cap and all.
+   *
+   * THE CAP IS RE-CHECKED HERE rather than trusted from the caller. Duplicating
+   * is a NEW save — it takes a slot — so it has to answer to the same rule
+   * saveProject() answers to, and it throws the same message. A duplicate button
+   * that quietly created a fourth project on a three-project plan would be the
+   * cap leaking, and the cap is the thing Pro sells.
+   *
+   * The copy is a deep clone with a fresh id and fresh timestamps. It carries the
+   * DESIGN, not the identity: `archived` is deliberately not copied, because
+   * duplicating something you have put away in order to work on the copy is the
+   * whole reason to duplicate an archived project.
+   */
+  const duplicateProject = useCallback((id) => {
+    if (!userKey) throw new Error('Sign in to save projects')
+    const current = allProjects[userKey] || []
+    if (current.length >= projectLimit) {
+      throw new Error(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
+    }
+    const source = current.find((p) => p.id === id)
+    if (!source) throw new Error('That project no longer exists')
+    const now = new Date().toISOString()
+    const copy = {
+      id: newId(),
+      name: `${source.name} copy`,
+      design: JSON.parse(JSON.stringify(source.design)),
+      createdAt: now,
+      updatedAt: now,
+    }
+    setAllProjects(prev => {
+      const next = { ...prev, [userKey]: [...(prev[userKey] || []), copy] }
+      saveAllProjects(next)
+      return next
+    })
+    return copy.id
+  }, [userKey, allProjects, projectLimit])
   const updateProject = useCallback((id, patch) => {
     if (!userKey) return
     setAllProjects(prev => {
@@ -380,6 +417,7 @@ export function ProjectProvider({ children }) {
     setGradient,
     updateDesign,
     saveProject,
+    duplicateProject,
     overwriteProject,
     renameProject,
     loadProject,
