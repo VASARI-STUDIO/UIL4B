@@ -16,6 +16,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
@@ -74,8 +75,14 @@ test('a new board defaults to a FREE system everywhere', () => {
     'PaletteBuilder still falls back to a paid system')
   assert.match(src, /design\.palette\.harmony : (?:'auto'|DEFAULT_SYSTEM)/)
 
-  const project = stripComments(read('src/contexts/ProjectContext.jsx'))
-  assert.match(project, /harmony: 'auto'/)
+  // The default a new board gets, asserted as a VALUE rather than as a
+  // string in a file. DEFAULT_DESIGN moved out of ProjectContext.jsx into
+  // src/data/designDefaults.js so the User Home could compare saved
+  // projects against it without importing React and Firestore. The value
+  // did not change — but a grep over the old file could not tell the
+  // difference between “moved” and “deleted”, and reported the latter.
+  assert.equal(DEFAULT_DESIGN.palette.harmony, 'auto',
+    'a new board must start on a FREE system (P-004)')
   const studio = stripComments(read('src/pages/ColorStudio.jsx'))
   assert.ok(!/\|\| 'analogous'/.test(studio), 'ColorStudio still falls back to a paid system')
 })

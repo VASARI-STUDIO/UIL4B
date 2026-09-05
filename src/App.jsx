@@ -13,6 +13,7 @@ import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { purgeStaleUsage } from './utils/usageTracker'
 import { onboardingDestination } from './utils/onboardingState'
+import { readSessionHint, rootDestination } from './utils/sessionHint'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
@@ -20,6 +21,7 @@ import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from './data/rout
 import { LoginPromptProvider, useLoginPrompt } from './contexts/LoginPromptContext'
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
+import { useSessionHint } from './hooks/useSessionHint'
 import { createRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES } from './data/legacyRoutes'
 
@@ -191,6 +193,9 @@ function LoginRoute() {
 function AppInner() {
   const { user: authUser, userProfile, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
   useFirestoreSync(authUser?.uid || null)
+  // Records what auth resolved to, so the NEXT cold load can pick the right
+  // page before Firebase has finished loading. See utils/sessionHint.js.
+  useSessionHint()
   useSmoothScroll()
   const { message, visible, type, toast } = useToast()
   const copy = useClipboard(toast)
@@ -259,10 +264,27 @@ function AppInner() {
     updateRouteMeta({ pathname: location.pathname, title, description })
   }, [location.pathname])
 
-  // The sales / landing page is the public homepage. It renders full-screen with
-  // its own PillNav. The root URL (/) serves it to logged-out visitors so it is
-  // the first page that loads and is indexable; logged-in visitors are sent on to
-  // /home (the Dashboard is gone).
+  // ── THE FRONT DOOR ────────────────────────────────────────────────────
+  //
+  // `/` decides; `/home` never does. That split is the whole routing change, and
+  // it is the founder's own wording, approved explicitly on 2026-09-05:
+  //
+  //     “i want the sales page to mostly be for new users if a user is already
+  //      logged in and navigates to the website it takes them to the dashboard
+  //      page unless they click they home button or navigate to specifly /home”
+  //
+  // So there are two URLs for one page and they answer different questions:
+  //
+  //   /home  is the sales page, unconditionally, for everybody. It is what the
+  //          nav logo links to (PillNav), it is prerendered, and the branch below
+  //          reads no auth state at all — there is no code path on which a signed-in
+  //          visitor at /home is sent anywhere. That is the founder's exception,
+  //          and tests/unit/user-home.test.js asserts it structurally.
+  //
+  //   /      is the decision. Signed out it renders the same sales page (so the
+  //          indexable root is unchanged and first paint is unchanged). Signed in
+  //          it hands over to the User Home.
+  //
   // /welcome is the legacy path — redirect it to /home so old links keep working.
   if (location.pathname === '/welcome') {
     return <Navigate to="/home" replace />
@@ -277,26 +299,39 @@ function AppInner() {
     return <Navigate to="/create/color" replace />
   }
   if (location.pathname === '/') {
-    // Render the sales page immediately — first paint must not depend on Firebase
-    // auth resolving (otherwise a slow/misconfigured auth init leaves a blank page).
-    // Once we positively know the visitor is logged in, canonicalise them onto
-    // /home (the Dashboard is gone); new sign-ups still route through onboarding.
-    if (!authLoading && authUser) {
-      // Onboarding is a property of the ACCOUNT, not of this browser.
-      //
-      // This used to read localStorage alone, so a returning user on a new
-      // device, a second browser, an incognito window or after clearing site
-      // data was sent back through onboarding — every time. The profile is the
-      // account-level truth and it wins whenever it is known.
-      //
-      // While the profile is still loading, prefer /home. Brand-new sign-ups do
-      // not depend on this path at all: `pendingOnboarding` routes them from
-      // the auth event itself (see the effect above). So the only person this
-      // branch can still send to onboarding is someone whose account genuinely
-      // has no completion recorded — and guessing "not onboarded" during a slow
-      // read would re-run it for exactly the established users it kept catching.
-      return <Navigate to={onboardingDestination(userProfile)} replace />
-    }
+    // FIRST PAINT MUST NOT WAIT ON FIREBASE. The obvious implementation of this
+    // redirect — hold a loader until onAuthStateChanged fires, then decide — has a
+    // cost already measured in this repo and written into
+    // tests/user-sim/20-billing-banner.spec.js: that wait is “measured at ~1s here”.
+    // A second of blank loader in front of the front door, for the people who use
+    // the product most, is a worse product than the sales page it replaced — and
+    // [firebase-critical-path] is open precisely because Firebase sits on this path.
+    // Rendering the sales page first and swapping once auth resolves is no better:
+    // that is a second of the WRONG page, followed by a jump.
+    //
+    // So the decision is made from a synchronous localStorage hint written the last
+    // time auth resolved (utils/sessionHint.js), which costs microseconds and is
+    // right for every returning visitor and every first-time visitor. Resolved auth
+    // overrides it in both directions, so a stale hint survives exactly one paint.
+    //
+    // Onboarding is a property of the ACCOUNT, not of this browser — which is why
+    // the destination comes from onboardingDestination(userProfile) rather than from
+    // localStorage. It used to read localStorage alone, so a returning user on a new
+    // device, a second browser, an incognito window or after clearing site data was
+    // sent back through onboarding every time. Brand-new sign-ups do not depend on
+    // this path at all: `pendingOnboarding` routes them from the auth event itself
+    // (see the effect above).
+    const destination = rootDestination({
+      loading: authLoading,
+      signedIn: !!authUser,
+      hint: readSessionHint(),
+      appHome: onboardingDestination(userProfile),
+      salesPage: '/home',
+    })
+    // '/home' is the one destination we render in place rather than navigate to:
+    // it is byte-identical to this URL, and redirecting `/` to `/home` would move
+    // every signed-out visitor and every crawler off the canonical root.
+    if (destination !== '/home') return <Navigate to={destination} replace />
     return <><Home /><AppFooter /><GoogleOneTap /></>
   }
 
@@ -364,7 +399,30 @@ function AppInner() {
               {/* Account, billing, legal and system pages — rendered inside the
                   PillNav app-shell (the wrapper return below). */}
               <Route path="/login" element={<LoginRoute />} />
-              <Route path="/projects" element={<RequireAuth><Projects toast={toast} /></RequireAuth>} />
+              {/* THE USER HOME, and deliberately NOT behind RequireAuth any more.
+
+                  RequireAuth holds a loader until Firebase resolves and then sends a
+                  signed-out visitor to /login. Both halves are wrong for the page
+                  that signed-in visitors now land on:
+
+                  · THE LOADER is the ~1s wait this whole change exists to remove.
+                    The page has plenty it can render without knowing who you are —
+                    the tip, the day's starters, the whole frame — and it renders
+                    them immediately, resolving only the project list.
+
+                  · THE REDIRECT could loop. A visitor whose session lapsed between
+                    page loads still carries the session hint, so `/` sends them
+                    here; RequireAuth would send them to /login; dismissing the
+                    popup returns them to /projects, which redirects again. Making
+                    the page render its own signed-out state removes the loop by
+                    construction rather than by guarding against it.
+
+                  Nothing private is exposed by that: with no user the project list
+                  is empty, and the free-plan allowance stays behind the same
+                  `canSaveProjects` early return it always did — which is the
+                  property tests/user-sim/20-billing-banner.spec.js actually
+                  guards, and it still guards it. */}
+              <Route path="/projects" element={<Projects toast={toast} />} />
               <Route path="/plans" element={<Plans />} />
               <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
               <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
