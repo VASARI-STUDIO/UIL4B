@@ -20,7 +20,10 @@
 //
 // The rule both halves enforce: the page may not advertise a capability the
 // product does not have.
-import { test, expect } from '@playwright/test'
+// `test` comes from ./base.js, not @playwright/test — that is where Google One
+// Tap is stubbed on the browser fixture, and tests/unit/one-tap-stub.test.js
+// fails the build for any spec that reaches past it.
+import { test, expect } from './base.js'
 import { go, watch, expectRendered } from './helpers.js'
 import {
   EXPORT_FORMATS,
