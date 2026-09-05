@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import { categoryDestination } from '../data/toolTree'
+import FounderNote from './FounderNote'
 
 // Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
 // decisions — 2026-08-20", decision 3 — and the Help Centre and Settings already
@@ -84,6 +85,19 @@ export default function AppFooter({ compact = false }) {
         </nav>
         <div className="app-footer-legal">
           <span className="app-footer-copy">© {year} UIL4B</span>
+          {/* The opt-in note about this project — see FounderNote.jsx for why it
+              is a link here and not a popup that opens itself.
+
+              It sits in the legal row rather than in the Support column above
+              because that is where this footer already says who built the app:
+              "Built in Brisbane by Dylan Coleman" is one item to the right, and
+              a reader who wants more after reading that has it in the same row
+              instead of having to go looking. It is also the row least likely to
+              collide — the Support column's four links are ordinary NavLinks
+              generated from FOOTER_GROUPS, and a <button> spliced into that map
+              would have to special-case one group to say something none of the
+              others say. */}
+          <FounderNote />
           <span>
             Built in Brisbane by{' '}
             <a
