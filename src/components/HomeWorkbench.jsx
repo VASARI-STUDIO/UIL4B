@@ -23,6 +23,7 @@ import {
   setIconDraft,
 } from '../utils/iconHandoff'
 import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
+import { stepName } from '../utils/fluidType'
 import { setBoardDraft } from '../utils/colorHandoff'
 import { derivePreviewRoles, tonalRamp } from '../utils/colors'
 import { colorName } from '../utils/paletteNames'
@@ -1389,12 +1390,57 @@ function TypographyPanel({ state, onChange, announce }) {
   return (
     <div className="hw-body">
       <div className="hw-stage">
+        {/* THE LADDER IS THE GENERATOR'S OWN ROW.
+            ──────────────────────────────────────────────────────────────────
+            Type Scale prints each step as `.tsc-row`: a fixed left gutter
+            carrying the TOKEN NAME in accent mono (`--text-3xl`), the size in
+            px and rem under it, and the line height under that - with the
+            specimen filling the rest of the row. The mini stacked a
+            tracked-caps caption ("DISPLAY · 31.3PX") ABOVE each specimen and
+            printed no token, no rem and no line height.
+
+            The token name is the part that matters most, and it was the part
+            missing. `--text-3xl` is the string a visitor actually pastes into
+            their code; "Display" is a word this panel invented. The names come
+            from `stepName()` in utils/fluidType.js - moved there from
+            TypeScale.jsx in this change, so the preview and the export cannot
+            disagree about what a step is called.
+
+            TWO GUTTER LINES, NOT THE GENERATOR'S THREE, and the reason is
+            honesty rather than height. `.tsc-row-sub` reads
+            "{mobile} → {desktop}px · {weight} · {line}px line". This panel has
+            no second breakpoint, no weight control and no line-height control,
+            so all three of those facts are things it neither shows nor hands
+            off - a line-height printed here would be a number the visitor
+            cannot change and the hand-off does not carry. The first two lines
+            are the generator's verbatim, and they are the two that are true.
+
+            The invented step labels went with it. "Display", "Heading", "Body",
+            "Caption" were this panel's own vocabulary; `--text-2xl` is the
+            product's, it is the string that ends up in the visitor's code, and
+            it says the same thing.
+
+            THE SPECIMEN DELIBERATELY DOES NOT TAKE `.tsc-row-text`, and this is
+            the one place in this change where a real class was rejected. That
+            rule is driven entirely by page-scoped variables - `font-size:
+            var(--tsc-fs)`, `line-height:var(--tsc-lh)`, `font-family:
+            var(--tsc-body-ff)` - which TypeScale writes per row from its own
+            fitted preview ladder and which do not exist here. Applied anyway it
+            beat `.hw-type-sample` on source order and every step rendered at
+            the SAME size: a type-scale preview showing no scale, with four
+            correct numbers in the gutter beside it. The build was green and 20
+            render assertions passed; one screenshot showed it. The gutter is
+            the portable half of `.tsc-row`; the specimen is not. */}
         <div className="hw-type-preview" aria-label="Live type scale preview">
           {TYPE_STEPS.map((step) => {
             const size = Math.round(state.base * Math.pow(state.ratio, step.exponent) * 10) / 10
+            const rem = Math.round((size / 16) * 1000) / 1000
             return (
-              <div className="hw-type-row" key={step.label}>
-                <span className="hw-type-meta">{step.label} · {size}px</span>
+              <div className="tsc-row hw-type-row" key={step.exponent}>
+                <span className="tsc-row-meta">
+                  <span className="tsc-row-name">--text-{stepName(step.exponent)}</span>
+                  <span className="tsc-row-num">{size}px · {rem}rem</span>
+                </span>
                 <span
                   className="hw-type-sample"
                   ref={(node) => node?.style.setProperty('--hw-type-size', `${size}px`)}
@@ -1409,11 +1455,17 @@ function TypographyPanel({ state, onChange, announce }) {
       </div>
 
         <div className="hw-controls hw-type-side">
-          {/* Base size is a PROPERTY: label left, editable number right. Ratio
-              is a set of named OPTIONS, so it becomes a rail below rather than
-              a third select. */}
+          {/* `.seg-label` is Type Scale's own caption for these exact two
+              controls - `<label className="seg-label" htmlFor="tsc-mbase">Base
+              size</label>` and the same for Ratio, verbatim. Same words, same
+              class, so the two surfaces caption the same setting identically.
+
+              The CONTROLS keep their forms: the generator drives base size with
+              a SnapSlider and ratio with a <select>, both of which cost this
+              panel height it does not have. A number box and a three-value rail
+              express the same two settings inside 152px of a fixed frame. */}
           <div className="hw-prop">
-            <label className="hw-prop-label" htmlFor="hw-type-base">Base size</label>
+            <label className="seg-label" htmlFor="hw-type-base">Base size</label>
             <div className="hw-prop-num hw-prop-num--wide">
               <input
                 id="hw-type-base"
@@ -1447,7 +1499,7 @@ function TypographyPanel({ state, onChange, announce }) {
           </div>
 
           <div className="hw-rail-group">
-            <span className="hw-rail-label" id="hw-type-ratio-label">Scale ratio</span>
+            <span className="seg-label" id="hw-type-ratio-label">Ratio</span>
             <div className="hw-rail" role="group" aria-labelledby="hw-type-ratio-label">
               {TYPE_RATIOS.map((ratio) => (
                 <button
@@ -1465,7 +1517,7 @@ function TypographyPanel({ state, onChange, announce }) {
           </div>
 
           <div className="hw-prop">
-            <label className="hw-prop-label" htmlFor="hw-type-sample">Preview text</label>
+            <label className="seg-label" htmlFor="hw-type-sample">Preview text</label>
             <input
               id="hw-type-sample"
               className="hw-input hw-prop-text"

@@ -10,7 +10,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont } from '../utils/googleFonts'
 import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
 import { fitTypePreviewSize, typePreviewNeedsFitting } from '../utils/typeScalePreview'
-import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepPx } from '../utils/fluidType'
+import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '../utils/fluidType'
 
 // Type Scale Generator — the standalone /create/type-scale page. One base size and one
 // ratio generate a whole modular scale, previewed in a real article and handed
@@ -79,8 +79,6 @@ const WIDTHS = [
   { id: 'mobile', label: 'Mobile', px: 375, vw: FLUID_VIEWPORTS.min },
 ]
 
-const UP_NAMES = ['lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', '8xl']
-const DOWN_NAMES = ['sm', 'xs', '2xs', '3xs', '4xs']
 
 const DEFAULTS = {
   base: 16,
@@ -100,15 +98,10 @@ const DEFAULTS = {
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
 
-// A step's token name. `base` is the anchor; everything above walks lg → 8xl and
-// everything below walks sm → 4xs, which is the naming most teams already read
-// fluently from Tailwind. Beyond the named runs it falls back to `Nxl`/`Nxs`
-// rather than running out of names on a deep scale.
-function stepName(exp) {
-  if (exp === 0) return 'base'
-  if (exp > 0) return UP_NAMES[exp - 1] || `${exp}xl`
-  return DOWN_NAMES[-exp - 1] || `${-exp}xs`
-}
+// (stepName lived here. It is now in utils/fluidType.js beside stepPx, because
+// the homepage workbench's Typography preview labels its steps with the same
+// token names this page exports — and two copies of a naming table is how a
+// preview and an export come to disagree about what a step is called.)
 
 // (roundPx lived here. It is now `stepPx` in utils/fluidType.js, so the two
 // breakpoint ladders and their clamp() are all rounded by one function that the

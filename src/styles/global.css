@@ -7957,12 +7957,29 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 @media(max-width:640px){.hw-ig{grid-template-columns:repeat(4,minmax(0,1fr))}}
 
 /* 5 · Typography */
-.hw-type-preview{min-width:0;padding:16px 18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0);overflow:hidden}
-.hw-type-row{display:flex;min-width:0;flex-direction:column;gap:3px;padding:10px 0;border-top:1px solid var(--border)}
+.hw-type-preview{min-width:0;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-0);overflow:hidden}
+/* THE LADDER IS `.tsc-row`, TYPE SCALE'S OWN. The meta moved from a caption
+   stacked ABOVE each specimen into the generator's fixed left gutter, and it
+   carries what the generator carries: the token name in accent mono, px and
+   rem, the line height. `.hw-type-meta` is gone with the caption.
+
+   Geometry only below. `.tsc-row` is a button on a full-width page and this is
+   a static row in a 240px stage, so it gives up the generator's 14px/16px
+   padding and takes a narrower gutter. The specimen keeps its own size variable
+   because the mini computes sizes from state rather than from the generator's
+   fitted preview ladder. */
+.hw-type-row{padding:5px 0;border-top:1px solid var(--border)}
 .hw-type-row:first-child{padding-top:0;border-top:0}
 .hw-type-row:last-child{padding-bottom:0}
-.hw-type-meta{font-family:var(--mono);font-size:var(--fs-micro);font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
-.hw-type-sample{display:block;max-width:100%;font-size:var(--hw-type-size);font-weight:650;line-height:1.08;letter-spacing:-.025em;color:var(--t0);overflow-wrap:anywhere}
+/* The generator's own 116px gutter. Narrower and "28.7px line" wraps, which
+   turns a three-line gutter into four and costs more height than the 12px
+   saves. */
+/* The generator's own 116px gutter, so "31.3px · 1.956rem" stays on one line.
+   The tightened line-height is the frame budget: on the two small steps the
+   gutter is TALLER than the specimen beside it, so it sets the row height. */
+.hw-type-row .tsc-row-meta{flex-basis:116px;gap:0}
+.hw-type-row .tsc-row-name,.hw-type-row .tsc-row-num{line-height:1.35}
+.hw-type-sample{display:block;flex:1;min-width:0;max-width:100%;font-size:var(--hw-type-size);font-weight:650;line-height:1.08;letter-spacing:-.025em;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hw-type-side{gap:12px}
 .hw-type-tools{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .hw-type-tool{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:54px;padding:8px 11px;border:0;border-top:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--t),color var(--t)}

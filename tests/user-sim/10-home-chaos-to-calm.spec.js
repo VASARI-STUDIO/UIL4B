@@ -819,7 +819,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await page.keyboard.type('20')
     await page.keyboard.press('Tab')
     await expect(baseInput).toHaveValue('20')
-    // Scale ratio is an OPTIONS rail of toggles now, not a select. A click does
+    // Ratio is an OPTIONS rail of toggles, not a select. A click does
     // not imply a value the way selectOption did, so the pressed state — the
     // thing a screen reader is actually told — is asserted explicitly. The
     // contract did not cover that before.
@@ -1213,7 +1213,10 @@ test.describe('homepage: eleven tools, five ways of working', () => {
           const b = r.getBoundingClientRect()
           return b.bottom > box.bottom + 0.5 || b.top < box.top - 0.5
         })
-        .map((r) => r.querySelector('.hw-type-meta').textContent)
+        // `.tsc-row-name` since 2026-09-05: the ladder renders Type Scale's own
+        // `.tsc-row` gutter, so a cropped step is now named by the TOKEN it
+        // exports (`--text-2xl`) rather than by a label this panel invented.
+        .map((r) => r.querySelector('.tsc-row-name').textContent)
     })
     expect(cropped, 'no step is cut off by the preview box').toEqual([])
   })
