@@ -248,13 +248,20 @@ export default function FontMatcher({ onCopy, toast }) {
 
   return (
     <div className="sec fpr-page">
+      {/* The structural twin of the Font Gallery masthead, and it carried the
+          same two faults (#surface-headers-read-as-ai): a decorative
+          "Create / Typography" taxonomy eyebrow restating the <h1> below it,
+          and the page's onward action parked in the top-right corner as an 11px
+          underlined text link. Both are gone; the link is now a real button in
+          the copy column, under the paragraph that gives it a reason.
+
+          WHAT STAYS, and why it is not the thing the founder marked: the
+          `.fpr-hero-pair` readout is the page's LIVE STATE — the two families
+          currently selected. It changes as you work and you cannot get it
+          anywhere else on screen. That is the opposite of a catalogue counter,
+          which is fixed, decorative, and tells you about the product rather
+          than about your work. */}
       <header className="fpr-hero fpr-hero--premium" ref={varsRef(specimenVars)}>
-        <div className="fpr-hero-topline">
-          <span className="sec-h-eyebrow">Create / Typography</span>
-          <NavLink to="/create/font-gallery" className="fpr-gallery-link">
-            Browse the Font Gallery <span aria-hidden="true">↗</span>
-          </NavLink>
-        </div>
         <div className="fpr-hero-copy">
           <div>
             <h1>Font Pair</h1>
@@ -270,6 +277,9 @@ export default function FontMatcher({ onCopy, toast }) {
               <i aria-hidden="true">+</i>
               <span>{bodyFont.family}</span>
             </div>
+            <NavLink to="/create/font-gallery" className="btn fpr-hero-cta">
+              Browse the Font Gallery <span aria-hidden="true">↗</span>
+            </NavLink>
           </div>
         </div>
       </header>
