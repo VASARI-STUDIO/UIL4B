@@ -23,8 +23,22 @@ const playfair = {
 
 const rowFor = (font, key) => fontFacts(font).find(r => r.k === key)
 
-test('the dossier offers exactly the three tabs the founder asked for', () => {
-  assert.deepEqual(DOSSIER_TABS.map(t => t.id), ['specimen', 'about', 'examples'])
+test('the dossier offers exactly the four tabs the founder asked for, in order', () => {
+  // FOUR now, not three. The founder asked for the example half to be SPLIT
+  // (2026-09-05): "1 tab showing Usage examples using some made mockup use
+  // cases, but ... a tab showing real world use applications for each font and
+  // an image to show it".
+  //
+  // The order is load-bearing and is pinned here rather than left to whoever
+  // edits the array next: the two example tabs sit ADJACENT, so a reader meets
+  // the invented one and the photographed one as two halves of one question
+  // instead of finding them either side of the family's facts.
+  assert.deepEqual(DOSSIER_TABS.map(t => t.id), ['specimen', 'about', 'examples', 'inuse'])
+  const labels = Object.fromEntries(DOSSIER_TABS.map(t => [t.id, t.label]))
+  assert.equal(labels.examples, 'Examples')
+  assert.equal(labels.inuse, 'In use')
+  // The two must not read as the same kind of thing from the strip alone.
+  assert.notEqual(labels.examples, labels.inuse)
 })
 
 test('a fully-described family states every fact the catalogue holds', () => {

@@ -1168,7 +1168,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-add-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
 
 /* Gallery grid — masonry-like with varying heights */
-.pl-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));--pl-gap:16px;gap:var(--pl-gap);margin-top:8px}
+.pl-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));--pl-gap:16px;--pl-preview-h:172px;--pl-preview-fade:44px;--pl-preview-dur:16s;gap:var(--pl-gap);margin-top:8px}
 /* The locked tease continues the gallery, so its seam is the ROW GAP, not
    the 8px that separates the first grid from the toolbar. --pl-gap is read
    rather than repeated: the 720px band retunes it and the seam follows. */
@@ -1186,9 +1186,99 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-card-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.1) 50%,transparent 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px;opacity:0;transition:opacity var(--dur-3) var(--ease-standard)}
 .pl-card-title{font-size:15px;font-weight:600;color:#fff;line-height:1.35;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
+/* ── The prompt preview: the card shows the ARTEFACT ────────────────────────
+   The founder asked the library to "preivew the prompts" and referenced
+   motionsites.com, a gallery whose cards continuously auto-play a scrolling
+   preview of the real page behind them, with the title and category beneath
+   and a badge on the paid entries. The transferable half is that the card
+   carries the artefact rather than a NAME for it, so the body of a prompt card
+   is now the prompt's own text, set in --mono exactly as .pl-modal-prompt sets
+   the same text one activation away. Reference screens are cited in
+   PromptCard.jsx (WRITER's prompt library, Sana AI's workflow grid).
+
+   THE WINDOW IS NOT A SCROLL CONTAINER, and that is deliberate. Making it one
+   would put a nested scroller under the pointer on twenty cards, which the
+   app-wide Lenis instance then has to arbitrate on every wheel event —
+   allowNestedScroll measures the element under the pointer and hands the
+   gesture back only once that element can no longer move. A transform inside
+   overflow:hidden is invisible to the wheel, so a scroll over the gallery stays
+   an ordinary page scroll and Lenis is never involved.
+
+   --pl-preview-dur is ONE PASS, written per card by PromptCard from the
+   prompt's length so that a 400-character brief and a 3,000-character one
+   travel at the same reading pace. The value on .pl-card is the fallback for a
+   card that never sets it. */
+.pl-card-preview{position:relative;height:var(--pl-preview-h);overflow:hidden;padding:16px 18px 0;background:var(--cbg);border-bottom:1px solid var(--border)}
+/* The bottom fade is the truncation signal, and it is drawn over the WINDOW
+   rather than masked onto the text: a mask on the text would travel with the
+   transform, so the fade would follow the words instead of marking the edge.
+   Where a prompt is shorter than the window the gradient lies over its own
+   ground colour and is invisible, so a short prompt gets no fade pretending
+   there is more of it.
+
+   --pl-preview-fade is ONE number for two properties: the height of this
+   gradient and the bottom padding of the text. They have to match, because the
+   scroll ends with the text's padded bottom on the window's bottom edge —
+   measured at 0.0px — so any padding smaller than the fade would leave the
+   prompt's LAST LINE sitting inside the gradient, washed out at the exact
+   moment the reader has scrolled to reach it. */
+.pl-card-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:var(--pl-preview-fade);background:linear-gradient(180deg,transparent 0%,var(--cbg) 88%);pointer-events:none}
+/* MOTION IS EARNED PER CARD. The scroll plays on hover and on keyboard focus,
+   never on its own. motionsites plays every card at once and it works there
+   because its artefact is a PAGE — there is no text to read. A prompt IS text,
+   and twelve bodies of it moving at once is not a preview.
+
+   It is also WCAG 2.2 SC 2.2.2 (Pause, Stop, Hide): content that moves
+   automatically for more than five seconds alongside other content needs a
+   mechanism to pause it, and this layout has nowhere to put one. Hover- and
+   focus-driven motion is user-initiated and self-cancelling, so it is outside
+   2.2.2 entirely and it answers the question for the one card the reader is
+   looking at.
+
+   The travel is min(0px, window - text height - the window's own top padding),
+   so a prompt that already fits moves by exactly nothing rather than sliding up
+   to reveal blank space. `alternate` returns it to the top rather than jumping,
+   and the 7%/93% holds are the dwell at each end. */
+.pl-card-preview-text{margin:0;padding-bottom:var(--pl-preview-fade);font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--t1);white-space:pre-wrap;word-break:break-word;animation:pl-preview-scroll var(--pl-preview-dur) linear infinite alternate;animation-play-state:paused}
+.pl-card:hover .pl-card-preview-text,.pl-card:focus-visible .pl-card-preview-text{animation-play-state:running}
+@keyframes pl-preview-scroll{0%,7%{transform:translateY(0)}93%,100%{transform:translateY(min(0px,calc(var(--pl-preview-h) - 100% - 16px)))}}
+/* BOTH HALVES — and the reason is narrower than the usual one, so it is worth
+   stating precisely rather than repeating the house line.
+
+   MEASURED IN A RENDERED BROWSER, four motion contexts, hovering a card in each:
+     OS reduce, no stored choice ............ animation-name none, translateY 0
+     OS no-preference, no stored choice ..... pl-preview-scroll, 27s, travels
+     OS no-preference, Settings say REDUCE .. animation-name none, translateY 0
+     OS reduce, Settings say MOTION ......... pl-preview-scroll, 27s, travels
+   All four correct, in both directions.
+
+   THE CLAIM THIS COMMENT ORIGINALLY MADE WAS WRONG AND WAS TESTED RATHER THAN
+   TRUSTED. It said that without these two rules the global clamp would run one
+   0.01ms iteration and leave the text RESTING AT ITS LAST KEYFRAME — every
+   hovered card snapped to the BOTTOM of its prompt. Deleting exactly these two
+   rules at runtime and re-measuring gives translateY 0: the clamp forces
+   animation-iteration-count to 1, the animation finishes immediately, and with
+   `animation-fill-mode: none` the element reverts to its UN-ANIMATED transform,
+   which is the top. Forcing fill-mode `both` on top of that did not move it
+   either. So the clamp handles this animation on its own today.
+
+   THE PAIR STILL SHIPS, for the honest reason rather than the dramatic one: it
+   is what stops the correct behaviour from depending on two defaults staying
+   put — the clamp's iteration count and this animation's fill mode. Someone
+   adding `forwards` so a preview holds where the pointer left it is a plausible
+   next edit, and it would be reaching past the clamp. `animation:none` says the
+   thing outright instead of arriving at it by subtraction, and the repo's
+   contract (tests/unit/reduced-motion-guard) requires the explicit-attribute
+   companion beside the media half in any case.
+
+   The hover and focus selectors are listed in both halves, or the play-state
+   rule above would put a cancelled animation back on hover. */
+html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion="true"] .pl-card:hover .pl-card-preview-text,html[data-reduced-motion="true"] .pl-card:focus-visible .pl-card-preview-text{animation:none;transform:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .pl-card-preview-text,html:not([data-reduced-motion="false"]) .pl-card:hover .pl-card-preview-text,html:not([data-reduced-motion="false"]) .pl-card:focus-visible .pl-card-preview-text{animation:none;transform:none}}
+
 /* No-image card */
 .pl-card.no-img{background:var(--card-grad)}
-.pl-card-text-hero{padding:22px 22px;min-height:132px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+.pl-card-text-hero{padding:16px 18px 18px;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
 /* The 40x40 accent-tinted square that used to sit here was EMPTY — `content:''`
    with `display:flex;align-items:center;justify-content:center`, i.e. centring
    rules for a glyph that was never added. On a text-only card it read as a
@@ -1762,7 +1852,7 @@ img,svg,video{max-width:100%;height:auto}
   .ic>span:not(.ic-pack){-webkit-line-clamp:3;line-clamp:3}
   .grad-presets{grid-template-columns:repeat(auto-fill,minmax(min(180px,100%),1fr))}
   .img-grid{grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr))}
-  .pl-gallery{grid-template-columns:1fr}
+  .pl-gallery{grid-template-columns:1fr;--pl-preview-h:150px}
   .pl-add-btn{width:100%}
   .pl-drop-zone{flex:1 1 100%}
   .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}
@@ -10977,6 +11067,54 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fdx-fiu{border-radius:2px;color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .fdx-fiu:hover{color:var(--t0)}
 .fdx-fiu:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* ── The "In use" tab ────────────────────────────────────────────────────────
+   Photographs of real work set in the family. It ships EMPTY for every family
+   and will stay that way until an image arrives with its provenance attached —
+   see src/data/fontRealWorldUses for the rule and the founder's decision.
+
+   THE EMPTY STATE HAS NO ILLUSTRATION, AND THAT IS THE DESIGN DECISION HERE.
+   Jira's and Xero's empty states both draw one and both work, but neither of
+   them is a panel ABOUT A MISSING PICTURE: a grey box with a picture glyph in
+   it, in this panel, is indistinguishable from an image that failed to load —
+   the exact failure PRODUCT.md names when it says a decorative mock-up "reads
+   as a component that failed to load". So the shape taken is Lyssna's: a
+   heading naming what is absent, prose naming the CONDITION under which it
+   would appear, and one outbound link. Type only, on the panel's own ground,
+   with no dashed box and no frame — a frame would be an empty slot, and an
+   empty slot is a thing waiting to be filled rather than a thing that is
+   deliberately not there yet.
+
+   Held at a reading measure rather than run to the full dialog width: this is
+   three short paragraphs of explanation, and 60ch is where they stop being a
+   wall. */
+.fdx-empty{max-width:60ch;padding:6px 0 2px}
+.fdx-empty-head{margin:0 0 10px;font-size:14.5px;font-weight:650;letter-spacing:-.01em;color:var(--t0)}
+.fdx-empty-body{margin:0 0 10px;font-size:12.5px;line-height:1.6;color:var(--t2)}
+.fdx-empty-body--last{margin-bottom:0}
+
+/* The filled state. One column: these are photographs of printed matter and
+   signage, and a two-up grid at dialog width would render each one too small to
+   read the type in — which is the only reason the picture is there. */
+.fdx-uses{display:flex;flex-direction:column;gap:22px;margin:0;padding:0;list-style:none}
+.fdx-use figure{margin:0}
+/* CAPPED, and `contain` rather than `cover`. MEASURED with a 1200px-wide test
+   image seeded into the registry: uncapped it rendered 797px tall inside a
+   792px dialog and pushed the caption — which carries the LICENCE, the reason
+   the photograph is allowed to be on the page at all — off the bottom. A
+   licence that scrolls away from its picture is not attached to anything.
+   `cover` would have solved the height by cropping, which on a photograph of
+   type in use removes the thing the reader came to look at, so the whole image
+   is shown letterboxed on the panel ground instead. */
+.fdx-use-img{display:block;width:100%;height:auto;max-height:min(56vh,420px);object-fit:contain;border-radius:var(--radius);border:1px solid var(--border);background:var(--cbg)}
+/* The caption is a stack rather than a run of separated spans: the credit and
+   the licence are two different facts about who may show this, and running them
+   together with middots invites a reader to skim past the one that matters. */
+.fdx-use-cap{display:flex;flex-direction:column;gap:3px;margin-top:10px}
+.fdx-use-title{font-size:12.5px;font-weight:600;color:var(--t0)}
+.fdx-use-credit{font-size:11.5px;color:var(--t1)}
+.fdx-use-licence{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t2)}
+.fdx-use-src{align-self:flex-start;margin-top:3px;font-size:11.5px}
 @media(max-width:560px){
   .fbd-dialog{max-height:96vh;padding:16px}
   /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
@@ -13208,7 +13346,19 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    measures 4.43:1 on the card in light. The pill is an unavailability marker,
    not an action, so it takes the neutral ink rather than the accent. */
 .lockt-tag{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t1);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
-.lockt-lines{display:flex;flex-direction:column;justify-content:center;gap:9px;min-height:104px;padding:14px;border-radius:var(--radius-l);border:1px dashed var(--bh);background:var(--bg-2)}
+/* min-height READS the real card's window height rather than restating it —
+   the same rule the .lockt-stripes comment above states for the palette
+   placeholders. The 104px that used to sit here was tuned against a prompt
+   card that was a title and three tags; the card is now an artefact window
+   plus a caption, so a literal here would have left the teased row visibly
+   shorter than the row above it and reading as a different component. The
+   fallback covers the placeholder being used outside a .pl-gallery, which
+   is where the custom property is set.
+
+   The locked card is still shorter than a free one by exactly its missing
+   TITLE LINE, and that is not a defect to close: a prompt's title is the
+   product, so unlike a brand palette this placeholder carries no name. */
+.lockt-lines{display:flex;flex-direction:column;justify-content:center;gap:9px;min-height:var(--pl-preview-h,104px);padding:14px;border-radius:var(--radius-l);border:1px dashed var(--bh);background:var(--bg-2)}
 .lockt-line{height:8px;border-radius:var(--radius-pill);background:var(--bg-4)}
 .lockt-line[data-step="0"]{width:100%}
 .lockt-line[data-step="1"]{width:82%}

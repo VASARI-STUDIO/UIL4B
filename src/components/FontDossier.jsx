@@ -5,6 +5,7 @@ import {
 import {
   fontsInUseSearchUrl, ladderFor, sceneWeights, scenesFor,
 } from '../utils/fontScenes'
+import { usesFor } from '../data/fontRealWorldUses'
 import { weightName } from '../utils/fontGallery'
 import { fontStack, loadFont } from '../utils/googleFonts'
 
@@ -602,6 +603,137 @@ export function FontExamplesPanel({ font, id, labelledBy }) {
         </a>
         . It is a search, so a newer or less-used family may return nothing.
       </p>
+    </div>
+  )
+}
+
+// ── THE "IN USE" TAB ────────────────────────────────────────────────────────
+//
+// Photographs of real work set in the family. It ships with NO IMAGES, for
+// every family, and that is the founder's own call rather than an unfinished
+// job: "i can collect images myself later if you cant do it". What is built is
+// the tab, the layout and the per-family slot; what is not built is a single
+// invented example or placeholder photograph.
+//
+// THE SENTENCE THIS PANEL MUST NOT SAY. An empty tab called "In use" is one
+// careless line away from telling a reader that nobody uses this typeface —
+// which for a real face drawn by a real person is a false and damaging claim,
+// and the exact class of error the About tab was built to avoid. So the empty
+// state is about US, not about the family: we have not cleared an image for it.
+// The distinction is stated outright rather than implied, because a reader who
+// gets it wrong gets it wrong about somebody's work.
+//
+// WHY IT IS EMPTY AND NOT MERELY UNFINISHED. [fonts-in-use-surface] is blocked
+// on imagery rights — who owns the pictures, under what licence they may be
+// shown, who curates them, what provenance is displayed — and that is a founder
+// and licensing question, not a build task. data/fontRealWorldUses refuses to
+// hand over an entry that cannot name its source, its credit and its licence,
+// so the first image to appear here will arrive with its provenance attached or
+// not at all.
+//
+// Mobbin drove the empty state, and specifically drove it AWAY from an
+// illustration:
+//   XERO's "No filed sales tax reports" — mobbin.com/screens/84b0c0bb-d346-41ee-995f-15112dfe85ec
+//     names what is absent and then explains THE CONDITION UNDER WHICH IT WOULD
+//     APPEAR ("once a report has been marked as filed..."). That is what makes
+//     an empty panel read as deliberate instead of broken: not a nicer noun, a
+//     mechanism.
+//   LYSSNA's "No sessions yet" — mobbin.com/screens/04281c5d-4340-450c-a46b-601993d9b6db
+//     is the same shape at the smaller size used here, and ends on a single
+//     outbound link rather than a button that does nothing.
+//   JIRA's and Xero's decorative illustrations were deliberately NOT copied. A
+//   grey box with a picture icon in it, sitting in a panel whose whole subject
+//   is a missing picture, is indistinguishable from an image that failed to
+//   load — the exact failure PRODUCT.md names.
+export function FontInUsePanel({ font, id, labelledBy }) {
+  const uses = useMemo(() => usesFor(font?.family), [font])
+  if (!font) return null
+
+  const search = fontsInUseSearchUrl(font.family)
+
+  return (
+    <div className="fdx-panel" id={id} role="tabpanel" aria-labelledby={labelledBy} tabIndex={0}>
+      {uses.length > 0 ? (
+        <>
+          <p className="fdx-source fdx-source--lead">
+            {uses.length} {uses.length === 1 ? 'photograph' : 'photographs'} of work set in{' '}
+            {font.family}. Each one is credited to whoever made it and shown under the permission
+            named beneath it.
+          </p>
+          <ul className="fdx-uses">
+            {uses.map(use => (
+              <li className="fdx-use" key={use.image}>
+                <figure>
+                  {/* loading="lazy" because the tab may hold several full-width
+                      photographs and it is not the first tab anyone opens. */}
+                  <img className="fdx-use-img" src={use.image} alt={use.alt} loading="lazy" />
+                  <figcaption className="fdx-use-cap">
+                    <span className="fdx-use-title">{use.title}</span>
+                    <span className="fdx-use-credit">{use.credit}</span>
+                    {/* The provenance is part of the picture, not a footnote:
+                        the licence is the reason the image is allowed to be
+                        here, so it is printed beside it rather than pooled at
+                        the bottom of the panel where it stops attaching to
+                        anything. */}
+                    <span className="fdx-use-licence">{use.licence}</span>
+                    <a
+                      className="fdx-fiu fdx-use-src"
+                      href={use.source}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                    >
+                      Source<span aria-hidden="true"> ↗</span>
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </figcaption>
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <div className="fdx-empty">
+          {/* THE HEADING IS ABOUT THE LIBRARY, NOT THE TYPEFACE. "No uses of
+              {family}" would be a claim about how the world uses somebody's
+              work, made from a table this product has never filled in. */}
+          <h4 className="fdx-empty-head">No cleared photographs of {font.family} yet</h4>
+          <p className="fdx-empty-body">
+            This tab shows photographs of real work — printed matter, signage, packaging — set in
+            this family, each credited to whoever made it and shown under a named permission. A
+            photograph only appears here once we hold that permission, and none has been cleared
+            for {font.family} so far.
+          </p>
+          <p className="fdx-empty-body">
+            {/* Said plainly, because the alternative is that a reader concludes
+                it from an empty panel and is wrong. */}
+            That is a gap in what we have licensed, not a statement about the typeface. Plenty of
+            families with nothing on this tab are in wide use.
+          </p>
+          <p className="fdx-empty-body fdx-empty-body--last">
+            The Examples tab beside this one is the other half of the question, and it is full: it
+            sets {font.family} in situations this page draws itself, chosen from what kind of face
+            it is.
+          </p>
+          {/* Same wording and the same caveat as the Examples tab, for the same
+              reason — a fontsinuse.com miss returns HTTP 200 with "No Uses
+              found" AND 47 unrelated popular uses underneath, so the miss case
+              is a page that still looks full. It can only ever be offered as a
+              search. */}
+          <p className="fdx-fiu-note">
+            Until then, real-world usage lives off-site and we do not host it —{' '}
+            <a
+              className="fdx-fiu"
+              href={search}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+            >
+              search fontsinuse.com for {font.family}<span aria-hidden="true"> ↗</span>
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+            . It is a search, so a newer or less-used family may return nothing.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
