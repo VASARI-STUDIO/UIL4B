@@ -100,6 +100,7 @@ export function crumbName(route) {
 export function parentOf(pathname) {
   const route = norm(pathname)
   if (route.startsWith('/discover/')) return '/discover'
+  if (route.startsWith('/learn/')) return '/learn'
   const group = CREATE_GROUPS.find((g) => g.tools.some((t) => norm(t.route) === route))
   if (!group) return null
   const home = norm(group.home)

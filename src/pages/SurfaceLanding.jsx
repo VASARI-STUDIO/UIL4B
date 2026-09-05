@@ -6,6 +6,7 @@ import WorldMap from '../components/WorldMap'
 import SystemCTA from '../components/SystemCTA'
 import { useReveal } from '../hooks/useReveal'
 import { DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
+import { LEARN_ARTICLES, readingMinutes } from '../data/learnIndex'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
 import { GALLERY_PALETTES } from '../data/paletteGallery'
 import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
@@ -103,6 +104,10 @@ const PREVIEWS = {
 // Motion mirrors Home: the hero animates on load (CSS fx-rise); the grid reveals
 // on scroll through useReveal(), which only toggles a class — no state-in-effect.
 
+// The guide the hero sends a first-time reader to. Read off the registry
+// rather than written down, so reordering the articles moves the button.
+const FIRST_GUIDE = LEARN_ARTICLES[0]
+
 const SURFACES = {
   discover: {
     eyebrow: 'Discover',
@@ -137,18 +142,18 @@ const SURFACES = {
       { title: 'From colour to conversion', desc: 'Principles, colour and type, plus SEO and marketing playbooks — the full path from a good-looking UI to one that performs.' },
       { title: 'Built into your workflow', desc: 'Every guide links back to the tool that puts it into practice, so you learn and apply in the very same place.' },
     ],
-    sectionTitle: 'A library that explains itself.',
-    sectionLede: 'From first principles to SEO and marketing — short, practical guides that make you measurably better at the work.',
+    sectionTitle: 'Topics still being written.',
+    sectionLede: 'The guides above are live. These are the areas the library will cover next — nothing in this grid is written yet, which is what the Soon badge means.',
     mapEyebrow: 'A worldwide classroom',
     mapTitle: 'Designers everywhere, leveling up.',
     mapLede: 'Built in Brisbane for a community that spans every continent — practical craft that travels as far as your work does.',
     hue: 'ai',
     groups: LEARN_GROUPS,
-    primaryLabel: 'Start building',
-    primaryTo: '/create/color',
-    secondaryLabel: 'Back to home',
-    secondaryTo: '/home',
-    hint: 'Learn is coming soon — here’s what’s on the way.',
+    primaryLabel: `Start with ${FIRST_GUIDE.navLabel.toLowerCase()}`,
+    primaryTo: `/learn/${FIRST_GUIDE.slug}`,
+    secondaryLabel: 'Start building',
+    secondaryTo: '/create/color',
+    hint: `${LEARN_ARTICLES.length === 1 ? 'One guide is' : `${LEARN_ARTICLES.length} guides are`} live. Each one ends at the tool that does the thing it explains.`,
   },
 }
 
@@ -205,6 +210,35 @@ export default function SurfaceLanding({ surface }) {
           </div>
         </div>
       </section>
+
+      {/* ── Learn only: the guides that exist, before the ones that do not ──
+          Order is the argument. A reader arriving at Learn should meet pages
+          they can open before they meet a roadmap; the previous version led
+          with eight Soon cards and had nothing behind any of them. */}
+      {surface === 'learn' && (
+        <section className="home-section">
+          <div className="home-container">
+            <div className="home-head home-head-center" data-reveal>
+              <span className="home-eyebrow">Guides</span>
+              <h2 className="home-h2">Reference, not opinion.</h2>
+              <p className="home-lede">Each guide states the rule, cites the standard it comes from, and shows the working. Every figure is either quoted from a linked specification or computed on the page as you read it.</p>
+            </div>
+            <div className="lidx-grid">
+              {LEARN_ARTICLES.map((a) => (
+                <Link className="lidx-card" key={a.slug} to={`/learn/${a.slug}`} data-reveal>
+                  <span className="lidx-top">
+                    <span className="lidx-topic">{a.topic}</span>
+                    <span className="lidx-time">{readingMinutes(a.words)} min</span>
+                  </span>
+                  <span className="lidx-title">{a.title}</span>
+                  <span className="lidx-dek">{a.dek}</span>
+                  <span className="lidx-go">Read&nbsp;&rarr;</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── What's coming: the surface's sections as cards ── */}
       <section className="home-section">

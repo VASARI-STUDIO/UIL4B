@@ -358,6 +358,14 @@
       "destination": "/info/index.html"
     },
     {
+      "source": "/learn",
+      "destination": "/learn/index.html"
+    },
+    {
+      "source": "/learn/colour-contrast",
+      "destination": "/learn/colour-contrast/index.html"
+    },
+    {
       "source": "/plans",
       "destination": "/plans/index.html"
     },

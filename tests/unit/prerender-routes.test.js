@@ -33,6 +33,7 @@ import {
 import { ORIGIN, advertisedRoutes, buildSitemap } from '../../scripts/sync-sitemap.mjs'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { CREATE_GROUPS } from '../../src/data/toolTree.js'
+import { LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 import { canonicalUrl, robotsFor } from '../../src/utils/routeMeta.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
@@ -120,14 +121,25 @@ test('the API share route survives, and the SPA fallback still covers everything
   // what they should have carried anyway.
   const catchAll = rewrites[rewrites.length - 1]
   assert.equal(catchAll.destination, '/404.html')
-  for (const clientOnly of ['/settings', '/projects', '/checkout', '/login', '/learn']) {
+  for (const clientOnly of ['/settings', '/projects', '/checkout', '/login']) {
     assert.ok(!rewrites.some(r => r.source === clientOnly),
       `${clientOnly} must fall through to the SPA, not be prerendered`)
   }
   // /discover moved the other way: it is a real page with real content and is
   // now prerendered and advertised.
+  //
+  // /learn followed it. It was in the list above while it was a landing page
+  // over an empty library; it now carries the Learn articles, its hero no
+  // longer says "coming soon", and SOON_SURFACES in route-matrix.mjs is empty.
+  // Every article gets its own shell for the same reason /discover does.
   assert.ok(rewrites.some(r => r.source === '/discover'),
     '/discover is indexable content and should have its own prerendered shell')
+  assert.ok(rewrites.some(r => r.source === '/learn'),
+    '/learn has articles on it now and should have its own prerendered shell')
+  for (const route of LEARN_ARTICLE_ROUTES) {
+    assert.ok(rewrites.some(r => r.source === route),
+      `${route} is a published article and needs its own shell`)
+  }
 })
 
 test('vercel.json is exactly what the generator produces — no hand-edit drift', async () => {
@@ -191,7 +203,11 @@ test('no Soon route is prerendered', () => {
   for (const route of soon) {
     assert.ok(!routes.includes(route), `${route} is still in the workshop and must not be prerendered`)
   }
-  assert.ok(!routes.includes('/learn'), '/learn says it is coming soon and must not be prerendered')
+  // /learn is no longer in this set. SOON_SURFACES in route-matrix.mjs is
+  // empty because the surface shipped content; what remains asserted is that
+  // the mechanism still only excludes routes the Create tree calls Soon.
+  assert.ok(routes.includes('/learn'),
+    '/learn has published articles and must be prerendered')
 })
 
 test('CANONICAL AND NOINDEX TRUTH: every prerendered route is one the runtime indexes', () => {

@@ -60,7 +60,7 @@ const DISCOVER_PREFIXES = ['/discover/']
 // section switcher highlights Learn during the redirect hop as well as on the
 // landing itself.
 const LEARN_EXACT = new Set(['/learn', '/docs', '/help', '/info'])
-const LEARN_PREFIXES = ['/docs-', '/docs/']
+const LEARN_PREFIXES = ['/docs-', '/docs/', '/learn/']
 
 /**
  * Resolve a router pathname to a product-surface id.
