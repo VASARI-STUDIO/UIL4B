@@ -30,7 +30,7 @@ import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
-import { consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
+import { boardDraftAge, consumeBoardDraft, readBoardDraft, resetGradientDraft, resetTintDraft, setGradientDraft, setTintDraft } from '../utils/colorHandoff'
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
 // colours and the slider values are persisted separately.
 import useModalDialog from '../hooks/useModalDialog'
@@ -863,7 +863,27 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // `source` is what the persist effect below reads to tell an untouched draw
   // apart from a palette a person actually chose.
   const [initial] = useState(() => initialPaletteBoard({ queryColors, handoff, saved }))
-  useEffect(() => { consumeBoardDraft() }, [])
+  // Age of the hand-off that won, captured during the same render that read it
+  // — after the mount effect consumes the slot there is nothing left to ask.
+  const [handoffAge] = useState(boardDraftAge)
+  useEffect(() => {
+    consumeBoardDraft()
+    // One line, once per mount, saying WHY this board looks the way it does.
+    // The founder's report is intermittent and state-shaped, so the thing worth
+    // shipping is not a guess about which branch misfired but a record that
+    // names it the next time it happens. `handoff` in particular should only
+    // ever be minutes-fresh; an age near the ttl in a report is the smoking gun
+    // for a stager that leaked. Colours are deliberately NOT logged — the count
+    // is what the report was about, and a console is not a place to put a
+    // user's work.
+    try {
+      console.info('[palette] board source=%s cols=%d handoffAge=%s', initial.source, initial.colors.length, handoffAge ?? '—')
+    } catch { /* a console that throws is not a reason to fail a mount */ }
+  // Mount-only by design. `initial` and `handoffAge` are frozen first-render
+  // reads held in useState, so naming them here would fire exactly once anyway
+  // and would only imply this effect re-runs on values it cannot see change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Colours are the source of truth (positional: index 0–4 = the five ROLES,
   // beyond = ALTERNATIVE n). They stay the RAW base: the adjust lens never
@@ -2008,7 +2028,18 @@ export default function PaletteBuilder({ onCopy, toast }) {
   }
 
   return (
-    <div className="plb">
+    // `data-board-source` is the instrumentation for
+    // `palette-opens-with-wrong-state`. The report — "sometimes I open the
+    // palette builder and it has added many colours and it's a different
+    // swatch" — was impossible to triage because the four ways a board can be
+    // populated (a ?c= link, a hand-off, this device's saved project, a fresh
+    // random draw) are indistinguishable once painted. This attribute names the
+    // branch that won, and `data-board-cols` the count the founder was
+    // counting, so a screenshot of the inspector or one line in the console
+    // settles which path produced the board instead of the next reporter having
+    // to reconstruct it. It is inert: nothing reads it to decide anything, and
+    // it carries no colour values, so it stays safe to leave on in production.
+    <div className="plb" data-board-source={initial.source} data-board-cols={colors.length}>
       <p className="sr-only" aria-live="polite">{liveMsg}</p>
 
       {/* ── Toolbar ── */}
