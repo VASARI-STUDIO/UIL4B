@@ -2,6 +2,7 @@ import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
 import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
+import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 
 const STATIC_INDEXABLE_ROUTES = [
   '/',
@@ -19,6 +20,10 @@ const STATIC_INDEXABLE_ROUTES = [
   // it as "see every page", so a crawler following that link should find it
   // advertised rather than treated as an orphan.
   '/sitemap',
+  // /learn moved out of RETIRED_OR_THIN_ROUTES the day it stopped being a
+  // landing page over nothing. It now lists the published guides above its
+  // roadmap, and each guide is advertised in its own right below.
+  '/learn',
 ]
 
 const LIVE_CREATE_ROUTES = CREATE_GROUPS.flatMap((group) => (
@@ -30,7 +35,10 @@ const LIVE_DISCOVER_ROUTES = DISCOVER_GROUPS
   .map((group) => group.route)
 
 const EXPECTED_CRAWLER_ROUTES = [
-  ...new Set([...STATIC_INDEXABLE_ROUTES, ...LIVE_CREATE_ROUTES, ...LIVE_DISCOVER_ROUTES]),
+  ...new Set([
+    ...STATIC_INDEXABLE_ROUTES, ...LIVE_CREATE_ROUTES, ...LIVE_DISCOVER_ROUTES,
+    ...LEARN_ARTICLE_ROUTES,
+  ]),
 ].sort()
 
 const RETIRED_OR_THIN_ROUTES = [
@@ -52,13 +60,10 @@ const RETIRED_OR_THIN_ROUTES = [
   // to three live libraries (asserted in the first test below), so excluding it
   // was hiding a genuine page from the index.
   //
-  // /learn stays. The 2026-08-11 audit listed it alongside /discover as
-  // "missing from sitemap.xml but real, indexable" — that half was wrong.
-  // EVERY group in LEARN_GROUPS carries `soon: true` and the page's own copy
-  // reads "Learn is coming soon", so `robotsFor('/learn')` is noindex.
-  // Advertising it would mean the sitemap saying "index this" about a page that
-  // says "do not". It belongs here until real content ships.
-  '/learn',
+  // /learn went the same way once real content shipped. It was here while the
+  // page's own copy read "Learn is coming soon" over eight unbuilt sections;
+  // it now lists the published guides, so it is in STATIC_INDEXABLE_ROUTES
+  // above and its articles come from LEARN_ARTICLE_ROUTES.
 ]
 
 function crawlerPaths(xml) {
@@ -128,9 +133,19 @@ test.describe('public route contract', () => {
     await expect(stagedDiscover).toHaveCount(DISCOVER_GROUPS.filter((group) => group.soon).length)
     await expect(stagedDiscover.locator('a')).toHaveCount(0)
 
+    // Learn is now BOTH: published guides that are real links, and a topic
+    // roadmap whose rows are still non-actionable. The column asserted zero
+    // links while every row was Soon; it now asserts the split, which is the
+    // property that matters — a Soon row must never become clickable, and a
+    // published guide must never lose its href.
     const learn = page.locator('[data-sitemap-section="learn"]')
     await expect(learn.locator('[data-soon="true"]')).toHaveCount(LEARN_GROUPS.length)
-    await expect(learn.locator('a')).toHaveCount(0)
+    await expect(learn.locator('[data-soon="true"] a')).toHaveCount(0)
+    for (const article of LEARN_ARTICLES) {
+      const row = learn.locator(`.smap-link[data-route="/learn/${article.slug}"]`)
+      await expect(row).not.toHaveAttribute('data-soon', 'true')
+      await expect(row.locator('a')).toHaveAttribute('href', `/learn/${article.slug}`)
+    }
 
     // A Create tool still in the workshop stays non-actionable on the map…
     const stagedBoxShadow = page.locator('.smap-link[data-route="/create/box-shadow"]')

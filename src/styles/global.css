@@ -13176,3 +13176,226 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .cur-lead{padding:14px}
   .cur-lead-title{font-size:16px}
 }
+/* ══ LEARN ARTICLES (.lart-*) ═══════════════════════════════════════════════
+   The reading surface for /learn/<slug>. One layout, every article.
+
+   ── The measure is the whole design ──
+   Bringhurst puts a satisfactory single-column line at 45-75 characters, so the
+   prose column is capped in `ch` rather than px: `ch` is the advance width of
+   "0" in the current font, so a cap expressed in it tracks the face and the
+   size instead of encoding a guess about them.
+
+   The number was measured in the browser with the real face loaded, and the
+   first guess was wrong. 1ch is 10.37px in Manrope at 17px, but the average
+   glyph is nearer 9px — "0" is wider than most letters — so a cap in `ch` buys
+   more characters than it names. 56ch renders 581px and measures 65 characters
+   a line, which is where Bringhurst puts the ideal; the original 68ch would be
+   705px, near 79 characters, past the top of his range. This is also the article
+   about line length practising what it states, which is the cheapest way to keep
+   the two honest. The measurement is on the page: ReadingMeasure.jsx takes it
+   live.
+
+   ── Layout, and the reference behind it ──
+   At >=1080px a 200px contents rail sits immediately left of the prose and the
+   PAIR is centred, rather than the rail being pinned to the window edge. Taken
+   from Ditto's Style Guide on Mobbin
+   (mobbin.com/screens/b2d37cca-3e44-405d-b85a-130756feb9df), where the section
+   index sits against the content column: the eye travels a few centimetres
+   between "where am I" and "what am I reading", not the width of a monitor.
+   Below that the contents become a plain list above the prose. NOT a collapsed
+   <details> — on the viewport where orientation is hardest to hold, hiding the
+   contents behind a tap is the wrong trade, and five short lines is a cheap
+   price for them.
+
+   ── Emphasis budget ──
+   Four prose primitives (src/components/LearnParts.jsx) and no callout colours.
+   The retired DocsDesign.jsx had reached three tinted callout variants plus a
+   stat tile plus a red/green before-after grid; at that point nothing on the
+   page is emphasised, because everything is. Weight, the hairline rule and the
+   mono face carry the hierarchy here, and colour is spent only on links and on
+   the pass/fail verdicts in the measured table, where it is the datum.
+
+   ── Ground ──
+   The prose sits directly on --bg-0 with no card. That is a decision the
+   contrast article depends on: TokenContrastTable measures against --bg-0
+   because that is what is behind the text. Wrapping the prose in a --bg-1 panel
+   would make its own published figures wrong. ══════════════════════════════ */
+/* --lart-rail is the contents column and --lart-gap the space beside it; the
+   header is indented by their sum at wide widths so the h1 sits over its own
+   text rather than over the rail.
+
+   font-size on .lart is load-bearing, not decoration. `ch` resolves against the
+   element it is used on, so `max-width:56ch` on the header (inheriting the body
+   size) and on the prose (17px) produced two different widths from one token —
+   which is exactly how the h1 ended up starting 128px left of the paragraph
+   under it. One size on the container, and every 56ch in here is the same
+   number of pixels. */
+.lart{--lart-measure:56ch;--lart-rail:200px;--lart-gap:var(--s-8);font-size:17px;max-width:1180px}
+.lart-crumb{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--t3);margin-bottom:var(--s-4)}
+.lart-crumb a{color:var(--t3)}
+.lart-crumb a:hover{color:var(--t0)}
+.lart-crumb span[aria-current]{color:var(--t1)}
+
+.lart-head{max-width:var(--lart-measure);margin-bottom:var(--s-6)}
+/* Capped at 38px, not the site's 52px. In a 581px column a 44px title took
+   three lines and half the first screen; 38px lands the same title in two. */
+.lart-head h1{font-family:var(--display);font-size:clamp(28px,3.4vw,38px);font-weight:600;letter-spacing:-.025em;line-height:1.18;color:var(--t0);text-wrap:balance}
+.lart-dek{margin-top:var(--s-3);font-size:clamp(16px,1.7vw,19px);line-height:1.6;color:var(--t1);max-width:56ch}
+.lart-meta{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:var(--s-5);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em;color:var(--t3)}
+.lart-topic{display:inline-flex;align-items:center;padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--bh);color:var(--t1);text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-weight:700}
+.lart-meta-sep{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.55}
+
+/* ── Layout ── */
+.lart-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-6)}
+@media(min-width:1080px){
+  .lart-layout{grid-template-columns:var(--lart-rail) minmax(0,var(--lart-measure));justify-content:center;gap:var(--lart-gap);align-items:start}
+  /* Same centred block as the layout below, with the rail's width as padding —
+     so the crumb, the h1 and the first paragraph share one left edge. */
+  .lart-crumb,.lart-head{width:min(100%,calc(var(--lart-rail) + var(--lart-gap) + var(--lart-measure)));margin-inline:auto;padding-left:calc(var(--lart-rail) + var(--lart-gap))}
+}
+
+/* ── Contents ── */
+.lart-toc{border-top:1px solid var(--border);padding-top:var(--s-4)}
+.lart-toc-h{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:var(--s-3)}
+.lart-toc ol{list-style:none;display:flex;flex-direction:column;gap:2px;counter-reset:lart-toc}
+.lart-toc li{counter-increment:lart-toc}
+.lart-toc a{display:flex;gap:10px;padding:6px 0;font-size:13px;line-height:1.45;color:var(--t1);text-decoration:none;border-bottom:1px solid transparent}
+.lart-toc a::before{content:counter(lart-toc,decimal-leading-zero);font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t3);padding-top:3px;flex:none}
+.lart-toc a:hover{color:var(--t0);text-decoration:none}
+.lart-toc a[data-active]{color:var(--t0);font-weight:600}
+.lart-toc a[data-active]::before{color:var(--accent-strong)}
+@media(min-width:1080px){
+  .lart-toc{position:sticky;top:calc(var(--nav-clear) + var(--s-4));max-height:calc(100dvh - var(--nav-clear) - var(--s-8));overflow-y:auto}
+}
+
+/* ── Prose ── */
+.lart-prose{max-width:var(--lart-measure);line-height:1.7;color:var(--t1)}
+.lart-prose>section{scroll-margin-top:calc(var(--nav-clear) + var(--s-4))}
+.lart-prose>section+section{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border)}
+.lart-prose h2{font-family:var(--display);font-size:clamp(21px,2.4vw,27px);font-weight:650;letter-spacing:-.02em;line-height:1.25;color:var(--t0);margin-bottom:var(--s-4);text-wrap:balance}
+.lart-prose h3{font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1.4;color:var(--t0);margin-top:var(--s-6);margin-bottom:var(--s-2)}
+.lart-prose p{margin-bottom:var(--s-4)}
+.lart-prose p:last-child{margin-bottom:0}
+.lart-prose strong,.lart-prose b{font-weight:700;color:var(--t0)}
+.lart-prose i{font-style:italic}
+.lart-prose a{color:var(--accent-strong);text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px;text-decoration-color:color-mix(in srgb,var(--accent-strong) 45%,transparent)}
+.lart-prose a:hover{text-decoration-color:currentColor}
+/* NOT white-space:nowrap. A long declaration — clamp(1.5rem, 1.1479rem +
+   0.0939vw, 2.5rem) is 39 characters of mono — overflowed the 358px column at
+   390px and was clipped, so the reader saw a truncated value in an article
+   whose point was the exact value. It wraps at its own spaces now; short chips
+   are unaffected because there is nothing in them to wrap at. */
+.lart-prose code{font-family:var(--mono);font-size:.88em;padding:1px 5px;border-radius:var(--radius-xs);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);overflow-wrap:break-word}
+.lart-prose ul,.lart-prose ol{margin:0 0 var(--s-4) 1.15em;display:flex;flex-direction:column;gap:var(--s-2)}
+.lart-prose li{padding-left:4px}
+.lart-dim{color:var(--t3)}
+
+/* ── Aside: a clarification to one side of the sentence above it. No icon, no
+      label, no tint — it is not more important than the paragraph, it is next
+      to it. The rule is the only marker. ── */
+.lart-aside{margin:var(--s-5) 0;padding-left:var(--s-4);border-left:1px solid var(--border);font-size:14.5px;line-height:1.65;color:var(--t3)}
+.lart-aside code{font-size:.9em}
+
+/* ── Spec: a requirement in the standard's own words, attributed. ── */
+.lart-spec{margin:var(--s-5) 0;padding:var(--s-4) 0 var(--s-4) var(--s-5);border-left:2px solid var(--bh)}
+.lart-spec-quote{font-size:15.5px;line-height:1.62;color:var(--t0)}
+.lart-spec-quote b{font-weight:700}
+.lart-spec-cite{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:var(--s-3);font-family:var(--mono);font-size:11px;letter-spacing:.03em}
+.lart-spec-cite a{color:var(--t2);text-decoration:none;border-bottom:1px solid var(--border)}
+.lart-spec-cite a:hover{color:var(--t0);border-bottom-color:currentColor;text-decoration:none}
+.lart-spec-level{padding:2px 7px;border-radius:var(--radius-pill);border:1px solid var(--border);color:var(--t3);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+
+/* ── Formula ── */
+.lart-formula{margin:var(--s-5) 0}
+.lart-formula pre{overflow-x:auto;padding:var(--s-4);border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border)}
+.lart-formula code{font-family:var(--mono);font-size:13px;line-height:1.75;color:var(--t0);white-space:pre;display:block}
+.lart-formula figcaption{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
+
+/* ── Tables ── */
+.lart-table-wrap{margin:var(--s-5) 0}
+.lart-table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+.lart-table-scroll:focus-visible{outline:2px solid var(--accent-strong);outline-offset:2px}
+.lart-table{width:100%;border-collapse:collapse;font-size:14px}
+.lart-table th,.lart-table td{padding:10px 14px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--border)}
+.lart-table tbody tr:last-child th,.lart-table tbody tr:last-child td{border-bottom:0}
+.lart-table thead th{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);background:var(--bg-2);white-space:nowrap}
+.lart-table tbody th{font-weight:600;color:var(--t0)}
+.lart-table td{color:var(--t1)}
+.lart-table [data-num]{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.lart-table-cap{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
+.lart-table-cap code{font-family:var(--mono);font-size:.92em}
+
+.lart-swatch{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;border-radius:var(--radius-xs);border:1px solid var(--border);font-size:12px;font-weight:600;margin-right:10px;vertical-align:middle}
+.lart-swatch--wide{width:56px}
+.lart-hex{font-family:var(--mono);font-size:11.5px;color:var(--t2);white-space:nowrap}
+/* position:relative is load-bearing, not tidiness. The .sr-only text inside is
+   position:absolute, and with no positioned ancestor it resolved against the
+   initial containing block — so it escaped the table's overflow container and
+   widened the DOCUMENT by 39px, giving /learn/colour-contrast a horizontal
+   scrollbar at 390px and 320px while every visible box was inside the viewport.
+   A containing block on the parent puts it back inside the scroller. */
+.lart-verdict{position:relative;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+/* The -strong companions, not --ok/--err. The base state tokens are tuned to
+   clear 3:1 as fills, dots and glyphs; this is 11px text, so it needs the 4.5:1
+   pair. tests/unit/state-token-contrast.test.js caught this exact rule, which
+   is a fair result for a verdict badge inside an article about contrast. */
+.lart-verdict[data-pass="true"]{color:var(--ok-strong)}
+.lart-verdict[data-pass="false"]{color:var(--err-strong)}
+/* The verdict is a word first and a colour second — SC 1.4.1 applies to this
+   table as much as to anything the article describes. The ratio and threshold
+   ride along for assistive tech, in the site's existing .sr-only, where the
+   colour carries nothing at all. */
+
+/* ── Sources, next step, read next ── */
+.lart-sources{margin-top:var(--s-7);padding-top:var(--s-6);border-top:1px solid var(--border)}
+.lart-sources h2{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:var(--s-3)}
+.lart-sources ul{list-style:none;margin:0;display:flex;flex-direction:column;gap:var(--s-2)}
+.lart-sources li{padding-left:0;font-size:14px;line-height:1.5}
+
+.lart-next{margin-top:var(--s-6);padding-top:var(--s-5);border-top:1px solid var(--border);display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4)}
+.lart-next-lede{font-size:15px;line-height:1.6;color:var(--t1);margin:0}
+.lart-next .ui-pill{padding:11px 20px;font-size:14px}
+
+.lart-onward{margin-top:var(--s-6)}
+.lart-onward-label{display:block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:var(--s-3)}
+.lart-onward a{display:flex;flex-direction:column;gap:4px;padding:var(--s-4);border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);text-decoration:none;transition:border-color var(--t),background var(--t)}
+.lart-onward a:hover{border-color:var(--bh);background:var(--bg-2);text-decoration:none}
+.lart-onward-title{font-size:16px;font-weight:650;color:var(--t0);letter-spacing:-.01em}
+.lart-onward-dek{font-size:13.5px;line-height:1.55;color:var(--t2)}
+
+@media(max-width:640px){
+  .lart{font-size:16.5px}
+  .lart-prose>section+section{margin-top:var(--s-6);padding-top:var(--s-5)}
+  .lart-spec{padding-left:var(--s-4)}
+  .lart-table th,.lart-table td{padding:9px 12px}
+}
+
+/* ── The type ladder. A LIST, not a table: the specimen carries its own row's
+      clamp() as a font-size, so the sizes here move with the window exactly the
+      way the exported CSS does. A table would have forced every specimen into a
+      cell of the same height and turned a scale into a column of numbers. ── */
+.lart-ladder-wrap{margin:var(--s-5) 0}
+.lart-ladder{list-style:none;margin:0;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.lart-ladder-row{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:baseline;gap:var(--s-3);padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--border)}
+.lart-ladder-row:last-child{border-bottom:0}
+.lart-ladder-name{grid-row:1;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--t3)}
+.lart-ladder-specimen{grid-row:1;grid-column:2;font-family:var(--display);font-weight:600;letter-spacing:-.02em;line-height:1.15;color:var(--t0);overflow-wrap:anywhere}
+.lart-ladder-nums{grid-row:2;grid-column:2;display:flex;gap:var(--s-4);font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--t3);margin-top:2px}
+
+/* ══ /learn article index (.lidx-*) ═════════════════════════════════════════
+   The three live guides on the Learn landing, above the roadmap grid. Card
+   shape follows the Hers "More for what's ahead" row on Mobbin
+   (mobbin.com/screens/e9a5d723-7095-463b-ae19-ec3caa81d79c) and Codecademy's
+   index (mobbin.com/screens/c55a431d-f136-4e0d-8161-73470143aa5f): a category
+   chip, the title, one line of what it answers, and the reading time as a fact
+   rather than a badge. No thumbnails — there is no illustration for "the
+   relative luminance formula" that would not be decoration. ══════════════ */
+.lidx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--s-4)}
+.lidx-card{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-5);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);text-decoration:none;transition:border-color var(--t),transform var(--t),box-shadow var(--t)}
+.lidx-card:hover{border-color:var(--bh);text-decoration:none;transform:translateY(-2px);box-shadow:var(--shadow-cmd)}
+.lidx-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.lidx-topic{color:var(--accent-strong)}
+.lidx-time{color:var(--t3);letter-spacing:.06em}
+.lidx-title{font-size:19px;font-weight:650;letter-spacing:-.015em;line-height:1.3;color:var(--t0)}
+.lidx-dek{font-size:14px;line-height:1.6;color:var(--t2);flex:1}
+.lidx-go{font-size:13.5px;font-weight:600;color:var(--accent-strong)}

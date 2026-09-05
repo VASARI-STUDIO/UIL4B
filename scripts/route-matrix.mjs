@@ -72,20 +72,24 @@ export { CREATE_HOMES_THAT_RENDER }
 
 // Surfaces outside the Create tree that describe themselves as unfinished.
 //
-// isSoonRoute() only understands the Create tree — by design, per its own
-// comment — so it returns false for /learn. But SurfaceLanding.jsx renders
-// /learn with the hint "Learn is coming soon — here's what's on the way", every
-// entry in LEARN_GROUPS carries soon: true, and routeMetaMap's own description
-// ends "The Learn library is on the way." Prerendering it would put a crawlable
-// shell behind an empty library.
+// isSoonRoute() only understands the Create tree, by design (see its own
+// comment), so a surface that is honestly unbuilt has to say so here.
 //
-// NOTE FOR THE FOUNDER, deliberately not actioned here: robotsFor('/learn')
-// returns `index,follow`, so the moment JavaScript runs the page asks to be
-// indexed, while the shell it was served says noindex. Excluding it from the
-// matrix preserves today's served behaviour rather than quietly changing what
-// gets indexed. Making the two agree is a call about whether /learn should be
-// in the index at all.
-const SOON_SURFACES = Object.freeze(['/learn'])
+// /learn WAS the only entry, and it is not one any more. It now carries three
+// full reference articles at /learn/<slug>, its hero no longer says "coming
+// soon", and its own description in routeMetaMap.js no longer says the library
+// is on the way. The exclusion existed because prerendering it would have put a
+// crawlable shell behind an empty library; that is no longer what is behind it.
+//
+// This ALSO resolves the contradiction recorded here for the founder: the
+// served shell said noindex while robotsFor('/learn') returned `index,follow`,
+// so the moment JavaScript ran the page asked to be indexed and the HTML it
+// arrived in said the opposite. Both now say index, which is the honest answer
+// for a page with content on it.
+//
+// The list stays as the mechanism. The next surface that ships a landing page
+// ahead of its content goes here, and comes out the day the content lands.
+const SOON_SURFACES = Object.freeze([])
 
 const RETIRED = new Set(LEGACY_REDIRECTS.map(([from]) => from))
 

@@ -349,6 +349,12 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
   return { ...rest, route: tool.route, soon: tool.soon }
 })
 
+// The live Learn articles. LEARN_GROUPS below is the TOPIC roadmap — areas the
+// section will cover — and an article is a page that exists. Keeping them apart
+// is what lets the menu show both without either lying: the Guides column is
+// pages you can open now, the Foundations and Growth columns are still Soon.
+import { LEARN_ARTICLES } from './learnIndex.js'
+
 export const LEARN_GROUPS = [
   { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/learn', soon: true },
   { id: 'themes', label: 'UI Themes', desc: 'Dark, light and custom theme systems.', route: '/learn', soon: true },
@@ -500,10 +506,36 @@ const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
   { label: 'Your library', ids: ['curated', 'collections'] },
 ])
 
-const LEARN_MENU = groupsToMenu(LEARN_GROUPS, [
-  { label: 'Foundations', ids: ['principles', 'themes', 'brand', 'typography'] },
-  { label: 'Growth & help', ids: ['seo', 'marketing', 'ai-assistants', 'help'] },
-])
+// Which NavIcon glyph a Learn article row shows. Presentation, so it lives here
+// beside MENU_ICONS rather than in learnIndex.js — that file has to stay
+// parseable by the Node build scripts and has no business knowing about icons.
+const LEARN_ARTICLE_ICONS = {
+  'colour-contrast': 'contrast',
+  'type-scales': 'typography',
+  'colour-spaces': 'palette',
+}
+
+// The articles dealt into the menu's row shape. They are not folded into
+// LEARN_GROUPS: a group is a subject area with a Soon flag, an article is a URL
+// that renders. Merging them would have meant either giving every article a
+// fake group or every group a fake route.
+const LEARN_ARTICLE_ROWS = LEARN_ARTICLES.map((a) => ({
+  id: `learn-${a.slug}`,
+  label: a.navLabel,
+  route: `/learn/${a.slug}`,
+  icon: LEARN_ARTICLE_ICONS[a.slug] || 'principles',
+  soon: false,
+}))
+
+// Guides first: it is the only column whose rows go anywhere. The two roadmap
+// columns keep their Soon badges and stay below it in reading order.
+const LEARN_MENU = [
+  [{ label: 'Guides', tools: LEARN_ARTICLE_ROWS }],
+  ...groupsToMenu(LEARN_GROUPS, [
+    { label: 'Foundations', ids: ['principles', 'themes', 'brand', 'typography'] },
+    { label: 'Growth & help', ids: ['seo', 'marketing', 'ai-assistants', 'help'] },
+  ]),
+]
 
 // Top-level nav model consumed by PillNav. Each section carries its flat `groups`
 // (still used by the router hand-off), the menu `columns` (the flat icon+label
