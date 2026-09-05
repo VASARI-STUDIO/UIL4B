@@ -1168,14 +1168,14 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-add-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
 
 /* Gallery grid — masonry-like with varying heights */
-.pl-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));--pl-gap:16px;gap:var(--pl-gap);margin-top:8px}
+.pl-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));--pl-gap:16px;--pl-preview-h:172px;--pl-preview-fade:44px;--pl-preview-dur:16s;gap:var(--pl-gap);margin-top:8px}
 /* The locked tease continues the gallery, so its seam is the ROW GAP, not
    the 8px that separates the first grid from the toolbar. --pl-gap is read
    rather than repeated: the 720px band retunes it and the seam follows. */
 .pl-gallery--continues{margin-top:var(--pl-gap)}
 
 /* Card */
-.pl-card{--pl-preview-h:172px;--pl-preview-dur:16s;border-radius:var(--radius-l);overflow:hidden;cursor:pointer;transition:all var(--dur-3) var(--ease-out);position:relative;background:var(--card);border:1px solid var(--border)}
+.pl-card{border-radius:var(--radius-l);overflow:hidden;cursor:pointer;transition:all var(--dur-3) var(--ease-out);position:relative;background:var(--card);border:1px solid var(--border)}
 .pl-card:hover{transform:translateY(-4px);box-shadow:var(--warm-shadow-lg);border-color:var(--bh)}
 .pl-card:hover .pl-card-overlay{opacity:1}
 .pl-card:hover .pl-card-img img{transform:scale(1.04)}
@@ -1214,8 +1214,15 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
    transform, so the fade would follow the words instead of marking the edge.
    Where a prompt is shorter than the window the gradient lies over its own
    ground colour and is invisible, so a short prompt gets no fade pretending
-   there is more of it. */
-.pl-card-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:44px;background:linear-gradient(180deg,transparent 0%,var(--cbg) 88%);pointer-events:none}
+   there is more of it.
+
+   --pl-preview-fade is ONE number for two properties: the height of this
+   gradient and the bottom padding of the text. They have to match, because the
+   scroll ends with the text's padded bottom on the window's bottom edge —
+   measured at 0.0px — so any padding smaller than the fade would leave the
+   prompt's LAST LINE sitting inside the gradient, washed out at the exact
+   moment the reader has scrolled to reach it. */
+.pl-card-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:var(--pl-preview-fade);background:linear-gradient(180deg,transparent 0%,var(--cbg) 88%);pointer-events:none}
 /* MOTION IS EARNED PER CARD. The scroll plays on hover and on keyboard focus,
    never on its own. motionsites plays every card at once and it works there
    because its artefact is a PAGE — there is no text to read. A prompt IS text,
@@ -1232,16 +1239,40 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
    so a prompt that already fits moves by exactly nothing rather than sliding up
    to reveal blank space. `alternate` returns it to the top rather than jumping,
    and the 7%/93% holds are the dwell at each end. */
-.pl-card-preview-text{margin:0;padding-bottom:14px;font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--t1);white-space:pre-wrap;word-break:break-word;animation:pl-preview-scroll var(--pl-preview-dur) var(--ease-standard) infinite alternate;animation-play-state:paused}
+.pl-card-preview-text{margin:0;padding-bottom:var(--pl-preview-fade);font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--t1);white-space:pre-wrap;word-break:break-word;animation:pl-preview-scroll var(--pl-preview-dur) linear infinite alternate;animation-play-state:paused}
 .pl-card:hover .pl-card-preview-text,.pl-card:focus-visible .pl-card-preview-text{animation-play-state:running}
 @keyframes pl-preview-scroll{0%,7%{transform:translateY(0)}93%,100%{transform:translateY(min(0px,calc(var(--pl-preview-h) - 100% - 16px)))}}
-/* BOTH HALVES, because the global clamp at the top of this file reaches
-   animation-duration but NOT transform: under the clamp alone this animation
-   would run one iteration in 0.01ms and REST AT ITS LAST KEYFRAME, i.e. every
-   hovered card would snap to the BOTTOM of its prompt. `animation:none` plus
-   `transform:none` is what actually parks the text at the top. The hover and
-   focus selectors are listed too, or the play-state rule above would restart a
-   cancelled animation on hover. */
+/* BOTH HALVES — and the reason is narrower than the usual one, so it is worth
+   stating precisely rather than repeating the house line.
+
+   MEASURED IN A RENDERED BROWSER, four motion contexts, hovering a card in each:
+     OS reduce, no stored choice ............ animation-name none, translateY 0
+     OS no-preference, no stored choice ..... pl-preview-scroll, 27s, travels
+     OS no-preference, Settings say REDUCE .. animation-name none, translateY 0
+     OS reduce, Settings say MOTION ......... pl-preview-scroll, 27s, travels
+   All four correct, in both directions.
+
+   THE CLAIM THIS COMMENT ORIGINALLY MADE WAS WRONG AND WAS TESTED RATHER THAN
+   TRUSTED. It said that without these two rules the global clamp would run one
+   0.01ms iteration and leave the text RESTING AT ITS LAST KEYFRAME — every
+   hovered card snapped to the BOTTOM of its prompt. Deleting exactly these two
+   rules at runtime and re-measuring gives translateY 0: the clamp forces
+   animation-iteration-count to 1, the animation finishes immediately, and with
+   `animation-fill-mode: none` the element reverts to its UN-ANIMATED transform,
+   which is the top. Forcing fill-mode `both` on top of that did not move it
+   either. So the clamp handles this animation on its own today.
+
+   THE PAIR STILL SHIPS, for the honest reason rather than the dramatic one: it
+   is what stops the correct behaviour from depending on two defaults staying
+   put — the clamp's iteration count and this animation's fill mode. Someone
+   adding `forwards` so a preview holds where the pointer left it is a plausible
+   next edit, and it would be reaching past the clamp. `animation:none` says the
+   thing outright instead of arriving at it by subtraction, and the repo's
+   contract (tests/unit/reduced-motion-guard) requires the explicit-attribute
+   companion beside the media half in any case.
+
+   The hover and focus selectors are listed in both halves, or the play-state
+   rule above would put a cancelled animation back on hover. */
 html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion="true"] .pl-card:hover .pl-card-preview-text,html[data-reduced-motion="true"] .pl-card:focus-visible .pl-card-preview-text{animation:none;transform:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .pl-card-preview-text,html:not([data-reduced-motion="false"]) .pl-card:hover .pl-card-preview-text,html:not([data-reduced-motion="false"]) .pl-card:focus-visible .pl-card-preview-text{animation:none;transform:none}}
 
@@ -1821,8 +1852,7 @@ img,svg,video{max-width:100%;height:auto}
   .ic>span:not(.ic-pack){-webkit-line-clamp:3;line-clamp:3}
   .grad-presets{grid-template-columns:repeat(auto-fill,minmax(min(180px,100%),1fr))}
   .img-grid{grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr))}
-  .pl-gallery{grid-template-columns:1fr}
-  .pl-card{--pl-preview-h:150px}
+  .pl-gallery{grid-template-columns:1fr;--pl-preview-h:150px}
   .pl-add-btn{width:100%}
   .pl-drop-zone{flex:1 1 100%}
   .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}
@@ -13268,7 +13298,19 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    measures 4.43:1 on the card in light. The pill is an unavailability marker,
    not an action, so it takes the neutral ink rather than the accent. */
 .lockt-tag{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t1);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
-.lockt-lines{display:flex;flex-direction:column;justify-content:center;gap:9px;min-height:104px;padding:14px;border-radius:var(--radius-l);border:1px dashed var(--bh);background:var(--bg-2)}
+/* min-height READS the real card's window height rather than restating it —
+   the same rule the .lockt-stripes comment above states for the palette
+   placeholders. The 104px that used to sit here was tuned against a prompt
+   card that was a title and three tags; the card is now an artefact window
+   plus a caption, so a literal here would have left the teased row visibly
+   shorter than the row above it and reading as a different component. The
+   fallback covers the placeholder being used outside a .pl-gallery, which
+   is where the custom property is set.
+
+   The locked card is still shorter than a free one by exactly its missing
+   TITLE LINE, and that is not a defect to close: a prompt's title is the
+   product, so unlike a brand palette this placeholder carries no name. */
+.lockt-lines{display:flex;flex-direction:column;justify-content:center;gap:9px;min-height:var(--pl-preview-h,104px);padding:14px;border-radius:var(--radius-l);border:1px dashed var(--bh);background:var(--bg-2)}
 .lockt-line{height:8px;border-radius:var(--radius-pill);background:var(--bg-4)}
 .lockt-line[data-step="0"]{width:100%}
 .lockt-line[data-step="1"]{width:82%}

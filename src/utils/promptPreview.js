@@ -59,13 +59,22 @@ export const PREVIEW_MAX_SECONDS = 34
 
 /**
  * Seconds for one pass of the preview scroll, clamped to the band above.
- * Always a finite number >= PREVIEW_MIN_SECONDS, including for empty,
- * null and non-string input, so the CSS custom property it feeds can never
- * be handed `NaNs` (which would invalidate the whole animation shorthand).
+ *
+ * Always a finite number >= PREVIEW_MIN_SECONDS, for empty, null, undefined and
+ * non-string input alike. That matters more than it looks: this value is
+ * written into a CSS custom property inside the `animation` shorthand, and a
+ * `NaNs` there invalidates the WHOLE shorthand — so the failure mode of a bad
+ * input is not a wrong duration, it is no preview animation at all, silently.
+ *
+ * The type test is the entire guard and it is deliberately the only one. A
+ * trailing `Number.isFinite` check on the division was written here first and
+ * then deleted, because `chars` is a string length or 0 by construction, so
+ * the division cannot be non-finite and no mutation of that branch could be
+ * made to fail a test. Unreachable defence reads as covered without being
+ * covered, which is worse than no defence.
  */
 export function previewDuration(text) {
   const chars = typeof text === 'string' ? text.length : 0
   const raw = chars / PREVIEW_CHARS_PER_SECOND
-  if (!Number.isFinite(raw)) return PREVIEW_MIN_SECONDS
   return Math.round(Math.min(PREVIEW_MAX_SECONDS, Math.max(PREVIEW_MIN_SECONDS, raw)))
 }

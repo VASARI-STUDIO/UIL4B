@@ -19,6 +19,21 @@
 // Every assertion is paired with a POSITIVE CONTROL over a free prompt. If the
 // gallery ever fails to render, "no locked prompt found" would be true and
 // meaningless — which is exactly how this suite would start lying.
+//
+// ── WHAT CHANGED, AND WHY THE STAKES WENT UP ────────────────────────────────
+//
+// The cards now PREVIEW THE PROMPT. Each free card renders `p.text` in full
+// inside a fixed-height window, because the founder asked the library to show
+// the artefact rather than a name for it. That makes the split the only thing
+// between a signed-out visitor and eight paid prompt texts, where before it was
+// the only thing between them and eight titles.
+//
+// So the assertions below no longer stop at "the title is absent". They read
+// EVERY RENDERED PREVIEW on the page, pair it with the card it belongs to, and
+// require that the set of previewed texts is exactly the free set — under the
+// search box, under both sort orders, and under every category chip. Reverting
+// the grid's source from `browsableCommunity` to `sortedCommunity` fails these,
+// which is the wiring the first version of this gate got wrong.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
@@ -56,6 +71,21 @@ async function surfaces(page) {
       .map((el) => `${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''} ${el.textContent || ''}`)
       .join(' | ').toLowerCase(),
   }))
+}
+
+/**
+ * Every card on screen, paired with the text its preview window is showing.
+ *
+ * `[data-preview]` is the stable hook rather than the class: PromptCard's
+ * comment says so, and a class is something CSS is free to rename. What this
+ * gate needs to know is WHICH PROMPT'S TEXT IS ON THE PAGE, and that is the
+ * element the attribute marks.
+ */
+async function previews(page) {
+  return page.evaluate(() => [...document.querySelectorAll('.pl-card')].map((card) => ({
+    title: (card.querySelector('.pl-card-title')?.textContent || '').trim(),
+    preview: card.querySelector('[data-preview]')?.textContent || '',
+  })))
 }
 
 test.describe('the community prompt gate holds under every control on the page', () => {
@@ -160,6 +190,84 @@ test.describe('the community prompt gate holds under every control on the page',
     await page.keyboard.press('Enter')
     // The canonical upgrade modal, not a second one built for this surface.
     await expect(page.locator('[role="dialog"]').filter({ hasText: 'The full community library' })).toBeVisible()
+  })
+
+  test('every rendered preview is a free prompt, verbatim — the positive control', async ({ page }) => {
+    // The control for everything below it. If the preview were empty, a stub, or
+    // a truncated summary, the leak assertions would all pass by accident.
+    const shown = await previews(page)
+    expect(shown.length, 'the gallery rendered no cards').toBe(FREE.length)
+    for (const card of shown) {
+      const match = FREE.find((p) => p.title === card.title)
+      expect(match, `a card titled "${card.title}" is not a free prompt`).toBeTruthy()
+      // Verbatim, not a summary: the card shows the artefact.
+      expect(card.preview, `the preview for "${card.title}" is not the prompt itself`)
+        .toBe(match.text)
+    }
+  })
+
+  test('no preview carries a locked prompt, under search, sort or any category', async ({ page }) => {
+    // THE regression, aimed at the surface that now holds the payload. A locked
+    // prompt reaching the grid would arrive with its ENTIRE TEXT in a preview,
+    // so this reads the previews rather than the titles.
+    const leaks = async (where) => {
+      const shown = await previews(page)
+      const found = []
+      for (const card of shown) {
+        for (const p of LOCKED) {
+          const phrase = (p.text || '').split('\n')[0].slice(0, 40).toLowerCase()
+          if (card.preview.toLowerCase().includes(phrase)) found.push(`${p.id} previewed under ${where}`)
+          if (card.title === p.title) found.push(`${p.id} titled under ${where}`)
+        }
+      }
+      // Every card on screen must still be one of the twelve.
+      const strangers = shown
+        .filter((c) => !FREE.some((p) => p.title === c.title))
+        .map((c) => `unknown card "${c.title}" under ${where}`)
+      return [...found, ...strangers]
+    }
+
+    expect(await leaks('the default view'), 'a locked prompt reached the grid').toEqual([])
+
+    const search = page.getByLabel('Search community prompts')
+    for (const p of TELLTALE) {
+      for (const word of p.words) {
+        await search.fill(word)
+        await expect(page.locator('.pl-card')).toHaveCount(0)
+        expect(await leaks(`search "${word}"`), `searching "${word}" leaked ${p.id}`).toEqual([])
+      }
+    }
+    await search.fill(CONTROL_WORD)
+    await expect(page.locator('.pl-card')).toHaveCount(1)
+    expect(await leaks(`search "${CONTROL_WORD}"`)).toEqual([])
+    await search.fill('')
+
+    for (const order of ['Newest', 'Popular']) {
+      await page.getByRole('button', { name: order, exact: true }).click()
+      await expect(page.locator('.pl-card')).toHaveCount(FREE.length)
+      expect(await leaks(`sort ${order}`), `sorting by ${order} leaked a locked prompt`).toEqual([])
+    }
+
+    for (const label of ['Website', '3D & Motion', 'UI Components', 'CSS & Visual', 'Branding']) {
+      await page.getByRole('button', { name: label, exact: true }).click()
+      expect(await leaks(`category ${label}`), `the ${label} category leaked a locked prompt`).toEqual([])
+    }
+  })
+
+  test('a locked placeholder has no preview element to put a prompt in', async ({ page }) => {
+    // Structural, not cosmetic. The free card's window is `[data-preview]`; the
+    // placeholder is a different component with no such element, so there is
+    // nowhere for a payload to land even if a future mapper handed one over.
+    const locked = page.locator('.lockt-card')
+    await expect(locked).toHaveCount(3)
+    expect(await locked.locator('[data-preview]').count(),
+      'a locked placeholder grew a preview window').toBe(0)
+    expect(await page.locator('.lockt-card .pl-card-preview-text').count(),
+      'a locked placeholder is drawing prompt text').toBe(0)
+    // Positive control: the free cards DO have one, so the count above is not
+    // zero because the selector is wrong.
+    expect(await page.locator('.pl-card [data-preview]').count(),
+      'the free cards have no preview either — this assertion is vacuous').toBe(FREE.length)
   })
 
   test('the wall steps aside while the visitor is searching or filtering', async ({ page }) => {
