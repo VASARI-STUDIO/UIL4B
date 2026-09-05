@@ -493,12 +493,12 @@ export default function UIBuilder({ onCopy, toast }) {
       <div className="sec-h">
         <div className="sec-h-eyebrow">UI Builder <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', padding: '2px 8px', borderRadius: 100, background: 'var(--brand-bg)', color: 'var(--accent-strong)', marginLeft: 6, verticalAlign: 'middle' }}>ALPHA</span></div>
         <h1>Component Designer <span className="uib-alpha-tag">Alpha</span></h1>
-        <p>Design dashboard components with live previews. Pick styles, tune tokens, copy CSS.</p>
+        <p>Design dashboard components with live previews. Pick a variant, tune your styles, copy CSS.</p>
       </div>
 
       {showIntro && (
         <div className="uib-intro">
-          <span>UI Builder is in alpha — components are generated from your design tokens. Missing a component? <Link to="/feedback">Send feedback</Link>.</span>
+          <span>UI Builder is in alpha — components are generated from your styles. Missing a component? <Link to="/feedback">Send feedback</Link>.</span>
           <button className="uib-intro-close" onClick={dismissIntro} aria-label="Dismiss">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>

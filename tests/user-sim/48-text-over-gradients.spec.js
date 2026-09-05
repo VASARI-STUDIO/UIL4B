@@ -373,18 +373,23 @@ const MIN_MEASURED = 8
  * both 39-accent-contrast and 43-state-token-contrast drop every node over a
  * background-image before scoring it, so neither has ever had an opinion here.
  *
- *   /community .ch-thumb-mono   1.74-2.83:1 against a floor of 3
- *       Eight community-card monograms: rgba(255,255,255,.92) at 30px/700 on
- *       linear-gradient(135deg, var(--c1), var(--c2)), where c1/c2 are the
- *       curated per-item brand colours in the community seed data. The worst
- *       ground is #f9b31b at 1.74:1. Not fixable in a rule - the ground is
- *       DATA, so it needs either a scrim on .ch-thumb, a per-item ink, or
- *       darker seed colours, and all three are visual-design decisions.
- *       STILL OPEN ON PURPOSE, with the options priced: see
- *       [gradient-text-below-aa]. It is also WIDER than first reported - not
- *       eight monograms but NINE OF TWELVE below the 3.0 floor, worst 1.47:1
- *       modelled over the whole gradient (s9, ground #6ee7b7) and 1.77:1 at
- *       the worst point actually behind a glyph.
+ *   /community .ch-thumb-mono   FIXED 2026-09-05 by PER-ITEM INK, and this
+ *       paragraph is kept because the measurement is the useful part. It was
+ *       rgba(255,255,255,.92) at 30px/700 on linear-gradient(135deg, var(--c1),
+ *       var(--c2)), where c1/c2 are curated per-item data - so NINE OF TWELVE
+ *       monograms sat below the 3.0 large-text floor, worst 1.47:1 modelled
+ *       over the whole gradient (s9, #059669 -> #6EE7B7) and 1.77:1 at the
+ *       worst point actually behind a glyph.
+ *       Four options were priced on [gradient-text-below-aa]; the founder
+ *       picked per-item ink. CommunityCard.jsx now chooses the pole from each
+ *       card's OWN gradient via inkOnGradient() and sets --mono-ink/--mono-glow,
+ *       and the rule's colour went opaque. NOT ONE CURATED COLOUR CHANGED.
+ *       Worst across all twelve: 3.69:1 (s11, #7C3AED -> #C4B5FD), against 3.0.
+ *       The accepted cost is visible: ten of the twelve flipped white -> black,
+ *       so the grid no longer has one ink.
+ *       The ground here is DATA, so the guarantee is proved exhaustively in
+ *       tests/unit/community-monogram-ink.test.js rather than only by the
+ *       twelve rows this file happens to walk.
  *
  *   /seo .seo-social-img span   FIXED 2026-09-04, and this paragraph is kept
  *       because the route to the fix is the useful part. It measured 2.99:1
@@ -409,9 +414,10 @@ const MIN_MEASURED = 8
  * list, and a fixed one fails because it still is. A `>=` on a count, or a
  * regex skip, would have done neither.
  */
-const KNOWN_BELOW_FLOOR = [
-  '/community .ch-thumb-mono',
-]
+// EMPTY, and that is the assertion. Both surfaces this file was written to
+// expose are fixed and measured; an empty exact-match list means a new one
+// fails the moment it appears, and a regression on either of these fails too.
+const KNOWN_BELOW_FLOOR = []
 
 const report = (route, theme, vp, bad) => bad.map((b) =>
   `  ${route} [${theme}@${vp}] .${b.cls}\n`
