@@ -8716,6 +8716,57 @@ button.plb-varrow:hover{background:var(--bg-2)}
    derives the height, and a `max-height` alone would clamp the height and
    silently break the ratio again. Capping the WIDTH at the height cap times the
    ratio means whichever limit binds, both stay consistent. */
+/* ── The action rail's exploratory cluster ────────────────────────────────
+   UNCOLLAPSED THIS WRAPPER HAS NO BOX. `display:contents` is the whole
+   reason this change is safe to make in the most heavily pinned area of the
+   app: the five controls stay direct flex children of the rail, so the row
+   is laid out to the pixel as it was before the wrapper existed and every
+   shipped assertion about this rail measures what it measured before.
+   Collapsed it becomes a panel. See utils/toolbarFit.js for the rule. */
+/* No `.plb-tools` rule on the row: the wrapper is not rendered there at all.
+   `display:contents` was tried and reverted — it removes the box, not the
+   element, so every `>` selector aimed at the rail stopped matching. */
+.plb-tools--panel{display:flex;position:absolute;top:calc(100% + 6px);left:0;z-index:60;flex-direction:column;align-items:stretch;gap:4px;min-width:210px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-m);box-shadow:var(--shadow-3, 0 12px 32px rgba(0,0,0,.18))}
+/* Inside the panel every control is a full-width row with its label showing —
+   a menu of five named things, which is what the collapsed form is for. The
+   icon-only treatment the row uses would just move the founder's complaint. */
+/* An author display declaration beats the UA [hidden] rule, so the panel has
+   to opt back in — otherwise the closed menu renders as an open one. */
+.plb-tools--panel[hidden]{display:none}
+.plb-tools--panel>*{width:100%}
+.plb-tools--panel .btn{width:100%;justify-content:flex-start;gap:9px}
+.plb-tools--panel .plb-lbl,.plb-tools--panel .plb-lbl-i{display:inline!important;position:static!important;width:auto!important;height:auto!important;overflow:visible!important;clip:auto!important;clip-path:none!important}
+/* The panel is anchored to the trigger, so the trigger owns the positioning
+   context. It also must not scroll away with the rail. */
+.plb-toolswrap{position:relative;flex:0 0 auto}
+.plb-toolsbtn{flex:0 0 auto;white-space:nowrap}
+
+/* ── Desktop rhythm ───────────────────────────────────────────────────────
+   Founder, 2026-09-05: the toolbar "is a run of icon-only buttons of uneven
+   weight and spacing sitting beside two labelled buttons and a select, and
+   it reads as unresolved rather than designed."
+   Measured at 1440: ten 36px icon squares interleaved with three controls of
+   135, 171 and 152px in no order, at a uniform 10px gap except a stray 21px
+   before Save / export. Every gap said the same thing, so nothing said which
+   controls belonged together.
+   Mobbin: Substack and Frame both answer a long icon run the same way — keep
+   the run TIGHT within a group and open a wider gap between groups, so the
+   row reads as three or four deliberate clusters instead of ten loose
+   squares. That is a spacing system, not more chrome, so it costs the row no
+   width at the very widths where width is short. The clusters here are:
+   explore (what you go looking for) · generate · step back · commit. */
+@media (min-width:961px){
+  .plb-toolbar-group.rail-overflow{gap:6px}
+  /* The three cluster boundaries. Each is the FIRST control of a new group,
+     so the rule stays true however many controls a group grows. */
+  .plb-toolbar-group.rail-overflow>.plb-random,
+  .plb-toolbar-group.rail-overflow>.plb-undo,
+  .plb-toolbar-group.rail-overflow>.plb-savewrap{margin-left:16px}
+  /* Commit is the end of the journey and the only irreversible control on
+     the row; a hairline says so without adding a fourth kind of button. */
+  .plb-toolbar-group.rail-overflow>.plb-savewrap{position:relative}
+  .plb-toolbar-group.rail-overflow>.plb-savewrap::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:1px;height:20px;background:var(--border)}
+}
 .plb-imgstage{position:relative;width:100%;aspect-ratio:var(--plb-img-ar,1.6);max-width:calc(min(48vh,420px) * var(--plb-img-ar,1.6));margin-inline:auto;overflow:hidden;border-radius:var(--radius-s);background:var(--bg-2);touch-action:none;user-select:none}
 .plb-imgstage-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
 .plb-imghint{margin:0;font-size:11px;font-weight:500;color:var(--t2);text-align:center}

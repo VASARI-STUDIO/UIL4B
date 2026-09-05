@@ -34,6 +34,10 @@ import { boardDraftAge, consumeBoardDraft, readBoardDraft, resetGradientDraft, r
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
 // colours and the slider values are persisted separately.
 import useModalDialog from '../hooks/useModalDialog'
+import useMediaQuery from '../hooks/useMediaQuery'
+// The measured collapse for the action rail — the rule, the measurements that
+// found the band nobody had reported, and why one band is exempt.
+import { railOverflowsToolbar, RIBBON_QUERY } from '../utils/toolbarFit'
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
 // What a fresh board and a Reset open on, plus the ?c= > hand-off > saved >
 // random precedence — kept pure so the free-settings default and “a shared link
@@ -47,6 +51,33 @@ import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBo
 // HCT edit, tints, right-click menu), and a bottom global-adjust bar. Runs on
 // the exact same colour engine as the merged Colour Studio (utils/colors.js),
 // so palettes built here match the studio's output.
+
+// The action rail's exploratory cluster, in one of its two forms.
+//
+// ON THE ROW it renders its children and NOTHING ELSE — no wrapper, not even a
+// `display:contents` one. That is the point: the five controls stay direct
+// children of the rail, so every `>` selector aimed at the rail keeps matching
+// and the row is laid out to the pixel as it was before this existed. See the
+// markup note in utils/toolbarFit.js for what happened when a wrapper was
+// there — a band this change does not touch moved by 54px.
+//
+// COLLAPSED it is a panel behind one labelled trigger. Each control keeps its
+// own `.plb-menuwrap` and its own popover, so nothing about how any of them
+// works changes; only where they live does.
+function ToolCluster({ collapsed, open, children }) {
+  if (!collapsed) return children
+  return (
+    <div
+      className="plb-tools plb-tools--panel"
+      id="plb-tools-panel"
+      role="menu"
+      aria-label="More palette tools"
+      hidden={!open}
+    >
+      {children}
+    </div>
+  )
+}
 
 const DEFAULT_SEED = '#4338E0'
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
@@ -982,6 +1013,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const [saveOpen, setSaveOpen] = useState(false)  // merged Save & share menu
   const [harmOpen, setHarmOpen] = useState(false)
   const [visionOpen, setVisionOpen] = useState(false)
+  const [toolsOpen, setToolsOpen] = useState(false)  // the collapsed Tools panel
 
   // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
   // it stays nested in the menu with draggable picker points sampling its
@@ -1306,7 +1338,109 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // Close every toolbar menu in one call — used by the dismiss layer and by each
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
-    setSaveOpen(false); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
+    setSaveOpen(false); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false); setToolsOpen(false)
+  }, [])
+
+  /* ── Does the action rail fit? (palette-toolbar-rendering) ────────────────
+   *
+   * The rule and the whole argument for it live in utils/toolbarFit.js. This
+   * is only the measuring half, and it follows LibraryFilterGroup's contract
+   * exactly, because that contract is what keeps a measure-then-change-layout
+   * loop from oscillating:
+   *
+   *   · the intrinsic width is taken ONCE per band, while the cluster is
+   *     still on the row, and cached. It is never re-read while collapsed,
+   *     where the cluster is a vertical menu and would measure as one.
+   *   · the budget comes from the toolbar's width and a CONSTANT ceiling, so
+   *     nothing on that side of the comparison moves when the cluster
+   *     collapses.
+   *
+   * The band is part of the cache key: below 961px the rail's buttons carry
+   * visible labels and the same five controls measure 964px instead of 712px,
+   * so one cached number would be wrong on one side of that line.
+   */
+  const railRef = useRef(null)
+  const intrinsicRef = useRef({ band: null, width: 0 })
+  const ribbonBand = useMediaQuery(RIBBON_QUERY)
+  const [railOverflows, setRailOverflows] = useState(false)
+  const toolsCollapsed = railOverflows && !ribbonBand
+
+  // Closing the panel when the band changes is adjust-state-during-render (the
+  // documented React pattern), not an effect: a resize that un-collapses the
+  // cluster while its panel is open would otherwise leave a menu mounted with
+  // no trigger to hand focus back to.
+  const [wasCollapsed, setWasCollapsed] = useState(toolsCollapsed)
+  if (wasCollapsed !== toolsCollapsed) {
+    setWasCollapsed(toolsCollapsed)
+    setToolsOpen(false)
+  }
+
+  const fitRail = useCallback(() => {
+    const rail = railRef.current
+    const row = rail?.closest('.plb-toolbar')
+    if (!rail || !row) return
+    const band = window.matchMedia('(min-width:961px)').matches ? 'wide' : 'narrow'
+    let intrinsic = intrinsicRef.current.width
+    if (intrinsicRef.current.band !== band) {
+      // Only measurable while the cluster is on the row. `scrollWidth` is the
+      // rail's own content width — it is a scroll container below 961px, so
+      // this is the one number that reports the full line rather than the
+      // visible slice of it.
+      // The intrinsic width can only be read while the cluster is ON THE ROW.
+      // Returning here — the obvious guard — is a trap: it leaves the previous
+      // answer standing AND leaves the cache empty, so once collapsed the rail
+      // could never re-measure and never expand again. Measured: after the
+      // font-swap invalidation below, the toolbar froze collapsed at every
+      // width up to 1920.
+      //
+      // So say "I cannot answer yet" by expanding, and answer on the next pass
+      // with a row that can be measured. This cannot loop: it runs only when
+      // the BAND has changed, and the pass that follows caches a number, after
+      // which the branch is not taken again until the band changes once more.
+      if (toolsCollapsed) { setRailOverflows(false); return }
+      intrinsic = rail.scrollWidth
+      if (!intrinsic) return
+      intrinsicRef.current = { band, width: intrinsic }
+    }
+    setRailOverflows(railOverflowsToolbar({ intrinsic, rowWidth: row.clientWidth }))
+  }, [toolsCollapsed])
+
+  // No separate mount call: ResizeObserver fires once when observation begins,
+  // which is both the first measurement and the only place this state is set.
+  // Setting it from an effect body instead would be the cascading-render shape
+  // `react-hooks/set-state-in-effect` exists to catch.
+  useEffect(() => {
+    const row = railRef.current?.closest('.plb-toolbar')
+    if (!row || typeof ResizeObserver === 'undefined') return undefined
+    const obs = new ResizeObserver(fitRail)
+    obs.observe(row)
+    return () => obs.disconnect()
+  }, [fitRail])
+
+  // THE FONT-SWAP INVALIDATION IS ITS OWN EFFECT, AND RUNS ONCE.
+  //
+  // It began life inside the observer effect above, which was wrong in a way
+  // that only a rendered browser shows. That effect re-runs whenever the
+  // collapse flips, `document.fonts.ready` is an ALREADY-RESOLVED promise by
+  // then, and so every flip re-registered a callback that fired immediately,
+  // invalidated the cache and expanded the row — which measured, collapsed,
+  // flipped, and started again. Measured: 981, 1000, 1080 and 662 never
+  // settled, and 981 sat in the broken 105px two-row form half the time.
+  //
+  // A font swap happens once. So does this.
+  const fontsSettled = useRef(false)
+  useEffect(() => {
+    let cancelled = false
+    document.fonts?.ready?.then(() => {
+      if (cancelled || fontsSettled.current) return
+      fontsSettled.current = true
+      // Every control width has changed, so the cached number is stale.
+      // Expanding alongside the invalidation is what makes the re-measure
+      // possible at all — see the guard in fitRail.
+      intrinsicRef.current = { band: null, width: 0 }
+      setRailOverflows(false)
+    }).catch(() => {})
+    return () => { cancelled = true }
   }, [])
   useEffect(() => {
     if (!anyPopover) return
@@ -2277,7 +2411,40 @@ export default function PaletteBuilder({ onCopy, toast }) {
             global.css, where this group must not be a scroll container at all —
             its dropdowns are absolutely-positioned popups and a scroll
             container would clip them. */}
-        <div className="plb-toolbar-group rail-overflow">
+        <div className="plb-toolbar-group rail-overflow" ref={railRef}>
+          {/* THE EXPLORATORY CLUSTER.
+              Uncollapsed this wrapper is `display:contents` — it has no box, so
+              the row is laid out exactly as it was before it existed and every
+              measurement, rule and shipped test that reads this rail sees the
+              same geometry. Collapsed it becomes a panel behind one labelled
+              trigger. Each control keeps its own `.plb-menuwrap` and its own
+              popover, so nothing about how they work changes; only where they
+              live does. */}
+          {toolsCollapsed && (
+            <div className="plb-menuwrap plb-toolswrap">
+              <button
+                type="button"
+                className="btn btn-s plb-toolsbtn"
+                aria-expanded={toolsOpen}
+                aria-haspopup="menu"
+                aria-controls={toolsOpen ? 'plb-tools-panel' : undefined}
+                title="Image, Explore, Preview, Gradient and History"
+                onClick={() => { const n = !toolsOpen; closeAllMenus(); setToolsOpen(n) }}
+              >
+                <IcoSliders />
+                {/* A WORD, not a tenth icon. The founder's desktop complaint is
+                    a run of icon-only buttons reading as unresolved; answering
+                    an overflow with one more glyph would deepen exactly that.
+                    Mobbin: Substack's editor toolbar collapses to "More ▾" set
+                    beside its other labelled dropdowns, so the overflow reads
+                    as a peer of Style and Button rather than as another
+                    mystery square. */}
+                <span className="plb-harm-k">Tools</span>
+                <IcoChevron />
+              </button>
+            </div>
+          )}
+          <ToolCluster collapsed={toolsCollapsed} open={toolsOpen}>
           <div className="plb-menuwrap">
             <button
               type="button"
@@ -2459,6 +2626,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
           >
             <IcoGradient /><span className="plb-lbl"><span className="plb-lbl-i">Gradient</span></span>
           </button>
+          </ToolCluster>
+          {/* ── end of the exploratory cluster ─────────────────────────────────
+              What stays on the row is what a person is mid-task with: generate,
+              step back, and commit. What collapses is what they went LOOKING
+              for. That split is also why the cluster is contiguous in the DOM:
+              a collapse that reordered the row would move focus order for
+              everyone to buy space for one band. */}
           {canUseUiSystem && (
             <button type="button" className="btn btn-s" onClick={() => setUiMode(true)} title="Build a complete UI colour system from Brand 500"><IcoSliders /> Build UI system</button>
           )}

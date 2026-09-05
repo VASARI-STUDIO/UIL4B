@@ -158,9 +158,23 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
       // incremental relayout after a viewport change.
       await page.setViewportSize({ width, height: 900 })
       await go(page, '/create/palette')
-      await expect(page.locator('.plb-icobtn').first()).toBeVisible()
+      await expect(page.locator('.plb-icobtn:visible').first()).toBeVisible()
       const state = await page.evaluate(() => {
-        const rows = [...document.querySelectorAll('.plb-icobtn')].map((el) => {
+        // ONLY THE CONTROLS ACTUALLY ON THE ROW.
+        //
+        // `palette-toolbar-rendering` collapses the exploratory cluster —
+        // Image, Explore, Preview, Vision type, Gradient — behind one labelled
+        // trigger wherever the rail cannot fit, which is every width in this
+        // list. Those five are still mounted, inside a closed panel, so an
+        // unfiltered querySelector returns buttons that measure as all zeros
+        // and the `inside` proxy below reads that as "clipped".
+        //
+        // The contract is unchanged, only its subject is stated properly: of
+        // the controls a user can SEE, every displayed label is open and
+        // inside its button, and exactly Undo and Reset are icon-only. The
+        // collapsed five get their own assertion after this loop, where the
+        // requirement is stronger — a menu of five named things.
+        const rows = [...document.querySelectorAll('.plb-icobtn')].filter(el => el.offsetParent !== null).map((el) => {
           const inner = el.querySelector('.plb-lbl-i')
           const b = el.getBoundingClientRect()
           const i = inner.getBoundingClientRect()
@@ -181,13 +195,48 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
       const hidden = state.rows.filter((r) => r.hidden).map((r) => r.name).sort()
 
       expect(hidden, `${width}px · exactly Undo and Reset may be icon-only`).toEqual(['Reset', 'Undo'])
-      expect(shown.length).toBeGreaterThan(3)
+      // Was `> 3`, when all nine icon buttons sat on the row. Where the
+      // cluster collapses, the row's labelled icon buttons are History and
+      // Save / export — the two that must never be behind anything, since one
+      // is the way back and the other is the way out. The floor says so.
+      expect(shown.length, `${width}px · History and Save / export stay on the row`).toBeGreaterThanOrEqual(2)
       for (const row of shown) {
         expect(row.width, `${width}px · ${row.name}: label is open at its real width`)
           .toBeGreaterThanOrEqual(row.natural - 1)
         expect(row.inside, `${width}px · ${row.name}: label is inside its button, not clipped beside it`).toBe(true)
       }
       expect(state.overflow, `no horizontal overflow at ${width}px`).toBeLessThanOrEqual(0)
+    }
+  })
+
+  // The other half of the contract above. The five controls that collapse are
+  // not exempt from "a label that is open and inside its button" — the panel
+  // exists so they can be NAMED, and a menu of five icon squares would just
+  // move the founder's desktop complaint into a popup.
+  test('the collapsed cluster shows full labels, not icons', async ({ page }) => {
+    watch(page, 'designer opening the toolbar overflow on a narrow laptop')
+    await page.setViewportSize({ width: 662, height: 900 })
+    await go(page, '/create/palette')
+    await page.locator('.plb-toolsbtn').click()
+    const state = await page.evaluate(() => (
+      [...document.querySelectorAll('.plb-tools--panel .plb-icobtn')]
+        .filter(el => el.offsetParent !== null)
+        .map((el) => {
+          const inner = el.querySelector('.plb-lbl-i')
+          const b = el.getBoundingClientRect()
+          const i = inner.getBoundingClientRect()
+          return {
+            name: el.getAttribute('aria-label'),
+            width: i.width,
+            natural: inner.scrollWidth,
+            inside: i.left >= b.left - 0.5 && i.right <= b.right + 0.5,
+          }
+        })
+    ))
+    expect(state.map(r => r.name).sort()).toEqual(['Explore', 'Gradient', 'Image', 'Preview'])
+    for (const row of state) {
+      expect(row.width, `${row.name}: label open at its real width in the panel`).toBeGreaterThanOrEqual(row.natural - 1)
+      expect(row.inside, `${row.name}: label inside its button in the panel`).toBe(true)
     }
   })
 })
