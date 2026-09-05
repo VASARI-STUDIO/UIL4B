@@ -219,26 +219,59 @@ function colorsFromQuery() {
 const rgbToHex = (r, g, b) =>
   '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase()
 
-// "From image" — draw the upload onto a canvas capped for cheap sampling and
-// hand back its pixel data (plus the source object URL for the preview). The
-// caller keeps the ImageData so picker points can re-sample it live on drag.
+// Browser canvases have a maximum dimension (4096 is the smallest limit still
+// in the wild). The source canvas below is capped there rather than at the
+// histogram's 320: everything the LOUPE shows and everything a marker reports
+// is read from it, so it has to hold real pixels, not an approximation of them.
+const IMG_SOURCE_MAX = 4096
+
+// "From image" — two canvases, deliberately.
+//
+//   `data`   a 320px ImageData. Cheap enough to histogram in a loop for the
+//            automatic extraction, and that is all it is for.
+//   `source` the image at (near) its own resolution. EVERY value a marker
+//            reports and every pixel the loupe draws comes from here.
+//
+// They used to be one, and the 320px one was doing both jobs. That was
+// invisible while a marker was a 26px dot over a 400px preview — the dot
+// covered dozens of pixels, so nobody could tell which one it claimed. The
+// moment a loupe magnifies the sample it becomes very visible: at 320px a
+// 4000px-wide photo is sampled one pixel in twelve, so the loupe would draw a
+// smooth region of the photo and the readout would name a colour from a
+// different pixel. The founder asked to see "exactly what pixel im selecting",
+// and a loupe fed by a thumbnail cannot answer that question honestly.
 function loadImageData(file, maxSize = 320) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
       try {
-        const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
-        const w = Math.max(1, Math.round(img.width * scale))
-        const h = Math.max(1, Math.round(img.height * scale))
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        const ctx = canvas.getContext('2d', { willReadFrequently: true })
-        ctx.drawImage(img, 0, 0, w, h)
+        const draw = (w, h) => {
+          const c = document.createElement('canvas')
+          c.width = w; c.height = h
+          // Read frequently: the drag handler takes a 1x1 sample per pointermove.
+          c.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, w, h)
+          return c
+        }
+        const fit = (cap) => {
+          const scale = Math.min(1, cap / Math.max(img.width, img.height))
+          return [Math.max(1, Math.round(img.width * scale)), Math.max(1, Math.round(img.height * scale))]
+        }
+        const [sw, sh] = fit(maxSize)
+        const small = draw(sw, sh)
+        const [fw, fh] = fit(IMG_SOURCE_MAX)
+        // Reuse the small canvas when the image is already tiny — drawing the
+        // same pixels twice buys nothing.
+        const source = (fw === sw && fh === sh) ? small : draw(fw, fh)
         // The natural dimensions, not the capped canvas's: the preview stage
         // is sized from this ratio, and rounding 4000x2999 down to 320x240
         // would tilt every picker point by a fraction of the image.
-        resolve({ data: ctx.getImageData(0, 0, w, h), url, aspect: img.naturalWidth / img.naturalHeight })
+        resolve({
+          data: small.getContext('2d').getImageData(0, 0, sw, sh),
+          source,
+          url,
+          aspect: img.naturalWidth / img.naturalHeight,
+        })
       } catch (err) { URL.revokeObjectURL(url); reject(err) }
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Couldn’t read that image')) }
@@ -274,14 +307,25 @@ function dominantSwatches(imageData, count) {
   return picks.map(p => ({ hex: p.hex, x: p.x, y: p.y }))
 }
 
-// Colour of the pixel under a normalised (0–1) point — used while dragging a
-// picker point across the previewed image.
-function sampleImageData(imageData, nx, ny) {
-  const { data, width, height } = imageData
-  const px = Math.min(width - 1, Math.max(0, Math.round(nx * width)))
-  const py = Math.min(height - 1, Math.max(0, Math.round(ny * height)))
-  const i = (py * width + px) * 4
-  return rgbToHex(data[i], data[i + 1], data[i + 2])
+// Which SOURCE pixel does a normalised (0–1) point land on? One function, used
+// by the sampler and by the loupe, so the value under the crosshair and the
+// value on the swatch can never come from two different roundings.
+function sourcePixel(canvas, nx, ny) {
+  const px = Math.min(canvas.width - 1, Math.max(0, Math.floor(nx * canvas.width)))
+  const py = Math.min(canvas.height - 1, Math.max(0, Math.floor(ny * canvas.height)))
+  return { px, py }
+}
+
+// Colour of the pixel under a normalised (0–1) point, read at SOURCE
+// resolution — used while dragging or nudging a picker point, and by the loupe
+// for the value it prints under the crosshair.
+function sampleSourcePixel(canvas, nx, ny) {
+  if (!canvas) return null
+  const { px, py } = sourcePixel(canvas, nx, ny)
+  try {
+    const d = canvas.getContext('2d', { willReadFrequently: true }).getImageData(px, py, 1, 1).data
+    return rgbToHex(d[0], d[1], d[2])
+  } catch { return null }
 }
 
 // WCAG level for a raw ratio (AAA ≥7, AA ≥4.5, AA18 large-text ≥3, else LOW).
@@ -951,9 +995,15 @@ export default function PaletteBuilder({ onCopy, toast }) {
   // point's normalised (x, y) in the SOURCE lands on the same spot of the
   // DISPLAYED image — see the CSS note on .plb-imgstage.
   const [imgAspect, setImgAspect] = useState(16 / 10)
-  const imgDataRef = useRef(null)               // ImageData kept for live sampling
+  const imgDataRef = useRef(null)               // 320px ImageData — histogram only
+  const imgSourceRef = useRef(null)             // full-resolution canvas — every sample and the loupe
   const imgDragIdx = useRef(null)               // point index being dragged
   const imgStageRef = useRef(null)              // the preview stage element
+  const imgLoupeRef = useRef(null)              // the loupe <canvas>
+  // Which marker the loupe is following. Set by a drag, a click, a focus or an
+  // arrow-key nudge, so the mouse and the keyboard drive one thing rather than
+  // two. Null means no marker is being worked on and the loupe stays away.
+  const [imgActive, setImgActive] = useState(null)
   // Variation persistence: `varBase` is the frozen palette snapshot the current
   // variation list is derived from, `activeVar` the id of the one the user picked.
   // Picking a variation preserves the base (via the skip guard) so reopening the
@@ -1454,11 +1504,13 @@ export default function PaletteBuilder({ onCopy, toast }) {
       setImgError(`That image is over ${IMG_MAX_MB} MB — pick a smaller one.`); return
     }
     try {
-      const { data, url, aspect } = await loadImageData(file)
+      const { data, source, url, aspect } = await loadImageData(file)
       imgDataRef.current = data
+      imgSourceRef.current = source
       setImgAspect(Number.isFinite(aspect) && aspect > 0 ? aspect : 16 / 10)
       setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return url })
-      setImgPoints(dominantSwatches(data, Math.min(colors.length, PRO_MAX)))
+      setImgActive(null)
+      setImgPoints(trueToSource(dominantSwatches(data, Math.min(colors.length, PRO_MAX))))
     } catch (err) {
       setImgError(err?.message || 'Couldn’t read that image')
     }
@@ -1475,37 +1527,93 @@ export default function PaletteBuilder({ onCopy, toast }) {
     loadImageFile(e.dataTransfer.files?.[0])
   }
 
+  // ONE INVARIANT, and the loupe exists to make it checkable: the colour a
+  // marker reports is the colour of the SOURCE pixel it is standing on.
+  //
+  // `dominantSwatches` cannot honour it on its own. Its hex is a bucket AVERAGE
+  // and its position is that bucket's centroid, so the two describe a region
+  // rather than a point — a ring of one colour puts its centroid in the middle,
+  // where the photo is some other colour entirely. That was invisible under a
+  // 26px dot and is the first thing a magnifier would expose: crosshair on one
+  // colour, swatch showing another, and no way for the user to tell which of
+  // the two is lying. The extraction still CHOOSES the points; this only makes
+  // each one tell the truth about where it ended up.
+  const trueToSource = useCallback((points) => {
+    const src = imgSourceRef.current
+    if (!src) return points
+    return points.map(p => ({ ...p, hex: sampleSourcePixel(src, p.x, p.y) || p.hex }))
+  }, [])
+
   // Re-run automatic extraction over the current image (reset / auto).
   const autoExtractImage = () => {
     if (!imgDataRef.current) return
-    setImgPoints(dominantSwatches(imgDataRef.current, Math.min(imgPoints.length || colors.length, PRO_MAX)))
+    setImgActive(null)
+    setImgPoints(trueToSource(dominantSwatches(imgDataRef.current, Math.min(imgPoints.length || colors.length, PRO_MAX))))
   }
 
   const clearImage = () => {
     setImgSrc(prev => { if (prev) URL.revokeObjectURL(prev); return '' })
     imgDataRef.current = null
-    setImgPoints([]); setImgError(''); setImgAspect(16 / 10)
+    imgSourceRef.current = null
+    setImgPoints([]); setImgError(''); setImgAspect(16 / 10); setImgActive(null)
   }
 
   const addImagePoint = () => {
-    if (!imgDataRef.current || imgPoints.length >= PRO_MAX) return
-    setImgPoints(prev => [...prev, { x: 0.5, y: 0.5, hex: sampleImageData(imgDataRef.current, 0.5, 0.5) }])
+    if (!imgSourceRef.current || imgPoints.length >= PRO_MAX) return
+    const hex = sampleSourcePixel(imgSourceRef.current, 0.5, 0.5) || '#808080'
+    setImgPoints(prev => {
+      setImgActive(prev.length)
+      return [...prev, { x: 0.5, y: 0.5, hex }]
+    })
   }
   const removeImagePoint = () => {
     setImgPoints(prev => (prev.length > 2 ? prev.slice(0, -1) : prev))
+    setImgActive(null)
   }
 
+  // Put marker `idx` at a normalised position and re-sample it at source
+  // resolution. The single write path — drag, keyboard nudge and the +
+  // button all come through here, so they cannot drift apart.
+  const placeImagePoint = useCallback((idx, x, y) => {
+    const src = imgSourceRef.current
+    if (idx == null || !src) return
+    const cx = Math.min(1, Math.max(0, x))
+    const cy = Math.min(1, Math.max(0, y))
+    const hex = sampleSourcePixel(src, cx, cy)
+    setImgPoints(prev => prev.map((p, i) => (i === idx ? { x: cx, y: cy, hex: hex || p.hex } : p)))
+  }, [])
+
   // Drag a picker point across the image; re-sample the pixel under it live.
-  const moveImagePoint = (clientX, clientY) => {
+  const moveImagePoint = useCallback((clientX, clientY) => {
     const idx = imgDragIdx.current
     const stage = imgStageRef.current
-    if (idx == null || !stage || !imgDataRef.current) return
+    if (idx == null || !stage) return
     const r = stage.getBoundingClientRect()
-    const x = Math.min(1, Math.max(0, (clientX - r.left) / r.width))
-    const y = Math.min(1, Math.max(0, (clientY - r.top) / r.height))
-    const hex = sampleImageData(imgDataRef.current, x, y)
-    setImgPoints(prev => prev.map((p, i) => (i === idx ? { x, y, hex } : p)))
+    placeImagePoint(idx, (clientX - r.left) / r.width, (clientY - r.top) / r.height)
+  }, [placeImagePoint])
+
+  // Keyboard parity. The markers were <button>s with a pointerdown handler and
+  // nothing else, so a keyboard user could focus one and then had no way to
+  // move it at all — the tool's only sampling gesture was mouse-only. Arrows
+  // step ONE SOURCE PIXEL, which is the unit the loupe is showing; Shift steps
+  // ten, so crossing a large photo does not take four thousand presses.
+  const nudgeImagePoint = (idx, dxPx, dyPx) => {
+    const src = imgSourceRef.current
+    const p = imgPoints[idx]
+    if (!src || !p) return
+    setImgActive(idx)
+    placeImagePoint(idx, p.x + dxPx / src.width, p.y + dyPx / src.height)
   }
+
+  const onImagePointKey = (e, i) => {
+    const step = e.shiftKey ? 10 : 1
+    const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }
+    const move = moves[e.key]
+    if (!move) return
+    e.preventDefault()
+    nudgeImagePoint(i, move[0], move[1])
+  }
+
   useEffect(() => {
     if (!imgSrc) return
     const onMove = (e) => { if (imgDragIdx.current != null) { e.preventDefault(); moveImagePoint(e.clientX, e.clientY) } }
@@ -1513,7 +1621,56 @@ export default function PaletteBuilder({ onCopy, toast }) {
     window.addEventListener('pointermove', onMove, { passive: false })
     window.addEventListener('pointerup', onUp)
     return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp) }
-  }, [imgSrc])
+  }, [imgSrc, moveImagePoint])
+
+  // ── The loupe ────────────────────────────────────────────────────────────
+  //
+  // Founder: "show me a large zoomed in view so i can [see] exactly what pixel
+  // im selecting". Five markers over a ~400px preview of a 4000px photo means
+  // one marker covers roughly a hundred source pixels, so "which one am I on"
+  // was genuinely unanswerable.
+  //
+  // References (Mobbin): Alan's crop screen parks its magnifier in a FIXED
+  // CORNER with a crosshair at the centre rather than floating it under the
+  // finger — a loupe that follows the pointer covers the thing it is
+  // magnifying, which is the failure mode a first attempt always ships.
+  // Shopee's ring loupe is the reason for a thick neutral rim: it has to read
+  // over any photograph, light or dark. beehiiv's web colour picker is why the
+  // hex sits ON the loupe rather than across the panel — the value and the
+  // pixel are one piece of information and get read together.
+  //
+  // The corner is chosen per-frame, opposite the marker, so the loupe never
+  // sits on top of the region being sampled.
+  const LOUPE_PX = 13          // source pixels across the loupe (odd: one true centre)
+  const drawLoupe = useCallback(() => {
+    const cv = imgLoupeRef.current
+    const src = imgSourceRef.current
+    const p = imgActive != null ? imgPoints[imgActive] : null
+    if (!cv || !src || !p) return
+    const ctx = cv.getContext('2d')
+    if (!ctx) return
+    const size = cv.width                       // backing store is square
+    const cell = size / LOUPE_PX
+    const { px, py } = sourcePixel(src, p.x, p.y)
+    const half = (LOUPE_PX - 1) / 2
+    ctx.clearRect(0, 0, size, size)
+    // Nearest-neighbour: a smoothed loupe is a picture of an interpolation,
+    // not of the pixels, and the whole point is to show the pixels.
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(src, px - half, py - half, LOUPE_PX, LOUPE_PX, 0, 0, size, size)
+    // The sampled pixel, outlined in both inks so it survives any photo under
+    // it — a single white box vanishes on a white pixel, which is exactly the
+    // pixel a user is most likely to be hunting for.
+    const x0 = half * cell
+    ctx.lineWidth = 3
+    ctx.strokeStyle = 'rgba(0,0,0,.75)'
+    ctx.strokeRect(x0 - 1.5, x0 - 1.5, cell + 3, cell + 3)
+    ctx.lineWidth = 2
+    ctx.strokeStyle = '#fff'
+    ctx.strokeRect(x0 - 1, x0 - 1, cell + 2, cell + 2)
+  }, [imgActive, imgPoints])
+
+  useEffect(() => { drawLoupe() }, [drawLoupe])
   // Release the preview object URL when the picker unmounts.
   useEffect(() => () => { if (imgSrc) URL.revokeObjectURL(imgSrc) }, [imgSrc])
 
@@ -2910,16 +3067,43 @@ export default function PaletteBuilder({ onCopy, toast }) {
                     <button
                       key={i}
                       type="button"
-                      className="plb-imgpoint"
+                      className={imgActive === i ? 'plb-imgpoint plb-imgpoint--on' : 'plb-imgpoint'}
                       style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%`, background: p.hex }}
-                      onPointerDown={(e) => { e.preventDefault(); imgDragIdx.current = i }}
-                      aria-label={`Picker point ${i + 1}: ${p.hex}`}
+                      onPointerDown={(e) => { e.preventDefault(); imgDragIdx.current = i; setImgActive(i) }}
+                      // Focus, not click, arms the loupe for a keyboard user:
+                      // arriving on the marker is the moment they need to see
+                      // where it is, and it is the only cue they get that the
+                      // arrow keys now do something.
+                      onFocus={() => setImgActive(i)}
+                      onKeyDown={(e) => onImagePointKey(e, i)}
+                      aria-label={`Picker point ${i + 1}: ${p.hex}. Use the arrow keys to move it a pixel at a time, or hold Shift for ten.`}
                       title={p.hex}
                       data-hex={p.hex}
                     />
                   ))}
+                  {/* Parked in a corner rather than under the pointer (Alan),
+                      and on the side AWAY from the marker, so the magnifier
+                      never covers the region it is magnifying. */}
+                  {imgActive != null && imgPoints[imgActive] && (
+                    <div
+                      className="plb-loupe"
+                      data-side={imgPoints[imgActive].x > 0.5 ? 'left' : 'right'}
+                      aria-hidden="true"
+                    >
+                      <canvas ref={imgLoupeRef} className="plb-loupe-cv" width={208} height={208} />
+                      <span className="plb-loupe-hex">{imgPoints[imgActive].hex}</span>
+                    </div>
+                  )}
                 </div>
-                <p className="plb-imghint">Drag a marker to sample a different pixel.</p>
+                {/* One live region for both input methods — a keyboard nudge is
+                    silent otherwise, and the loupe it arms is aria-hidden
+                    because a canvas of pixels is not something to read out. */}
+                <p className="sr-only" aria-live="polite">
+                  {imgActive != null && imgPoints[imgActive]
+                    ? `Point ${imgActive + 1} is on ${imgPoints[imgActive].hex}`
+                    : ''}
+                </p>
+                <p className="plb-imghint">Drag a marker, or focus one and use the arrow keys, to sample a different pixel.</p>
                 <div className="plb-imgstrip">
                   {imgPoints.map((p, i) => (
                     <div key={i} className="plb-imgswatch" style={{ background: p.hex }} title={p.hex} />

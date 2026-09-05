@@ -8702,6 +8702,24 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-imghint{margin:0;font-size:11px;font-weight:500;color:var(--t2);text-align:center}
 .plb-imgpoint{position:absolute;width:26px;height:26px;transform:translate(-50%,-50%);border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.4);cursor:grab;padding:0}
 .plb-imgpoint:active{cursor:grabbing}
+/* The active marker reads as the one being worked on — a keyboard user gets
+   this from focus, so the ring is the same cue for both input methods. */
+.plb-imgpoint--on{border-color:var(--brand);box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 0 0 4px color-mix(in srgb,var(--brand) 45%,transparent),0 2px 6px rgba(0,0,0,.4);z-index:3}
+.plb-imgpoint:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+/* ── The eyedropper loupe ──────────────────────────────────────────────────
+   Parked in a stage corner (Mobbin: Alan crop) rather than tracking the
+   pointer, so it never covers the region it magnifies; `data-side` flips it
+   to whichever corner the marker is NOT near. `pointer-events:none` is
+   load-bearing — the loupe sits inside the drag surface, and a drag that
+   carried a marker under it would otherwise stop dead on its own magnifier. */
+.plb-loupe{position:absolute;top:8px;width:104px;pointer-events:none;z-index:4;border-radius:var(--radius-s);overflow:hidden;background:var(--bg-1);border:1px solid color-mix(in srgb,#fff 55%,transparent);box-shadow:0 0 0 1px rgba(0,0,0,.45),0 6px 18px rgba(0,0,0,.35)}
+.plb-loupe[data-side="right"]{right:8px}
+.plb-loupe[data-side="left"]{left:8px}
+.plb-loupe-cv{display:block;width:104px;height:104px;image-rendering:pixelated}
+/* The value rides ON the loupe (Mobbin: beehiiv) — the pixel and its hex are
+   one piece of information, and a readout across the panel is a second look. */
+.plb-loupe-hex{display:block;padding:3px 0 4px;font-size:11px;font-weight:700;letter-spacing:.02em;text-align:center;color:var(--t0);background:var(--bg-1);font-variant-numeric:tabular-nums}
+@media (max-width:560px){.plb-loupe,.plb-loupe-cv{width:84px}.plb-loupe-cv{height:84px}}
 .plb-imgstrip{display:flex;gap:3px;margin-top:8px}
 .plb-imgswatch{flex:1;height:22px;border-radius:5px;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
 .plb-imgcount{display:flex;align-items:center;justify-content:space-between;margin-top:10px}

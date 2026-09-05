@@ -151,10 +151,14 @@ function drift(m) {
   return Math.max(...c.map((v, i) => Math.abs(v - m.painted[i])))
 }
 
-// The app's own sampling canvas downscales the source to 320px wide, so a hex
-// read back from it drifts a little from the exact band colour. Every point
-// measured here sits mid-band, well clear of an edge.
-const TOLERANCE = 20
+// This used to be 20, because the app sampled from a canvas downscaled to
+// 320px wide and a hex read back from it drifted from the exact band colour.
+// The loupe made that unaffordable — a magnifier that draws the source while
+// the readout names a resampled approximation of it is a magnifier that lies —
+// so sampling now reads the source canvas and the drift is gone. 2 is left for
+// the half-pixel between this oracle's `round` and the app's `floor` at a
+// marker's exact centre; every point measured here sits mid-band anyway.
+const TOLERANCE = 2
 
 test.describe('image to palette picker', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'designer pulling colours from a photo') })
@@ -211,6 +215,88 @@ test.describe('image to palette picker', () => {
     const dragged = (await markerTruth(page)).find(m => Math.abs(m.at[0] - 0.125) < 0.02)
     expect(dragged, 'the dragged marker did not land where it was dropped').toBeTruthy()
     expect(drift(dragged), 'dropped on band 1 but reported ' + dragged.claims).toBeLessThanOrEqual(TOLERANCE)
+  })
+
+  /* ── The loupe (eyedropper-needs-zoom) ───────────────────────────────────
+   *
+   * Founder: "show me a large zoomed in view so i can [see] exactly what pixel
+   * im selecting". A 26px marker over a preview of a large photo covers a
+   * hundred source pixels, so the tool could not answer that.
+   *
+   * The assertion that matters is not that a loupe APPEARS — it is that the
+   * loupe, the marker's swatch and the source pixel are all the same colour.
+   * A loupe fed by the 320px histogram canvas would still look convincing and
+   * would still be wrong, which is the failure this pins.
+   */
+  test('the loupe shows the sampled pixel, and agrees with the marker', async ({ page }) => {
+    await openPickerWithImage(page)
+    // No marker engaged yet: a magnifier that is always on just covers the photo.
+    await expect(page.locator('.plb-loupe')).toHaveCount(0)
+
+    const box = await page.locator(STAGE).boundingBox()
+    const marker = page.locator(MARKER).first()
+    const from = await marker.boundingBox()
+    // Mid-band 4 (87.5% across), far from any edge and far from band 1, so a
+    // stale or mis-mapped sample cannot land on the right answer by accident.
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width * 0.875, box.y + box.height * 0.5, { steps: 8 })
+    await page.mouse.up()
+
+    const loupe = page.locator('.plb-loupe')
+    await expect(loupe).toHaveCount(1)
+    // Parked on the side AWAY from the marker, so it never covers what it magnifies.
+    await expect(loupe).toHaveAttribute('data-side', 'left')
+
+    const seen = await page.evaluate(() => {
+      const cv = document.querySelector('.plb-loupe-cv')
+      const ctx = cv.getContext('2d')
+      const hex = (d) => '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+      const all = ctx.getImageData(0, 0, cv.width, cv.height).data
+      let painted = 0
+      for (let i = 3; i < all.length; i += 4) if (all[i] > 0) painted++
+      return {
+        centre: hex(ctx.getImageData(Math.floor(cv.width / 2), Math.floor(cv.height / 2), 1, 1).data),
+        painted,
+        cells: all.length / 4,
+        readout: document.querySelector('.plb-loupe-hex').textContent.trim().toUpperCase(),
+        marker: document.querySelector('.plb-imgpoint').dataset.hex.toUpperCase(),
+      }
+    })
+    expect(seen.painted, 'the loupe canvas is blank').toBe(seen.cells)
+    expect(seen.centre, 'the pixel under the crosshair').toBe(BANDS[3].toUpperCase())
+    expect(seen.readout, 'the value printed on the loupe').toBe(seen.centre)
+    expect(seen.marker, 'the marker swatch').toBe(seen.centre)
+  })
+
+  // A drag was the ONLY way to move a marker: they were <button>s carrying a
+  // pointerdown handler and nothing else, so a keyboard user could focus one
+  // and then had no gesture at all. The loupe has to reach them too.
+  test('a keyboard user can nudge a marker and gets the same loupe', async ({ page }) => {
+    await openPickerWithImage(page)
+    await page.locator(MARKER).first().focus()
+    // Focus alone arms it — that is the only cue the arrow keys now do something.
+    await expect(page.locator('.plb-loupe')).toHaveCount(1)
+
+    const before = await page.locator(MARKER).first().getAttribute('data-hex')
+    const beforeX = await page.locator(MARKER).first().evaluate(el => parseFloat(el.style.left))
+    // One press = one SOURCE pixel: 1/400 of a 400px-wide image = 0.25%.
+    await page.keyboard.press('ArrowRight')
+    const afterX = await page.locator(MARKER).first().evaluate(el => parseFloat(el.style.left))
+    expect(afterX - beforeX, 'one arrow press should step exactly one source pixel').toBeCloseTo(0.25, 2)
+
+    // Shift steps ten, so crossing a 400px photo does not take 400 presses.
+    // From band 1 (12.5% ≈ x=50) ten Shift presses is 1000px — clamped to the
+    // right edge, which is band 4. Cross one band boundary instead: 5 presses
+    // of Shift from mid-band-1 lands at x=101, inside band 2.
+    for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowRight')
+    const after = await page.locator(MARKER).first().getAttribute('data-hex')
+    expect(after, 'Shift+Arrow should cross into the next band').not.toBe(before)
+
+    // The nudge is announced — the loupe is aria-hidden (a canvas of pixels is
+    // not something to read out), so without this a screen-reader user moving a
+    // marker gets silence.
+    await expect(page.locator('.plb-imgcard p[aria-live]')).toContainText(after.toUpperCase())
   })
 
   // The picker moved out of the toolbar's dismiss layer (which closes anything
