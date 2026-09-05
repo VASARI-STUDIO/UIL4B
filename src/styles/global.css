@@ -7977,9 +7977,31 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 /* The generator's own 116px gutter, so "31.3px · 1.956rem" stays on one line.
    The tightened line-height is the frame budget: on the two small steps the
    gutter is TALLER than the specimen beside it, so it sets the row height. */
-.hw-type-row .tsc-row-meta{flex-basis:116px;gap:0}
+/* row-gap 0, column-gap 8. Below 769px the shared rule turns `.tsc-row-meta`
+   into a horizontal wrap (`flex-direction:row`), where a flat `gap:0` printed
+   "--text-xl25px · 1.563rem" with no space between the token and its size.
+   Naming the two axes separately is correct in both layouts. */
+.hw-type-row .tsc-row-meta{flex-basis:116px;row-gap:0;column-gap:8px}
 .hw-type-row .tsc-row-name,.hw-type-row .tsc-row-num{line-height:1.35}
 .hw-type-sample{display:block;flex:1;min-width:0;max-width:100%;font-size:var(--hw-type-size);font-weight:650;line-height:1.08;letter-spacing:-.025em;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Below 769px the shared rule turns `.tsc-row` into a COLUMN, and both of the
+   declarations above are row-layout assumptions that then misfire: `flex:1`
+   stretches the specimen down the row instead of across it, and `nowrap`
+   ellipsises a 31px specimen that has 358px of phone to sit in. The generator
+   answers this for `.tsc-row-text` in the same breakpoint; this is the same
+   answer for the one element that could not take its class. */
+@media(max-width:768px){
+  .hw-type-sample{flex:0 0 auto;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  /* AND THE GUTTER MUST GIVE UP ITS BASIS HERE, which is the subtler half.
+     `flex-basis` measures along the CONTAINER'S main axis, and the shared rule
+     above turns `.tsc-row` into a column at this width - so 116px stops being a
+     gutter width and becomes a 116px-TALL meta box, opening a chasm between
+     each step's label and its own specimen. The generator already resets this
+     (`.tsc-row-meta{flex-basis:auto}` in the same breakpoint); the reset was
+     losing to the two-class selector above it, at (0,2,0) against (0,1,0).
+     Caught in a 390px screenshot, not by any assertion. */
+  .hw-type-row .tsc-row-meta{flex-basis:auto}
+}
 .hw-type-side{gap:12px}
 .hw-type-tools{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 .hw-type-tool{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-height:54px;padding:8px 11px;border:0;border-top:1px solid var(--border);background:var(--bg-1);color:var(--t1);font-family:var(--font);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--t),color var(--t)}

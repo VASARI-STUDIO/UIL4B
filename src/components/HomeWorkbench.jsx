@@ -191,9 +191,9 @@ const UI_ROWS = [
  * Studio previews now speak one language: the same palette produces the same
  * roles wherever a visitor meets it.
  *
- * Inert and aria-hidden, exactly like `.hw-chrome` and `.hw-grad-preview`
- * above it: nothing inside is focusable, no control is impersonated, and every
- * hex it paints is announced for real by the swatch buttons below.
+ * Inert and aria-hidden, exactly like `.hw-chrome`: nothing inside is
+ * focusable, no control is impersonated, and every hex it paints is announced
+ * for real by the board's own `.plb-hex` buttons above it.
  */
 function PaletteStage({ swatches }) {
   const { theme } = useTheme()

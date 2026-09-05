@@ -420,7 +420,8 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // Everything still operates: the tablist is the authoritative mode control
     // whether or not the scroll sync ever arrives.
     await page.locator('.hw-tab[data-tab="gradient"]').click()
-    await expect(page.locator('.hw-grad-preview')).toBeVisible()
+    // `.ggn-preview` since 2026-09-05 - the canvas is Gradient Generator's own.
+    await expect(page.locator('.hw-ggn .ggn-preview')).toBeVisible()
     await page.locator('.htool-link').first().focus()
     await expect(page.locator('.htool-link').first()).toBeFocused()
 
@@ -1254,9 +1255,13 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // The zone must not claim to convert anything - the whole panel's honesty
     // rests on File Converter doing the encoding.
     await expect(page.locator('.fc-drop-sub')).toContainText('nothing is converted on this page')
-    await zone.dispatchEvent('dragover', { dataTransfer: {} })
+    // A real DataTransfer, built in the page: DragEvent's constructor rejects a
+    // plain object for that property, so `{ dataTransfer: {} }` throws rather
+    // than dispatching and the assertion never runs.
+    const dt = await page.evaluateHandle(() => new DataTransfer())
+    await zone.dispatchEvent('dragover', { dataTransfer: dt })
     await expect(zone, 'a dragover is acknowledged, so the target is live').toHaveClass(/fc-drop-on/)
-    await zone.dispatchEvent('dragleave')
+    await zone.dispatchEvent('dragleave', { dataTransfer: dt })
     await expect(zone).not.toHaveClass(/fc-drop-on/)
 
     // The bundled thumbnail carries its intrinsic size, so nothing shifts.
