@@ -200,7 +200,10 @@ export default function ContrastChecker({ onCopy }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">Colour</div>
+        {/* NO TAXONOMY EYEBROW. It read "Colour" in 10px mono caps at y=102,
+            above an h1 whose first word is "Colour", on /create/contrast under
+            a lit Create > Colour menu. Third statement of one fact. Removed
+            with the rest of the sweep for #surface-headers-read-as-ai. */}
         <h1>Colour Contrast Checker</h1>
         <p>
           Test any text and background pair against WCAG AA and AAA. If a check

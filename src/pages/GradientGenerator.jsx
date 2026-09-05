@@ -802,9 +802,17 @@ export default function GradientGenerator({ onCopy, toast }) {
   return (
     <div className="ggn">
       {/* Header */}
+      {/* THE TAXONOMY EYEBROW IS GONE (`.ggn-eyebrow`).
+          ------------------------------------------------------------------
+          "Create / Colour" in 11px caps at 1.76px tracking, measured at y=140
+          directly above an h1 that says "Gradient Generator", on the route
+          /create/gradient with the Create menu already lit in the nav. Same
+          element #382 deleted from the Font Gallery and Font Pair and #386
+          from the Type Scale, under a third class name. Below it sit four
+          controls you can actually press — Random, From palette, Reset, Submit
+          for review — which is where this header states where you are. */}
       <header className="ggn-head">
         <div className="ggn-head-id">
-          <span className="ggn-eyebrow">Create / Colour</span>
           <div className="ggn-title-row">
             <h1 className="ggn-title">Gradient Generator</h1>
           </div>
@@ -850,12 +858,34 @@ export default function GradientGenerator({ onCopy, toast }) {
         </div>
       </header>
 
-      <div className="ggn-status" aria-live="polite">
-        <span><strong>{type}</strong> gradient</span>
-        <span><strong>{stops.length}</strong> editable stop{stops.length === 1 ? '' : 's'}</span>
-        <span><strong>{angleActive ? `${Math.round(angle)}°` : 'Centred'}</strong> direction</span>
-        <span><strong>{effFmt.toUpperCase()}</strong> handoff</span>
-      </div>
+      {/* THE FOUR-UP FIGURE STRIP IS GONE (`.ggn-status`).
+          ------------------------------------------------------------------
+          Every one of its four figures was already on the same screen, at the
+          control that sets it. Measured at 1440x900, strip bottom edge y=426:
+
+            "Linear gradient"     `.ggn-pill` says "Linear" at +131px and the
+                                  segmented button that sets it is on at +173px.
+            "3 editable stops"    `.ggn-badge` says "3/12 stops" at +45px — and
+                                  the badge is strictly better, because it also
+                                  tells you how many you have left.
+            "135° direction"      `.ggn-pill` says "135°" at +131px.
+            "CSS handoff"         `.ggn-fmt-btn` for CSS is on at +393px.
+
+          So it was a band of duplicates above the canvas, inside an
+          aria-live="polite" region that re-announced all four every time one
+          stop moved. This is the motif the founder marked "AI" on the Font
+          Gallery header, one column wider.
+
+          Framer's gradient inspector on Mobbin
+          (mobbin.com/screens/4ade6802-3d3f-4adb-a256-2fb85fa62782) and Rive's
+          (mobbin.com/screens/9f95defe-f313-4c2e-90aa-aa1da9e137d9) both run a
+          canvas with a right-hand inspector and neither states its values twice:
+          the colours, the seed, the angle and the fill mode live only on the
+          controls that change them.
+
+          NOT REMOVED: `.ggn-badge` ("3/12 stops"). It is the only place the
+          stop LIMIT appears, and it is what tells you when Add Stop will stop
+          working. */}
 
       <div className="ggn-grid" aria-label="Gradient workbench">
         {/* Preview */}

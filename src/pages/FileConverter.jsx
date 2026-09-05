@@ -219,7 +219,10 @@ export default function FileConverter({ toast }) {
   return (
     <div className="sec fc">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">File Converter</div>
+        {/* NO TAXONOMY EYEBROW. This was the most literal instance in the
+            codebase: the eyebrow read "File Converter" at y=102 and the h1
+            below it read "File Converter" at y=135. The same three words,
+            twice, 33px apart. #surface-headers-read-as-ai. */}
         <h1>
           File Converter
           <span className="fc-alpha">Alpha</span>
