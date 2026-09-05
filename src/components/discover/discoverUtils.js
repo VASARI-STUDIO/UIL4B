@@ -3,14 +3,39 @@
 // files, tool hand-off logic in 3). Pure functions only — no React, no DOM — so
 // every consumer keeps its own navigate()/onClose() around the result.
 
-import { CATEGORY_MAP } from '../../data/discoverCategories'
+// Explicit .js extensions: these three data modules import nothing themselves,
+// so with the extension written out this module loads under bare `node --test`
+// as well as through Vite — which is what lets tests/unit/discover-handoff.test.js
+// exercise the real GATED_ROUTES derivation instead of reading this file as text.
+import { CATEGORY_MAP } from '../../data/discoverCategories.js'
+import { createTools, liveToolRoutes } from '../../data/toolTree.js'
 
-// Routes that exist but are NOT yet public (admin-gated in App.jsx, rendered as
-// <ComingSoon/> for normal users). A relatedTools entry pointing at one of these
-// is treated as unavailable so we never offer a "Use in tool" CTA that dead-ends
-// on a placeholder. Removing a route from this set (when the tool ships) re-lights
-// every CTA for it automatically — no per-component change needed.
-export const GATED_ROUTES = new Set(['/create/component-designer', '/create/file-converter'])
+// Routes a relatedTools entry may name that are NOT yet a real screen —
+// CreateTool.jsx resolves `group.soon ? null : LIVE_TOOLS[path]`, so a `soon`
+// tool renders <ComingSoon/> for everyone. A hand-off pointing at one is a CTA
+// that dead-ends, so it is treated as unavailable.
+//
+// THIS WAS A HAND-KEPT LITERAL SET AND IT HAD DRIFTED IN BOTH DIRECTIONS, which
+// is the whole reason it is now derived. Its own comment promised "removing a
+// route from this set (when the tool ships) re-lights every CTA for it
+// automatically", and nobody ever did:
+//   • /create/file-converter SHIPPED (soon:false, mounted in LIVE_TOOLS) and was
+//     still listed, so three curated resources silently lost their hand-off.
+//   • /create/box-shadow is soon:true and was NEVER listed, so two resources
+//     offered a button that lands on Coming Soon — the exact fault the set exists
+//     to prevent.
+// Deriving it off toolTree's own `soon` flags means it cannot drift again: the
+// day the founder flips a flag, every CTA for that tool re-lights by itself.
+//
+// Only routes the Create tree OWNS are considered. /create/color is not one of
+// them (App.jsx intercepts it and renders ColorLanding), so it stays available,
+// which is correct — it is a real page.
+const CREATE_ROUTES = new Set(createTools().map(t => t.route))
+const LIVE_ROUTES = new Set(liveToolRoutes())
+
+export const GATED_ROUTES = new Set(
+  [...CREATE_ROUTES].filter(route => !LIVE_ROUTES.has(route)),
+)
 
 // True when a related tool's destination is live for everyone (not admin-gated).
 export function isToolAvailable(tool) {

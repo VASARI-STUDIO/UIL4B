@@ -338,6 +338,10 @@
       "destination": "/discover/prompts/index.html"
     },
     {
+      "source": "/discover/resources",
+      "destination": "/discover/resources/index.html"
+    },
+    {
       "source": "/feedback",
       "destination": "/feedback/index.html"
     },

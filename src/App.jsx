@@ -54,6 +54,7 @@ const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 // Moved from Create to Discover: it is a browse-and-take surface, not a tool
 // you operate, so it belongs beside the palette and gradient libraries.
 const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
+const CuratedResources = lazy(() => import('./pages/CuratedResources'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 // Create tool routes come straight from the single tool-tree source, so adding a
@@ -345,6 +346,11 @@ function AppInner() {
               <Route path="/discover/gradients" element={<GradientGallery toast={toast} />} />
               <Route path="/discover/palettes" element={<PaletteGallery toast={toast} />} />
               <Route path="/discover/prompts" element={<PromptLibrary toast={toast} />} />
+              {/* Curated Resources — the hand-picked external set in
+                  src/data/discoverResources.js. The nav has advertised this as
+                  “Soon” since Slice 2 while the data sat unrendered; this is the
+                  route that makes the menu entry true. */}
+              <Route path="/discover/resources" element={<CuratedResources />} />
 
               {/* Account, billing, legal and system pages — rendered inside the
                   PillNav app-shell (the wrapper return below). */}
