@@ -14061,3 +14061,44 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .uh-parts{flex-wrap:wrap}
   .uh-card-when{flex:1 0 100%}
 }
+
+/* ── Export panel · the brand logo field ─────────────────────────────────────
+   The one place UIL4B accepts an asset it did not generate. It renders only for
+   an export format whose document has logo pages (`logo` in
+   src/config/exportFormats.js), and it sits in its OWN bordered block beneath
+   the format list rather than inside the guidelines row — Pitch's "Export as"
+   puts its watermark notice in exactly that slot, and a control nested inside a
+   radio row is a control you cannot reach without selecting the row.
+   Anatomy — thumbnail, label with the one line saying what the file is used
+   for, action on the right — is Uvodo's Brand row.
+   https://mobbin.com/screens/fe97c269-f702-4dfe-8185-55a1f6cbbf6c
+   https://mobbin.com/screens/6f36a615-a60f-4a47-954b-337698f6c86a          */
+.exp-logo{margin:0 24px 20px;padding:14px 16px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l)}
+.exp-logo-row{display:flex;align-items:flex-start;gap:14px}
+/* The chequer is not decoration: it is the only way the preview can show
+   whether the artwork has a transparent ground, which is the exact thing the
+   note below asks the user to check. */
+.exp-logo-chip{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border:1px solid var(--border);border-radius:var(--radius-s);color:var(--t3);background-color:var(--bg-1);overflow:hidden}
+.exp-logo-chip.has-mark{background-image:linear-gradient(45deg,var(--bg-2) 25%,transparent 25%),linear-gradient(-45deg,var(--bg-2) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--bg-2) 75%),linear-gradient(-45deg,transparent 75%,var(--bg-2) 75%);background-size:10px 10px;background-position:0 0,0 5px,5px -5px,-5px 0}
+.exp-logo-chip img{max-width:38px;max-height:38px;width:auto;height:auto;object-fit:contain}
+.exp-logo-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.exp-logo-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow-wrap:anywhere}
+.exp-logo-hint{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
+.exp-logo-acts{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto}
+.exp-logo-drop{padding:0;background:none;border:0;font-size:var(--fs-micro);color:var(--t2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.exp-logo-drop:hover{color:var(--t0)}
+.exp-logo-drop:disabled{opacity:.5;cursor:default}
+/* The accepted formats and the ceiling are stated BEFORE anything is chosen —
+   Deel's "Custom branding". An upload limit discovered as an error message is a
+   limit the product kept to itself.
+   https://mobbin.com/screens/a60bceec-975d-4a91-bffd-70cda485c249 */
+.exp-logo-note{margin:12px 0 0;padding-top:12px;border-top:1px solid var(--border);font-size:var(--fs-micro);color:var(--t3);line-height:1.5}
+.exp-logo-error{margin:10px 0 0;font-size:var(--fs-caption);color:var(--err-strong);line-height:1.45}
+
+@media(max-width:560px){
+  .exp-logo{margin:0 16px 16px}
+  /* The action column cannot hold a pill and a Remove link beside two lines of
+     hint text at 320px; it takes its own row under the label instead. */
+  .exp-logo-row{flex-wrap:wrap}
+  .exp-logo-acts{flex-direction:row;align-items:center;width:100%;margin-left:0;justify-content:flex-start;gap:14px}
+}

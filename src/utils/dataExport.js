@@ -45,8 +45,14 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-pinned-v': { purpose: 'Pinned-tools schema version', pii: 'no' },
   'vs-recent-tools': { purpose: 'Recently used tools list', pii: 'no' },
   'vs-visited': { purpose: 'Which surfaces you have opened before', pii: 'no' },
-  'vs-current-design': { purpose: 'Active palette, fonts and type scale', pii: 'no' },
-  'vs-projects': { purpose: 'Saved design projects', pii: 'local' },
+  // Now also carries an uploaded LOGO, as a data: URI, when one has been added
+  // for the brand guidelines export — so this pair became content the user
+  // supplied rather than settings the product generated, and the disclosure has
+  // to say so. The prefix rule already EXPORTED it the day it existed; what a
+  // stale purpose line breaks is the promise that the table explains what is in
+  // the file, which is the half people actually read.
+  'vs-current-design': { purpose: 'Active palette, fonts, type scale and any logo you uploaded', pii: 'local' },
+  'vs-projects': { purpose: 'Saved design projects, including any logo you uploaded', pii: 'local' },
   'vs-project-folders': { purpose: 'Project folder organisation', pii: 'local' },
   'vs-project-icons': { purpose: 'Icons saved into projects', pii: 'local' },
   'vs-custom-icons': { purpose: 'Icons you customised and saved', pii: 'local' },

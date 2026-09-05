@@ -29,11 +29,25 @@
 //
 // A format with `pro` and no `live` would be a paid promise of a file that does
 // not exist. assertFormatsCoherent() below refuses that combination.
+//
+// A THIRD FLAG, ADDED WITH THE BRAND GUIDELINES:
+//   logo — this document has pages that exist only when the user has uploaded a
+//          logo. It is what tells ExportPanel to offer the upload field beside
+//          the format, so the request appears next to the thing that needs it
+//          rather than in a settings page nobody visits. It carries no
+//          entitlement meaning: a Pro user with no logo still gets the document,
+//          minus the logo section, and its closing page names what is missing.
 
 export const EXPORT_FORMATS = Object.freeze([
-  // The Pro deliverable, listed first because it is the best thing the panel
-  // makes.
+  // The two Pro deliverables, listed first because they are the best things the
+  // panel makes — and listed as a PAIR because that is the offer. They are not
+  // the same document at two paper sizes: the book is an A4 portrait
+  // SPECIFICATION an engineer implements from, and the guidelines are a 16:9
+  // landscape PRESENTATION a brand is argued from. See the long note at the top
+  // of utils/brandGuidelines.js for why the founder's reference material
+  // (UI Examples/Brand kit examples) could not be served by extending the book.
   Object.freeze({ id: 'book', name: 'Design system book (PDF)', desc: 'A 12-page A4 manual — cover, contents, numbered sections, full-bleed colour specimens, the contrast matrix, type specimens and every token. Opens ready to save as PDF.', live: true, pro: true }),
+  Object.freeze({ id: 'guidelines', name: 'Brand guidelines (presentation)', desc: 'A 16:9 landscape deck — cover, numbered sections, named swatches, alphabet grids, and your own logo on every brand ground with its clear-space rule. Opens ready to save as PDF.', live: true, pro: true, logo: true }),
   Object.freeze({ id: 'html', name: 'Style guide (HTML)', desc: 'A paginated A4 booklet — cover, palette with contrast evidence, and the type ladder. Prints to PDF from the browser.', live: true }),
   Object.freeze({ id: 'md', name: 'Style guide (Markdown)', desc: 'The same guide, importable straight into Notion or Google Docs.', live: true }),
   Object.freeze({ id: 'png', name: 'Style guide (PNG)', desc: 'A single A4 sheet at 2× — palette, contrast grades and the type ladder. For pasting into a deck or a handoff ticket.', live: true }),
