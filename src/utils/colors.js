@@ -1012,6 +1012,12 @@ export function derivePreviewRoles(allColors, opts = {}) {
       accent: PV_BRAND_SOFT,
       text,
       muted: pvQuietInk(text, bg, [bg, surface], 0.42),
+      // The READABLE halves of the two fill roles — see pvInkFromFill. The
+      // fallback path needs them for the same reason the full path does: the
+      // scenes paint accent and primary as TEXT, and brand blue on the light
+      // surface is 2.89:1.
+      accentInk: pvInkFromFill(PV_BRAND_SOFT, [bg, surface]),
+      primaryInk: pvInkFromFill(PV_BRAND, [bg, surface]),
       border: mixHex(text, bg, 0.86),
       inkGrounds: [bg, surface],
       primaryBorder,
@@ -1100,11 +1106,35 @@ export function derivePreviewRoles(allColors, opts = {}) {
   // can afford and never quieter. Terminates because step 0 is `text`, which
   // the line above has already guaranteed. ──
   const muted = pvQuietInk(text, bg, inkGrounds, 0.45)
+
+  // ── 10. accentInk / primaryInk: the READABLE halves of the two fill roles.
+  //
+  // [preview-accent-ink-unmeasured]. `accent` and `primary` were emitted with
+  // no ink guarantee at all and then painted as TEXT by five rules —
+  // .plb-pv-n--accent (16px/700), .plb-pvb-eyebrow and .plb-pvg-kicker
+  // (10.5px/700), .plb-pv-settings nav .is-active (8px) and .plb-pv-reply span.
+  // None of them is large text, so the floor is 4.5 for all five. Measured on
+  // the rendered page across all three preview tabs and both preview themes,
+  // on the deterministic palette 50-palette-preview-ink seeds: 22 of 22
+  // accent- and primary-inked samples below 4.5, worst 1.031:1.
+  //
+  // The fills do NOT move. accent paints the chips, the disc and the shapes and
+  // primary paints the CTA, where 1.4.11 asks 3:1 and the palette colour is the
+  // point; moving them is what [hue-set-has-no-tint-margin] refused to do. The
+  // margin goes to these two roles instead, guaranteed on inkGrounds — the same
+  // list text and muted are guaranteed on, so a scene that adds a third ground
+  // adds it in one place and all four roles are covered on arrival.
+  const accentInk = pvInkFromFill(accent, inkGrounds)
+  const primaryInk = pvInkFromFill(primary, inkGrounds)
+
   // CTA invisible on its card → caller draws a 1px border; we expose primaryBorder.
   const primaryLowOnSurface = contrastRatio(primary, surface) < 3
   const primaryBorder = primaryLowOnSurface ? mixHex(primary, text, 0.35) : 'transparent'
 
-  return { bg, surface, primary, onPrimary, accent, text, muted, border, primaryBorder, lowChroma, inkGrounds }
+  return {
+    bg, surface, primary, onPrimary, accent, text, muted, border,
+    accentInk, primaryInk, primaryBorder, lowChroma, inkGrounds,
+  }
 }
 
 // The worst contrast an ink achieves over a set of grounds. Every guarantee
@@ -1223,6 +1253,69 @@ function pvQuietInk(text, bg, grounds, maxMix, target = 4.5) {
  */
 function inkOnSolid(bg, target = 4.5) {
   return inkOnGrounds([bg], target)
+}
+
+// Resolution of the walk in pvInkFromFill. 256 steps is one level per channel
+// at the widest possible separation, so the answer is exact to the precision
+// the hex it returns can express.
+const PV_INK_STEPS = 256
+
+/**
+ * A TEXT ink derived from a FILL colour, moved only as far as the grounds
+ * require and no further.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM THE FILL. `accent` is chosen by chroma and
+ * `primary` by chroma subject to a 3:1 floor on surface, and both are FILL
+ * colours first — they paint the CTA, the chips, the disc and the shapes,
+ * where 1.4.11 asks 3:1 and the palette colour is the whole point. Moving
+ * THEM to satisfy a text rule is what [hue-set-has-no-tint-margin] refused to
+ * do, and its answer is the one taken here: a second role carries the margin,
+ * the fill value never moves. That pattern is now ratified four times in this
+ * codebase — --accent/--accent-strong, the --ok/--warn/--err pair, --hue-*
+ * /--hue-*-strong, and this.
+ *
+ * BOTH DIRECTIONS ARE SEARCHED, and that is the whole point of not reusing
+ * fixForeground. fixForeground takes its direction from the GROUND — `bgLum <
+ * 0.5` means walk the ink lighter — and 0.5 is not the crossover. The
+ * crossover where black and white are equally readable is relative luminance
+ * 0.179, so for every ground between 0.179 and 0.5 it walks toward white when
+ * black was the answer, and it returns its INPUT unchanged when nothing in
+ * that walk clears, which reads like a clamp and is not one. Measured on this
+ * codebase: 6,376 of 16,200 colours left under 4.5:1 by that single direction,
+ * every one of which pure black cleared. Here both poles are walked and the
+ * SMALLER movement wins, so the answer is never worse than either and the
+ * result stays as close to the palette's own colour as the grounds allow.
+ *
+ * THE WALK IS LINEAR, NOT A BISECTION, on purpose. Contrast against a SET of
+ * grounds is not monotone along the seed→pole line when the grounds sit on
+ * both sides of the seed's luminance, and a bisection assumes it is. A scan
+ * finds the first step that clears every ground, which is the definition being
+ * asked for, without assuming anything about the shape of the curve.
+ *
+ * `target` is the caller's floor. All five rules this feeds are small text —
+ * the KPI number is 16px/700, which is NOT large text (AA-large starts at
+ * 18.66px bold) — so the default is 4.5.
+ */
+function pvInkFromFill(seed, grounds, target = 4.5) {
+  // Already legible on every ground: the palette's own colour is the answer
+  // and nothing moves. This is the common case on a well-separated palette.
+  if (pvWorstOn(seed, grounds) >= target) return seed
+  let best = null
+  let bestT = Infinity
+  for (const pole of ['#FFFFFF', '#000000']) {
+    if (pvWorstOn(pole, grounds) < target) continue
+    for (let i = 1; i <= PV_INK_STEPS; i++) {
+      const t = i / PV_INK_STEPS
+      if (pvWorstOn(mixHex(seed, pole, t), grounds) < target) continue
+      if (t < bestT) { bestT = t; best = mixHex(seed, pole, t) }
+      break
+    }
+  }
+  // Neither pole is reachable, which for the {bg, surface} pair means pvSurface
+  // has already been defeated — it cannot be, by construction. Kept so the
+  // function is total, and it defers to the same pole walk every other ink role
+  // in this engine uses rather than inventing a second answer.
+  return best || inkOnGrounds(grounds, target)
 }
 
 // The same walk over a SET of grounds. With one ground this is byte-identical

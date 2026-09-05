@@ -432,6 +432,11 @@ test.describe('text over a gradient is measured, not skipped', () => {
       const refused = []
       const below = new Set()
       let measured = 0
+      // The seeded fallback cards, counted by their own initials. Without this
+      // the seed above is a no-op the moment /community stops rendering local
+      // submissions, and the fallback ground goes back to being unmeasured
+      // while this spec still reports a clean run.
+      const seededSeen = new Set()
       for (const vp of VIEWPORTS) {
         const ctx = await browser.newContext({ viewport: vp, colorScheme: theme })
         // Seeding vs-t BEFORE navigation is what actually puts React in this
@@ -439,6 +444,34 @@ test.describe('text over a gradient is measured, not skipped', () => {
         // reasoning as 43-state-token-contrast, and the same trap.
         await ctx.addInitScript((t) => {
           try { localStorage.setItem('vs-t', t) } catch { /* private mode */ }
+          // TWO COMMUNITY CARDS WITH UNUSABLE STOPS, seeded so the FALLBACK
+          // ground is measured here too.
+          //
+          // Per-item ink is a guarantee about a card that HAS a usable pair of
+          // hexes. Nothing validates c1/c2 — sanitizeCommunitySubmission passes
+          // them through untouched and Community.jsx spreads a server payload
+          // over its own defaults — so a card can reach CommunityCard with
+          // stops CSS cannot use, and it then falls back to the rule's own
+          // ground, which is a THEME pair rather than per-item data. That
+          // ground was never measured: the hard-coded #FFFFFF in the var()
+          // fallback is 4.43:1 on the light accent pair and 2.41:1 on the dark
+          // one, under the 3:1 large-text floor, and 1.00:1 on the card itself
+          // when the stop is a value CSS cannot parse at all.
+          //
+          // The two rows below are the two shapes of unusable: one CSS can
+          // parse but this app cannot measure ('red'), one CSS cannot parse at
+          // all ('nope'). Seeded in BOTH themes because the defect reverses
+          // between them — the light pair passes and the dark pair fails.
+          const card = (id, name, c1, c2) => ({
+            id, name, c1, c2, category: 'Portfolio', saves: 0,
+            author: 'Community member', curated: false, url: 'https://example.com/',
+          })
+          try {
+            localStorage.setItem('vs-community-submissions', JSON.stringify([
+              card('a11y-unparseable', 'Zero Zulu', 'nope', 'nope'),
+              card('a11y-unmeasurable', 'Yankee Yard', 'red', '#8B5CF6'),
+            ]))
+          } catch { /* private mode */ }
         }, theme)
         const page = await ctx.newPage()
         for (const route of ROUTES) {
@@ -448,6 +481,13 @@ test.describe('text over a gradient is measured, not skipped', () => {
           await go(page, route)
           const res = await page.evaluate(WALK)
           measured += res.out.length
+          if (route === '/community') {
+            for (const n of res.out) {
+              if (String(n.cls).includes('ch-thumb-mono') && ['ZZ', 'YY'].includes(String(n.text).trim())) {
+                seededSeen.add(`${String(n.text).trim()}@${vp.width}`)
+              }
+            }
+          }
           for (const r of res.refusals) refused.push(`  ${route} [${theme}@${vp.width}] .${r.cls} — ${r.why}`)
           const bad = res.out.filter((n) => n.ratio < n.floor)
           for (const b of bad) below.add(`${route} .${b.cls}`)
@@ -474,6 +514,16 @@ test.describe('text over a gradient is measured, not skipped', () => {
         + ' so their contrast is UNKNOWN rather than passing. Extend the parser, or give'
         + ' them their own check:\n' + refused.join('\n'))
         .toEqual([])
+
+      // The seeded cards reached the page and were SCORED, at both viewports.
+      // A monogram that fell back to a non-gradient ground would be dropped by
+      // the walk rather than failed, so this is the difference between "the
+      // fallback passes" and "the fallback was never asked".
+      expect([...seededSeen].sort(),
+        'the two seeded unusable-stop community cards were not measured over a gradient in '
+        + `${theme}. Their ground is the rule's own accent-pair fallback, so if they are `
+        + 'missing here the fallback is unmeasured however green the rest of this run is.')
+        .toEqual(['YY@1280', 'YY@390', 'ZZ@1280', 'ZZ@390'])
 
       expect([...below].sort(), 'the set of gradient-backed text below its AA floor has'
         + ' changed. A surface here that is NOT in KNOWN_BELOW_FLOOR is a new defect; one'

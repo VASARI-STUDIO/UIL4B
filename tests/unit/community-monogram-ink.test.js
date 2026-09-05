@@ -194,3 +194,114 @@ test('.ch-thumb-mono reads the per-item ink and is opaque', () => {
     + '0.1-0.2:1 here and about 0.7:1 on the state tokens.',
   )
 })
+
+// ── 6. The FALLBACK ground, which per-item ink could not see ─────────────
+//
+// Per-item ink is a guarantee about a card that HAS a usable pair of stops.
+// Nothing validates c1/c2: sanitizeCommunitySubmission passes them straight
+// through, and Community.jsx spreads a server payload over its own defaults,
+// so a card can reach CommunityCard with no usable pair at all. That card
+// falls through to the rule's own ground -
+// linear-gradient(135deg,var(--accent),var(--accent-strong)) - which is not
+// per-item DATA but a THEME pair, and the two are different colours in the two
+// themes. The hard-coded #FFFFFF that used to sit in the var() fallback was
+// never measured against either of them.
+
+// The accent pair as the CASCADE resolves it: the last declaration inside a
+// [data-theme="..."] block wins, because :root and [data-theme] are both
+// (0,1,0) and this sheet declares --accent only in theme blocks. Read off the
+// sheet rather than repeated here, so moving a brand value fails this test
+// instead of silently invalidating it.
+function themeToken(css, theme, token) {
+  const re = new RegExp('\\[data-theme="' + theme + '"\\]\\s*\\{([^}]*)\\}', 'g')
+  let value = null
+  for (const m of css.matchAll(re)) {
+    const d = m[1].match(new RegExp('--' + token + ':\\s*(#[0-9a-fA-F]{6})'))
+    if (d) value = d[1]
+  }
+  return value
+}
+
+// The stylesheet's own fallback ink for a thumbnail with no usable stops.
+//
+// LAST DECLARATION WINS, so every matching rule is scanned rather than the
+// first one found: `.ch-thumb` is declared twice on purpose (geometry first,
+// then the ink defaults), and taking match() at its word would read the
+// geometry rule, find no ink and report the guarantee missing when it is there.
+function fallbackInk(css, theme) {
+  const re = theme === 'dark'
+    ? /\[data-theme="dark"\]\s+\.ch-thumb\{([^}]*)\}/g
+    : /(?:^|[\r\n])\.ch-thumb\{([^}]*)\}/g
+  let value = null
+  for (const rule of css.matchAll(re)) {
+    const m = rule[1].match(/--mono-ink:\s*(#[0-9a-fA-F]{6})/)
+    if (m) value = m[1]
+  }
+  return value
+}
+
+test('the accent-gradient fallback carries a MEASURED ink in both themes', () => {
+  const css = stripComments(read('src/styles/global.css'))
+  for (const theme of ['light', 'dark']) {
+    const c1 = themeToken(css, theme, 'accent')
+    const c2 = themeToken(css, theme, 'accent-strong')
+    assert.ok(c1 && c2, `${theme}: could not read the accent pair off the sheet`)
+    const ink = fallbackInk(css, theme)
+    assert.ok(ink, `${theme}: .ch-thumb declares no fallback --mono-ink`)
+    const ratio = worstOnGradient(ink, c1, c2)
+    assert.ok(
+      ratio >= FLOOR,
+      `${theme}: the fallback monogram ink ${ink} measures ${ratio.toFixed(2)}:1 on `
+      + `${c1}->${c2}, below the ${FLOOR}:1 large-text floor`,
+    )
+  }
+})
+
+test('and prefers-contrast: more does not undo it', () => {
+  // That block overrides --accent and --accent-strong to a single value per
+  // theme, so the fallback ground changes shape - a solid, not a ramp - for
+  // the one user who asked for MORE contrast. Both poles are checked there too.
+  const css = stripComments(read('src/styles/global.css'))
+  const block = css.match(/@media \(prefers-contrast: more\)\{([\s\S]*?)[\r\n]\}/)
+  assert.ok(block, 'the prefers-contrast block has gone from the sheet')
+  for (const theme of ['light', 'dark']) {
+    const scoped = block[1].match(new RegExp('\\[data-theme="' + theme + '"\\]\\{([^}]*)\\}'))
+    assert.ok(scoped, `${theme}: no prefers-contrast override`)
+    const c1 = scoped[1].match(/--accent:\s*(#[0-9a-fA-F]{6})/)
+    const c2 = scoped[1].match(/--accent-strong:\s*(#[0-9a-fA-F]{6})/)
+    assert.ok(c1 && c2, `${theme}: the override no longer sets both accent tokens`)
+    const ink = fallbackInk(css, theme)
+    const ratio = worstOnGradient(ink, c1[1], c2[1])
+    assert.ok(ratio >= FLOOR, `${theme} prefers-contrast: ${ink} is ${ratio.toFixed(2)}:1 on ${c1[1]}->${c2[1]}`)
+  }
+})
+
+test('the fixture discriminates: the hard-coded white this replaced really failed', () => {
+  // Without this the two tests above would pass on a sheet that never had a
+  // problem. #FFFFFF measures 4.43:1 on the light pair and 2.41:1 on the dark
+  // one - so the defect was theme-shaped, and a light-only check would have
+  // reported a clean pass. Same reversal [gradient-text-below-aa] recorded for
+  // --accent-strong on /seo.
+  const css = stripComments(read('src/styles/global.css'))
+  const dark = worstOnGradient('#FFFFFF', themeToken(css, 'dark', 'accent'), themeToken(css, 'dark', 'accent-strong'))
+  assert.ok(dark < FLOOR, `plain white now measures ${dark.toFixed(2)}:1 on the dark accent pair - `
+    + 'the brand values moved and the two tests above need re-measuring, not deleting')
+})
+
+test('CommunityCard writes the stops and the ink together, or writes neither', () => {
+  // The hole this closes was a SPLIT: --c1/--c2 were written unconditionally
+  // while --mono-ink was written only when they parsed, so a card with a
+  // non-hex stop got a ground from its own bad data and an ink from the
+  // stylesheet's fallback - two measurements of two different things. Worse, a
+  // value CSS cannot parse at all invalidates the whole gradient at
+  // computed-value time, so .ch-thumb resolves to `initial` and the monogram
+  // lands on the CARD, where white is 1.00:1 in light.
+  const src = stripComments(read('src/components/discover/CommunityCard.jsx'))
+  const style = src.match(/style: mono[\s\S]{0,240}?,\s*\}/)
+  assert.ok(style, 'the thumbnail style is no longer gated on the per-item ink')
+  const branch = style[0]
+  for (const prop of ['--c1', '--c2', '--mono-ink', '--mono-glow']) {
+    assert.ok(branch.includes(prop), `${prop} is no longer written on the same branch as the others`)
+  }
+  assert.match(branch, /:\s*undefined/, "the unusable-stops branch must write NOTHING, so the rule's own fallback applies")
+})
