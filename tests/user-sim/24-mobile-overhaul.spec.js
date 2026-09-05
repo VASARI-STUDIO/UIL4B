@@ -1,4 +1,6 @@
-// The mobile overhaul — rendered proof for docs/qa/mobile-audit-2026-08.md.
+// The mobile overhaul — rendered proof for the August 2026 mobile audit (S1–S16).
+// That audit was deleted 2026-09-05; docs/qa/defect-register-2026-08.md says what
+// each number was and which test below holds it.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY EVERY ASSERTION HERE IS GEOMETRY AND NONE OF THEM IS TEXT

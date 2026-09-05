@@ -1,7 +1,8 @@
 // The defect sweep — the leftovers of the two August 2026 QA audits.
 //
-// docs/qa/responsive-audit-2026-08.md (M1, M6, N1–N8) and
-// docs/qa/mobile-audit-2026-08.md (S3, S4, S5, S10, and S16 above 768px),
+// The responsive audit (M1, M6, N1–N8) and the mobile audit (S3, S4, S5, S10,
+// and S16 above 768px) — both deleted 2026-09-05; what each number was and what
+// holds it now is in docs/qa/defect-register-2026-08.md,
 // minus everything PR #263 and PR #271 already landed and minus every
 // homepage-scoped finding (the founder is reworking that surface separately).
 //
