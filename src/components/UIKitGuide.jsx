@@ -116,10 +116,21 @@ export default function UIKitGuide({ step }) {
     const trigger = introTriggerRef.current
     return () => {
       const back = openedByRef.current
-      // A node that has been detached cannot take focus, and .focus() on one is
-      // a silent no-op that drops the user on <body>. Prefer the rail's own
-      // trigger, which is always mounted.
-      const target = back && back.isConnected ? back : trigger
+      // Three ways `back` is not somewhere to return to, and the rendered spec
+      // found the third:
+      //   · nothing had focus;
+      //   · the opener was DETACHED — very often true, because the control that
+      //     started the flow is a mega-menu button that unmounts on the route
+      //     change. .focus() on a detached node is a silent no-op;
+      //   · the opener was <body>, which is what `activeElement` reports when
+      //     nothing is focused — and body IS connected, so an isConnected check
+      //     alone waves it through and "restores" focus to nowhere. That is the
+      //     normal case here, because this card opens ITSELF on arrival rather
+      //     than being opened by a press.
+      // The rail's own trigger is the answer in all three: it is always mounted
+      // while the card is up, and it is what re-opens the card.
+      const usable = back && back !== document.body && back.isConnected
+      const target = usable ? back : trigger
       if (target && target.isConnected) target.focus()
     }
   }, [showIntro])
