@@ -40,9 +40,13 @@ import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 // eighth hand-kept list in a codebase that has spent two PRs deleting the first
 // seven, and it would pass while the guide itself changed underneath it.
 function guideStepLabels() {
-  const src = fs.readFileSync(path.join('src', 'components', 'UIKitGuide.jsx'), 'utf8')
-  const block = src.slice(src.indexOf('export const UIKIT_STEPS = ['))
-  const body = block.slice(0, block.indexOf('\n]'))
+  // The step model moved OUT of the component into utils/brandKitGuide.js,
+  // beside the reading that explains it. This reads the array the menu card and
+  // the walkthrough now BOTH import, so it is still one source rather than an
+  // eighth hand-kept list — which is the property this helper exists to keep.
+  const src = fs.readFileSync(path.join('src', 'utils', 'brandKitGuide.js'), 'utf8')
+  const block = src.slice(src.indexOf('export const BRAND_KIT_STEPS = Object.freeze(['))
+  const body = block.slice(0, block.indexOf('\n])'))
   return [...body.matchAll(/label:\s*'([^']+)'/g)].map((m) => m[1])
 }
 
@@ -198,9 +202,24 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     const cta = page.locator('#pnav-mega .pnav-editorial-cta')
     await expect(cta).toBeVisible()
     await cta.click()
-    // /create/color is the merged studio and is NOT one of the redirect-only
-    // category homes, so the guided flow opens a page rather than bouncing.
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/color')
+    // MOVED DELIBERATELY, 2026-09-05, and the old value is worth recording
+    // because it did not go stale -- IT PINNED A DEFECT. This line asserted
+    // /create/color and justified it as "the merged studio". That stopped being
+    // true: App.jsx routes /create/color to ColorLanding, the compressed colour
+    // SALES page, and ColorStudio -- the only page that rendered the guide's
+    // colour step -- moved to /create/semantic-color. So the guided flow landed
+    // on a page of links with no step bar and no step one, and this assertion
+    // stayed green through all of it, because it checked the URL rather than
+    // whether anything was there when you arrived.
+    //
+    // Step one is /create/palette now: a live tool, and the one that writes
+    // design.palette, which is what the walkthrough reads to know the step is
+    // done. tests/unit/brand-kit-guide.test.js checks every step path against
+    // liveToolRoutes() so this cannot rot the same way twice, and
+    // 53-brand-kit-walkthrough.spec.js asserts the flow is RUNNING on arrival
+    // rather than only that the URL changed.
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
+    await expect(page.getByRole('region', { name: 'Brand kit walkthrough' })).toBeVisible()
   })
 
   test('column heads wear their own category hue instead of one shared accent', async ({ page }) => {

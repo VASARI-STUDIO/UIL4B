@@ -12,7 +12,9 @@ import { searchHints } from '../data/toolIndex'
 import { GALLERY_PALETTES } from '../data/paletteGallery'
 import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
 import usePopover from '../hooks/usePopover'
-import { UIKIT_GUIDE_KEY, UIKIT_STEPS } from './UIKitGuide'
+import { BRAND_KIT_STEPS, guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
+import { getRecentIcons } from '../utils/recentIcons'
+import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -406,6 +408,10 @@ export default function PillNav() {
   const { openLogin } = useLoginPrompt()
   const { isPro } = useSubscription()
   const { reducedMotion } = useAppearance()
+  // The saved design is what the brand-kit walkthrough measures its
+  // progress against, so the nav's own CTA can say whether it starts or
+  // resumes. Same object the tools write and the project cards read.
+  const { design } = useProject()
   // Hover/focus on the search field. Drives both the width expansion and the
   // typing placeholder; the CSS could do the width on its own, but the timer
   // needs to know too, and one source beats two that can disagree.
@@ -413,13 +419,42 @@ export default function PillNav() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // Launch the guided brand-kit builder (colour → fonts → type → icons) from the
-  // Create mega-menu promo card. Mirrors the dashboard's "Build a UI Kit" action:
-  // set the session flag, then enter at the colour step.
+  // THE FRONT DOOR. Founder instruction, 2026-09-05: the navigation entry
+  // “should start a guided walkthrough to build a full system”, and “build a
+  // brand kit should go straight into step 1”.
+  //
+  // IT USED TO GO TO `/create/color`, WHICH IS NOT A STEP AND NOT A TOOL. That
+  // route renders ColorLanding, the compressed colour sales page, and the only
+  // page rendering the guide's colour step moved to `/create/semantic-color`.
+  // So this button set a flag and dropped the visitor on a page of links with no
+  // step bar and no popup — the walkthrough was unreachable from its own front
+  // door. Step one is now `/create/palette`, the route SYSTEM_PARTS and
+  // FIRST_WINS already name as the colour tool.
+  //
+  // A FRESH start always opens step one, which is the founder's instruction. If
+  // the flow is ALREADY RUNNING the same control RESUMES instead, landing on the
+  // first step with no work in it — a setup checklist you come back to shows you
+  // what is left rather than restarting you (Klaviyo's "Set up your account").
+  // `guideEntry` decides; nothing about it lives in this component.
+  //
+  // A plain <button>, deliberately. Staging state and then navigating from a
+  // <Link onClick> is the defect utils/handoffSlot.js documents — React Router
+  // runs the handler on a Ctrl/Cmd/Shift-click too and only then declines to
+  // navigate, arming the flow in a tab that never enters it. A button has no
+  // modified-click navigation to lose, so there is nothing to strand.
+  //
+  // Read straight rather than memoised: `guideEntry` is pure arithmetic over an
+  // object already in context, and the two storage reads behind it are a flag
+  // and a <=20-item list. PillNav re-renders on route change and menu state, not
+  // per scroll event, so this is a handful of reads per navigation.
+  const brandKitEntry = guideEntry(design, {
+    active: isGuideActive(),
+    iconsTouched: getRecentIcons().length > 0,
+  })
   const launchBrandKit = () => {
     closeAll()
-    try { sessionStorage.setItem(UIKIT_GUIDE_KEY, '1') } catch { /* ignore */ }
-    navigate('/create/color')
+    startGuide()
+    navigate(brandKitEntry.path)
   }
   // On marketing/sales routes there's nothing to export, so the bar leads with
   // the conversion pill instead of the Export shell.
@@ -1142,7 +1177,7 @@ export default function PillNav() {
                   // four-item list sitting between a blurb and a button and have
                   // to infer what it enumerates.
                   <ol className="pnav-steps" aria-label={`${activeSection.promo.cta || 'Guided flow'}: steps`}>
-                    {UIKIT_STEPS.map((s, i) => (
+                    {BRAND_KIT_STEPS.map((s, i) => (
                       <li className="pnav-step" key={s.id}>
                         <span className="pnav-step-n" aria-hidden="true">{i + 1}</span>
                         <span className="pnav-step-label">{s.label}</span>
@@ -1165,7 +1200,12 @@ export default function PillNav() {
                       onClick={launchBrandKit}
                       data-pnav-menuitem
                     >
-                      {activeSection.promo.cta || 'Start building'}
+                      {/* The label reports which of the two things this button
+                          is about to do. A control that says "Build a brand kit"
+                          and then drops you three steps in has lied to you. */}
+                      {brandKitEntry.resume
+                        ? `Resume: ${brandKitEntry.step.label}`
+                        : (activeSection.promo.cta || 'Start building')}
                     </button>
                   )}
                   <Link className="pnav-editorial-link" to={activeSection.viewAllHref} onClick={closeAll} data-pnav-menuitem>
@@ -1303,7 +1343,9 @@ export default function PillNav() {
                 {sheetPromo.guide ? (
                   <>
                     <button type="button" className="ui-pill ui-pill-accent ui-pill-sm" onClick={launchBrandKit}>
-                      {sheetPromo.cta || 'Start building'}
+                      {brandKitEntry.resume
+                        ? `Resume: ${brandKitEntry.step.label}`
+                        : (sheetPromo.cta || 'Start building')}
                     </button>
                     <Link className="ui-pill ui-pill-ghost ui-pill-sm" to={sheetPromo.href} onClick={closeAll}>Learn more</Link>
                   </>
