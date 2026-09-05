@@ -613,7 +613,7 @@ export default function Projects({ toast }) {
       <div className="sec-h" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1>Projects</h1>
-          <p style={{ color: 'var(--t2)', fontSize: 13 }}>Your saved design systems — palette, fonts, type scale, and tokens.</p>
+          <p style={{ color: 'var(--t2)', fontSize: 13 }}>Your saved design systems — palette, fonts, type scale, and styles.</p>
           {totalProjects > 0 && (
             <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
               {/* The allowance appears in the count ONLY once it is worth

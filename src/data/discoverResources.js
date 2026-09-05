@@ -416,7 +416,7 @@ export const DISCOVER_RESOURCES = [
     tags: ['tailwind', 'components', 'free', 'application-ui'],
     shortDescription: 'A free, open-source collection of Tailwind components for marketing and application UIs, with light and dark variants.',
     useCase: 'App & marketing components',
-    whyUseful: 'Solid, accessible component starting points. Bring the structure into the UI Builder and apply your tokens.',
+    whyUseful: 'Solid, accessible component starting points. Bring the structure into the UI Builder and apply your styles.',
     relatedTools: [
       { label: 'UI Builder', route: '/create/component-designer' },
     ],

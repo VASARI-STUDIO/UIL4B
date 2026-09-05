@@ -46,20 +46,43 @@
 //   Domain-restricted search against pepsico.com surfaces the 2023 announcement
 //   in PepsiCo's own words ("electric blue and the black of Pepsi Zero Sugar")
 //   and publishes NO hex.
-// The row therefore still asserts a palette nobody here has confirmed. Whether
-// a row we cannot substantiate should keep shipping under the bare name "Pepsi"
-// is a product call, not a data one - see [brand-palette-provenance].
+// RESOLVED 2026-09-05 as a NAMING change, not a data one. The founder chose
+// "rename it to its era" over dropping the row, so the hexes are untouched and
+// the row is now "Pepsi (pre-2023)". The era label is read off the VALUES, and
+// pre-2023 is the tightest claim they support:
+//   1. THE ROW HAS NO BLACK. PepsiCo's own newsroom, quoted above, describes the
+//      2023 identity as electric blue plus "the black of Pepsi Zero Sugar". A
+//      five-swatch palette carrying no black cannot be that identity.
+//   2. It is the blue / red / white globe triad plus two supporting blues - the
+//      shape of the identity the 2023 refresh replaced.
+//   3. These are the values this file has carried since before the 2023 change
+//      and has deliberately never updated (see NOT VERIFIED above).
+// A tighter label (a start year - 2008, 2003) is NOT asserted: that would be a
+// second unverified claim stacked on the first, and nothing reachable here dates
+// the palette's beginning. "pre-2023" is bounded by the one change PepsiCo has
+// published in its own words.
+// STILL UNVERIFIED, and the name now says so instead of the header alone: no
+// primary source confirms these hexes, and none was re-fetched for this change -
+// the three blocked routes above were not retried. Provenance stays in this
+// header rather than in a per-row `source` field, because that field was
+// considered and rejected for the whole file (see [brand-palette-provenance]);
+// adding it to one row would contradict the rule the other 36 follow.
 //
 // NAMING RULE, learned the hard way. A row named after a COMPANY must hold that
 // company's identity colours. `material` held Material 3's default purple under
 // the name "Material (Google)" — correct hexes, wrong promise, since nobody
 // reading "Google" expects purple. It is now "Material 3 Baseline" (a design
 // SYSTEM) and `google` carries the four-colour logo palette. Keep them separate.
+//
+// PARENTHETICALS. Two are legitimate and the test pins both. "X (Twitter)" is a
+// RENAME - one company, two names. "Pepsi (pre-2023)" is an ERA - one brand, a
+// palette it has moved on from. Neither attaches an owner to something that is
+// not that owner's identity, which is the defect the rule exists to stop.
 
 export const BRAND_PALETTES = [
   { id: 'apple', name: 'Apple', free: true, system: 'custom', colors: ['#1D1D1F', '#F5F5F7', '#0071E3', '#86868B', '#2997FF'] },
   { id: 'material', name: 'Material 3 Baseline', free: true, system: 'custom', colors: ['#6750A4', '#625B71', '#7D5260', '#FEF7FF', '#1D1B20'] },
-  { id: 'google', name: 'Google', free: false, system: 'custom', colors: ['#4285F4', '#EA4335', '#FBBC04', '#34A853', '#202124'] },
+  { id: 'google', name: 'Google', free: true, system: 'custom', colors: ['#4285F4', '#EA4335', '#FBBC04', '#34A853', '#202124'] },
   { id: 'netflix', name: 'Netflix', free: true, system: 'custom', colors: ['#E50914', '#221F1F', '#F5F5F1', '#B81D24', '#000000'] },
   { id: 'discord', name: 'Discord', free: true, system: 'custom', colors: ['#5865F2', '#EB459E', '#FEE75C', '#57F287', '#23272A'] },
   { id: 'stripe', name: 'Stripe', free: true, system: 'custom', colors: ['#635BFF', '#0A2540', '#00D4FF', '#F6F9FC', '#425466'] },
@@ -81,7 +104,7 @@ export const BRAND_PALETTES = [
   { id: 'ikea', name: 'IKEA', free: false, system: 'custom', colors: ['#0058A3', '#FFDB00', '#FFFFFF', '#111111', '#F5F5F5'] },
   { id: 'lego', name: 'LEGO', free: false, system: 'custom', colors: ['#E3000B', '#FFED00', '#006CB7', '#00AF4D', '#181716'] },
   { id: 'mcdonalds', name: "McDonald's", free: false, system: 'custom', colors: ['#FFC72C', '#DA291C', '#27251F', '#FFFFFF', '#264F36'] },
-  { id: 'pepsi', name: 'Pepsi', free: false, system: 'custom', colors: ['#004B93', '#E32934', '#FFFFFF', '#0065C3', '#28458E'] },
+  { id: 'pepsi', name: 'Pepsi (pre-2023)', free: false, system: 'custom', colors: ['#004B93', '#E32934', '#FFFFFF', '#0065C3', '#28458E'] },
   { id: 'firefox', name: 'Firefox', free: false, system: 'custom', colors: ['#FF9500', '#FF3B6B', '#9059FF', '#20123A', '#00DDFF'] },
   { id: 'x', name: 'X (Twitter)', free: false, system: 'custom', colors: ['#000000', '#FFFFFF', '#1D9BF0', '#71767B', '#16181C'] },
   { id: 'instagram', name: 'Instagram', free: false, system: 'custom', colors: ['#E1306C', '#F56040', '#FCAF45', '#833AB4', '#405DE6'] },

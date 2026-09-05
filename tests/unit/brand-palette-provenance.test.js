@@ -58,9 +58,17 @@ test('brand ids are unique', () => {
 // Which rows are free is a pricing call, not a data detail, and `free` is one
 // keystroke from flipping in a file that gets edited for colour reasons. Pin the
 // SET, so giving a brand away (or taking one back) has to be deliberate.
-test('the free brand set is exactly the six the founder chose', () => {
+//
+// `google` was added 2026-09-05 by founder decision, taking the set from six to
+// seven. Renaming "Material (Google)" to "Material 3 Baseline" had left the free
+// tier with nothing called Google in it, and Google's logo colours are both
+// public and among the most recognisable in the library — a strong free-tier
+// draw. This flag decides which side of splitLockedLibrary the row lands on:
+// free rows ship their `colors`, gated rows are stripped to id/label/slots, so
+// flipping it is a disclosure change as well as a pricing one.
+test('the free brand set is exactly the seven the founder chose', () => {
   const free = BRAND_PALETTES.filter(b => b.free).map(b => b.id).sort()
-  assert.deepEqual(free, ['apple', 'discord', 'material', 'netflix', 'spotify', 'stripe'])
+  assert.deepEqual(free, ['apple', 'discord', 'google', 'material', 'netflix', 'spotify', 'stripe'])
 })
 
 // ── Retired values stay retired ─────────────────────────────────────────────
@@ -129,9 +137,13 @@ test('a row named for Google holds Google\'s logo colours, not Material\'s purpl
 
 // A parenthetical in a name is how the original defect looked ("Material
 // (Google)"): it attaches an owner to something that is not the owner's
-// identity. One is legitimate — X is genuinely the company formerly called
-// Twitter, which is a rename, not an owner. Pin the set so a new parenthetical
-// has to be argued for rather than pasted in.
+// identity. Two are legitimate, and they are legitimate for the same reason —
+// neither names an owner. X is genuinely the company formerly called Twitter,
+// which is a rename. "Pepsi (pre-2023)" names an ERA: the row holds a palette
+// Pepsi has moved on from (no black, against PepsiCo's own 2023 announcement of
+// electric blue plus black), and the parenthetical is what stops the row
+// claiming to be current. Pin the set so a THIRD parenthetical has to be argued
+// for rather than pasted in.
 // ── The one unverified row ─────────────────────────────────────────────
 // `pepsi` is the only row in the file whose values no primary source confirms,
 // and the header says so in as many words. This does NOT assert the hexes are
@@ -172,12 +184,33 @@ test('the pepsi row and the header\'s unverified claim move together', () => {
   }
 })
 
-test('parenthetical brand names are limited to the one justified case', () => {
+test('parenthetical brand names are limited to the two justified cases', () => {
   const parenthetical = BRAND_PALETTES.filter(b => b.name.includes('(')).map(b => b.name).sort()
   assert.deepEqual(
     parenthetical,
-    ['X (Twitter)'],
+    ['Pepsi (pre-2023)', 'X (Twitter)'],
     'A new "Product (Company)" name is the exact shape of the Material (Google) defect. ' +
-    'If the row is a design system, name it after the design system.',
+    'If the row is a design system, name it after the design system. ' +
+    'An ERA parenthetical is a different thing and is allowed, but add it here on purpose.',
+  )
+})
+
+// The era label is the row's only warning that it is not current, so it has to
+// survive a rename that "tidies" it. This is deliberately paired with the
+// unverified-claim test above: that one couples the header to the hexes, this
+// one couples the NAME to them.
+test('the unverified pepsi row is labelled as historical, not as current Pepsi', () => {
+  const pepsi = byId('pepsi')
+  assert.ok(pepsi, 'the `pepsi` row is missing')
+  assert.match(
+    pepsi.name, /pre-2023/,
+    'The pepsi row holds a palette no primary source confirms and that predates PepsiCo\'s ' +
+    '2023 identity change (which added black — this row has none). Its name is the only place ' +
+    'a user is told that. Do not shorten it back to "Pepsi".',
+  )
+  assert.ok(
+    !pepsi.colors.includes('#000000'),
+    'A black here would contradict the pre-2023 label — PepsiCo\'s 2023 announcement is what ' +
+    'introduced black. If black belongs, the row is post-rebrand and the name is wrong.',
   )
 })

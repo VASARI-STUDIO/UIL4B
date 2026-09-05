@@ -968,7 +968,7 @@ ${stateVars}
           </p>
         </div>
         <div className="stc-hero-actions">
-          <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy all tokens</button>
+          <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy all CSS variables</button>
         </div>
         {canSaveProjects && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'sticky', bottom: 16, zIndex: 20, background: 'var(--card)', padding: '10px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--warm-shadow-lg)' }}>
@@ -1026,7 +1026,7 @@ ${stateVars}
           <span><strong>{activeStateBundle?.name || 'Custom mix'}</strong> bundle</span>
           <span><strong>{stateRoleIds.length}</strong> state roles</span>
           <span><strong>{STATE_LABELS.length}</strong> stops per ramp</span>
-          <span><strong>{stateTokenCount}</strong> canonical tokens</span>
+          <span><strong>{stateTokenCount}</strong> canonical variables</span>
         </div>
 
 

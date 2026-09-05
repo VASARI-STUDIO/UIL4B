@@ -290,7 +290,7 @@ export default function TintTool({ onCopy, toast }) {
           <p>
             Build a tonal system that designers can evaluate and developers can
             ship. Start with one colour or import a palette, tune the curve, then
-            inspect real interface roles or copy production-ready tokens.
+            inspect real interface roles or copy production-ready CSS.
           </p>
         </div>
         <div className="tt-audience" role="tablist" aria-label="Choose your tint scale workflow">
@@ -321,7 +321,7 @@ export default function TintTool({ onCopy, toast }) {
             onKeyDown={handleAudienceKeyDown}
           >
             <span className="tt-audience-kicker">For developers</span>
-            <strong>Ship the tokens</strong>
+            <strong>Ship the CSS</strong>
             <span>Inspect names and copy a complete CSS handoff.</span>
           </button>
         </div>
@@ -331,7 +331,7 @@ export default function TintTool({ onCopy, toast }) {
         <span><strong>{bases.length}</strong> base colour{bases.length > 1 ? 's' : ''}</span>
         <span><strong>{labels.length}</strong> stops per scale</span>
         <span><strong>{mode === 'perceived' ? 'HCT' : 'HSL'}</strong> lightness curve</span>
-        <span><strong>{ramps.length * labels.length}</strong> generated tokens</span>
+        <span><strong>{ramps.length * labels.length}</strong> generated tints</span>
       </div>
 
       <div className="tt-grid">
@@ -612,7 +612,7 @@ export default function TintTool({ onCopy, toast }) {
                       <h3>One scale, clear hierarchy.</h3>
                       <p>
                         Test surfaces, borders, text and actions together before
-                        handing the tokens to engineering.
+                        handing the styles to engineering.
                       </p>
                       <div className="tt-preview-actions">
                         <span className="tt-preview-primary">Primary action</span>
@@ -620,7 +620,7 @@ export default function TintTool({ onCopy, toast }) {
                       </div>
                     </div>
                     <div className="tt-preview-card">
-                      <span className="tt-preview-card-k">Token coverage</span>
+                      <span className="tt-preview-card-k">Style coverage</span>
                       <strong>{roleSamples.length} roles</strong>
                       <span>{labels.length} stops available</span>
                       <div className="tt-preview-spectrum" aria-hidden="true">
