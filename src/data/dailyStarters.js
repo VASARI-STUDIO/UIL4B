@@ -35,7 +35,7 @@
 import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from './gradientGallery.js'
 import { LIBRARY_PALETTES } from './paletteLibrary.js'
 import { paletteBuilderUrl } from './paletteGallery.js'
-import { pickForDay } from '../utils/userHome.js'
+import { pickForDay, paletteBands } from '../utils/userHome.js'
 import { dayNumber } from './dailyTips.js'
 
 /**
@@ -71,17 +71,14 @@ function gradientCard(g) {
 }
 
 function paletteCard(p) {
-  // Hard stops, so the swatches read as swatches rather than as a blend, out of
-  // one background value — the card art stays a single element for both kinds.
-  const step = 100 / p.colors.length
-  const bands = p.colors
-    .map((c, i) => `${c} ${(i * step).toFixed(2)}% ${((i + 1) * step).toFixed(2)}%`)
-    .join(', ')
   return {
     id: p.id,
     kind: 'Palette',
     name: p.name,
-    art: `linear-gradient(90deg, ${bands})`,
+    // The same hard-stop bands the project cards draw, from the one
+    // implementation in utils/userHome.js — a palette must not look like two
+    // different things on two surfaces of the same page.
+    art: paletteBands(p.colors),
     fact: `${p.colors.length} colours`,
     to: paletteBuilderUrl(p.colors),
     opens: 'Palette Builder',

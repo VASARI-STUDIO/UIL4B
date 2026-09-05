@@ -13499,6 +13499,7 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    one system rather than four near-misses. */
 .uh-eyebrow{display:flex;align-items:baseline;gap:var(--s-2);margin:0 0 var(--s-2);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--t3)}
 .uh-eyebrow-kind{font-weight:500;letter-spacing:.06em;color:var(--accent-strong)}
+.uh-eyebrow-kind::before{content:'\00b7';margin-right:.5em;color:var(--t3)}
 
 /* ── Masthead ───────────────────────────────────────────────────── */
 /* .sec-h is kept alongside so the h1 inherits the site's display treatment;
@@ -13576,13 +13577,13 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    you are without telling you what is missing, which is the only actionable
    half. The dots repeat the label rather than replacing it, and the group
    carries the whole reading as an aria-label. */
-.uh-parts{display:flex;align-items:center;gap:var(--s-2);flex-wrap:wrap;margin-top:auto;font-size:var(--fs-micro)}
-.uh-parts-dots{display:inline-flex;gap:5px;flex:0 0 auto}
+.uh-parts{display:flex;align-items:flex-start;gap:var(--s-2);flex-wrap:nowrap;margin-top:auto;font-size:var(--fs-micro)}
+.uh-parts-dots{display:inline-flex;gap:5px;flex:0 0 auto;padding-top:.35em}
 .uh-part{width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--t3)}
 .uh-part.is-done{background:var(--accent);box-shadow:none}
-.uh-parts-label{font-family:var(--mono);font-weight:600;letter-spacing:.03em;color:var(--t2)}
+.uh-parts-label{flex:1;min-width:0;font-family:var(--mono);font-weight:600;letter-spacing:.03em;line-height:1.6;color:var(--t2)}
 .uh-parts-label.is-complete{color:var(--ok-strong)}
-.uh-card-when{margin-left:auto;font-family:var(--mono);letter-spacing:.02em;color:var(--t3);white-space:nowrap}
+.uh-card-when{flex:0 0 auto;font-family:var(--mono);letter-spacing:.02em;line-height:1.6;color:var(--t3);white-space:nowrap}
 
 .uh-card-foot{display:flex;align-items:center;gap:var(--s-2)}
 .uh-card-folder{margin-left:auto}
@@ -13623,9 +13624,10 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 
 /* ── Daily starters ────────────────────────────────────────────── */
 .uh-starters{margin-top:var(--s-8);padding-top:var(--s-5);border-top:1px solid var(--border)}
-.uh-starters-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s-4);flex-wrap:wrap;margin-bottom:var(--s-4)}
+.uh-band + .uh-starters{margin-top:var(--s-6);padding-top:0;border-top:none}
+.uh-starters-head{margin-bottom:var(--s-4)}
 .uh-starters-note{margin:0;max-width:60ch;font-size:var(--fs-micro);line-height:1.6;color:var(--t3)}
-.uh-starter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr));gap:var(--s-3);padding:0;list-style:none}
+.uh-starter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr));gap:var(--s-3);padding:0;list-style:none}
 .uh-starter{display:flex;flex-direction:column;height:100%;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);overflow:hidden;text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
 .uh-starter:hover{border-color:var(--bh);text-decoration:none;transform:translateY(-2px);box-shadow:var(--shadow-cmd)}
 /* The artefact itself, at a size it can be judged at. */
@@ -13638,8 +13640,18 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 
 @media(max-width:640px){
   .uh-head{margin-bottom:var(--s-4)}
+  /* At 320px the Load button and the folder select shared a row they did
+     not both fit on. */
+  .uh-card-foot{flex-wrap:wrap}
+  .uh-card-folder{margin-left:0;width:100%}
+  .uh-card-folder select{width:100%}
   .uh-head-actions{width:100%}
   .uh-head-actions .btn{flex:1}
   .uh-stats li + li{padding-left:var(--s-3)}
-  .uh-card-when{margin-left:0;width:100%}
+  /* The progress row is nowrap at desktop widths so the timestamp pins right
+     on every card. At 320px there is no room for both, and nowrap pushed the
+     timestamp past the card's own edge — measured at 341px inside a 315px
+     document. It takes its own line here instead. */
+  .uh-parts{flex-wrap:wrap}
+  .uh-card-when{flex:1 0 100%}
 }

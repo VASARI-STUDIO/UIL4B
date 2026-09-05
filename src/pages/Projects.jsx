@@ -6,12 +6,12 @@ import { useAuth } from '../contexts/AuthContext'
 import { useClipboard } from '../hooks/useClipboard'
 import { isSvg } from '../utils/imageProcessing'
 import { projectQuota } from '../utils/projectQuota'
-import { projectDigest, nextToolSuggestion, homeStats, relativeTime } from '../utils/userHome'
+import { nextToolSuggestion, homeStats } from '../utils/userHome'
 import { readSessionHint } from '../utils/sessionHint'
 import { buildCSSVars } from '../utils/exportBuilder'
 import DailyBand from '../components/userhome/DailyBand'
 import StarterRow from '../components/userhome/StarterRow'
-import ProjectActions from '../components/userhome/ProjectActions'
+import ProjectCard from '../components/userhome/ProjectCard'
 
 // Read-only sample design systems shown under the "Community" tab.
 const COMMUNITY_PROJECTS = [
@@ -48,25 +48,6 @@ function readIconFile(file) {
   })
 }
 
-/**
- * The palette, drawn as the palette.
- *
- * Hard stops rather than a blend: these are discrete colours somebody chose,
- * and interpolating between them draws four colours that are not in the
- * project. The card art used to be `linear-gradient(135deg, colour1, colour2)`
- * — a decorative two-stop blend of the first two swatches, standing in for a
- * palette rather than being one. Same correction the homepage strip got in
- * `homepage-community-points-outward`: the art should BE the artefact.
- */
-function paletteBands(colors) {
-  if (!colors?.length) return 'var(--bg-3)'
-  const step = 100 / colors.length
-  const bands = colors
-    .map((c, i) => `${c} ${(i * step).toFixed(2)}% ${((i + 1) * step).toFixed(2)}%`)
-    .join(', ')
-  return `linear-gradient(90deg, ${bands})`
-}
-
 function ColorRow({ colors, height = 24 }) {
   if (!colors?.length) return null
   return (
@@ -75,160 +56,6 @@ function ColorRow({ colors, height = 24 }) {
         <div key={i} style={{ flex: 1, background: c, transition: 'flex .2s' }} title={c} />
       ))}
     </div>
-  )
-}
-
-/**
- * “A project with colours but no type scale should say so” — the founder's own
- * example, said in words rather than left to a percentage.
- *
- * A number would have been easier and worse. Airtable's project gallery
- * (mobbin.com/screens/0e9a986f-01cd-4332-ac89-ba5c36853ae3) prints “Progress
- * Percentage 75” beside a status chip, and 75 tells you how far along you are
- * without telling you what is missing — which is the only part that is
- * actionable. Four named parts, and the ones that are absent named.
- */
-function partsLabel(digest) {
-  if (!digest.missing.length) return 'All four parts'
-  if (digest.missing.length === digest.total) return 'Nothing built yet'
-  const names = digest.missing.map((m) => m.label.toLowerCase())
-  const last = names.pop()
-  return names.length ? `No ${names.join(', ')} or ${last}` : `No ${last}`
-}
-
-function ProjectCard({
-  project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive,
-  folder, onFolderChange, folders, onOpenDetail, icon,
-  onDuplicate, onExportCss, onOpenIn,
-}) {
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(project.name)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
-
-  const digest = projectDigest(project)
-  const when = relativeTime(digest.updatedAt)
-
-  return (
-    <article className={`card proj-card uh-card${isCurrent ? ' proj-card-active' : ''}${project.archived ? ' is-archived' : ''}`}>
-      {/* The palette itself, full-bleed across the top. No text sits on it, which
-          is deliberate: the old header set the project name in white over a
-          two-colour blend, so its contrast depended entirely on which colours the
-          user had picked. Any palette could make the name unreadable. */}
-      <div className="uh-card-art" style={{ background: paletteBands(digest.colors) }} aria-hidden="true" />
-
-      <div className="uh-card-body">
-        <div className="uh-card-top">
-          {icon && <img src={icon} alt="" className="uh-card-icon" />}
-          {/* The name, set in the project's OWN heading face — the fastest
-              honest answer to “what is in this project” that costs no space at
-              all. Falls back through the same stack the tools use. */}
-          <button
-            type="button"
-            className="uh-card-name"
-            style={{ fontFamily: `'${digest.heading}', var(--font)` }}
-            onClick={() => onOpenDetail?.(project)}
-            title="View project details"
-          >
-            {project.name}
-          </button>
-          {project.archived && <span className="uh-tag">Archived</span>}
-          {isCurrent && !project.archived && <span className="uh-tag uh-tag--live">Loaded</span>}
-          <ProjectActions
-            project={project}
-            digest={digest}
-            onOpenIn={onOpenIn}
-            onDuplicate={onDuplicate}
-            onRename={() => setEditing(true)}
-            onExportCss={onExportCss}
-            onOverwrite={onOverwrite}
-            onArchive={onArchive}
-            onDelete={() => setConfirmDelete(true)}
-          />
-        </div>
-
-        {editing ? (
-          <div className="uh-card-rename">
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { onRename(project.id, name); setEditing(false) } }}
-              aria-label={`Rename ${project.name}`}
-              autoFocus
-            />
-            <button className="btn btn-s btn-accent" onClick={() => { onRename(project.id, name); setEditing(false) }}>Save</button>
-            <button className="btn btn-s" onClick={() => { setName(project.name); setEditing(false) }}>Cancel</button>
-          </div>
-        ) : (
-          /* What is actually in it, in one mono line: the two faces, the scale,
-             the colour count. Every value read off the project. */
-          <p className="uh-card-meta">
-            {digest.heading} / {digest.body}
-            <span className="uh-dot">·</span>
-            {digest.scaleBase}px / {digest.scaleRatio.toFixed(2)}×
-            <span className="uh-dot">·</span>
-            {digest.colourCount} colour{digest.colourCount === 1 ? '' : 's'}
-            {digest.tintCount > 0 && (<><span className="uh-dot">·</span>{digest.tintCount} tints</>)}
-          </p>
-        )}
-
-        <div className="uh-parts">
-          <span
-            className="uh-parts-dots"
-            role="img"
-            aria-label={`${digest.done} of ${digest.total} parts built: ${digest.parts.map(p => `${p.label} ${p.done ? 'built' : 'empty'}`).join(', ')}`}
-          >
-            {digest.parts.map((part) => (
-              <span key={part.id} className={`uh-part${part.done ? ' is-done' : ''}`} />
-            ))}
-          </span>
-          <span className={`uh-parts-label${digest.missing.length ? '' : ' is-complete'}`}>{partsLabel(digest)}</span>
-          {when && <span className="uh-card-when">{when}</span>}
-        </div>
-
-        {confirmDelete ? (
-          <div className="uh-card-confirm">
-            <p>Type <strong>{project.name}</strong> to delete it. This cannot be undone.</p>
-            <input
-              value={deleteConfirmText}
-              onChange={e => setDeleteConfirmText(e.target.value)}
-              placeholder={project.name}
-              aria-label={`Type the project name to confirm deleting ${project.name}`}
-              autoFocus
-            />
-            <div className="uh-card-confirm-actions">
-              <button
-                className="btn btn-s uh-danger"
-                onClick={() => { onDelete(project.id); setConfirmDelete(false); setDeleteConfirmText('') }}
-                disabled={deleteConfirmText !== project.name}
-              >
-                Permanently delete
-              </button>
-              <button className="btn btn-s" onClick={() => { setConfirmDelete(false); setDeleteConfirmText('') }}>Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <div className="uh-card-foot">
-            {!project.archived ? (
-              <button className="btn btn-s btn-accent" onClick={() => onLoad(project.id)}>
-                {isCurrent ? 'Reload' : 'Load'}
-              </button>
-            ) : (
-              <button className="btn btn-s" onClick={() => onArchive(project.id)}>Restore</button>
-            )}
-            <label className="uh-card-folder">
-              <span className="sr-only">Folder for {project.name}</span>
-              <select value={folder || ''} onChange={e => onFolderChange(project.id, e.target.value)}>
-                <option value="">No folder</option>
-                {(folders || []).filter(f => f !== 'all').map(f => (
-                  <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
-      </div>
-    </article>
   )
 }
 

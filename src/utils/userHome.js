@@ -221,6 +221,50 @@ export function homeStats(projects, defaults = DEFAULT_DESIGN) {
   return stats.filter((s) => s.value > 0)
 }
 
+/**
+ * A palette, drawn as the palette: hard stops, one CSS value.
+ *
+ * Hard stops rather than a blend because these are discrete colours somebody
+ * chose, and interpolating between them paints colours that are NOT in the
+ * project. The project card used to be topped with
+ * `linear-gradient(135deg, colour1, colour2)` — a decorative two-stop blend of
+ * the first two swatches, standing in for a palette instead of being one. Same
+ * correction the homepage strip got in `homepage-community-points-outward`.
+ *
+ * One implementation, two callers (the project card and the daily starters), so
+ * the two cannot drift into drawing the same thing differently.
+ */
+export function paletteBands(colors) {
+  const list = Array.isArray(colors) ? colors.filter(Boolean) : []
+  if (!list.length) return 'var(--bg-3)'
+  const step = 100 / list.length
+  const bands = list
+    .map((c, i) => `${c} ${(i * step).toFixed(2)}% ${((i + 1) * step).toFixed(2)}%`)
+    .join(', ')
+  return `linear-gradient(90deg, ${bands})`
+}
+
+/**
+ * “A project with colours but no type scale should say so” — the founder's own
+ * example, said in words.
+ *
+ * A percentage would have been easier and worse. Airtable's project gallery
+ * (mobbin.com/screens/0e9a986f-01cd-4332-ac89-ba5c36853ae3) prints “Progress
+ * Percentage 75” beside a status chip, and 75 tells you how far along you are
+ * without telling you WHICH part is missing — the only half you can act on.
+ *
+ * “Nothing built yet” rather than naming all four: a brand-new project listing
+ * every part it lacks reads as a telling-off, and it is the state every project
+ * starts in.
+ */
+export function partsLabel(digest) {
+  if (!digest?.missing?.length) return 'All four parts'
+  if (digest.missing.length === digest.total) return 'Nothing built yet'
+  const names = digest.missing.map((m) => m.label.toLowerCase())
+  const last = names.pop()
+  return names.length ? `No ${names.join(', ')} or ${last}` : `No ${last}`
+}
+
 const MINUTE = 60000
 const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
