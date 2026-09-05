@@ -451,7 +451,7 @@ ${watermark ? `    <div class="sg-watermark">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.6"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
         <div>
           <strong>Free Export — Made with UIL4B</strong>
-          <div style="font-size:11px;margin-top:2px">Upgrade to Pro to remove this watermark and unlock JSON &amp; Tailwind exports</div>
+          <div style="font-size:11px;margin-top:2px">Upgrade to Pro to remove this credit line and unlock the design system book</div>
         </div>
         <a href="https://uil4b.com/checkout?plan=yearly" target="_blank" rel="noopener" style="padding:6px 14px;border-radius:6px;background:${primary};color:${contrastText(primary)};font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap">Upgrade</a>
       </div>
