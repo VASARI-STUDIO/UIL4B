@@ -1175,7 +1175,7 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-gallery--continues{margin-top:var(--pl-gap)}
 
 /* Card */
-.pl-card{border-radius:var(--radius-l);overflow:hidden;cursor:pointer;transition:all var(--dur-3) var(--ease-out);position:relative;background:var(--card);border:1px solid var(--border)}
+.pl-card{--pl-preview-h:172px;--pl-preview-dur:16s;border-radius:var(--radius-l);overflow:hidden;cursor:pointer;transition:all var(--dur-3) var(--ease-out);position:relative;background:var(--card);border:1px solid var(--border)}
 .pl-card:hover{transform:translateY(-4px);box-shadow:var(--warm-shadow-lg);border-color:var(--bh)}
 .pl-card:hover .pl-card-overlay{opacity:1}
 .pl-card:hover .pl-card-img img{transform:scale(1.04)}
@@ -1186,9 +1186,68 @@ input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
 .pl-card-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.1) 50%,transparent 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px;opacity:0;transition:opacity var(--dur-3) var(--ease-standard)}
 .pl-card-title{font-size:15px;font-weight:600;color:#fff;line-height:1.35;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
+/* ── The prompt preview: the card shows the ARTEFACT ────────────────────────
+   The founder asked the library to "preivew the prompts" and referenced
+   motionsites.com, a gallery whose cards continuously auto-play a scrolling
+   preview of the real page behind them, with the title and category beneath
+   and a badge on the paid entries. The transferable half is that the card
+   carries the artefact rather than a NAME for it, so the body of a prompt card
+   is now the prompt's own text, set in --mono exactly as .pl-modal-prompt sets
+   the same text one activation away. Reference screens are cited in
+   PromptCard.jsx (WRITER's prompt library, Sana AI's workflow grid).
+
+   THE WINDOW IS NOT A SCROLL CONTAINER, and that is deliberate. Making it one
+   would put a nested scroller under the pointer on twenty cards, which the
+   app-wide Lenis instance then has to arbitrate on every wheel event —
+   allowNestedScroll measures the element under the pointer and hands the
+   gesture back only once that element can no longer move. A transform inside
+   overflow:hidden is invisible to the wheel, so a scroll over the gallery stays
+   an ordinary page scroll and Lenis is never involved.
+
+   --pl-preview-dur is ONE PASS, written per card by PromptCard from the
+   prompt's length so that a 400-character brief and a 3,000-character one
+   travel at the same reading pace. The value on .pl-card is the fallback for a
+   card that never sets it. */
+.pl-card-preview{position:relative;height:var(--pl-preview-h);overflow:hidden;padding:16px 18px 0;background:var(--cbg);border-bottom:1px solid var(--border)}
+/* The bottom fade is the truncation signal, and it is drawn over the WINDOW
+   rather than masked onto the text: a mask on the text would travel with the
+   transform, so the fade would follow the words instead of marking the edge.
+   Where a prompt is shorter than the window the gradient lies over its own
+   ground colour and is invisible, so a short prompt gets no fade pretending
+   there is more of it. */
+.pl-card-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:44px;background:linear-gradient(180deg,transparent 0%,var(--cbg) 88%);pointer-events:none}
+/* MOTION IS EARNED PER CARD. The scroll plays on hover and on keyboard focus,
+   never on its own. motionsites plays every card at once and it works there
+   because its artefact is a PAGE — there is no text to read. A prompt IS text,
+   and twelve bodies of it moving at once is not a preview.
+
+   It is also WCAG 2.2 SC 2.2.2 (Pause, Stop, Hide): content that moves
+   automatically for more than five seconds alongside other content needs a
+   mechanism to pause it, and this layout has nowhere to put one. Hover- and
+   focus-driven motion is user-initiated and self-cancelling, so it is outside
+   2.2.2 entirely and it answers the question for the one card the reader is
+   looking at.
+
+   The travel is min(0px, window - text height - the window's own top padding),
+   so a prompt that already fits moves by exactly nothing rather than sliding up
+   to reveal blank space. `alternate` returns it to the top rather than jumping,
+   and the 7%/93% holds are the dwell at each end. */
+.pl-card-preview-text{margin:0;padding-bottom:14px;font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--t1);white-space:pre-wrap;word-break:break-word;animation:pl-preview-scroll var(--pl-preview-dur) var(--ease-standard) infinite alternate;animation-play-state:paused}
+.pl-card:hover .pl-card-preview-text,.pl-card:focus-visible .pl-card-preview-text{animation-play-state:running}
+@keyframes pl-preview-scroll{0%,7%{transform:translateY(0)}93%,100%{transform:translateY(min(0px,calc(var(--pl-preview-h) - 100% - 16px)))}}
+/* BOTH HALVES, because the global clamp at the top of this file reaches
+   animation-duration but NOT transform: under the clamp alone this animation
+   would run one iteration in 0.01ms and REST AT ITS LAST KEYFRAME, i.e. every
+   hovered card would snap to the BOTTOM of its prompt. `animation:none` plus
+   `transform:none` is what actually parks the text at the top. The hover and
+   focus selectors are listed too, or the play-state rule above would restart a
+   cancelled animation on hover. */
+html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion="true"] .pl-card:hover .pl-card-preview-text,html[data-reduced-motion="true"] .pl-card:focus-visible .pl-card-preview-text{animation:none;transform:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .pl-card-preview-text,html:not([data-reduced-motion="false"]) .pl-card:hover .pl-card-preview-text,html:not([data-reduced-motion="false"]) .pl-card:focus-visible .pl-card-preview-text{animation:none;transform:none}}
+
 /* No-image card */
 .pl-card.no-img{background:var(--card-grad)}
-.pl-card-text-hero{padding:22px 22px;min-height:132px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+.pl-card-text-hero{padding:16px 18px 18px;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
 /* The 40x40 accent-tinted square that used to sit here was EMPTY — `content:''`
    with `display:flex;align-items:center;justify-content:center`, i.e. centring
    rules for a glyph that was never added. On a text-only card it read as a
@@ -1763,6 +1822,7 @@ img,svg,video{max-width:100%;height:auto}
   .grad-presets{grid-template-columns:repeat(auto-fill,minmax(min(180px,100%),1fr))}
   .img-grid{grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr))}
   .pl-gallery{grid-template-columns:1fr}
+  .pl-card{--pl-preview-h:150px}
   .pl-add-btn{width:100%}
   .pl-drop-zone{flex:1 1 100%}
   .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}
