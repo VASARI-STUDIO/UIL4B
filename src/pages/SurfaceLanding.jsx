@@ -2,8 +2,6 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import NavIcon from '../components/NavIcon'
-import WorldMap from '../components/WorldMap'
-import SystemCTA from '../components/SystemCTA'
 import { useReveal } from '../hooks/useReveal'
 import { DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
 import { LEARN_ARTICLES, readingMinutes } from '../data/learnIndex'
@@ -95,65 +93,95 @@ const PREVIEWS = {
   }),
 }
 
-// The Discover + Learn landing shells. Phase 1 is structure-only: both surfaces
-// render a hero band over a grid of the sections that are on the way, each
-// carrying an honest "Soon" badge. One component serves both surfaces via the
-// `surface` prop, driven by the same DISCOVER_GROUPS / LEARN_GROUPS that feed the
-// nav — so the page can never promise a section the menu doesn't list.
+// ── The Discover + Learn landings ───────────────────────────────────────────
 //
-// Motion mirrors Home: the hero animates on load (CSS fx-rise); the grid reveals
-// on scroll through useReveal(), which only toggles a class — no state-in-effect.
+// COMPRESSED to a value proposition and the links, on the founder's 2026-09-05
+// instruction: "i want to compress our secondary sales pages to mostly act as
+// linking pages showcasing a tools value proposition then a link". He was
+// offered three depths and chose the deepest — value prop plus link, nothing
+// else — so what a visitor now meets is: what is in here, one line on why it is
+// worth opening, and every destination as a real link. Then the page stops.
+//
+// THREE SECTIONS WERE DELETED, and the reason is the same for all three: none
+// of them was a link and none of them was a fact.
+//
+//   1. "Why it helps" — three numbered pillars per surface. Textbook slop by
+//      the bar's own naming: a rule of three, anaphoric titles, and copy that
+//      argues for the product instead of showing it. TWO OF DISCOVER'S THREE
+//      WERE ALSO FALSE. "Save what earns a tab / Build collections of the
+//      systems you actually reuse" describes Collections, which is
+//      `soon: true` in DISCOVER_SPEC and has no page; "Browse community UI
+//      systems" describes Inspiration, also `soon: true`. The grid below has
+//      always carried honest Soon badges on both — the pillars sold them as
+//      shipped two screens above it.
+//   2. The world map — "Great UI is built everywhere", over a decorative map
+//      plotting no user data, on a product with no users to plot. A slogan and
+//      an illustration, on a page whose job is to hand over links.
+//   3. The closing SystemCTA — a second, larger copy of the CTA the hero has
+//      already made, one scroll after it.
+//
+// WHAT SURVIVED, AND WHY. Every true claim in the deleted copy is still made,
+// at the place it describes rather than as a preamble — the same move the
+// homepage made when its intro paragraph went and its three honesty claims
+// moved down to the panels they were about:
+//   · what is live vs. still being built → the Soon badge on each card, and the
+//     hero hint, which now COUNTS the groups instead of asserting a number;
+//   · the hand-off into the matching tool → each library card links to the
+//     library that does it, and the libraries themselves carry the hand-off
+//     buttons the pillar was describing;
+//   · what the Learn guides are → the guide cards, which show topic, reading
+//     time and dek.
+//
+// One component still serves both surfaces via the `surface` prop, driven by
+// the same DISCOVER_GROUPS / LEARN_GROUPS that feed the nav — so the page can
+// never promise a section the menu doesn't list.
+//
+// Reference for the shape: Shopify's "Explore tools" index — a heading, one
+// line, then every tool as name + one sentence + its own link, and nothing
+// after the grid. https://mobbin.com/sites/sections/0b61affd-faef-4b8c-b6fd-983b94de9a77
 
 // The guide the hero sends a first-time reader to. Read off the registry
 // rather than written down, so reordering the articles moves the button.
 const FIRST_GUIDE = LEARN_ARTICLES[0]
 
+// How many Discover libraries a visitor can actually open today. DERIVED, not
+// typed: the hint used to read "Four curated libraries are ready now — palettes,
+// gradients, fonts and icons", and it had been wrong since the Prompt Library
+// shipped and wrong again since /discover/resources did. A hand-typed count on
+// a page generated from a list is a claim that goes stale on somebody else's
+// commit.
+const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
+const DISCOVER_SOON = DISCOVER_GROUPS.length - DISCOVER_LIVE
+
 const SURFACES = {
   discover: {
     eyebrow: 'Discover',
     title: 'Find systems worth stealing.',
-    lede: 'Browse community UI systems and the hand-picked resources that actually earn a tab — then carry what fits straight into your build.',
-    pillarsTitle: 'Everything you find, in one place.',
-    pillars: [
-      { title: 'Browse, don’t bookmark', desc: 'Community UI systems and hand-picked resources in one searchable place — no more forty-tab research sessions that you never revisit.' },
-      { title: 'One-tap hand-off', desc: 'See a gradient, palette or font you like and carry it straight into the matching UIL4B tool — already loaded and ready to tweak.' },
-      { title: 'Save what earns a tab', desc: 'Build collections of the systems and resources you actually reuse, so your best references are always one click away.' },
-    ],
-    sectionTitle: 'Everything worth a tab.',
-    sectionLede: 'Inspiration, community fonts and prompts, curated tools and your own collections — organised in one place instead of forty browser tabs.',
-    mapEyebrow: 'A global craft',
-    mapTitle: 'Great UI is built everywhere.',
-    mapLede: 'From a studio in Brisbane to design hubs on every continent — UIL4B is made for the way people build interfaces the world over.',
+    // Names what is in the libraries rather than what browsing them feels like.
+    // The old lede opened on "Browse community UI systems", which is Inspiration
+    // — still `soon: true`, still unbuilt.
+    lede: 'Palettes, gradients, fonts, icons, prompts and the outside tools that earn a tab — most of them one click from the tool that uses them.',
     hue: 'imagery',
     groups: DISCOVER_GROUPS,
     primaryLabel: 'Browse palettes',
     primaryTo: '/discover/palettes',
-    secondaryLabel: 'Explore fonts',
-    secondaryTo: '/create/font-gallery',
-    hint: 'Four curated libraries are ready now — palettes, gradients, fonts and icons.',
+    hint: `${DISCOVER_LIVE} libraries are open now. ${DISCOVER_SOON} more are still being built, and say so.`,
+    gridTitle: 'Every library, and what is in it.',
   },
   learn: {
     eyebrow: 'Learn',
     title: 'Understand the craft, not just the tools.',
-    lede: 'Design principles, colour and type guides, and growth playbooks — the why behind every foundation you build in UIL4B.',
-    pillarsTitle: 'Get measurably better at the work.',
-    pillars: [
-      { title: 'The why, not just the how', desc: 'Short, practical guides that explain the reasoning behind interfaces that work — so the lesson sticks well past a single project.' },
-      { title: 'From colour to conversion', desc: 'Principles, colour and type, plus SEO and marketing playbooks — the full path from a good-looking UI to one that performs.' },
-      { title: 'Built into your workflow', desc: 'Every guide links back to the tool that puts it into practice, so you learn and apply in the very same place.' },
-    ],
-    sectionTitle: 'Topics still being written.',
-    sectionLede: 'The guides above are live. These are the areas the library will cover next — nothing in this grid is written yet, which is what the Soon badge means.',
-    mapEyebrow: 'A worldwide classroom',
-    mapTitle: 'Designers everywhere, leveling up.',
-    mapLede: 'Built in Brisbane for a community that spans every continent — practical craft that travels as far as your work does.',
+    // "Growth playbooks" came out: SEO and Marketing are LEARN_GROUPS rows, and
+    // every LEARN_GROUPS row is `soon: true`. What exists is three reference
+    // guides, and what makes them worth opening is that they show their working.
+    lede: 'Reference guides on colour and type. Each one states the rule, cites the standard it comes from, and ends at the tool that applies it.',
     hue: 'ai',
     groups: LEARN_GROUPS,
     primaryLabel: `Start with ${FIRST_GUIDE.navLabel.toLowerCase()}`,
     primaryTo: `/learn/${FIRST_GUIDE.slug}`,
-    secondaryLabel: 'Start building',
-    secondaryTo: '/create/color',
-    hint: `${LEARN_ARTICLES.length === 1 ? 'One guide is' : `${LEARN_ARTICLES.length} guides are`} live. Each one ends at the tool that does the thing it explains.`,
+    hint: `${LEARN_ARTICLES.length === 1 ? 'One guide is' : `${LEARN_ARTICLES.length} guides are`} live. Every figure in them is quoted from a linked specification or computed on the page as you read it.`,
+    gridTitle: 'Topics still being written.',
+    gridLede: 'Nothing in this grid is written yet — that is what Soon means.',
   },
 }
 
@@ -172,10 +200,15 @@ export default function SurfaceLanding({ surface }) {
       {/* ── Hero ──
           `home-hero` alone carries min-height:min(100svh,980px), which the
           HOMEPAGE earns: it holds a search field, eleven satellites and the
-          workbench. This hero holds an eyebrow, a heading, a line of lede, two
-          buttons and a hint — measured at 1440x900 its content ended at 499px
+          workbench. This hero holds an eyebrow, a heading, a line of lede, one
+          button and a hint — measured at 1440x900 its content ended at 499px
           inside a 900px box, so 401px of the first screen of /discover was
-          nothing at all. The modifier lets it be as tall as it is. */}
+          nothing at all. The modifier lets it be as tall as it is.
+
+          ONE button, not two. The second was "Explore fonts" on Discover and
+          "Start building" on Learn — a link OUT of the surface the visitor has
+          just arrived at, competing with the grid of that surface's own
+          destinations a screen below. */}
       <header className="home-hero home-hero--surface">
         <span className="home-eyebrow">{s.eyebrow}</span>
         <h1 className="home-hero-h1">{s.title}</h1>
@@ -185,31 +218,9 @@ export default function SurfaceLanding({ surface }) {
             {s.primaryLabel}
             <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
           </Link>
-          <Link className="ui-pill ui-pill-out ui-pill-lg" to={s.secondaryTo}>
-            {s.secondaryLabel}
-          </Link>
         </div>
         <p className="home-hero-hint">{s.hint}</p>
       </header>
-
-      {/* ── Value pillars: why this surface is worth it ── */}
-      <section className="home-section">
-        <div className="home-container">
-          <div className="home-head home-head-center" data-reveal>
-            <span className="home-eyebrow">Why it helps</span>
-            <h2 className="home-h2">{s.pillarsTitle}</h2>
-          </div>
-          <div className="sl-pillars">
-            {s.pillars.map((p, i) => (
-              <article className="sl-pillar fx-lift" key={p.title} data-reveal>
-                <span className="sl-pillar-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                <h3 className="sl-pillar-title">{p.title}</h3>
-                <p className="sl-pillar-desc">{p.desc}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── Learn only: the guides that exist, before the ones that do not ──
           Order is the argument. A reader arriving at Learn should meet pages
@@ -219,9 +230,7 @@ export default function SurfaceLanding({ surface }) {
         <section className="home-section">
           <div className="home-container">
             <div className="home-head home-head-center" data-reveal>
-              <span className="home-eyebrow">Guides</span>
               <h2 className="home-h2">Reference, not opinion.</h2>
-              <p className="home-lede">Each guide states the rule, cites the standard it comes from, and shows the working. Every figure is either quoted from a linked specification or computed on the page as you read it.</p>
             </div>
             <div className="lidx-grid">
               {LEARN_ARTICLES.map((a) => (
@@ -240,13 +249,12 @@ export default function SurfaceLanding({ surface }) {
         </section>
       )}
 
-      {/* ── What's coming: the surface's sections as cards ── */}
+      {/* ── The destinations. This grid IS the page. ── */}
       <section className="home-section">
         <div className="home-container">
           <div className="home-head home-head-center" data-reveal>
-            <span className="home-eyebrow">{surface === 'discover' ? 'Live libraries & roadmap' : 'On the way'}</span>
-            <h2 className="home-h2">{s.sectionTitle}</h2>
-            <p className="home-lede">{s.sectionLede}</p>
+            <h2 className="home-h2">{s.gridTitle}</h2>
+            {s.gridLede && <p className="home-lede">{s.gridLede}</p>}
           </div>
 
           <div className="surface-grid">
@@ -293,31 +301,6 @@ export default function SurfaceLanding({ surface }) {
           </div>
         </div>
       </section>
-
-      {/* ── Global craft: stylized world map (decorative, no user data) ── */}
-      <section className="home-section">
-        <div className="home-container">
-          <div className="home-head home-head-center" data-reveal>
-            <span className="home-eyebrow">{s.mapEyebrow}</span>
-            <h2 className="home-h2">{s.mapTitle}</h2>
-            <p className="home-lede">{s.mapLede}</p>
-          </div>
-          <div data-reveal>
-            <WorldMap />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Final CTA ── */}
-      <SystemCTA
-        eyebrow={`${s.eyebrow} meets Create`}
-        title="Turn what you find into a system you can ship."
-        description="Move from reference to real interface foundations without rebuilding the context in another app."
-        primaryLabel="Start building"
-        primaryTo="/create/color"
-        secondaryLabel="Back to home"
-        secondaryTo="/home"
-      />
       </main>
     </div>
   )

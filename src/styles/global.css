@@ -6854,76 +6854,10 @@ html.lenis{scroll-behavior:auto!important}
    dead letter — which is exactly what happened on the first attempt. */
 .home-hero.home-hero--surface{min-height:0;padding-bottom:var(--s-7)}
 
-/* ══ Surface sales — value pillars (sl-) ══ */
-.sl-pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-4);margin-top:var(--s-7)}
-.sl-pillar{display:flex;flex-direction:column;gap:10px;padding:22px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow-xs)}
-.sl-pillar-num{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:var(--radius-s);background:var(--accent-bg);color:var(--accent-strong);font-family:var(--mono);font-size:13px;font-weight:600}
-.sl-pillar-title{font-size:var(--fs-h3);font-weight:600;letter-spacing:-.016em;color:var(--t0)}
-.sl-pillar-desc{font-size:var(--fs-body-s);color:var(--t2);line-height:1.55}
-
-/* ══ Stylized world map (wmap-) — decorative social proof, no user data ══ */
-.wmap{margin:var(--s-7) auto 0;max-width:1000px}
-.wmap-frame{position:relative;width:100%;aspect-ratio:1000/500}
-.wmap-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.wmap-dot{fill:var(--t3);opacity:.28;transition:opacity var(--dur-3) var(--ease-out)}
-.wmap[data-region] .wmap-dot{opacity:.15}
-.wmap-hubs{position:absolute;inset:0}
-.wmap-blip{position:absolute;display:grid;place-items:center;width:24px;height:24px;transform:translate(-50%,-50%);padding:0;border:none;background:none;cursor:pointer;color:var(--accent-strong);line-height:0}
-.wmap-blip-dot{display:block;width:11px;height:11px;border-radius:50%;background:currentColor;box-shadow:0 0 0 4px color-mix(in srgb,currentColor 22%,transparent);position:relative;transition:transform var(--dur-2) var(--ease-out)}
-.wmap-blip-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:currentColor;animation:wmap-ping 2.6s var(--ease-out) infinite}
-.wmap-blip:hover{z-index:5}
-.wmap-blip:hover .wmap-blip-dot,.wmap-blip:focus-visible .wmap-blip-dot{transform:scale(1.25)}
-.wmap-blip:focus-visible{outline:none}
-.wmap-blip:focus-visible .wmap-blip-dot{box-shadow:0 0 0 4px var(--accent-bg),0 0 0 6px var(--accent)}
-.wmap-blip[data-dim="true"]{opacity:.34;filter:grayscale(.45)}
-.wmap-blip.is-on{z-index:4}
-.wmap-blip.is-on .wmap-blip-dot{transform:scale(1.3)}
-.wmap-blip.is-on .wmap-blip-dot::after{animation-duration:1.6s}
-.wmap-blip.is-home{width:auto;min-width:24px;color:var(--t0);z-index:6}
-.wmap-pin{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px 0 8px;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);box-shadow:var(--warm-shadow-lg,var(--shadow-l));position:relative}
-.wmap-pin::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
-.wmap-pin::after{content:"";position:absolute;left:50%;bottom:-4px;width:9px;height:9px;background:var(--t0);transform:translateX(-50%) rotate(45deg);border-radius:2px}
-.wmap-pin-word{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.02em;line-height:1}
-.wmap-tip{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);white-space:nowrap;padding:5px 9px;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-0);font-size:11px;font-weight:600;letter-spacing:.01em;box-shadow:var(--shadow-s);opacity:0;visibility:hidden;transition:opacity var(--dur-2) var(--ease-out);pointer-events:none;z-index:7}
-.wmap-blip.is-home .wmap-tip{bottom:calc(100% + 9px)}
-.wmap-blip:hover .wmap-tip,.wmap-blip:focus-visible .wmap-tip{opacity:1;visibility:visible}
-.wmap-tip::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--t0)}
-/* N4 (responsive-audit-2026-08): the tip is centred on its blip with
-   `left:50%; translateX(-50%)`, so the rightmost blip's tip ran past `.home`,
-   which carries `overflow-x:clip` — the last few characters were cut and could
-   not be scrolled to. Measured 9px past at 320px, 6px at 360, 4px at 390, 3px at
-   400, 1px at 430, clean from 480.
-
-   Clamping the tip to its container is not expressible from here: its containing
-   block is the blip, not the map, so no `inset` value can see the map's edge.
-   What is available is making the tip narrow enough that being centred cannot
-   push it out — letting it take two lines instead of one. Measured after: 0 of
-   15 tips past the edge at every width on both /discover and /learn.
-
-   Note `visibility` stays a plain state property on the rule above and is NOT in
-   its transition — that pairing is deliberate and is left exactly as it is. */
-@media(max-width:480px){
-  .wmap-tip{white-space:normal;max-width:min(130px,36vw);text-align:center}
-}
-.wmap-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px 18px;margin-top:var(--s-5);text-align:center;min-height:34px}
-.wmap-cap{font-size:var(--fs-caption);color:var(--t3);max-width:56ch;line-height:1.5}
-.wmap-callout{display:inline-flex;align-items:center;gap:10px;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);box-shadow:var(--shadow-xs)}
-.wmap-callout-region{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
-.wmap-callout-cities{font-size:var(--fs-caption);color:var(--t2)}
-.wmap-callout-clear{border:none;background:none;color:var(--accent-strong);font-family:var(--font);font-size:var(--fs-caption);font-weight:600;cursor:pointer;padding:2px 4px;border-radius:var(--radius-xs)}
-.wmap-callout-clear:hover{text-decoration:underline}
-@keyframes wmap-ping{0%{transform:scale(1);opacity:.5}70%,100%{transform:scale(2.6);opacity:0}}
-html[data-reduced-motion="true"] .wmap-blip-dot::after{animation:none}
-html[data-reduced-motion="true"] .wmap-dot,html[data-reduced-motion="true"] .wmap-blip-dot,html[data-reduced-motion="true"] .wmap-tip{transition:none}
-@media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .wmap-blip-dot::after{animation:none}
-  html:not([data-reduced-motion="false"]) .wmap-dot,html:not([data-reduced-motion="false"]) .wmap-blip-dot,html:not([data-reduced-motion="false"]) .wmap-tip{transition:none}
-}
-@media (max-width:640px){
-  .sl-pillars{grid-template-columns:1fr}
-  .wmap-pin-word{font-size:10px}
-  .wmap-blip-dot{width:9px;height:9px}
-}
+/* The value-pillar cards (sl-pillar-) and the decorative world map (wmap-)
+   were deleted with the sections that used them — see the header comments in
+   SurfaceLanding.jsx and ColorLanding.jsx. Neither selector has a element
+   left in src/, and src/components/WorldMap.jsx went with them. */
 
 /* ══ Sales / home page (home-) ══ */
 /* The accent radial wash is GONE. V2's ground is warm bone (--bg-0 #EFEEE9) and
