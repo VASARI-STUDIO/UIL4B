@@ -174,23 +174,32 @@ export async function go(page, url) {
  * WHY "the fallback is gone" IS NOT ENOUGH BY ITSELF
  * `waitFor({ state: 'detached' })` on `.page-loading` is satisfied by an
  * element that has not been ATTACHED yet — the entire pre-hydration window, in
- * which `#root` is still the empty div `scripts/prerender.mjs` wrote (it clones
- * the shell and rewrites the head; it does not render React). A wait that
- * accepts "not yet" as "already finished" is the same can't-fail shape one
- * level down. So both halves are required, and required TOGETHER: React has
- * committed something into `#root`, AND no fallback is on screen in the same
- * frame.
+ * which `#root` still holds only what `scripts/prerender.mjs` wrote (it clones
+ * index.html's shell and rewrites the head; it does not render React). A wait
+ * that accepts "not yet" as "already finished" is the same can't-fail shape one
+ * level down.
+ *
+ * AND "#root HAS A CHILD" IS NOT ENOUGH EITHER, which is the half #391 found.
+ * What prerender clones is not an empty div: index.html ships
+ * `<div id="root"><div class="boot-shell" id="boot-shell">` — a skeleton nav,
+ * a skeleton hero and a `role="status"` reading "Loading UIL4B" — into all 33
+ * route shells. So in the pre-hydration window `root.firstElementChild` is
+ * TRUE, of markup the server wrote. See BOOT_SHELL_HINT below.
+ *
+ * So all three are required, and required TOGETHER: React has committed
+ * something into `#root`, the boot shell it replaces is gone, AND no fallback
+ * is on screen — in the same frame.
  *
  * Held for several FRAMES, not milliseconds, for the reason the scroll helpers
  * below give at length — and because the nested case (`/create/*`, where the
  * static CreateTool shell mounts first and its inner Suspense raises a second
- * fallback in the same commit) needs the two conditions to be true at the same
- * instant rather than at two instants a test happened to sample.
+ * fallback in the same commit) needs the conditions to be true at the same
+ * instant rather than at instants a test happened to sample.
  */
 
-// Consecutive animation frames on which the route must be mounted AND free of a
-// Suspense fallback. `waitForFunction` polls on rAF, so this is literally a
-// frame count.
+// Consecutive animation frames on which the route must be mounted, past the
+// boot shell AND free of a Suspense fallback. `waitForFunction` polls on rAF,
+// so this is literally a frame count.
 const READY_FRAMES = 3
 
 // A backstop, and only a backstop: it exists so a chunk that never arrives
@@ -233,6 +242,14 @@ export function renderState(page) {
     }
     return {
       mounted: !!(root && root.firstElementChild),
+      // `booting` is the STATIC BOOT SHELL, and it is reported for the same
+      // reason `crashed` is: it looks mounted by every other measure here.
+      // index.html ships `<div id="root"><div class="boot-shell" id="boot-shell">`
+      // and scripts/prerender.mjs clones that into all 33 route shells, so
+      // `root.firstElementChild` is satisfied by markup the SERVER wrote, before
+      // React has run a single line. `.page-loading` is absent in that state too
+      // — App.jsx has never rendered, so there is no Suspense fallback to find.
+      booting: !!document.getElementById('boot-shell'),
       loading: !!document.querySelector('.page-loading'),
       crashed: !!document.querySelector('.error-boundary'),
       body: (document.body.innerText || '').trim().length,
@@ -272,21 +289,67 @@ function buildAssetHint(page) {
     + ' not as a defect. The global teardown fails the whole run on this.'
 }
 
+/**
+ * The state where `#root` HAS a child and React has still never run.
+ *
+ * index.html ships a static skeleton — `<div id="root"><div class="boot-shell"
+ * id="boot-shell">` — and scripts/prerender.mjs clones it into every one of the
+ * 33 route shells. So the two conditions this function used to wait for were
+ * BOTH satisfied by markup the server wrote: `#root` has a child (the shell),
+ * and there is no `.page-loading` (App.jsx has not rendered, so there is no
+ * Suspense fallback to find yet). The pre-hydration window the long note above
+ * says `waitFor({ state: 'detached' })` cannot see was therefore still open on
+ * the OTHER half as well.
+ *
+ * #391 caught /create/semantic-color in exactly that state once under four
+ * parallel workers — h1 not found, and the accessibility snapshot reading
+ * `status: Loading UIL4B`, which is the boot shell's own live region. It worked
+ * around it locally in 55-header-sweep.spec.js; this is the fix in the door.
+ *
+ * The shell going away is a POSITIVE fact about React rather than another
+ * absence: `createRoot(...).render()` clears its container on the first commit,
+ * so `#boot-shell` is gone exactly when React has committed something. That is
+ * why this is checked alongside `root.firstElementChild` and not instead of it
+ * — a commit that rendered nothing would empty `#root` and must not count.
+ */
+const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL that index.html ships'
+  + ' into every prerendered route shell, so React has NOT RUN AT ALL. This is not a slow route'
+  + ' chunk and waiting longer will not help: the app never started. The usual cause is the ENTRY'
+  + ' bundle (/assets/index-*.js) never arriving — check the build-asset line below, if there is one.'
+
 export async function ready(page, what) {
   const where = what || page.url()
-  await page.evaluate(() => { window.__uilReadyFrames = 0 }).catch(() => { /* mid-navigation */ })
+  await page.evaluate(() => {
+    window.__uilReadyFrames = 0
+    // Counted so a readiness wait that examined NOTHING is visible in its own
+    // failure message. A guard that reports no violations because it never
+    // looked is the shape this suite keeps paying for.
+    window.__uilReadyPolls = 0
+  }).catch(() => { /* mid-navigation */ })
   try {
     await page.waitForFunction((frames) => {
+      window.__uilReadyPolls = (window.__uilReadyPolls || 0) + 1
       const root = document.getElementById('root')
-      const clear = !!(root && root.firstElementChild) && !document.querySelector('.page-loading')
+      // ONE presence and TWO absences, and all three in the same frame. The
+      // presence is what stops the two absences being trivially true on a page
+      // that has rendered nothing; the boot-shell absence is what stops the
+      // presence being true of markup the server wrote. See the note above.
+      const clear = !!(root && root.firstElementChild)
+        && !document.getElementById('boot-shell')
+        && !document.querySelector('.page-loading')
       window.__uilReadyFrames = clear ? (window.__uilReadyFrames || 0) + 1 : 0
       return window.__uilReadyFrames >= frames
     }, READY_FRAMES, { polling: 'raf', timeout: READY_BACKSTOP_MS })
   } catch {
     const s = await renderState(page).catch(() => null)
+    const polls = await page.evaluate(() => window.__uilReadyPolls || 0).catch(() => 0)
     throw new Error(
-      `${where}: the route never got past its lazy-loading fallback in ${READY_BACKSTOP_MS}ms`
-      + (s ? ` — mounted=${s.mounted} fallback=${s.loading} bodyChars=${s.body} ownChars=${s.own}` : '')
+      `${where}: ${s && s.booting
+        ? 'the app never replaced the static boot shell'
+        : 'the route never got past its lazy-loading fallback'} in ${READY_BACKSTOP_MS}ms`
+      + (s ? ` — mounted=${s.mounted} booting=${s.booting} fallback=${s.loading} bodyChars=${s.body} ownChars=${s.own}` : '')
+      + ` (readiness examined ${polls} frame(s))`
+      + (s && s.booting ? BOOT_SHELL_HINT : '')
       + buildAssetHint(page),
     )
   }

@@ -71,6 +71,59 @@ test('ready() requires BOTH a mounted root and no Suspense fallback', () => {
     + 'pre-hydration window, in which #root is still the empty div prerender wrote.')
 })
 
+/* ── The half the door was missing until #391 ────────────────────────────────
+ *
+ * The two conditions above are BOTH satisfied by a page React has never run on.
+ * index.html ships `<div id="root"><div class="boot-shell" id="boot-shell">`,
+ * and scripts/prerender.mjs clones that into all 33 route shells — so
+ * `root.firstElementChild` is true of markup the SERVER wrote, and
+ * `.page-loading` is absent because App.jsx has not rendered and there is no
+ * Suspense fallback yet.
+ *
+ * #391 caught /create/semantic-color in exactly that state under four parallel
+ * workers: h1 not found, accessibility snapshot reading `status: Loading
+ * UIL4B`. It worked around it in one spec. The door now carries it.
+ */
+
+test('ready() also requires the STATIC BOOT SHELL to be gone', () => {
+  const src = readStripped(path.join('tests', 'user-sim', 'helpers.js'))
+  const body = src.match(/export\s+async\s+function\s+ready\s*\(([\s\S]*?)\n\}/)
+  assert.ok(body, 'helpers.js no longer exports `async function ready(...)`')
+  assert.match(body[1], /boot-shell/,
+    'ready() stopped checking for the static boot shell. index.html ships one INSIDE\n'
+    + '#root and prerender clones it into every route shell, so "#root has a child" and\n'
+    + '"no .page-loading" are both true of a page the app has never run on - which is\n'
+    + 'the state #391 caught /create/semantic-color in. Without this the readiness door\n'
+    + 'returns before React, and the spec that navigated reports a missing element.')
+})
+
+// Anti-vacuity for the assertion above. If index.html ever stopped shipping a
+// boot shell, the check in ready() would be guarding a state that no longer
+// exists and this file would still be green - so pin the thing being guarded,
+// not just the guard. Deliberately read from index.html rather than from dist/,
+// because the unit suite must not require a build.
+test('index.html really does ship a boot shell inside #root, so that check guards something', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
+  assert.match(html, /<div id="root">\s*<div class="boot-shell" id="boot-shell">/,
+    'index.html no longer ships <div id="root"><div class="boot-shell" id="boot-shell">.\n'
+    + 'If the static shell is genuinely gone, the boot-shell clause in ready() is dead\n'
+    + 'code and this pair of tests should go with it. If it merely MOVED or was renamed,\n'
+    + 'ready() is now blind to the pre-hydration window again and the id must be updated\n'
+    + 'in tests/user-sim/helpers.js as well.')
+})
+
+// ...and that renderState REPORTS it, which is what lets a failure name itself
+// instead of blaming a slow route chunk.
+test('renderState reports the boot shell, so the diagnostic can name the cause', () => {
+  const src = readStripped(path.join('tests', 'user-sim', 'helpers.js'))
+  const body = src.match(/export\s+function\s+renderState\s*\(([\s\S]*?)\n\}/)
+  assert.ok(body, 'helpers.js no longer exports `function renderState(...)`')
+  assert.match(body[1], /booting:/,
+    'renderState stopped reporting `booting`. Without it a page stuck on the static\n'
+    + 'shell fails with the same message as a slow route chunk, and the next\n'
+    + 'investigation goes looking at the route instead of at the entry bundle.')
+})
+
 /* ── The door has no way around it any more ──────────────────────────
  *
  * This used to be a KNOWN_RAW_GOTO allowlist of twenty spec files, pinned so

@@ -175,4 +175,91 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     expect(held.own).toBe(0)
     expect(arrived.own).toBeGreaterThan(2000)
   })
+
+  /* ── The BOOT SHELL, which `ready()` used to accept as arrival ──────────────
+   *
+   * Every test above holds back a ROUTE chunk, so React is running and the
+   * Suspense fallback is on screen. This one holds back the ENTRY bundle, so
+   * React never runs at all — and that state defeated the readiness check from
+   * the OTHER side. index.html ships
+   * `<div id="root"><div class="boot-shell" id="boot-shell">` and
+   * scripts/prerender.mjs clones it into all 33 route shells, so
+   * `root.firstElementChild` is satisfied by markup the SERVER wrote, and
+   * `.page-loading` is absent because App.jsx has never rendered. Both of the
+   * conditions `ready()` used to require were true of a page with no
+   * application on it.
+   *
+   * Caught in the wild by #391: /create/semantic-color under four parallel
+   * workers, h1 not found, accessibility snapshot reading
+   * `status: Loading UIL4B` — the boot shell's own live region.
+   */
+  const ENTRY_BUNDLE = '**/assets/index-*.js'
+
+  test('the static boot shell is not arrival, and a page stuck on it says so', async ({ page }) => {
+    // ready()'s backstop is 20s by design, so this needs room for it.
+    test.setTimeout(60000)
+
+    // Held open forever rather than aborted: an abort reaches
+    // `vite:preloadError`/the ErrorBoundary and is a different state. Nothing
+    // rejects here, so the entry module simply never executes.
+    await page.route(ENTRY_BUNDLE, () => { /* never continued, never aborted */ })
+    // `waitUntil: 'commit'` for the reason 04-premium-home needs it: a module
+    // script that never loads means DOMContentLoaded never fires, so the
+    // default wait would hang here rather than reach the reading below.
+    await goRaw(page, HELD_ROUTE, { waitUntil: 'commit' })
+    await expect(page.locator('#boot-shell')).toBeVisible()
+
+    // ── The vacuity, as four facts from one instant. ──
+    const shell = await renderState(page)
+    expect(shell.mounted, 'THE OLD CONTRACT: #root HAS a child — the shell index.html ships')
+      .toBe(true)
+    expect(shell.loading, 'THE OLD CONTRACT: no .page-loading, because App.jsx has never rendered')
+      .toBe(false)
+    expect(shell.booting, 'THE NEW CONTRACT: the static boot shell is still on screen')
+      .toBe(true)
+    expect(shell.own, 'and the route itself has rendered nothing at all')
+      .toBe(0)
+
+    // ── So the wait must fail, and must name the cause. ──
+    const failure = await ready(page, HELD_ROUTE).then(
+      () => null,
+      (err) => String(err && err.message ? err.message : err),
+    )
+    expect(failure, 'a page still showing the boot shell must FAIL, not count as arrived')
+      .not.toBeNull()
+    // Not "the route never got past its lazy-loading fallback": there is no
+    // fallback and there is no route. Sending the next investigation at a slow
+    // chunk is what this message exists to prevent.
+    expect(failure).toMatch(/never replaced the static boot shell/)
+    expect(failure, 'the diagnostic must carry the numbers that show why').toMatch(/booting=true/)
+    expect(failure, 'and must say that waiting longer cannot help').toMatch(/React has NOT RUN AT ALL/)
+    // The readiness wait must report how many frames it actually examined. A
+    // wait that returned without looking is indistinguishable from one that
+    // looked and was satisfied, which is the shape this suite keeps paying for.
+    const polls = Number((failure.match(/readiness examined (\d+) frame/) || [])[1])
+    expect(polls, 'ready() must say how many frames it examined, and it must be non-zero')
+      .toBeGreaterThan(0)
+  })
+
+  test('the same page arrives normally once the entry bundle is let through', async ({ page }) => {
+    // The positive control for the test above. Without it, "ready() fails on
+    // the boot shell" would also be satisfied by a ready() that had started
+    // failing on everything.
+    let open
+    const release = new Promise((r) => { open = r })
+    let served = 0
+    await page.route(ENTRY_BUNDLE, async (route) => { served += 1; await release; await route.continue() })
+
+    await goRaw(page, HELD_ROUTE, { waitUntil: 'commit' })
+    await expect(page.locator('#boot-shell')).toBeVisible()
+    expect(served, 'the entry bundle request must actually have been held, or this proves nothing')
+      .toBeGreaterThan(0)
+
+    open()
+    await ready(page, HELD_ROUTE)
+    const arrived = await renderState(page)
+    expect(arrived.booting, 'the boot shell must be gone once ready() returns').toBe(false)
+    expect(arrived.mounted, 'and React must have committed something').toBe(true)
+    expect(arrived.own, 'and the route must have rendered its own content').toBeGreaterThan(2000)
+  })
 })
