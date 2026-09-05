@@ -16,10 +16,29 @@ import { formatSubsets, weightName } from './fontGallery.js'
 // family name, nothing is hand-authored per family, and nothing is defaulted to
 // a plausible-looking value.
 
+// TWO EXAMPLE TABS, and the split between them is the founder's own sentence
+// (2026-09-05): "1 tab showing Usage examples using some made mockup use cases,
+// but ... a tab showing real world use applications for each font and an image
+// to show it".
+//
+//   examples  MOCKUPS. Situations this page draws itself, chosen from what kind
+//             of face the family is. Invented by construction and labelled as
+//             such at the top of the panel. Nothing in it is a claim about
+//             anybody's brand.
+//   inuse     PHOTOGRAPHS of real work. Ships EMPTY — see data/fontRealWorldUses
+//             for why, and for what an entry has to carry before it may be
+//             drawn. [fonts-in-use-surface] stays blocked; this is the slot it
+//             will fill, not a claim that it has been filled.
+//
+// "In use" rather than "Real world": it is the vocabulary fontsinuse.com itself
+// uses, and the panel links there. The two labels have to be legible as
+// DIFFERENT KINDS OF THING from the tab strip alone, which is why the invented
+// one is not also called something that sounds real.
 export const DOSSIER_TABS = [
   { id: 'specimen', label: 'Specimen' },
   { id: 'about', label: 'About' },
   { id: 'examples', label: 'Examples' },
+  { id: 'inuse', label: 'In use' },
 ]
 
 // What a CLASSIFICATION is for. Deliberately about the category and never about

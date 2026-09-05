@@ -6,7 +6,7 @@ import LibraryGrid from './library/LibraryGrid'
 import LibraryCard from './library/LibraryCard'
 import LibraryEmpty from './library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
-import { FontAboutPanel, FontDossierTabs, FontExamplesPanel } from './FontDossier'
+import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from './FontDossier'
 import { filterPickableTypefaces, ladderWeights, specimenSizeCqw, weightName } from '../utils/fontGallery'
 import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleFonts'
 
@@ -246,6 +246,9 @@ function FontDetail({ font, selected, onUse, onBack }) {
         )}
         {tab === 'examples' && (
           <FontExamplesPanel font={font} id="fbd-panel-examples" labelledBy="fbd-tab-examples" />
+        )}
+        {tab === 'inuse' && (
+          <FontInUsePanel font={font} id="fbd-panel-inuse" labelledBy="fbd-tab-inuse" />
         )}
       </div>
 
