@@ -64,7 +64,7 @@ written down anywhere before.
 | **How to run** a visual or responsive review | `.claude/skills/uil4b-surface-review/` | The quality bar, and `design.md`'s tell list — those say what to look for, not where to stand |
 | What is queued, blocked or known-broken | `src/data/pipeline.js` | Any doc naming an item as open — check its `status` field first |
 | What shipped, and founder decisions already made | `CHANGELOG.md` | — but it is a historical record; a file it names may since have been deleted |
-| Ideas awaiting a founder verdict | `docs/PROPOSALS.md` | — no agent may claim a verdict not written on the verdict line |
+| Ideas awaiting a founder verdict | `docs/PROPOSALS.md` | — no agent may claim a verdict not written on the verdict line. **Check it before asking:** five entries were answered on 2026-09-05 and re-asking one is the exact friction the founder complained about |
 | Founder-only console / credential work | `docs/OWNER-ACTIONS.md` | — |
 | Agent roles, tools, evidence classes | `.claude/agents/README.md` | — |
 | What real content exists, and what must never be fabricated | `PRODUCT.md`, "Evidence on Hand" | Any surface's own copy — a mock-up is a claim |
@@ -168,7 +168,7 @@ Verdicts from this pass. **KEEP** = accurate and needed · **UPDATE** = fixed he
 | File | Verdict | Why |
 |---|---|---|
 | `PROPOSALS.md` | KEEP | Founder verdict queue. |
-| `OWNER-ACTIONS.md` | **REWRITTEN 2026-09-05** | Founder-gated actions, restructured on the founder’s instruction that our writing takes too long to parse. Every item now carries Do / Time / Why / If you do nothing, and the *questions* are separated from the *console work*. It links to `PROPOSALS.md` for the working rather than restating it. `tests/unit/ai-provider-path.test.js` still pins the OpenRouter procedure. |
+| `OWNER-ACTIONS.md` | **REWRITTEN 2026-09-05** | Founder-gated actions, restructured on the founder’s instruction that our writing takes too long to parse. Every item carries Do / Time / Why / If you do nothing. §1 is what is stopped, §2 is the short list of what still needs him, §3 is the ten decisions he made on 2026-09-05 **restated so no agent asks twice — `CHANGELOG.md` remains their canonical home**, §4 onward is console work. `tests/unit/ai-provider-path.test.js` still pins the OpenRouter procedure. |
 | `build-plan/tool-tree.md` | KEEP | Derived from `toolTree.js` and says so. |
 | `design/homepage-spec-2026-08.md` | KEEP, **re-verified 2026-09-05** | Still a live spec, but its consumer list has changed and the old one would mislead. #262 **merged**. #269 is **empty** (C2 shipped as #363) and closable. #264 **cannot be rebased** — it edits `src/components/TopBar.jsx`, deleted from `main`. Only **#270** is genuinely open against it. **Deletable when #270 lands or closes**, and not before. |
 | `design/anti-slop-and-hero-2026-08.md` | KEEP, **re-verified 2026-09-05** | Same correction. Two things keep it alive rather than one: §2.3 is the spec for #270’s specimen band, and §2.12 is the source of `PROPOSALS.md` P-006, P-008, P-009 and P-010 — four open founder verdicts, each of which names a section of it as its evidence. **Do not delete while those are PENDING**, or four proposals lose their evidence line. (P-011 cites the spec, not this file.) It still references `src/data/homeGallery.js`, which does not exist on `main` and now never will, since #264 is not landing; read it as a spec, not a description of `main`. |

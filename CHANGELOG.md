@@ -13,6 +13,99 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### Founder decisions — 2026-09-05
+
+Taken in an interview with the Director on 2026-09-05. **Ten decisions.** Four
+answer questions this repository had put to him; six are new. Quoted where he
+was quoted; nothing inferred. **Two of the ten went against our recommendation,
+and both are marked as such** — a record that only shows the agreements is not a
+record.
+
+| # | Decision | Ours? |
+|---|---|---|
+| 1 | **The word *tokens* becomes “Styles”** on every sales, navigation and tool-heading surface | **No — we recommended “Foundations”** |
+| 2 | **The `pepsi` palette is renamed to its era.** The palette stays; the claim about today’s brand goes | Yes |
+| 3 | **`google` becomes a free palette** | **No — we recommended leaving it paid** |
+| 4 | **`/community` tiles pick their lettering ink per tile.** Ten of twelve flip white → black | Yes |
+| 5 | **Typography: browsing is free, saving is Pro** | New question, no prior recommendation |
+| 6 | **Learn is proper design education** — real articles on colour theory, typography and accessibility | New |
+| 7 | **Learn’s voice is neutral and factual, not the founder’s.** No first person | New |
+| 8 | **Discover ends as a community gallery, built in stages** — curated first, community publishing later | New |
+| 9 | **Moderation is an approval queue.** Nothing publishes until he approves it | New |
+| 10 | **The founder note is not a popup.** Opt-in only | New |
+
+**1 — “Styles”, not “Foundations”.** He was shown all three options in
+`docs/PROPOSALS.md` P-019 with the reasoning and the competitor evidence, and
+picked **C**. Our recommendation was A. **Rule R is unchanged and was never in
+question:** the word *token* survives past the **export boundary** only — the
+export panel, the generated file names, the code blocks, the `@uil4b/tokens`
+package — because that is the one place it is correct and renaming it there
+would break customers’ code. Implementation is in flight in a separate pull
+request; the homepage behaviour contract
+(`tests/user-sim/10-home-chaos-to-calm.spec.js`) needs its assertion moved
+deliberately alongside the H1.
+
+**3 — `google` becomes free, and he chose it knowing the cost.** He was told the
+free tier already held six palettes and that we recommended leaving Google paid.
+**The history is worth keeping, because it is the useful part:** the row named
+`google` was never Google — it was holding **Material 3’s** default purple. #354
+split them into `material` (Material 3 Baseline) and a correct `google` row. That
+split was a *data correction*; which side of the paywall Google then landed on
+was never chosen by anybody, and this decision is where it finally was.
+
+**5 — typography pricing, which had been open since 2026-08-15.** Browse fonts,
+pair them and build a type scale for free; **Pro to save, to export, or to keep a
+type system in a project.** He picked it because it is exactly how the colour
+tools already gate — so it introduces no new concept, and it satisfies the P-003
+lesson that whatever is gated must stay visible and named. This closes
+`PROPOSALS.md` P-016, which had recorded that **no gate could be built at all**
+until it was answered.
+
+**6 and 7 — what Learn is, and whose voice it is in.** Real articles on colour
+theory, typography and accessibility: **not** how-to guides for our tools, and
+**not** product documentation. The voice is **neutral and factual, not his** —
+no first person — chosen deliberately so the content can be written at scale and
+he only has to fact-check it.
+
+**That is not in tension with decision 10, and the distinction is the useful
+part:** an educational article is not his to sign, and a welcome from the founder
+is nothing but his. The same reasoning is why hero direction C ships a flagged
+placeholder rather than an agent’s attempt at his voice.
+
+**8 — Discover ships curated before it ships social.** Galleries he fills
+himself now, rather than launching an empty community feature and waiting for it
+to fill.
+
+**9 — moderation is an approval queue, and the reason is liability, not taste.**
+Nothing publishes until he approves it. He chose this over publish-then-remove
+**on liability grounds, as a solo developer**. It is a constraint on how community
+publishing gets built rather than a feature of its own — and it raises the
+priority of the admin custom claim in `docs/OWNER-ACTIONS.md` §4.4, because an
+approval queue is an admin surface with the same unmet requirement.
+
+**10 — the founder note, in his words:** *"maybe we make it visable when a user
+clicks a certian section or button, it will just be a short welcome from me and a
+what this app is for and what state its in also asking for feedback support as im
+a solo developr"*. **Opt-in only** — it never auto-opens, and there is no timer,
+no scroll trigger and no first-visit trigger. It is **blocked on four sentences
+only he can write** (who he is, what UIL4B is for, what state it is in, what help
+he wants), which is `docs/OWNER-ACTIONS.md` §2.3 and is deliberately not
+ghostwritten.
+
+### Still open after that interview — 2026-09-05
+
+Two questions and one writing task, all on one screen each in
+[`docs/OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) §2. Listed here because this
+file is the record of where a call was **asked for** as well as where one was
+made.
+
+1. **The hero shape** — A, B or C, at `/?hero=a|b|c`. Note that direction C is
+   rendered at 45% opacity **as a placeholder marker**; the shape is what is being
+   judged, not the paleness.
+2. **The muted-text trade-off** — keep as shipped, reverse it, or say so on
+   screen. (`PROPOSALS.md` P-023.)
+3. **The founder note’s four sentences** — not a decision, a piece of writing,
+   and the only part of that feature that is blocked.
 ### Founder requests recorded — 2026-09-03 and 2026-09-04
 
 Quoted verbatim from conversation with the Director. **These are requests, not
@@ -25,34 +118,14 @@ that is said so explicitly below.
 | 2026-09-03 | *"review our subagent MD files and our other MD files to ensure nothing is stale as i feel like we have been going in circles sometimes"* | `docs/reference/doc-authority-map.md` (#311), and the four traps it names |
 | 2026-09-03 | *"i sohuld also be able to access icon library from the discober tab"* | #306, #317 |
 | 2026-09-04 | *"the mega menu could use a UI redesign as it feels a bit AI slop"* | #345 recorded it, #352 and #364 answered it |
-| 2026-09-04 | *"i dont like tokens being such an important word we are using around the site, tokens means alot of things and in the context we are using it doesnt make it seem like its a huge value add"* | Three named options in `docs/PROPOSALS.md` P-019 — **still open** |
+| 2026-09-04 | *"i dont like tokens being such an important word we are using around the site, tokens means alot of things and in the context we are using it doesnt make it seem like its a huge value add"* | Three named options in `docs/PROPOSALS.md` P-019. **ANSWERED 2026-09-05: “Styles”** — see the decisions above |
 | 2026-09-04 | *"for the font examples i want real world examples not the same UI examples for each one"* | #356 |
 | 2026-09-04 | The hero copy still reads as AI-generated — **the third report of the same thing** | #320 built three shapes at `/?hero=a\|b\|c` — **still open** |
 | 2026-09-04 | *"real australian style english to sound like me not an AI written statement"* | Standing constraint. It is why hero direction C ships a flagged placeholder line rather than an agent's attempt at the founder's voice |
 
-**Nothing in this table is a verdict.** The two marked *still open* are the two
-the founder has been asked to settle; both are on one screen each in
-`docs/OWNER-ACTIONS.md` §2.
-
-### Six open decisions put to the founder — 2026-09-05
-
-Raised by work in this period, all six unanswered at the time of writing. Full
-text, with a recommendation and a cost of delay for each, is in
-[`docs/OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) §2. Listed here because this
-file is the standing record of where a call was asked for, not only of where one
-was made.
-
-1. **The token vocabulary** — Foundations, "colour, type and spacing", or Styles.
-   Recommended: Foundations. (`PROPOSALS.md` P-019.)
-2. **The `pepsi` brand palette cannot be verified** — keep, rename to its era, or
-   drop. Recommended: rename.
-3. **`google` is now a paid palette**, so the free tier holds nothing called
-   Google. Intended or not.
-4. **`/community` monogram contrast** — 9 of 12 tiles fail the 3:1 floor, worst
-   1.47:1. Per-tile ink fixes it without changing a colour. Yes or no.
-5. **The hero shape** — A, B or C.
-6. **The muted-text trade-off** — keep as shipped, reverse it, or say so on
-   screen.
+**Nothing in this table is a verdict** — every row is a problem he named, not a
+call he made. The token-vocabulary row was answered on 2026-09-05 and the hero
+row still is not; both outcomes are in the decisions section above.
 
 ### 2026-09-02 → 2026-09-05 — seventy-six changes on `main`, none of them live
 

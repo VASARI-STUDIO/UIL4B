@@ -20,16 +20,18 @@ _Last reviewed: 2026-09-05._
 
 | | Question | The answer we would give |
 |---|---|---|
-| **P-021** | Google is now a paid palette, so nothing named Google is free. Intended? | Leave it — Material 3 Baseline is the better free starter |
-| **P-022** | May we flip 10 of the 12 `/community` tile letters white → black so they can be read? | Yes — 9 of 12 are below the contrast floor today, worst 1.47:1 |
-| **P-020** | We cannot verify the `pepsi` palette. Keep, rename, or drop? | Rename it to its era |
-| **P-023** | Quieter text is now readable everywhere but looks like body text on 19% of palettes. Keep? | Keep — it shipped, and the alternative is unreadable text |
-| **P-019** | What do we call design tokens on the site? | Foundations |
-| P-005 … P-018 | Eleven older questions. None blocks anything today. | See each entry |
+| **P-023** | Quieter text is now readable everywhere but looks like body text on 19% of palettes. Keep it? | Keep — it shipped, and the alternative is unreadable text |
+| **P-006** | Which hero shape — A, B or C? Look at `/?hero=a`, `?hero=b`, `?hero=c` | No recommendation. Direction C is shown at 45% opacity **on purpose** — judge the shape, not the paleness |
+| P-005, P-008 … P-018 | Ten older questions. None blocks anything today. | See each entry |
 
-The first five are restated as a to-do list, each with a cost of delay, in
-[`OWNER-ACTIONS.md` §2](OWNER-ACTIONS.md). **Answering in either file counts.**
+**Answered 2026-09-05 and now closed:** P-016 (typography pricing), P-019 (the
+token vocabulary), P-020 (`pepsi`), P-021 (`google`), P-022 (`/community` ink).
+Their verdicts are on each entry and in the Resolved table at the foot of this
+file. **Do not re-ask them.**
 
+The two still open are restated as a to-do list, each with a cost of delay, in
+[`OWNER-ACTIONS.md` §2](OWNER-ACTIONS.md), alongside the one piece of writing
+only the founder can do. **Answering in either file counts.**
 ## How to read an entry
 
 Every proposal carries an **evidence class**, stated honestly:
@@ -222,7 +224,7 @@ whole page, which is why it is here rather than decided.
 > **Read the hero-shape question first.** #290 rewrote the words inside the
 > current hero against the anti-slop bar and the founder’s complaint survived it,
 > so the words are not the variable — the shape is. Three shapes are live at
-> `/?hero=a|b|c` ([`OWNER-ACTIONS.md` §2.5](OWNER-ACTIONS.md)). **If direction C
+> `/?hero=a|b|c` ([`OWNER-ACTIONS.md` §2.1](OWNER-ACTIONS.md)). **If direction C
 > wins, this proposal is moot**: C’s deliverable is one sentence in the founder’s
 > own words, which is not ours to choose between.
 
@@ -431,7 +433,16 @@ typography is currently all door and no room. **No gate can be built until this
 is answered**, and note the P-003 lesson: whatever is gated must be visible and
 named, because a silent collapse reads as broken.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(ANSWERED 2026-09-05 — **browsing is free, saving is Pro**.)_
+
+Anyone may browse fonts, pair them and build a type scale. **Pro is required to
+save, to export, or to keep a type system in a project.** The founder picked it
+because it is exactly how the colour tools already gate — so it introduces no new
+concept to explain, and it satisfies the P-003 lesson this entry raised: what is
+gated stays visible and named, because a silent collapse reads as broken.
+
+The gate can now be built. `typography-paywall-model` in `src/data/pipeline.js`
+carries the implementation.
 
 ---
 
@@ -474,23 +485,23 @@ current behaviour or change it.
 
 ## P-019 · What we call design tokens on the site
 
-> **Pick one, in a minute.** On the site, instead of the word *tokens*, do we say:
+> **DECIDED 2026-09-05 — the answer is “Styles”.**
 >
-> - **A — Foundations** ← **we recommend this.** It is already our word:
->   `CLAUDE.md` opens with it and the app’s own docs nav says it. It is the only
->   option that works as a nav label *and* keeps the claim that these values are
->   one connected system.
-> - **B — “Colour, type and spacing”**, with no collective word at all. Zero
->   jargon — but then there is nothing left to put on a nav label.
-> - **C — Styles.** Plainest English, big precedent. But “styles” sounds
->   cosmetic, and undersells that these values ship to code.
+> The founder was shown all three options with the reasoning below and picked
+> **C, “Styles”**. **We had recommended A, “Foundations”; he chose otherwise, and
+> this is his call, not ours.** The evidence below is kept because it is why the
+> question was worth asking — not because the answer is still open.
 >
-> **Either way, the word *token* stays in the export panel and the code.** That is
-> the one place it is correct, and renaming it there would break customers’ code.
+> **Rule R holds, and it was never in question:** the word *token* survives only
+> past the export boundary — the export panel, the generated file names, the code
+> blocks, the `@uil4b/tokens` package. Renaming it there would break customers’
+> code for no gain. It comes out of every sales, navigation and tool-heading
+> surface.
 >
-> **Cost:** about 35 lines of English copy. No translation work.
-> **If you do nothing:** the site keeps leading with the word you told us
-> undersells it, in the exact places we are selling.
+> **Implementation is in flight in a separate pull request.** Do not start a
+> second one. The homepage behaviour contract
+> (`tests/user-sim/10-home-chaos-to-calm.spec.js`) needs its assertion updated
+> deliberately alongside the H1.
 >
 > The evidence and the full working are below.
 
@@ -622,7 +633,7 @@ will need its assertion updated deliberately alongside.
 **What would settle it:** your pick of A, B or C. Nothing was rewritten — the
 item asked for options first, and the word choice is the whole decision.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(DECIDED 2026-09-05 — **C, “Styles”**.)_ Chosen by the founder over our recommendation of A. Rule R stands: `token` survives past the export boundary only. Implementation in flight in a separate PR.
 
 ---
 
@@ -670,7 +681,7 @@ Material 3's purple under Google's name.
 **What would settle it:** your pick of A, B or C. No further research will help;
 the sources are closed.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(DECIDED 2026-09-05 — **A, rename it to its era**.)_ Matches the recommendation. The palette stays; the name stops asserting anything about today’s brand. No further provenance work — the sources are closed.
 
 ---
 
@@ -705,7 +716,7 @@ question is only which side of it Google belongs on.
 **What would settle it:** a yes or a no. This is a check, not a defect — A is
 defensible and is what ships today.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(DECIDED 2026-09-05 — **B, make `google` free**.)_ **Chosen against our recommendation of A**, and knowingly: the founder was told the free tier already held six palettes. The free tier becomes seven; `material` stays free beside it.
 
 ---
 
@@ -741,7 +752,7 @@ if a new community row lands below the floor. Risk is aesthetic only.
 
 **What would settle it:** yes or no to the white → black flip on ten tiles.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(DECIDED 2026-09-05 — **yes, per-item ink**.)_ Matches the recommendation. Ten of the twelve monograms flip white → black; no colour changes. Needs a test that fails the build if a new community row lands below the floor.
 
 ---
 
@@ -807,3 +818,8 @@ paints a low-contrast tint of the ink on a saturated ground.**
 | 2026-08-14 | P-004 · Make Auto the default colour system app-wide | APPROVED — shipped |
 | 2026-09-03 | P-012 · When the four parked homepage PRs resume | ANSWERED by #328 and corrected by #365 — a verdict and a cost per PR, re-measured by rebasing rather than estimating. Open only for the founder’s hero pick |
 | 2026-09-04 | P-007 · Whether to delete the hero stat line | RESOLVED by the Director on `main`, by a third option neither side proposed — the strip is deleted, the numbers kept and attributed |
+| 2026-09-05 | P-016 · What does Pro mean for the typography tools | ANSWERED — browsing is free, saving is Pro. Matches how the colour tools already gate |
+| 2026-09-05 | P-019 · What we call design tokens on the site | DECIDED — **“Styles”** (option C), over our recommendation of “Foundations”. `token` survives past the export boundary only |
+| 2026-09-05 | P-020 · The `pepsi` brand palette cannot be verified | DECIDED — rename it to its era. The palette stays, the claim goes |
+| 2026-09-05 | P-021 · `google` left the free tier as a side effect | DECIDED — **make it free**, against our recommendation, knowing the tier already held six |
+| 2026-09-05 | P-022 · `/community` monogram contrast | DECIDED — yes, per-item ink. Ten of twelve flip white → black, no colour changes |
