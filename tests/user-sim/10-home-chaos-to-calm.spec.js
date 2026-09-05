@@ -843,8 +843,12 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     await page.getByRole('button', { name: /Continue in Type Scale/ }).click()
     await page.waitForURL('**/create/type-scale')
-    await expect(page.locator('.tsc-status')).toContainText('20px')
-    await expect(page.locator('.tsc-status')).toContainText('1.333')
+    // `.tsc-status`, the five-up figure strip, is gone. The hand-off lands on
+    // the two controls in `.tsc-scale-bar` that now carry those numbers — and
+    // reading the CONTROL rather than a readout is the stronger assertion,
+    // because it is the control the visitor goes on to drag.
+    await expect(page.locator('#tsc-base + .snapv-value')).toHaveText('20px')
+    await expect(page.getByLabel('Scale ratio')).toHaveValue('1.333')
     // The homepage carries scale maths only: saved family choices survive.
     // Read off the picker's name line rather than a form value — the family
     // picker is a specimen trigger now, not a <select>, because a <select>
