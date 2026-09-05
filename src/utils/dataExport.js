@@ -82,7 +82,7 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-design-analytics': { purpose: 'Local counters about designs you have built', pii: 'local' },
   'vs-feedback': { purpose: 'Feedback drafts written in this browser', pii: 'local' },
   'vs-usage': { purpose: 'AI generations used, per tool per day', pii: 'no' },
-  'vs-uikit-guide': { purpose: 'UI kit guide dismissal state', pii: 'no' },
+  'vs-uikit-guide': { purpose: 'Whether you are part-way through the brand kit walkthrough', pii: 'no' },
   'vs-uib-intro-dismissed': { purpose: 'Builder intro dismissal state', pii: 'no' },
   'vs-info-intro': { purpose: 'Info page intro dismissal state', pii: 'no' },
   'vs-admin-unlocked': { purpose: 'Admin panel access flag', pii: 'no' },

@@ -25,6 +25,7 @@ import { useProModal } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
+import UIKitGuide from '../components/UIKitGuide'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
@@ -3481,6 +3482,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
         </button>
         <button type="button" className="btn btn-s plb-copycss" onClick={() => onCopy?.(cssExport)}>Copy CSS</button>
       </footer>
+
+      {/* Step 1 of the brand-kit walkthrough (colours → fonts → type scale →
+          icons). Renders nothing unless the visitor is in the flow. This page is
+          the step because it is the tool that writes `design.palette`, which is
+          what the walkthrough reads to know the step is done. */}
+      <UIKitGuide step="color" />
     </div>
   )
 }

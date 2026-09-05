@@ -3238,32 +3238,79 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 /* ─── Pro plan disabled state ─── */
 
-/* ─── Build-a-UI-Kit guided flow ─── */
-.uikit-intro-overlay{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance)}
-.uikit-intro{width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:28px;animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.uikit-intro-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:10px}
-.uikit-intro-title{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:10px}
-.uikit-intro-body{font-size:13.5px;color:var(--t1);line-height:1.65;margin-bottom:18px}
-.uikit-intro-steps{list-style:none;margin:0 0 22px;padding:0;display:flex;flex-direction:column;gap:10px}
-.uikit-intro-steps li{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--t2)}
-.uikit-intro-steps li.is-current{color:var(--t0);font-weight:600}
-.uikit-intro-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:11px;font-weight:700}
-.uikit-intro-steps li.is-current .uikit-intro-num{background:var(--accent-strong);color:var(--accent-fg)}
-.uikit-intro .btn{width:100%;justify-content:center}
+/* ─── Brand kit walkthrough ─── */
+/* Two surfaces, both DOCKED to the bottom of a live tool: the step rail, which
+   is always there while the flow is running, and the orientation card, which
+   sits directly above it and is dismissible.
 
-.uikit-stepbar{position:sticky;bottom:20px;z-index:60;margin:32px auto 0;max-width:560px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg)}
-.uikit-stepbar-progress{display:flex;flex-direction:column;gap:8px;min-width:0}
-.uikit-stepbar-label{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
-.uikit-stepbar-dots{display:flex;gap:6px}
-.uikit-dot{width:24px;height:5px;border-radius:3px;background:var(--bg-3);transition:background var(--dur-3) var(--ease-standard)}
-.uikit-dot.is-done{background:color-mix(in srgb,var(--accent) 55%,var(--bg-3))}
-.uikit-dot.is-current{background:var(--accent)}
-.uikit-stepbar-next{flex-shrink:0}
-.uikit-stepbar-close{flex-shrink:0;width:32px;height:32px;border-radius:var(--radius-s);border:1px solid var(--border);background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
-.uikit-stepbar-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
-@media(max-width:640px){
-  .uikit-stepbar{flex-direction:column;align-items:stretch}
-  .uikit-stepbar-next{justify-content:center}
+   THE CARD HAS NO SCRIM AND NO FIXED FULL-VIEWPORT LAYER, and that is the whole
+   point of this pass rather than an omission — the founder asked for step one to
+   start immediately with the explanation offered OVER it. The previous version
+   painted `position:fixed;inset:0` with a 6px backdrop blur across the entire
+   page, which is what "blocks the step behind it" looks like in CSS.
+   Reference: Weavy and FLORA both dock a coach card to the foot of a canvas
+   that stays fully usable behind it. */
+.bkit-card{position:sticky;bottom:96px;z-index:61;margin:0 auto;width:min(440px,calc(100% - 32px));background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:22px 24px;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.bkit-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.bkit-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.bkit-card-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-strong)}
+.bkit-card-close{width:28px;height:28px;flex-shrink:0;border-radius:var(--radius-s);border:1px solid transparent;background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
+.bkit-card-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
+.bkit-card-title{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:8px}
+.bkit-card-body{font-size:13px;color:var(--t1);line-height:1.6;margin-bottom:16px}
+.bkit-card-steps{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-direction:column;gap:8px}
+.bkit-card-steps li{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--t2)}
+.bkit-card-steps li.is-current{color:var(--t0);font-weight:600}
+.bkit-card-num{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:11px;font-weight:700}
+.bkit-card-steps li.is-current .bkit-card-num{background:var(--accent-strong);color:var(--accent-fg)}
+.bkit-card-go{width:100%;justify-content:center}
+
+/* THE RAIL. All four steps at once, each carrying the artefact it produced, so
+   step four can see what step one built. Reference: Cofounder's bottom "Design
+   Roadmap" and Klaviyo's ticked setup checklist. */
+.bkit-rail{position:sticky;bottom:20px;z-index:60;margin:32px auto 0;width:min(880px,calc(100% - 32px));display:flex;align-items:center;gap:18px;padding:12px 16px;background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg)}
+.bkit-rail-head{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.bkit-rail-eyebrow{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.bkit-rail-count{font-size:12px;font-weight:600;color:var(--t0);white-space:nowrap}
+
+.bkit-steps{list-style:none;margin:0;padding:0;display:flex;align-items:stretch;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.bkit-steps::-webkit-scrollbar{display:none}
+.bkit-steps li{min-width:0;flex:1 1 0}
+.bkit-step{display:flex;align-items:center;gap:8px;min-width:0;height:100%;padding:6px 9px;border-radius:var(--radius-s);border:1px solid transparent;color:var(--t2);text-decoration:none;transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
+.bkit-step:hover{background:var(--hvr);color:var(--t0)}
+.bkit-step.is-current{border-color:var(--border);background:var(--bg-2);color:var(--t0)}
+.bkit-step-mark{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:10.5px;font-weight:700}
+.bkit-step.is-current .bkit-step-mark{background:var(--accent-strong);color:var(--accent-fg)}
+/* Done beats current: a step you have built keeps its tick while you stand on
+   it, because the tick is a statement about the SYSTEM, not about the cursor. */
+.bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-strong)}
+.bkit-step-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bkit-step-label{font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkit-step-value{font-family:var(--mono);font-size:10px;color:var(--t2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkit-step-swatches{display:flex;gap:2px;height:8px}
+.bkit-step-swatch{width:8px;height:8px;border-radius:2px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--t0) 12%,transparent)}
+
+.bkit-rail-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.bkit-rail-help{border:0;background:transparent;padding:4px 2px;font-size:12px;color:var(--t2);text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap}
+.bkit-rail-help:hover{color:var(--t0)}
+.bkit-rail-next{flex-shrink:0}
+.bkit-rail-close{flex-shrink:0;width:30px;height:30px;border-radius:var(--radius-s);border:1px solid var(--border);background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
+.bkit-rail-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
+
+/* Narrow: the rail stacks, the steps keep their own horizontal scroller rather
+   than wrapping into a four-line block that would eat the tool. */
+@media(max-width:820px){
+  .bkit-rail{flex-wrap:wrap;gap:10px}
+  .bkit-steps{order:3;flex-basis:100%}
+  .bkit-steps li{flex:0 0 auto}
+  .bkit-rail-actions{margin-left:auto}
+  .bkit-card{bottom:150px}
+}
+@media(max-width:520px){
+  .bkit-rail-help{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .bkit-card{animation:none}
 }
 
 /* ─── Landing / welcome page ─── */

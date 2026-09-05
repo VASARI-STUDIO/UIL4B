@@ -40,9 +40,13 @@ import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 // eighth hand-kept list in a codebase that has spent two PRs deleting the first
 // seven, and it would pass while the guide itself changed underneath it.
 function guideStepLabels() {
-  const src = fs.readFileSync(path.join('src', 'components', 'UIKitGuide.jsx'), 'utf8')
-  const block = src.slice(src.indexOf('export const UIKIT_STEPS = ['))
-  const body = block.slice(0, block.indexOf('\n]'))
+  // The step model moved OUT of the component into utils/brandKitGuide.js,
+  // beside the reading that explains it. This reads the array the menu card and
+  // the walkthrough now BOTH import, so it is still one source rather than an
+  // eighth hand-kept list — which is the property this helper exists to keep.
+  const src = fs.readFileSync(path.join('src', 'utils', 'brandKitGuide.js'), 'utf8')
+  const block = src.slice(src.indexOf('export const BRAND_KIT_STEPS = Object.freeze(['))
+  const body = block.slice(0, block.indexOf('\n])'))
   return [...body.matchAll(/label:\s*'([^']+)'/g)].map((m) => m[1])
 }
 
