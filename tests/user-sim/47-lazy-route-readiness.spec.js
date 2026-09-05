@@ -22,11 +22,11 @@
 // against the machine — on a fast runner the chunk can win. Holding the chunk
 // request itself is the same state arrived at deterministically, so this spec
 // measures the same thing on any hardware.
-import { test, expect } from './base.js'
+import { ASSET_TROUBLE, expectBuildAssetFailures, test, expect } from './base.js'
 // goRaw, not go. `go()` now waits for the route to arrive, which is the fix
 // this file exists to prove works - so measuring the moment before it arrives
 // has to bypass it. This is goRaw's only caller, and that is the point.
-import { goRaw, ready, renderState, expectRendered } from './helpers.js'
+import { go, goRaw, ready, renderState, expectRendered } from './helpers.js'
 
 // /privacy is the sharpest case in the app: 421 characters of chrome while the
 // fallback is up against 6537 once it lands, and it is one of the two routes
@@ -261,5 +261,75 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     expect(arrived.booting, 'the boot shell must be gone once ready() returns').toBe(false)
     expect(arrived.mounted, 'and React must have committed something').toBe(true)
     expect(arrived.own, 'and the route must have rendered its own content').toBeGreaterThan(2000)
+  })
+
+  /* ── An asset the machine could not DELIVER ──────────────────────────────
+   *
+   * Every test above holds a request open or aborts it with route.abort()'s
+   * default, which Chromium reports as net::ERR_FAILED - something this suite
+   * does on purpose, and deliberately NOT counted by the build-asset watch.
+   *
+   * This one produces the failure that is not deliberate. On 2026-09-06 five
+   * specs failed once each under full-suite parallelism and every one passed in
+   * isolation; two of those runs carried net::ERR_NO_BUFFER_SPACE against
+   * /assets/index-*.js and /assets/en-*.js in their own feedback-loop section.
+   * The app chunk never loaded, so the spec's first locator found nothing and
+   * the failure read as if the element had been deleted.
+   *
+   * net::ERR_CONNECTION_FAILED stands in for it: it is in the same allowlist,
+   * and route.abort('connectionfailed') produces it on demand. The classifier's
+   * two directions are asserted without a browser in
+   * tests/unit/build-asset-guard.test.js; what is asserted HERE is the wiring -
+   * that a real failed request on a real asset reaches the watch, and that the
+   * failure a spec actually sees names it.
+   */
+  test('an entry bundle that never arrives is NAMED, not reported as a missing element', async ({ page }) => {
+    test.setTimeout(60000)
+
+    // Declared BEFORE the failure, because the suppression is read when a
+    // failure is RECORDED. This is the one context in the suite allowed to do
+    // this, and tests/unit/build-asset-guard.test.js pins that to this file -
+    // without it, the run's own proof that the guard works would fail the run,
+    // which is the guard working.
+    expectBuildAssetFailures(page.context())
+    await page.route(ENTRY_BUNDLE, (route) => route.abort('connectionfailed'))
+    await goRaw(page, HELD_ROUTE, { waitUntil: 'commit' })
+    await expect(page.locator('#boot-shell')).toBeVisible()
+
+    const failure = await ready(page, HELD_ROUTE).then(
+      () => null,
+      (err) => String(err && err.message ? err.message : err),
+    )
+    expect(failure, 'a page whose entry bundle never arrived must FAIL').not.toBeNull()
+
+    // THE POINT OF THE ITEM. The failure must say the app could not be loaded,
+    // and name the file - not describe a route that is missing something.
+    expect(failure, 'the failure must say the app never started')
+      .toMatch(/never replaced the static boot shell/)
+    expect(failure, 'and must say a build asset never arrived')
+      .toMatch(/NEVER ARRIVED in this browser context/)
+    expect(failure, 'and must carry the actual network error')
+      .toMatch(/ERR_CONNECTION_FAILED/)
+    expect(failure, 'and must name the file')
+      .toMatch(/\/assets\/index-/)
+
+    // POSITIVE CONTROL for the ledger itself: an absence assertion above would
+    // be satisfied by a watch that recorded nothing anywhere.
+    const recorded = page.context()[ASSET_TROUBLE] || []
+    expect(recorded.length, 'the watch must have RECORDED the failure, not merely reported it once')
+      .toBeGreaterThan(0)
+    expect(
+      recorded.every((r) => r.includes('/assets/')),
+      'every recorded entry must be a build asset',
+    ).toBe(true)
+  })
+
+  test('a build asset that arrives normally records NOTHING, so the watch is not indiscriminate', async ({ page }) => {
+    // The negative control for the test above, and the one that says the guard
+    // is not simply on. If this ever went red the whole suite would be failing
+    // every test on assets that loaded perfectly.
+    await go(page, HELD_ROUTE)
+    const recorded = page.context()[ASSET_TROUBLE] || []
+    expect(recorded, 'a healthy page load must leave the build-asset ledger empty').toEqual([])
   })
 })

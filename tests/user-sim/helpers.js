@@ -282,11 +282,14 @@ function buildAssetHint(page) {
   try { bad = page.context()[ASSET_TROUBLE] || [] } catch { return '' }
   if (!bad.length) return ''
   const uniq = [...new Set(bad)]
-  return `\n\n  ${bad.length} build asset request(s) FAILED in this browser context`
+  return `\n\n  ${bad.length} build asset request(s) NEVER ARRIVED in this browser context`
     + ` (${uniq.slice(0, 3).join(', ')}${uniq.length > 3 ? `, +${uniq.length - 3} more` : ''}).`
-    + ' Files under /assets/ cannot 404 in a healthy run, so dist/ was almost certainly'
-    + ' REBUILT while this suite was running — read the route below as a casualty of that,'
-    + ' not as a defect. The global teardown fails the whole run on this.'
+    + ' Files under /assets/ are content-hashed build outputs and cannot 404 or fail to be'
+    + ' delivered in a healthy run. A 4xx means dist/ was REBUILT under the run; a net:: error'
+    + ' means the machine could not deliver the file (ERR_NO_BUFFER_SPACE and'
+    + ' ERR_INSUFFICIENT_RESOURCES are resource exhaustion, seen with several suites running at'
+    + ' once). Read the route above as a casualty of that, not as a defect. The test and the'
+    + ' whole run both fail on this.'
 }
 
 /**
