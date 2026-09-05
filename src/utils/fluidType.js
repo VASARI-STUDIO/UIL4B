@@ -48,6 +48,26 @@ function n(value, places = 4) {
  * the caller has chosen — rounding is a decision the user makes, not a hidden
  * toFixed, which is why it is threaded through rather than applied at the end.
  */
+// A step's TOKEN NAME. `base` is the anchor; everything above walks lg -> 8xl
+// and everything below walks sm -> 4xs, which is the naming most teams already
+// read fluently from Tailwind. Beyond the named runs it falls back to
+// `Nxl`/`Nxs` rather than running out of names on a deep scale.
+//
+// This lived in TypeScale.jsx. It is here because the homepage workbench's
+// Typography preview now labels each step with the token name the generator
+// will emit for it - which is the string a visitor actually carries into their
+// code, and the thing the mini was not showing. Two copies of a naming table
+// is how the preview and the export come to disagree about what a step is
+// called.
+const UP_NAMES = ['lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', '8xl']
+const DOWN_NAMES = ['sm', 'xs', '2xs', '3xs', '4xs']
+
+export function stepName(exp) {
+  if (exp === 0) return 'base'
+  if (exp > 0) return UP_NAMES[exp - 1] || `${exp}xl`
+  return DOWN_NAMES[-exp - 1] || `${-exp}xs`
+}
+
 export function stepPx(base, ratio, exp, round) {
   const raw = base * Math.pow(ratio, exp)
   if (round === 'whole') return Math.round(raw)
