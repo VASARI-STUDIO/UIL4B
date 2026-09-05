@@ -14,9 +14,9 @@ import { applyPricingHtml } from './scripts/site-pricing.mjs'
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
 
 // The root index.html, resolved once. The pricing hook below is scoped to this
-// exact file: `vite build --mode test` adds a second HTML input
-// (tests/user-sim/fixtures/ui-system-pro.html), and that fixture carries no
-// pricing markers and must not be required to.
+// exact file: `vite build --mode test` adds further HTML inputs
+// (tests/user-sim/fixtures/*.html), and those fixtures carry no pricing
+// markers and must not be required to.
 const INDEX_HTML = resolve(import.meta.dirname, 'index.html')
 
 // Money in index.html, generated from src/config/planLadder.js.
@@ -58,6 +58,7 @@ export default defineConfig(({ mode }) => ({
       input: {
         index: resolve(import.meta.dirname, 'index.html'),
         'ui-system-pro-fixture': resolve(import.meta.dirname, 'tests/user-sim/fixtures/ui-system-pro.html'),
+        'type-save-fixture': resolve(import.meta.dirname, 'tests/user-sim/fixtures/type-save.html'),
       },
     } : undefined,
   },

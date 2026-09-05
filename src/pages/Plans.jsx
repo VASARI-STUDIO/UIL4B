@@ -150,7 +150,7 @@ export default function Plans() {
           <p className="plans-card-intro">The complete toolkit, with limits only where something costs money to run.</p>
           <ul className="sub-tier-list">
             <li><Check /> Every colour, type, icon and image tool</li>
-            <li><Check /> Unlimited palettes, scales, gradients and exports</li>
+            <li><Check /> Unlimited palettes, font pairings, type scales, gradients and exports</li>
             <li><Check /> {AI.free.daily} AI generations a day · {AI.free.monthly} a month</li>
             <li><Check /> {FREE_SAVE_LIMITS.projects} saved projects and {FREE_SAVE_LIMITS.customIcons} custom icons</li>
           </ul>
@@ -243,11 +243,11 @@ export default function Plans() {
           <thead><tr><th scope="col">Capability</th><th scope="col">Free</th><th scope="col" className="pct-pro">Pro</th></tr></thead>
           <tbody>
             <tr><td>Colour, type, icon and image tools</td><td>All of them</td><td className="pct-pro">All of them</td></tr>
-            <tr><td>Palettes, scales and exports</td><td>Unlimited</td><td className="pct-pro">Unlimited</td></tr>
+            <tr><td>Palettes, font pairings, type scales and exports</td><td>Unlimited</td><td className="pct-pro">Unlimited</td></tr>
             <tr><td>AI generations per day</td><td>{AI.free.daily}</td><td className="pct-pro">{AI.pro.daily}</td></tr>
             <tr><td>AI generations per month</td><td>{AI.free.monthly}</td><td className="pct-pro">{AI.pro.monthly}</td></tr>
             <tr><td>AI model</td><td>Same on both plans</td><td className="pct-pro">Same on both plans</td></tr>
-            <tr><td>Saved projects</td><td>{FREE_SAVE_LIMITS.projects}</td><td className="pct-pro">Unlimited</td></tr>
+            <tr><td>Saved projects (palette, fonts and type scale)</td><td>{FREE_SAVE_LIMITS.projects}</td><td className="pct-pro">Unlimited</td></tr>
             <tr><td>Custom icons</td><td>{FREE_SAVE_LIMITS.customIcons}</td><td className="pct-pro">Unlimited</td></tr>
             <tr><td>Advanced colour controls</td><td>Core controls</td><td className="pct-pro">Unlocked</td></tr>
             <tr><td>Design JSON export</td><td className="pct-none">Not included</td><td className="pct-pro">Full design JSON</td></tr>

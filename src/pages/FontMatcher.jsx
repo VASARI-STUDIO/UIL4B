@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import FontPicker from '../components/FontPicker'
 import ShuffleIcon from '../components/ShuffleIcon'
 import UIKitGuide from '../components/UIKitGuide'
+import SaveTypeSystem from '../components/SaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
@@ -528,6 +529,24 @@ export default function FontMatcher({ onCopy, toast }) {
               <button type="button" className="fpr-copy-primary" onClick={() => onCopy?.(cssExport)}>Copy CSS</button>
             </div>
             <pre id="fpr-export" className="fpr-export" tabIndex="0"><code>{cssExport}</code></pre>
+
+            {/* Copying is free; keeping is the paid step. Founder decision
+                2026-09-05: browsing is free, saving is Pro — and the gate is
+                the shared project slot the colour tools already use, not a
+                second scheme. Everything above this line works signed out. */}
+            <div className="fpr-keep">
+              <SaveTypeSystem
+                gate="type-save-font-pair"
+                label="this pairing"
+                summary={headingFont && bodyFont
+                  ? `${headingFont.family} ${headingW} for headings, ${bodyFont.family} ${bodyW} for body.`
+                  : ''}
+                toast={toast}
+              />
+              <p className="fpr-keep-note">
+                Keeps both families and their weights with the project’s palette and type scale.
+              </p>
+            </div>
           </div>
         </section>
       </div>
