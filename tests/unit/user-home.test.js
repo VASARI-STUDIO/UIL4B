@@ -13,6 +13,7 @@ import { liveToolRoutes } from '../../src/data/toolTree.js'
 import {
   SYSTEM_PARTS, partsPresent, projectDigest, mostRecentProject,
   nextToolSuggestion, homeStats, relativeTime, pickForDay, strideFor,
+  partsLabel, paletteBands,
 } from '../../src/utils/userHome.js'
 import {
   SESSION_HINT_KEY, readSessionHint, writeSessionHint, rootDestination,
@@ -107,6 +108,69 @@ test('a malformed or absent project never throws', () => {
     assert.equal(digest.total, 4)
     assert.ok(Array.isArray(digest.colors))
   }
+})
+
+/* ── the sentence on the card ───────────────────────────────────── */
+
+test('THE FOUNDER’S SENTENCE: colours but no type scale says so, in words', () => {
+  // “progress, so a project with colours but no type scale says so”. This is the
+  // string that requirement becomes, and it was the one thing in this feature
+  // that mutation testing found uncovered: breaking partsLabel so it always
+  // returned ‘All four parts’ left the entire unit suite green.
+  const design = clone(DEFAULT_DESIGN)
+  design.palette.colors = ['#112233', '#445566', '#778899']
+  design.fonts.heading.family = 'Fraunces'
+  design.tints.scale = ['#111', '#222']
+  assert.equal(partsLabel(projectDigest({ id: 'x', name: 'x', design })), 'No type scale')
+})
+
+test('several gaps read as a list, and a complete system says so', () => {
+  const design = clone(DEFAULT_DESIGN)
+  design.palette.colors = ['#112233', '#445566']
+  assert.equal(partsLabel(projectDigest({ id: 'x', name: 'x', design })),
+    'No type scale, fonts or tints')
+  assert.equal(partsLabel(projectDigest(complete())), 'All four parts')
+})
+
+test('an untouched project is not given a list of everything it lacks', () => {
+  // ‘No palette, type scale, fonts or tints’ is technically correct and reads as
+  // a telling-off — and it is the state every project starts in.
+  assert.equal(partsLabel(projectDigest(untouched())), 'Nothing built yet')
+  assert.equal(partsLabel(null), 'All four parts', 'a missing digest must not throw')
+})
+
+test('a palette is drawn with hard stops, so no colour is invented between two', () => {
+  const colours = ['#FF0000', '#00FF00', '#0000FF', '#FFFFFF']
+  const css = paletteBands(colours)
+  assert.match(css, /^linear-gradient\(90deg,/)
+
+  // Every colour carries TWO positions of its own — CSS's multi-position colour
+  // stop. That is what makes it a hard stop rather than a blend: a plain
+  // two-stop gradient from #FF0000 to #00FF00 paints a wide band of browns that
+  // are in nobody's palette, and the card would be showing colours the project
+  // does not contain.
+  const stops = css.replace(/^linear-gradient\(90deg, /, '').replace(/\)$/, '').split(', ')
+  assert.equal(stops.length, colours.length, 'one stop per colour, no interpolation stops')
+  stops.forEach((stop, i) => {
+    assert.match(stop, /^#[0-9A-F]{6} \d+\.\d\d% \d+\.\d\d%$/, `stop ${i} is not a hard stop`)
+    assert.ok(stop.startsWith(colours[i]), `stop ${i} should be ${colours[i]}`)
+  })
+
+  // And the bands tile the full width exactly: each one starts where the last
+  // ended, the first at 0 and the last at 100. A gap would show the card
+  // background through the palette; an overlap would hide a colour.
+  const edges = stops.map((s) => s.match(/([\d.]+)% ([\d.]+)%$/).slice(1, 3).map(Number))
+  assert.equal(edges[0][0], 0)
+  assert.equal(edges[edges.length - 1][1], 100)
+  for (let i = 1; i < edges.length; i += 1) {
+    assert.equal(edges[i][0], edges[i - 1][1], `band ${i} does not start where band ${i - 1} ended`)
+  }
+})
+
+test('an empty palette degrades to a token, never to an invalid CSS value', () => {
+  assert.equal(paletteBands([]), 'var(--bg-3)')
+  assert.equal(paletteBands(null), 'var(--bg-3)')
+  assert.equal(paletteBands([null, undefined]), 'var(--bg-3)')
 })
 
 /* ── the next-tool suggestion ──────────────────────────────────── */
