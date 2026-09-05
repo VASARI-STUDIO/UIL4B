@@ -494,10 +494,7 @@ export default function TypeScale({ onCopy, toast }) {
       <header className="tsc-masthead">
         <div className="tsc-masthead-copy">
           <h1>Type Scale Generator</h1>
-          <p>
-            One base size and one ratio. Every step below is that multiplication,
-            set in the families you have chosen.
-          </p>
+          <p>One base size and one ratio. Every step below is that multiplication.</p>
         </div>
         <button type="button" className="tsc-reset" onClick={reset}>
           Reset scale
@@ -604,6 +601,7 @@ export default function TypeScale({ onCopy, toast }) {
             The interval name is a fact about music; this line is the one that
             answers "should I pick this one?", so it rides with the range. */}
         <p className="tsc-scale-out" aria-live="polite">
+          <span className="tsc-scale-eq" aria-hidden="true">=</span>
           <strong>{steps.length} step{steps.length === 1 ? '' : 's'}</strong>
           <span className="tsc-scale-range">
             {steps[steps.length - 1].px}px – {steps[0].px}px
@@ -635,6 +633,279 @@ export default function TypeScale({ onCopy, toast }) {
       )}
 
       <div className="tsc-grid">
+        {/* ── The ladder leads, at every width ────────────────────────────
+            THIS SECTION MOVED ABOVE THE RAIL IN THE DOM, and the media query
+            that used to reorder the two columns at 1344px+ went with it.
+
+            The old order was rail-then-ladder, which #327 chose for a good
+            reason: the rail held every input the tool had, and below 1344px the
+            page is a single 940px column, so putting the inputs second meant
+            adjusting a ratio while the ladder it changed was off screen.
+
+            That reason has gone. The base and the ratio are in the scale bar
+            above this grid now, adjacent to the ladder at every width, so what
+            is left in the rail is the two families and a closed disclosure —
+            about 330px of secondary controls that were standing between the
+            scale bar and the thing the scale bar describes on every screen
+            narrower than 1344px. A tool for reading a scale should open on the
+            scale.
+
+            With the DOM in this order the 1344px grid needs no reorder at all:
+            `.tsc-grid` is `1fr 340px`, so the ladder takes the wide column and
+            the rail the narrow one by source order. Two fewer rules, and the
+            numbering they existed to keep honest is gone anyway. */}
+        <section className="card tsc-panel tsc-output" aria-labelledby="tsc-output-title">
+          {/* THE 01 / 02 / 03 BADGES ARE GONE FROM ALL THREE PANELS.
+              ──────────────────────────────────────────────────────────────
+              They were `.tsc-section-num`: a 30x24px mono numeral in a
+              brand-tinted box with its own border, one per panel head. Two
+              things were wrong with them, and only the second is a look.
+
+              THEY READ RIGHT TO LEFT. Measured at 1440x1000 before this
+              change: "01 Tune the scale" had its box at x=1079 and "02 Read the
+              scale" at x=71, both on the same line at y=494. #327 introduced
+              the numbers to fix a DOM-order problem and reordered the DOM so
+              they would read 01-02-03; the two-column grid at 1344px+ then puts
+              the rail on the right, so on the widest screens the sequence runs
+              backwards. A numbered sequence that has to be read against the
+              reading direction is worse than no numbering.
+
+              AND THEY WERE DECORATION DOING HIERARCHY'S JOB. Three panels, one
+              of them nested INSIDE another (03 lived in 02's card), given rank
+              by a coloured numeral rather than by size, position or weight —
+              which is the motif the anti-slop bar names as "decoration that
+              pretends to be product proof". MagicPath's design-system editor on
+              Mobbin (mobbin.com/screens/8284a8ac-b530-4b95-8d12-ba78a1a905fb)
+              titles the equivalent block with a plain small-caps "TYPE SCALE"
+              and nothing else, and its hierarchy is legible without it.
+
+              The width switch moves up onto the title line because it belongs
+              to the ladder rather than to the page: it says which end of the
+              scale you are reading. */}
+          <div className="tsc-ladder-head">
+            <div>
+              <h2 id="tsc-output-title">Read the scale</h2>
+              <p>Every step at its real size, weight and tracking. Select one to copy its declaration.</p>
+            </div>
+            <div className="tsc-width-switch" role="group" aria-label="Preview width">
+              {WIDTHS.map(w => (
+                <button
+                  key={w.id}
+                  type="button"
+                  className={width === w.id ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
+                  aria-pressed={width === w.id}
+                  onClick={() => setWidth(w.id)}
+                >
+                  {w.label}{w.px ? ` · ${w.px}px` : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* YOUR WORDS, NOT OURS. "Is this step usable?" is a question about
+              the content that will sit at that size, and a pangram cannot
+              answer it for a nav label, a price or a German compound noun.
+              Font Pair has had this control since it shipped, and so has the
+              homepage Typography panel that mirrors this tool — this page, the
+              one whose only job is judging sizes, was the exception.
+
+              It is one input for the whole page: the ladder below and the
+              article heading further down both read it, because they are two
+              views of one decision. Empty falls back to the pangram, which is
+              why the placeholder IS the pangram rather than a description of
+              it. */}
+          <div className="tsc-sample-row">
+            <label className="seg-label" htmlFor="tsc-sample">Preview text</label>
+            <input
+              id="tsc-sample"
+              type="text"
+              className="tsc-sample-input"
+              value={sample}
+              maxLength={60}
+              placeholder={PANGRAM}
+              autoComplete="off"
+              onChange={e => setSample(e.target.value)}
+            />
+          </div>
+
+          <div
+            className={activeWidth.px ? 'tsc-ladder tsc-ladder--clamped' : 'tsc-ladder'}
+            ref={varsRef({ ...previewVars, '--tsc-w': activeWidth.px ? `${activeWidth.px}px` : '100%' })}
+          >
+            {previewIsFitted && (
+              <p className="tsc-fit-note" role="status">
+                Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
+              </p>
+            )}
+            {steps.map(s => (
+              <button
+                key={s.name}
+                type="button"
+                className="tsc-row"
+                onClick={() => onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)}
+                aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
+              >
+                <span className="tsc-row-meta">
+                  <span className="tsc-row-name">--text-{s.name}</span>
+                  {/* The size AT THE PREVIEWED WIDTH, not the desktop size. The
+                      old readout always said the desktop figure even while the
+                      Mobile preview was selected, which is what made the
+                      breakpoint control look decorative. The mobile→desktop
+                      range sits underneath so both ends stay visible. */}
+                  <span className="tsc-row-num">{s.previewPx}px · {trim(+(s.previewPx / 16).toFixed(4))}rem</span>
+                  <span className="tsc-row-sub">
+                    {s.mobilePx !== s.px ? `${s.mobilePx} → ${s.px}px · ` : ''}{s.weight} · {s.lineHeight}px line
+                  </span>
+                </span>
+                <span
+                  className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
+                  ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
+                >
+                  {specimen}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="tsc-delivery">
+            <div className="tsc-delivery-head">
+              <div>
+                <h2>{audience === 'designer' ? 'Evaluate the hierarchy' : 'Prepare the handoff'}</h2>
+                <p>
+                  {audience === 'designer'
+                    ? 'The same scale, laid out as a page — check the jumps actually read.'
+                    : `${steps.length} sizes plus leading, tracking and both families, ready to paste.`}
+                </p>
+              </div>
+              {/* Now the ONLY control for `audience`, and a real tablist: it
+                  sits immediately above the tabpanel it switches, so the
+                  arrow-key and roving-tabindex contract it advertises actually
+                  lands somewhere the user can see. */}
+              <div className="tsc-view-switch" role="tablist" aria-label="Output view">
+                <button
+                  type="button"
+                  role="tab"
+                  id="tsc-tab-designer"
+                  aria-selected={audience === 'designer'}
+                  aria-controls="tsc-audience-panel"
+                  tabIndex={audience === 'designer' ? 0 : -1}
+                  className={audience === 'designer' ? 'tsc-view-btn tsc-view-btn--on' : 'tsc-view-btn'}
+                  onClick={() => setAudience('designer')}
+                  onKeyDown={handleAudienceKeyDown}
+                >
+                  Design preview
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="tsc-tab-developer"
+                  aria-selected={audience === 'developer'}
+                  aria-controls="tsc-audience-panel"
+                  tabIndex={audience === 'developer' ? 0 : -1}
+                  className={audience === 'developer' ? 'tsc-view-btn tsc-view-btn--on' : 'tsc-view-btn'}
+                  onClick={() => setAudience('developer')}
+                  onKeyDown={handleAudienceKeyDown}
+                >
+                  Developer handoff
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="tsc-audience-panel"
+              role="tabpanel"
+              aria-labelledby={audience === 'designer' ? 'tsc-tab-designer' : 'tsc-tab-developer'}
+            >
+              {audience === 'designer' ? (
+                <article className="tsc-article" ref={varsRef(previewVars)}>
+                  {/* The eyebrow said "Article preview" directly beneath a tab
+                      that says "Design preview", above an article. Three labels
+                      for one thing.
+
+                      The heading said "A scale you can defend in a review",
+                      which is the product arguing for itself inside its own
+                      specimen — the anti-slop bar's "headings that sound
+                      polished but do not help the user predict the product".
+                      What replaces it is what the block is, and it takes the
+                      typed preview text when there is any, exactly as the
+                      ladder does. */}
+                  <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.px || steps[0].px, { max: 72 })}px` })}>
+                    {sample.trim() || 'A page set on this scale'}
+                  </h3>
+                  <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.px || base, { max: 28 })}px` })}>
+                    Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
+                    hand-picked, so the rhythm holds when the page grows.
+                  </p>
+                  <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.px || base, { max: 48 })}px` })}>
+                    Where the jumps matter
+                  </h4>
+                  <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(base, { max: 24 })}px` })}>
+                    A ratio that looks elegant in isolation can flatten a page: if the step between
+                    body copy and a subheading is too small, the hierarchy stops doing its job.
+                  </p>
+                  <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.px || base, { max: 18 })}px` })}>
+                    Captions and helper text live down here — check they are still comfortably legible.
+                  </p>
+                </article>
+              ) : (
+                <div className="tsc-developer-view">
+                  <div className="tsc-code-meta">
+                    <div>
+                      <span className="seg-label">Export format</span>
+                      <div className="tsc-fmt" role="group" aria-label="Export format">
+                        {[['css', 'CSS variables'], ['tailwind', 'Tailwind'], ['scss', 'SCSS']].map(([id, label]) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className={format === id ? 'tsc-fmt-btn tsc-fmt-btn--on' : 'tsc-fmt-btn'}
+                            aria-pressed={format === id}
+                            onClick={() => setFormat(id)}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="tsc-code-actions">
+                      {importUrl && (
+                        <button type="button" className="tsc-copy-all" onClick={() => onCopy?.(importUrl)}>
+                          Copy font import
+                        </button>
+                      )}
+                      <button type="button" className="tsc-copy-primary" onClick={() => onCopy?.(currentExport)}>
+                        Copy {format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'}
+                      </button>
+                    </div>
+                  </div>
+                  <pre id="tsc-export" className="tsc-export" tabIndex="0"><code>{currentExport}</code></pre>
+                </div>
+              )}
+            </div>
+
+            {/* OUTSIDE the audience tabpanel on purpose. The panel swaps its
+                whole subtree on the designer/developer toggle, so a save
+                control placed inside would exist for one audience and vanish
+                for the other — and would mount twice in the tree if it were
+                added to both branches. Keeping is not a developer concern.
+
+                Founder decision 2026-09-05: browsing is free, saving is Pro.
+                Every control above this line — the ratio, the steps, the
+                preview, Copy CSS/Tailwind/SCSS and Copy font import — works
+                signed out and stays that way. */}
+            <div className="tsc-keep">
+              <SaveTypeSystem
+                gate="type-save-type-scale"
+                label="this type scale"
+                summary={`${trim(base)}px base on a ${trim(ratio, 3)} ratio, ${headingName} and ${bodyName}.`}
+                toast={toast}
+              />
+              <p className="tsc-keep-note">
+                Keeps the scale and both families with the project’s palette and tokens.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* ── The rail ──────────────────────────────────────────────────────
             THIRTEEN LABELLED CONTROLS USED TO STAND HERE AT ONE WEIGHT.
             Measured before this change: a 340x1592px column holding, in order,
@@ -944,259 +1215,6 @@ export default function TypeScale({ onCopy, toast }) {
               An unrounded modular scale produces values like 40.96px. Rounding is a
               decision — make it here rather than in the stylesheet.
             </p>
-          </div>
-        </section>
-
-        {/* ── Scale + delivery ── */}
-        <section className="card tsc-panel tsc-output" aria-labelledby="tsc-output-title">
-          {/* THE 01 / 02 / 03 BADGES ARE GONE FROM ALL THREE PANELS.
-              ──────────────────────────────────────────────────────────────
-              They were `.tsc-section-num`: a 30x24px mono numeral in a
-              brand-tinted box with its own border, one per panel head. Two
-              things were wrong with them, and only the second is a look.
-
-              THEY READ RIGHT TO LEFT. Measured at 1440x1000 before this
-              change: "01 Tune the scale" had its box at x=1079 and "02 Read the
-              scale" at x=71, both on the same line at y=494. #327 introduced
-              the numbers to fix a DOM-order problem and reordered the DOM so
-              they would read 01-02-03; the two-column grid at 1344px+ then puts
-              the rail on the right, so on the widest screens the sequence runs
-              backwards. A numbered sequence that has to be read against the
-              reading direction is worse than no numbering.
-
-              AND THEY WERE DECORATION DOING HIERARCHY'S JOB. Three panels, one
-              of them nested INSIDE another (03 lived in 02's card), given rank
-              by a coloured numeral rather than by size, position or weight —
-              which is the motif the anti-slop bar names as "decoration that
-              pretends to be product proof". MagicPath's design-system editor on
-              Mobbin (mobbin.com/screens/8284a8ac-b530-4b95-8d12-ba78a1a905fb)
-              titles the equivalent block with a plain small-caps "TYPE SCALE"
-              and nothing else, and its hierarchy is legible without it.
-
-              The width switch moves up onto the title line because it belongs
-              to the ladder rather than to the page: it says which end of the
-              scale you are reading. */}
-          <div className="tsc-ladder-head">
-            <div>
-              <h2 id="tsc-output-title">Read the scale</h2>
-              <p>Every step at its real size, weight and tracking. Select one to copy its declaration.</p>
-            </div>
-            <div className="tsc-width-switch" role="group" aria-label="Preview width">
-              {WIDTHS.map(w => (
-                <button
-                  key={w.id}
-                  type="button"
-                  className={width === w.id ? 'tsc-width-btn tsc-width-btn--on' : 'tsc-width-btn'}
-                  aria-pressed={width === w.id}
-                  onClick={() => setWidth(w.id)}
-                >
-                  {w.label}{w.px ? ` · ${w.px}px` : ''}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* YOUR WORDS, NOT OURS. "Is this step usable?" is a question about
-              the content that will sit at that size, and a pangram cannot
-              answer it for a nav label, a price or a German compound noun.
-              Font Pair has had this control since it shipped, and so has the
-              homepage Typography panel that mirrors this tool — this page, the
-              one whose only job is judging sizes, was the exception.
-
-              It is one input for the whole page: the ladder below and the
-              article heading further down both read it, because they are two
-              views of one decision. Empty falls back to the pangram, which is
-              why the placeholder IS the pangram rather than a description of
-              it. */}
-          <div className="tsc-sample-row">
-            <label className="seg-label" htmlFor="tsc-sample">Preview text</label>
-            <input
-              id="tsc-sample"
-              type="text"
-              className="tsc-sample-input"
-              value={sample}
-              maxLength={60}
-              placeholder={PANGRAM}
-              autoComplete="off"
-              onChange={e => setSample(e.target.value)}
-            />
-          </div>
-
-          <div
-            className={activeWidth.px ? 'tsc-ladder tsc-ladder--clamped' : 'tsc-ladder'}
-            ref={varsRef({ ...previewVars, '--tsc-w': activeWidth.px ? `${activeWidth.px}px` : '100%' })}
-          >
-            {previewIsFitted && (
-              <p className="tsc-fit-note" role="status">
-                Preview sizes are fitted between 8px and 96px to keep the preview usable. Labels and exports retain the exact scale.
-              </p>
-            )}
-            {steps.map(s => (
-              <button
-                key={s.name}
-                type="button"
-                className="tsc-row"
-                onClick={() => onCopy?.(`font-size: ${fluid ? s.css : `${trim(s.rem)}rem`};${fluid ? ` /* ${s.mobilePx}px → ${s.px}px */` : ` /* ${s.px}px */`}\nline-height: ${trim(lineHeight, 3)};\nletter-spacing: ${trim(s.track, 3)}em;`)}
-                aria-label={`Copy the ${s.name} step — ${s.mobilePx} pixels on mobile, ${s.px} pixels on desktop`}
-              >
-                <span className="tsc-row-meta">
-                  <span className="tsc-row-name">--text-{s.name}</span>
-                  {/* The size AT THE PREVIEWED WIDTH, not the desktop size. The
-                      old readout always said the desktop figure even while the
-                      Mobile preview was selected, which is what made the
-                      breakpoint control look decorative. The mobile→desktop
-                      range sits underneath so both ends stay visible. */}
-                  <span className="tsc-row-num">{s.previewPx}px · {trim(+(s.previewPx / 16).toFixed(4))}rem</span>
-                  <span className="tsc-row-sub">
-                    {s.mobilePx !== s.px ? `${s.mobilePx} → ${s.px}px · ` : ''}{s.weight} · {s.lineHeight}px line
-                  </span>
-                </span>
-                <span
-                  className={s.role === 'heading' ? 'tsc-row-text tsc-row-text--heading' : 'tsc-row-text'}
-                  ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(s.previewPx)}px` })}
-                >
-                  {specimen}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="tsc-delivery">
-            <div className="tsc-delivery-head">
-              <div>
-                <h2>{audience === 'designer' ? 'Evaluate the hierarchy' : 'Prepare the handoff'}</h2>
-                <p>
-                  {audience === 'designer'
-                    ? 'The same scale, laid out as a page — check the jumps actually read.'
-                    : `${steps.length} sizes plus leading, tracking and both families, ready to paste.`}
-                </p>
-              </div>
-              {/* Now the ONLY control for `audience`, and a real tablist: it
-                  sits immediately above the tabpanel it switches, so the
-                  arrow-key and roving-tabindex contract it advertises actually
-                  lands somewhere the user can see. */}
-              <div className="tsc-view-switch" role="tablist" aria-label="Output view">
-                <button
-                  type="button"
-                  role="tab"
-                  id="tsc-tab-designer"
-                  aria-selected={audience === 'designer'}
-                  aria-controls="tsc-audience-panel"
-                  tabIndex={audience === 'designer' ? 0 : -1}
-                  className={audience === 'designer' ? 'tsc-view-btn tsc-view-btn--on' : 'tsc-view-btn'}
-                  onClick={() => setAudience('designer')}
-                  onKeyDown={handleAudienceKeyDown}
-                >
-                  Design preview
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  id="tsc-tab-developer"
-                  aria-selected={audience === 'developer'}
-                  aria-controls="tsc-audience-panel"
-                  tabIndex={audience === 'developer' ? 0 : -1}
-                  className={audience === 'developer' ? 'tsc-view-btn tsc-view-btn--on' : 'tsc-view-btn'}
-                  onClick={() => setAudience('developer')}
-                  onKeyDown={handleAudienceKeyDown}
-                >
-                  Developer handoff
-                </button>
-              </div>
-            </div>
-
-            <div
-              id="tsc-audience-panel"
-              role="tabpanel"
-              aria-labelledby={audience === 'designer' ? 'tsc-tab-designer' : 'tsc-tab-developer'}
-            >
-              {audience === 'designer' ? (
-                <article className="tsc-article" ref={varsRef(previewVars)}>
-                  {/* The eyebrow said "Article preview" directly beneath a tab
-                      that says "Design preview", above an article. Three labels
-                      for one thing.
-
-                      The heading said "A scale you can defend in a review",
-                      which is the product arguing for itself inside its own
-                      specimen — the anti-slop bar's "headings that sound
-                      polished but do not help the user predict the product".
-                      What replaces it is what the block is, and it takes the
-                      typed preview text when there is any, exactly as the
-                      ladder does. */}
-                  <h3 className="tsc-article-h1" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === Math.min(up, 4))?.px || steps[0].px, { max: 72 })}px` })}>
-                    {sample.trim() || 'A page set on this scale'}
-                  </h3>
-                  <p className="tsc-article-lede" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 1)?.px || base, { max: 28 })}px` })}>
-                    Every size below comes from {base}px multiplied by {trim(ratio, 3)}. Nothing is
-                    hand-picked, so the rhythm holds when the page grows.
-                  </p>
-                  <h4 className="tsc-article-h2" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === 2)?.px || base, { max: 48 })}px` })}>
-                    Where the jumps matter
-                  </h4>
-                  <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(base, { max: 24 })}px` })}>
-                    A ratio that looks elegant in isolation can flatten a page: if the step between
-                    body copy and a subheading is too small, the hierarchy stops doing its job.
-                  </p>
-                  <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.px || base, { max: 18 })}px` })}>
-                    Captions and helper text live down here — check they are still comfortably legible.
-                  </p>
-                </article>
-              ) : (
-                <div className="tsc-developer-view">
-                  <div className="tsc-code-meta">
-                    <div>
-                      <span className="seg-label">Export format</span>
-                      <div className="tsc-fmt" role="group" aria-label="Export format">
-                        {[['css', 'CSS variables'], ['tailwind', 'Tailwind'], ['scss', 'SCSS']].map(([id, label]) => (
-                          <button
-                            key={id}
-                            type="button"
-                            className={format === id ? 'tsc-fmt-btn tsc-fmt-btn--on' : 'tsc-fmt-btn'}
-                            aria-pressed={format === id}
-                            onClick={() => setFormat(id)}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="tsc-code-actions">
-                      {importUrl && (
-                        <button type="button" className="tsc-copy-all" onClick={() => onCopy?.(importUrl)}>
-                          Copy font import
-                        </button>
-                      )}
-                      <button type="button" className="tsc-copy-primary" onClick={() => onCopy?.(currentExport)}>
-                        Copy {format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'}
-                      </button>
-                    </div>
-                  </div>
-                  <pre id="tsc-export" className="tsc-export" tabIndex="0"><code>{currentExport}</code></pre>
-                </div>
-              )}
-            </div>
-
-            {/* OUTSIDE the audience tabpanel on purpose. The panel swaps its
-                whole subtree on the designer/developer toggle, so a save
-                control placed inside would exist for one audience and vanish
-                for the other — and would mount twice in the tree if it were
-                added to both branches. Keeping is not a developer concern.
-
-                Founder decision 2026-09-05: browsing is free, saving is Pro.
-                Every control above this line — the ratio, the steps, the
-                preview, Copy CSS/Tailwind/SCSS and Copy font import — works
-                signed out and stays that way. */}
-            <div className="tsc-keep">
-              <SaveTypeSystem
-                gate="type-save-type-scale"
-                label="this type scale"
-                summary={`${trim(base)}px base on a ${trim(ratio, 3)} ratio, ${headingName} and ${bodyName}.`}
-                toast={toast}
-              />
-              <p className="tsc-keep-note">
-                Keeps the scale and both families with the project’s palette and tokens.
-              </p>
-            </div>
           </div>
         </section>
       </div>
