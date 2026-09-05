@@ -11257,28 +11257,34 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .drh-head h2{margin:0;font-family:var(--display);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
 .drh-head p{margin:0;font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
 @media(max-width:720px){
-  /* min-height 0 now, and the long argument that used to live here is
-     obsolete rather than wrong. #331 spent it working out a floor that would
-     not leave dead black above the copy once .dgh-mark was hidden on a phone.
-     .dgh-mark no longer exists at ANY width (#surface-headers-read-as-ai), so
-     the copy is the tallest thing in the box everywhere and there is nothing
-     left for a floor to hold open. Kept for the record: this block hid .dgh-mark,
+  /* min-height 280, NOT 300 and NOT 0 (#surface-headers-read-as-ai).
+     #331 worked this floor out at 300 against a copy block that still carried
+     an eyebrow. Removing the eyebrow took ~38px out of that copy, so 300 would
+     now leave ~88px of dead black at 641 - past the 72px its sibling test
+     allows. Dropping the floor entirely goes wrong the other way: the masthead
+     collapses onto its copy at 211px, which the guard below this one catches.
+     280 satisfies both ends - about 2px of dead space at 641, and still a slab
+     rather than a bare heading. Both numbers are asserted in
+     tests/user-sim/40-gallery-hero.spec.js; if you change the type scale here,
+     re-measure against both rather than either.
+     Kept for the record: this block hid .dgh-mark,
      the 92px serif numeral the 390px desktop floor was sized around, and then
      raised the floor by 40px anyway. So the layout with LESS in it got a TALLER
      box, and the difference was dead black above the copy — measured 125px at
      390, 163px at 480 and 180px at 641, where it was 42% of the whole hero. The
      radial glow got pushed out of frame with it, so the one decorative gesture
      the masthead has was invisible on a phone.
-     300 is the floor that still binds where the copy is shortest (252px of
-     content at 641) and stays out of the way where it is longest (307px at 390).
-     If you change the type scale here, re-measure both ends.
+     300 was the floor that bound where the copy was shortest (252px of content
+     at 641) and stayed out of the way where it was longest (307px at 390) -
+     with the eyebrow still in the box. See the top of this comment for why it
+     is 280 now.
      NOT A DEFECT, checked and recorded so it is not re-reported: .dgh-hero
      reports scrollWidth - clientWidth of 36px at 390 and 61px at 641, scaling
      with the viewport. That is ::before, whose `inset:auto -10% -65% 42%` puts
      the glow 10% past the right edge ON PURPOSE, where `overflow:hidden` on the
      same element clips it. Suppress ::before and the figure is exactly 0 at
      every width; the document itself never scrolls horizontally. */
-  .dgh-hero{grid-template-columns:1fr;min-height:0;border-radius:20px}
+  .dgh-hero{grid-template-columns:1fr;min-height:280px;border-radius:20px}
   /* The mark is dropped here; the aside is NOT. It carries the only route to
      the other library, so it stacks under the copy instead of disappearing, and
      that stacked aside already gives the box more height than the floor above
