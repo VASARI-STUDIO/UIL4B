@@ -154,22 +154,11 @@ test.describe('public UI quality release', () => {
     }
   })
 
-  test('Discover and Learn map blips keep a 24px target around the compact visual dot', async ({ page }) => {
-    watch(page, 'touch user exploring public community proof')
-    await page.setViewportSize({ width: 390, height: 844 })
-    for (const route of ['/discover', '/learn']) {
-      await go(page, route)
-      const blips = page.locator('.wmap-blip:not(.is-home)')
-      await expect(blips.first()).toBeVisible()
-      const sizes = await blips.evaluateAll((buttons) => buttons.map((button) => {
-        const target = button.getBoundingClientRect()
-        const dot = button.querySelector('.wmap-blip-dot').getBoundingClientRect()
-        return { targetW: target.width, targetH: target.height, dotW: dot.width, dotH: dot.height }
-      }))
-      expect(sizes.every(({ targetW, targetH }) => targetW >= 24 && targetH >= 24)).toBe(true)
-      expect(sizes.every(({ dotW, dotH }) => dotW <= 11 && dotH <= 11)).toBe(true)
-    }
-  })
+  // The "Discover and Learn map blips keep a 24px target" test lived here.
+  // The decorative world map it measured was deleted from /discover and
+  // /learn when those landings were compressed to a value proposition and
+  // their links (see the header comment in SurfaceLanding.jsx), and
+  // src/components/WorldMap.jsx went with it. There is no blip left to size.
 
   test('compact footer stays contained and exposes Plans on a narrow tool route', async ({ page }) => {
     watch(page, 'mobile visitor checking plans after using a tool')
