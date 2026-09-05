@@ -13131,9 +13131,13 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   overflow-wrap:anywhere}
 .cur-row-aside .cur-host{margin:0}
 
-.cur-link{color:var(--t0);text-decoration:none;border-bottom:1px solid color-mix(in srgb,currentColor 32%,transparent)}
+.cur-link{color:var(--t0);text-decoration:none;border-radius:2px;
+  border-bottom:1px solid color-mix(in srgb,currentColor 32%,transparent)}
 .cur-link:hover{color:var(--cur-c,var(--accent));border-bottom-color:currentColor}
-.cur-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+/* The radius sits on the element at rest so the focus outline traces the shape
+   the control actually has — a radius introduced by :focus-visible changes the
+   geometry at the moment the ring appears. */
+.cur-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 /* Resting, not hover-only: founder direction 2026-09-02 rules out hover-only
    affordances on touch, and this arrow is how an outbound link says it leaves. */
 .cur-ext{display:inline-block;margin-left:3px;font-size:.82em;color:var(--t3);vertical-align:baseline}
@@ -13141,7 +13145,7 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 /* Free / Paid. The only metric on the page, and it is a fact from the record
    rather than a count nobody has generated yet. */
 .cur-tag{flex-shrink:0;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;
-  letter-spacing:.03em;text-transform:uppercase;color:var(--ok);
+  letter-spacing:.03em;text-transform:uppercase;color:var(--ok-strong);
   background:color-mix(in srgb,var(--ok) 13%,transparent)}
 .cur-tag--paid{color:var(--t2);background:color-mix(in srgb,var(--t2) 12%,transparent)}
 
@@ -13151,9 +13155,10 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 
 /* The in-product hand-off on a compact row. A link, not a button: it is a
    navigation, and it must not out-weigh the lead item's real button. */
-.cur-go{font-size:12px;font-weight:650;color:var(--accent);text-decoration:none;white-space:nowrap}
+.cur-go{font-size:12px;font-weight:650;color:var(--accent);text-decoration:none;
+  white-space:nowrap;border-radius:2px}
 .cur-go:hover{text-decoration:underline}
-.cur-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.cur-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* The real sample swatches a palette resource carries in its own record.
    Rendered only where they exist (3 of 22) — a strip under a resource with no
