@@ -275,6 +275,77 @@ test.describe('Home mini-builder · Continue in Palette Builder', () => {
 
     // …and Continue actually continued.
     expect(await page.locator('.plb-hex').allInnerTexts()).toEqual(handedOver)
+
+    // THE POSITIVE CONTROL for the modified-click test below. That test asserts
+    // the board did NOT come from the hand-off, which would also be true if the
+    // hand-off had simply stopped working, or if the attribute never read
+    // `handoff` at all. This is the half that says the instrument responds:
+    // when a hand-off really happens, the board says so.
+    await expect(page.locator('.plb')).toHaveAttribute('data-board-source', 'handoff')
+  })
+
+  /* ── The modified click (palette-opens-with-wrong-state) ──────────────────
+   *
+   * Founder: "somtimes i open the pallete builder and it has added many colours
+   * and its a different swatch."
+   *
+   * React Router's Link calls the caller's onClick UNCONDITIONALLY and only
+   * then asks its own shouldProcessLinkClick whether to navigate — which for a
+   * Ctrl/Cmd/Shift/Alt click, or any non-primary button, is no, because the
+   * browser is opening a new tab instead. The new tab starts a fresh module
+   * instance and correctly finds nothing. THIS tab was left holding a draft
+   * nothing would ever consume, in a slot with no expiry, and it ambushed
+   * whatever visit to /create/palette came next.
+   *
+   * WHY THIS TEST EXISTS SEPARATELY FROM THE UNIT TESTS. tests/unit/
+   * board-handoff.test.js proves `navigatesThisTab` gives the right answer for
+   * every modifier. It cannot prove the homepage ASKS IT — and the defect was
+   * never in the helper, it was in the call site. Reverting
+   * HomeWorkbench.jsx's onClick to its unconditional form left the whole unit
+   * suite green (1190 pass) and 16-founder-batch-2 green (13 passed), which is
+   * the gap this closes.
+   *
+   * TWO THINGS THIS TEST HAS TO GET RIGHT OR IT ASSERTS NOTHING:
+   *   · the second visit must be an IN-APP navigation. A reload starts a fresh
+   *     module instance, which finds no staged draft whether or not the bug is
+   *     present, and the test would pass on the broken build.
+   *   · it must arrive by a DIFFERENT link. Clicking Continue again would stage
+   *     a fresh, legitimate draft and `handoff` would be the correct answer.
+   */
+  test('a click that opens a NEW TAB must not arm the board in THIS one', async ({ page }) => {
+    watch(page, 'visitor ctrl-clicking Continue to keep the homepage open')
+    await go(page, '/')
+    await page.locator('.hw-tab[data-tab="palette"]').click()
+    await expect(page.locator('.hw-board .plb-hex')).toHaveCount(5)
+
+    const cont = page.getByRole('link', { name: /Continue in Palette Builder/ })
+    const [popup] = await Promise.all([
+      page.context().waitForEvent('page'),
+      cont.click({ modifiers: ['ControlOrMeta'] }),
+    ])
+    // The browser opened the link somewhere else, which is what the visitor
+    // asked for and is not the problem.
+    await expect(popup).toHaveURL(/\/create\/palette/)
+    await popup.close()
+    // …and THIS tab did not move, which is the whole setup.
+    await expect(page).not.toHaveURL(/\/create\/palette/)
+
+    // Reach the builder later, by another route, in the same module instance —
+    // the nav, a gallery link or, here, the homepage's own step CTA.
+    const other = page.getByRole('link', { name: /Open Palette Builder/ })
+    await expect(other, 'the second route must not be the Continue link').toHaveClass(/hstep-cta/)
+    await other.click()
+    await page.waitForURL('**/create/palette')
+
+    const board = page.locator('.plb')
+    await expect(board).toBeVisible()
+    // The founder's bug, in one attribute: `handoff` here means this board was
+    // painted from swatches the visitor generated somewhere else, minutes ago,
+    // on a page they never navigated away from.
+    await expect(
+      board,
+      'a draft staged by a click that opened a new tab was delivered to this one',
+    ).not.toHaveAttribute('data-board-source', 'handoff')
   })
 
   test('the hand-off does not fire again when the visitor keeps working', async ({ page }) => {
