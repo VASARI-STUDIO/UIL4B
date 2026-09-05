@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
 import HomeCommandBar from '../components/HomeCommandBar'
+import TryItMark from '../components/TryItMark'
 // TEMPORARY — the hero-direction explorer for `hero-copy-still-reads-ai`.
 // Renders `children` (the shipped hero) unless ?hero=a|b|c is present.
 import HomeHeroDirections from '../components/HomeHeroDirections'
@@ -354,7 +355,14 @@ export default function Home() {
                 bar itself: the `>` prompt says what it is, and the placeholder
                 types real tool names to say what is in it. See HomeCommandBar. */}
             <p className="sr-only" id="home-search-label">Search every tool</p>
-            <HomeCommandBar labelledBy="home-search-label" />
+            {/* The command bar keeps its own max-width and centring; this
+                wrapper exists only to give the drawn mark something to sit
+                beside, so the mark tracks the BAR rather than the hero box and
+                stays attached however the headline above it wraps. */}
+            <div className="tim-anchor">
+              <HomeCommandBar labelledBy="home-search-label" />
+              <TryItMark />
+            </div>
 
             <div className="home-hero-cta">
               {/* ?signup=1 so the popup opens on the sign-up form. A real
@@ -432,6 +440,42 @@ export default function Home() {
               <h2 className="hh2" id="hsteps-title">
                 Five tools. Each one hands your work to the full tool.
               </h2>
+
+              {/* THE HEADING'S OWN CLAIM, SHOWN INSTEAD OF ASSERTED — and NOT a
+                  paragraph, because the paragraph that used to live here was
+                  deleted twice for reading as generated and must not come back
+                  (see the long note above).
+
+                  Founder, 2026-09-05: "use the mobbin MCP to look at sites like
+                  buffer for slight aleration of the hero and intro to tool
+                  section". Buffer's "Here's what you can do with Buffer" screen
+                  is this exact arrangement: the heading on the left, and beside
+                  it the short list of the things the section will walk through,
+                  with the one you are currently on carrying its detail and the
+                  rest reduced to their names.
+                  https://mobbin.com/screens/42990c6e-5536-41b6-b2bb-5332fbe87768
+
+                  Two problems it fixes at once. The heading says there are FIVE
+                  and that they connect, and a reader meeting one sticky panel at
+                  a time can verify neither until they have scrolled the whole
+                  section — this shows the set. And `.hsteps-head` is capped at
+                  720px inside a full-width container, so at 1440px the band was
+                  a short line of type with 740px of nothing beside it.
+
+                  It reads scroll position and nothing else: `activeStep` is the
+                  same index the rail below already uses, so this cannot disagree
+                  with it. aria-hidden because it is a position indicator for a
+                  list that is RIGHT THERE as a semantic <ol>, and because it is
+                  not operable — five labels that highlighted but could not be
+                  clicked would read to a screen reader as a broken tablist. */}
+              <ol className="hsteps-ticks" aria-hidden="true">
+                {STEPS.map((step, index) => (
+                  <li className="hsteps-tick" key={step.tab} data-active={index === activeStep || undefined}>
+                    <span className="hsteps-tick-num">{step.num}</span>
+                    <span className="hsteps-tick-name">{step.kicker}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
 
             <div className="hsteps-grid">
