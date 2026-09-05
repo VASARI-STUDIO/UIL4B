@@ -13017,7 +13017,6 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .plb-galpopup-body .lockt-cta-body{font-size:11.5px}
 .plb-galpopup-body .lockt-cta-btn{width:100%;margin-top:10px}
 
-<<<<<<< HEAD
 /* ── Save a type system (components/SaveTypeSystem.jsx) ──────────────────────
    The typography half of the paywall the colour tools already have. Borrows
    .plb-menu's geometry rather than inventing a second popover language: same
@@ -13060,7 +13059,7 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .svt-wrap{width:100%}
   .svt-trigger{width:100%;justify-content:center}
   .fpr-keep,.tsc-keep{gap:10px}
-=======
+}
 /* ══ Curated Resources (/discover/resources) ═══════════════════════════════
    A hand-picked set is SMALL and has to look edited at that size. So the
    catalogue is hairline-ruled rows, not a card grid: Mobbin's "AI in Design
@@ -13176,5 +13175,4 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .cur-bands{gap:36px}
   .cur-lead{padding:14px}
   .cur-lead-title{font-size:16px}
->>>>>>> c36f5c7 (Build /discover/resources — the curated set the nav already promised)
 }

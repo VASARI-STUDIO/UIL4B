@@ -580,8 +580,14 @@ const PRIORITY_COLOR = { P0: 'var(--err)', P1: 'var(--warn)', P2: 'var(--t2)' }
 // `deferred` is NOT `blocked`: blocked means something unknown is in the way,
 // deferred means the founder decided to wait. They read differently on this
 // board, so they get different colours — deferred is muted, not alarming.
-const TODO_STATUS_COLOR = { todo: 'var(--t3)', doing: 'var(--brand)', review: 'var(--warn)', blocked: 'var(--err)', deferred: 'var(--t2)' }
-const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', blocked: 'Blocked', deferred: 'Deferred' }
+// EVERY status in NEXT_TODO must appear in all three of these, or the item is
+// mis-reported on the founder's own board. `done` (94 items) and `partial` (16)
+// were in none of them: they fell through to the raw lowercase string in the
+// default grey, and neither had a filter button, so 110 of 130 items could not
+// be filtered to at all. tests/unit/pipeline-board-renderable.test.js now fails
+// the build if a status is added to the data and not to these.
+const TODO_STATUS_COLOR = { todo: 'var(--t3)', doing: 'var(--brand)', review: 'var(--warn)', partial: 'var(--accent)', blocked: 'var(--err)', deferred: 'var(--t2)', done: 'var(--ok)' }
+const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', partial: 'Partial', blocked: 'Blocked', deferred: 'Deferred', done: 'Done' }
 
 // Pipeline — the owner's ops view: current app condition, the workstreams
 // moving through the pipeline, and the prioritised next-to-do queue. Renders
@@ -589,7 +595,7 @@ const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', blo
 // tracks each feature module.
 function PipelineBoard() {
   const [todoFilter, setTodoFilter] = useState('all')
-  const todoFilters = ['all', 'doing', 'todo', 'review', 'blocked', 'deferred']
+  const todoFilters = ['all', 'doing', 'todo', 'review', 'partial', 'blocked', 'deferred', 'done']
   const visibleTodos = NEXT_TODO.filter(t => todoFilter === 'all' || t.status === todoFilter)
 
   return (

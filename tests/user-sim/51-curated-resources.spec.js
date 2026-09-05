@@ -28,7 +28,11 @@ const ROUTE = '/discover/resources'
 // VISIBLE element (offsetParent !== null): this app keeps inactive views
 // mounted, so a bare querySelector can return a 0x0 hidden sibling and every
 // measurement taken from it is a confident number about nothing.
-const SURVEY = `() => {
+// An IIFE, not a bare arrow. page.evaluate() given a STRING evaluates it as
+// an EXPRESSION, so `() => {...}` yields a function object, which is not
+// serializable and arrives as undefined — every assertion then reads a
+// property of nothing, which is how all five of these first failed.
+const SURVEY = `(() => {
   const vis = el => el && el.offsetParent !== null
   const all = sel => [...document.querySelectorAll(sel)].filter(vis)
   return {
@@ -40,7 +44,13 @@ const SURVEY = `() => {
     })),
     leads: all('.cur-lead').length,
     rows: all('.cur-row').length,
-    externals: all('a[href^="http"]').map(a => ({
+    // SCOPED TO .cur-wrap DELIBERATELY. Unscoped, this also collects the
+    // AppFooter's "Built in Brisbane by Dylan Coleman" link, which carries
+    // noopener noreferrer and NO nofollow ON PURPOSE — nofollow is for the
+    // curated and member-submitted third-party links, and that one is ours.
+    // Asserting the curated convention over the whole document would either
+    // fail on it or force the wrong rel onto it.
+    externals: all('.cur-wrap a[href^="http"]').map(a => ({
       rel: a.getAttribute('rel'),
       target: a.getAttribute('target'),
       text: a.textContent.trim(),
@@ -49,7 +59,7 @@ const SURVEY = `() => {
     palettes: all('.cur-pal').length,
     overflowX: document.documentElement.scrollWidth > window.innerWidth + 1,
   }
-}`
+})()`
 
 test('the curated library renders its real contents, not an empty shell', async ({ page }) => {
   watch(page, 'curated-resources')
@@ -92,22 +102,36 @@ test('no hand-off lands on a Coming Soon placeholder', async ({ page }) => {
   await go(page, ROUTE)
 
   const { handoffs } = await page.evaluate(SURVEY)
-  // 13 of 22 resources hand off today. The other nine point only at Component
-  // Designer or Box Shadow, both still `soon`, and must therefore render NO
-  // button at all rather than one that dead-ends. That is the fault this
-  // asserts against — the CTA that looks live and is not.
-  expect(handoffs.length).toBeGreaterThan(0)
+  // EXACTLY 13 of the 22 resources hand off today. The other nine point only at
+  // Component Designer or Box Shadow, both still `soon`, so they must render NO
+  // button rather than one that dead-ends.
+  //
+  // THE EXACT NUMBER IS THE ASSERTION, not `> 0`. A mutation that dropped the
+  // gate and offered `relatedTools[0]` unconditionally SURVIVED the first
+  // version of this test: the count check was toBeGreaterThan(0), which 22
+  // satisfies just as well as 13, and the navigation check below was blind for
+  // a separate reason (see the dead-end detector). 13 vs 22 is the difference
+  // the gate makes, so it is what gets pinned.
+  expect(handoffs.length).toBe(13)
 
   // Follow every distinct destination and prove a real tool is on the other
   // side. A href is not a destination until something has been there.
   const seen = new Set(handoffs.map(h => h.split('?')[0]))
+  expect(seen.size).toBeGreaterThan(0)
   for (const route of seen) {
     await go(page, route)
-    const dead = await page.evaluate(() => {
-      const t = document.body.innerText
-      return /coming soon/i.test(t) || /page not found/i.test(t)
-    })
-    expect(dead, `${route} is offered as a hand-off but renders a placeholder`).toBe(false)
+    const dead = await page.evaluate(() => ({
+      // STRUCTURAL, not a phrase match. The first version looked for "coming
+      // soon" and found it nowhere: CreateTool's SoonState is headed
+      // "<Tool> is still in the workshop.", and the standalone page it mirrors
+      // uses the same .coming-wrap container. Matching the container is what
+      // survives a copy edit; the wording is kept as a second signal.
+      placeholder: !!document.querySelector('.coming-wrap'),
+      workshop: /still in the workshop/i.test(document.body.innerText),
+      notFound: /page not found/i.test(document.body.innerText),
+    }))
+    expect(dead, `${route} is offered as a hand-off but renders a placeholder`)
+      .toEqual({ placeholder: false, workshop: false, notFound: false })
   }
 })
 
