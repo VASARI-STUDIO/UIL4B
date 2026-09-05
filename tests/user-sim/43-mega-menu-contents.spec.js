@@ -33,6 +33,8 @@ import { test, expect } from './base.js'
 import { watch, go } from './helpers.js'
 import { GALLERY_PALETTES } from '../../src/data/paletteGallery.js'
 import { GALLERY_GRADIENTS, gradientCss } from '../../src/data/gradientGallery.js'
+import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
+import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 
 // Derived, never hand-listed. A literal copy of these labels here would be the
 // eighth hand-kept list in a codebase that has spent two PRs deleting the first
@@ -465,20 +467,37 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     }
   })
 
-  test('Learn carries no descriptions at all, because nothing in Learn is built', async ({ page }) => {
+  test('Learn separates the guides that exist from the topics that do not', async ({ page }) => {
     watch(page, 'a visitor checking whether the guides exist yet')
     await go(page, '/')
     await openWithPointer(page, 'Learn')
 
+    // THIS TEST USED TO ASSERT THAT EVERY LEARN ROW WAS SOON, and its own
+    // comment predicted the day that would stop being true: "it is what the
+    // panel should look like until one of them ships -- at which point that row
+    // gets its line back with no edit here, because the rule reads t.soon
+    // rather than a list." Three guides have shipped. The rule did hold; what
+    // changed is the arithmetic, so the assertion is now the SPLIT rather than
+    // the total, which is the property that actually matters: a Soon row must
+    // never become clickable, and a published guide must never be marked Soon.
     const rows = page.locator('#pnav-mega .pnav-tool')
     const total = await rows.count()
     expect(total).toBeGreaterThan(4)
-    // Every Learn tool is Soon, so the rule above empties the whole panel of
-    // prose. That is the honest state, and it is what the panel should look like
-    // until one of them ships -- at which point that row gets its line back with
-    // no edit here, because the rule reads t.soon rather than a list.
+
+    const soonRows = page.locator('#pnav-mega .pnav-tool[data-soon]')
+    await expect(soonRows).toHaveCount(LEARN_GROUPS.filter((g) => g.soon).length)
+
+    for (const article of LEARN_ARTICLES) {
+      const row = page.locator(`#pnav-mega a.pnav-tool[href="/learn/${article.slug}"]`)
+      await expect(row, `${article.slug} is not offered in the Learn menu`).toBeVisible()
+      await expect(row).not.toHaveAttribute('data-soon', 'true')
+      await expect(row).toContainText(article.navLabel)
+    }
+
+    // The description rule is unchanged and still absolute here: a Soon row
+    // never describes what it will do, and the guide rows lead with their
+    // title rather than a second line of prose in a 180px column.
     await expect(page.locator('#pnav-mega .pnav-tool-desc')).toHaveCount(0)
-    await expect(page.locator('#pnav-mega .pnav-tool[data-soon]')).toHaveCount(total)
   })
 
   test('an emptied description does not fall through to the page copy behind it', async ({ page }) => {
