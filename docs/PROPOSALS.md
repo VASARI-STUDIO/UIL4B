@@ -14,8 +14,24 @@ which.
 the record — no other confirmation is needed, and no agent may claim a verdict
 that is not written here.
 
-_Last reviewed: 2026-09-01._
+_Last reviewed: 2026-09-05._
 
+## What is waiting on you, shortest first
+
+| | Question | The answer we would give |
+|---|---|---|
+| **P-023** | Quieter text is now readable everywhere but looks like body text on 19% of palettes. Keep it? | Keep — it shipped, and the alternative is unreadable text |
+| **P-006** | Which hero shape — A, B or C? Look at `/?hero=a`, `?hero=b`, `?hero=c` | No recommendation. Direction C is shown at 45% opacity **on purpose** — judge the shape, not the paleness |
+| P-005, P-008 … P-018 | Ten older questions. None blocks anything today. | See each entry |
+
+**Answered 2026-09-05 and now closed:** P-016 (typography pricing), P-019 (the
+token vocabulary), P-020 (`pepsi`), P-021 (`google`), P-022 (`/community` ink).
+Their verdicts are on each entry and in the Resolved table at the foot of this
+file. **Do not re-ask them.**
+
+The two still open are restated as a to-do list, each with a cost of delay, in
+[`OWNER-ACTIONS.md` §2](OWNER-ACTIONS.md), alongside the one piece of writing
+only the founder can do. **Answering in either file counts.**
 ## How to read an entry
 
 Every proposal carries an **evidence class**, stated honestly:
@@ -79,7 +95,7 @@ Validation Zone — needs founder approval before any route change.
 **What would settle it.** Even a fortnight of captured reports would tell us
 whether the silence is contentment or attrition.
 
-**Verdict:** _(APPROVEvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv)_
+**Verdict:** _(APPROVED)_ — recorded 2026-08-14. The stored line held a stuck-key run of `v`s; normalised 2026-09-05 to match the Resolved table below, which has read APPROVED since the day it was answered.
 
 ---
 
@@ -205,6 +221,13 @@ who does not already know the vocabulary.
 The anti-slop pass recommends **A**. This is one call and it sets the tone of the
 whole page, which is why it is here rather than decided.
 
+> **Read the hero-shape question first.** #290 rewrote the words inside the
+> current hero against the anti-slop bar and the founder’s complaint survived it,
+> so the words are not the variable — the shape is. Three shapes are live at
+> `/?hero=a|b|c` ([`OWNER-ACTIONS.md` §2.1](OWNER-ACTIONS.md)). **If direction C
+> wins, this proposal is moot**: C’s deliverable is one sentence in the founder’s
+> own words, which is not ours to choose between.
+
 **Verdict:** _(PENDING)_
 
 ---
@@ -310,6 +333,18 @@ visitor meets the argument in.
 > shape being chosen between. Full detail is on each PR as a comment and in
 > `homepage-parked-prs-triage` in `src/data/pipeline.js`. **The text below is
 > the pre-triage framing, kept for its context only.**
+>
+> **CORRECTED 2026-09-04 by #365, which rebased all four rather than estimating.**
+> Three of the conclusions above changed. **#262 is merged** — it was revived,
+> rebased and landed. **#269 is now empty**: its one surviving change shipped as
+> #363, and the PR can be closed. **#264 cannot be rebased at all** — it edits
+> `src/components/TopBar.jsx`, which no longer exists on `main`; re-implement its
+> survivors against `main`, one commit each. And **#270 is NOT gated on the hero
+> choice** — that was the stated reason to wait, and it is wrong. Measured at
+> 1440×900, direction A leaves 183.9px of empty flow, B 256.6px and C 253.2px
+> against a band budget of 96–144px, so the specimen band fits in all three, on
+> desktop and on phone. It should still be *designed into* the chosen shape
+> rather than bolted on, but that is a preference, not a blocker.
 
 **Evidence: `observed`** — founder instruction, 2026-08-20.
 
@@ -347,7 +382,9 @@ longer exists. Recapture them, or accept them as an archive and say so.
 
 ## P-014 · Icon-grid density — long icon names truncate at every width
 
-**Evidence: `measured`** — `docs/qa/responsive-audit-2026-08.md` N5.
+**Evidence: `measured`** — the August 2026 responsive audit, finding N5. That
+audit was deleted on 2026-09-05; the finding survives in
+`docs/qa/defect-register-2026-08.md`.
 
 On `/create/icons`, `align-center-horizontal` needs 117px against a 79px cell;
 **51–75 labels are truncated at any given width**, from 320px to 1920px. The
@@ -396,7 +433,16 @@ typography is currently all door and no room. **No gate can be built until this
 is answered**, and note the P-003 lesson: whatever is gated must be visible and
 named, because a silent collapse reads as broken.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(ANSWERED 2026-09-05 — **browsing is free, saving is Pro**.)_
+
+Anyone may browse fonts, pair them and build a type scale. **Pro is required to
+save, to export, or to keep a type system in a project.** The founder picked it
+because it is exactly how the colour tools already gate — so it introduces no new
+concept to explain, and it satisfies the P-003 lesson this entry raised: what is
+gated stays visible and named, because a silent collapse reads as broken.
+
+The gate can now be built. `typography-paywall-model` in `src/data/pipeline.js`
+carries the implementation.
 
 ---
 
@@ -438,6 +484,26 @@ current behaviour or change it.
 ---
 
 ## P-019 · What we call design tokens on the site
+
+> **DECIDED 2026-09-05 — the answer is “Styles”.**
+>
+> The founder was shown all three options with the reasoning below and picked
+> **C, “Styles”**. **We had recommended A, “Foundations”; he chose otherwise, and
+> this is his call, not ours.** The evidence below is kept because it is why the
+> question was worth asking — not because the answer is still open.
+>
+> **Rule R holds, and it was never in question:** the word *token* survives only
+> past the export boundary — the export panel, the generated file names, the code
+> blocks, the `@uil4b/tokens` package. Renaming it there would break customers’
+> code for no gain. It comes out of every sales, navigation and tool-heading
+> surface.
+>
+> **Implementation is in flight in a separate pull request.** Do not start a
+> second one. The homepage behaviour contract
+> (`tests/user-sim/10-home-chaos-to-calm.spec.js`) needs its assertion updated
+> deliberately alongside the H1.
+>
+> The evidence and the full working are below.
 
 **Evidence: `observed` + `inferred`** — founder request 2026-09-04, recorded
 verbatim in `token-vocabulary-undersells`; competitor naming checked against 22
@@ -567,6 +633,177 @@ will need its assertion updated deliberately alongside.
 **What would settle it:** your pick of A, B or C. Nothing was rewritten — the
 item asked for options first, and the word choice is the whole decision.
 
+**Verdict:** _(DECIDED 2026-09-05 — **C, “Styles”**.)_ Chosen by the founder over our recommendation of A. Rule R stands: `token` survives past the export boundary only. Implementation in flight in a separate PR.
+
+---
+
+## P-020 · The `pepsi` brand palette cannot be verified — keep, rename, or drop
+
+**Evidence: `measured`** — a full provenance attempt on 2026-09-04, recorded in
+the header of `src/data/brandPalettes.js` and in `brand-palette-provenance`.
+
+**The problem in one line.** We sell a paid palette called **Pepsi** and cannot
+prove the five colours in it are Pepsi's.
+
+**What was actually tried, so nobody repeats it.** Blocked to every fetcher —
+plain curl, agent fetch, and a real headless Chromium with a browser UA:
+`pepsico.com`, `design.pepsico.com`, `contact.pepsico.com`,
+`investor.pepsico.com`, `pepsico.co.uk`, `pepsi.co.uk`, `pepsico.de`,
+`pepsicobeveragefacts.com`. It is an edge WAF, not a user-agent check, so a
+better UA will not fix it. `pepsi.com` answers 400 to curl and geo-redirects a
+real browser to a Facebook page. **Reachable and useful:** `digitalassets.pepsico.com`
+serves 200 — but every asset behind it is the **PepsiCo corporate mark**, not
+the Pepsi cola brand, and PepsiCo refreshed the corporate identity separately in
+2025, so those files answer a different question. PepsiCo's own 2023 announcement
+describes *"electric blue and the black of Pepsi Zero Sugar"* and publishes **no
+hex**. Three PepsiCo portals serve `#0065C3` in their site chrome, which is one
+of this row's current values — **that is a coincidence, not a confirmation**, and
+naming it is the point: a marketing theme is not a logo palette.
+
+The pre-2023 values were therefore **left in place rather than guessed from an
+aggregator**. This is a product call about shipping an unverifiable claim, not a
+data problem — the data work is finished and it failed.
+
+### Three options
+
+- **A — rename it to its era**, e.g. "Cola Blue (pre-2023)" *(recommended)*.
+  Honest, keeps the palette, and stops us asserting anything about today's brand.
+  Costs the same as B.
+- **B — keep it as "Pepsi".** Fastest. We continue selling a claim we cannot
+  substantiate, and it is now knowingly rather than accidentally.
+- **C — delete the row.** Safest. Costs one of 31 paid palettes.
+
+**Cost / risk.** Minutes either way. The naming rule the file already carries —
+*a row named after a company must hold that company's identity colours* — is what
+makes B uncomfortable, and it was written after `material` was found holding
+Material 3's purple under Google's name.
+
+**What would settle it:** your pick of A, B or C. No further research will help;
+the sources are closed.
+
+**Verdict:** _(DECIDED 2026-09-05 — **A, rename it to its era**.)_ Matches the recommendation. The palette stays; the name stops asserting anything about today’s brand. No further provenance work — the sources are closed.
+
+---
+
+## P-021 · `google` left the free tier as a side effect. Intended?
+
+**Evidence: `measured`** — `src/data/brandPalettes.js`, verified 2026-09-05:
+`{ id: 'google', … free: false }`, and no other row is named Google.
+
+**What happened, and it was not a pricing decision.** #354 found the row named
+`google` was holding **Material 3's** default purple rather than Google's
+colours. Correcting that meant splitting it in two: **`material` — "Material 3
+Baseline"** kept the purple and stayed **free**, and a **new `google` row**
+(`#4285F4` `#EA4335` `#FBBC04` `#34A853` `#202124`) was created and marked
+**paid**, alongside the other company brands.
+
+The consequence nobody chose: **the free tier now contains nothing called
+Google.** It is six palettes — Apple, Material 3 Baseline, Netflix, Discord,
+Stripe, Spotify — against 31 paid.
+
+### Two options
+
+- **A — leave it** *(recommended)*. Material 3 Baseline is the better free
+  starting point: it is a whole system a user can build on, not one company's
+  brand identity. And the free tier keeps six recognisable names.
+- **B — make `google` free too**, and move something else across to hold the
+  free/paid balance.
+
+**Cost / risk.** One boolean either way. `tests/unit/free-tier-gates.test.js` and
+`locked-library-tease.test.js` cover the gate, so the change is safe; the
+question is only which side of it Google belongs on.
+
+**What would settle it:** a yes or a no. This is a check, not a defect — A is
+defensible and is what ships today.
+
+**Verdict:** _(DECIDED 2026-09-05 — **B, make `google` free**.)_ **Chosen against our recommendation of A**, and knowingly: the founder was told the free tier already held six palettes. The free tier becomes seven; `material` stays free beside it.
+
+---
+
+## P-022 · `/community` monogram contrast — 9 of 12 tiles fail the floor
+
+**Evidence: `measured`** — WCAG contrast computed over
+`COMMUNITY_DESIGNS` × `.ch-thumb-mono` (`rgba(255,255,255,.92)`) on 2026-09-05.
+
+**The problem in plain words.** Each of the twelve tiles on `/community` shows two
+large letters on a coloured square. On **nine of the twelve** the letters are too
+faint to read. Large text needs **3:1**; the worst tile — "Product & checkout
+flows", `#059669 → #6EE7B7` — measures **1.47:1**. Every failing tile is a light
+or mid-tone gradient with white letters painted on it.
+
+The tiles are the first thing a visitor sees on that page, and it is a page we
+point new visitors at.
+
+### Four options were compared; one wins on the only axis that is measured
+
+| | Option | What it does to the page |
+|---|---|---|
+| **A** | **Per-item ink** — pick black or white per tile *(recommended)* | **No colour changes at all.** Worst case rises from 1.47:1 to **3.69:1**, clear of the floor. But **10 of the 12 monograms flip white → black**, which visibly changes the page. |
+| B | Darken every gradient until white clears 3:1 | Changes the look of all twelve tiles, including the three that already pass |
+| C | Add a scrim behind the letters | A grey wash over every tile, muddying the gradient that is the whole point of the tile |
+| D | Heavier text shadow | A shadow does not create contrast against a mid-tone; it fails the floor and reads as a 2010s treatment |
+
+**A is the only one of the four that changes no colour**, which is why it wins
+despite the visible flip. The flip is the thing to say yes or no to — everything
+else about it is settled.
+
+**Cost / risk.** Small: one derived value, plus a unit test that fails the build
+if a new community row lands below the floor. Risk is aesthetic only.
+
+**What would settle it:** yes or no to the white → black flip on ten tiles.
+
+**Verdict:** _(DECIDED 2026-09-05 — **yes, per-item ink**.)_ Matches the recommendation. Ten of the twelve monograms flip white → black; no colour changes. Needs a test that fails the build if a new community row lands below the floor.
+
+---
+
+## P-023 · Muted text now looks like body text on 19% of palettes — keep it?
+
+**Evidence: `measured`** — 6,000 generated palettes × 2 themes, an sRGB grid
+sweep of 48,778 more, and 840 rendered samples per theme on `/create/palette`.
+Full numbers in `preview-muted-on-surface` in `src/data/pipeline.js`.
+
+**What shipped, and why.** The palette previews paint two levels of text: normal,
+and a quieter second level. The quieter one was **unreadable on most palettes** —
+12,000 of 12,000 samples on the panel ground were under 4.5:1, worst 2.951. #372
+guaranteed both ink roles against **every** ground the engine paints them on. All
+of those are now clear.
+
+**The cost, measured not described.** On a saturated canvas the whole ink budget
+goes on clearing the background, so there is nothing left to build a *second,
+quieter* level out of. Pairs where muted is visually indistinguishable from text
+— under 1.15:1 between the two — went from **3.02%** to **19.10%** of palettes ×
+themes.
+
+**It is not tunable.** Shrinking the dark panel step from 10% to 4% only moves
+the collapse from 16.27% to 12.27%, because the binding ground is the canvas and
+not the panel. A hue-preserving walk that keeps the mix's hue and moves only
+lightness rescues **24 of 1,895** collapses — contrast is a luminance property,
+and no hue at that luminance is far enough from the text colour.
+
+### Three options
+
+- **A — ship as is** *(recommended, and this is what shipped)*. Everything is
+  readable everywhere; on the 19% the hierarchy is carried by size and weight
+  instead of colour.
+- **B — move the canvas colour too**, the way the homepage cards do. Buys the
+  hierarchy back, and shows the user a canvas colour they did not choose.
+- **C — say so in the product**, the way Linear prints *"Contrast has been
+  adjusted"* beside a user-picked colour. Extra build, extra words on screen.
+
+**Why A was taken without asking first.** The alternative was leaving text
+unreadable on most palettes, which is a live accessibility defect rather than a
+preference — so it was taken **by the Director under standing authority** and is
+brought here to be confirmed or reversed rather than to be approved in advance.
+
+**The evidence for A is not taste.** Of eight comparable products checked on
+Mobbin, where the canvas is a saturated user-chosen colour, **Polywork and
+Squarespace both paint secondary copy in the same ink as the heading** and carry
+the hierarchy with size and weight; Mailchimp, GitBook and Gamma keep the canvas
+neutral instead and put the colour in blocks and accents. **Not one of the eight
+paints a low-contrast tint of the ink on a saturated ground.**
+
+**What would settle it:** keep, reverse, or add the on-screen note.
+
 **Verdict:** _(PENDING)_
 
 ---
@@ -579,3 +816,10 @@ item asked for options first, and the word choice is the whole decision.
 | 2026-08-14 | P-002 · Give users somewhere to tell us something is wrong | APPROVED — every report now carries its route, tool and state; no API change needed |
 | 2026-08-14 | P-003 · Decide what the free tier is for | ANSWERED — "a foot in the door". Silent system collapse now names the paid edge; remaining gates still to audit |
 | 2026-08-14 | P-004 · Make Auto the default colour system app-wide | APPROVED — shipped |
+| 2026-09-03 | P-012 · When the four parked homepage PRs resume | ANSWERED by #328 and corrected by #365 — a verdict and a cost per PR, re-measured by rebasing rather than estimating. Open only for the founder’s hero pick |
+| 2026-09-04 | P-007 · Whether to delete the hero stat line | RESOLVED by the Director on `main`, by a third option neither side proposed — the strip is deleted, the numbers kept and attributed |
+| 2026-09-05 | P-016 · What does Pro mean for the typography tools | ANSWERED — browsing is free, saving is Pro. Matches how the colour tools already gate |
+| 2026-09-05 | P-019 · What we call design tokens on the site | DECIDED — **“Styles”** (option C), over our recommendation of “Foundations”. `token` survives past the export boundary only |
+| 2026-09-05 | P-020 · The `pepsi` brand palette cannot be verified | DECIDED — rename it to its era. The palette stays, the claim goes |
+| 2026-09-05 | P-021 · `google` left the free tier as a side effect | DECIDED — **make it free**, against our recommendation, knowing the tier already held six |
+| 2026-09-05 | P-022 · `/community` monogram contrast | DECIDED — yes, per-item ink. Ten of twelve flip white → black, no colour changes |

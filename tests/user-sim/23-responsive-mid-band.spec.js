@@ -1,5 +1,6 @@
 // The 961–1343px band: two layout faults that only exist between the tablet
-// breakpoint and full desktop, from docs/qa/responsive-audit-2026-08.md.
+// breakpoint and full desktop, from the August 2026 responsive audit (B1, M2–M4).
+// That audit was deleted 2026-09-05 — see docs/qa/defect-register-2026-08.md.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THESE ARE RENDERED TESTS AND NOT STYLESHEET GREPS
