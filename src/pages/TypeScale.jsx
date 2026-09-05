@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import FontPicker from '../components/FontPicker'
 import UIKitGuide from '../components/UIKitGuide'
+import SaveTypeSystem from '../components/SaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
@@ -996,6 +997,28 @@ export default function TypeScale({ onCopy, toast }) {
                   <pre id="tsc-export" className="tsc-export" tabIndex="0"><code>{currentExport}</code></pre>
                 </div>
               )}
+            </div>
+
+            {/* OUTSIDE the audience tabpanel on purpose. The panel swaps its
+                whole subtree on the designer/developer toggle, so a save
+                control placed inside would exist for one audience and vanish
+                for the other — and would mount twice in the tree if it were
+                added to both branches. Keeping is not a developer concern.
+
+                Founder decision 2026-09-05: browsing is free, saving is Pro.
+                Every control above this line — the ratio, the steps, the
+                preview, Copy CSS/Tailwind/SCSS and Copy font import — works
+                signed out and stays that way. */}
+            <div className="tsc-keep">
+              <SaveTypeSystem
+                gate="type-save-type-scale"
+                label="this type scale"
+                summary={`${trim(base)}px base on a ${trim(ratio, 3)} ratio, ${headingName} and ${bodyName}.`}
+                toast={toast}
+              />
+              <p className="tsc-keep-note">
+                Keeps the scale and both families with the project’s palette and tokens.
+              </p>
             </div>
           </div>
         </section>
