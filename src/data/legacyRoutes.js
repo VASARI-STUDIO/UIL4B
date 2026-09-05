@@ -99,7 +99,12 @@ export const CREATE_ROUTE_MIGRATION = Object.freeze([
 // a two-hop chain, on the day this landed.
 export const RETIRED_ROUTES = Object.freeze([
   ['/welcome', '/home'],
-  ['/dashboard', '/home'],
+  // Retargeted 2026-09-05. It pointed at /home, the SALES page, which was the
+  // right answer while that was the only home there was. It is the wrong answer
+  // now: signed-in visitors land on the User Home, and somebody who types
+  // /dashboard is asking for a dashboard, not for the page selling them one.
+  // /projects is live and is not itself in this table, so this is a single hop.
+  ['/dashboard', '/projects'],
   ['/color/ui', '/create/color'],
   ['/color-studio', '/create/color'],
   ['/export', '/create/color'],
