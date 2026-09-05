@@ -204,7 +204,11 @@ test.describe('Home mini-builder · Continue in Palette Builder', () => {
     await go(page, '/')
 
     await page.locator('.hw-tab[data-tab="palette"]').click()
-    const swatches = page.locator('.hw-pal-hex')
+    // `.hw-board .plb-hex` since 2026-09-05: the homepage mini renders the
+    // product's own board rather than a bespoke swatch strip. That makes the
+    // hand-off assertion at the end of this test a stronger statement than it
+    // used to be - the SAME selector, reading the SAME values, on both pages.
+    const swatches = page.locator('.hw-board .plb-hex')
     await expect(swatches).toHaveCount(5)
     const handedOver = await swatches.allInnerTexts()
 
@@ -228,7 +232,7 @@ test.describe('Home mini-builder · Continue in Palette Builder', () => {
     watch(page, 'visitor moving between tools after the hand-off')
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="palette"]').click()
-    await expect(page.locator('.hw-pal-hex')).toHaveCount(5)
+    await expect(page.locator('.hw-board .plb-hex')).toHaveCount(5)
     await page.getByRole('link', { name: /Continue in Palette Builder/ }).click()
     await page.waitForURL('**/create/palette')
     await expect(page.locator('.plb-harm')).toContainText('Auto')

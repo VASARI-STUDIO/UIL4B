@@ -420,7 +420,8 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // Everything still operates: the tablist is the authoritative mode control
     // whether or not the scroll sync ever arrives.
     await page.locator('.hw-tab[data-tab="gradient"]').click()
-    await expect(page.locator('.hw-grad-preview')).toBeVisible()
+    // `.ggn-preview` since 2026-09-05 - the canvas is Gradient Generator's own.
+    await expect(page.locator('.hw-ggn .ggn-preview')).toBeVisible()
     await page.locator('.htool-link').first().focus()
     await expect(page.locator('.htool-link').first()).toBeFocused()
 
@@ -819,7 +820,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await page.keyboard.type('20')
     await page.keyboard.press('Tab')
     await expect(baseInput).toHaveValue('20')
-    // Scale ratio is an OPTIONS rail of toggles now, not a select. A click does
+    // Ratio is an OPTIONS rail of toggles, not a select. A click does
     // not imply a value the way selectOption did, so the pressed state — the
     // thing a screen reader is actually told — is asserted explicitly. The
     // contract did not cover that before.
@@ -860,20 +861,28 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await go(page, '/')
 
     // Palette: real generated hex values, locking, and copy that reports truth.
-    const hexes = page.locator('.hw-pal-hex')
+    //
+    // SELECTORS RE-POINTED 2026-09-05, ASSERTIONS UNCHANGED. This panel used to
+    // render a bespoke `.hw-pal` swatch strip; it now renders the product's own
+    // `.plb-board`, so the hex readout is `.plb-hex` (which is also the copy
+    // button - one control, as on the real board) and the lock is
+    // `.plb-tool--key`. Every property checked below is the property that was
+    // checked before: five real hexes, a locked colour survives Generate, and
+    // copy reports only what the clipboard accepted.
+    const hexes = page.locator('.hw-board .plb-hex')
     await expect(hexes).toHaveCount(5)
     const before = await hexes.allInnerTexts()
     expect(before.every((h) => /^#[0-9A-F]{6}$/.test(h))).toBe(true)
 
-    await page.locator('.hw-pal-lock').first().click()
-    await expect(page.locator('.hw-pal-lock').first()).toHaveAttribute('aria-pressed', 'true')
+    await page.locator('.hw-board .plb-tool--key').first().click()
+    await expect(page.locator('.hw-board .plb-tool--key').first()).toHaveAttribute('aria-pressed', 'true')
     await page.getByRole('button', { name: 'Generate' }).click()
     const after = await hexes.allInnerTexts()
     expect(after[0], 'a locked colour survives generate').toBe(before[0])
     expect(after.slice(1).join()).not.toBe(before.slice(1).join())
 
     // Copy announces success without renaming the swatch's control.
-    const copyButton = page.locator('.hw-pal-copy').first()
+    const copyButton = page.locator('.hw-board .plb-hex').first()
     const name = await copyButton.getAttribute('aria-label')
     await copyButton.click()
     await expect(copyButton).toHaveAttribute('aria-label', name)
@@ -881,19 +890,36 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(after[0])
 
     // Gradient: editable stops, a real CSS value, and copy.
+    //
+    // SELECTORS RE-POINTED 2026-09-05, ASSERTIONS UNCHANGED. This panel now
+    // renders Gradient Generator's own inspector - `.ggn-stop` rows, a
+    // `.ggn-dial` angle control, `.ggn-css` for the declaration - so the code
+    // block is `.ggn-css code`, an invalid hex is reported through the tool's
+    // `.ggn-field-error`, and the copy control is the label row's "Copy", named
+    // as the tool names it. `#hw-grad-from` and `#hw-grad-angle` both survive:
+    // the angle id moved from the range input to the number input beside the
+    // dial, which is still the control that takes an exact value, and `fill()`
+    // drives it identically.
     await page.locator('.hw-tab[data-tab="gradient"]').click()
     const startHex = page.locator('#hw-grad-from')
+    const cssBlock = page.locator('.hw-ggn .ggn-css code')
     await startHex.fill('#FF0000')
-    await expect(page.locator('.hw-code')).toContainText('#FF0000')
+    await expect(cssBlock).toContainText('#FF0000')
     await page.locator('#hw-grad-angle').fill('90')
-    await expect(page.locator('.hw-code')).toContainText('linear-gradient(90deg')
+    await expect(cssBlock).toContainText('linear-gradient(90deg')
+
+    // The dial is not decoration beside the number: it is a real slider, and it
+    // has to report the same angle the declaration does. This assertion is NEW -
+    // the control it describes did not exist before - and it is the one that
+    // fails if the dial is ever left painting a fixed hand.
+    await expect(page.locator('.hw-ggn .ggn-dial')).toHaveAttribute('aria-valuenow', '90')
 
     // Invalid input keeps the last valid preview and explains the correction.
     await startHex.fill('not-a-colour')
-    await expect(page.locator('.hw-field-err')).toContainText('#FF0000')
-    await expect(page.locator('.hw-code')).toContainText('#FF0000')
+    await expect(page.locator('.hw-ggn .ggn-field-error')).toContainText('#FF0000')
+    await expect(cssBlock).toContainText('#FF0000')
 
-    await page.getByRole('button', { name: 'Copy CSS' }).click()
+    await page.locator('.hw-ggn .ggn-copy').click()
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('linear-gradient(90deg')
   })
 
@@ -906,7 +932,13 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    const stage = page.locator('.hw-stage .hw-ui')
+    // `.hw-panel .hw-ui`, not `.hw-stage .hw-ui`. 2026-09-05 the artefact of
+    // this mode became the real `.plb-board` and this card moved down into the
+    // controls zone under a "Preview" label - which is the status its
+    // equivalent holds in Palette Builder, where it sits behind a Preview
+    // button in a modal whose later scenes are Pro. Nothing this test asserts
+    // about the card depends on which zone it is in; only the path does.
+    const stage = page.locator('.hw-panel .hw-ui')
     await expect(stage).toBeVisible()
 
     // Decorative and inert: the swatch buttons below carry every value for
@@ -920,7 +952,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // dot at all and the preview implied the palette held an unusable colour,
     // when in fact the preview had taken that colour for its own ground.
     const dotsMatchCard = async () => page.evaluate(() => {
-      const card = document.querySelector('.hw-stage .hw-ui')
+      const card = document.querySelector('.hw-panel .hw-ui')
       const bg = getComputedStyle(card).backgroundColor
       const dots = [...card.querySelectorAll('.hw-ui-dot')]
       return { count: dots.length, clashes: dots.filter((d) => getComputedStyle(d).backgroundColor === bg).length }
@@ -1039,7 +1071,16 @@ test.describe('homepage: eleven tools, five ways of working', () => {
       // The Palette Builder's .plb-pv-cta, .plb-pvb-navcta and
       // .plb-pvb-btn--primary read the same pair through --pv-onprimary; they
       // are fixed by the same engine change and are not re-measured here.
-      const SEL = '.hw-pal-hex, .hw-ui-avatar, .hw-ui-mark, .hw-ui-app, .hw-ui-crumb, '
+      //
+      // `.plb-hex` REPLACED `.hw-pal-hex` 2026-09-05 - the board is the product's
+      // own now, and the hex is the string a visitor copies, which is what the
+      // old selector was defending. It is the only board element measured here,
+      // deliberately: `.plb-name` (opacity .95) and `.plb-role` (opacity .6)
+      // carry their opacity from the SHARED component, so a strict AA gate on
+      // them would fail this build on a property of Palette Builder that has
+      // always shipped and is not this change's to decide. Recorded rather than
+      // quietly dropped - see the report on [home-mini-tools-fidelity].
+      const SEL = '.plb-hex, .hw-ui-avatar, .hw-ui-mark, .hw-ui-app, .hw-ui-crumb, '
         + '.hw-ui-metric-label, .hw-ui-metric-num, .hw-ui-delta, .hw-ui-row-name, '
         + '.hw-ui-row-state, .hw-ui-btn'
       for (const el of document.querySelectorAll(SEL)) {
@@ -1070,19 +1111,23 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // this widening reported exactly that - #8D2046 measured on #948719, two
     // colours from different palettes and 200 degrees of hue apart - which is a
     // torn read, not a contrast bug. The invariant that says the card is settled
-    // is the one the component guarantees: every swatch label sits on its own
-    // hex, because .hw-pal-hex takes labelGround(s.hex) and labelGround moves it
-    // only where an ink demands, never more than a step or two of lightness.
+    // is the one the component guarantees, and on the board that invariant got
+    // STRICTER rather than merely moving. It used to be a tolerance check -
+    // .hw-pal-hex carried its own labelGround() background, so the label and its
+    // ground could only be compared to within a couple of steps of lightness
+    // (`near`, +/-24 per channel). The board paints the column from --plb-c and
+    // prints that same hex in .plb-hex, so the two can be compared for EXACT
+    // equality: a torn read is a column whose custom property and whose printed
+    // value disagree, full stop, with no tolerance to hide inside.
     const settled = async () => expect.poll(async () => page.evaluate(() => {
-      const near = (a, b) => Math.abs(a - b) <= 24
-      return [...document.querySelectorAll('.hw-pal-hex')].every((el) => {
-        const t = (el.textContent || '').trim()
+      const cols = [...document.querySelectorAll('.hw-board .plb-col')]
+      if (cols.length !== 5) return false
+      return cols.every((col) => {
+        const t = (col.querySelector('.plb-hex')?.textContent || '').trim()
         if (!/^#[0-9A-F]{6}$/i.test(t)) return false
-        const want = [1, 3, 5].map((i) => parseInt(t.slice(i, i + 2), 16))
-        const got = (getComputedStyle(el).backgroundColor.match(/\d+/g) || []).map(Number)
-        return got.length >= 3 && want.every((v, i) => near(v, got[i]))
+        return col.style.getPropertyValue('--plb-c').trim().toUpperCase() === t.toUpperCase()
       })
-    }), { message: 'the swatch labels and their grounds are from the same render' })
+    }), { message: 'every column and its printed hex are from the same render' })
       .toBe(true)
 
     // BOTH THEMES, and that is not padding. Every failure this test was widened
@@ -1169,7 +1214,10 @@ test.describe('homepage: eleven tools, five ways of working', () => {
           const b = r.getBoundingClientRect()
           return b.bottom > box.bottom + 0.5 || b.top < box.top - 0.5
         })
-        .map((r) => r.querySelector('.hw-type-meta').textContent)
+        // `.tsc-row-name` since 2026-09-05: the ladder renders Type Scale's own
+        // `.tsc-row` gutter, so a cropped step is now named by the TOKEN it
+        // exports (`--text-2xl`) rather than by a label this panel invented.
+        .map((r) => r.querySelector('.tsc-row-name').textContent)
     })
     expect(cropped, 'no step is cut off by the preview box').toEqual([])
   })
@@ -1180,7 +1228,10 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await go(page, '/')
     await page.locator('.hw-tab[data-tab="image"]').click()
 
-    const subtabs = page.locator('.hw-subtab')
+    // `.fc-tab` since 2026-09-05: the reference picker wears File Converter's
+    // own pill group rather than a bespoke `.hw-subtab` row. Scoped to the
+    // workbench, because the converter's own page uses the same class.
+    const subtabs = page.locator('.hw-panel .fc-tab')
     await expect(subtabs).toHaveCount(3)
     expect(await subtabs.allInnerTexts()).toEqual(['Architecture', 'People', 'Nature'])
     await expect(subtabs.first()).toHaveAttribute('aria-selected', 'true')
@@ -1190,6 +1241,28 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await expect(page.locator('.hw-intent')).toContainText('Nothing is converted here')
     // WebP cannot honour Lossless in the real converter, and says so up front.
     await expect(page.locator('.hw-limit')).toContainText('cannot store a')
+
+    // THE DROP ZONE HAS TO BE A REAL DROP TARGET, NOT A PICTURE OF ONE.
+    // It wears File Converter's `.img-drop-zone.fc-drop`, so it now looks
+    // exactly like the control that accepts a drop on the converter's own page.
+    // A lookalike that silently swallowed a drop would be the precise failure
+    // this panel was rebuilt to stop, so the handlers are asserted rather than
+    // assumed: the zone reacts to a dragover by taking the converter's own
+    // `.fc-drop-on` state, and it releases that state on dragleave.
+    const zone = page.locator('.hw-ref')
+    await expect(zone).toHaveClass(/fc-drop/)
+    await expect(page.locator('.fc-drop-hint')).toContainText('Drop your own images here')
+    // The zone must not claim to convert anything - the whole panel's honesty
+    // rests on File Converter doing the encoding.
+    await expect(page.locator('.fc-drop-sub')).toContainText('nothing is converted on this page')
+    // A real DataTransfer, built in the page: DragEvent's constructor rejects a
+    // plain object for that property, so `{ dataTransfer: {} }` throws rather
+    // than dispatching and the assertion never runs.
+    const dt = await page.evaluateHandle(() => new DataTransfer())
+    await zone.dispatchEvent('dragover', { dataTransfer: dt })
+    await expect(zone, 'a dragover is acknowledged, so the target is live').toHaveClass(/fc-drop-on/)
+    await zone.dispatchEvent('dragleave', { dataTransfer: dt })
+    await expect(zone).not.toHaveClass(/fc-drop-on/)
 
     // The bundled thumbnail carries its intrinsic size, so nothing shifts.
     const active = page.locator('.hw-ref-img:not([hidden])')
@@ -1346,17 +1419,31 @@ test.describe('homepage: eleven tools, five ways of working', () => {
 
     // 14 · controls mutate the preview and nothing else.
     await page.getByRole('button', { name: /Preview the zap icon/ }).click()
-    // Size and stroke are OPTIONS rails now. Each is scoped by its own rail's
-    // label so "32" cannot match a tile in the other rail, and the stroke
-    // filter is anchored so /^2$/ does not also select 2.5.
-    const size32 = page.locator('[aria-labelledby="hw-icon-size-label"] .hw-tile', { hasText: '32' })
-    const stroke2 = page.locator('[aria-labelledby="hw-icon-stroke-label"] .hw-tile').filter({ hasText: /^2$/ })
+    // Size and stroke are the ICON EDITOR'S OWN setting rows since 2026-09-05 -
+    // `.icust-row` with an `.icust-seg` segmented control - rather than a
+    // `.hw-rail` of `.hw-tile`s that existed nowhere else in the product. Each
+    // is still scoped by its own label so "32" cannot match the other row, and
+    // the stroke filter is still anchored so /^2$/ does not also select 2.5.
+    const size32 = page.locator('[aria-labelledby="hw-icon-size-label"] button', { hasText: '32' })
+    const stroke2 = page.locator('[aria-labelledby="hw-icon-stroke-label"] button').filter({ hasText: /^2$/ })
     await size32.click()
     await stroke2.click()
     await expect(size32).toHaveAttribute('aria-pressed', 'true')
     await expect(stroke2).toHaveAttribute('aria-pressed', 'true')
-    await expect(page.locator('.hw-icon-meta')).toContainText('zap · 32px · 2 stroke')
-    await expect(page.locator('.hw-icon-preview svg')).toHaveAttribute('width', '32')
+    // The mono caption "zap · 32px · 2 stroke" became the editor's own
+    // `.icust-tag` chips, so the same four facts are asserted as four chips
+    // rather than as one sentence.
+    const tags = page.locator('.hw-panel .icust-meta .icust-tag')
+    await expect(tags).toHaveText(['lucide', 'zap', '32px', '2 stroke'])
+    // SIZE IS NOW MEASURED, NOT READ OFF AN ATTRIBUTE, and that is a stronger
+    // check than the one it replaces. The glyph used to carry width="32" on the
+    // SVG; it now takes its size from --ig-size on `.icust-stage`, exactly as
+    // IconCustomizer's own stage does. Asserting the attribute would no longer
+    // be possible, and asserting the custom property would only prove the value
+    // was written - the rendered box proves the editor's CSS actually consumed
+    // it, which is the thing that was silently untested before.
+    const glyph = await page.locator('.icust-stage-host svg').boundingBox()
+    expect(Math.round(glyph.width), 'the stage paints the selected size').toBe(32)
     expect(await snapshot(), 'no storage, recents or quota write').toBe(before)
 
     // 15 · a valid draft opens the real editor with the supported values.
@@ -1545,7 +1632,7 @@ test.describe('homepage: eleven tools, five ways of working', () => {
       await page.locator(`.hw-tab[data-tab="${id}"]`).click()
     }
     await page.locator('.hw-tab[data-tab="image"]').click()
-    for (const index of [1, 2, 0]) await page.locator('.hw-subtab').nth(index).click()
+    for (const index of [1, 2, 0]) await page.locator('.hw-panel .fc-tab').nth(index).click()
 
     expect(remote.filter((u) => /iconify|logo\.dev|logodev/i.test(u)),
       'the homepage never calls an icon or logo catalogue').toEqual([])
@@ -1556,15 +1643,15 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await page.context().setOffline(true)
     await page.locator('.hw-tab[data-tab="palette"]').click()
     await page.getByRole('button', { name: 'Generate' }).click()
-    await expect(page.locator('.hw-pal-hex').first()).toHaveText(/^#[0-9A-F]{6}$/)
+    await expect(page.locator('.hw-board .plb-hex').first()).toHaveText(/^#[0-9A-F]{6}$/)
 
     await page.locator('.hw-tab[data-tab="gradient"]').click()
     await page.locator('#hw-grad-angle').fill('45')
-    await expect(page.locator('.hw-code')).toContainText('linear-gradient(45deg')
+    await expect(page.locator('.hw-ggn .ggn-css code')).toContainText('linear-gradient(45deg')
 
     await page.locator('.hw-tab[data-tab="icon"]').click()
     await page.getByRole('button', { name: /Preview the star icon/ }).click()
-    await expect(page.locator('.hw-icon-meta')).toContainText('star')
+    await expect(page.locator('.hw-panel .icust-meta')).toContainText('star')
 
     await page.locator('.hw-tab[data-tab="image"]').click()
     await expect(page.locator('.hw-intent')).toBeVisible()

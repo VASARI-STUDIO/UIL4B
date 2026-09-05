@@ -386,19 +386,52 @@ export default function Home() {
                 its own section, an eyebrow above it is a second label for the
                 same thing.
 
-                The heading was "Not a screenshot. The actual tools, running
-                here." Defensive negation: it argues with a doubt the reader has
-                not voiced yet, and the shape ("Not an X. The real Y.") is
-                itself a tell. The instruction is stronger than the boast. */}
+                THIS BLOCK HAS NOW FAILED TWICE FOR ONE REASON, so the third
+                version is a deletion rather than a rewrite.
+
+                v1 was "Not a screenshot. The actual tools, running here."
+                Rejected as defensive negation: it argues with a doubt the
+                reader has not voiced, and "Not an X. The real Y." is itself a
+                tell.
+
+                v2 was "Everything below is the real tool. Use it." over "Real
+                generated values, real keyboard handling, real clipboard.
+                Nothing saves, nothing needs an account, and every panel names
+                where it hands off before you press it." Founder, 2026-09-05:
+                "MEGA AI generated ... horrible copy".
+
+                Different register, same move. Both spent the whole word budget
+                litigating one question — is this real? — that prose cannot
+                settle and the reader had not asked. v2 also stacked the three
+                most recognisable generated-prose tics into forty words: triple
+                anaphora ("Real X, real Y, real Z"), a second anaphoric pair
+                ("Nothing saves, nothing needs an account"), and a two-word
+                imperative fragment ("Use it."). Copy that insists on its own
+                authenticity reads as generated precisely because a product
+                confident in the panels below would not need the line.
+
+                So the LEDE IS GONE, not replaced. Its three honesty claims were
+                load-bearing and they are all still made — at the point of use,
+                where they are checkable, rather than as a preamble the reader
+                has no reason to trust yet:
+                  · "nothing saves" → each panel's own note (Image: "Nothing is
+                    converted here"; Icon: "Nothing here saves to My Icons…";
+                    Typography: "It does not save a font kit"; Palette: the
+                    Generate note). Gradient stages no state to save.
+                  · "no account" → the hero's "Free to use. No card." above, and
+                    Palette's "on the free Auto system" below.
+                  · "names where it hands off" → every `.hw-foot` does exactly
+                    this, in the sentence next to the button it describes.
+
+                THE HEADING STAYS, because `aria-labelledby` on this section
+                points at it and because it is the one thing the panels cannot
+                show themselves: a visitor meets one mode at a time and can see
+                neither that there are five nor that the work travels. It says
+                that and stops. */}
             <div className="hsteps-head" data-reveal>
               <h2 className="hh2" id="hsteps-title">
-                Everything below is the real tool. Use it.
+                Five tools. Each one hands your work to the full tool.
               </h2>
-              <p className="hlede">
-                Real generated values, real keyboard handling, real clipboard. Nothing saves,
-                nothing needs an account, and every panel names where it hands off before you
-                press it.
-              </p>
             </div>
 
             <div className="hsteps-grid">

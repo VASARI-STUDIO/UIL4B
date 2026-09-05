@@ -36,6 +36,9 @@ import {
 import { contrastRatio, derivePreviewRoles } from '../../src/utils/colors.js'
 
 const AA = 4.5
+// Assertion messages below are multi-line. A named constant keeps the escape
+// out of the template literals, where it is easy to mangle and hard to see.
+const NL = String.fromCharCode(10)
 
 // makeSwatch() emits `60 + Math.random() * 16`, so the saturation band is
 // [60, 76). Nine samples across it, times 360 hues, times the five ramp steps,
@@ -67,16 +70,80 @@ test('every swatch label clears AA on every colour the generator can emit', () =
     + 'twelve:\n  ' + bad.slice(0, 12).join('\n  '))
 })
 
+// THE BOARD'S INK, WHICH IS A DIFFERENT GUARANTEE FROM THE ONE ABOVE.
+//
+// 2026-09-05 the Palette panel stopped rendering a bespoke `.hw-pal` swatch
+// strip and started rendering the product's own `.plb-board`. That changed what
+// the ink has to survive. The strip gave its hex label a chip of its own
+// (`labelGround(hex)`) and put `readableInk(hex)` on it, so the test above
+// measures ink against a ground that has ALREADY been moved to suit it. A board
+// column has no chip: `.plb-name`, `.plb-hex` and `.plb-role` all inherit
+// --plb-ink and sit directly on --plb-c, the raw generated colour, exactly as
+// they do in Palette Builder.
+//
+// So the pair under test here is (readableInk(hex), hex) with nothing in
+// between, and it is the harder of the two - labelGround exists precisely
+// because some mid-luminance chromatic fills admit no good achromatic ink. What
+// makes this pass is that readableInk does not stop at picking the better pole;
+// it walks that pole with fixForeground until the pair clears 4.5:1. If someone
+// ever "simplifies" readableInk back to a pole-picker - which is what
+// PaletteBuilder's own textColorForBg still is - this is the test that fails.
+test('every board label clears AA on the raw colour it sits on', () => {
+  const bad = []
+  let measured = 0
+  for (let h = 0; h < 360; h++) {
+    for (const s of SATS) {
+      for (const l of L_RAMP) {
+        const hex = hslToHex(h, s, l)
+        const ink = readableInk(hex)
+        const ratio = contrastRatio(ink, hex)
+        measured++
+        if (ratio < AA) bad.push(`${hex} -> ink ${ink} on the swatch itself = ${ratio.toFixed(2)}:1`)
+      }
+    }
+  }
+  assert.equal(measured, 360 * SATS.length * L_RAMP.length,
+    'the sweep did not cover the space it claims to')
+  assert.deepEqual(bad.slice(0, 12), [],
+    `${bad.length} of ${measured} generated colours give a board label under ${AA}:1` + NL
+    + 'against the column fill itself. The board has no label chip to fall back on,' + NL
+    + 'so readableInk has to carry this alone. First twelve:' + NL
+    + '  ' + bad.slice(0, 12).join(NL + '  '))
+})
+
 // labelGround's OTHER promise, which is about fidelity rather than contrast and
 // was written down only in prose: "Usually it returns the swatch unchanged and
 // nothing is drawn... It moves only where it must, and barely." That matters
 // because the swatch is a colour CONTROL - every unit the ground moves is the
 // preview showing a colour the palette did not generate.
 //
-// MEASURED over the same 16,200: the ground is untouched on 96.5% of them, and
-// where it moves the largest single-channel move is 9/255. The thresholds below
-// carry headroom on both numbers so ordinary tuning does not trip them.
-test('labelGround leaves the generated colour alone except where it cannot', () => {
+// THIS TEST'S CLAIM WAS INVERTED ON 2026-09-05, and the reason is arithmetic
+// rather than taste. It used to assert `moved > 0` as a liveness guard, on the
+// measurement that labelGround repainted 3.5% of the space (worst single-channel
+// move 9/255). It now asserts `moved === 0`, because readableInk gained #000000
+// as an explicit candidate and that closes the gap completely:
+//
+//   contrast(black, C) = (L + .05) / .05          rises with L
+//   contrast(white, C) = 1.05 / (L + .05)         falls with L
+//
+// The two curves cross at L = .1789, where both read 4.579:1. So for EVERY
+// colour, one of the two absolute poles is at least 4.579:1 - there is no fill
+// anywhere in sRGB that admits no legible achromatic ink, and therefore no fill
+// whose ground labelGround has to move. Measured, not just derived: 0 of 16,200
+// grounds moved, and readableInk's worst pair over the same sweep is 4.50:1.
+//
+// THAT MAKES THIS THE STRONGER PROMISE, NOT A WEAKER ONE. The swatch is a colour
+// control, and it is now never repainted at all - which is exactly what the
+// prose above wished for. The liveness worry the old `moved > 0` guarded
+// against is covered instead by the sweep in the previous test: if readableInk
+// stops guaranteeing AA, that fails loudly rather than this passing vacuously.
+//
+// FOLLOW-UP, NOT DONE HERE: labelGround is now provably an identity function for
+// every input, so its remaining callers are paying for a no-op. Removing it
+// touches PaletteStage's render path and cardGrounds/mutedInk, which solve a
+// DIFFERENT problem (one ink shared across two grounds) and are not affected by
+// this proof. Filed rather than folded into a fidelity change.
+test('labelGround no longer has to repaint any ground the generator can emit', () => {
   let n = 0
   let moved = 0
   let worst = 0
@@ -95,16 +162,14 @@ test('labelGround leaves the generated colour alone except where it cannot', () 
       }
     }
   }
-  assert.ok(moved > 0,
-    'labelGround moved NO ground at all across the whole space, so this test and the'
-    + ' contrast sweep above are both measuring a function that has stopped working')
-  assert.ok(moved / n <= 0.05,
-    `labelGround moved the ground on ${(100 * moved / n).toFixed(1)}% of generated colours`
-    + ' (was 3.5%). The swatch is a colour control; a preview that repaints the ground'
-    + ' this often is showing colours the palette did not generate.')
-  assert.ok(worst <= 12,
-    `labelGround moved a channel by ${worst}/255 (was 9). It is meant to move only as`
-    + ' far as the ink demands.')
+  assert.equal(moved, 0,
+    `labelGround repainted ${moved} of ${n} generated grounds (worst single-channel move`
+    + ` ${worst}/255). Since readableInk gained #000000 as a candidate this should be`
+    + ' zero: one of the two absolute poles clears 4.579:1 against every colour in sRGB,'
+    + ' so no fill needs its ground moved. A non-zero count here means readableInk has'
+    + ' stopped reaching for the pole that works, and the swatch a visitor reads the'
+    + ' colour from is no longer the value the hex claims.')
+  assert.equal(worst, 0, 'a ground moved without being counted')
 })
 
 // The palette the Generate button builds: a base hue, then five steps 14 degrees
@@ -155,10 +220,17 @@ test('the sweep is measuring real, varied colour - not a constant', () => {
   assert.ok(contrastRatio('#000000', '#FFFFFF') > 20, 'contrastRatio is not measuring')
   assert.ok(contrastRatio('#777777', '#808080') < 1.3, 'contrastRatio is not measuring')
 
-  // labelGround must be capable of BOTH answers, or the first sweep proves
-  // nothing: it returns the colour untouched where an ink already clears it,
-  // and moves it where none can.
+  // labelGround used to be required to give BOTH answers here, with #1A8993 as
+  // the canonical fill "no ink can clear" - 4.42:1 against black and 4.16
+  // against white, per its own doc comment. Both of those numbers were measured
+  // against #141414 and #FFFFFF, and #141414 is not black. Against #000000 the
+  // same fill reads 5.044:1, so readableInk now returns pure black for it and
+  // the ground stays put. The pair below is the positive control that matters
+  // now: the fill is untouched, AND the ink chosen for it genuinely clears AA.
   assert.equal(labelGround('#FFFFFF'), '#FFFFFF', 'labelGround moved a ground that needed no move')
-  assert.notEqual(labelGround('#1A8993'), '#1A8993',
-    'labelGround left the mid-luminance fill that no ink can clear - the case it exists for')
+  assert.equal(labelGround('#1A8993'), '#1A8993',
+    'labelGround repainted the mid-luminance fill it no longer needs to touch')
+  assert.ok(contrastRatio(readableInk('#1A8993'), '#1A8993') >= AA,
+    'the fill labelGround now leaves alone has no legible ink, which would make the'
+    + ' line above a regression rather than a simplification')
 })

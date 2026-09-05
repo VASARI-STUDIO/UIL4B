@@ -15,6 +15,7 @@ import {
 import {
   DEFAULT_ICON_DRAFT,
   ICON_DRAFT_NAMES,
+  ICON_DRAFT_PACK,
   ICON_DRAFT_SIZES,
   ICON_DRAFT_STROKES,
   buildIconDraft,
@@ -22,8 +23,12 @@ import {
   setIconDraft,
 } from '../utils/iconHandoff'
 import { resetScaleDraft, setScaleDraft } from '../utils/typeHandoff'
+import { stepName } from '../utils/fluidType'
 import { setBoardDraft } from '../utils/colorHandoff'
-import { derivePreviewRoles } from '../utils/colors'
+import { derivePreviewRoles, tonalRamp } from '../utils/colors'
+import { colorName } from '../utils/paletteNames'
+import { roleLabel } from '../utils/paletteRoles'
+import { barRef, colRef } from '../utils/paletteBoard'
 import {
   L_RAMP, cardGrounds, hslToHex, labelGround, mutedInk, readableInk,
 } from '../utils/workbenchInk'
@@ -161,13 +166,15 @@ const UI_ROWS = [
 /**
  * Zone 1 of the Palette mode: the artefact.
  *
- * This panel used to BE the five swatches — a labelled colour row presented as
- * a live product preview. Every comparable token editor sampled on Mobbin
- * (v0, Lovable, GitBook, Gamma) previews a palette on real application UI and
- * none of them previews it as a swatch row, for the reason the row cannot
- * answer: swatches show you five colours, a UI shows you whether they COMPOSE.
- * The swatch row is still here — it moved to the controls zone, where it is the
- * input it always was.
+ * NOTE ON ITS PLACE, 2026-09-05. This card is no longer the panel's artefact
+ * and no longer sits in `.hw-stage`. The artefact is the real `.plb-board` — see
+ * the long note in PalettePanel for why. It is still worth rendering, because a
+ * palette on real UI answers "do these compose", which a column of swatches
+ * cannot. But that is a SECOND question, asked after the board, and in the
+ * product it is asked inside a modal behind a Preview button whose later scenes
+ * are Pro. So it moved into the controls zone under a `Preview` label, which is
+ * the status it actually holds. Everything below about how it derives its
+ * colours is unchanged and still load-bearing.
  *
  * ROLES COME FROM derivePreviewRoles(), THE SAME ENGINE THE FULL TOOLS USE.
  * The first version of this hand-rolled its own luminance sort and picked
@@ -184,9 +191,9 @@ const UI_ROWS = [
  * Studio previews now speak one language: the same palette produces the same
  * roles wherever a visitor meets it.
  *
- * Inert and aria-hidden, exactly like `.hw-chrome` and `.hw-grad-preview`
- * above it: nothing inside is focusable, no control is impersonated, and every
- * hex it paints is announced for real by the swatch buttons below.
+ * Inert and aria-hidden, exactly like `.hw-chrome`: nothing inside is
+ * focusable, no control is impersonated, and every hex it paints is announced
+ * for real by the board's own `.plb-hex` buttons above it.
  */
 function PaletteStage({ swatches }) {
   const { theme } = useTheme()
@@ -334,47 +341,120 @@ function PalettePanel({ swatches, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      {/* Zone 1 — the artefact. See the `.hw-stage` / `.hw-controls` block in
-          global.css: the stage holds what the mode produces, the controls hold
-          what changes it, and the two are never interleaved. */}
+      {/* Zone 1 — the artefact, and it is now THE REAL BOARD.
+          ────────────────────────────────────────────────────────────────────
+          Founder, 2026-09-05: the mini tools "don't look like the real tool".
+          Measured on this panel, that was literally true — it shared ZERO class
+          names with PaletteBuilder's 153.
+
+          WHAT WAS HERE AND WHY IT WENT. The stage was `PaletteStage`, a mocked
+          "Acme" product card, and the palette itself was a 96px `.hw-pal` strip
+          filed under CONTROLS. Both halves of that were upside down against the
+          tool this panel hands off to:
+
+            · In Palette Builder the BOARD is the screen — full-height colour
+              columns carrying a tonal ramp, the colour's name, its hex and its
+              role. That is what "Continue in Palette Builder" opens on.
+            · The UI preview is NOT on screen there at all. It lives behind a
+              Preview button, in a modal, and past the third scene it is Pro.
+
+          So the mini led with the thing the real tool hides behind a click and
+          a paywall, and shrank the thing the real tool IS into a strip. The two
+          are now the right way up: the board is the artefact, and the preview
+          moved down into the controls zone — which is the same "there if you go
+          looking" status it has in the product.
+
+          Mobbin drove the shape of this, as it drove the card it replaces.
+          monday.com's "Try it out! See how monday.com works"
+          (sites/sections/cb5efa4f-8757-45c7-a26f-ffadd272a4fb) embeds the
+          literal board UI — real column headers, real status pills in the real
+          brand colours — and adds exactly one coaching callout; Framer
+          (sites/sections/9caf7169-91a3-419e-a787-6f61843eeda0) puts its actual
+          canvas on the page with real page-tree routes and real breakpoint
+          labels and no marketing chrome inside the frame. Neither restyles the
+          product for the marketing page. MagicPath's design-system panel
+          (screens/e7a8b966-6fad-474a-ac17-53efda7268e8) is the reason each
+          column carries three lines rather than one: every tile there shows the
+          role name, the value in a named space, and what the role is FOR —
+          which is `.plb-name` / `.plb-hex` / `.plb-role`, already built here.
+
+          THE CLASSES AND THE ENGINES ARE THE REAL ONES, not lookalikes:
+          `.plb-board` / `.plb-col` / `.plb-col-tools` / `.plb-tool` /
+          `.plb-ramp` / `.plb-name` / `.plb-hex` / `.plb-role` straight out of
+          global.css, painted through the shared `colRef` / `barRef` contract
+          (utils/paletteBoard.js), with `colorName()` for the title,
+          `roleLabel()` for the eyebrow and `tonalRamp()` for the bars — the
+          same functions PaletteBuilder calls. Only `.hw-board` is new, and it
+          is four geometry declarations (a height, a radius, a clip) so a
+          full-bleed board sits inside a rounded card.
+
+          HONESTY, WHICH IS WHERE A HIGHER-FIDELITY MOCK GETS DANGEROUS. Reusing
+          a class must not import a capability. The real column offers grip,
+          lock, HCT, contrast and a More menu; this one renders ONLY the lock,
+          because the lock is the only one that works here. The real `.plb-ramp`
+          is a <button> that opens a tints popover; here it is an inert
+          aria-hidden <div>, so it shows the ramp — genuinely computed by
+          `tonalRamp` — while claiming no action it cannot perform.
+
+          INK. The board takes `readableInk`, not PaletteBuilder's
+          `textColorForBg`. The real board picks the better of black/white and
+          accepts whatever ratio that gives; `readableInk` picks the same pole
+          and then guarantees 4.5:1. The mini matches the real board's LOOK
+          while keeping the homepage's own contrast floor, which is the one
+          place it should be stricter than the tool it previews. */}
       <div className="hw-stage">
-        <PaletteStage swatches={swatches} />
+        <div className="plb-board hw-board" role="group" aria-label="Generated palette">
+          {swatches.map((s, i) => {
+            const ink = readableInk(s.hex)
+            return (
+              <section className="plb-col" key={i} ref={colRef(s.hex, ink)} aria-label={`${roleLabel(HANDOFF_SYSTEM, i)} ${s.hex}`}>
+                <div className="plb-col-tools">
+                  <button
+                    type="button"
+                    className={s.locked ? 'plb-tool plb-tool--key plb-tool--on' : 'plb-tool plb-tool--key'}
+                    aria-pressed={s.locked}
+                    aria-label={`${s.locked ? 'Unlock' : 'Lock'} ${s.hex}`}
+                    title={s.locked ? 'Unlock — allow generate to change it' : 'Lock — keep this colour through generate'}
+                    onClick={() => toggleLock(i)}
+                  >
+                    <IconLock open={!s.locked} />
+                  </button>
+                </div>
+
+                {/* Inert by design — see the honesty note above. */}
+                <div className="plb-ramp" aria-hidden="true">
+                  {tonalRamp(s.hex).map((rc, k) => (
+                    <span key={k} className="plb-ramp-bar" ref={barRef(rc)} />
+                  ))}
+                </div>
+
+                <div className="plb-name">{colorName(s.hex)}</div>
+                <button
+                  type="button"
+                  className="plb-hex"
+                  aria-label={`Copy ${s.hex}`}
+                  onClick={() => copy(s.hex)}
+                >
+                  {s.hex}
+                </button>
+                <div className="plb-role">{roleLabel(HANDOFF_SYSTEM, i)}</div>
+                {copiedHex === s.hex && <span className="plb-badge" aria-hidden="true">Copied</span>}
+              </section>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Zone 2 — the controls. The swatch row is an INPUT: lock, copy, and
-          the value each button announces. It reads as the palette rail under
-          the canvas, which is where every sampled editor puts it. */}
+      {/* Zone 2 — the controls. */}
       <div className="hw-controls">
-      <ul className="hw-pal">
-        {swatches.map((s, i) => (
-          <li className="hw-pal-sw" key={i} style={{ background: s.hex }}>
-            <button
-              type="button"
-              className="hw-pal-lock"
-              style={{ color: readableInk(s.hex) }}
-              aria-pressed={s.locked}
-              aria-label={`${s.locked ? 'Unlock' : 'Lock'} ${s.hex}`}
-              onClick={() => toggleLock(i)}
-            >
-              <IconLock open={!s.locked} />
-            </button>
-            <button
-              type="button"
-              className="hw-pal-copy"
-              style={{ color: readableInk(s.hex) }}
-              aria-label={`Copy ${s.hex}`}
-              onClick={() => copy(s.hex)}
-            >
-              <span className="hw-pal-hex" style={{ background: labelGround(s.hex) }}>{s.hex}</span>
-              {copiedHex === s.hex && <span className="hw-pal-tick" aria-hidden="true" style={{ background: labelGround(s.hex) }}>Copied</span>}
-            </button>
-          </li>
-        ))}
-      </ul>
-
       <div className="hw-row">
         <button type="button" className="hw-btn hw-btn-go" onClick={generate}>Generate</button>
-        <p className="hw-note">Lock a colour to keep it through the next generate.</p>
+        {/* Carries "nothing saves" for this panel. It used to live in the
+            section lede above the workbench, which the founder rejected on
+            2026-09-05 as "MEGA AI generated"; the claim was load-bearing, so it
+            moved to the point of use rather than being dropped with it. The
+            board reading as the real board makes this MORE necessary, not less. */}
+        <p className="hw-note">Lock a colour to keep it through the next generate. Nothing here is saved.</p>
       </div>
 
       {copyError && (
@@ -383,6 +463,13 @@ function PalettePanel({ swatches, onChange, announce }) {
           <code className="hw-code-inline">{copyError}</code>
         </p>
       )}
+
+      {/* The preview, in the position it holds in the product: secondary, and
+          reached by going looking rather than by arriving. */}
+      <div className="hw-prev">
+        <span className="hw-prev-label">Preview</span>
+        <PaletteStage swatches={swatches} />
+      </div>
 
       </div>
 
@@ -398,7 +485,13 @@ function PalettePanel({ swatches, onChange, announce }) {
           Continue in Palette Builder
           <span aria-hidden="true">→</span>
         </Link>
-        <span className="hw-foot-note">Your five swatches carry over on the free Auto system · full ramps, roles and export there.</span>
+        {/* "full ramps, roles and export there" stopped being true on
+            2026-09-05: the mini board now shows the tonal ramp and the role of
+            every step, because it is the real board. What the full tool adds
+            beyond this is what it names now — kept to the old line's length,
+            because a second line here costs the control zone 21px it does not
+            have at 1280x660 (measured). */}
+        <span className="hw-foot-note">Your five swatches carry over on the free Auto system · more systems, HCT and export there.</span>
       </div>
     </div>
   )
@@ -419,8 +512,39 @@ function GradientPanel({ gradient, onChange, announce }) {
   const [drafts, setDrafts] = useState({ from: gradient.from, to: gradient.to })
   const [invalid, setInvalid] = useState({ from: false, to: false })
   const [copyState, setCopyState] = useState('')
+  const dialRef = useRef(null)
+  // The hand is rotated through a ref rather than an inline `style`, matching
+  // the no-inline-styles route the rest of this file takes for generated
+  // values; the transform is recomputed on every render, which is every frame
+  // of a drag.
+  const handRef = (node) => { node?.style.setProperty('transform', `rotate(${gradient.angle}deg)`) }
 
   const css = gradientCss(gradient)
+
+  const setAngle = (deg) => onChange({ ...gradient, angle: ((Math.round(deg) % 360) + 360) % 360 })
+
+  // Pointer maths lifted from `dragDial` in GradientGenerator.jsx so the two
+  // dials answer a drag identically: atan2 from the dial's centre, +90 so that
+  // 0deg points up, wrapped into [0, 360).
+  const dragDial = (event) => {
+    const compute = (ev) => {
+      const rect = dialRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const cx = rect.left + rect.width / 2
+      const cy = rect.top + rect.height / 2
+      setAngle(Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI + 90)
+    }
+    compute(event)
+    const move = (ev) => compute(ev)
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+  }
 
   const commitStop = (stop, value) => {
     setDrafts((d) => ({ ...d, [stop]: value }))
@@ -446,96 +570,165 @@ function GradientPanel({ gradient, onChange, announce }) {
     if (ok) announce('Gradient CSS copied.')
   }
 
-  // "sRGB hex", not "Hex". For a product whose pitch is defensible colour
-  // systems, naming the space is both more correct and a credibility signal,
-  // and it costs four characters.
-  const stopField = (stop, label) => (
-    <div className="hw-field">
-      <label className="hw-label" htmlFor={`hw-grad-${stop}`}>
-        {label} <span className="hw-label-space">sRGB hex</span>
-      </label>
-      <div className="hw-stop">
-        {/* The shared picker — the homepage demo is the first colour control
+  // THE STOP ROW IS THE PRODUCT'S OWN, `.ggn-stop`.
+  //
+  // It used to be `.hw-field` + `.hw-label` + `.hw-stop` + `.hw-input-hex`,
+  // captioned "START sRGB hex" / "END sRGB hex" - a vocabulary and a shape that
+  // exist nowhere in Gradient Generator, where a stop is a bordered row carrying
+  // its index, its swatch and its hex. Same row here now, minus the three
+  // controls this panel genuinely does not have: position, lock and remove. A
+  // two-stop preview cannot move a stop, so it does not draw a control that
+  // says it can.
+  //
+  // The index is the visible label, as in the tool. "Start" and "End" survive
+  // as the accessible name, which is where a first-time visitor who cannot see
+  // the gradient actually needs them.
+  //
+  // The ERROR COPY stays the mini's, in the tool's `.ggn-field-error` shell.
+  // The tool says "Use a 6-digit hex"; this says which value is still on screen,
+  // which is the more useful sentence and was fought for. Borrowing the shell
+  // and keeping the better words is the point of reuse, not a compromise of it.
+  // `.ggn-field-error` is absolutely positioned inside `.ggn-stop-hex-field`,
+  // so an invalid hex costs the control zone no height - which matters, because
+  // that zone measures 0px at 1280x660 already.
+  const stopField = (stop, index, label) => (
+    <div className="ggn-stop">
+      <span className="ggn-stop-idx" aria-hidden="true">{index}</span>
+      <span className="ggn-stop-swatch">
+        {/* The shared picker - the homepage demo is the first colour control
             most visitors ever touch here, so it must be the same one the tools
             use rather than the operating system's. */}
         <ColorPickerPop
           value={gradient[stop]}
           ariaLabel={`${label} colour picker`}
           onChange={(hex) => pickStop(stop, hex)}
-          triggerClassName="hw-stop-well"
         />
+      </span>
+      <span className="ggn-stop-hex-field">
         <input
           id={`hw-grad-${stop}`}
           type="text"
-          className="hw-input hw-input-hex"
+          className="ggn-stop-hex"
           value={drafts[stop]}
           spellCheck="false"
           autoComplete="off"
           maxLength={7}
+          aria-label={`${label} colour, sRGB hex`}
           aria-invalid={invalid[stop] || undefined}
           aria-describedby={invalid[stop] ? `hw-grad-${stop}-err` : undefined}
           onChange={(e) => commitStop(stop, e.target.value)}
         />
-      </div>
-      {invalid[stop] && (
-        <p className="hw-field-err" id={`hw-grad-${stop}-err`}>
-          Use a hex value like #7C3AED. The preview still shows {gradient[stop]}.
-        </p>
-      )}
+        {invalid[stop] && (
+          <span className="ggn-field-error" role="status" id={`hw-grad-${stop}-err`}>
+            Use a hex value like #7C3AED. The preview still shows {gradient[stop]}.
+          </span>
+        )}
+      </span>
     </div>
   )
 
   return (
-    <div className="hw-body">
+    <div className="hw-body hw-ggn">
+      {/* THE CANVAS, WITH THE TOOL'S OWN PILLS ON IT.
+          `.hw-grad-preview` was a plain filled rectangle. Gradient Generator
+          overlays two glass pills top-left reading the type and the angle, and
+          they are the first thing that tells you what you are looking at. Both
+          are true of this gradient - it IS linear, and that IS its angle - so
+          they carry over as facts rather than as decoration. */}
       <div className="hw-stage">
-        <div className="hw-grad-preview" style={{ background: css }} aria-hidden="true" />
-      </div>
-
-      <div className="hw-controls">
-      <div className="hw-fields">
-        {stopField('from', 'Start')}
-        {stopField('to', 'End')}
-      </div>
-
-      {/* A property, so a label-left / control-right row with the number as a
-          real input. On this column a slider alone cannot land on 135 degrees,
-          so the readout is the precise control and the slider the coarse one —
-          the arrangement Salesforce uses for Border Radius and MagicPath for
-          every type-scale value. The range keeps the id, so the existing
-          contract (`#hw-grad-angle`) still points at the slider. */}
-      <div className="hw-prop">
-        <label className="hw-prop-label" htmlFor="hw-grad-angle">Angle</label>
-        <input
-          id="hw-grad-angle"
-          className="hw-prop-range"
-          type="range"
-          min="0"
-          max="360"
-          step="1"
-          value={gradient.angle}
-          onChange={(e) => onChange({ ...gradient, angle: Number(e.target.value) })}
-        />
-        <div className="hw-prop-num">
-          <input
-            className="hw-num"
-            type="number"
-            min="0"
-            max="360"
-            step="1"
-            value={gradient.angle}
-            aria-label="Gradient angle in degrees"
-            onChange={(e) => {
-              const next = Number(e.target.value)
-              if (Number.isFinite(next)) onChange({ ...gradient, angle: Math.min(360, Math.max(0, next)) })
-            }}
-          />
-          <span className="hw-num-unit" aria-hidden="true">&deg;</span>
+        <div className="ggn-preview" style={{ background: css }}>
+          <div className="ggn-preview-pills" aria-hidden="true">
+            <span className="ggn-pill">Linear</span>
+            <span className="ggn-pill">{gradient.angle}&deg;</span>
+          </div>
         </div>
       </div>
 
-      <div className="hw-out">
-        <code className="hw-code">background: {css};</code>
-        <button type="button" className="hw-btn" onClick={copy}>Copy CSS</button>
+      <div className="hw-controls">
+      {/* THE INSPECTOR, IN THE TOOL'S OWN GRAMMAR: a tracked-caps `.ggn-label`
+          over the control it names, one `.ggn-field` per setting. That grammar
+          is what a visitor meets again the moment they press Continue. */}
+      <div className="ggn-field">
+        <span className="ggn-label" id="hw-grad-stops-label">Stops</span>
+        <div className="ggn-stops" role="group" aria-labelledby="hw-grad-stops-label">
+          {stopField('from', 1, 'Start')}
+          {stopField('to', 2, 'End')}
+        </div>
+      </div>
+
+      {/* THE ANGLE IS A DIAL, BECAUSE IN THE TOOL IT IS A DIAL.
+          This was a linear range slider beside a number box. Gradient Generator
+          uses a 64px circular dial with a hand, dragged or arrowed, next to a
+          mono readout with a degree suffix - and an angle is the one quantity a
+          dial reads better than a track, because the control has the same shape
+          as the thing it sets. Same markup, same classes, same pointer maths as
+          `dragDial` in GradientGenerator.jsx.
+
+          `#hw-grad-angle` MOVED FROM THE SLIDER TO THE NUMBER INPUT, and that is
+          the only contract change: the id has always pointed at whichever
+          control types an exact angle, and after this change that is the number
+          box. `fill()` works on it exactly as it did on the range. */}
+      <div className="ggn-field">
+        <span className="ggn-label" id="hw-grad-angle-label">Angle</span>
+        <div className="ggn-angle">
+          <div
+            className="ggn-dial"
+            ref={dialRef}
+            role="slider"
+            aria-labelledby="hw-grad-angle-label"
+            aria-valuenow={gradient.angle}
+            aria-valuemin={0}
+            aria-valuemax={360}
+            aria-valuetext={`${gradient.angle} degrees`}
+            tabIndex={0}
+            onPointerDown={dragDial}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setAngle(gradient.angle + 1) }
+              else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setAngle(gradient.angle + 359) }
+              else if (e.key === 'Home') { e.preventDefault(); setAngle(0) }
+              else if (e.key === 'End') { e.preventDefault(); setAngle(180) }
+            }}
+          >
+            <div className="ggn-dial-hand" ref={handRef} />
+            <div className="ggn-dial-center" />
+          </div>
+          <div className="ggn-angle-ctrl">
+            <div className="ggn-angle-num">
+              <input
+                id="hw-grad-angle"
+                type="number"
+                min="0"
+                max="360"
+                className="ggn-angle-input"
+                value={gradient.angle}
+                aria-label="Gradient angle in degrees"
+                onChange={(e) => {
+                  const next = Number(e.target.value)
+                  if (Number.isFinite(next)) onChange({ ...gradient, angle: Math.min(360, Math.max(0, Math.round(next))) })
+                }}
+              />
+              <span className="ggn-angle-deg" aria-hidden="true">&deg;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CODE, laid out as the tool lays it out: the label row carries the Copy
+          action on its right, and the declaration sits in a `.ggn-css` block
+          below. The mini used to put a "Copy CSS" button inside the box. The
+          tool's format tablist (CSS / Tailwind / SVG) is deliberately NOT here -
+          this panel emits CSS and only CSS, and three tabs where two do nothing
+          would be the first dishonest thing in the workbench. */}
+      <div className="ggn-field">
+        <div className="ggn-label-row">
+          <span className="ggn-label">Code</span>
+          <button type="button" className="ggn-copy" onClick={copy}>
+            {copyState === 'ok' ? '✓ Copied' : 'Copy'}
+          </button>
+        </div>
+        <button type="button" className="ggn-css ggn-css--block" onClick={copy} aria-label="Copy the gradient CSS">
+          <code>background: {css};</code>
+        </button>
       </div>
 
       {copyState === 'fail' && (
@@ -549,9 +742,9 @@ function GradientPanel({ gradient, onChange, announce }) {
       <div className="hw-foot">
         <Link className="hw-continue" to="/create/gradient">
           Continue in Gradient Generator
-          <span aria-hidden="true">→</span>
+          <span aria-hidden="true">&rarr;</span>
         </Link>
-        <span className="hw-foot-note">Two stops here · multi-stop, presets and gallery there.</span>
+        <span className="hw-foot-note">Two stops here · multi-stop, radial, conic and export there.</span>
       </div>
     </div>
   )
@@ -606,6 +799,7 @@ function ImagePanel({ state, onChange, announce }) {
   const [failed, setFailed] = useState({})
   const [error, setError] = useState('')
   const [handingOff, setHandingOff] = useState(false)
+  const [dropping, setDropping] = useState(false)
   // A second activation must not create a second transfer, even before React
   // has re-rendered the disabled button.
   const lockRef = useRef(false)
@@ -651,9 +845,11 @@ function ImagePanel({ state, onChange, announce }) {
     fileRef.current?.click()
   }
 
-  const onFiles = (event) => {
-    const { accepted, rejected } = partitionImageFiles(event.target.files)
-    event.target.value = ''
+  // ONE PATH FOR BOTH WAYS IN - the OS picker and a drop on the zone. Anything
+  // that diverged here would be a second, less-tested route to the same
+  // hand-off, and the drop zone is new.
+  const handOff = (fileList) => {
+    const { accepted, rejected } = partitionImageFiles(fileList)
     if (!accepted.length) {
       // Cancelling produces no change event at all, so reaching here with no
       // accepted file means a real unsupported selection.
@@ -684,6 +880,15 @@ function ImagePanel({ state, onChange, announce }) {
     }
   }
 
+  const onFiles = (event) => {
+    const files = event.target.files
+    // Reset before handing over: navigation may unmount this input, and a
+    // stale value would resubmit the same files on a later visit.
+    const list = files ? [...files] : []
+    event.target.value = ''
+    handOff(list)
+  }
+
   const activeRef = IMAGE_REFERENCES[activeIndex] || IMAGE_REFERENCES[0]
 
   return (
@@ -691,7 +896,10 @@ function ImagePanel({ state, onChange, announce }) {
       {/* The reference picker belongs to the ARTEFACT, not the controls — it
           chooses what the canvas shows, so it travels with the canvas. */}
       <div className="hw-stage">
-      <div className="hw-subtabs" role="tablist" aria-label="Built-in reference images">
+      {/* `.fc-tabs` / `.fc-tab`, File Converter's own pill group, not the
+          bespoke `.hw-subtab` pills. Same control, same shape, and the mode bar
+          is the first thing on the converter's page. */}
+      <div className="fc-tabs" role="tablist" aria-label="Built-in reference images">
         {IMAGE_REFERENCES.map((r, index) => (
           <button
             key={r.id}
@@ -702,7 +910,7 @@ function ImagePanel({ state, onChange, announce }) {
             aria-controls="hw-ref-panel"
             aria-selected={r.id === reference}
             tabIndex={r.id === reference ? 0 : -1}
-            className="hw-subtab"
+            className={r.id === reference ? 'fc-tab on' : 'fc-tab'}
             onClick={() => selectReference(r.id)}
             onKeyDown={(event) => onRefKeyDown(event, index)}
           >
@@ -711,11 +919,44 @@ function ImagePanel({ state, onChange, announce }) {
         ))}
       </div>
 
+        {/* THE DROP ZONE IS THE THING THAT SAYS "FILE CONVERTER".
+            ──────────────────────────────────────────────────────────────────
+            Open /create/file-converter and the page is a mode bar over one big
+            dashed `.img-drop-zone.fc-drop` reading "Drop images here or click
+            to browse". The mini had no drop zone at all - a photograph in a
+            plain bordered box, and a "Try your image" button two zones away -
+            so the single most recognisable element of the tool was missing
+            from its own preview.
+
+            The reference photo now lives INSIDE that zone, which costs no
+            height (it replaces `.hw-ref`'s own frame rather than adding an
+            element) and claims no capability: clicking runs the same
+            `openPicker` the foot button runs, and this panel already handed
+            files to File Converter.
+
+            DRAG AND DROP IS WIRED FOR REAL, and that is a requirement rather
+            than a bonus. A control that looks exactly like a drop target and
+            silently swallows a drop is a lie told by a lookalike, which is the
+            precise failure this whole change exists to stop. Dropped files take
+            the same `handOff` path as picked ones, so every honesty guarantee -
+            nothing encoded here, nothing stored, nothing in the URL - is
+            unchanged.
+
+            The hint says WHOSE images it means: "Drop images here" would be
+            ambiguous beside a reference photograph the panel supplied itself. */}
         <div
-          className="hw-ref"
+          className={`img-drop-zone fc-drop hw-ref${dropping ? ' fc-drop-on' : ''}`}
           id="hw-ref-panel"
           role="tabpanel"
           aria-labelledby={`hw-ref-tab-${activeRef.id}`}
+          onClick={openPicker}
+          onDragOver={(event) => { event.preventDefault(); setDropping(true) }}
+          onDragLeave={() => setDropping(false)}
+          onDrop={(event) => {
+            event.preventDefault()
+            setDropping(false)
+            if (event.dataTransfer.files?.length) handOff(event.dataTransfer.files)
+          }}
         >
           {failed[activeRef.id] ? (
             <p className="hw-ref-msg">
@@ -739,17 +980,37 @@ function ImagePanel({ state, onChange, announce }) {
               onError={() => setFailed((s) => ({ ...s, [r.id]: true }))}
             />
           ))}
+
+          <div className="hw-ref-drop">
+            <span className="fc-drop-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" />
+              </svg>
+            </span>
+            <p className="fc-drop-hint">Drop your own images here, or click to browse</p>
+            <p className="fc-drop-sub">They open in File Converter with this draft · nothing is converted on this page</p>
+          </div>
         </div>
 
       </div>
 
       <div className="hw-controls">
-        {/* File type is a closed set of OPTIONS, so a rail. Resolution and
-            compression are PROPERTIES with a described value, so rows. The
-            rail also collapses a label+select pair onto one line, which is
-            most of the vertical room this mode was short of. */}
+        {/* `.seg-label` IS FILE CONVERTER'S OWN CAPTION - 8.5px, 700, .1em
+            tracked, uppercase - and it is a SHARED class, already worn by nine
+            surfaces including the converter's own Output Format, Quality and
+            Max Dimension. The mini captioned the same three settings in
+            sentence case, at a different size, in a different weight: the
+            mismatch in miniature. Not a wrong decision, a second one.
+
+            The CONTROLS keep their existing forms. File type is a closed set of
+            OPTIONS, so a rail; resolution and compression are PROPERTIES with a
+            described value, so rows. The converter uses a <select> for all
+            three, but it owns a page and this owns 152px of a fixed frame - a
+            rail collapses a caption and a control onto one line, and this
+            control zone measures 2.2px at 1280x660 before anything is added
+            to it. */}
         <div className="hw-rail-group">
-          <span className="hw-rail-label" id="hw-img-fmt-label">File type</span>
+          <span className="seg-label" id="hw-img-fmt-label">File type</span>
           <div className="hw-rail" role="group" aria-labelledby="hw-img-fmt-label">
             {DRAFT_FORMATS.map((f) => (
               <button
@@ -766,7 +1027,7 @@ function ImagePanel({ state, onChange, announce }) {
         </div>
 
         <div className="hw-prop">
-          <label className="hw-prop-label" htmlFor="hw-img-res">Resolution</label>
+          <label className="seg-label" htmlFor="hw-img-res">Resolution</label>
           <select
             id="hw-img-res"
             className="hw-select hw-prop-select"
@@ -780,7 +1041,7 @@ function ImagePanel({ state, onChange, announce }) {
         </div>
 
         <div className="hw-prop">
-          <label className="hw-prop-label" htmlFor="hw-img-comp">Compression</label>
+          <label className="seg-label" htmlFor="hw-img-comp">Compression</label>
           <select
             id="hw-img-comp"
             className="hw-select hw-prop-select"
@@ -859,19 +1120,14 @@ const DEFAULT_ICON_STATE = {
   stroke: DEFAULT_ICON_DRAFT.stroke,
 }
 
-function IconGlyph({ name, size, stroke }) {
+// Size, stroke, cap and join come from CSS, not from SVG attributes. That is
+// how `.icust-stage` and `.ic` both paint a glyph - `--ig-size` / `--ig-stroke`
+// on the stage, fixed values on a grid cell - so one glyph component sits
+// correctly in either, and the stage resizes the preview through a transition
+// rather than by re-rendering a new attribute.
+function IconGlyph({ name }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={stroke}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
       <path d={ICON_PATHS[name]} />
     </svg>
   )
@@ -882,6 +1138,14 @@ function IconPanel({ state, onChange, announce }) {
   const [error, setError] = useState('')
   const [opening, setOpening] = useState(false)
   const lockRef = useRef(false)
+  // The same two properties IconCustomizer's effect writes onto its own stage,
+  // written the same way - the no-inline-styles route this file already takes
+  // for generated values.
+  const stageRef = (node) => {
+    if (!node) return
+    node.style.setProperty('--ig-size', `${state.size}px`)
+    node.style.setProperty('--ig-stroke', String(state.stroke))
+  }
 
   const draft = buildIconDraft(state)
 
@@ -917,65 +1181,112 @@ function IconPanel({ state, onChange, announce }) {
 
   return (
     <div className="hw-body">
-      <div className="hw-stage hw-icon-stage">
-        <div className="hw-icon-preview">
-          <IconGlyph name={state.name} size={state.size} stroke={state.stroke} />
+      {/* THE STAGE IS THE EDITOR'S STAGE.
+          ────────────────────────────────────────────────────────────────────
+          `Continue in Icon Editor` opens IconCustomizer, whose spotlight is
+          `.icust-stage`: a dark radial-gradient panel with the glyph sized and
+          weighted through --ig-size / --ig-stroke / --ig-color, a row of
+          `.icust-tag` chips under it naming the pack and the icon, and
+          `.icust-row` settings below that. The mini used a light-grey
+          `.hw-icon-stage` box with a mono caption reading "heart · 48px · 1.5
+          stroke" - a sentence where the editor has chips, on a ground the
+          editor does not use.
+
+          Same stage now, driven by the SAME custom properties: --ig-size and
+          --ig-stroke on the stage, exactly as IconCustomizer's effect writes
+          them, so the glyph is sized by CSS rather than by an SVG attribute and
+          the two surfaces resize a preview the same way. */}
+      <div className="hw-stage">
+        <div className="icust-stage hw-icust-stage" ref={stageRef}>
+          <div className="icust-stage-host" aria-hidden="true">
+            <IconGlyph name={state.name} />
+          </div>
         </div>
-        <p className="hw-icon-meta">{state.name} · {state.size}px · {state.stroke} stroke</p>
+        <div className="icust-meta">
+          <span className="icust-tag">{ICON_DRAFT_PACK}</span>
+          <span className="icust-tag">{state.name}</span>
+          <span className="icust-tag">{state.size}px</span>
+          <span className="icust-tag">{state.stroke} stroke</span>
+        </div>
       </div>
 
       <div className="hw-controls">
-        <div className="hw-icon-grid" role="group" aria-label="Preview icon">
+        {/* THE PICKER IS THE LIBRARY GRID: `.ig` with `.ic` cells, which is a
+            glyph over its NAME in mono, on no card, filling on hover. The mini
+            drew twelve bordered boxes with no names at all - and the name is
+            the thing you search for, the thing you copy and the thing the
+            hand-off carries, so leaving it out made the grid harder to use as
+            well as unlike the library. */}
+        <div className="ig hw-ig" role="group" aria-label="Preview icon">
           {ICON_DRAFT_NAMES.map((name) => (
-            <button
+            <div
               key={name}
-              type="button"
-              className="hw-icon-cell"
+              className="ic"
+              role="button"
+              tabIndex={0}
               aria-pressed={state.name === name}
               aria-label={`Preview the ${name.replace(/-/g, ' ')} icon`}
               onClick={() => patch({ name })}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); patch({ name }) } }}
             >
-              <IconGlyph name={name} size={22} stroke={state.stroke} />
-            </button>
+              <IconGlyph name={name} />
+              <span>{name}</span>
+            </div>
           ))}
         </div>
 
-        {/* Sizes and strokes are OPTIONS, so rails rather than a stack of
-            selects. Two selects with labels cost ~130px, two rails ~76px, and
-            every value is now one click instead of two. */}
-        <div className="hw-rail-group">
-          <span className="hw-rail-label" id="hw-icon-size-label">Size</span>
-          <div className="hw-rail" role="group" aria-labelledby="hw-icon-size-label">
-            {ICON_DRAFT_SIZES.map((sz) => (
-              <button
-                key={sz}
-                type="button"
-                className="hw-tile"
-                aria-pressed={state.size === sz}
-                aria-label={`Icon size ${sz} pixels`}
-                onClick={() => patch({ size: sz })}
-              >
-                {sz}<span className="hw-tile-unit" aria-hidden="true">px</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* SIZE AND STROKE ARE `.icust-row` + `.icust-seg`, THE EDITOR'S OWN
+            SETTING ROW: a 56px mono tracked label on the left, a segmented
+            control filling the rest.
 
-        <div className="hw-rail-group">
-          <span className="hw-rail-label" id="hw-icon-stroke-label">Stroke</span>
-          <div className="hw-rail" role="group" aria-labelledby="hw-icon-stroke-label">
-            {ICON_DRAFT_STROKES.map((st) => (
-              <button
-                key={st}
-                type="button"
-                className="hw-tile"
-                aria-pressed={state.stroke === st}
-                aria-label={`Stroke width ${st}`}
-                onClick={() => patch({ stroke: st })}
-              >
-                {st}
-              </button>
-            ))}
+            WHAT THIS DELIBERATELY IS NOT. The editor drives both of these with
+            SnapSlider - a continuous track with magnetic snap points and a
+            click-to-type readout - and reusing that component was the obvious
+            move. It would break the hand-off. `validateIconDraft` is a strict
+            allowlist (ICON_DRAFT_SIZES [24,32,48], ICON_DRAFT_STROKES
+            [1,1.5,2,2.5]) and SnapSlider leaves the values BETWEEN its snaps
+            reachable on purpose, so any drag that landed off a snap would
+            produce a draft the editor refuses and a Continue button that
+            disables itself with no explanation the visitor can act on. A
+            control that can express an intent the product then rejects is
+            worse than one that cannot express it, so this stays a closed set -
+            rendered in the editor's own segmented shell rather than in a
+            `.hw-rail` that exists nowhere else. */}
+        <div className="icust-controls hw-icust-controls">
+          <div className="icust-row">
+            <label id="hw-icon-size-label">Size</label>
+            <div className="icust-seg" role="group" aria-labelledby="hw-icon-size-label">
+              {ICON_DRAFT_SIZES.map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  className={state.size === sz ? 'active' : ''}
+                  aria-pressed={state.size === sz}
+                  aria-label={`Icon size ${sz} pixels`}
+                  onClick={() => patch({ size: sz })}
+                >
+                  {sz}px
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="icust-row">
+            <label id="hw-icon-stroke-label">Stroke</label>
+            <div className="icust-seg" role="group" aria-labelledby="hw-icon-stroke-label">
+              {ICON_DRAFT_STROKES.map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  className={state.stroke === st ? 'active' : ''}
+                  aria-pressed={state.stroke === st}
+                  aria-label={`Stroke width ${st}`}
+                  onClick={() => patch({ stroke: st })}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -1079,12 +1390,57 @@ function TypographyPanel({ state, onChange, announce }) {
   return (
     <div className="hw-body">
       <div className="hw-stage">
+        {/* THE LADDER IS THE GENERATOR'S OWN ROW.
+            ──────────────────────────────────────────────────────────────────
+            Type Scale prints each step as `.tsc-row`: a fixed left gutter
+            carrying the TOKEN NAME in accent mono (`--text-3xl`), the size in
+            px and rem under it, and the line height under that - with the
+            specimen filling the rest of the row. The mini stacked a
+            tracked-caps caption ("DISPLAY · 31.3PX") ABOVE each specimen and
+            printed no token, no rem and no line height.
+
+            The token name is the part that matters most, and it was the part
+            missing. `--text-3xl` is the string a visitor actually pastes into
+            their code; "Display" is a word this panel invented. The names come
+            from `stepName()` in utils/fluidType.js - moved there from
+            TypeScale.jsx in this change, so the preview and the export cannot
+            disagree about what a step is called.
+
+            TWO GUTTER LINES, NOT THE GENERATOR'S THREE, and the reason is
+            honesty rather than height. `.tsc-row-sub` reads
+            "{mobile} → {desktop}px · {weight} · {line}px line". This panel has
+            no second breakpoint, no weight control and no line-height control,
+            so all three of those facts are things it neither shows nor hands
+            off - a line-height printed here would be a number the visitor
+            cannot change and the hand-off does not carry. The first two lines
+            are the generator's verbatim, and they are the two that are true.
+
+            The invented step labels went with it. "Display", "Heading", "Body",
+            "Caption" were this panel's own vocabulary; `--text-2xl` is the
+            product's, it is the string that ends up in the visitor's code, and
+            it says the same thing.
+
+            THE SPECIMEN DELIBERATELY DOES NOT TAKE `.tsc-row-text`, and this is
+            the one place in this change where a real class was rejected. That
+            rule is driven entirely by page-scoped variables - `font-size:
+            var(--tsc-fs)`, `line-height:var(--tsc-lh)`, `font-family:
+            var(--tsc-body-ff)` - which TypeScale writes per row from its own
+            fitted preview ladder and which do not exist here. Applied anyway it
+            beat `.hw-type-sample` on source order and every step rendered at
+            the SAME size: a type-scale preview showing no scale, with four
+            correct numbers in the gutter beside it. The build was green and 20
+            render assertions passed; one screenshot showed it. The gutter is
+            the portable half of `.tsc-row`; the specimen is not. */}
         <div className="hw-type-preview" aria-label="Live type scale preview">
           {TYPE_STEPS.map((step) => {
             const size = Math.round(state.base * Math.pow(state.ratio, step.exponent) * 10) / 10
+            const rem = Math.round((size / 16) * 1000) / 1000
             return (
-              <div className="hw-type-row" key={step.label}>
-                <span className="hw-type-meta">{step.label} · {size}px</span>
+              <div className="tsc-row hw-type-row" key={step.exponent}>
+                <span className="tsc-row-meta">
+                  <span className="tsc-row-name">--text-{stepName(step.exponent)}</span>
+                  <span className="tsc-row-num">{size}px · {rem}rem</span>
+                </span>
                 <span
                   className="hw-type-sample"
                   ref={(node) => node?.style.setProperty('--hw-type-size', `${size}px`)}
@@ -1099,11 +1455,17 @@ function TypographyPanel({ state, onChange, announce }) {
       </div>
 
         <div className="hw-controls hw-type-side">
-          {/* Base size is a PROPERTY: label left, editable number right. Ratio
-              is a set of named OPTIONS, so it becomes a rail below rather than
-              a third select. */}
+          {/* `.seg-label` is Type Scale's own caption for these exact two
+              controls - `<label className="seg-label" htmlFor="tsc-mbase">Base
+              size</label>` and the same for Ratio, verbatim. Same words, same
+              class, so the two surfaces caption the same setting identically.
+
+              The CONTROLS keep their forms: the generator drives base size with
+              a SnapSlider and ratio with a <select>, both of which cost this
+              panel height it does not have. A number box and a three-value rail
+              express the same two settings inside 152px of a fixed frame. */}
           <div className="hw-prop">
-            <label className="hw-prop-label" htmlFor="hw-type-base">Base size</label>
+            <label className="seg-label" htmlFor="hw-type-base">Base size</label>
             <div className="hw-prop-num hw-prop-num--wide">
               <input
                 id="hw-type-base"
@@ -1137,7 +1499,7 @@ function TypographyPanel({ state, onChange, announce }) {
           </div>
 
           <div className="hw-rail-group">
-            <span className="hw-rail-label" id="hw-type-ratio-label">Scale ratio</span>
+            <span className="seg-label" id="hw-type-ratio-label">Ratio</span>
             <div className="hw-rail" role="group" aria-labelledby="hw-type-ratio-label">
               {TYPE_RATIOS.map((ratio) => (
                 <button
@@ -1155,7 +1517,7 @@ function TypographyPanel({ state, onChange, announce }) {
           </div>
 
           <div className="hw-prop">
-            <label className="hw-prop-label" htmlFor="hw-type-sample">Preview text</label>
+            <label className="seg-label" htmlFor="hw-type-sample">Preview text</label>
             <input
               id="hw-type-sample"
               className="hw-input hw-prop-text"

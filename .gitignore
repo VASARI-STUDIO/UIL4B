@@ -88,3 +88,7 @@ __*.py
 # ...and the lockfile that package manager writes alongside them.
 skills-lock.json
 tests/flakeprobe-a0e1/artifacts/
+
+# local screenshot harness (agent scratch)
+shoot-tmp.mjs
+mi-tmp.mjs
