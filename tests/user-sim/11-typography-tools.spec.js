@@ -1031,6 +1031,151 @@ test.describe('the font picker is browsable', () => {
     await expect(trigger.locator('.typ-picker-name')).toHaveText('Lora')
   })
 
+  test('no specimen is trimmed to fit, at either end of the column range', async ({ page }) => {
+    // #font-picker-shows-handgloves. The specimen IS the comparison surface, so
+    // a trimmed one is the fault the tile geometry exists to prevent — the
+    // stylesheet says exactly that. specimenSizeCqw used to budget its lines
+    // with Math.ceil(chars / lines), which is a perfectly BALANCED split, and
+    // browsers fill greedily and break at spaces instead. "Plus Jakarta Sans"
+    // at a 9-character budget is "Plus" / "Jakarta" / "Sans" — three lines
+    // inside a two-line clamp, silently trimmed.
+    //
+    // Four of the 84 bundled families are in that state, which is why this can
+    // be measured here at all: the catalogue this build serves contains the
+    // defect. Measured as CLIPPING rather than as arithmetic — scrollHeight
+    // against clientHeight on the real box — because the arithmetic is what was
+    // wrong, and a test written in the same model could not see it.
+    watch(page, 'designer scanning the whole family grid')
+
+    // TWO THINGS THIS TEST HAS TO ARRANGE, and both were found by measuring
+    // rather than by reasoning.
+    //
+    // 1. THE BUNDLED CATALOGUE CANNOT SHOW THE DEFECT. This build serves the
+    //    84-family fallback list; its longest name is 19 characters, and at the
+    //    30px ceiling both the old size and the new one fit two lines, so a
+    //    sweep of it stays green either way. Verified by mutation: reverting
+    //    specimenSizeCqw leaves a bundled-only sweep passing. So the real
+    //    catalogue's long tail is seeded into the cache the app already reads
+    //    (googleFonts.js, 'vs-gf-catalog').
+    //
+    // 2. THE FACE HAS TO BE THE WORST-CASE ONE. Webfonts do not load here, so a
+    //    'sans-serif' family renders in the platform sans at roughly 0.50em per
+    //    character — narrower than the 0.60em the sizing is calibrated against,
+    //    and wide enough to absorb the balanced split's over-run. Measured, at
+    //    1440: "Noto Sans Inscriptional Parthian" is TWO lines under both
+    //    formulas in the platform sans, and THREE under the old one in the
+    //    platform monospace, which is exactly 0.60em. Seeding the long tail as
+    //    monospace makes the fallback face the worst case the arithmetic claims
+    //    to survive, rather than a comfortable middle one. This is the whole
+    //    reason the defect shipped: it is invisible on most faces.
+    const BUNDLED = ['Roboto Condensed', 'Shadows Into Light', 'Barlow Condensed', 'Plus Jakarta Sans']
+    const LONG_TAIL = [
+      // The first two are the only names in the live catalogue the 13px floor
+      // pushes onto a third line at the narrowest shipped column.
+      'Noto Sans Inscriptional Parthian', 'Noto Sans Inscriptional Pahlavi',
+      'Noto Sans Anatolian Hieroglyphs', 'Noto Serif Khitan Small Script',
+      'Alumni Sans Collegiate One', 'Atkinson Hyperlegible Mono',
+      'Encode Sans Semi Condensed', 'IBM Plex Sans Condensed',
+      // Controls: a short name, and the longest unbreakable word in the
+      // catalogue, which has no space to wrap on.
+      'Abel', 'UnifrakturMaguntia',
+    ]
+    const CATALOGUE = [...BUNDLED, ...LONG_TAIL]
+    await page.addInitScript(([bundled, longTail]) => {
+      try {
+        localStorage.setItem('vs-gf-catalog', JSON.stringify({
+          t: Date.now(),
+          fonts: [
+            ...bundled.map((family) => ({ family, category: 'sans-serif', variants: [400, 700], subsets: ['latin'] })),
+            ...longTail.map((family) => ({ family, category: 'monospace', variants: [400, 700], subsets: ['latin'] })),
+          ],
+        }))
+      } catch { /* private mode */ }
+    }, [BUNDLED, LONG_TAIL])
+
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await go(page, '/fontpairs')
+      const trigger = page.locator('.typ-picker-trigger').first()
+      await expect(trigger).toBeVisible()
+      await trigger.click()
+      const dialog = page.getByRole('dialog')
+      await expect(dialog).toBeVisible()
+      await expect(dialog.locator('.fbd-sample').first()).toBeVisible()
+
+      // HOW MANY LINES THE NAME REALLY TAKES, measured by lifting the clamp and
+      // reading the block height back. scrollHeight is the wrong instrument
+      // here and quietly lies: a cursive face's ascenders and descenders
+      // overflow a 1.15 line box, so "Shadows Into Light" reports 38px of
+      // scroll inside a 35px single line and looks truncated when it is not.
+      // Line boxes are what the clamp counts, so line boxes are what to count.
+      const measure = (scope) => scope.locator('.fbd-sample').evaluateAll((nodes) => nodes.map((n) => {
+        const cs = getComputedStyle(n)
+        const lh = parseFloat(cs.lineHeight)
+        const clamp = Number(cs.webkitLineClamp) || Number(cs.lineClamp) || 0
+        const prev = { clamp: n.style.webkitLineClamp, display: n.style.display, overflow: n.style.overflow }
+        n.style.webkitLineClamp = 'unset'
+        n.style.display = 'block'
+        n.style.overflow = 'visible'
+        const lines = Math.max(1, Math.round(n.getBoundingClientRect().height / lh))
+        n.style.webkitLineClamp = prev.clamp
+        n.style.display = prev.display
+        n.style.overflow = prev.overflow
+        return {
+          name: (n.textContent || '').trim(),
+          lines,
+          clamp,
+          clipped: lines > clamp,
+          overflowing: n.scrollWidth > n.clientWidth + 1,
+          px: parseFloat(cs.fontSize),
+          box: n.clientWidth,
+        }
+      }))
+
+      const seen = await measure(dialog)
+
+      // POSITIVE CONTROL, and it comes first. The grid renders a page of the
+      // catalogue rather than all of it, so every seeded family is searched for
+      // by name — without this the sweep is a clean pass over whichever short
+      // names happened to be on screen, which were never in question.
+      const search = dialog.getByLabel('Search font families')
+      for (const family of CATALOGUE) {
+        await search.fill(family)
+        const card = dialog.locator('.fbd-card', { hasText: family }).first()
+        await expect(card, `@${width}: ${family} is not reachable in the grid, so this test measured`
+          + ' nothing that the old formula got wrong').toBeVisible()
+        const [hit] = await measure(card)
+        expect(hit, `@${width}: no specimen inside the ${family} card`).toBeTruthy()
+        // WITHIN THE TWO LINES THE HELPER BUDGETED, not merely within the
+        // three-line clamp. The clamp is three so that the two catalogue names
+        // the 13px floor forces onto a third line are not trimmed; nothing that
+        // fits its own budget should ever need it. A budget that stopped
+        // solving the real wrap shows up here as a third line long before it
+        // shows up as a trim, which is what makes this the earlier signal.
+        //
+        // One line is a pass: at 390 the dialog gives a single column ~265px
+        // wide and the 30px ceiling lets "Roboto Condensed" sit on one line
+        // there. The claim is a ceiling on lines, not a fixed number of them.
+        expect(hit.lines,
+          `@${width}: the ${family} specimen wraps to ${hit.lines} lines at ${hit.px}px`
+          + ` in a ${hit.box}px box - the line budget is not solving the wrap the browser performs`)
+          .toBeLessThanOrEqual(2)
+        seen.push(hit)
+      }
+      await search.fill('')
+
+      const clipped = seen.filter((s) => s.clipped || s.overflowing)
+      expect(clipped.map((s) => `${s.name} ${s.lines} lines in a ${s.clamp}-line clamp @${s.px}px`),
+        `@${width}: these specimens are trimmed or overflow their tile`).toEqual([])
+
+      // And the specimen is still SET at a readable size rather than shrunk to
+      // fit — the other way this could go green.
+      const tiny = seen.filter((s) => s.px < 13)
+      expect(tiny.map((s) => `${s.name} at ${s.px}px`),
+        `@${width}: a specimen fell below the 13px clamp floor`).toEqual([])
+    }
+  })
+
   test('the picker dialog carries the same four tabs, In use included', async ({ page }) => {
     // Two dialogs show this dossier and they have drifted once before. The tab
     // is wired into both, so it is checked in both — a component that exists

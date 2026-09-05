@@ -4242,6 +4242,23 @@ html[data-reduced-motion="true"] .landing-sticky-demo{transition:none}
 .ch-card{position:relative;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .ch-card:hover{border-color:var(--bh);transform:translateY(-3px)}
 .ch-thumb{display:flex;align-items:center;justify-content:center;height:150px;text-decoration:none!important;position:relative;background:linear-gradient(135deg,var(--c1,var(--accent)),var(--c2,var(--accent-strong)))}
+/* THE FALLBACK GROUND IS A THEME PAIR, AND IT FLIPS. When a card's stops are
+   not a usable hex pair CommunityCard omits --c1/--c2 and the rule above
+   draws linear-gradient(135deg,var(--accent),var(--accent-strong)) instead -
+   so the ground stops being per-item DATA and becomes a THEME token, which is
+   the one ground per-item ink could not see. Measured over the whole of that
+   ground, sampled across the ramp: the old hard-coded #FFFFFF is 4.43:1 on the
+   light pair and 2.41:1 on the dark one, and 2.23:1 under prefers-contrast:
+   more in dark, both under the 3:1 large-text floor. So the fallback ink is
+   chosen per theme by the same measurement the per-item one uses, from the
+   same near-poles inkOnGrounds walks: #F2F3F5 is 3.99:1 on the light pair
+   (7.36:1 under prefers-contrast) and #0A0B0D is 6.31:1 on the dark pair
+   (8.82:1 under prefers-contrast). An inline --mono-ink always wins over both,
+   so a card WITH usable stops is untouched by this. Pinned in
+   tests/unit/community-monogram-ink.test.js, which reads the accent pair off
+   this sheet rather than repeating it. */
+.ch-thumb{--mono-ink:#F2F3F5;--mono-glow:rgba(0,0,0,.25)}
+[data-theme="dark"] .ch-thumb{--mono-ink:#0A0B0D;--mono-glow:rgba(255,255,255,.38)}
 /* Ink and glow are set PER CARD by CommunityCard.jsx from that card's own
    gradient — the ground is per-item data, so no fixed ink clears 3:1 on all
    of them. The colour is OPAQUE now: the old .92 alpha composited toward the
@@ -9222,7 +9239,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pv-settings nav{display:flex;flex-direction:column;gap:7px;padding:18px;background:var(--pv-surface);border-right:1px solid var(--pv-border);font-size:8px}
 .plb-pv-settings nav strong{margin-bottom:10px}
 .plb-pv-settings nav span{padding:7px;color:var(--pv-muted)}
-.plb-pv-settings nav .is-active{color:var(--pv-primary);background:var(--pv-raised)}
+.plb-pv-settings nav .is-active{color:var(--pv-primary-ink);background:var(--pv-raised)}
 .plb-pv-settings form{display:grid;align-content:start;gap:8px;padding:18px}
 .plb-pv-settings label{display:flex;justify-content:space-between;padding:8px;font-size:8px;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:4px}
 .plb-pv-settings label i{font-style:normal;color:var(--pv-muted)}
@@ -9237,7 +9254,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pv-inbox>main{padding:18px}
 .plb-pv-message{max-width:250px;padding:12px;margin-top:16px;color:var(--pv-text)!important;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:5px}
 .plb-pv-reply{display:flex;justify-content:space-between;padding:10px;margin-top:16px;font-size:8px;color:var(--pv-muted);border:1px solid var(--pv-border);border-radius:5px}
-.plb-pv-reply span{font-weight:750;color:var(--pv-primary)}
+.plb-pv-reply span{font-weight:750;color:var(--pv-primary-ink)}
 .plb-pv-finance{display:grid;grid-template-columns:1fr .75fr;gap:12px;padding:18px}
 .plb-pv-finance header{grid-column:1/-1}
 .plb-pv-finance-chart{display:flex;align-items:flex-end;gap:5px;height:116px;padding:12px;background:var(--pv-surface);border:1px solid var(--pv-border)}
@@ -9388,7 +9405,22 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pv-card{display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:10px}
 .plb-pv-k{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pv-muted)}
 .plb-pv-n{font-size:16px;font-weight:800;color:var(--pv-text)}
-.plb-pv-n--accent{color:var(--pv-accent)}
+/* THE FIVE RULES THAT SET TEXT IN A FILL ROLE READ THE INK ROLE, NOT THE FILL.
+   #preview-accent-ink-unmeasured. --pv-accent and --pv-primary are chosen by
+   CHROMA and are FILL colours first - they paint the CTA, the chips, the disc
+   and the shapes below, where 1.4.11 asks 3:1 and the palette colour is the
+   point. They were also being read as ink by these five rules, with no
+   guarantee of any kind. Measured on the rendered page across all three
+   preview tabs and both preview themes: 22 of 22 accent- and primary-inked
+   samples below 4.5:1, worst 1.031. None of the five is large text - the KPI
+   number is 16px/700 and AA-large starts at 18.66px bold - so the floor is 4.5
+   for all of them. derivePreviewRoles now emits accentInk/primaryInk,
+   guaranteed on inkGrounds; every fill value below is unchanged. Same split as
+   --accent and --accent-strong, and the -strong split on the category hues.
+   (Spelling that second pair out rather than abbreviating it: the short form
+   contains a star-slash, which ends this comment early and takes the build
+   with it.) */
+.plb-pv-n--accent{color:var(--pv-accent-ink)}
 .plb-pv-bars{display:flex;align-items:flex-end;gap:6px;height:64px;margin-top:auto}
 .plb-pv-bar{flex:1;border-radius:6px 6px 2px 2px;background:var(--plb-rc)}
 .plb-pv-bar--1{height:44%}
@@ -9407,7 +9439,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pvb-navlink{width:36px;height:7px;border-radius:999px;background:var(--pv-muted);opacity:.55}
 .plb-pvb-navcta{padding:6px 13px;font-size:11px;font-weight:700;color:var(--pv-onprimary);background:var(--pv-primary);border:1px solid var(--pv-pborder);border-radius:8px}
 .plb-pvb-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px 22px;text-align:center}
-.plb-pvb-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--pv-accent)}
+.plb-pvb-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--pv-accent-ink)}
 .plb-pvb-head{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.02em;color:var(--pv-text)}
 .plb-pvb-sub{max-width:340px;font-size:12.5px;line-height:1.5;color:var(--pv-muted)}
 .plb-pvb-btns{display:flex;gap:10px;margin-top:2px}
@@ -9423,7 +9455,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pvg-square{position:absolute;bottom:64px;right:34px;width:70px;height:70px;border-radius:12px;background:var(--plb-rc);transform:rotate(12deg)}
 .plb-pvg-tri{position:absolute;top:96px;left:18px;width:0;height:0;border-left:34px solid transparent;border-right:34px solid transparent;border-bottom:58px solid var(--plb-rc);opacity:.85}
 .plb-pvg-body{position:relative;z-index:1;margin-top:auto}
-.plb-pvg-kicker{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--pv-accent)}
+.plb-pvg-kicker{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--pv-accent-ink)}
 .plb-pvg-title{margin-top:6px;font-size:46px;font-weight:900;line-height:.92;letter-spacing:-.03em;color:var(--pv-text)}
 .plb-pvg-lead{margin-top:10px;max-width:280px;font-size:12px;line-height:1.5;color:var(--pv-muted)}
 .plb-pvg-swatches{position:relative;z-index:1;display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--pv-border)}
@@ -10880,17 +10912,39 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    word - so a tile that somehow renders without the property looks exactly as
    it did before.
 
-   TWO LINES, and the height is checked: the tile is 104px with 10px of vertical
-   padding, so 84px of content box. Two lines at the 30px ceiling and 1.15
-   leading is 69px, which fits. overflow-wrap:anywhere is the backstop for the
-   longest unbreakable word in the catalogue ("UnifrakturMaguntia", 18 chars);
-   family names otherwise carry spaces and wrap on them.
+   TWO LINES BUDGETED, THREE CLAMPED, and the height is checked at both: the
+   tile is 104px with 10px of vertical padding, so 84px of content box. Two
+   lines at the 30px ceiling and 1.15 leading is 69px, which fits; three lines
+   at the 13px floor is 45px, which also fits. overflow-wrap:anywhere is the
+   backstop for the longest unbreakable word in the catalogue
+   ("UnifrakturMaguntia", 18 chars); family names otherwise carry spaces and
+   wrap on them.
+
+   WHY THE CLAMP IS THREE AND NOT TWO. specimenSizeCqw solves for a size whose
+   GREEDY wrap fits two lines, and 0 of the 1,946 live families exceed that at
+   their own derived size. The clamp floor above then overrides the size on the
+   longest names: at 190px columns, 13px carries about 20 characters a line, and
+   "Noto Sans Inscriptional Parthian" and "Noto Sans Inscriptional Pahlavi" need
+   22. TWO of 1,946, and the choice for those two is a third line or a trimmed
+   specimen. This file already says which one it wants - "a specimen trimmed to
+   fit is the fault being fixed here, not a fix for it" - so the clamp widens
+   rather than the floor dropping. 11px would fit them on two lines and is the
+   size this note already calls present but not legible.
+
+   Mobbin, and it is evidence rather than taste: Linktree's font chips wrap
+   "Bricolage Grotesque" onto two lines inside the chip rather than trimming it,
+   which is the pattern extended here. Gamma clips to one line at a fixed size
+   instead - "Instrument...", "Libre..." - but it prints the full name in the UI
+   font INSIDE the same card, which is the trade .typ-picker-face makes and this
+   tile deliberately does not.
+   mobbin.com/screens/5e3d1b9f-55bb-4593-aade-10b766825aeb (Linktree)
+   mobbin.com/screens/05db44b6-6347-42df-b903-6bcf6f7ab24a (Gamma)
 
    The ellipsis is GONE rather than kept as a backstop. It cannot fire now that
    the size is derived from the character count, and leaving it would mean a
    long name silently trimmed instead of visibly mis-sized - a specimen trimmed
    to fit is the fault being fixed here, not a fix for it. */
-.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 1cqw),30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
+.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 1cqw),30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3}
 /* A tile whose face has not registered yet shows nothing rather than the
    fallback: the tile exists to be judged, and a fallback pretending to be the
    family is the one thing it must never do. */

@@ -396,6 +396,14 @@ function pvRef(roles) {
     el.style.setProperty('--pv-muted', roles.muted)
     el.style.setProperty('--pv-border', roles.border)
     el.style.setProperty('--pv-pborder', roles.primaryBorder)
+    // The READABLE halves of the two fill roles. Separate properties, not
+    // replacements: --pv-accent and --pv-primary still paint every fill, and
+    // only the five rules that set TEXT in them read these
+    // (#preview-accent-ink-unmeasured). Dropping either hand-off leaves the
+    // rules resolving var() to nothing, which is a visible failure rather than
+    // a silent one — asserted in tests/unit/preview-roles-contrast.test.js.
+    el.style.setProperty('--pv-accent-ink', roles.accentInk)
+    el.style.setProperty('--pv-primary-ink', roles.primaryInk)
   }
 }
 

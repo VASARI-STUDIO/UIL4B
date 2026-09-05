@@ -45,15 +45,25 @@ function HeartIcon({ filled }) {
 export default function CommunityCard({ item, saved, count, onToggle, offline = false }) {
   const href = safeHttpUrl(item.url)
   const mono = monoInk(item.c1, item.c2)
+  // THE STOPS AND THE INK ARE SET TOGETHER OR NOT AT ALL.
+  //
+  // These four properties are one decision, and splitting them was a hole. The
+  // stops used to be written unconditionally while the ink was written only
+  // when they parsed, so an item carrying a non-hex c1 - which nothing
+  // validates; sanitizeCommunitySubmission passes c1/c2 straight through and
+  // Community.jsx spreads a server payload over its defaults - got a ground
+  // from its own bad data and an ink from the stylesheet's fallback, which are
+  // measurements of two different things. A value CSS cannot parse at all
+  // ('nope') makes the whole gradient invalid at computed-value time, so
+  // .ch-thumb falls back to `initial` - transparent - and the monogram lands on
+  // the CARD, where white measures 1.00:1 in light. Omitting both hands the
+  // rule its own accent-gradient fallback, which .ch-thumb carries a measured
+  // per-theme ink for.
   const thumbProps = {
     className: 'ch-thumb',
-    style: {
-      '--c1': item.c1,
-      '--c2': item.c2,
-      // Omitted, not guessed, when the stops are not a usable pair: the CSS
-      // fallback is the accent ground the rule already draws, with white on it.
-      ...(mono ? { '--mono-ink': mono.ink, '--mono-glow': mono.glow } : null),
-    },
+    style: mono
+      ? { '--c1': item.c1, '--c2': item.c2, '--mono-ink': mono.ink, '--mono-glow': mono.glow }
+      : undefined,
   }
   const thumbContent = (
     <span className="ch-thumb-mono">{item.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
