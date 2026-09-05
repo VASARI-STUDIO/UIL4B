@@ -2926,6 +2926,80 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .app-footer--compact .app-footer-legal{padding-top:var(--s-4)}
 @media(max-width:768px){.app-footer-inner,.app-footer--compact .app-footer-inner{grid-template-columns:minmax(0,1fr)}.app-footer-brand,.app-footer-links,.app-footer-group,.app-footer-legal{min-width:0}.app-footer-links{grid-template-columns:repeat(3,minmax(0,1fr))}.app-footer-legal{grid-column:auto}}
 @media(max-width:480px){.app-footer-links{grid-template-columns:1fr 1fr}.app-footer-legal{align-items:flex-start;flex-direction:column}}
+/* ─── "About this project" — the founder's note, opened from the footer ─── */
+/* THE TRIGGER. A <button> that reads as a link, and both halves of that are
+   deliberate.
+
+   A button because it OPENS A DIALOG rather than going anywhere. An
+   <a href="#"> here would be a link that navigates nowhere, announced as a link,
+   activated by Enter but not Space — the class of defect the modal and menu
+   keyboard contracts in this app exist to remove.
+
+   Reading as a link because of where it stands: between the copyright and the
+   founder attribution, in a row of quiet text. A filled or bordered control
+   there would out-rank both of the things it sits between, and the note is the
+   least urgent item in the footer, not the most.
+
+   The underline RESTS rather than waiting for hover — same reason as
+   .app-footer-attrib above (founder direction 2026-09-02, no hover-only
+   affordances on touch), and more so here: its two neighbours are plain spans,
+   so nothing else in the row tells a reader this one is pressable. */
+.app-footer-note{padding:0;border:0;background:none;font:inherit;font-size:var(--fs-caption);font-weight:500;color:var(--t1);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px;transition:color var(--t-fast)}
+.app-footer-note:hover{color:var(--accent-strong);text-decoration-color:currentColor}
+
+/* THE PANEL. The house dialog shell — same scrim, same radius, same entrance as
+   .fb-modal — carrying a letter rather than a form. Narrower than the feedback
+   modal (480 vs 520) because this is one column of prose and nothing else, and
+   .fnote-para caps at 56ch so the measure stays readable however long the note
+   turns out to be. */
+.fnote-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance)}
+.fnote{display:flex;flex-direction:column;width:100%;max-width:480px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.fnote-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 14px;flex-shrink:0}
+.fnote-title{margin:0;font-size:var(--fs-body);font-weight:650;letter-spacing:-.01em;color:var(--t0)}
+.fnote-close{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;padding:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;color:var(--t2);cursor:pointer;transition:color var(--t-fast),background var(--t-fast),border-color var(--t-fast)}
+.fnote-close:hover{background:var(--bg-2);border-color:var(--border);color:var(--t0)}
+/* overflow-y:auto is what makes this the scroll container, and it is also what
+   `markScrollContainers()` looks for when the dialog opens: it measures the
+   subtree, marks the real scrollers `data-lenis-prevent`, and the rule further
+   down this file gives them `overscroll-behavior:contain`. That pair is how a
+   wheel gesture over a long note scrolls the NOTE — Lenis intercepts the wheel
+   for the whole document, and a stopped Lenis would otherwise freeze this box
+   along with the page behind it. */
+.fnote-body{padding:0 22px 20px;overflow-y:auto;min-height:0}
+.fnote-para{max-width:56ch;margin:0 0 12px;font-size:var(--fs-body-s);line-height:1.65;color:var(--t1)}
+.fnote-para:last-child{margin-bottom:0}
+/* The unwritten state. Dashed rather than solid, and on --bg-2 rather than the
+   card, so it cannot be mistaken at a glance for the note itself. */
+.fnote-todo{padding:14px 16px;border:1px dashed var(--border);border-radius:var(--radius);background:var(--bg-2)}
+.fnote-todo-lead{margin:0 0 10px;font-size:var(--fs-body-s);line-height:1.55;color:var(--t1)}
+.fnote-todo-list{display:flex;flex-direction:column;gap:6px;margin:0;padding-left:20px;font-size:var(--fs-body-s);line-height:1.5;color:var(--t2)}
+.fnote-todo-where{margin:12px 0 0;font-size:var(--fs-caption);line-height:1.5;color:var(--t3)}
+.fnote-todo-where code{font-family:var(--mono);font-size:.95em;color:var(--t2)}
+.fnote-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 22px 20px;border-top:1px solid var(--border);flex-shrink:0}
+.fnote-sign{display:flex;flex-direction:column;gap:2px;margin:0;font-size:var(--fs-caption);font-weight:600;color:var(--t1)}
+.fnote-sign-place{font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.fnote-action{flex-shrink:0}
+/* Phone: the same bottom-sheet form .fb-modal takes, at the same breakpoint. A
+   centred card on a 390px screen puts the close button in the middle of the
+   viewport and leaves a strip of scrim above and below that reads as a mistake. */
+@media(max-width:640px){
+  .fnote-overlay{padding:0;align-items:flex-end}
+  .fnote{max-width:100%;max-height:92vh;border-radius:var(--radius-l) var(--radius-l) 0 0;border-bottom:none}
+  .fnote-foot{gap:12px}
+  .fnote-action{width:100%;justify-content:center}
+}
+/* REDUCED MOTION, both directions of the contract.
+   The global clamp at the top of this file forces durations and delays to near
+   zero but CANNOT reach `opacity` or `transform` — and opacity and transform are
+   precisely what cp-fade and cp-rise animate. So both are flattened by hand,
+   per property, rather than left to the clamp. */
+html[data-reduced-motion="true"] .fnote-overlay,
+html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .fnote-overlay,
+  html:not([data-reduced-motion="false"]) .fnote{animation:none;opacity:1;transform:none}
+}
+
 /* Global floating feedback button */
 .global-feedback-btn{position:fixed;right:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(0,0,0,.3);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 .global-feedback-btn:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg);transform:translateY(-2px)}
