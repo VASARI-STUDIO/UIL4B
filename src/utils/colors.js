@@ -997,7 +997,7 @@ export function derivePreviewRoles(allColors, opts = {}) {
   // ── Empty palette → brand fallback set on app-neutral material (§10). ──
   if (palette.length === 0) {
     const bg = mode === 'dark' ? PV_NEAR_BLACK : PV_NEAR_WHITE
-    const surface = mixHex(bg, mode === 'dark' ? '#FFFFFF' : '#000000', 0.06)
+    const surface = pvSurface(bg, mode === 'dark' ? '#FFFFFF' : '#000000', 0.06)
     const text = mode === 'dark' ? PV_NEAR_WHITE : PV_NEAR_BLACK
     // Brand blue on the light surface is CR 2.89 (<3:1), so the CTA/KPI numbers
     // need the same border safety net the full path uses (§5.2) — else the
@@ -1011,8 +1011,9 @@ export function derivePreviewRoles(allColors, opts = {}) {
       onPrimary: inkOnSolid(PV_BRAND),
       accent: PV_BRAND_SOFT,
       text,
-      muted: mixHex(text, bg, 0.42),
+      muted: pvQuietInk(text, bg, [bg, surface], 0.42),
       border: mixHex(text, bg, 0.86),
+      inkGrounds: [bg, surface],
       primaryBorder,
       lowChroma: true,
     }
@@ -1027,8 +1028,10 @@ export function derivePreviewRoles(allColors, opts = {}) {
 
   // ── 3. surface: one tonal step off bg toward the opposite end (Material:
   // surfaces are tonal, never a random palette colour). Dark mode lifts toward
-  // white; light mode dips a hair toward black so the panel reads as *raised*. ──
-  const surface = mixHex(bg, opposite, mode === 'dark' ? 0.10 : 0.05)
+  // white; light mode dips a hair toward black so the panel reads as *raised*.
+  // The step is SHORTENED where a full one would leave no ink able to sit on
+  // both grounds at once — see pvSurface. ──
+  const surface = pvSurface(bg, opposite, mode === 'dark' ? 0.10 : 0.05)
 
   // ── 4. primary: highest chroma that clears ≥3:1 on surface (visible CTA). ──
   const byChroma = [...palette].sort((a, b) => pvChroma(b) - pvChroma(a))
@@ -1062,22 +1065,126 @@ export function derivePreviewRoles(allColors, opts = {}) {
   // ── 7. onPrimary: legible label on the CTA — GUARANTEED, not estimated. ──
   const onPrimary = inkOnSolid(primary)
 
-  // ── 8. muted + border: derived from text↔bg, contrast-clamped. ──
-  let muted = mixHex(text, bg, 0.45)
+  // ── 8. THE GROUNDS THE INK ROLES ARE PAINTED ON, stated rather than assumed.
+  // This list is the fix for [preview-muted-on-surface]. The clamp below used
+  // to run against `bg` alone — the old comment here said so plainly, "muted +
+  // border: derived from text↔bg, contrast-clamped" — while the scenes paint
+  // both ink roles on `surface` as well: .plb-pv-field is 8px --pv-muted on
+  // --pv-surface, and .plb-pv-card, .plb-pv-side, .plb-pv-settings nav/label,
+  // .plb-pvb-schedule span and .plb-pvb-booking are all surface-grounded.
+  // A scene that introduces a THIRD ground adds it here; nothing else changes.
+  const inkGrounds = [bg, surface]
+
+  // `border` is a LINE, not an ink, and it is derived from the pre-net text on
+  // purpose: raising the ink then moves no fill and no border in either tool,
+  // so this change is confined to the two roles that are actually READ.
   const border = mixHex(text, bg, 0.86)
 
   // ── §5.2 AA safety net — validate + self-heal before any scene renders. ──
   if (contrastRatio(text, bg) < 7) {
     // body copy must clear AA-large; pick the winning pole.
     text = contrastRatio(PV_NEAR_WHITE, bg) >= contrastRatio(PV_NEAR_BLACK, bg) ? PV_NEAR_WHITE : PV_NEAR_BLACK
-    muted = mixHex(text, bg, 0.45)
   }
-  if (contrastRatio(muted, bg) < 4.5) muted = fixForeground(muted, bg, 4.5)
+  // ...and picking the winning pole is NOT a guarantee, for the reason
+  // inkOnSolid records: on a mid-luminance ground neither near-pole clears AA.
+  // Measured before this line existed, 6,000 generated palettes x 2 themes:
+  // text missed 4.5:1 on bg 243 times (worst 4.211) and on surface 466 (3.481).
+  if (pvWorstOn(text, inkGrounds) < 4.5) text = inkOnGrounds(inkGrounds)
+
+  // ── 9. muted: the QUIET ink — SOLVED rather than clamped. The old line was
+  // `mixHex(text, bg, 0.45)` followed by fixForeground, which is not a clamp
+  // (it returns its input unchanged when nothing clears) and was measured
+  // failing 2,314 of 12,000 on bg, worst 2.481, and 12,000 of 12,000 on
+  // surface, worst 2.951. Now: take the LARGEST step toward bg that still
+  // clears AA on every ground above, so the role stays as quiet as the palette
+  // can afford and never quieter. Terminates because step 0 is `text`, which
+  // the line above has already guaranteed. ──
+  const muted = pvQuietInk(text, bg, inkGrounds, 0.45)
   // CTA invisible on its card → caller draws a 1px border; we expose primaryBorder.
   const primaryLowOnSurface = contrastRatio(primary, surface) < 3
   const primaryBorder = primaryLowOnSurface ? mixHex(primary, text, 0.35) : 'transparent'
 
-  return { bg, surface, primary, onPrimary, accent, text, muted, border, primaryBorder, lowChroma }
+  return { bg, surface, primary, onPrimary, accent, text, muted, border, primaryBorder, lowChroma, inkGrounds }
+}
+
+// The worst contrast an ink achieves over a set of grounds. Every guarantee
+// below is stated in these terms, because a role that clears one ground and
+// fails another is exactly the defect [preview-muted-on-surface] recorded.
+function pvWorstOn(ink, grounds) {
+  let worst = Infinity
+  for (const g of grounds) {
+    const r = contrastRatio(ink, g)
+    if (r < worst) worst = r
+  }
+  return worst
+}
+
+// Can ANY ink sit on both of these grounds at once? Asked of the two pure
+// poles, which is sufficient: for a SINGLE ground one of them always clears
+// 4.5:1 (pure black does for every luminance at or above 0.175 and pure white
+// for every one at or below 0.1833, and those overlap — see inkOnSolid). For a
+// PAIR that stops being true, because the pair can straddle the overlap: bg
+// #167797 with surface #2d85a1 tops out at 4.216:1 on its best pole.
+function pvBothClear(a, b, target) {
+  return Math.max(
+    Math.min(contrastRatio('#000000', a), contrastRatio('#000000', b)),
+    Math.min(contrastRatio('#FFFFFF', a), contrastRatio('#FFFFFF', b)),
+  ) >= target
+}
+
+/**
+ * The surface tonal step, shortened where a full one would put the two grounds
+ * out of reach of any single ink.
+ *
+ * `bg` is a colour the USER chose and is shown at full size, so it is never
+ * moved. `surface` is invented by this engine — it is the one ground here that
+ * is ours to give up, and giving up a little of it is what makes an AA
+ * guarantee on both grounds possible at all. Measured over 6,000 generated
+ * palettes x 2 themes: 251 of 12,000 (2.09%, dark only) had NO ink clearing
+ * 4.5:1 on both grounds, worst best-case 4.151:1.
+ *
+ * The direction is kept — flipping it would read as an inset well rather than a
+ * raised panel — and the step is shrunk by the smallest amount that works.
+ * It terminates because at step 0 the pair collapses to one ground, where a
+ * pole always clears. The panel edge is carried by `border` regardless, and the
+ * shortened step never lands below a surface/bg separation this engine already
+ * emits at full step on a near-black bg.
+ */
+function pvSurface(bg, opposite, step, target = 4.5) {
+  const full = mixHex(bg, opposite, step)
+  if (pvBothClear(bg, full, target)) return full
+  let lo = 0            // invariant: lo always clears, so the result does too
+  let hi = step
+  for (let i = 0; i < 22; i++) {
+    const mid = (lo + hi) / 2
+    if (pvBothClear(bg, mixHex(bg, opposite, mid), target)) lo = mid
+    else hi = mid
+  }
+  return mixHex(bg, opposite, lo)
+}
+
+/**
+ * The quietest ink on the text→bg line that still clears `target` on EVERY
+ * ground it will be painted on.
+ *
+ * `muted` exists to be quieter than `text`; legibility is what it may not trade
+ * away. So rather than mixing a fixed 45% toward bg and hoping, this solves for
+ * the largest mix the grounds allow. On most palettes that is the full 45% and
+ * nothing moves. On a saturated canvas there is genuinely no quiet ink — the
+ * whole ink budget is spent on clearing bg — and the answer converges on `text`
+ * itself, which is the honest result rather than an illegible one.
+ */
+function pvQuietInk(text, bg, grounds, maxMix, target = 4.5) {
+  const clears = (t) => pvWorstOn(mixHex(text, bg, t), grounds) >= target
+  if (clears(maxMix)) return mixHex(text, bg, maxMix)
+  let lo = 0            // t = 0 is `text`, already guaranteed by the caller
+  let hi = maxMix
+  for (let i = 0; i < 22; i++) {
+    const mid = (lo + hi) / 2
+    if (clears(mid)) lo = mid
+    else hi = mid
+  }
+  return mixHex(text, bg, lo)
 }
 
 /**
@@ -1115,30 +1222,40 @@ export function derivePreviewRoles(allColors, opts = {}) {
  * levels per channel.
  */
 function inkOnSolid(bg, target = 4.5) {
+  return inkOnGrounds([bg], target)
+}
+
+// The same walk over a SET of grounds. With one ground this is byte-identical
+// to what inkOnSolid did before [preview-muted-on-surface] widened it, which
+// is why onPrimary's measured guarantee is unchanged by that widening.
+function inkOnGrounds(grounds, target = 4.5) {
   const poles = [[PV_NEAR_BLACK, '#000000'], [PV_NEAR_WHITE, '#FFFFFF']]
   let near = poles[0][0]
-  for (const [p] of poles) if (contrastRatio(p, bg) > contrastRatio(near, bg)) near = p
-  if (contrastRatio(near, bg) >= target) return near
+  for (const [p] of poles) if (pvWorstOn(p, grounds) > pvWorstOn(near, grounds)) near = p
+  if (pvWorstOn(near, grounds) >= target) return near
   // Neither near-pole clears. Walk each toward its pure extreme and keep the
   // smallest movement that does — every unit of movement is a preview showing a
   // colour the palette did not generate, which is the trade cardGrounds makes too.
   let winner = null
   let winnerT = Infinity
   for (const [pole, pure] of poles) {
-    if (contrastRatio(pure, bg) < target) continue
+    if (pvWorstOn(pure, grounds) < target) continue
     let lo = 0
     let hi = 1   // invariant: hi always clears, so the returned mix always does
     for (let i = 0; i < 20; i++) {
       const mid = (lo + hi) / 2
-      if (contrastRatio(mixHex(pole, pure, mid), bg) >= target) hi = mid
+      if (pvWorstOn(mixHex(pole, pure, mid), grounds) >= target) hi = mid
       else lo = mid
     }
     if (hi < winnerT) { winnerT = hi; winner = mixHex(pole, pure, hi) }
   }
   if (winner) return winner
-  // Unreachable for sRGB (see above), kept so the function is total: return the
-  // better pure pole rather than a value that only looks like a decision.
-  return contrastRatio('#000000', bg) >= contrastRatio('#FFFFFF', bg) ? '#000000' : '#FFFFFF'
+  // Unreachable for a single sRGB ground (see above), and unreachable for the
+  // {bg, surface} pair too because pvSurface has already ruled out the straddle
+  // that is the only way a pair can defeat both poles. Kept so the function is
+  // total: return the better pure pole rather than a value that only looks
+  // like a decision.
+  return pvWorstOn('#000000', grounds) >= pvWorstOn('#FFFFFF', grounds) ? '#000000' : '#FFFFFF'
 }
 
 // textColorForBg returns rgba() strings; for solid hex roles we want a hex pole
