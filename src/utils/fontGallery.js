@@ -120,6 +120,41 @@ const SUBSET_NAMES = {
 // coverage twice, in the same dialog, with two different answers.
 const NON_SCRIPT_SUBSETS = new Set(['menu'])
 
+// How large the browse tile may set a family's own NAME as its specimen.
+//
+// #font-picker-shows-handgloves replaced the fixed word "Handgloves" with the
+// family name, so the specimen stopped being one width and became 1,941 of
+// them. Measured over the live Google Fonts family list: median 11 characters,
+// p95 22, longest 32 ("Noto Sans Inscriptional Parthian"). A constant font-size
+// calibrated for a 10-character word cannot survive a 32-character one - it
+// overflows, and the tile's ellipsis backstop then trims a specimen, which is
+// the exact fault the tile geometry was built to prevent.
+//
+// THE RATIO IS THE REPO'S OWN MEASUREMENT, NOT A GUESS. global.css records that
+// "Handgloves" renders between 4.8x and 6.0x its font-size across the five
+// categories, so the worst-case advance is ~0.60em per character. To fill a
+// 100cqw tile: size <= 100 / (chars * 0.60) cqw = 167/chars, less ~10% headroom
+// => 150/chars. At 10 characters that yields 15cqw - which is exactly the
+// constant that shipped for "Handgloves", so this formula reproduces the
+// measured value rather than replacing it.
+//
+// WHY TWO LINES PAST 14 CHARACTERS: on one line a 32-character name would need
+// 4.7cqw, about 8px in a 190px column - present but not legible, which is worse
+// than absent. Wrapping halves the characters per line and roughly doubles the
+// size the same box can carry (32 chars -> ~15px). Family names contain spaces,
+// so they wrap naturally; the longest unbreakable word in the catalogue is 18
+// characters ("UnifrakturMaguntia"), which is why .fbd-sample also carries
+// overflow-wrap:anywhere as a backstop rather than relying on a space.
+//
+// Returns the cqw multiplier only. The floor and ceiling live in CSS with the
+// rest of the tile geometry.
+export function specimenSizeCqw(family, maxLines = 2) {
+  const chars = String(family || '').trim().length
+  if (!chars) return 15
+  const lines = (maxLines > 1 && chars > 14) ? 2 : 1
+  return 150 / Math.ceil(chars / lines)
+}
+
 export function formatSubsets(subsets) {
   if (!Array.isArray(subsets)) return []
   const seen = subsets

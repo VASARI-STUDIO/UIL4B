@@ -10569,13 +10569,23 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    104px face box clipped "Handgloves" mid-word, which reads as a broken
    control rather than a preview. Full width the specimen gets ~290px in the
    narrowest panel that hosts this, which is enough for a real word. */
-.typ-picker-trigger{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;align-items:center;width:100%;padding:10px 12px 10px 14px;text-align:left;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.typ-picker-trigger{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;align-items:center;width:100%;padding:10px 12px 10px 14px;container-type:inline-size;text-align:left;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .typ-picker-trigger:hover:not(:disabled){border-color:var(--bh);background:var(--hvr)}
 .typ-picker-trigger:focus-visible{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 .typ-picker-trigger:disabled{opacity:.55;cursor:not-allowed}
 /* Fixed height: the specimen changes family on every pick, and letting it size
-   the row would bounce the whole panel each time you chose something. */
-.typ-picker-face{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;height:34px;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:26px;line-height:1.05;letter-spacing:-.02em;color:var(--t0);white-space:nowrap}
+   the row would bounce the whole panel each time you chose something.
+
+   The face now sets the FAMILY NAME (#font-picker-shows-handgloves), so its
+   width varies from 4 to 32 characters where "Handgloves" was always 10. Same
+   derivation as the browse tile, at one line rather than two: --fbd-cap comes
+   from specimenSizeCqw(family, 1). The 0.72 factor is the share of the trigger
+   this cell actually gets - the "Browse" pill and the two gaps take the rest,
+   and cqw resolves against the whole trigger, not this column.
+   The ellipsis IS kept here, unlike .fbd-sample: .typ-picker-name repeats the
+   full name in the UI font on the very next line, so a trimmed specimen costs
+   the reader nothing. */
+.typ-picker-face{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;height:34px;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 0.72cqw),26px);line-height:1.05;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
 .typ-picker-id{grid-column:1;grid-row:2;display:flex;align-items:baseline;gap:7px;min-width:0}
 .typ-picker-name{flex-shrink:0;max-width:60%;font-size:12px;font-weight:650;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .typ-picker-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -10608,30 +10618,36 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fbd-tile:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .fbd-card.is-selected .fbd-tile{border-color:var(--brand);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--brand)}
 /* THE SPECIMEN IS THE CONTROL, SO IT MUST NEVER BE TRUNCATED.
-   At 390px this read "Hand…", "Handgl…", "Handg…" — a different amount of a
-   different word per family, so the tiles stopped being comparable at exactly
-   the width where comparing them is hardest. A fixed 30px inside a column that
-   drops to 150px cannot fit ten characters, and the ellipsis quietly hid that.
+   At 390px this read "Hand...", "Handgl...", "Handg..." - a different amount of
+   a different word per family, so the tiles stopped being comparable at exactly
+   the width where comparing them is hardest.
 
-   `cqw` sizes the word off the TILE, so the specimen shrinks with its own box
-   instead of overflowing it, at any column count and any viewport. Note cqw
-   resolves against the container's CONTENT box, so the tile's 14px side padding
-   is already discounted — calibrating against the border box gets this wrong by
-   exactly that much, which is how the first attempt landed on the floor.
+   `cqw` sizes the specimen off the TILE, so it shrinks with its own box instead
+   of overflowing it, at any column count and any viewport. Note cqw resolves
+   against the container's CONTENT box, so the tile's 14px side padding is
+   already discounted - calibrating against the border box gets this wrong by
+   exactly that much.
 
-   15cqw is measured, not guessed: "Handgloves" renders between 4.8× and 6.0×
-   its font-size across the five categories (serif narrowest, some display and
-   mono faces widest), so the widest face needs 15cqw × 6.0 = 90% of the box and
-   keeps ~10% headroom. The 30px ceiling keeps every tile from ~228px up
-   identical to what shipped; the floor never binds at any shipped column count.
+   THE MULTIPLIER IS NOW PER-FAMILY (#font-picker-shows-handgloves). The tile
+   sets the family's own NAME, not the fixed word "Handgloves", so the specimen
+   is no longer one width: 1,941 families run from 4 characters to 32. A single
+   constant cannot serve both, so JS supplies --fbd-cap per tile and the
+   derivation lives with it in specimenSizeCqw (src/utils/fontGallery.js).
+   The 15 fallback is the value that shipped for "Handgloves" - a 10-character
+   word - so a tile that somehow renders without the property looks exactly as
+   it did before.
 
-   The ellipsis stays as the backstop. It is genuinely last-resort now rather
-   than the normal case, but it is NOT claimed to be unreachable: "Handgloves"
-   is 6.3× its font-size in the widest face measured across the loaded corpus,
-   and nothing stops family 1,947 being wider. If it ever fires again the
-   answer is this ratio, not a shorter word — a specimen trimmed to fit is the
-   fault being fixed here, not a fix for it. */
-.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(17px,15cqw,30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
+   TWO LINES, and the height is checked: the tile is 104px with 10px of vertical
+   padding, so 84px of content box. Two lines at the 30px ceiling and 1.15
+   leading is 69px, which fits. overflow-wrap:anywhere is the backstop for the
+   longest unbreakable word in the catalogue ("UnifrakturMaguntia", 18 chars);
+   family names otherwise carry spaces and wrap on them.
+
+   The ellipsis is GONE rather than kept as a backstop. It cannot fire now that
+   the size is derived from the character count, and leaving it would mean a
+   long name silently trimmed instead of visibly mis-sized - a specimen trimmed
+   to fit is the fault being fixed here, not a fix for it. */
+.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 1cqw),30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2}
 /* A tile whose face has not registered yet shows nothing rather than the
    fallback: the tile exists to be judged, and a fallback pretending to be the
    family is the one thing it must never do. */

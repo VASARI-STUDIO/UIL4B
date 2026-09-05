@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import FontBrowseDialog from './FontBrowseDialog'
 import { fontStack, headingWeight } from '../utils/googleFonts'
+import { specimenSizeCqw } from '../utils/fontGallery'
 
 // Pick one family out of the catalogue. Shared by the Type Scale and Font Pair
 // tools so choosing a typeface works identically in both.
@@ -46,10 +47,18 @@ export default function FontPicker({
         aria-haspopup="dialog"
         onClick={() => setBrowsing(true)}
       >
-        {/* The specimen is decorative: the accessible name already carries the
-            family, and reading "Handgloves" aloud once per picker says nothing.
-            A family that has not loaded yet simply shows in the fallback here —
-            unlike the browse tiles, this is a label, not a judgement surface. */}
+        {/* The specimen is the FAMILY NAME set in the family
+            (#font-picker-shows-handgloves), for the same reason the browse tiles
+            are: "Handgloves" is the same ten letters on every face and tells you
+            nothing about which one you picked. Still decorative, so still
+            aria-hidden - the accessible name carries the family already, and
+            announcing it twice helps nobody.
+
+            ONE LINE HERE, TWO IN THE DIALOG, and the difference is deliberate.
+            This face is a fixed 34px row and .typ-picker-name repeats the full
+            name in the UI font DIRECTLY BENEATH IT, so a long name clipped here
+            loses no information. In the browse grid the specimen IS the
+            comparison surface, so it may never be trimmed - see .fbd-sample. */}
         <span
           className="typ-picker-face"
           aria-hidden="true"
@@ -57,9 +66,10 @@ export default function FontPicker({
             if (!el || !current) return
             el.style.setProperty('--fbd-ff', fontStack(current))
             el.style.setProperty('--fbd-fw', String(headingWeight(current)))
+            el.style.setProperty('--fbd-cap', String(specimenSizeCqw(current.family, 1)))
           }}
         >
-          {current ? 'Handgloves' : '—'}
+          {current ? current.family : '—'}
         </span>
         <span className="typ-picker-id">
           <span className="typ-picker-name" id={`${uid}-value`}>

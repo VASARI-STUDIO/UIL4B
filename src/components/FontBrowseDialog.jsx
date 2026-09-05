@@ -7,7 +7,7 @@ import LibraryCard from './library/LibraryCard'
 import LibraryEmpty from './library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
 import { FontAboutPanel, FontDossierTabs, FontExamplesPanel } from './FontDossier'
-import { filterPickableTypefaces, ladderWeights, weightName } from '../utils/fontGallery'
+import { filterPickableTypefaces, ladderWeights, specimenSizeCqw, weightName } from '../utils/fontGallery'
 import { bodyWeight, fontStack, headingWeight, loadFont } from '../utils/googleFonts'
 
 // Browse the catalogue and pick a family by LOOKING at it.
@@ -51,7 +51,25 @@ const CATS = [
 // grows on scroll instead, and search is the route to anything past the end.
 const PAGE = 36
 
-const SAMPLE = 'Handgloves'
+// THE SPECIMEN IS THE NAME (#font-picker-shows-handgloves).
+//
+// Every tile used to read "Handgloves", so 1,851 cards differed only by shape
+// and the reader had to look away to the caption to learn what they were
+// looking at. Setting each tile in its own name makes the specimen and the
+// label the same object - which is what Canva, Visual Electric and Magnific all
+// do in their font pickers, and it is the difference between their lists and
+// Readymag's, which shows "Ag" in every tile with the name in a caption below:
+// the same split this change closes.
+//
+// THE CAPTION STAYS, and it is not redundant. LibraryCard still renders
+// `name={font.family}` in the UI font underneath. That is the safety net for
+// the faces whose whole point is that they are decorative - a barcode face, a
+// blackletter, a script - where the specimen is unreadable BY DESIGN and the
+// caption is the only way to know what you are looking at. Canva does exactly
+// this: the name appears twice, once as shape and once as text. The repo has
+// been caught by the other choice before - a sentence about scripts being hard
+// to read set in a script - and the lesson was that the legible label must not
+// be the thing rendered in the decorative face.
 
 function InfoIcon() {
   return (
@@ -116,10 +134,13 @@ function FontTile({ font, selected, onPick, onInspect }) {
               if (!el) return
               el.style.setProperty('--fbd-ff', fontStack(font))
               el.style.setProperty('--fbd-fw', String(headingWeight(font)))
+              // Sized off the name's own length so a 32-character family fills
+              // the tile as fully as a 4-character one. See specimenSizeCqw.
+              el.style.setProperty('--fbd-cap', String(specimenSizeCqw(font.family)))
             }}
             aria-hidden="true"
           >
-            {SAMPLE}
+            {font.family}
           </span>
         </button>
       )}
