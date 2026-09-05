@@ -189,7 +189,7 @@ test.describe('Semantic Colour system workflow', () => {
     await expect(hero.locator('.stc-hero-eyebrow')).toHaveText('Create / Colour')
     await expect(hero.getByRole('heading', { level: 1, name: 'Semantic Colours' })).toBeVisible()
     // The action belongs to the hero, the way Gradient's Random/Reset do.
-    await expect(hero.getByRole('button', { name: 'Copy all tokens' })).toBeVisible()
+    await expect(hero.getByRole('button', { name: 'Copy all CSS variables' })).toBeVisible()
 
     const facts = page.locator('.stc-status span')
     await expect(facts).toHaveCount(4)

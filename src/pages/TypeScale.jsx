@@ -957,7 +957,7 @@ export default function TypeScale({ onCopy, toast }) {
                   <p className="tsc-article-body" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(base, { max: 24 })}px` })}>
                     A ratio that looks elegant in isolation can flatten a page: if the step between
                     body copy and a subheading is too small, the hierarchy stops doing its job.
-                    Read this paragraph at each preview width before you copy the tokens.
+                    Read this paragraph at each preview width before you copy the scale.
                   </p>
                   <p className="tsc-article-small" ref={varsRef({ '--tsc-fs': `${fitTypePreviewSize(steps.find(s => s.exp === -1)?.px || base, { max: 18 })}px` })}>
                     Captions and helper text live down here — check they are still comfortably legible.

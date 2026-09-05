@@ -52,7 +52,7 @@ const FEATURES = [
     body: 'Search thousands of icons via Iconify, convert and compress images locally, generate accessible alt text with AI, and save AI prompt templates for reuse.',
   },
   {
-    title: 'Design tokens at your fingertips',
+    title: 'Styles at your fingertips',
     body: 'Reference spacing scales, shadows, border radii, and font sizes from popular frameworks. Export a complete design system from your palette, fonts, and type scale in one click.',
   },
 ]
@@ -754,7 +754,7 @@ export default function Landing() {
             </h1>
             <p className="landing-lede">
               Build production-ready colour systems, pair fonts, search 200K+ icons,
-              and export complete design tokens — all in one tool that runs entirely
+              and export your styles as code — all in one tool that runs entirely
               in your browser.
             </p>
             <div className="landing-cta-row">
@@ -926,7 +926,7 @@ export default function Landing() {
           <h2>{loggedIn ? 'Pick up where you left off.' : 'Start building your design system.'}</h2>
           <p>
             {loggedIn
-              ? 'Your projects and design tokens are ready and waiting. Jump back into the toolkit any time.'
+              ? 'Your projects and styles are ready and waiting. Jump back into the toolkit any time.'
               : 'Colour, type, icons, images and AI — all in one place. Your work saves locally, and an account unlocks synced projects whenever you are ready.'}
           </p>
           <div className="landing-cta-row">

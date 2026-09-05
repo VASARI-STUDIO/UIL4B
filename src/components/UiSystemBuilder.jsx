@@ -176,7 +176,7 @@ export default function UiSystemBuilder({
             <strong aria-current="page">UI System <span>Admin</span></strong>
           </div>
           <h1>UI System Builder</h1>
-          <p>One brand colour expanded into six scales, measured roles and interface-ready light and dark tokens.</p>
+          <p>One brand colour expanded into six scales, measured roles and interface-ready light and dark styles.</p>
         </div>
         <button type="button" className="btn btn-s btn-ghost uis-back" onClick={onBack}>← Back to palette</button>
       </header>

@@ -113,7 +113,7 @@ export default function ColorLanding() {
       {/* ── Final CTA ── */}
       <SystemCTA
         title="Build a colour system that stays connected."
-        description="Start with one decision, validate every role, and leave with production-ready tokens."
+        description="Start with one decision, validate every role, and leave with production-ready styles."
         primaryLabel="Start with a palette"
         primaryTo="/create/palette"
         secondaryLabel="Back to home"
