@@ -159,9 +159,22 @@ test('the linearisation figures in the formula block are the real ones', () => {
   assert.equal(toLinear(191).toFixed(4), '0.5210')
   assert.equal((1 - toLinear(64)).toFixed(4), '0.9487')
   assert.equal(255 - 64, 191, 'the inverted channel in the block is no longer the inverse')
-  for (const figure of ['0.0513', '0.5210', '0.9487']) {
-    assert.ok(themeSource.includes(figure), `the formula block no longer prints ${figure}`)
+  // Asserted as the printed LINES, not as bare figures: 0.5210 appears twice in
+  // the guide — once in the block, once in the sentence under it — and an
+  // `includes` on the figure alone was satisfied by whichever copy a mutation
+  // had not touched. Each line is rebuilt from the recomputed value.
+  const lines = [
+    `lin(64/255)   = ${toLinear(64).toFixed(4)}`,
+    `lin(191/255)  = ${toLinear(191).toFixed(4)}`,
+    `1 - lin(64/255) = ${(1 - toLinear(64)).toFixed(4)}`,
+  ]
+  for (const line of lines) {
+    assert.ok(themeSource.includes(line), `the formula block no longer prints "${line}"`)
   }
+  // And the sentence that reads the block back to the reader quotes the same two.
+  assert.match(themeProse,
+    new RegExp(`${toLinear(191).toFixed(4)} against ${(1 - toLinear(64)).toFixed(4)}`),
+    'the paragraph under the formula no longer quotes the two figures in it')
 })
 
 test('THE ONE THAT MATTERS: the inverted pair disagrees with the real one in every row', () => {
