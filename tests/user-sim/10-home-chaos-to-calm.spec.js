@@ -28,6 +28,14 @@
 // homepage-field-metrics item in src/data/pipeline.js).
 import { test, expect } from './base.js'
 import { watch, go, restAfterMove } from './helpers.js'
+// The SAME engine PaletteStage calls. Imported so 8a can assert the
+// correspondence it is named for — that the preview is painted from the live
+// swatches — instead of an inequality. What this pins is the HAND-OFF: the
+// board's colours reaching the preview. It deliberately does not pin the
+// engine's choices, which are the subject of
+// tests/unit/preview-roles-contrast.test.js; swapping the component to a
+// different engine is what turns this red.
+import { derivePreviewRoles } from '../../src/utils/colors.js'
 
 const PERSONA = 'designer evaluating the workspace from the homepage'
 
@@ -1156,15 +1164,86 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect(seen.count, 'the ramp is compared on three rows').toBe(3)
     expect(seen.clashes, 'no status dot is painted in the card background').toBe(0)
 
-    // Generate rerolls the palette; the mock must follow it, and must still not
-    // paint a dot in its own ground for the NEW palette.
-    const before = await page.locator('.hw-ui-chart path').first().getAttribute('fill')
-    await page.getByRole('button', { name: 'Generate' }).click()
-    await expect
-      .poll(async () => page.locator('.hw-ui-chart path').first().getAttribute('fill'))
-      .not.toBe(before)
-    seen = await dotsMatchCard()
-    expect(seen.clashes, 'still true after a fresh generate').toBe(0)
+    /* ── PAINTED FROM THE LIVE SWATCHES, which is what the name claims ────────
+     *
+     * THIS USED TO ASSERT AN INEQUALITY, and a random process cannot promise
+     * one. It read the chart's fill, pressed Generate, and polled until the
+     * fill was DIFFERENT. On 2026-09-06 a regenerate produced #3B82F6 twice and
+     * it failed.
+     *
+     * That is not bad luck. #3B82F6 is PV_BRAND in src/utils/colors.js — the
+     * focal colour derivePreviewRoles falls back to when a palette is all-grey,
+     * or when the primary it picked clashes with its own background. The fill
+     * is a DERIVED value chosen from five swatches with a fallback, so repeats
+     * are something the engine does on purpose, and "it changed" was never a
+     * property of the component under test.
+     *
+     * The correspondence is. The chart's fill must EQUAL the primary the engine
+     * derives from the swatches that are on screen at that moment — before a
+     * generate and after one, in light and in dark. That holds every time,
+     * including on the roll that produced the same colour twice, and it is the
+     * thing that breaks if the preview ever stops following the board.
+     */
+    const GENERATES = 6
+
+    // Read the board and the paint it produced in ONE evaluate. Two would
+    // straddle a re-render and compare a chart fill against a palette that had
+    // already moved — the torn-frame reading 8c had to be fixed for.
+    const painted = () => page.evaluate(() => {
+      const path = document.querySelector('.hw-panel .hw-ui .hw-ui-chart path')
+      return {
+        hexes: [...document.querySelectorAll('.hw-board .plb-hex')].map((b) => b.textContent.trim()),
+        fill: path ? path.getAttribute('fill') : null,
+        mode: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+      }
+    })
+
+    const correspond = (shot, when) => {
+      expect(shot.hexes.length, `${when}: the board must be showing its five swatches`).toBe(5)
+      expect(shot.fill, `${when}: the preview chart must be painted at all`).not.toBeNull()
+      const derived = derivePreviewRoles(shot.hexes, { mode: shot.mode }).primary
+      expect(
+        String(shot.fill).toLowerCase(),
+        `${when}: the chart is painted ${shot.fill}, but ${shot.mode}-mode roles derived from`
+        + ` the swatches ON SCREEN (${shot.hexes.join(' ')}) give ${derived}. The preview is not`
+        + ' being painted from the live palette.',
+      ).toBe(String(derived).toLowerCase())
+    }
+
+    const signatures = new Set()
+    let shot = await painted()
+    correspond(shot, 'on arrival')
+    signatures.add(shot.hexes.join(','))
+
+    for (let i = 1; i <= GENERATES; i += 1) {
+      await page.getByRole('button', { name: 'Generate' }).click()
+      // No wait for the palette to "change": every reading is taken in a single
+      // evaluate, so it is self-consistent whether or not the click has
+      // committed yet, and a reading of the pre-click state still has to
+      // correspond. The loop samples the generator; the assertion never asks it
+      // to produce a particular value.
+      shot = await painted()
+      correspond(shot, `after generate ${i}`)
+      signatures.add(shot.hexes.join(','))
+      seen = await dotsMatchCard()
+      expect(seen.clashes, `no status dot is the card background after generate ${i}`).toBe(0)
+    }
+
+    // NON-VACUITY, and it is why the loop exists. The correspondence above is
+    // trivially true of a preview that FROZE at mount: a stale fill still
+    // matches a stale palette. This says the readings sampled more than one.
+    //
+    // It is not the inequality that was removed. That one asked a DERIVED value
+    // — one of five swatches, or a fallback — to differ, and it has a real
+    // collision rate. This asks whether the SOURCE varied across six presses of
+    // a generator drawing hue and saturation from continuous ranges and
+    // quantising to 8 bits a channel. One signature across all six means the
+    // board is not regenerating, which is a defect and not a dice roll.
+    expect(
+      signatures.size,
+      `${GENERATES} presses of Generate produced ${signatures.size} distinct palette(s), so the`
+      + ' correspondence above was never tested against a palette that had actually changed',
+    ).toBeGreaterThan(1)
 
     // DARK THEME IS WHERE THE CLASH LIVES, and it must be entered for real.
     // Stamping data-theme on the element does not re-render React, so the mock
@@ -1181,6 +1260,13 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     seen = await dotsMatchCard()
     expect(seen.count, 'the mock still renders in dark theme').toBe(3)
     expect(seen.clashes, 'no dot is the card background in dark theme either').toBe(0)
+
+    // The correspondence again, in the mode where the engine makes DIFFERENT
+    // choices: bg is the darkest step rather than the lightest, so the surface
+    // it clears primary against moves and the role can land on another swatch.
+    // A preview wired to a fixed mode passes every assertion above and fails
+    // this one.
+    correspond(await painted(), 'in dark theme')
   })
 
   // The palette is regenerated at RANDOM on every load, so a contrast bug here

@@ -71,6 +71,98 @@ test('ready() requires BOTH a mounted root and no Suspense fallback', () => {
     + 'pre-hydration window, in which #root is still the empty div prerender wrote.')
 })
 
+/* ── The half the door was missing until #391 ────────────────────────────────
+ *
+ * The two conditions above are BOTH satisfied by a page React has never run on.
+ * index.html ships `<div id="root"><div class="boot-shell" id="boot-shell">`,
+ * and scripts/prerender.mjs clones that into all 33 route shells — so
+ * `root.firstElementChild` is true of markup the SERVER wrote, and
+ * `.page-loading` is absent because App.jsx has not rendered and there is no
+ * Suspense fallback yet.
+ *
+ * #391 caught /create/semantic-color in exactly that state under four parallel
+ * workers: h1 not found, accessibility snapshot reading `status: Loading
+ * UIL4B`. It worked around it in one spec. The door now carries it.
+ */
+
+test('ready() also requires the STATIC BOOT SHELL to be gone', () => {
+  const src = readStripped(path.join('tests', 'user-sim', 'helpers.js'))
+  const body = src.match(/export\s+async\s+function\s+ready\s*\(([\s\S]*?)\n\}/)
+  assert.ok(body, 'helpers.js no longer exports `async function ready(...)`')
+  assert.match(body[1], /boot-shell/,
+    'ready() stopped checking for the static boot shell. index.html ships one INSIDE\n'
+    + '#root and prerender clones it into every route shell, so "#root has a child" and\n'
+    + '"no .page-loading" are both true of a page the app has never run on - which is\n'
+    + 'the state #391 caught /create/semantic-color in. Without this the readiness door\n'
+    + 'returns before React, and the spec that navigated reports a missing element.')
+})
+
+// Anti-vacuity for the assertion above. If index.html ever stopped shipping a
+// boot shell, the check in ready() would be guarding a state that no longer
+// exists and this file would still be green - so pin the thing being guarded,
+// not just the guard. Deliberately read from index.html rather than from dist/,
+// because the unit suite must not require a build.
+test('index.html really does ship a boot shell inside #root, so that check guards something', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
+  assert.match(html, /<div id="root">\s*<div class="boot-shell" id="boot-shell">/,
+    'index.html no longer ships <div id="root"><div class="boot-shell" id="boot-shell">.\n'
+    + 'If the static shell is genuinely gone, the boot-shell clause in ready() is dead\n'
+    + 'code and this pair of tests should go with it. If it merely MOVED or was renamed,\n'
+    + 'ready() is now blind to the pre-hydration window again and the id must be updated\n'
+    + 'in tests/user-sim/helpers.js as well.')
+})
+
+// ...and that renderState REPORTS it, which is what lets a failure name itself
+// instead of blaming a slow route chunk.
+test('renderState reports the boot shell, so the diagnostic can name the cause', () => {
+  const src = readStripped(path.join('tests', 'user-sim', 'helpers.js'))
+  const body = src.match(/export\s+function\s+renderState\s*\(([\s\S]*?)\n\}/)
+  assert.ok(body, 'helpers.js no longer exports `function renderState(...)`')
+  assert.match(body[1], /booting:/,
+    'renderState stopped reporting `booting`. Without it a page stuck on the static\n'
+    + 'shell fails with the same message as a slow route chunk, and the next\n'
+    + 'investigation goes looking at the route instead of at the entry bundle.')
+})
+
+/* ── The state a TOOL renders instead of its content ─────────────────────────
+ *
+ * One level below the route fallback. The three typography tools render
+ * <FontCatalogLoading> INSTEAD of their workbench while the Google Fonts
+ * catalogue is in flight, so a route that has arrived can still be showing
+ * nothing a spec can measure. Measured on /create/font-gallery: ready()
+ * returned at 148ms with .typ-loading up and ZERO .fg-card rows, against 24
+ * rows once it settled at 2530ms.
+ *
+ * That is what 51-typography-paywall hit on 2026-09-06 - "the gallery rendered
+ * no rows at all", in a run with no build-asset failure in it at all.
+ */
+
+test('ready() also waits for a tool that is showing its own data-loading state', () => {
+  const src = readStripped(path.join('tests', 'user-sim', 'helpers.js'))
+  const body = src.match(/export\s+async\s+function\s+ready\s*\(([\s\S]*?)\n\}/)
+  assert.ok(body, 'helpers.js no longer exports `async function ready(...)`')
+  assert.match(body[1], /typ-loading/,
+    'ready() stopped waiting for the typography tools\' own loading state. The route arrives,\n'
+    + 'the Suspense fallback goes, and the tool then shows <FontCatalogLoading> INSTEAD of its\n'
+    + 'workbench - so a spec that measures reads the skeleton and reports zero rows from a\n'
+    + 'gallery that is working perfectly.')
+})
+
+// Anti-vacuity, and it pins the DISCRIMINATOR rather than just the class name.
+// FontMatcher renders a second .typ-loading for "No font catalogue is available
+// right now", which is a rendered answer and not a wait; the direct-child
+// spinner is the only thing that tells them apart. If FontCatalogLoading lost
+// its spinner, ready() would stop waiting and this file would still be green.
+test('FontCatalogLoading still renders the spinner the readiness selector keys on', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'src', 'components', 'FontCatalogState.jsx'), 'utf8')
+  assert.match(src, /className="typ-loading"[\s\S]{0,120}?className="fg-loader"/,
+    'FontCatalogState no longer renders <div className="fg-loader"> as a child of\n'
+    + '<div className="typ-loading">. ready() keys on `.typ-loading > .fg-loader` to tell the\n'
+    + 'LOADING state apart from FontMatcher\'s terminal "No font catalogue is available right\n'
+    + 'now", which uses the same class and is a rendered answer rather than a wait. Update the\n'
+    + 'selector in tests/user-sim/helpers.js, or this readiness clause is dead.')
+})
+
 /* ── The door has no way around it any more ──────────────────────────
  *
  * This used to be a KNOWN_RAW_GOTO allowlist of twenty spec files, pinned so
