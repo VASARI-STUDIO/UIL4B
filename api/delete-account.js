@@ -195,6 +195,20 @@ export default async function handler(req, res) {
       db, db.collection('community-prompts').where('authorUid', '==', uid),
     )
 
+    // Community submissions — gradients, designs and palettes queued for review
+    // (utils/communityQueue.js) — carry authorUid and authorName exactly as
+    // prompts do. They were MISSED when this cascade was written: the
+    // collection arrived after it, and nothing tied "a collection that stores a
+    // uid" to "a collection the delete has to reach". So a deleted account's
+    // display name stayed on every submission it had ever made, readable by any
+    // signed-in user, under a dialog that says "and all associated data".
+    // tests/unit/account-deletion.test.js now derives the list of collections
+    // this must reach from firestore.rules, so the next one cannot be missed
+    // the same way.
+    deleted.communitySubmissions = await deleteQueryInBatches(
+      db, db.collection('community-submissions').where('authorUid', '==', uid),
+    )
+
     // Feedback carries the address they typed. api/support.js stores no uid, so
     // the email is the only handle — which is also why this is skipped for an
     // account without one rather than deleting by a null match.
