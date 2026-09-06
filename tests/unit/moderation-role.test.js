@@ -315,12 +315,24 @@ test('no surface in the browser can grant itself a role', () => {
   // security property rather than an omission: Firestore denies by default, so
   // no browser can read the roster, enumerate who holds power here, or write
   // itself into it.
+  // Naming either thing anywhere under src/ is an offence, because the only
+  // reason client code would mention them is to reach them.
+  const NAMES = /['"`]moderators['"`]|setCustomUserClaims/
+  // One exception, and it is a documented file rather than a hole:
+  // src/data/pipeline.js is the engineering log. Its notes are prose inside
+  // string literals and are never behaviour, so a note that NAMES an API must
+  // not trip the guard — otherwise the guard quietly pressures every future
+  // agent into writing a vaguer note. It is held to a call-shaped test instead,
+  // which is what an actual escalation would look like.
+  const CALL_SHAPED = /setCustomUserClaims\s*\(|(?:collection|doc)\(\s*db\s*,\s*['"`]moderators['"`]/
+  const LOG = 'src/data/pipeline.js'
+
   const offenders = []
   const walk = (dir) => {
     for (const entry of fs.readdirSync(path.join(process.cwd(), dir), { withFileTypes: true })) {
       const rel = `${dir}/${entry.name}`
       if (entry.isDirectory()) walk(rel)
-      else if (/\.jsx?$/.test(entry.name) && /['"`]moderators['"`]|setCustomUserClaims/.test(read(rel))) {
+      else if (/\.jsx?$/.test(entry.name) && (rel === LOG ? CALL_SHAPED : NAMES).test(read(rel))) {
         offenders.push(rel)
       }
     }
@@ -328,6 +340,21 @@ test('no surface in the browser can grant itself a role', () => {
   walk('src')
   assert.deepEqual(offenders, [],
     `client code must never touch the moderator roster or mint a claim: ${offenders.join(', ')}`)
+
+  // The exception is not a hiding place: prove the call-shaped pattern still
+  // catches every escalation it is meant to, so the log file cannot become the
+  // one place in src/ where a real call would pass.
+  for (const escalation of [
+    "await setCustomUserClaims(uid, { moderator: true })",
+    "setCustomUserClaims (uid, {})",
+    "await setDoc(doc(db, 'moderators', uid), {})",
+    'await getDocs(collection(db, "moderators"))',
+  ]) {
+    assert.ok(CALL_SHAPED.test(escalation), `the log exception would let this through: ${escalation}`)
+  }
+  // ...and that prose naming the API is what it lets past, deliberately.
+  assert.ok(!CALL_SHAPED.test('a fix for setCustomUserClaims REPLACING the claims object'),
+    'the log exception is not actually letting prose through, so it does nothing')
 })
 
 test('the server module costs nothing against the 12-function budget', () => {
