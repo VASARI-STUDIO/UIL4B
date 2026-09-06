@@ -63,7 +63,12 @@ export default function UiSystemBuilder({
       return false
     }
     const copy = PRO_COPY[kind] || PRO_COPY.controls
-    openProModal({ eyebrow: 'UI System · Pro', title: copy.title, subtitle: copy.subtitle })
+    // `gate` is DERIVED from the kind, not the copy, so a wall added to PRO_COPY
+    // later is measured by existing. Note it names the kind that was ASKED for
+    // even when the copy falls back to `controls` — a gate reporting under a
+    // wall the user did not hit is exactly the inward-pointing version of the
+    // false claim /plans just had removed.
+    openProModal({ gate: `ui-system-${kind}`, eyebrow: 'UI System · Pro', title: copy.title, subtitle: copy.subtitle })
     return false
   }
 
