@@ -20,9 +20,16 @@ import path from 'node:path'
 
 // The four public pages the violation actually reached, plus the tool pages
 // whose eyebrows named the surface.
+//
+// 'src/pages/Landing.jsx' WAS LISTED HERE and is removed with the page itself
+// (`landing-page-orphaned`) — the superseded predecessor homepage, on no route,
+// deleted along with its 156 selectors. The header above says the violation
+// reached "several landing sentences"; those sentences went with the file, so
+// there is nothing left on that page to enforce against. src/pages/Home.jsx,
+// the homepage that replaced it, stays first in this list and still carries the
+// homepage half of the rule.
 const PUBLIC_COPY = [
   'src/pages/Home.jsx',
-  'src/pages/Landing.jsx',
   'src/pages/Plans.jsx',
   'src/pages/SiteMap.jsx',
   'src/pages/HelpCentre.jsx',

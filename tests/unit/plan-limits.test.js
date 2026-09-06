@@ -66,11 +66,20 @@ test('the pricing page quotes the numbers the server actually enforces', () => {
 // Every surface that quoted an AI allowance. The figure was wrong in ALL of
 // them — including Checkout, which a user reads at the moment they pay — because
 // each was typed by hand and nothing tied them together.
+//
+// 'src/pages/Landing.jsx' WAS AN EIGHTH ENTRY HERE and was removed when that
+// page was deleted (`landing-page-orphaned`): it was the superseded predecessor
+// homepage, reachable from no route, and its 156 selectors were deleted with
+// it. The entry is dropped rather than the test, which still covers the other
+// seven. Removing it loses no coverage — a page that cannot render cannot quote
+// a retired figure at anyone — and leaving it would have failed the suite with
+// ENOENT rather than an assertion, which is how this deletion was noticed at
+// all: eslint here runs no-unused-vars with varsIgnorePattern '^[A-Z_]' and is
+// therefore blind to an unused React component.
 const QUOTA_SURFACES = [
   'src/App.jsx',
   'src/pages/Plans.jsx',
   'src/pages/Checkout.jsx',
-  'src/pages/Landing.jsx',
   'src/pages/Onboarding.jsx',
   'src/pages/Settings.jsx',
   'src/pages/HelpCentre.jsx',

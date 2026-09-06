@@ -220,7 +220,12 @@ const READY_BACKSTOP_MS = 20000
 export function renderState(page) {
   return page.evaluate(() => {
     const root = document.getElementById('root')
-    const main = document.querySelector('#main, main, .landing')
+    // `.landing` was a third branch here until src/pages/Landing.jsx was
+    // deleted (`landing-page-orphaned`). That page was the only thing in the
+    // app that ever rendered `class="landing"`, so the branch now matches
+    // nothing on any route and is dropped rather than left to read as a
+    // surface this helper still supports.
+    const main = document.querySelector('#main, main')
     const parts = []
     if (main) parts.push(main.innerText || '')
     for (const d of document.querySelectorAll('[role="dialog"], [aria-modal="true"]')) {

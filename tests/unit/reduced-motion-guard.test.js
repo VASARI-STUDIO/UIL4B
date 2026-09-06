@@ -35,6 +35,15 @@
 // translateY(4px). Both now flatten. That is why the companion is asserted
 // rather than left to the clamp.
 //
+// `.landing-reveal` NO LONGER EXISTS. It belonged to src/pages/Landing.jsx,
+// the orphaned predecessor homepage, which was deleted along with its 156
+// selectors — five reduced-motion guard PAIRS among them, taking the file from
+// 28 blocks to 23. The measurement above is kept because it is the evidence
+// for why the companion half is asserted at all, and that argument does not
+// depend on the site still shipping; `.lbry-card-actions` is the live half of
+// it. The floor in test 1 is unchanged and still clears: it is a vacuity guard,
+// not a ratchet on any particular count.
+//
 // DELIBERATELY NOT A RATCHET. An allowlist of the thirteen would have made the
 // suite green while permanently blessing the defect. This asserts the whole
 // file unconditionally, so block twenty-four cannot ship bare.
