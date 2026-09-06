@@ -271,6 +271,16 @@ test.describe('Semantic Colour system workflow', () => {
 // luminance), against the nearest opaque ancestor background, so it measures
 // what is painted rather than what the stylesheet says.
 //
+// `.cc-field-badge`, `.cc-check-foot` and `.cc-level-opt` joined with the LEFT
+// panel overhaul, and `.cc-check-name` finally started matching something. That
+// selector has been in this list since the sweep was written and no element has
+// ever carried it — the class was `.cc-check-label` — so the check text on the
+// page that enforces contrast was the one thing this sweep never measured. The
+// OR-list is what hid it: five other selectors kept the positive control above
+// its floor, so the count could never fall to zero and give it away. The lesson
+// is on the count itself — a floor over a UNION cannot prove each member
+// contributed.
+//
 // `.cc-verdict` and `.cc-lede` joined the set with the preview overhaul
 // [contrast-checker-overhaul]. The chips are the interesting addition: they are
 // the only text on the page that SITS on the user's chosen background, and a
@@ -347,7 +357,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
           return [255, 255, 255]
         }
         const out = []
-        for (const el of document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc, .cc-verdict, .cc-lede')) {
+        for (const el of document.querySelectorAll('.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-check-foot, .cc-fix-desc, .cc-verdict, .cc-lede, .cc-field-badge, .cc-level-opt')) {
           const cs = getComputedStyle(el)
           const bg = bgOf(el)
           const raw = parse(cs.color)
@@ -369,7 +379,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       // means either that everything passed or that the walk matched no
       // elements at all, and those are not the same result.
       const measured = await page.locator(
-        '.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-fix-desc, .cc-verdict, .cc-lede').count()
+        '.cc-ratio-verdict, .cc-check-mark, .cc-check-name, .cc-check-foot, .cc-fix-desc, .cc-verdict, .cc-lede, .cc-field-badge, .cc-level-opt').count()
       await ctx.close()
       expect(measured, `no contrast-checker text was found to measure in ${theme}`)
         .toBeGreaterThan(8)
@@ -452,4 +462,205 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
         'Chips must paint with page tokens, never with --cc-fg/--cc-bg.').toEqual([])
     })
   }
+
+  // ── The left panel [contrast-checker-overhaul] ────────────────────────────
+  // These drive the PAGE. The solver's maths is swept over 46,656 pairs in
+  // tests/unit/contrast-fixes.test.js and none of that would notice a call site
+  // still wired to fixForeground, which is the failure mode this repo keeps
+  // paying for. What is asserted here is what the page RENDERS.
+
+  // THE DEFECT, as a user meets it. #000099 on #009900 measures 3.806:1. Black
+  // clears 5.56:1, so a one-click fix plainly exists — but the ground's relative
+  // luminance is 0.228, and fixForeground's `bgLum < 0.5` rule sent the search
+  // toward white, which tops out at 3.78:1. It found nothing and returned its
+  // input, the page's own re-verification dropped it, and "Make it pass" came up
+  // EMPTY. Measured across a 6-level-per-channel grid, that was 42.7% of failing
+  // pairs missing a text fix and 17.0% shown no fix of any kind.
+  test('a pair the old direction rule gave up on now offers a fix', async ({ page }) => {
+    watch(page, 'a designer fixing a green button label')
+    await go(page, '/create/contrast')
+    await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
+
+    await page.fill('#cc-fg', '#000099')
+    await page.fill('#cc-bg', '#009900')
+
+    // The pair really is the failing one, so an empty row below cannot be
+    // explained by the page having ignored the input.
+    await expect(page.locator('.cc-ratio-num')).toHaveText('3.81 : 1')
+
+    const fixes = page.locator('.cc-fix')
+    await expect(fixes).toHaveCount(2)
+
+    // Both sides, and each one verified in the browser against the pair as
+    // rendered — not merely present.
+    const offered = await page.locator('.cc-fix-chip').allTextContents()
+    const check = await page.evaluate((hexes) => {
+      const lum = ([r, g, b]) => {
+        const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+      }
+      const rgb = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16))
+      const ratio = (a, b) => {
+        const L1 = lum(rgb(a)), L2 = lum(rgb(b))
+        return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05)
+      }
+      return {
+        textFixOnGreen: ratio(hexes[0], '#009900'),
+        blueOnBgFix: ratio('#000099', hexes[1]),
+      }
+    }, offered)
+
+    expect(check.textFixOnGreen,
+      `the offered text fix ${offered[0]} does not reach 4.5:1 on #009900`).toBeGreaterThanOrEqual(4.5)
+    expect(check.blueOnBgFix,
+      `the offered background fix ${offered[1]} does not reach 4.5:1 under #000099`).toBeGreaterThanOrEqual(4.5)
+
+    // And the suggestion is still the designer's blue rather than a jump to
+    // black — the point of walking the seed's own lightness axis.
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(offered[0].slice(i, i + 2), 16))
+    expect(b, `the text fix ${offered[0]} stopped being blue`).toBeGreaterThan(Math.max(r, g))
+  })
+
+  // Applying a fix must actually resolve the failure it was offered for.
+  test('applying an offered fix makes the pair pass', async ({ page }) => {
+    watch(page, 'a designer taking the one-click fix')
+    await go(page, '/create/contrast')
+    await page.fill('#cc-fg', '#000099')
+    await page.fill('#cc-bg', '#009900')
+    await expect(page.locator('.cc-fix')).toHaveCount(2)
+
+    await page.locator('.cc-fix').first().getByRole('button', { name: 'Apply' }).click()
+
+    // The body-copy check is the one that was failing; it must now pass, and
+    // the fix row must empty because there is nothing left to fix.
+    await expect(page.locator('.cc-check').first()).toHaveClass(/cc-check--pass/)
+    await expect(page.locator('.cc-fix')).toHaveCount(0)
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText(/Good for body text/)
+  })
+
+  // A pair no single-side move can fix must SAY so. Showing nothing is what the
+  // page used to do for 17% of failing pairs, and an empty space is
+  // indistinguishable from a page that did not look.
+  //
+  // THIS STATE IS ONLY REACHABLE AT AAA, and the test says so because the reason
+  // is a real property rather than a quirk of the fixture. Pure black clears
+  // 4.5:1 on every ground at or above relative luminance 0.175 and pure white on
+  // every one at or below 0.1833 — those ranges OVERLAP, so against a SINGLE
+  // ground one pole always clears and an AA fix always exists. At 7:1 the two
+  // ranges separate and a band of mid greys opens up where neither works.
+  test('an unfixable pair says so instead of showing an empty row', async ({ page }) => {
+    watch(page, 'a designer on a pair that cannot be rescued')
+    await go(page, '/create/contrast')
+    await page.fill('#cc-fg', '#808080')
+    await page.fill('#cc-bg', '#7F7F7F')
+
+    // At AA this pair IS fixable, which is the control: it proves the message
+    // below is a verdict about the pair and not just the failing state.
+    await expect(page.locator('.cc-fix')).toHaveCount(2)
+    await expect(page.locator('.cc-unfixable')).toHaveCount(0)
+
+    await page.getByRole('radio', { name: 'AAA' }).click()
+    await expect(page.locator('.cc-fix')).toHaveCount(0)
+    await expect(page.locator('.cc-unfixable')).toBeVisible()
+    await expect(page.locator('.cc-unfixable')).toContainText('Neither colour can reach 7:1')
+  })
+
+  // Whereby's `AA ⌄`: the level is chosen once and everything follows it.
+  // Reverting any one of the four consumers to a hard-coded 4.5 fails here.
+  test('the level control drives the badges, the checks and the preview chips', async ({ page }) => {
+    watch(page, 'a designer holding a pair to AAA')
+    await go(page, '/create/contrast')
+    await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
+
+    const read = () => page.evaluate(() => ({
+      badges: [...document.querySelectorAll('.cc-field-badge')].map(e => e.textContent.trim()),
+      checkMins: [...document.querySelectorAll('.cc-check-min')].map(e => e.textContent.replace(/\s+/g, ' ').trim()),
+      chipMins: [...document.querySelectorAll('.cc-verdict')].map(e => e.children[1]?.textContent),
+    }))
+
+    const aa = await read()
+    expect(aa.badges.every(b => b.startsWith('✓AA') || b.startsWith('✕AA')),
+      `the AA badges did not name their level: ${aa.badges.join(' | ')}`).toBe(true)
+    expect(aa.checkMins).toEqual([
+      'Passes; needs ≥ 4.5:1', 'Passes; needs ≥ 3:1', 'Passes; needs ≥ 3:1',
+    ])
+    expect(aa.chipMins).toEqual(['3:1', '4.5:1', '4.5:1', '4.5:1'])
+
+    await page.getByRole('radio', { name: 'AAA' }).click()
+    const aaa = await read()
+
+    expect(aaa.badges.every(b => b.includes('AAA')),
+      `the badges did not follow the level: ${aaa.badges.join(' | ')}`).toBe(true)
+    // Body copy rises to 7 and large text to 4.5 — but NON-TEXT STAYS AT 3.
+    // SC 1.4.11 is a AA criterion with no AAA counterpart, and scaling it would
+    // be inventing a rule on the page that teaches the rules.
+    expect(aaa.checkMins).toEqual([
+      'Fails; needs ≥ 7:1', 'Passes; needs ≥ 4.5:1', 'Passes; needs ≥ 3:1',
+    ])
+    expect(aaa.chipMins).toEqual(['4.5:1', '7:1', '7:1', '7:1'])
+  })
+
+  // Typeform writes its checks as sentences about real objects; Hotjar makes the
+  // verdict a short headline. Both replaced jargon, so both are asserted as the
+  // ABSENCE of the jargon as well as the presence of the prose — a sentence
+  // added beside a surviving tier list would pass a presence-only test.
+  test('the checks name real objects and the verdict is a sentence', async ({ page }) => {
+    watch(page, 'a designer who does not know what AA means')
+    await go(page, '/create/contrast')
+    await expect(page.locator('.cc-ratio-verdict')).toBeVisible()
+
+    const names = await page.locator('.cc-check-name').allTextContents()
+    expect(names).toHaveLength(3)
+    for (const n of names) {
+      expect(n, `"${n}" is not a sentence about anything`).toMatch(/\.$/)
+      expect(n, `"${n}" is still a tier name`).not.toMatch(/^A{2,3}\b|·/)
+    }
+    expect(names.join(' ')).toContain('Body copy at 16px')
+    expect(names.join(' ')).toContain('Buttons, borders and focus rings')
+
+    // The old five-tier list, gone rather than merely restyled.
+    const panel = await page.locator('.cc-checks').innerText()
+    expect(panel).not.toMatch(/AA\s*·\s*normal text/)
+    expect(panel).not.toMatch(/AAA\s*·\s*large text/)
+
+    // Hotjar: the verdict says what the pair can CARRY, not "Passes some checks".
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Good for body text at any size.')
+    await page.fill('#cc-fg', '#BBBBBB')
+    await expect(page.locator('.cc-ratio-verdict')).toHaveText('Not usable for text at any size.')
+  })
+
+  // Whereby puts the measured ratio beside the field being edited. The two here
+  // form ONE pair, so the number is the same on both sides — naming the ground
+  // is what stops that reading as a duplicate, and is the part worth pinning.
+  test('each colour field carries its own verdict, naming its ground', async ({ page }) => {
+    watch(page, 'a designer reading the verdict beside the field')
+    await go(page, '/create/contrast')
+
+    const badges = page.locator('.cc-field-badge')
+    await expect(badges).toHaveCount(2)
+    await expect(badges.nth(0)).toContainText('vs background')
+    await expect(badges.nth(1)).toContainText('vs text')
+
+    // They track the pair, rather than being decoration painted once.
+    await expect(badges.nth(0)).toHaveClass(/cc-field-badge--pass/)
+    await page.fill('#cc-fg', '#DDDDDD')
+    await expect(badges.nth(0)).toHaveClass(/cc-field-badge--fail/)
+    await expect(badges.nth(1)).toHaveClass(/cc-field-badge--fail/)
+  })
+
+  // The two panels are not equal halves any more: the preview renders a page and
+  // needs the room. Asserted as a RELATIONSHIP, not as pixel values, so a change
+  // to the page gutter does not fail it for the wrong reason.
+  test('the preview panel is given more width than the controls', async ({ page }) => {
+    watch(page, 'a designer on a wide screen')
+    await go(page, '/create/contrast')
+    await expect(page.locator('.cc-preview')).toBeVisible()
+
+    const [controls, preview] = await page.locator('.cc-panel').evaluateAll(
+      els => els.map(e => Math.round(e.getBoundingClientRect().width)))
+    expect(preview, `preview ${preview}px is not wider than controls ${controls}px`)
+      .toBeGreaterThan(controls)
+    // Wider, but still two real columns rather than a sliver beside a slab.
+    expect(preview / controls).toBeLessThan(1.6)
+  })
 })

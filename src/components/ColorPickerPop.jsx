@@ -49,6 +49,12 @@ import { addRecentColor, getRecentColors } from '../utils/recentColors'
 //   routes through here, that list finally spans the whole app rather than
 //   three tools of it.
 //
+//   The list is written at the four SETTLE boundaries, and two of them were
+//   missing until [colour-picker-ui] closed them: the pad recorded a pointer
+//   release but not an arrow-key release, and the hue strip recorded nothing at
+//   all. A keyboard user could mix a colour and watch the Recent grid stay
+//   empty; so could anyone who only moved hue. See the note on `commit`.
+//
 //   EYEDROPPER — the one control added in the 2026-09-03 pass, and it is here
 //   rather than in the declined list below because of the emit contract, not
 //   taste: `EyeDropper.open()` resolves to an opaque `sRGBHex`, which is already
@@ -119,6 +125,15 @@ function hsvToHex({ h, s, v }) {
   return `#${to2(r)}${to2(g)}${to2(b)}`
 }
 
+// The keys that MOVE each control, and therefore the only ones whose release is
+// a finished choice. Tab and Escape raise keyup on these elements too, and
+// recording on those would put a colour nobody picked at the head of the shared
+// list — including on a panel that was opened and abandoned.
+const PAD_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'])
+const HUE_KEYS = new Set([
+  'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown',
+])
+
 const DEFAULT_SWATCHES = [
   '#18181b', '#f4f4f5', '#ef4444', '#f59e0b', '#22c55e',
   '#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#78716c',
@@ -176,9 +191,19 @@ export default function ColorPickerPop({
 
   // Dragging the pad fires this on every pointermove, so the recents list is
   // NOT written here — it would fill with twelve shades of one drag. It is
-  // written on release, on a swatch press, on an eyedropper pick and on a typed
-  // value: the four moments a colour was actually chosen rather than passed
-  // through.
+  // written at the SETTLE BOUNDARIES instead: pointer release, arrow-key
+  // release, a swatch press, an eyedropper pick and a typed value — the moments
+  // a colour was actually chosen rather than passed through.
+  //
+  // [colour-picker-ui] Those boundaries used to cover only the pad's POINTER
+  // release. Two whole routes to a colour therefore never reached the shared
+  // list: mixing on the pad with the arrow keys, and moving the hue slider by
+  // any means at all. So the saved-swatches feature this item shipped was
+  // unreachable for a keyboard user, and unreachable for anyone who adjusted
+  // only hue — the list stayed empty while the colour visibly changed. The fix
+  // is to give the hue strip and the pad's keyboard the same release boundary
+  // the pad's pointer already had, rather than to widen `commit` (which fires
+  // per pixel of drag and would reintroduce the twelve-shades problem).
   const commit = (next) => {
     setHsv(next)
     const hex = hsvToHex(next)
@@ -307,6 +332,16 @@ export default function ColorPickerPop({
               style={{ backgroundColor: hueHex }}
               role="slider"
               aria-label="Saturation and brightness"
+              // `aria-valuenow` is REQUIRED on role="slider" and was absent —
+              // a slider without it is an invalid node, and some screen readers
+              // announce nothing at all for one. The pad is two-dimensional, so
+              // no single number is the whole truth: valuenow carries
+              // saturation (the horizontal axis, which is what the arrow keys
+              // move first) and `aria-valuetext` keeps saying BOTH, which is
+              // what actually gets read aloud when it is present.
+              aria-valuenow={Math.round(hsv.s * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
               aria-valuetext={`Saturation ${Math.round(hsv.s * 100)}%, brightness ${Math.round(hsv.v * 100)}%`}
               tabIndex={0}
               onPointerDown={(e) => {
@@ -327,6 +362,13 @@ export default function ColorPickerPop({
                 else if (e.key === 'ArrowUp') { e.preventDefault(); commit({ ...hsv, v: Math.min(1, hsv.v + step) }) }
                 else if (e.key === 'ArrowDown') { e.preventDefault(); commit({ ...hsv, v: Math.max(0, hsv.v - step) }) }
               }}
+              // The keyboard's settle boundary, matching onPointerUp above.
+              // Guarded to the four keys that actually move the pad so Tab and
+              // Escape — which also raise keyup here — do not record a colour
+              // nobody chose.
+              onKeyUp={(e) => {
+                if (PAD_KEYS.has(e.key)) remember(liveHex)
+              }}
             >
               <span
                 className="cpk-pad-thumb"
@@ -343,7 +385,16 @@ export default function ColorPickerPop({
               step="1"
               value={Math.round(hsv.h)}
               aria-label="Hue"
+              // A bare number is what a range announces without this; "212" is
+              // not a hue to anyone who cannot see the strip it sits on.
+              aria-valuetext={`Hue ${Math.round(hsv.h)} degrees`}
               onChange={(e) => commit({ ...hsv, h: +e.target.value })}
+              // Same settle boundary as the pad, by both routes a range can be
+              // moved. `commit` alone fires per pixel of a drag, so remembering
+              // there would spend the whole twelve-slot list on one sweep of
+              // the strip.
+              onPointerUp={() => remember(liveHex)}
+              onKeyUp={(e) => { if (HUE_KEYS.has(e.key)) remember(liveHex) }}
             />
           </div>
 
