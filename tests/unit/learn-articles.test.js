@@ -34,6 +34,7 @@ import {
   readingMinutes,
 } from '../../src/data/learnIndex.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
+import { LEARN_DELIVERED, LEARN_GROUPS, LEARN_ROADMAP } from '../../src/data/toolTree.js'
 import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
 import { countWords, proseOf } from '../../scripts/learn-wordcount.mjs'
 
@@ -174,7 +175,7 @@ test('every article ends somewhere that exists', () => {
 test('the Learn nav offers every article and no article it does not have', () => {
   const tree = read(path.join('src', 'data', 'toolTree.js'))
   assert.match(tree, /LEARN_ARTICLE_ROWS/, 'the Learn menu no longer builds a row per article')
-  assert.match(tree, /import \{ LEARN_ARTICLES \} from '\.\/learnIndex\.js'/,
+  assert.match(tree, /import \{[^}]*\bLEARN_ARTICLES\b[^}]*\} from '\.\/learnIndex\.js'/,
     'toolTree.js must read the articles rather than keep a copy of them')
   // The icon map is presentation and may legitimately fall back, but an article
   // with no entry is a row wearing a glyph that means nothing.
@@ -182,6 +183,48 @@ test('the Learn nav offers every article and no article it does not have', () =>
     assert.ok(tree.includes(`'${a.slug}':`),
       `${a.slug} has no NavIcon glyph in LEARN_ARTICLE_ICONS`)
   }
+})
+
+test('a roadmap row that has stopped saying Soon points at a guide that renders', () => {
+  // The Learn menu, the /learn grid and the visual sitemap all show the topic
+  // roadmap. A row is allowed to stop being Soon only when a published guide
+  // answers it, and the row records WHICH by carrying that guide's route — so
+  // an unflipped `soon: false` is a topic advertised as done with the section
+  // landing behind it, which is the exact dishonesty the Soon badge exists to
+  // prevent.
+  const live = LEARN_GROUPS.filter((g) => !g.soon)
+  for (const group of live) {
+    assert.ok(LEARN_ARTICLE_ROUTES.includes(group.route),
+      `the ${group.id} roadmap row is no longer Soon but points at ${group.route},`
+      + ' which is not a published guide')
+    assert.ok(findArticle(group.route.replace('/learn/', '')),
+      `${group.route} is not a registered article`)
+  }
+  // LEARN_ROADMAP and LEARN_DELIVERED are what the surfaces render; between
+  // them they must account for every row exactly once, or a topic silently
+  // disappears from both the roadmap and the guide list.
+  assert.equal(LEARN_ROADMAP.length + live.length, LEARN_GROUPS.length)
+  assert.deepEqual(LEARN_DELIVERED.map((g) => g.id), live.map((g) => g.id),
+    'a delivered row points somewhere that is not one of the article routes')
+  assert.ok(LEARN_ROADMAP.every((g) => g.soon), 'LEARN_ROADMAP carries a row that is not Soon')
+})
+
+test('no two Learn rows claim the same destination', () => {
+  // The failure this is really about: SiteMap.jsx renders one .smap-link per
+  // article AND one per roadmap row, keyed by data-route. A delivered row
+  // listed in both places puts two elements on one route — a duplicate for the
+  // reader, and a strict-mode ambiguity for the spec that walks that column.
+  // Roadmap rows legitimately SHARE /learn — they are non-actionable, and the
+  // section landing is where a row with nothing behind it points. What must
+  // never happen is a roadmap row landing on a GUIDE's route, because the
+  // guide is already listed above it under its own title.
+  const clashes = LEARN_ROADMAP
+    .filter((g) => LEARN_ARTICLE_ROUTES.includes(g.route))
+    .map((g) => `${g.id} -> ${g.route}`)
+  assert.deepEqual(clashes, [],
+    `${clashes.join(', ')}: a Soon row points at a published guide, so the Learn`
+    + ' column would render that route twice, once of them wearing a Soon badge')
+  assert.equal(new Set(LEARN_ARTICLE_ROUTES).size, LEARN_ARTICLE_ROUTES.length)
 })
 
 test('read-next walks every article and returns to the first', () => {

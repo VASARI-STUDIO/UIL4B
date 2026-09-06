@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
+import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 
 // The full visual site map — a single page that lays out every destination in
@@ -146,7 +146,13 @@ export default function SiteMap() {
           {/* Learn carried a category-level "Soon" badge over eight rows that
               all pointed at /learn. The live guides go first with their own
               URLs; the topic roadmap keeps its per-row Soon badges below them,
-              so the map states what exists and what does not in one column. */}
+              so the map states what exists and what does not in one column.
+
+              LEARN_ROADMAP rather than LEARN_GROUPS: a delivered row carries
+              the SAME route as the guide that delivered it, so listing both
+              would put two .smap-link rows on one data-route — a duplicate for
+              the reader and a strict-mode ambiguity for the spec that walks
+              this column by route. */}
           <div className="smap-cat" data-hue="accent" data-sitemap-section="learn">
             <div className="smap-cat-h">
               <span className="smap-cat-dot" aria-hidden="true" />
@@ -158,7 +164,7 @@ export default function SiteMap() {
                 <MapLink key={a.slug} label={a.title} route={`/learn/${a.slug}`} note={a.dek} />
               ))}
               <MapLink label="Learn" route="/learn" note="The section landing, and what is on the way." />
-              {LEARN_GROUPS.map((g) => (
+              {LEARN_ROADMAP.map((g) => (
                 <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
               ))}
             </ul>

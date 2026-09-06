@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import NavIcon from '../components/NavIcon'
 import { useReveal } from '../hooks/useReveal'
-import { DISCOVER_GROUPS, LEARN_GROUPS } from '../data/toolTree'
+import { DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
 import { LEARN_ARTICLES, readingMinutes } from '../data/learnIndex'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
 import { GALLERY_PALETTES } from '../data/paletteGallery'
@@ -171,15 +171,20 @@ const SURFACES = {
   learn: {
     eyebrow: 'Learn',
     title: 'Understand the craft, not just the tools.',
-    // "Growth playbooks" came out: SEO and Marketing are LEARN_GROUPS rows, and
-    // every LEARN_GROUPS row is `soon: true`. What exists is three reference
-    // guides, and what makes them worth opening is that they show their working.
-    lede: 'Reference guides on colour and type. Each one states the rule, cites the standard it comes from, and ends at the tool that applies it.',
+    // "Growth playbooks" came out: SEO and Marketing are roadmap rows with
+    // nothing behind them. What exists is the published guides, and what makes
+    // them worth opening is that they show their working — which is what the
+    // hint says, in the place a reader decides whether to open one.
+    lede: 'Reference guides on colour, contrast and type. Each one states the rule, cites the standard it comes from, and ends at the tool that applies it.',
     hue: 'ai',
-    groups: LEARN_GROUPS,
+    // The ROADMAP, not every group: two topics now have a guide, and those
+    // guides are the cards above this grid. Rendering the delivered rows here
+    // too would put a second link to the same page under a heading that says
+    // nothing in the grid is written yet.
+    groups: LEARN_ROADMAP,
     primaryLabel: `Start with ${FIRST_GUIDE.navLabel.toLowerCase()}`,
     primaryTo: `/learn/${FIRST_GUIDE.slug}`,
-    hint: `${LEARN_ARTICLES.length} guides live · free, no account`,
+    hint: `${LEARN_ARTICLES.length} guides live · every figure cited or computed`,
     gridTitle: 'Topics still being written.',
     gridLede: 'Nothing in this grid is written yet — that is what Soon means.',
   },

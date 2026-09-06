@@ -3,7 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import NotFound from './NotFound'
 import { findArticle, nextArticle, readingMinutes } from '../data/learnIndex'
 import ColourContrast from '../data/learn/colourContrast'
+import BrandColour from '../data/learn/brandColour'
 import ColourSpaces from '../data/learn/colourSpaces'
+import ThemeSystems from '../data/learn/themeSystems'
 import TypeScales from '../data/learn/typeScales'
 
 // The Learn article shell: one layout, every article.
@@ -43,6 +45,8 @@ const BODIES = {
   'colour-contrast': ColourContrast,
   'type-scales': TypeScales,
   'colour-spaces': ColourSpaces,
+  'theme-systems': ThemeSystems,
+  'brand-colour': BrandColour,
 }
 
 // One sentence saying what the tool does with what the reader has just read.
@@ -52,6 +56,8 @@ const TOOL_LEDE = {
   'colour-contrast': 'The Contrast Checker runs the formula above on any pair, gives the verdict against all four thresholds at once, and offers the nearest passing colour when a pair falls short.',
   'type-scales': 'The Type Scale Generator builds the ladder from a base and a ratio at each end of the range, previews it at three viewport widths in real families, and exports the clamp() for every step.',
   'colour-spaces': 'The Tint Scale Generator builds a 50–950 ramp from one colour, and its lightness curve is exactly the choice this article is about: Perceived spaces the stops by HCT tone, Linear by HSL lightness. The two are visibly different on the same seed.',
+  'theme-systems': 'The Semantic Colour Generator builds the role layer this article describes: it derives error, success, warning and info from hue arcs that keep each one legible as itself, then picks every shade by measured contrast — 4.5:1 for text, 3:1 for a boundary — separately for a light scene and a dark one.',
+  'brand-colour': 'The Palette Generator starts from one seed, builds the harmony and the tonal ramp from it, and rates each colour it produces against black and white ink — so the value that clears a threshold and the value that does not are on screen together rather than checked one at a time afterwards.',
 }
 
 export default function LearnArticle() {
