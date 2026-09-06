@@ -251,6 +251,19 @@ export function renderState(page) {
       // — App.jsx has never rendered, so there is no Suspense fallback to find.
       booting: !!document.getElementById('boot-shell'),
       loading: !!document.querySelector('.page-loading'),
+      // `dataLoading` is a state a TOOL renders instead of its workbench, one
+      // level below App.jsx's route fallback. The three typography tools share
+      // `<FontCatalogLoading>`, and its own comment says a tool renders it
+      // "INSTEAD of its workbench, so nothing half-built ever flashes on
+      // screen" — which is exactly what makes it invisible to a check that only
+      // knows about `.page-loading`.
+      //
+      // The DIRECT-CHILD `.fg-loader` is load-bearing. FontMatcher renders a
+      // second `.typ-loading` for "No font catalogue is available right now",
+      // which is a rendered ANSWER rather than a wait, and has no spinner. A
+      // bare `.typ-loading` would make a readiness check wait 20s for a page
+      // that had already finished.
+      dataLoading: !!document.querySelector('.typ-loading > .fg-loader'),
       crashed: !!document.querySelector('.error-boundary'),
       body: (document.body.innerText || '').trim().length,
       own: parts.join(' ').trim().length,
@@ -320,6 +333,77 @@ const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL t
   + ' chunk and waiting longer will not help: the app never started. The usual cause is the ENTRY'
   + ' bundle (/assets/index-*.js) never arriving — check the build-asset line below, if there is one.'
 
+/* ── The state a TOOL renders instead of its content ─────────────────────────
+ *
+ * The route arrives, the Suspense fallback goes, and the tool then renders its
+ * OWN loading state while the data it needs is in flight. `ready()` knew about
+ * `.page-loading` and nothing else, so it returned into that window and a spec
+ * that measured read the skeleton.
+ *
+ * MEASURED on /create/font-gallery, on this build, at the instant `go()`
+ * returned:
+ *
+ *     /api/fonts answered      ready at 188ms   .typ-loading 0   .fg-card 24
+ *     /api/fonts held open     ready at 148ms   .typ-loading 1   .fg-card  0
+ *                              settled at 2530ms                 .fg-card 24
+ *
+ * Zero rows, from a gallery that was working perfectly. That is the third
+ * mechanism in `suite-flake-class-unreproduced`, and it is a different one from
+ * the two build-asset shapes: 51-typography-paywall failed on 2026-09-06 with
+ * "the gallery rendered no rows at all / Expected: > 10 / Received: 0", in a run
+ * with ZERO occurrences of ERR_NO_BUFFER_SPACE, on a PR whose diff touched no
+ * font-related file, and it passed 8 of 8 in isolation.
+ *
+ * The 2530ms is the app's own bound, not a guess: `requestCatalogJson` in
+ * src/utils/googleFonts.js aborts each source after
+ * FONT_CATALOG_SOURCE_TIMEOUT_MS (2000), and `fetchFontCatalog` never rejects —
+ * it always resolves to the 84-family bundled list. So this is a wait for a
+ * state the app GUARANTEES terminates, not a widened timeout, and the 20s
+ * backstop below is unchanged.
+ *
+ * WHY THE CATALOGUE IS NOT STUBBED, which is a decision and not an oversight.
+ *
+ *   1. There is no third-party round trip to remove. base.js stubs
+ *      accounts.google.com because One Tap made a LIVE call on every signed-out
+ *      page load — 461 in one measured run. The font catalogue is not that: with
+ *      no VITE_GOOGLE_FONTS_API_KEY in the test build, googleFonts.js skips the
+ *      Google branch entirely and the only request is /api/fonts, which `vite
+ *      preview` answers locally with a 404. Measured above: one hit, settled in
+ *      188ms.
+ *   2. The degraded catalogue is a SHIPPED product state with its own notice and
+ *      retry, and 33-offline-state and 11-typography-tools exercise it on
+ *      purpose. A stub would have to reproduce live/cache/fallback faithfully or
+ *      those specs would start testing the stub.
+ *   3. It would hide this defect rather than fix it. The fetch is not the fault;
+ *      `ready()` returning into a state the tool renders instead of its content
+ *      is. Stubbing covers one tool family and leaves every other data-loading
+ *      surface exposed — the same "fixing it per-spec leaves the next spec
+ *      exposed" that put `ready()` inside `go()` in the first place.
+ *
+ * If a future tool renders its own instead-of-content state, it belongs in the
+ * selector here, next to this one.
+ */
+const DATA_LOADING_HINT = '\n\n  The route arrived and then the TOOL showed its own loading state:'
+  + ' <FontCatalogLoading>, which the typography tools render INSTEAD of their workbench while'
+  + ' the Google Fonts catalogue is in flight. A measurement taken here reads the skeleton — the'
+  + ' gallery reports zero rows from a gallery that is working. fetchFontCatalog always resolves'
+  + ' (bundled list after a 2000ms bound per source), so a page still in this state after the'
+  + ' backstop means the catalogue request itself is wedged, not merely slow.'
+
+/**
+ * Which of the three stalls this is, named rather than lumped together.
+ *
+ * "expected 421 to be greater than 40" sent a previous investigation at the
+ * branch under test rather than at the wait, and cost a day. These three want
+ * completely different next steps: a missing entry bundle, a route chunk that
+ * never landed, and a tool whose data never arrived.
+ */
+function describeStall(s) {
+  if (s && s.booting) return 'the app never replaced the static boot shell'
+  if (s && s.dataLoading) return 'the tool never got past its own data-loading state'
+  return 'the route never got past its lazy-loading fallback'
+}
+
 export async function ready(page, what) {
   const where = what || page.url()
   await page.evaluate(() => {
@@ -340,6 +424,7 @@ export async function ready(page, what) {
       const clear = !!(root && root.firstElementChild)
         && !document.getElementById('boot-shell')
         && !document.querySelector('.page-loading')
+        && !document.querySelector('.typ-loading > .fg-loader')
       window.__uilReadyFrames = clear ? (window.__uilReadyFrames || 0) + 1 : 0
       return window.__uilReadyFrames >= frames
     }, READY_FRAMES, { polling: 'raf', timeout: READY_BACKSTOP_MS })
@@ -347,12 +432,11 @@ export async function ready(page, what) {
     const s = await renderState(page).catch(() => null)
     const polls = await page.evaluate(() => window.__uilReadyPolls || 0).catch(() => 0)
     throw new Error(
-      `${where}: ${s && s.booting
-        ? 'the app never replaced the static boot shell'
-        : 'the route never got past its lazy-loading fallback'} in ${READY_BACKSTOP_MS}ms`
-      + (s ? ` — mounted=${s.mounted} booting=${s.booting} fallback=${s.loading} bodyChars=${s.body} ownChars=${s.own}` : '')
+      `${where}: ${describeStall(s)} in ${READY_BACKSTOP_MS}ms`
+      + (s ? ` — mounted=${s.mounted} booting=${s.booting} fallback=${s.loading} dataLoading=${s.dataLoading} bodyChars=${s.body} ownChars=${s.own}` : '')
       + ` (readiness examined ${polls} frame(s))`
       + (s && s.booting ? BOOT_SHELL_HINT : '')
+      + (s && s.dataLoading ? DATA_LOADING_HINT : '')
       + buildAssetHint(page),
     )
   }

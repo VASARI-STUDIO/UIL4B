@@ -124,6 +124,45 @@ test('renderState reports the boot shell, so the diagnostic can name the cause',
     + 'investigation goes looking at the route instead of at the entry bundle.')
 })
 
+/* ── The state a TOOL renders instead of its content ─────────────────────────
+ *
+ * One level below the route fallback. The three typography tools render
+ * <FontCatalogLoading> INSTEAD of their workbench while the Google Fonts
+ * catalogue is in flight, so a route that has arrived can still be showing
+ * nothing a spec can measure. Measured on /create/font-gallery: ready()
+ * returned at 148ms with .typ-loading up and ZERO .fg-card rows, against 24
+ * rows once it settled at 2530ms.
+ *
+ * That is what 51-typography-paywall hit on 2026-09-06 - "the gallery rendered
+ * no rows at all", in a run with no build-asset failure in it at all.
+ */
+
+test('ready() also waits for a tool that is showing its own data-loading state', () => {
+  const src = readStripped(path.join('tests', 'user-sim', 'helpers.js'))
+  const body = src.match(/export\s+async\s+function\s+ready\s*\(([\s\S]*?)\n\}/)
+  assert.ok(body, 'helpers.js no longer exports `async function ready(...)`')
+  assert.match(body[1], /typ-loading/,
+    'ready() stopped waiting for the typography tools\' own loading state. The route arrives,\n'
+    + 'the Suspense fallback goes, and the tool then shows <FontCatalogLoading> INSTEAD of its\n'
+    + 'workbench - so a spec that measures reads the skeleton and reports zero rows from a\n'
+    + 'gallery that is working perfectly.')
+})
+
+// Anti-vacuity, and it pins the DISCRIMINATOR rather than just the class name.
+// FontMatcher renders a second .typ-loading for "No font catalogue is available
+// right now", which is a rendered answer and not a wait; the direct-child
+// spinner is the only thing that tells them apart. If FontCatalogLoading lost
+// its spinner, ready() would stop waiting and this file would still be green.
+test('FontCatalogLoading still renders the spinner the readiness selector keys on', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'src', 'components', 'FontCatalogState.jsx'), 'utf8')
+  assert.match(src, /className="typ-loading"[\s\S]{0,120}?className="fg-loader"/,
+    'FontCatalogState no longer renders <div className="fg-loader"> as a child of\n'
+    + '<div className="typ-loading">. ready() keys on `.typ-loading > .fg-loader` to tell the\n'
+    + 'LOADING state apart from FontMatcher\'s terminal "No font catalogue is available right\n'
+    + 'now", which uses the same class and is a rendered answer rather than a wait. Update the\n'
+    + 'selector in tests/user-sim/helpers.js, or this readiness clause is dead.')
+})
+
 /* ── The door has no way around it any more ──────────────────────────
  *
  * This used to be a KNOWN_RAW_GOTO allowlist of twenty spec files, pinned so

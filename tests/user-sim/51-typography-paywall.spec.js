@@ -60,6 +60,20 @@ async function chooseFilter(page, group, option) {
 }
 
 // What a signed-out visitor can actually see of the gallery right now.
+//
+// `catalogueLoading` is reported for the reason `renderState` reports
+// `crashed`: a gallery that has not got its catalogue yet looks IDENTICAL to a
+// gallery whose filter broke, if all you count is rows. On 2026-09-06 this file
+// failed with "the gallery rendered no rows at all / Expected: > 10 /
+// Received: 0", in a run with no build-asset failure anywhere in it, on a PR
+// that touched no font-related file, and it passed 8 of 8 in isolation. The
+// route had arrived; the TOOL was still showing <FontCatalogLoading>, which the
+// three typography tools render INSTEAD of their workbench.
+//
+// `go()` -> `ready()` now waits that out for every spec in the suite (the
+// contract is in 47-lazy-route-readiness.spec.js), so this should never be true
+// here. It is reported anyway, and named in the assertion below, because the
+// count alone sent one investigation at the filter.
 function galleryState(page) {
   return page.evaluate((lockedSel) => {
     const cards = [...document.querySelectorAll('.fg-card')]
@@ -67,6 +81,7 @@ function galleryState(page) {
       .map((el) => el.textContent.trim()).filter(Boolean)
     return {
       cards: cards.length,
+      catalogueLoading: !!document.querySelector('.typ-loading > .fg-loader'),
       names,
       first: names[0] || null,
       locked: document.querySelectorAll(lockedSel).length,
@@ -85,7 +100,17 @@ test.describe('Typography: browsing stays free under every view', () => {
     await go(page, GALLERY)
 
     const base = await galleryState(page)
-    expect(base.cards, 'the gallery rendered no rows at all').toBeGreaterThan(10)
+    // NAMED, not counted. Zero rows has two completely different causes and
+    // they want opposite next steps: a broken filter is a defect in this build,
+    // and a catalogue still in flight is a measurement taken too early.
+    expect(
+      base.catalogueLoading,
+      'the gallery was still loading its catalogue when this was measured, so the row count'
+      + ' below is a reading of the skeleton and NOT evidence about the gallery. go() -> ready()'
+      + ' is supposed to wait this out — see 47-lazy-route-readiness.spec.js.',
+    ).toBe(false)
+    expect(base.cards, 'the gallery rendered no rows at all, with its catalogue already in')
+      .toBeGreaterThan(10)
 
     // The search must narrow. If it does not, the sweeps below prove nothing.
     await page.getByRole('searchbox', { name: /Search font families/i }).fill('serif')

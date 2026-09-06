@@ -324,6 +324,104 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     ).toBe(true)
   })
 
+  /* ── A tool that has ARRIVED, and has no data ────────────────────────────
+   *
+   * The third mechanism, and the one neither build-asset shape explains.
+   * 51-typography-paywall failed on 2026-09-06 with "the gallery rendered no
+   * rows at all / Expected: > 10 / Received: 0", in a run with ZERO occurrences
+   * of ERR_NO_BUFFER_SPACE, on a PR whose diff touched no font-related file,
+   * and it passed 8 of 8 in isolation.
+   *
+   * The route had arrived. The TOOL had not: the three typography tools render
+   * <FontCatalogLoading> INSTEAD of their workbench while the catalogue is in
+   * flight, and `ready()` knew only about App.jsx's `.page-loading`.
+   *
+   * Held by never answering /api/fonts. The hold releases itself: googleFonts.js
+   * aborts each source after FONT_CATALOG_SOURCE_TIMEOUT_MS (2000) and always
+   * resolves to the bundled list, so this is a wait for a state the app
+   * GUARANTEES terminates rather than a widened timeout.
+   */
+  const FONT_GALLERY = '/create/font-gallery'
+
+  test('a tool showing its own data-loading state is not arrival either', async ({ page }) => {
+    test.setTimeout(60000)
+    let served = 0
+    await page.route('**/api/fonts', () => { served += 1 })
+
+    await goRaw(page, FONT_GALLERY)
+    await expect(page.locator('.typ-loading > .fg-loader')).toBeVisible()
+
+    // ── The vacuity, as five facts from one instant. Every condition the old
+    // contract required is TRUE here, and the gallery is empty. ──
+    const held = await renderState(page)
+    expect(served, 'the catalogue request must actually have been held, or this proves nothing')
+      .toBeGreaterThan(0)
+    expect(held.mounted, 'THE OLD CONTRACT: React has mounted').toBe(true)
+    expect(held.booting, 'THE OLD CONTRACT: the static boot shell is gone').toBe(false)
+    expect(held.loading, 'THE OLD CONTRACT: no Suspense fallback is on screen').toBe(false)
+    expect(held.dataLoading, 'THE NEW CONTRACT: the tool is showing its own loading state')
+      .toBe(true)
+    expect(await page.locator('.fg-card').count(),
+      'and this is the number a spec measuring here reads, from a gallery that works')
+      .toBe(0)
+
+    // ── So ready() must not return into that window. ──
+    await ready(page, FONT_GALLERY)
+    const arrived = await renderState(page)
+    expect(arrived.dataLoading, 'the tool state must be gone once ready() returns').toBe(false)
+    expect(await page.locator('.fg-card').count(),
+      'and the gallery must have its rows — the same reading, after the wait')
+      .toBeGreaterThan(10)
+  })
+
+  test('the catalogue-loading state is told apart from a tool that has FINISHED with nothing', async ({ page }) => {
+    // The discriminator, asserted rather than assumed. FontMatcher renders a
+    // second `.typ-loading` for "No font catalogue is available right now" -
+    // a rendered ANSWER, not a wait. If ready() waited on a bare `.typ-loading`
+    // it would hang 20s on a page that had already finished, so the selector
+    // takes the DIRECT-CHILD spinner. This pins that the spinner is what
+    // separates them.
+    await go(page, FONT_GALLERY)
+
+    // The control first: a settled gallery is not data-loading.
+    expect((await renderState(page)).dataLoading, 'a settled gallery is not data-loading')
+      .toBe(false)
+
+    // Now put FontMatcher's terminal state on the page, VERBATIM, and ask the
+    // helper - not a selector written here, which would assert nothing about
+    // what ready() actually does.
+    await page.evaluate(() => {
+      const el = document.createElement('div')
+      el.id = 'tidef-terminal-probe'
+      el.className = 'typ-loading'
+      el.setAttribute('role', 'status')
+      el.innerHTML = '<strong>No font catalogue is available right now.</strong>'
+      document.body.appendChild(el)
+    })
+    expect(await page.locator('.typ-loading').count(), 'a spinner-less .typ-loading is on screen')
+      .toBe(1)
+    const withTerminal = await renderState(page)
+    expect(
+      withTerminal.dataLoading,
+      'a .typ-loading with NO spinner is a rendered answer, not a wait. If the readiness'
+      + ' selector matched it, every page reaching that state would burn the 20s backstop and'
+      + ' fail as though it had never arrived.',
+    ).toBe(false)
+
+    // ...and the same helper DOES see the real loading state, or the assertion
+    // above is satisfied by a helper that sees nothing at all.
+    await page.evaluate(() => {
+      document.getElementById('tidef-terminal-probe').innerHTML = '<div class="fg-loader"></div>'
+    })
+    expect(
+      (await renderState(page)).dataLoading,
+      'the same element WITH the spinner must be seen, or this test proves only that'
+      + ' renderState reports false for everything',
+    ).toBe(true)
+
+    await page.evaluate(() => document.getElementById('tidef-terminal-probe').remove())
+  })
+
   test('a build asset that arrives normally records NOTHING, so the watch is not indiscriminate', async ({ page }) => {
     // The negative control for the test above, and the one that says the guard
     // is not simply on. If this ever went red the whole suite would be failing
