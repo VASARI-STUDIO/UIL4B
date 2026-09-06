@@ -251,7 +251,26 @@ test.describe('nav popover keyboard movement', () => {
     // CPU throttling). It has its own backlog item, popover-open-scroll-
     // suppression, and it is recorded here so a run that hits it says so in the
     // feedback summary instead of going quietly green.
-    if (closedY > afterClose && openY <= before) {
+    //
+    // A RUN THAT COULD NOT MEASURE THIS SAYS SO. The comparison rests entirely
+    // on the CONTROL press producing a default scroll, and CI has recorded that
+    // failing three times — scrollY 0 with 7422px of room below it. When it
+    // does, "the defect did not appear" and "this run could never have seen the
+    // defect" are the same silence in the feedback report, and the second reads
+    // as a clean result. So the unmeasured case gets its own finding.
+    //
+    // Same anti-vacuity rule the walks in this suite carry after three of them
+    // reported violations while never reporting how many nodes they examined:
+    // say how much you looked at, not only what you found.
+    if (closedY <= afterClose) {
+      fb.note(
+        'info',
+        'The control press produced no page scroll with the panel CLOSED '
+        + `(${afterClose} -> ${closedY}), so this run cannot say anything about whether an open `
+        + 'popover suppresses keyboard scrolling. NOT a clean result for '
+        + 'popover-open-scroll-suppression — an unmeasured one.',
+      )
+    } else if (openY <= before) {
       fb.note(
         'critical',
         'An arrow key aimed past the OPEN nav popover left the page still, though the same key moved it '
@@ -260,5 +279,9 @@ test.describe('nav popover keyboard movement', () => {
         + 'See backlog popover-open-scroll-suppression.',
       )
     }
+    // The ordinary result — control moved, open press moved — is deliberately
+    // NOT recorded. A finding written on every healthy run turns "no findings"
+    // into a line people scroll past, which is the opposite of what the
+    // feedback report is for.
   })
 })

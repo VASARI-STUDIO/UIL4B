@@ -22,11 +22,11 @@
 // against the machine — on a fast runner the chunk can win. Holding the chunk
 // request itself is the same state arrived at deterministically, so this spec
 // measures the same thing on any hardware.
-import { test, expect } from './base.js'
+import { ASSET_TROUBLE, expectBuildAssetFailures, test, expect } from './base.js'
 // goRaw, not go. `go()` now waits for the route to arrive, which is the fix
 // this file exists to prove works - so measuring the moment before it arrives
 // has to bypass it. This is goRaw's only caller, and that is the point.
-import { goRaw, ready, renderState, expectRendered } from './helpers.js'
+import { go, goRaw, ready, renderState, expectRendered } from './helpers.js'
 
 // /privacy is the sharpest case in the app: 421 characters of chrome while the
 // fallback is up against 6537 once it lands, and it is one of the two routes
@@ -174,5 +174,260 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     // "zero versus everything", which is a difference a threshold can hold.
     expect(held.own).toBe(0)
     expect(arrived.own).toBeGreaterThan(2000)
+  })
+
+  /* ── The BOOT SHELL, which `ready()` used to accept as arrival ──────────────
+   *
+   * Every test above holds back a ROUTE chunk, so React is running and the
+   * Suspense fallback is on screen. This one holds back the ENTRY bundle, so
+   * React never runs at all — and that state defeated the readiness check from
+   * the OTHER side. index.html ships
+   * `<div id="root"><div class="boot-shell" id="boot-shell">` and
+   * scripts/prerender.mjs clones it into all 33 route shells, so
+   * `root.firstElementChild` is satisfied by markup the SERVER wrote, and
+   * `.page-loading` is absent because App.jsx has never rendered. Both of the
+   * conditions `ready()` used to require were true of a page with no
+   * application on it.
+   *
+   * Caught in the wild by #391: /create/semantic-color under four parallel
+   * workers, h1 not found, accessibility snapshot reading
+   * `status: Loading UIL4B` — the boot shell's own live region.
+   */
+  const ENTRY_BUNDLE = '**/assets/index-*.js'
+
+  test('the static boot shell is not arrival, and a page stuck on it says so', async ({ page }) => {
+    // ready()'s backstop is 20s by design, so this needs room for it.
+    test.setTimeout(60000)
+
+    // Held open forever rather than aborted: an abort reaches
+    // `vite:preloadError`/the ErrorBoundary and is a different state. Nothing
+    // rejects here, so the entry module simply never executes.
+    await page.route(ENTRY_BUNDLE, () => { /* never continued, never aborted */ })
+    // `waitUntil: 'commit'` for the reason 04-premium-home needs it: a module
+    // script that never loads means DOMContentLoaded never fires, so the
+    // default wait would hang here rather than reach the reading below.
+    await goRaw(page, HELD_ROUTE, { waitUntil: 'commit' })
+    await expect(page.locator('#boot-shell')).toBeVisible()
+
+    // ── The vacuity, as four facts from one instant. ──
+    const shell = await renderState(page)
+    expect(shell.mounted, 'THE OLD CONTRACT: #root HAS a child — the shell index.html ships')
+      .toBe(true)
+    expect(shell.loading, 'THE OLD CONTRACT: no .page-loading, because App.jsx has never rendered')
+      .toBe(false)
+    expect(shell.booting, 'THE NEW CONTRACT: the static boot shell is still on screen')
+      .toBe(true)
+    expect(shell.own, 'and the route itself has rendered nothing at all')
+      .toBe(0)
+
+    // ── So the wait must fail, and must name the cause. ──
+    const failure = await ready(page, HELD_ROUTE).then(
+      () => null,
+      (err) => String(err && err.message ? err.message : err),
+    )
+    expect(failure, 'a page still showing the boot shell must FAIL, not count as arrived')
+      .not.toBeNull()
+    // Not "the route never got past its lazy-loading fallback": there is no
+    // fallback and there is no route. Sending the next investigation at a slow
+    // chunk is what this message exists to prevent.
+    expect(failure).toMatch(/never replaced the static boot shell/)
+    expect(failure, 'the diagnostic must carry the numbers that show why').toMatch(/booting=true/)
+    expect(failure, 'and must say that waiting longer cannot help').toMatch(/React has NOT RUN AT ALL/)
+    // The readiness wait must report how many frames it actually examined. A
+    // wait that returned without looking is indistinguishable from one that
+    // looked and was satisfied, which is the shape this suite keeps paying for.
+    const polls = Number((failure.match(/readiness examined (\d+) frame/) || [])[1])
+    expect(polls, 'ready() must say how many frames it examined, and it must be non-zero')
+      .toBeGreaterThan(0)
+  })
+
+  test('the same page arrives normally once the entry bundle is let through', async ({ page }) => {
+    // The positive control for the test above. Without it, "ready() fails on
+    // the boot shell" would also be satisfied by a ready() that had started
+    // failing on everything.
+    let open
+    const release = new Promise((r) => { open = r })
+    let served = 0
+    await page.route(ENTRY_BUNDLE, async (route) => { served += 1; await release; await route.continue() })
+
+    await goRaw(page, HELD_ROUTE, { waitUntil: 'commit' })
+    await expect(page.locator('#boot-shell')).toBeVisible()
+    expect(served, 'the entry bundle request must actually have been held, or this proves nothing')
+      .toBeGreaterThan(0)
+
+    open()
+    await ready(page, HELD_ROUTE)
+    const arrived = await renderState(page)
+    expect(arrived.booting, 'the boot shell must be gone once ready() returns').toBe(false)
+    expect(arrived.mounted, 'and React must have committed something').toBe(true)
+    expect(arrived.own, 'and the route must have rendered its own content').toBeGreaterThan(2000)
+  })
+
+  /* ── An asset the machine could not DELIVER ──────────────────────────────
+   *
+   * Every test above holds a request open or aborts it with route.abort()'s
+   * default, which Chromium reports as net::ERR_FAILED - something this suite
+   * does on purpose, and deliberately NOT counted by the build-asset watch.
+   *
+   * This one produces the failure that is not deliberate. On 2026-09-06 five
+   * specs failed once each under full-suite parallelism and every one passed in
+   * isolation; two of those runs carried net::ERR_NO_BUFFER_SPACE against
+   * /assets/index-*.js and /assets/en-*.js in their own feedback-loop section.
+   * The app chunk never loaded, so the spec's first locator found nothing and
+   * the failure read as if the element had been deleted.
+   *
+   * net::ERR_CONNECTION_FAILED stands in for it: it is in the same allowlist,
+   * and route.abort('connectionfailed') produces it on demand. The classifier's
+   * two directions are asserted without a browser in
+   * tests/unit/build-asset-guard.test.js; what is asserted HERE is the wiring -
+   * that a real failed request on a real asset reaches the watch, and that the
+   * failure a spec actually sees names it.
+   */
+  test('an entry bundle that never arrives is NAMED, not reported as a missing element', async ({ page }) => {
+    test.setTimeout(60000)
+
+    // Declared BEFORE the failure, because the suppression is read when a
+    // failure is RECORDED. This is the one context in the suite allowed to do
+    // this, and tests/unit/build-asset-guard.test.js pins that to this file -
+    // without it, the run's own proof that the guard works would fail the run,
+    // which is the guard working.
+    expectBuildAssetFailures(page.context())
+    await page.route(ENTRY_BUNDLE, (route) => route.abort('connectionfailed'))
+    await goRaw(page, HELD_ROUTE, { waitUntil: 'commit' })
+    await expect(page.locator('#boot-shell')).toBeVisible()
+
+    const failure = await ready(page, HELD_ROUTE).then(
+      () => null,
+      (err) => String(err && err.message ? err.message : err),
+    )
+    expect(failure, 'a page whose entry bundle never arrived must FAIL').not.toBeNull()
+
+    // THE POINT OF THE ITEM. The failure must say the app could not be loaded,
+    // and name the file - not describe a route that is missing something.
+    expect(failure, 'the failure must say the app never started')
+      .toMatch(/never replaced the static boot shell/)
+    expect(failure, 'and must say a build asset never arrived')
+      .toMatch(/NEVER ARRIVED in this browser context/)
+    expect(failure, 'and must carry the actual network error')
+      .toMatch(/ERR_CONNECTION_FAILED/)
+    expect(failure, 'and must name the file')
+      .toMatch(/\/assets\/index-/)
+
+    // POSITIVE CONTROL for the ledger itself: an absence assertion above would
+    // be satisfied by a watch that recorded nothing anywhere.
+    const recorded = page.context()[ASSET_TROUBLE] || []
+    expect(recorded.length, 'the watch must have RECORDED the failure, not merely reported it once')
+      .toBeGreaterThan(0)
+    expect(
+      recorded.every((r) => r.includes('/assets/')),
+      'every recorded entry must be a build asset',
+    ).toBe(true)
+  })
+
+  /* ── A tool that has ARRIVED, and has no data ────────────────────────────
+   *
+   * The third mechanism, and the one neither build-asset shape explains.
+   * 51-typography-paywall failed on 2026-09-06 with "the gallery rendered no
+   * rows at all / Expected: > 10 / Received: 0", in a run with ZERO occurrences
+   * of ERR_NO_BUFFER_SPACE, on a PR whose diff touched no font-related file,
+   * and it passed 8 of 8 in isolation.
+   *
+   * The route had arrived. The TOOL had not: the three typography tools render
+   * <FontCatalogLoading> INSTEAD of their workbench while the catalogue is in
+   * flight, and `ready()` knew only about App.jsx's `.page-loading`.
+   *
+   * Held by never answering /api/fonts. The hold releases itself: googleFonts.js
+   * aborts each source after FONT_CATALOG_SOURCE_TIMEOUT_MS (2000) and always
+   * resolves to the bundled list, so this is a wait for a state the app
+   * GUARANTEES terminates rather than a widened timeout.
+   */
+  const FONT_GALLERY = '/create/font-gallery'
+
+  test('a tool showing its own data-loading state is not arrival either', async ({ page }) => {
+    test.setTimeout(60000)
+    let served = 0
+    await page.route('**/api/fonts', () => { served += 1 })
+
+    await goRaw(page, FONT_GALLERY)
+    await expect(page.locator('.typ-loading > .fg-loader')).toBeVisible()
+
+    // ── The vacuity, as five facts from one instant. Every condition the old
+    // contract required is TRUE here, and the gallery is empty. ──
+    const held = await renderState(page)
+    expect(served, 'the catalogue request must actually have been held, or this proves nothing')
+      .toBeGreaterThan(0)
+    expect(held.mounted, 'THE OLD CONTRACT: React has mounted').toBe(true)
+    expect(held.booting, 'THE OLD CONTRACT: the static boot shell is gone').toBe(false)
+    expect(held.loading, 'THE OLD CONTRACT: no Suspense fallback is on screen').toBe(false)
+    expect(held.dataLoading, 'THE NEW CONTRACT: the tool is showing its own loading state')
+      .toBe(true)
+    expect(await page.locator('.fg-card').count(),
+      'and this is the number a spec measuring here reads, from a gallery that works')
+      .toBe(0)
+
+    // ── So ready() must not return into that window. ──
+    await ready(page, FONT_GALLERY)
+    const arrived = await renderState(page)
+    expect(arrived.dataLoading, 'the tool state must be gone once ready() returns').toBe(false)
+    expect(await page.locator('.fg-card').count(),
+      'and the gallery must have its rows — the same reading, after the wait')
+      .toBeGreaterThan(10)
+  })
+
+  test('the catalogue-loading state is told apart from a tool that has FINISHED with nothing', async ({ page }) => {
+    // The discriminator, asserted rather than assumed. FontMatcher renders a
+    // second `.typ-loading` for "No font catalogue is available right now" -
+    // a rendered ANSWER, not a wait. If ready() waited on a bare `.typ-loading`
+    // it would hang 20s on a page that had already finished, so the selector
+    // takes the DIRECT-CHILD spinner. This pins that the spinner is what
+    // separates them.
+    await go(page, FONT_GALLERY)
+
+    // The control first: a settled gallery is not data-loading.
+    expect((await renderState(page)).dataLoading, 'a settled gallery is not data-loading')
+      .toBe(false)
+
+    // Now put FontMatcher's terminal state on the page, VERBATIM, and ask the
+    // helper - not a selector written here, which would assert nothing about
+    // what ready() actually does.
+    await page.evaluate(() => {
+      const el = document.createElement('div')
+      el.id = 'tidef-terminal-probe'
+      el.className = 'typ-loading'
+      el.setAttribute('role', 'status')
+      el.innerHTML = '<strong>No font catalogue is available right now.</strong>'
+      document.body.appendChild(el)
+    })
+    expect(await page.locator('.typ-loading').count(), 'a spinner-less .typ-loading is on screen')
+      .toBe(1)
+    const withTerminal = await renderState(page)
+    expect(
+      withTerminal.dataLoading,
+      'a .typ-loading with NO spinner is a rendered answer, not a wait. If the readiness'
+      + ' selector matched it, every page reaching that state would burn the 20s backstop and'
+      + ' fail as though it had never arrived.',
+    ).toBe(false)
+
+    // ...and the same helper DOES see the real loading state, or the assertion
+    // above is satisfied by a helper that sees nothing at all.
+    await page.evaluate(() => {
+      document.getElementById('tidef-terminal-probe').innerHTML = '<div class="fg-loader"></div>'
+    })
+    expect(
+      (await renderState(page)).dataLoading,
+      'the same element WITH the spinner must be seen, or this test proves only that'
+      + ' renderState reports false for everything',
+    ).toBe(true)
+
+    await page.evaluate(() => document.getElementById('tidef-terminal-probe').remove())
+  })
+
+  test('a build asset that arrives normally records NOTHING, so the watch is not indiscriminate', async ({ page }) => {
+    // The negative control for the test above, and the one that says the guard
+    // is not simply on. If this ever went red the whole suite would be failing
+    // every test on assets that loaded perfectly.
+    await go(page, HELD_ROUTE)
+    const recorded = page.context()[ASSET_TROUBLE] || []
+    expect(recorded, 'a healthy page load must leave the build-asset ledger empty').toEqual([])
   })
 })
