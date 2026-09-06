@@ -671,15 +671,35 @@ async function readProviderHealth() {
   }
 }
 
+// The three caller-controlled strings, shaped into the one user message the
+// providers see. Exported and pure so the shaping is testable without a
+// provider call (tests/unit/ai-prompt-message.test.js).
+//
+// Every OPTIONAL field is type-checked before `.slice()` touches it. The old
+// inline version guarded only `description`; `style: 123` or `platform: {}`
+// passed the truthiness test and then threw a TypeError out of the handler —
+// after auth, so only a signed-in caller could reach it, but a 500 with a stack
+// trace in the function log is still the wrong answer to a malformed body.
+// Returns null when there is no usable description, which the caller turns
+// into the same 400 it always sent.
+export const PROMPT_DESCRIPTION_MAX = 2000
+export const PROMPT_STYLE_MAX = 200
+export const PROMPT_PLATFORM_MAX = 100
+
+export function buildPromptUserMessage({ description, style, platform } = {}) {
+  if (!description || typeof description !== 'string') return null
+  let userMessage = `Design brief: ${description.slice(0, PROMPT_DESCRIPTION_MAX)}`
+  if (typeof style === 'string' && style) userMessage += `\nStyle: ${style.slice(0, PROMPT_STYLE_MAX)}`
+  if (typeof platform === 'string' && platform) userMessage += `\nTarget platform: ${platform.slice(0, PROMPT_PLATFORM_MAX)}`
+  return userMessage
+}
+
 async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, monthLimit }) {
   const { description, style, platform } = req.body || {}
-  if (!description || typeof description !== 'string') {
+  const userMessage = buildPromptUserMessage({ description, style, platform })
+  if (!userMessage) {
     return res.status(400).json({ error: 'description (string) is required' })
   }
-
-  let userMessage = `Design brief: ${description.slice(0, 2000)}`
-  if (style) userMessage += `\nStyle: ${style.slice(0, 200)}`
-  if (platform) userMessage += `\nTarget platform: ${platform.slice(0, 100)}`
 
   // Try OpenRouter (primary), then fall back to Gemini so the tool stays up
   // through a provider outage or a misconfigured OpenRouter key.
@@ -733,7 +753,7 @@ async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, month
   return {
     prompt,
     provider,
-    platform: platform || null,
+    platform: typeof platform === 'string' && platform ? platform : null,
     plan: plan.id,
     usage: { used: used + 1, limit, remaining: limit - used - 1, monthUsed: monthUsed + 1, monthLimit, monthRemaining: monthLimit - monthUsed - 1 },
   }
