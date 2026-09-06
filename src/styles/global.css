@@ -6908,10 +6908,30 @@ html[data-reduced-motion="true"] :is(.home-hero-kicker,.home-hero-line-in,.home-
 }
 
 /* C · subtraction. One headline, the bar, one link — and a flag on the
-   placeholder line so it cannot be mistaken for proposed copy. */
+   placeholder line so it cannot be mistaken for proposed copy.
+
+   `opacity:.45` WAS ON .hero-c-h1 AND IS GONE. It was there to say "this
+   sentence is a placeholder", but `.hero-c-placeholder-flag` directly above
+   already says exactly that, in words, in --accent-strong. The dimming
+   therefore added no information — and it was not free. The variable under
+   test across A, B and C is the SHAPE, and C was the only one of the three
+   whose headline rendered at less than full strength: measured on this build,
+   .hero-a-h1 and .hero-b-h1 both compute opacity 1 while .hero-c-h1 computed
+   0.45. Judging "does subtraction work" against a headline that has been
+   faded is judging a different question.
+
+   It was also a contrast failure in its own right. --t0 (#0F0F10) at .45 over
+   --bg-0 (#EFEEE9) composites to ~rgb(138,138,135) — 2.99:1, under the 3:1
+   WCAG 1.4.3 floor for large text; at full strength the same line is 16.6:1.
+   So the dimming made the placeholder harder to read than the thing it was
+   flagging, on the one screen whose whole job is to be judged.
+
+   This changes nothing about WHICH direction wins — it makes the comparison
+   fair, it does not make the choice. Everything else in this block is
+   untouched and the decision stays open. */
 .hero-dir-c{text-align:center;justify-content:center}
 .hero-c-placeholder-flag{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:var(--s-3)}
-.hero-c-h1{font-size:clamp(32px,4.6vw,62px);font-weight:800;letter-spacing:-.035em;line-height:1.08;color:var(--t0);max-width:20ch;margin:0 auto var(--s-6);text-wrap:balance;opacity:.45}
+.hero-c-h1{font-size:clamp(32px,4.6vw,62px);font-weight:800;letter-spacing:-.035em;line-height:1.08;color:var(--t0);max-width:20ch;margin:0 auto var(--s-6);text-wrap:balance}
 .hero-dir-c .hcmd{margin-inline:auto;margin-top:0}
 
 @media(max-width:640px){

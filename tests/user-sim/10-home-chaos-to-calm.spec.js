@@ -241,6 +241,56 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     expect(marked.length, 'the mark highlights nothing').toBeGreaterThan(2)
     expect((await heading.innerText()).includes(marked)).toBe(true)
 
+    // THE MARKER-PEN BUDGET, over the whole hero rather than the headline.
+    //
+    // docs/reference/design-language-v2.md: "`--hi` (#E9FF64) is not a general
+    // accent … **Budget: at most one `--hi` element per viewport.** It reads as
+    // a marker pen — spend it on the single most important thing on screen and
+    // nowhere else." Nothing enforced that rule anywhere.
+    //
+    // WHY THE CHECK ABOVE IS NOT ALREADY THIS CHECK. It counts `.home-mark`
+    // inside the H1, so its subject is the headline. A second marker-pen
+    // element somewhere else in the hero — the CTA row, the kicker, the
+    // reassurance line — is invisible to it. MEASURED, not assumed: adding
+    // `ui-pill-hi` to the hero's "See it working" pill puts a second lime
+    // element on the first screen and all 39 tests in this file pass, this one
+    // included. That is the hole.
+    //
+    // It resolves --hi AT RUNTIME and compares PAINTED colour, so it is not a
+    // list of class names to keep up to date: a new class that happens to paint
+    // the marker colour is caught, and renaming `.home-mark` does not create a
+    // false pass. `::selection` is global and is a pseudo-element, so it never
+    // appears here.
+    //
+    // Scoped to `.home-hero` because on this page the hero IS the first
+    // viewport, and because the element is a stable boundary — where "above
+    // 800px" is a number that moves with every copy edit. The three hero
+    // directions behind ?hero=a|b|c all drop the mark entirely, so whichever
+    // one the founder picks this assertion travels with the shipped hero and
+    // its expected count is the only thing that changes.
+    const hiElements = await page.evaluate(() => {
+      const hero = document.querySelector('.home-hero')
+      if (!hero) return null
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--hi)'
+      hero.appendChild(probe)
+      const hi = getComputedStyle(probe).color
+      probe.remove()
+      return [...hero.querySelectorAll('*')]
+        .filter((el) => {
+          const cs = getComputedStyle(el)
+          return cs.backgroundColor === hi || cs.color === hi || cs.borderTopColor === hi
+        })
+        .map((el) => `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`)
+    })
+    expect(hiElements, 'the hero did not render — nothing to budget').not.toBeNull()
+    expect(hiElements,
+      `the hero paints --hi on ${hiElements?.length} element(s)`
+      + `${hiElements?.length ? `: ${hiElements.join(', ')}` : ''}. `
+      + 'design-language-v2.md budgets exactly one per viewport. More than one and '
+      + 'the marker pen stops being emphasis; none at all and the hero has lost the '
+      + 'mark the assertions above are about.').toHaveLength(1)
+
     // The headline names what the product makes. Not a pinned sentence — a
     // check that it is about this product rather than about a category, which
     // is the failure the rewrite was for.
