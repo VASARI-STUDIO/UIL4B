@@ -188,6 +188,86 @@ test.describe('colour picker', () => {
       .toHaveAttribute('aria-label', '#4338e0')
   })
 
+  // ── Every route to a colour reaches the shared list ────────────────────────
+  // [colour-picker-ui] The three recents tests above all commit through the HEX
+  // FIELD, and that is the one route that always worked. `remember()` was wired
+  // to the pad's POINTER release, a swatch press, an eyedropper pick and a typed
+  // value — so mixing with the arrow keys, or moving only the hue strip, changed
+  // the colour on screen and left the Recent grid empty. These two drive the
+  // CONTROLS rather than the helper: they assert on `.cpk-recents`, which is
+  // rendered from `getRecentColors()`, so reverting either handler in
+  // ColorPickerPop.jsx fails them.
+  //
+  // Neither asserts a specific hex. The pad's arrow step is 2% of saturation and
+  // the strip's is one degree of hue, and pinning the exact colour those produce
+  // would be a test of hsvToHex's rounding rather than of the wiring. What must
+  // be true is that a colour arrives at all, and that it is the one now shown in
+  // the field.
+  test('a colour mixed on the pad with the keyboard reaches the recents list', async ({ page }) => {
+    await openPicker(page)
+    // The panel opens with focus on the pad (asserted above), and this tool's
+    // first stop is a saturated colour, so there is room to move in both axes.
+    await expect(page.locator('.cpk-pad')).toBeFocused()
+    await expect(page.locator('.cpk-recents .cpk-swatch')).toHaveCount(0)
+
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('ArrowDown')
+
+    const mixed = await page.locator(FIELD).inputValue()
+    const recents = page.locator('.cpk-recents .cpk-swatch')
+    await expect(recents.first()).toBeVisible()
+    await expect(recents.first()).toHaveAttribute('aria-label', mixed.toLowerCase())
+  })
+
+  test('a colour set on the hue strip alone reaches the recents list', async ({ page }) => {
+    await openPicker(page)
+    await expect(page.locator('.cpk-recents .cpk-swatch')).toHaveCount(0)
+
+    // Focus the strip and move it — the hue-only route, which recorded nothing
+    // at all before. Tab from the pad rather than clicking, so the assertion
+    // cannot be satisfied by a stray pointerup landing on the pad instead.
+    await page.locator('.cpk-hue').focus()
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+
+    const mixed = await page.locator(FIELD).inputValue()
+    const recents = page.locator('.cpk-recents .cpk-swatch')
+    await expect(recents.first()).toBeVisible()
+    await expect(recents.first()).toHaveAttribute('aria-label', mixed.toLowerCase())
+  })
+
+  // Tab and Escape raise keyup on these controls too. A colour the user only
+  // LOOKED at must not take a slot in a twelve-slot shared list.
+  test('opening the panel and leaving it records nothing', async ({ page }) => {
+    await openPicker(page)
+    await expect(page.locator('.cpk-recents .cpk-swatch')).toHaveCount(0)
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Escape')
+
+    await page.locator(TRIGGER).first().click()
+    await expect(page.locator(PANEL)).toBeVisible()
+    await expect(page.locator('.cpk-recents .cpk-swatch')).toHaveCount(0)
+  })
+
+  // `role="slider"` REQUIRES aria-valuenow. Without it the node is invalid and
+  // some screen readers announce nothing for it at all. The pad is 2D, so
+  // valuenow carries saturation and aria-valuetext carries both axes — this
+  // asserts the required attribute exists AND that it tracks the control,
+  // rather than being a constant that satisfies a linter.
+  test('the saturation pad exposes a value a screen reader can read', async ({ page }) => {
+    await openPicker(page)
+    const pad = page.locator('.cpk-pad')
+    await expect(pad).toHaveAttribute('aria-valuemin', '0')
+    await expect(pad).toHaveAttribute('aria-valuemax', '100')
+
+    const before = Number(await pad.getAttribute('aria-valuenow'))
+    expect(Number.isFinite(before)).toBe(true)
+    await pad.press('ArrowLeft')
+    const after = Number(await pad.getAttribute('aria-valuenow'))
+    expect(after).toBeLessThan(before)
+    await expect(pad).toHaveAttribute('aria-valuetext', new RegExp(`Saturation ${after}%`))
+  })
+
   // The panel says WHICH of the many colours on a surface it is editing. A
   // gradient opens one of these per stop, and before this they were identical.
   test('the panel names the colour it is editing', async ({ page }) => {

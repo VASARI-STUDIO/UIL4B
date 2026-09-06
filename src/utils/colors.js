@@ -903,6 +903,76 @@ export function fixBackground(fg, bg, targetRatio) {
   return best
 }
 
+/**
+ * The NEAREST colour to `move`, on its own HSL lightness axis, that clears
+ * `targetRatio` against `against` — or `null` when no such colour exists.
+ *
+ * WHY THIS EXISTS RATHER THAN ANOTHER fixForeground CALL. fixForeground and
+ * fixBackground each take their search direction from the OTHER colour's
+ * luminance (`bgLum < 0.5` means walk the ink lighter) and 0.5 is not the
+ * crossover. Black and white are equally readable at relative luminance 0.179,
+ * so on every ground between 0.179 and 0.5 those functions walk AWAY from the
+ * answer, and they return their INPUT unchanged when the walk finds nothing —
+ * which reads like a clamp at the call site and is not one. That is already
+ * recorded twice in this file, for mutedInk and for pvInkFromFill.
+ *
+ * MEASURED ON THE CONTRAST CHECKER, which is the page that promises "one click
+ * nudges either colour just far enough to pass". Sweeping a 6-level-per-channel
+ * grid (216 colours, 38,594 AA-failing pairs) through the page's own `fixes`
+ * memo as it was written:
+ *
+ *     a TEXT fix existed but was not offered       16,485 of 38,594  (42.7%)
+ *     a BACKGROUND fix existed but was not offered 16,485 of 38,594  (42.7%)
+ *     "Make it pass" was EMPTY with a fix available  6,561 of 38,594  (17.0%)
+ *
+ * #000099 on #009900 is one of them: the pair measures 3.806:1, black clears
+ * 5.56:1, and the page offered nothing at all because the ground's luminance is
+ * 0.228 so the walk went looking toward white, which tops out at 3.78:1.
+ *
+ * BOTH DIRECTIONS ARE SCANNED and the SMALLER movement wins, which is the same
+ * rule pvInkFromFill uses over the seed→pole line and the same one
+ * HomeWorkbench's readableInk uses over the two house inks. The scan is LINEAR
+ * over the 101 integer lightnesses rather than a bisection, for the reason
+ * pvInkFromFill gives at length: contrast along this axis is not guaranteed
+ * monotone, and a bisection assumes it is. 101 candidates is also the exact
+ * resolution of the answer, because hslToHex takes an integer lightness.
+ *
+ * THE GUARANTEE. At L=0 hslToHex returns #000000 and at L=100 it returns
+ * #ffffff, for every hue and saturation — so this finds a colour whenever
+ * either pure pole clears `against`, which is exactly when one exists at all.
+ * When neither does, the honest answer is that this pair cannot be fixed by
+ * moving this side, and that is what `null` says. Returning the input instead
+ * is the defect above.
+ *
+ * CONTRAST IS SYMMETRIC, so one function serves both sides: pass the colour to
+ * MOVE first and the one to hold fixed second. fixForeground/fixBackground stay
+ * for HomeWorkbench's readableInk and labelGround, which pre-select their pole
+ * by measured contrast and use the walk only as one candidate among six behind
+ * a `>= 4.5` gate — a shape their direction bug cannot escape through.
+ */
+export function nearestPassingLightness(move, against, targetRatio) {
+  // Distance zero is a distance. A pair that already clears needs no move, and
+  // saying so here keeps the name honest; `null` then means only one thing,
+  // which is the property the call site depends on.
+  if (contrastRatio(move, against) >= targetRatio) return move
+  // Round-tripping through HSL is lossy (both ends round to integers), so the
+  // seed is returned as given above rather than as hslToHex(h, s, l0).
+  const [h, s, l0] = hexToHsl(move)
+  let best = null
+  let bestStep = Infinity
+  for (const dir of [-1, 1]) {
+    for (let step = 1; step <= 100; step++) {
+      const l = l0 + dir * step
+      if (l < 0 || l > 100) break
+      const candidate = hslToHex(h, s, l)
+      if (contrastRatio(candidate, against) < targetRatio) continue
+      if (step < bestStep) { bestStep = step; best = candidate }
+      break
+    }
+  }
+  return best
+}
+
 // Machado, Oliveira & Fernandes (2009) — severity 1.0 dichromat matrices,
 // applied in linear sRGB. Source: the canonical published severity table
 // (DaltonLens / colorspace R `simulate_cvd`). Achromatopsia is handled
