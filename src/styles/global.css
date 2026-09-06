@@ -2697,6 +2697,44 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .fg-more-link:hover{color:var(--accent-strong)}
 .fg-more-link:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 
+/* ── THE CROSS-TOOL HANDOFF LINK IS A TARGET, NOT A FOOTNOTE ───────────────
+   These seven links are how a person gets from one Create tool to the next —
+   Tint → Palette, Type Scale → Font Pair, Contrast → Tint, Gradient →
+   Gradient Library. They are the connective tissue between the tools, and
+   they were the SMALLEST targets on their pages.
+
+   MEASURED 2026-09-06, signed out, at all 20 widths from 320 to 1920 (the
+   height is the same at every one of them — this is not a breakpoint fault,
+   it is the rule):
+
+     .tt-more-link    "Build a full palette →"               105 x 18.1
+     .tsc-more-link   "Pair two families →"                   97.1 x 18.1
+     .fg-more-link    "Pair two families →"                   97.1 x 18.1
+     .fpr-more-link   "Build a type scale →"                 102.3 x 18.1
+     .tt-back         "Back to Palette Builder"               102 x 19.8
+     .ggn-gal-link    "Browse the Gradient Library →"         174.9 x 19.8
+     .cc-more-link    "Build a tint scale from this colour →" 215.5 x 21.4
+
+   WCAG 2.5.8 (AA) asks for 24x24 CSS px. Every one of them fails on height,
+   and four of them are the SAME declaration copied to four places, which is
+   why this is one rule rather than seven patches.
+
+   The fix is inline-flex with a min-height, so the box grows to 24px around
+   the same text: no font-size change, no new colour, no layout shift — the
+   links sit in `flex-wrap` rows whose height was already set by taller
+   siblings. Nothing visible moves; the hit area stops being a hairline.
+
+   NOT a new visual treatment. `.ggn-gal-link` already had exactly this shape
+   (`display:inline-flex;align-items:center`) and only lacked the height, so
+   this generalises a pattern the stylesheet had already chosen once. */
+.tt-more-link,
+.tsc-more-link,
+.fg-more-link,
+.fpr-more-link,
+.cc-more-link,
+.ggn-gal-link,
+.tt-back{display:inline-flex;align-items:center;min-height:24px}
+
 @media(max-width:980px){
   .fg-hero-copy{grid-template-columns:1fr;gap:var(--s-4)}
   /* The dialog's own padding moved into its three bands, so the tablet step is
@@ -6297,11 +6335,35 @@ html.lenis{scroll-behavior:auto!important}
    around the core, near-black just outside it — mean at least one always
    contrasts, whether the track under the handle is white, black or anything
    between, in either theme. */
-.snapv--grad input[type="range"]{-webkit-appearance:none;appearance:none;height:14px;border-radius:var(--radius-pill);background:var(--snapv-track,var(--bg-3));background-repeat:no-repeat;border:1px solid var(--border);outline:none;cursor:pointer;accent-color:auto}
-.snapv--grad input[type="range"]::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:transparent}
-.snapv--grad input[type="range"]::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:transparent}
-.snapv--grad input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;margin-top:-2px;border-radius:50%;background:var(--snapv-handle,#fff);border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 1px 3px rgba(0,0,0,.45);cursor:grab}
-.snapv--grad input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--snapv-handle,#fff);border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 1px 3px rgba(0,0,0,.45);cursor:grab}
+/* THE COLOURED TRACK IS 24px TALL BECAUSE IT IS THE TARGET.
+   ─────────────────────────────────────────────────────────────────────────
+   It was 14px, and on the Palette Builder those four sliders — Hue,
+   Saturation, Tone, Temperature — ARE the tool's fine adjustment. Measured
+   signed out on /create/palette: `#plb-h`, `#plb-s`, `#plb-b` and `#plb-temp`
+   all reported 154.7 x 14 at every width from 820 to 1920, and 186.5 x 14 at
+   390. WCAG 2.5.8 (AA) asks 24x24. A 14px band is also simply hard to hit
+   with a thumb on a phone, which is where a colour tool gets used one-handed.
+
+   MOBBIN, five captures, all iOS colour/adjustment sliders:
+     Freeform   https://mobbin.com/screens/17ea4802-3f5f-4425-a740-813e13d3b7da
+     Craft      https://mobbin.com/screens/8bfac362-d556-49de-befa-74221fb49fe7
+     Apple Notes https://mobbin.com/screens/63d95cf0-0452-451f-aa1c-0a5c2654c4c4
+     VSCO       https://mobbin.com/screens/9b5f4b29-caa9-4443-a8dd-2900a717dd19
+     Edits      https://mobbin.com/screens/da55d8ca-8fbf-4f46-914c-d40e7e45a52d
+   Freeform, Craft and Apple Notes all paint a THICK gradient track — visibly
+   in the mid-20s of px — with the thumb inset in it. VSCO and Edits keep a
+   thin track and put the size in a large overhanging thumb. Both shapes give
+   the finger 24px+; none of the five hands the user a 14px band. The thick
+   track is the one taken here because the track IS the gradient preview on
+   this control, so height buys legibility as well as reach.
+
+   The thumb keeps its two opposed rings and its `--snapv-handle` core — that
+   whole argument above is unchanged, only the geometry moved. */
+.snapv--grad input[type="range"]{-webkit-appearance:none;appearance:none;height:24px;border-radius:var(--radius-pill);background:var(--snapv-track,var(--bg-3));background-repeat:no-repeat;border:1px solid var(--border);outline:none;cursor:pointer;accent-color:auto}
+.snapv--grad input[type="range"]::-webkit-slider-runnable-track{height:22px;border-radius:var(--radius-pill);background:transparent}
+.snapv--grad input[type="range"]::-moz-range-track{height:22px;border-radius:var(--radius-pill);background:transparent}
+.snapv--grad input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;margin-top:1px;border-radius:50%;background:var(--snapv-handle,#fff);border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 1px 3px rgba(0,0,0,.45);cursor:grab}
+.snapv--grad input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--snapv-handle,#fff);border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 1px 3px rgba(0,0,0,.45);cursor:grab}
 .snapv--grad input[type="range"]:active::-webkit-slider-thumb{cursor:grabbing}
 .snapv--grad input[type="range"]:active::-moz-range-thumb{cursor:grabbing}
 /* Focus: a ring outside the track so it never competes with the gradient, plus
@@ -11562,7 +11624,19 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-search{display:flex;align-items:center;gap:10px;flex:1 1 240px;min-width:0;min-height:46px;padding:0 12px 0 14px;color:var(--t2);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
 .lbry-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 .lbry-search>svg{flex-shrink:0}
-.lbry-search input{width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+/* `align-self:stretch` IS THE HIT AREA. The wrapper is `min-height:46px` and
+   a plain <div> — not a <label> — so it forwards nothing. With the flex
+   default (`align-items:center`) the input sat at its own 18px content height
+   in the middle of that 46px field, and the 14px of padding above and below it
+   was dead. MEASURED on /create/font-gallery at 1440: wrapper 360x46, input
+   306x18; a real click 4px inside the wrapper's top edge left
+   `document.activeElement` on `main.rail-content` — the search field looks
+   46px tall and accepted a click in the middle 18px only. Stretching the input
+   makes the whole painted field the target. Nothing moves: the input is
+   transparent and borderless, and the icon and clear button keep their own
+   centring because this is `align-self` on one child, not `align-items` on
+   the row. */
+.lbry-search input{align-self:stretch;width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
 .lbry-search input::placeholder{color:var(--t3)}
 /* The engine's own clear affordance would sit beside ours and do the same job
    with a different glyph. Ours stays, because it carries an accessible name. */
