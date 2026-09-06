@@ -11,20 +11,21 @@ Engineering work is not here — it is in `src/data/pipeline.js`. Ideas waiting 
 your verdict are in [`PROPOSALS.md`](PROPOSALS.md). Decisions you have already
 made are in [`CHANGELOG.md`](../CHANGELOG.md).
 
-_Last reviewed: 2026-09-05._
+_Last reviewed: 2026-09-06._
 
-**Engineering is stopped on four of these.** The queue records these as waiting
-on you and nothing can move on them: the GitHub bill (§1.1), the Stripe
-retention setup (§4.6), a live Stripe checkout test (§6), and a verified sending
-domain (§4.10). A fifth — moving Firebase off the public critical path — needs a
-design from us before you can approve anything, so we will bring it to you rather
-than the other way round.
+**Engineering is stopped on five of these.** The queue records these as waiting
+on you and nothing can move on them: the GitHub bill (§1.1), **the moderator
+role permission (§1.3)**, the Stripe retention setup (§4.6), a live Stripe
+checkout test (§6), and a verified sending domain (§4.10). A sixth — moving
+Firebase off the public critical path — needs a design from us before you can
+approve anything, so we will bring it to you rather than the other way round.
 
 ---
 
-# 1 · Stopped right now — two bills
+# 1 · Stopped right now — two bills and a permission
 
-These two are not engineering problems and no amount of waiting fixes either.
+These three are not engineering problems and no amount of waiting fixes any of
+them.
 
 ## 1.1 · GitHub is running no tests at all. Pay the bill.
 
@@ -64,6 +65,66 @@ stays unfixed.
 **If you do nothing.** The live site keeps serving the 2 September build. Every
 fix listed in the changelog since then is invisible to real visitors, so none of
 it counts yet.
+
+## 1.3 · The moderator role is built and switched off. One setting turns it on.
+
+**Do.** Open `.claude/settings.json` in this repository and paste this in:
+
+```json
+{
+  "autoCompactEnabled": true,
+  "autoCompactWindow": 150000,
+  "permissions": {
+    "allow": [
+      "Edit(firestore.rules)",
+      "Edit(api/verify-admin.js)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
+```
+
+Then tell us it is in. Nothing else — you do not need to read the code.
+
+**Time.** One minute.
+
+**Why.** You approved both changes on 6 September. We could not make them. Two
+files are refused by the **Claude Code auto-mode classifier** — a guardrail in
+the tool itself, which is *separate from and stricter than*
+`docs/reference/human-validation-zones.md`. That doc says "ask Dylan first"; the
+classifier refuses **after** you have said yes. It blocked the agent and it
+blocked the coordinator, so your approval alone does not lift it. Only this
+setting does.
+
+The two blocked files:
+
+| File | What the held change does |
+|---|---|
+| `firestore.rules` | Lets a `moderator` claim through on feedback, community prompts and community submissions. Nothing else widens — accounts, billing and analytics are untouched. |
+| `api/verify-admin.js` | Mints the moderator claim from the roster, and gives you grant / revoke / list so you can actually assign someone. |
+
+Both diffs are written out in full in the body of **pull request #390**
+(`https://github.com/VASARI-STUDIO/UIL4B/pull/390`), under the heading
+**FOUNDER APPROVAL NEEDED** — the sections numbered *1. `firestore.rules`* and
+*2. `api/verify-admin.js`*. The working copies, refined and tested since, are
+held uncommitted in the `feat/moderator-role-enable` worktree and described in
+the pull request that carries this page.
+
+**What happens once it is in.** The two diffs apply, `npm run test:rules` runs
+against them, and the role goes live: you can promote someone from Admin →
+Users, and they can clear the approval queue you chose in §3.9 without seeing
+anyone's email address or being able to appoint anyone else.
+
+**If the paste does not work.** Tell us and we will hand you the two diffs as a
+single patch file to apply yourself. We have verified the block exists but not
+that this exact rule clears it — the tool's own refusal message names a Bash
+permission rule as the remedy, which is what the block above is.
+
+**If you do nothing.** The role stays built and inert. **You remain the only
+person on earth who can approve a community submission or clear a feedback
+report**, which is the bottleneck the role exists to remove — and the reason you
+asked for it.
 
 ---
 
@@ -319,22 +380,31 @@ file can work until it exists — including the community gallery in §3.8.
 
 **If you do nothing.** Community media stays unbuildable.
 
-## 4.4 · P0 — Admin → Feedback may not be able to read anything
+## 4.4 · P1 — Admin → Feedback: confirm it now loads
 
-**Do.** Open Admin → Feedback and see whether it loads.
+**Do.** Open Admin → Feedback and read the line above the list.
 
 **Time.** 2 minutes.
 
-**Why.** The published rules require an admin flag on your account
-(`request.auth.token.admin == true`). **No code anywhere sets that flag**, so it
-probably does not exist. If the panel says `permission-denied`, tell us and we
-will either set the flag properly or move the read behind a server route — that
-is a decision, not a fix, so we will ask.
+**Why — this item has changed, and the old version of it was wrong.** It used to
+say "no code anywhere sets that flag". That stopped being true in #241:
+`api/verify-admin.js` mints `admin` from your verified email. The real fault was
+narrower and quieter — nothing in the browser ever *refreshed* your token after
+the flag was minted, so your session went on using a token that did not carry
+it, and the panel absorbed the refusal in an empty `catch` and rendered **"No
+submissions yet"**. A refused read and an empty inbox looked identical.
 
-**This one now blocks more than feedback.** The approval queue you chose in §3.9
-is an admin surface with the same requirement.
+Both halves shipped in #390. The panel now forces the token refresh, and it says
+which it is: either `N from the server · M from this browser`, or a red **"The
+server's copy could not be read"** with the actual reason.
 
-**If you do nothing.** User feedback is being collected and nobody is reading it.
+So this is no longer a decision — it is a two-minute confirmation.
+
+**What you should see.** The count line. If you instead see the red box, copy the
+reason underneath it and send it to us; that is a real fault and we will fix it.
+
+**If you do nothing.** Feedback submitted through the site may still be
+unreviewed, and you will not know which.
 
 ## 4.5 · P1 — Prove the AI is using the provider you are paying for
 
