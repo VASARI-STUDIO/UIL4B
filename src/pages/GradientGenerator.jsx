@@ -293,7 +293,11 @@ const LockBtn = ({ on, onClick, label, className = '' }) => (
 // Community submission surface name for the sign-in gate (utils/submitIntent).
 const SUBMIT_SURFACE = 'gradient'
 
-export default function GradientGenerator({ onCopy, toast }) {
+// `onExport` is this tool's ONE declared export hook — the copy of the payload
+// that IS the artefact. It defaults to `onCopy` so the component still copies
+// correctly if it is ever mounted outside CreateTool; the activation naming
+// lives in src/config/activationExports.js, never here.
+export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) {
   const { design, setGradient, projects } = useProject()
   const { user, userProfile, loading: authLoading } = useAuth()
   const { requireLogin } = useLoginPrompt()
@@ -417,6 +421,7 @@ export default function GradientGenerator({ onCopy, toast }) {
   const guardEdit = useCallback(() => {
     if (!fromLibrary || isPro) return true
     openProModal({
+      gate: 'gradient-gallery-edit',
       eyebrow: 'Pro gradient tools',
       title: 'Editing gallery gradients is Pro',
       subtitle: 'Every gradient in the gallery is free to preview and copy. Reshaping one — adding stops, recolouring, changing the type or angle — is a Pro tool. Prefer to stay free? Hit Reset, Random or From palette to start an editable gradient of your own.',
@@ -614,7 +619,7 @@ export default function GradientGenerator({ onCopy, toast }) {
 
   const copyCode = useCallback(async () => {
     try {
-      const result = await onCopy?.(exportCode)
+      const result = await onExport?.(exportCode)
       if (result === false) {
         setCopied(false)
         return
@@ -625,7 +630,7 @@ export default function GradientGenerator({ onCopy, toast }) {
       setCopied(false)
       toast?.('Copy failed — select the code and copy it manually')
     }
-  }, [exportCode, onCopy, toast])
+  }, [exportCode, onExport, toast])
 
   // Queue the current gradient for review. Local-first, exactly like the
   // Community Hub's design submission: it lands in this browser's queue with a

@@ -891,7 +891,12 @@ function PreviewScene({ colors, mode, title, tab = 'ui', scene = PREVIEW_SCENES[
 // Community submission surface name for the sign-in gate (utils/submitIntent).
 const SUBMIT_SURFACE = 'palette'
 
-export default function PaletteBuilder({ onCopy, toast }) {
+// `onExport` is this tool's ONE declared export hook. This file has EIGHT copy
+// affordances; only the CSS-variables export represents the whole palette, so
+// only that one routes through the hook. Copying a single hex, a tint row or a
+// share link stays on `onCopy` and is not an activation — see
+// src/config/activationExports.js for why that decision lives in CreateTool.
+export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const { design, setPalette, saveProject, overwriteProject, projects, canSaveProjects } = useProject()
   const { isPro } = useSubscription()
   const { openProModal } = useProModal()
@@ -1276,7 +1281,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   const pickHarmony = (h) => {
     if (!h.free && !isPro) {
-      openProModal({ eyebrow: 'Pro colour tools', title: 'Unlock every colour system', subtitle: 'Analogous, complementary, triadic, tetradic and custom harmonies build richer palettes than the free Auto and Monochromatic systems.' })
+      openProModal({ gate: 'palette-harmony-system', eyebrow: 'Pro colour tools', title: 'Unlock every colour system', subtitle: 'Analogous, complementary, triadic, tetradic and custom harmonies build richer palettes than the free Auto and Monochromatic systems.' })
       return
     }
     setHarmony(h.id)
@@ -1576,7 +1581,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const insertAt = (idx, hex) => {
     if (colors.length >= HARD_MAX) { toast?.(`Palettes max out at ${HARD_MAX} colours`); return }
     if (!isPro && colors.length >= PRO_MAX) {
-      openProModal({ eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
       return
     }
     setColors(prev => { const n = [...prev]; n.splice(idx, 0, hex); return n })
@@ -1607,7 +1612,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
     const ceiling = isPro ? HARD_MAX : PRO_MAX
     const room = ceiling - colors.length
     if (n > room) {
-      openProModal({ eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
       return
     }
     const a = colors[i]
@@ -1639,7 +1644,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const openHctPicker = (i) => {
     setCtxMenu(null)
     if (!isPro) {
-      openProModal({ eyebrow: 'Pro colour tools', title: 'Fine-tune any colour in HCT', subtitle: 'Edit hue, chroma and tone on each colour individually with the HCT picker — perceptual control the free tier keeps read-only.' })
+      openProModal({ gate: 'palette-hct-picker', eyebrow: 'Pro colour tools', title: 'Fine-tune any colour in HCT', subtitle: 'Edit hue, chroma and tone on each colour individually with the HCT picker — perceptual control the free tier keeps read-only.' })
       return
     }
     setTintsIdx(null); setPickerIdx(p => (p === i ? null : i))
@@ -1980,7 +1985,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
 
   const pickVariation = (v, idx) => {
     if (!isPro && idx >= FREE_VARIATIONS) {
-      openProModal({ eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
+      openProModal({ gate: 'palette-variation-apply', eyebrow: 'Pro colour tools', title: 'Every variation, unlocked', subtitle: 'Free covers the first set of generated variations; Pro unlocks the full range of alternates for any palette.' })
       return
     }
     // Preserve the frozen list across this apply so reopening the menu shows the
@@ -1993,7 +1998,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   const compareVariation = (v, idx) => {
     // Free users can compare the free variations; the Pro-only rows stay gated.
     if (!isPro && idx >= FREE_VARIATIONS) {
-      openProModal({ eyebrow: 'Pro colour tools', title: 'Compare every variation', subtitle: 'Line palettes up side by side to compare them. Free covers the first set of variations; Pro unlocks the full range.' })
+      openProModal({ gate: 'palette-variation-compare', eyebrow: 'Pro colour tools', title: 'Compare every variation', subtitle: 'Line palettes up side by side to compare them. Free covers the first set of variations; Pro unlocks the full range.' })
       return
     }
     setGalleryOpen(false)
@@ -2055,7 +2060,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
   }, [colors, JSON.stringify(adjust), importedGalleryId])
   const pickBrand = (b) => {
     if (!b.free && !isPro) {
-      openProModal({ eyebrow: 'Pro colour tools', title: 'Load any brand system', subtitle: 'Free covers a handful of starter brands; Pro unlocks the full set — each one applies the brand’s whole colour system, not just its swatches.' })
+      openProModal({ gate: 'palette-brand-system', eyebrow: 'Pro colour tools', title: 'Load any brand system', subtitle: 'Free covers a handful of starter brands; Pro unlocks the full set — each one applies the brand’s whole colour system, not just its swatches.' })
       return
     }
     // Selecting a brand applies its WHOLE system. Pro users keep the brand's
@@ -2074,6 +2079,12 @@ export default function PaletteBuilder({ onCopy, toast }) {
     })
     return `:root {\n${lines.join('\n')}\n}`
   }, [adjusted])
+
+  // The single export path. Both "Copy CSS variables" (save menu) and the
+  // footer's "Copy CSS" are the SAME export reached two ways, so they share one
+  // function rather than each calling the hook — one call site per tool is the
+  // whole point of the shape, and two would be two places to forget.
+  const copyCssExport = () => onExport?.(cssExport)
 
   // ── Hand-offs into the sibling colour tools ─────────────────────────────────
   // Both carry what the user is actually LOOKING at (the adjusted values, never
@@ -2732,7 +2743,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                 <div className="plb-menu-sub">Share</div>
                 <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(shareLink()); setSaveOpen(false) }}><IcoCopy /> Copy link to this palette</button>
                 <div className="plb-menu-sub">Export</div>
-                <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(cssExport); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
+                <button type="button" className="plb-menu-item" onClick={() => { copyCssExport(); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
                 <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
                 <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
                 <div className="plb-menu-sub">Community</div>
@@ -2872,7 +2883,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                   aria-label={`Show contrast guidance for ${role}`}
                   onClick={() => {
                     if (!isPro) {
-                      openProModal({ eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })
+                      openProModal({ gate: 'palette-contrast-view', eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })
                       return
                     }
                     setShowContrast(v => !v)
@@ -3099,7 +3110,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                     const at = ctxMenu.i
                     setCtxMenu(null)
                     if (gated) {
-                      openProModal({ eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
+                      openProModal({ gate: 'palette-colour-cap', eyebrow: 'Pro palettes', title: `Go beyond ${PRO_MAX} colours`, subtitle: `Free palettes hold up to ${PRO_MAX} colours. Pro palettes grow to ${HARD_MAX} so you can build full multi-role systems.` })
                       return
                     }
                     insertBetweenMany(at, n)
@@ -3129,7 +3140,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
             onClick={() => {
               setCtxMenu(null)
               if (!isPro) {
-                openProModal({ eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })
+                openProModal({ gate: 'palette-contrast-view', eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })
                 return
               }
               setShowContrast(v => !v)
@@ -3340,7 +3351,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
                         <button
                           type="button"
                           className="plb-preview-gate"
-                          onClick={() => openProModal({ eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
+                          onClick={() => openProModal({ gate: 'palette-preview-scene', eyebrow: 'Pro palette previews', title: `Preview ${scene.name.toLowerCase()}`, subtitle: 'Test your palette across the complete preview library, in both light and dark interfaces.' })}
                         >
                           <IcoLock open={false} size={13} /> Unlock preview
                         </button>
@@ -3488,7 +3499,7 @@ export default function PaletteBuilder({ onCopy, toast }) {
         >
           Reset
         </button>
-        <button type="button" className="btn btn-s plb-copycss" onClick={() => onCopy?.(cssExport)}>Copy CSS</button>
+        <button type="button" className="btn btn-s plb-copycss" onClick={copyCssExport}>Copy CSS</button>
       </footer>
 
       {/* Step 1 of the brand-kit walkthrough (colours → fonts → type scale →

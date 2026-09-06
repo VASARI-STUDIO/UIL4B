@@ -689,7 +689,12 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
         subtitle: 'Line styles let you fine-tune stroke ends and corners — and Pro unlocks every other colour and icon tool too.',
       },
     }
-    openProModal(presets[kind] || {})
+    // `gate` is DERIVED from the kind rather than written into each preset, so
+    // a kind added later is measured under its own name by existing — the same
+    // reason trackUpgradeGate lives in ProModalContext and not at the 16 call
+    // sites. Without it all three of these walls reported as their modal title,
+    // and "Upgrade to Pro to use this feature" names nothing.
+    openProModal({ gate: `icon-${kind}`, ...(presets[kind] || {}) })
   }
 
   // Saving is FREE — it just needs an account (projects are account-scoped).
