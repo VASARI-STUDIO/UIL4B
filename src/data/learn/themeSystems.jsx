@@ -80,9 +80,8 @@ export default function ThemeSystems() {
           216 and inverts to <code>#F4A128</code>, an orange at hue 36. Its real
           dark link colour is <code>#4A90FF</code> — hue 217, the same blue,
           lifted until it clears the new ground. That is what the second value
-          actually is, in every theme system that works: the same hue re-picked
-          against a different background, not the arithmetic negative of the
-          first.
+          is: the same hue re-picked against a different background, rather than
+          the arithmetic negative of the first.
         </p>
 
         <h3>Why the ratio does not carry either</h3>
@@ -232,11 +231,11 @@ lin(191/255)  = 0.5210      <- the inverted channel
           This is the one most often missed, because everything it governs is
           drawn by the browser rather than by the stylesheet. A page that paints
           itself dark entirely in CSS and never declares{' '}
-          <code>color-scheme: dark</code> keeps a light scrollbar, light
-          date-pickers, and a light default background behind anything that
-          paints late. Declaring both — <code>color-scheme: light dark</code> —
-          is what lets a document with its own toggle hand the browser the right
-          answer in either state.
+          <code>color-scheme: dark</code> keeps the light scrollbar and the light
+          form controls the clause above names, on a page whose every authored
+          surface is dark. Declaring both —{' '}
+          <code>color-scheme: light dark</code> — is what lets a document with
+          its own toggle hand the browser the right answer in either state.
         </p>
       </section>
     </>

@@ -178,7 +178,7 @@ export const LEARN_ARTICLES = Object.freeze([
     dek: 'One hue has to be text, a fill and a border, in two themes. Almost no single value does all of it, which is what the ramp is for.',
     description: 'A brand colour has to be text, a fill and a border in two themes. Why no ramp stop clears 4.5:1 on both grounds, and how far a neutral can be tinted.',
     file: 'brandColour.jsx',
-    words: 1074,
+    words: 1089,
     updated: '2026-09-06',
     toolTo: '/create/palette',
     toolLabel: 'Palette Generator',

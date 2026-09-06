@@ -124,13 +124,13 @@ export default function BrandColour() {
           common, so no single value can be chosen.
         </p>
         <p>
-          The seed here is worth its own line. <code>#2563EB</code> measures
-          4.45:1 against this product&rsquo;s light ground — five hundredths under
-          the threshold, on the most-used blue on the web, against an off-white
-          rather than a pure white. A brand colour that fails by that margin
-          fails in a way no reviewer catches by eye, and the number is different
-          again on <code>#FFFFFF</code>. Which ground the check was run against is
-          part of the result.
+          The seed here is worth its own line. <code>#2563EB</code> is the colour
+          this product&rsquo;s own Colour Studio opens on, and it measures 4.45:1
+          against this product&rsquo;s light ground — five hundredths under the
+          threshold, against an off-white rather than a pure white. A brand
+          colour that fails by that margin fails in a way no reviewer catches by
+          eye, and the number is different again on <code>#FFFFFF</code>. Which
+          ground the check was run against is part of the result.
         </p>
         <Aside>
           The stops here are the generator&rsquo;s <i>perceived</i> curve, which
