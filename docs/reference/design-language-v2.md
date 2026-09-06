@@ -12,8 +12,14 @@
 ## Provenance and one correction
 
 `github.md` in the design project records that the mock's content was lifted from
-`src/pages/Landing.jsx`. **`Landing.jsx` is dead code** — it is imported by
-nothing and routed nowhere. The live homepage is `src/pages/Home.jsx`.
+`src/pages/Landing.jsx`. **`Landing.jsx` no longer exists.** It was dead code —
+imported by nothing and routed nowhere — and has since been deleted outright,
+along with the 156 `.landing-*` selectors it owned in `global.css`
+(`landing-page-orphaned`). The live homepage is `src/pages/Home.jsx`.
+
+This does not weaken the mock's provenance, but it does change how to read it:
+the content the mock was lifted from is now only in git history, so treat the
+`.dc.html` as the record of it rather than expecting a file to compare against.
 
 So V2 is a **visual and structural** source, not a content source. Apply it to
 `Home.jsx`, which already carries the three things the founder asked to keep:

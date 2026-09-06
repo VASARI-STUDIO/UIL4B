@@ -45,7 +45,12 @@ const SECTIONS = [
   {
     id: 'curated',
     label: 'Curated collection',
-    blurb: 'Colour systems with a point of view, built here.',
+    // Says WHEN you would reach for this group rather than the other one. The
+    // previous line — "Colour systems with a point of view, built here." —
+    // opened on the same seven words as the hero description sitting about two
+    // hundred pixels above it, so on one screen the page introduced itself
+    // twice and distinguished the two groups not at all.
+    blurb: 'Invented here, for work with no brand to follow.',
     match: (palette) => palette.kind === 'curated',
   },
   {
@@ -139,6 +144,32 @@ export default function PaletteGallery({ toast }) {
     setFilter('all')
   }
 
+  // The results row names a CATEGORY only when the view actually IS that
+  // category. This was the half of the sectioning work that never landed: the
+  // shared head kept saying "Curated collection" after the sections went in
+  // beneath it, which broke in two ways at once. It MIS-DESCRIBED the page —
+  // browse mode shows curated AND brand, so the head named the first of two
+  // groups as if it were the whole library — and it put a taxonomy eyebrow
+  // roughly forty pixels above an <h3> that repeated it word for word, which is
+  // the exact motif the founder marked "AI" on the Font Gallery masthead and
+  // that #391 was meant to have finished off. Measured on the rendered page:
+  // "CURATED COLLECTION / Colours worth building with / 71 palettes" sat
+  // directly on top of "Curated collection / 64".
+  //
+  // The same untruth reached the flat views. A search or a mood filter (Dark /
+  // Light / Vivid) matches both kinds, so labelling those results "Curated
+  // collection" was false too — it was simply less visible without a heading
+  // under it to disagree with.
+  //
+  // Shape follows CuratedResources.jsx, the other Discover library that browses
+  // in bands and narrows to a flat list: when it bands, its eyebrow is a claim
+  // about scope ("Hand-picked, not scraped") precisely so it cannot restate the
+  // band headings; when it narrows, it names what was matched.
+  const eyebrow = filter === 'brand' ? 'Brand systems'
+    : filter === 'curated' ? 'Curated collection'
+      : browsing ? 'Everything you can browse'
+        : 'Across both collections'
+
   // The teased tail of the Brand systems group: three placeholders, then one
   // wall. Three is the gallery's desktop column count, so the tease reads as
   // the next ROW of the collection rather than as a stub — see LOCKED_TEASE.
@@ -195,7 +226,7 @@ export default function PaletteGallery({ toast }) {
       </LibraryToolbar>
 
       <DiscoverResultHead
-        eyebrow={filter === 'brand' ? 'Brand systems' : 'Curated collection'}
+        eyebrow={eyebrow}
         title={filter === 'brand' ? 'Identities you already know' : 'Colours worth building with'}
         count={visible.length}
         noun="palette"
