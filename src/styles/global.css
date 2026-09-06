@@ -13511,6 +13511,10 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .lart-table tbody th{font-weight:600;color:var(--t0)}
 .lart-table td{color:var(--t1)}
 .lart-table [data-num]{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* A prose cell that must stay on one line. The tables live in an overflow-x
+   container, so this buys uniform row height at the cost of scroll distance —
+   which is the right trade for a column the reader scans downwards. */
+.lart-table [data-nowrap]{white-space:nowrap}
 .lart-table-cap{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
 .lart-table-cap code{font-family:var(--mono);font-size:.92em}
 

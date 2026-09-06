@@ -353,12 +353,24 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
 // section will cover — and an article is a page that exists. Keeping them apart
 // is what lets the menu show both without either lying: the Guides column is
 // pages you can open now, the Foundations and Growth columns are still Soon.
-import { LEARN_ARTICLES } from './learnIndex.js'
+//
+// A roadmap row is DELIVERED when a guide covering it ships. Its `soon` goes
+// false and its `route` stops pointing at the section landing and starts
+// pointing at that guide, which is the record of which topic the guide
+// answered — asserted against LEARN_ARTICLE_ROUTES in
+// tests/unit/learn-articles.test.js, so a delivered row can never claim a page
+// that is not there.
+//
+// Every surface that renders "what is still to be written" reads LEARN_ROADMAP
+// rather than LEARN_GROUPS. Not tidiness: a delivered row and its guide carry
+// the SAME route, so rendering both puts two rows with one `data-route` into
+// the visual sitemap and two links to one page into the mega menu.
+import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from './learnIndex.js'
 
 export const LEARN_GROUPS = [
   { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/learn', soon: true },
-  { id: 'themes', label: 'UI Themes', desc: 'Dark, light and custom theme systems.', route: '/learn', soon: true },
-  { id: 'brand', label: 'Brand Colour Guide', desc: 'Choose brand colours with confidence.', route: '/learn', soon: true },
+  { id: 'themes', label: 'UI Themes', desc: 'Dark, light and custom theme systems.', route: '/learn/theme-systems', soon: false },
+  { id: 'brand', label: 'Brand Colour Guide', desc: 'Choose brand colours with confidence.', route: '/learn/brand-colour', soon: false },
   { id: 'typography', label: 'Typography Guide', desc: 'Type that reads and scales cleanly.', route: '/learn', soon: true },
   { id: 'seo', label: 'SEO', desc: 'Small-business and specialist playbooks.', route: '/learn', soon: true },
   { id: 'marketing', label: 'Marketing', desc: 'Positioning, messaging and social.', route: '/learn', soon: true },
@@ -366,6 +378,18 @@ export const LEARN_GROUPS = [
   // The conversion-adjacent item — gets the accent-blue dot in the menu.
   { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn', soon: true, accent: true },
 ]
+
+/**
+ * The topics with nothing behind them yet — what "Soon" means on every surface
+ * that shows the roadmap. Derived, so shipping a guide and flipping its row is
+ * the single edit that drops it from the menu, the /learn grid and the map.
+ */
+export const LEARN_ROADMAP = LEARN_GROUPS.filter((g) => g.soon)
+
+/** Roadmap rows a published guide has already answered. */
+export const LEARN_DELIVERED = LEARN_GROUPS.filter(
+  (g) => !g.soon && LEARN_ARTICLE_ROUTES.includes(g.route),
+)
 
 // ── Menu-only column model ──────────────────────────────────────────────────
 // The mega-menu renders one flat icon+label row per tool, grouped under a short
@@ -513,6 +537,8 @@ const LEARN_ARTICLE_ICONS = {
   'colour-contrast': 'contrast',
   'type-scales': 'typography',
   'colour-spaces': 'palette',
+  'theme-systems': 'themes',
+  'brand-colour': 'brand',
 }
 
 // The articles dealt into the menu's row shape. They are not folded into
@@ -531,7 +557,7 @@ const LEARN_ARTICLE_ROWS = LEARN_ARTICLES.map((a) => ({
 // columns keep their Soon badges and stay below it in reading order.
 const LEARN_MENU = [
   [{ label: 'Guides', tools: LEARN_ARTICLE_ROWS }],
-  ...groupsToMenu(LEARN_GROUPS, [
+  ...groupsToMenu(LEARN_ROADMAP, [
     { label: 'Foundations', ids: ['principles', 'themes', 'brand', 'typography'] },
     { label: 'Growth & help', ids: ['seo', 'marketing', 'ai-assistants', 'help'] },
   ]),

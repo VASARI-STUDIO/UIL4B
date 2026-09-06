@@ -1,6 +1,6 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
-import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP } from '../../src/data/toolTree.js'
 import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 
@@ -138,8 +138,11 @@ test.describe('public route contract', () => {
     // links while every row was Soon; it now asserts the split, which is the
     // property that matters — a Soon row must never become clickable, and a
     // published guide must never lose its href.
+    //
+    // LEARN_ROADMAP, not LEARN_GROUPS: a roadmap row whose guide has shipped
+    // carries that guide's route, so the map lists it once — as the guide.
     const learn = page.locator('[data-sitemap-section="learn"]')
-    await expect(learn.locator('[data-soon="true"]')).toHaveCount(LEARN_GROUPS.length)
+    await expect(learn.locator('[data-soon="true"]')).toHaveCount(LEARN_ROADMAP.length)
     await expect(learn.locator('[data-soon="true"] a')).toHaveCount(0)
     for (const article of LEARN_ARTICLES) {
       const row = learn.locator(`.smap-link[data-route="/learn/${article.slug}"]`)
