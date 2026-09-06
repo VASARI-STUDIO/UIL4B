@@ -174,23 +174,32 @@ export async function go(page, url) {
  * WHY "the fallback is gone" IS NOT ENOUGH BY ITSELF
  * `waitFor({ state: 'detached' })` on `.page-loading` is satisfied by an
  * element that has not been ATTACHED yet — the entire pre-hydration window, in
- * which `#root` is still the empty div `scripts/prerender.mjs` wrote (it clones
- * the shell and rewrites the head; it does not render React). A wait that
- * accepts "not yet" as "already finished" is the same can't-fail shape one
- * level down. So both halves are required, and required TOGETHER: React has
- * committed something into `#root`, AND no fallback is on screen in the same
- * frame.
+ * which `#root` still holds only what `scripts/prerender.mjs` wrote (it clones
+ * index.html's shell and rewrites the head; it does not render React). A wait
+ * that accepts "not yet" as "already finished" is the same can't-fail shape one
+ * level down.
+ *
+ * AND "#root HAS A CHILD" IS NOT ENOUGH EITHER, which is the half #391 found.
+ * What prerender clones is not an empty div: index.html ships
+ * `<div id="root"><div class="boot-shell" id="boot-shell">` — a skeleton nav,
+ * a skeleton hero and a `role="status"` reading "Loading UIL4B" — into all 33
+ * route shells. So in the pre-hydration window `root.firstElementChild` is
+ * TRUE, of markup the server wrote. See BOOT_SHELL_HINT below.
+ *
+ * So all three are required, and required TOGETHER: React has committed
+ * something into `#root`, the boot shell it replaces is gone, AND no fallback
+ * is on screen — in the same frame.
  *
  * Held for several FRAMES, not milliseconds, for the reason the scroll helpers
  * below give at length — and because the nested case (`/create/*`, where the
  * static CreateTool shell mounts first and its inner Suspense raises a second
- * fallback in the same commit) needs the two conditions to be true at the same
- * instant rather than at two instants a test happened to sample.
+ * fallback in the same commit) needs the conditions to be true at the same
+ * instant rather than at instants a test happened to sample.
  */
 
-// Consecutive animation frames on which the route must be mounted AND free of a
-// Suspense fallback. `waitForFunction` polls on rAF, so this is literally a
-// frame count.
+// Consecutive animation frames on which the route must be mounted, past the
+// boot shell AND free of a Suspense fallback. `waitForFunction` polls on rAF,
+// so this is literally a frame count.
 const READY_FRAMES = 3
 
 // A backstop, and only a backstop: it exists so a chunk that never arrives
@@ -233,7 +242,28 @@ export function renderState(page) {
     }
     return {
       mounted: !!(root && root.firstElementChild),
+      // `booting` is the STATIC BOOT SHELL, and it is reported for the same
+      // reason `crashed` is: it looks mounted by every other measure here.
+      // index.html ships `<div id="root"><div class="boot-shell" id="boot-shell">`
+      // and scripts/prerender.mjs clones that into all 33 route shells, so
+      // `root.firstElementChild` is satisfied by markup the SERVER wrote, before
+      // React has run a single line. `.page-loading` is absent in that state too
+      // — App.jsx has never rendered, so there is no Suspense fallback to find.
+      booting: !!document.getElementById('boot-shell'),
       loading: !!document.querySelector('.page-loading'),
+      // `dataLoading` is a state a TOOL renders instead of its workbench, one
+      // level below App.jsx's route fallback. The three typography tools share
+      // `<FontCatalogLoading>`, and its own comment says a tool renders it
+      // "INSTEAD of its workbench, so nothing half-built ever flashes on
+      // screen" — which is exactly what makes it invisible to a check that only
+      // knows about `.page-loading`.
+      //
+      // The DIRECT-CHILD `.fg-loader` is load-bearing. FontMatcher renders a
+      // second `.typ-loading` for "No font catalogue is available right now",
+      // which is a rendered ANSWER rather than a wait, and has no spinner. A
+      // bare `.typ-loading` would make a readiness check wait 20s for a page
+      // that had already finished.
+      dataLoading: !!document.querySelector('.typ-loading > .fg-loader'),
       crashed: !!document.querySelector('.error-boundary'),
       body: (document.body.innerText || '').trim().length,
       own: parts.join(' ').trim().length,
@@ -265,28 +295,148 @@ function buildAssetHint(page) {
   try { bad = page.context()[ASSET_TROUBLE] || [] } catch { return '' }
   if (!bad.length) return ''
   const uniq = [...new Set(bad)]
-  return `\n\n  ${bad.length} build asset request(s) FAILED in this browser context`
+  return `\n\n  ${bad.length} build asset request(s) NEVER ARRIVED in this browser context`
     + ` (${uniq.slice(0, 3).join(', ')}${uniq.length > 3 ? `, +${uniq.length - 3} more` : ''}).`
-    + ' Files under /assets/ cannot 404 in a healthy run, so dist/ was almost certainly'
-    + ' REBUILT while this suite was running — read the route below as a casualty of that,'
-    + ' not as a defect. The global teardown fails the whole run on this.'
+    + ' Files under /assets/ are content-hashed build outputs and cannot 404 or fail to be'
+    + ' delivered in a healthy run. A 4xx means dist/ was REBUILT under the run; a net:: error'
+    + ' means the machine could not deliver the file (ERR_NO_BUFFER_SPACE and'
+    + ' ERR_INSUFFICIENT_RESOURCES are resource exhaustion, seen with several suites running at'
+    + ' once). Read the route above as a casualty of that, not as a defect. The test and the'
+    + ' whole run both fail on this.'
+}
+
+/**
+ * The state where `#root` HAS a child and React has still never run.
+ *
+ * index.html ships a static skeleton — `<div id="root"><div class="boot-shell"
+ * id="boot-shell">` — and scripts/prerender.mjs clones it into every one of the
+ * 33 route shells. So the two conditions this function used to wait for were
+ * BOTH satisfied by markup the server wrote: `#root` has a child (the shell),
+ * and there is no `.page-loading` (App.jsx has not rendered, so there is no
+ * Suspense fallback to find yet). The pre-hydration window the long note above
+ * says `waitFor({ state: 'detached' })` cannot see was therefore still open on
+ * the OTHER half as well.
+ *
+ * #391 caught /create/semantic-color in exactly that state once under four
+ * parallel workers — h1 not found, and the accessibility snapshot reading
+ * `status: Loading UIL4B`, which is the boot shell's own live region. It worked
+ * around it locally in 55-header-sweep.spec.js; this is the fix in the door.
+ *
+ * The shell going away is a POSITIVE fact about React rather than another
+ * absence: `createRoot(...).render()` clears its container on the first commit,
+ * so `#boot-shell` is gone exactly when React has committed something. That is
+ * why this is checked alongside `root.firstElementChild` and not instead of it
+ * — a commit that rendered nothing would empty `#root` and must not count.
+ */
+const BOOT_SHELL_HINT = '\n\n  The page is STILL SHOWING THE STATIC BOOT SHELL that index.html ships'
+  + ' into every prerendered route shell, so React has NOT RUN AT ALL. This is not a slow route'
+  + ' chunk and waiting longer will not help: the app never started. The usual cause is the ENTRY'
+  + ' bundle (/assets/index-*.js) never arriving — check the build-asset line below, if there is one.'
+
+/* ── The state a TOOL renders instead of its content ─────────────────────────
+ *
+ * The route arrives, the Suspense fallback goes, and the tool then renders its
+ * OWN loading state while the data it needs is in flight. `ready()` knew about
+ * `.page-loading` and nothing else, so it returned into that window and a spec
+ * that measured read the skeleton.
+ *
+ * MEASURED on /create/font-gallery, on this build, at the instant `go()`
+ * returned:
+ *
+ *     /api/fonts answered      ready at 188ms   .typ-loading 0   .fg-card 24
+ *     /api/fonts held open     ready at 148ms   .typ-loading 1   .fg-card  0
+ *                              settled at 2530ms                 .fg-card 24
+ *
+ * Zero rows, from a gallery that was working perfectly. That is the third
+ * mechanism in `suite-flake-class-unreproduced`, and it is a different one from
+ * the two build-asset shapes: 51-typography-paywall failed on 2026-09-06 with
+ * "the gallery rendered no rows at all / Expected: > 10 / Received: 0", in a run
+ * with ZERO occurrences of ERR_NO_BUFFER_SPACE, on a PR whose diff touched no
+ * font-related file, and it passed 8 of 8 in isolation.
+ *
+ * The 2530ms is the app's own bound, not a guess: `requestCatalogJson` in
+ * src/utils/googleFonts.js aborts each source after
+ * FONT_CATALOG_SOURCE_TIMEOUT_MS (2000), and `fetchFontCatalog` never rejects —
+ * it always resolves to the 84-family bundled list. So this is a wait for a
+ * state the app GUARANTEES terminates, not a widened timeout, and the 20s
+ * backstop below is unchanged.
+ *
+ * WHY THE CATALOGUE IS NOT STUBBED, which is a decision and not an oversight.
+ *
+ *   1. There is no third-party round trip to remove. base.js stubs
+ *      accounts.google.com because One Tap made a LIVE call on every signed-out
+ *      page load — 461 in one measured run. The font catalogue is not that: with
+ *      no VITE_GOOGLE_FONTS_API_KEY in the test build, googleFonts.js skips the
+ *      Google branch entirely and the only request is /api/fonts, which `vite
+ *      preview` answers locally with a 404. Measured above: one hit, settled in
+ *      188ms.
+ *   2. The degraded catalogue is a SHIPPED product state with its own notice and
+ *      retry, and 33-offline-state and 11-typography-tools exercise it on
+ *      purpose. A stub would have to reproduce live/cache/fallback faithfully or
+ *      those specs would start testing the stub.
+ *   3. It would hide this defect rather than fix it. The fetch is not the fault;
+ *      `ready()` returning into a state the tool renders instead of its content
+ *      is. Stubbing covers one tool family and leaves every other data-loading
+ *      surface exposed — the same "fixing it per-spec leaves the next spec
+ *      exposed" that put `ready()` inside `go()` in the first place.
+ *
+ * If a future tool renders its own instead-of-content state, it belongs in the
+ * selector here, next to this one.
+ */
+const DATA_LOADING_HINT = '\n\n  The route arrived and then the TOOL showed its own loading state:'
+  + ' <FontCatalogLoading>, which the typography tools render INSTEAD of their workbench while'
+  + ' the Google Fonts catalogue is in flight. A measurement taken here reads the skeleton — the'
+  + ' gallery reports zero rows from a gallery that is working. fetchFontCatalog always resolves'
+  + ' (bundled list after a 2000ms bound per source), so a page still in this state after the'
+  + ' backstop means the catalogue request itself is wedged, not merely slow.'
+
+/**
+ * Which of the three stalls this is, named rather than lumped together.
+ *
+ * "expected 421 to be greater than 40" sent a previous investigation at the
+ * branch under test rather than at the wait, and cost a day. These three want
+ * completely different next steps: a missing entry bundle, a route chunk that
+ * never landed, and a tool whose data never arrived.
+ */
+function describeStall(s) {
+  if (s && s.booting) return 'the app never replaced the static boot shell'
+  if (s && s.dataLoading) return 'the tool never got past its own data-loading state'
+  return 'the route never got past its lazy-loading fallback'
 }
 
 export async function ready(page, what) {
   const where = what || page.url()
-  await page.evaluate(() => { window.__uilReadyFrames = 0 }).catch(() => { /* mid-navigation */ })
+  await page.evaluate(() => {
+    window.__uilReadyFrames = 0
+    // Counted so a readiness wait that examined NOTHING is visible in its own
+    // failure message. A guard that reports no violations because it never
+    // looked is the shape this suite keeps paying for.
+    window.__uilReadyPolls = 0
+  }).catch(() => { /* mid-navigation */ })
   try {
     await page.waitForFunction((frames) => {
+      window.__uilReadyPolls = (window.__uilReadyPolls || 0) + 1
       const root = document.getElementById('root')
-      const clear = !!(root && root.firstElementChild) && !document.querySelector('.page-loading')
+      // ONE presence and TWO absences, and all three in the same frame. The
+      // presence is what stops the two absences being trivially true on a page
+      // that has rendered nothing; the boot-shell absence is what stops the
+      // presence being true of markup the server wrote. See the note above.
+      const clear = !!(root && root.firstElementChild)
+        && !document.getElementById('boot-shell')
+        && !document.querySelector('.page-loading')
+        && !document.querySelector('.typ-loading > .fg-loader')
       window.__uilReadyFrames = clear ? (window.__uilReadyFrames || 0) + 1 : 0
       return window.__uilReadyFrames >= frames
     }, READY_FRAMES, { polling: 'raf', timeout: READY_BACKSTOP_MS })
   } catch {
     const s = await renderState(page).catch(() => null)
+    const polls = await page.evaluate(() => window.__uilReadyPolls || 0).catch(() => 0)
     throw new Error(
-      `${where}: the route never got past its lazy-loading fallback in ${READY_BACKSTOP_MS}ms`
-      + (s ? ` — mounted=${s.mounted} fallback=${s.loading} bodyChars=${s.body} ownChars=${s.own}` : '')
+      `${where}: ${describeStall(s)} in ${READY_BACKSTOP_MS}ms`
+      + (s ? ` — mounted=${s.mounted} booting=${s.booting} fallback=${s.loading} dataLoading=${s.dataLoading} bodyChars=${s.body} ownChars=${s.own}` : '')
+      + ` (readiness examined ${polls} frame(s))`
+      + (s && s.booting ? BOOT_SHELL_HINT : '')
+      + (s && s.dataLoading ? DATA_LOADING_HINT : '')
       + buildAssetHint(page),
     )
   }

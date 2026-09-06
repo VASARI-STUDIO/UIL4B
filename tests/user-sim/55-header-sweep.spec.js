@@ -29,24 +29,24 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
-// go() -> ready() waits for `#root` to have a child and `.page-loading` to be
-// absent. Neither is true of the STATIC BOOT SHELL: index.html ships
-// `<div id="root"><div class="boot-shell">` into every prerendered route
-// shell, so `root.firstElementChild` is satisfied before React has run at
-// all. Under four parallel workers this suite caught /create/semantic-color
-// in exactly that state once - h1 not found, and the accessibility snapshot
-// read `status: Loading UIL4B`, which is the boot shell's own live region.
+// THE LOCAL WORKAROUND THAT USED TO LIVE HERE IS GONE, because the defect it
+// worked around is fixed in the door itself.
 //
-// So every navigation here waits for the shell to be REPLACED before it
-// measures anything. This is a wait, not a weakened assertion: the
-// expectations below are unchanged, they just no longer race a page that has
-// not been rendered yet. (Left local rather than pushed into `ready()`:
-// twenty-odd specs depend on that helper and widening it belongs in its own
-// change. Noted in the PR.)
-const arrive = async (page, route) => {
-  await go(page, route)
-  await expect(page.locator('#boot-shell')).toHaveCount(0)
-}
+// go() -> ready() used to wait for `#root` to have a child and `.page-loading`
+// to be absent, and BOTH are true of the STATIC BOOT SHELL: index.html ships
+// `<div id="root"><div class="boot-shell" id="boot-shell">` into every
+// prerendered route shell, so `root.firstElementChild` was satisfied before
+// React had run at all. Under four parallel workers this file caught
+// /create/semantic-color in exactly that state once - h1 not found, and the
+// accessibility snapshot reading `status: Loading UIL4B`, which is the boot
+// shell's own live region. This spec answered it with a local
+// `expect(page.locator('#boot-shell')).toHaveCount(0)` after every navigation
+// and left the other twenty-odd specs exposed.
+//
+// `ready()` now requires the boot shell to be GONE, so plain `go()` carries the
+// same guarantee for every spec in the suite. The contract is asserted in
+// tests/user-sim/47-lazy-route-readiness.spec.js (rendered, with the entry
+// bundle held back) and structurally in tests/unit/lazy-route-readiness.test.js.
 
 // The taxonomy eyebrow, per page: the class it used, and the exact string it
 // printed. Asserting the STRING as well as the class is what stops the motif
@@ -65,7 +65,7 @@ test.describe('no tool header restates the path the visitor walked', () => {
   for (const page_ of EYEBROWS) {
     test(`${page_.route} opens on its name, not on its taxonomy`, async ({ page }) => {
       watch(page, 'a visitor who used the nav to get here')
-      await arrive(page, page_.route)
+      await go(page, page_.route)
 
       // PRESENT: the page rendered and says what it is.
       const heading = page.getByRole('heading', { level: 1 })
@@ -138,7 +138,7 @@ test.describe('no tool header counts what the page already shows', () => {
   for (const s of STRIPS) {
     test(`${s.route} carries no figure strip, and keeps the facts that earned their place`, async ({ page }) => {
       watch(page, 'the founder re-reading a header he marked AI')
-      await arrive(page, s.route)
+      await go(page, s.route)
 
       // PRESENT.
       await expect(page.getByRole('heading', { level: 1 })).toContainText(s.h1)
@@ -179,7 +179,7 @@ test.describe('no tool header counts what the page already shows', () => {
 
 test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', async ({ page }) => {
   watch(page, 'a designer reading the page in the order it is laid out')
-  await arrive(page, '/create/font-pair')
+  await go(page, '/create/font-pair')
 
   // PRESENT: the four panels still exist and are still named, in words. The
   // headings are the ordering now, and they say what the numbers only implied.
@@ -220,7 +220,7 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
 
 test('the Tint Scale audience switch is the one next to the panel it changes', async ({ page }) => {
   watch(page, 'a developer switching to the handoff view')
-  await arrive(page, '/create/tint')
+  await go(page, '/create/tint')
 
   // ABSENT: the hero pair of cards. It was 1348x118px of the masthead.
   await expect(page.locator('.tt-audience')).toHaveCount(0)

@@ -176,7 +176,7 @@ function appendAssetAudit(rows) {
   } catch { /* evidence, never a source of failure itself */ }
 }
 
-/* ── Build assets that 404 in the middle of a run ────────────────────────
+/* ── Build assets that never arrive ──────────────────────────────────────
  *
  * WHY THIS EXISTS
  * `vite build` EMPTIES dist/ before it refills it, and `vite preview` serves
@@ -197,33 +197,168 @@ function appendAssetAudit(rows) {
  * fail 16 times across three of them with a rebuild loop running underneath.
  * tests/flakeprobe-a0e1/ is that experiment, kept runnable.
  *
- * WHY A 4xx UNDER /assets/ IS UNAMBIGUOUS
- * Those are content-hashed build outputs, so in a healthy run they cannot 404.
- * Nothing in this suite fulfils one with an error status either: the only two
- * specs that interfere with a chunk use `route.abort()` (10-home, for the
- * missing-GSAP persona) and a delayed `route.continue()`
- * (47-lazy-route-readiness), and neither produces an HTTP response at all.
- * Requests the app makes to /api/* are expected to 404 under `vite preview` and
- * are deliberately NOT matched here.
+ * ── A 4xx IS NOT THE ONLY WAY AN ASSET FAILS TO ARRIVE ──────────────────
+ *
+ * This started as a 4xx watch, and 4xx was only the half that the rebuild loop
+ * produced. On 2026-09-06 five specs failed once each under full-suite
+ * parallelism and every one passed in isolation — 09-auth-modal-accessibility,
+ * 23-responsive-mid-band, 24-mobile-overhaul, 25-defect-sweep and
+ * 11-palette-recovery. Two of those runs carried the cause in their own
+ * feedback-loop section: `net::ERR_NO_BUFFER_SPACE` against
+ * `/assets/index-*.js` and `/assets/en-*.js`. The app chunk never loaded, so
+ * the spec's first locator found nothing and the failure READ AS IF THE ELEMENT
+ * HAD BEEN DELETED. It correlates with several agents running suites at once
+ * (40+ node processes on one machine).
+ *
+ * A request that fails this way produces NO HTTP RESPONSE AT ALL, so the
+ * `response` listener below never saw it and the guard was silent on exactly
+ * the shape it exists for. `requestfailed` is the other half.
+ *
+ * WHICH FAILURES COUNT, AND WHY IT IS AN ALLOWLIST
+ * Chromium reports plenty of failures that are this suite doing its job:
+ * `route.abort()` produces `net::ERR_FAILED` (10-home's missing-GSAP persona),
+ * `route.abort('blockedbyclient')` produces `net::ERR_BLOCKED_BY_CLIENT`
+ * (11-typography), `context.setOffline(true)` produces
+ * `net::ERR_INTERNET_DISCONNECTED` (five specs), and a request cancelled by a
+ * navigation or a closing context produces `net::ERR_ABORTED`. None of those is
+ * a file that failed to arrive, and a guard that cried wolf on them would be
+ * ignored — which is the reasoning `classifyOneTapFailure` above already
+ * records after that guard failed at random on green branches.
+ *
+ * So this names the failures that mean THE MACHINE OR THE CONNECTION COULD NOT
+ * DELIVER THE FILE, and nothing else. Adding to this list is adding a claim
+ * about a specific error code, not widening a net.
  *
  * WHY IT FAILS THE RUN AND NOT THE TEST
- * Because a rebuilt dist/ makes every result in the run meaningless — the
- * passes exactly as much as the failures. A run this happened in cannot be read
- * as evidence either way, which is the same reason the One Tap guard above
- * fails a green run.
+ * Because a rebuilt dist/ — or a machine that could not deliver the app —
+ * makes every result in the run meaningless, the passes exactly as much as the
+ * failures. A run this happened in cannot be read as evidence either way, which
+ * is the same reason the One Tap guard above fails a green run. It ALSO fails
+ * the individual test, below, so the naming lands where the symptom did.
  */
+const ASSET_NEVER_ARRIVED = new RegExp([
+  'ERR_NO_BUFFER_SPACE',          // the one measured on 2026-09-06
+  'ERR_INSUFFICIENT_RESOURCES',   // its sibling under the same contention
+  // Ephemeral-port exhaustion. Not speculation: a full run on 2026-09-06
+  // recorded it on /fonts/jetbrains-mono-latin.woff2 while this guard was being
+  // written, on the same machine and for the same reason.
+  'ERR_ADDRESS_IN_USE',
+  'ERR_OUT_OF_MEMORY',
+  'ERR_CONNECTION',               // RESET / REFUSED / CLOSED / FAILED / ABORTED
+  'ERR_TIMED_OUT',
+  'ERR_EMPTY_RESPONSE',
+  'ERR_CONTENT_LENGTH_MISMATCH',
+  'ERR_INCOMPLETE_CHUNKED_ENCODING',
+  'ERR_SOCKET_NOT_CONNECTED',
+  'ERR_ADDRESS_UNREACHABLE',
+  'ERR_NETWORK_CHANGED',
+].join('|'), 'i')
+
+/**
+ * Did this build-asset request fail because the file could not be delivered?
+ *
+ * Exported so the classification is assertable without a browser; the WIRING is
+ * asserted in 47-lazy-route-readiness.spec.js, which breaks a real asset.
+ */
+export function assetNeverArrived(errorText) {
+  return ASSET_NEVER_ARRIVED.test(errorText || '')
+}
+
+/**
+ * Every build-asset failure seen since the CURRENT TEST started.
+ *
+ * Populated by the listeners themselves rather than at context close, so a
+ * context a spec builds by hand and never closes is covered too — and 73 of
+ * this suite's tests take `{ browser }` and build their own.
+ */
+let assetTroubleThisTest = []
+
+/** Set on a context by a spec that is going to break an asset ON PURPOSE. */
+export const EXPECTED_ASSET_TROUBLE = Symbol.for('uil4b.buildAssetTroubleExpected')
+
+/**
+ * Declare that this context's build-asset failures are the point of the test.
+ *
+ * The deliberate hole in this guard, and it has exactly ONE caller —
+ * 47-lazy-route-readiness.spec.js, which aborts the entry bundle to prove the
+ * guard fires and that `ready()` names it. Without this the run's own proof
+ * that the guard works would fail the run, which is the guard working.
+ *
+ * Call it BEFORE the failure it covers: the suppression is read when a failure
+ * is recorded, not when the context closes. Pinned to its one caller by
+ * tests/unit/lazy-route-readiness.test.js, the same way `goRaw` is.
+ */
+export function expectBuildAssetFailures(context) {
+  context[EXPECTED_ASSET_TROUBLE] = true
+  return context
+}
+
 export function watchBuildAssets(context) {
   const bad = []
   context[ASSET_TROUBLE] = bad
+  const note = (line) => {
+    bad.push(line)
+    // The per-test half is skipped for a context that declared it; the
+    // context-scoped `bad` is not, so the spec can still read what it caused.
+    if (!context[EXPECTED_ASSET_TROUBLE]) assetTroubleThisTest.push(line)
+  }
+  const assetPath = (url) => {
+    let pathname
+    try { pathname = new URL(url).pathname } catch { return null }
+    // Requests the app makes under /api/ are expected to 404 under
+    // `vite preview`, which runs no functions, and are deliberately NOT
+    // matched here. (Written without a wildcard on purpose: a slash followed
+    // by a star inside a line comment opens a block comment to every comment
+    // stripper that reads this file, and tests/unit/build-asset-guard.test.js
+    // reads this file.)
+    return pathname.startsWith('/assets/') ? pathname : null
+  }
   context.on('response', (res) => {
     if (res.status() < 400) return
-    let pathname
-    try { pathname = new URL(res.url()).pathname } catch { return }
-    if (!pathname.startsWith('/assets/')) return
-    bad.push(`${res.status()} ${pathname}`)
+    const pathname = assetPath(res.url())
+    if (pathname) note(`${res.status()} ${pathname}`)
   })
-  context.on('close', () => { if (bad.length) appendAssetAudit(bad) })
+  context.on('requestfailed', (req) => {
+    const pathname = assetPath(req.url())
+    if (!pathname) return
+    const why = req.failure()?.errorText || 'request failed'
+    if (assetNeverArrived(why)) note(`${why} ${pathname}`)
+  })
+  context.on('close', () => {
+    if (bad.length && !context[EXPECTED_ASSET_TROUBLE]) appendAssetAudit(bad)
+  })
   return context
+}
+
+/**
+ * The per-test half of the guard, installed as an automatic fixture below.
+ *
+ * The run-level teardown already fails a run this happened in, and that is the
+ * verdict that matters — but it arrives after 600 test results, and it does not
+ * say WHICH test was the casualty. The reported symptom is a locator finding
+ * nothing, and the whole point of this item is that such a run must name itself
+ * rather than read as a deleted element.
+ *
+ * It is not a new failure CLASS: every condition it fails on already failed the
+ * run. It only moves the naming to where the symptom was.
+ */
+function assertAssetsArrivedThisTest(seen) {
+  if (!seen.length) return
+  const uniq = [...new Set(seen)]
+  throw new Error(
+    `${seen.length} build asset request(s) never arrived during this test, on ${uniq.length} `
+    + 'distinct file(s):\n  '
+    + `${uniq.slice(0, 8).join('\n  ')}`
+    + `${uniq.length > 8 ? `\n  ...and ${uniq.length - 8} more` : ''}`
+    + '\n\nFiles under /assets/ are content-hashed build outputs. THIS TEST DID NOT MEASURE THE '
+    + 'APP — whatever it asserted on was missing because the code that renders it never loaded, '
+    + 'not because it was removed. A 4xx means dist/ was REBUILT under the run (`vite build` '
+    + 'empties dist/ and `vite preview` serves it live). A net:: error means the machine or the '
+    + 'connection could not deliver the file: ERR_NO_BUFFER_SPACE and ERR_INSUFFICIENT_'
+    + 'RESOURCES are resource exhaustion, seen when several agents run suites at once. Either '
+    + 'way the whole run is void and the global teardown fails it. Re-run with nothing else '
+    + 'building, and give each concurrent agent its own PLAYWRIGHT_PORT *and* its own checkout.',
+  )
 }
 
 /** Every build-asset failure recorded this run, deduplicated. */
@@ -241,16 +376,28 @@ export function assertNoStaleBuildAssets() {
   const bad = readStaleAssetAudit()
   if (!bad.length) return
   const uniq = [...new Set(bad)]
+  const rebuilt = uniq.filter((r) => /^\d/.test(r))
+  const undelivered = uniq.filter((r) => !/^\d/.test(r))
   throw new Error(
-    `${bad.length} build asset request(s) failed during this run, on ${uniq.length} distinct `
-    + 'file(s). Files under /assets/ are content-hashed build outputs and cannot 404 in a '
-    + 'healthy run:\n  '
+    `${bad.length} build asset request(s) never arrived during this run, on ${uniq.length} `
+    + 'distinct file(s). Files under /assets/ are content-hashed build outputs and cannot 404 '
+    + 'or fail to be delivered in a healthy run:\n  '
     + `${uniq.slice(0, 12).join('\n  ')}`
     + `${uniq.length > 12 ? `\n  ...and ${uniq.length - 12} more` : ''}`
-    + '\n\nSomething REBUILT dist/ while this suite was running. `vite build` empties dist/ '
-    + 'before refilling it and `vite preview` serves it live, so a concurrent `npm run build` '
-    + 'or `npm run test:users` in this checkout deletes the chunks these pages were loading. '
-    + 'Every result in this run is void — the passes as much as the failures. Re-run it with '
+    + (rebuilt.length
+      ? '\n\nThe 4xx ones mean something REBUILT dist/ while this suite was running. '
+        + '`vite build` empties dist/ before refilling it and `vite preview` serves it live, so '
+        + 'a concurrent `npm run build` or `npm run test:users` in this checkout deletes the '
+        + 'chunks these pages were loading.'
+      : '')
+    + (undelivered.length
+      ? '\n\nThe net:: ones mean the MACHINE OR THE CONNECTION could not deliver the file. '
+        + '`ERR_NO_BUFFER_SPACE` and `ERR_INSUFFICIENT_RESOURCES` are resource exhaustion — '
+        + 'measured on 2026-09-06 with several agents running suites at once (40+ node '
+        + 'processes). The app chunk never loaded, so the specs that failed reported missing '
+        + 'elements rather than a missing app. Run fewer suites at once.'
+      : '')
+    + '\n\nEvery result in this run is void — the passes as much as the failures. Re-run it with '
     + 'nothing else building, and give each concurrent agent its own PLAYWRIGHT_PORT *and* its '
     + 'own checkout. See tests/flakeprobe-a0e1/README.md.',
   )
@@ -266,6 +413,22 @@ export const test = base.extend({
     await use(browser)
     // Deliberately not unwrapping: the base fixture closes the browser next.
   }, { scope: 'worker', timeout: 0 }],
+
+  // AUTOMATIC, and it depends on `browser` rather than on `context` or `page`.
+  // Automatic fixtures are set up before the test's own, so this is the first
+  // test-scoped fixture up and the last down — it therefore reads its ledger
+  // after the default context has closed, and after a hand-rolled one has done
+  // whatever it was going to do. Depending on `context` would have forced a
+  // default context onto the 73 tests that take `{ browser }` and build their
+  // own, and STILL not covered the contexts those tests actually use.
+  buildAssetsArrived: [async ({ browser }, use) => {
+    void browser
+    assetTroubleThisTest = []
+    await use()
+    const seen = assetTroubleThisTest
+    assetTroubleThisTest = []
+    assertAssetsArrivedThisTest(seen)
+  }, { auto: true }],
 })
 
 /** Read the per-run ledger. Returns { contexts, stubbed, abortedAtTeardown, escaped }. */
