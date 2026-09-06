@@ -136,6 +136,54 @@ test.describe('Learn articles', () => {
       .toBe(4)
   })
 
+  test('THE TWO NEWEST TABLES MEASURE, and print what they measured', async ({ page }) => {
+    watch(page, 'reader checking the two guides that argue from their own arithmetic')
+
+    // ThemeInversionTable reads this page's tokens out of the running stylesheet
+    // and returns null rather than a wrong number if any of them comes back in a
+    // form it cannot measure — which is right, and silent. The paragraph under it
+    // says the two ratio columns disagree in EVERY row, so that is the assertion:
+    // a component that quietly rendered nothing, or a stylesheet that made the
+    // claim false, both fail here and nowhere else.
+    await go(page, '/learn/theme-systems')
+    const inversion = page.locator('[aria-label*="every channel inverted"]')
+    await expect(inversion, 'ThemeInversionTable rendered nothing — a token was not measurable')
+      .toBeVisible()
+    const inversionRows = inversion.locator('tbody tr')
+    await expect(inversionRows).toHaveCount(4)
+    for (let i = 0; i < 4; i += 1) {
+      const cells = await inversionRows.nth(i).locator('td[data-num]').allInnerTexts()
+      expect(cells, `row ${i} does not print two measured ratios`).toHaveLength(2)
+      for (const cell of cells) expect(cell.trim()).toMatch(/^\d+\.\d{2}:1$/)
+      expect(cells[0].trim(), `row ${i} reads the same painted and inverted — the guide`
+        + ' says the two columns disagree in every row').not.toBe(cells[1].trim())
+    }
+
+    // BrandRampTable generates the ramp with the product's own generator. Its
+    // article's central claim is a NEGATIVE one — no stop clears 4.5:1 on both
+    // grounds — and a negative claim is exactly what an empty table satisfies,
+    // so the row count is asserted first and the claim second.
+    await go(page, '/learn/brand-colour')
+    const ramp = page.locator('[aria-label*="both theme grounds"]')
+    await expect(ramp, 'BrandRampTable rendered nothing').toBeVisible()
+    const rampRows = ramp.locator('tbody tr')
+    await expect(rampRows).toHaveCount(11)
+    let clearsBoth = 0
+    for (let i = 0; i < 11; i += 1) {
+      const row = rampRows.nth(i)
+      const ratios = await row.locator('td[data-num]').allInnerTexts()
+      expect(ratios, `stop row ${i} does not print two measured ratios`).toHaveLength(2)
+      const [onLight, onDark] = ratios.map((t) => Number(t.trim().replace(':1', '')))
+      expect(Number.isFinite(onLight) && Number.isFinite(onDark),
+        `stop row ${i} printed something that is not a ratio: ${ratios.join(' / ')}`).toBe(true)
+      if (onLight >= 4.5 && onDark >= 4.5) clearsBoth += 1
+      // And the derived column is never blank: an empty verdict beside two real
+      // numbers is the shape a broken derivation takes.
+      await expect(row.locator('td').last()).not.toBeEmpty()
+    }
+    expect(clearsBoth, 'a stop now clears 4.5:1 on both grounds — the section above the'
+      + ' table says not one of them does').toBe(0)
+  })
   test('an unknown guide is a real 404, not the landing page wearing a new URL', async ({ page }) => {
     watch(page, 'visitor following a stale link to a guide that never shipped')
     await go(page, '/learn/a-guide-that-does-not-exist')

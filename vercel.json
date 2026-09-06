@@ -362,12 +362,20 @@
       "destination": "/learn/index.html"
     },
     {
+      "source": "/learn/brand-colour",
+      "destination": "/learn/brand-colour/index.html"
+    },
+    {
       "source": "/learn/colour-contrast",
       "destination": "/learn/colour-contrast/index.html"
     },
     {
       "source": "/learn/colour-spaces",
       "destination": "/learn/colour-spaces/index.html"
+    },
+    {
+      "source": "/learn/theme-systems",
+      "destination": "/learn/theme-systems/index.html"
     },
     {
       "source": "/learn/type-scales",
