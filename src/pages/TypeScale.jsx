@@ -130,7 +130,11 @@ function varsRef(vars) {
   }
 }
 
-export default function TypeScale({ onCopy, toast }) {
+// `onExport` is this tool's ONE declared export hook — the copy of the whole
+// scale as CSS, SCSS or a Tailwind config. Copying one step's font-size or the
+// Google Fonts import URL stays on `onCopy`: those are lookups, not a finished
+// type scale. See src/config/activationExports.js.
+export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
   const navigate = useNavigate()
   const { design, setFonts, setTypeScale } = useProject()
   const { fonts: catalog, status, degraded, online, retry, retrying } = useFontCatalog()
@@ -872,7 +876,7 @@ export default function TypeScale({ onCopy, toast }) {
                           Copy font import
                         </button>
                       )}
-                      <button type="button" className="tsc-copy-primary" onClick={() => onCopy?.(currentExport)}>
+                      <button type="button" className="tsc-copy-primary" onClick={() => onExport?.(currentExport)}>
                         Copy {format === 'css' ? 'CSS' : format === 'tailwind' ? 'config' : 'SCSS'}
                       </button>
                     </div>

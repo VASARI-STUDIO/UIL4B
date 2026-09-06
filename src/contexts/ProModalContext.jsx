@@ -16,6 +16,13 @@ export function ProModalProvider({ children }) {
   // call sites, so a gate added later is measured by existing rather than by
   // someone remembering. `gate` names which wall the user hit; without it the
   // count says people upgrade but not what pushed them.
+  //
+  // EVERY call site now names one. The `next.title` fallback is kept because
+  // analytics must never throw, but it is no longer load-bearing:
+  // tests/unit/upgrade-gate-names.test.js fails the build if any openProModal
+  // call omits `gate`. The fallback was actively harmful while it was in use —
+  // several walls share a title, and three separate ones read "Go beyond N
+  // colours", so the dashboard reported one wall where there were three.
   const openProModal = useCallback((next = {}) => {
     try { trackUpgradeGate(next.gate || next.title || 'unnamed') } catch { /* analytics must never block a gate */ }
     setOpts(next)
