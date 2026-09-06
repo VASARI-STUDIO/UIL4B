@@ -50,10 +50,46 @@ const MAX_ROWS = 5
 // Milliseconds per character typed and deleted, and the caret blink while a
 // completed word is held. From PillNav, which the founder has already signed
 // off on the feel of — this is the same animation, moved.
+//
+// PROVENANCE, stated plainly because the alternative is dressing a guess up as
+// research: Mobbin was searched for this pattern (web, hero search bars with a
+// self-typing placeholder) when it was first built and again on 2026-09-06, and
+// it returns NO evidence for any of these numbers. It cannot: the corpus is
+// still screenshots, so it can show that example-query placeholders are common
+// — Exa, Klook and Shop all ship one — and it structurally cannot show whether
+// such a placeholder animates, at what pace, or whether it loops. Every value
+// below is judgement plus the founder's sign-off on the feel, and each one is a
+// named constant so a change of mind is a one-line change.
 const TYPE_MS = 55
 const ERASE_MS = 28
 const BLINK_MS = 420
 const HOLD_BLINKS = 3
+
+// ── One pass, then it stops ─────────────────────────────────────────────────
+//
+// FOUNDER (PR #269, C6): the demo runs "one pass … then it stops. No loop."
+//
+// It used to loop for as long as the tab was open: the word getter read
+// `hints[index % hints.length]`, so the term after the last one was the first
+// one again. MEASURED on the shipped build immediately before this change, at
+// 1440x900 with motion on: 13 terms, one full pass in ~48s, "Palette" typed a
+// second time at 48.2s, and the placeholder still moving at 75s having repeated
+// 8 terms.
+//
+// Two reasons that is wrong and neither is taste:
+//
+//   1. It is the founder's stated ask, and it was the one part of C6 that never
+//      landed when the rest of the hero was rebuilt.
+//   2. WCAG 2.2.2 (Pause, Stop, Hide). This auto-starts, runs well past five
+//      seconds and sits alongside other content, so a stop has to exist AND be
+//      findable. A pass that ends by itself is the strongest form of that — the
+//      motion is self-limiting rather than perpetual — and the ⌘K keycap is the
+//      manual stop, which is why its accessible name says so while there is
+//      something to stop and reverts to its plain name once there is not.
+//
+// One pass says everything the deleted "Try …" chips said. Saying it a second
+// time does not say it better.
+const PASSES = 1
 
 // Nothing types until the hero has finished arriving. `.hcmd` runs its own
 // entrance from .52s for .62s (global.css), so 1200ms starts the typing just
@@ -90,6 +126,14 @@ export default function HomeCommandBar({ labelledBy } = {}) {
   // null means "not typing" — the static placeholder below is showing. Any
   // string, including an empty one, means the animation owns the placeholder.
   const [typed, setTyped] = useState(null)
+  // Latches true when the pass finishes, or the moment the visitor takes the
+  // bar. ONE-WAY on purpose: nothing sets it back to false.
+  //
+  // Without it, `animating` is derived state and the demo resumes the instant
+  // its inputs flip back — blur the field and it starts typing over you from
+  // the first term again. That is both a broken promise ("one pass") and a
+  // broken stop: a stop the page can undo on its own is not a stop.
+  const [demoDone, setDemoDone] = useState(false)
   const listId = useId()
 
   // `soon` comes from toolTree.js via the derived index, so this is now the
@@ -139,7 +183,8 @@ export default function HomeCommandBar({ labelledBy } = {}) {
   // animation never fights the visitor for the main thread mid-keystroke.
   // `query` — the placeholder is not painted at all once there is a value, so
   // the timers would be burning for nothing.
-  const animating = !reducedMotion && !focused && !query
+  // `demoDone` — the pass is over, or the visitor already took the bar once.
+  const animating = !reducedMotion && !focused && !query && !demoDone
 
   // Every setState below happens inside a timer callback, never synchronously in
   // the effect body, and the reset happens in the cleanup. That is what keeps
@@ -156,6 +201,12 @@ export default function HomeCommandBar({ labelledBy } = {}) {
     let timer
     let index = 0
 
+    // How many terms this visitor will ever be shown. `index` is allowed to run
+    // past the end of `hints` and the pass ends when it does — the modulo below
+    // only keeps `word()` in bounds, it is no longer what decides when to stop.
+    // Reading `hints[index % hints.length]` with no such bound is exactly the
+    // loop this replaced.
+    const total = hints.length * PASSES
     const word = () => hints[index % hints.length]
 
     const type = (i, erasing) => {
@@ -164,7 +215,18 @@ export default function HomeCommandBar({ labelledBy } = {}) {
       if (!erasing && i < word().length) timer = setTimeout(() => type(i + 1, false), TYPE_MS)
       else if (!erasing) timer = setTimeout(() => blink(1), BLINK_MS)
       else if (i > 0) timer = setTimeout(() => type(i - 1, true), ERASE_MS)
-      else { index += 1; timer = setTimeout(() => type(0, false), TYPE_MS) }
+      else {
+        index += 1
+        if (index >= total) {
+          // Done. Hand the field back to the resting sentence — which names the
+          // same tools, so the removed chips' job survives the animation ending
+          // — and latch so no later state change can restart it.
+          setTyped(null)
+          setDemoDone(true)
+          return
+        }
+        timer = setTimeout(() => type(0, false), TYPE_MS)
+      }
     }
 
     // The caret blinks on the completed word instead of the word simply sitting
@@ -253,7 +315,11 @@ export default function HomeCommandBar({ labelledBy } = {}) {
           aria-describedby={`${listId}-count`}
           placeholder={placeholder}
           onChange={(event) => setQuery(event.target.value)}
-          onFocus={() => setFocused(true)}
+          // Taking the bar ends the demo for good, not just while focus is
+          // here. This is the WCAG 2.2.2 stop, and it has to be one-way: a
+          // visitor who clicked in, looked at something else and blurred must
+          // not have the animation start typing over them again.
+          onFocus={() => { setFocused(true); setDemoDone(true) }}
           onBlur={() => setFocused(false)}
           onKeyDown={onInputKeyDown}
         />
@@ -262,7 +328,16 @@ export default function HomeCommandBar({ labelledBy } = {}) {
           className="hcmd-kbd"
           onClick={() => { inputRef.current?.focus(); inputRef.current?.select() }}
         >
-          <span className="sr-only">Focus the tool search</span>
+          {/* WCAG 2.2.2 asks for a mechanism to pause, stop or hide, and a
+              mechanism nobody can find is not one. This button already WAS the
+              stop — it focuses the input, and focus ends the demo — but its
+              name only ever mentioned the focusing, so the stop was real and
+              invisible. It now says what it does while there is something to
+              stop, and goes back to its plain name the moment there is not, so
+              it never advertises a control over motion that has already ended. */}
+          <span className="sr-only">
+            {animating ? 'Stop the search demo and focus the tool search' : 'Focus the tool search'}
+          </span>
           <kbd aria-hidden="true">⌘K</kbd>
         </button>
       </div>
