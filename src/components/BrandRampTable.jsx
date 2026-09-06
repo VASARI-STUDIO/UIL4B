@@ -94,7 +94,7 @@ export default function BrandRampTable() {
                 </td>
                 <td data-num="true">{r.onLight.toFixed(2)}:1</td>
                 <td data-num="true">{r.onDark.toFixed(2)}:1</td>
-                <td>{r.jobs}</td>
+                <td data-nowrap="true">{r.jobs}</td>
               </tr>
             ))}
           </tbody>
