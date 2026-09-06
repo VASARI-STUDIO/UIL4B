@@ -216,8 +216,9 @@ lin(191/255)  = 0.5210      <- the inverted channel
           Values <code>none</code> and <code>active</code>. In the active case
           the author&rsquo;s colours are replaced wholesale by a user palette, and
           the design question stops being which colours to use and becomes which
-          distinctions survive when colour is taken away — a state signalled by a
-          background fill disappears, a state signalled by a border does not.
+          distinctions survive when colour is taken away — a state carried only
+          by a background fill collapses into the system background, a state
+          carried by a border does not.
         </p>
 
         <Spec source="CSS Color Adjustment Level 1 — the color-scheme property" href={`${ADJUST}/#color-scheme-prop`}>
@@ -232,8 +233,8 @@ lin(191/255)  = 0.5210      <- the inverted channel
           drawn by the browser rather than by the stylesheet. A page that paints
           itself dark entirely in CSS and never declares{' '}
           <code>color-scheme: dark</code> keeps the light scrollbar and the light
-          form controls the clause above names, on a page whose every authored
-          surface is dark. Declaring both —{' '}
+          form controls the clause above names, while every authored surface
+          around them is dark. Declaring both —{' '}
           <code>color-scheme: light dark</code> — is what lets a document with
           its own toggle hand the browser the right answer in either state.
         </p>

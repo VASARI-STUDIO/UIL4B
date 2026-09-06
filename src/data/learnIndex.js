@@ -149,7 +149,7 @@ export const LEARN_ARTICLES = Object.freeze([
     dek: 'A dark theme is a second set of values bound to the same names. What inversion does instead, and which decisions belong to the reader.',
     description: 'A dark theme is a second set of values on the same token names, not an inversion: what inversion does to contrast and hue, and what the reader decides.',
     file: 'themeSystems.jsx',
-    words: 1386,
+    words: 1390,
     updated: '2026-09-06',
     toolTo: '/create/semantic-color',
     toolLabel: 'Semantic Colour Generator',
