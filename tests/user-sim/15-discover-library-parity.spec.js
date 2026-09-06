@@ -18,9 +18,19 @@ const PAID_BRANDS = BRAND_PALETTES.filter((brand) => brand.free !== true)
 const BROWSABLE = CURATED_LIBRARY_PALETTES.length + FREE_BRANDS.length
 const TEASED = 3 // LOCKED_TEASE — placeholders shown before the wall
 
+// `eyebrow` is the results-row label each library shows WHILE BROWSING, and the
+// two are deliberately different now. Parity here is of STRUCTURE — same
+// masthead, same results row, same live count — not of wording, and wording is
+// the one thing that cannot be shared, because the two pages do not contain the
+// same thing. The Gradient Library is curated end to end, so "Curated
+// collection" names it exactly. The Palette Library browses in sections
+// (Curated collection, then Brand systems), so the same label named the first
+// of two groups as if it were the page, and printed a taxonomy eyebrow directly
+// above an <h3> that repeated it verbatim — the motif this very file asserts
+// gone from the hero six lines below. See src/pages/PaletteGallery.jsx.
 const LIBRARIES = [
-  { route: '/discover/palettes', title: 'Palette Library', noun: 'palette' },
-  { route: '/discover/gradients', title: 'Gradient Library', noun: 'gradient' },
+  { route: '/discover/palettes', title: 'Palette Library', noun: 'palette', eyebrow: 'Everything you can browse' },
+  { route: '/discover/gradients', title: 'Gradient Library', noun: 'gradient', eyebrow: 'Curated collection' },
 ]
 
 test.describe('Discover libraries share one header', () => {
@@ -45,7 +55,7 @@ test.describe('Discover libraries share one header', () => {
       // Shared results row, with the live count announced politely.
       const resultHead = page.locator('.drh-head')
       await expect(resultHead).toBeVisible()
-      await expect(resultHead.locator('span')).toHaveText('Curated collection')
+      await expect(resultHead.locator('span')).toHaveText(library.eyebrow)
       await expect(resultHead.locator('p')).toHaveAttribute('aria-live', 'polite')
       await expect(resultHead.locator('p')).toContainText(new RegExp(`\\d+ ${library.noun}`))
 
