@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useCallback } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import AppFooter from '../components/AppFooter'
@@ -7,6 +7,8 @@ import { findCreateGroup, resolveTool } from '../data/toolTree'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useToast } from '../hooks/useToast'
 import { useClipboard } from '../hooks/useClipboard'
+import { ACTIVATION_EXPORTS } from '../config/activationExports'
+import { trackActivation } from '../utils/analytics'
 
 // The in-tool shell for every Create route. Navigation now lives entirely in the
 // top PillNav (the mega-menus own the tool tree), so this shell is a single,
@@ -127,6 +129,26 @@ export default function CreateTool() {
   // and use onCopy purely as a notification (harmless idempotent re-write here).
   const copy = useClipboard(toast)
 
+  // P-001 ACTIVATION, export half, for the three workbenches that finish a
+  // piece of work by copying it. See src/config/activationExports.js for why
+  // the decision is HERE and not at each tool's copy buttons.
+  //
+  // `onExport` IS the copy — same clipboard write, same toast — so the event
+  // cannot drift away from the action it claims to measure. It fires only when
+  // the write resolved true: a refused clipboard is not an export, and counting
+  // the click would report work that never left the page.
+  //
+  // A route absent from ACTIVATION_EXPORTS gets a plain copy and no event,
+  // rather than an invented one.
+  const activationId = ACTIVATION_EXPORTS[normPath(location.pathname)] || null
+  const exportCopy = useCallback(async (value) => {
+    const ok = await copy(value)
+    if (ok === true && activationId) {
+      try { trackActivation(activationId, 'export') } catch { /* never break a copy */ }
+    }
+    return ok
+  }, [copy, activationId])
+
   const group = findCreateGroup(location.pathname)
   const { name, isHome } = resolveTool(location.pathname)
 
@@ -160,7 +182,7 @@ export default function CreateTool() {
         <main id="main" tabIndex={-1} className={LiveTool ? 'rail-content rail-content--live' : 'rail-content'}>
           {LiveTool ? (
             <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
-              <LiveTool onCopy={copy} toast={toast} />
+              <LiveTool onCopy={copy} onExport={exportCopy} toast={toast} />
             </Suspense>
           ) : (
             <SoonState title={isHome ? group.label : name} isPro={isPro} />
