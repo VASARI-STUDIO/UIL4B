@@ -1,28 +1,83 @@
-import { initializeApp, cert, getApps } from 'firebase-admin/app'
-import { getFirestore } from 'firebase-admin/firestore'
+import { adminDb } from './_lib/firebase-admin.js'
 import { allowedOrigins } from './_lib/origins.js'
 import { clientIp, consume } from './_lib/rateLimit.js'
 
-if (!getApps().length) {
-  const projectId = process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'uil4b'
-  try {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-      : null
-    if (serviceAccount) {
-      initializeApp({ credential: cert(serviceAccount), projectId })
-    } else {
-      initializeApp({ projectId })
-    }
-  } catch {
-    initializeApp({ projectId })
-  }
-}
-
-const db = getFirestore()
+// THE BOOTSTRAP IS SHARED, NOT COPIED. This file used to carry its own
+// initializeApp(): a bare JSON.parse of FIREBASE_SERVICE_ACCOUNT_KEY inside a
+// catch that fell back to no credential, and a hard-coded projectId of 'uil4b'.
+// Both diverged from api/_lib/firebase-admin.js, which every other route uses,
+// and both were MEASURED before this was changed (2026-09-06 engineering
+// review, probe against the real module with a generated service account):
+//
+//   • A base64-encoded key — the form _lib documents as the SAFER one to store,
+//     because a raw paste mangles the PEM line breaks — failed JSON.parse here,
+//     fell into the catch, and this route booted on ApplicationDefaultCredential
+//     with no service account at all, while _lib read the same value fine.
+//   • The explicit projectId overrode the service account's own project_id, so
+//     with VITE_FIREBASE_PROJECT_ID unset in the function environment this
+//     route addressed project 'uil4b' while _lib addressed 'uil4b-357c5'.
+//
+// Either way the Firestore write failed, `stored` stayed false, and a bug
+// report reached anyone only if the optional Resend email happened to be
+// configured. One bootstrap, one set of encodings, one project id.
 
 const VALID_TYPES = ['bug', 'feature', 'general', 'help']
 const VALID_SOURCES = ['feedback-form', 'inline', 'email']
+
+export const MESSAGE_MAX = 5000
+export const SUBJECT_MAX = 200
+export const EMAIL_MAX = 254
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/**
+ * Validate and shape one submission. Pure, so the rules are testable under
+ * `node --test` without Firestore in the room (tests/unit/support-validation.test.js).
+ * Returns `{ error }` for a 400, or `{ entry }` — the document to store.
+ *
+ * Every field is TYPE-CHECKED before it is measured. The old code called
+ * `message.length` and `message.trim()` on whatever arrived: `{"message":["x"]}`
+ * passes `!message`, then `.trim()` throws a TypeError out of the handler, which
+ * Vercel reports as a 500 and logs as a crash — reachable unauthenticated, on
+ * demand, from the one endpoint that takes no session. A malformed body is a
+ * 400, never an exception.
+ */
+export function validateSupportBody(body, now = new Date()) {
+  const { type, subject, message, email, source } = body && typeof body === 'object' ? body : {}
+
+  if (typeof message !== 'string' || !message.trim()) {
+    return { error: 'Message is required' }
+  }
+  if (message.length > MESSAGE_MAX) {
+    return { error: `Message must be under ${MESSAGE_MAX} characters` }
+  }
+  if (subject != null && typeof subject !== 'string') {
+    return { error: 'Subject must be text' }
+  }
+  if (subject && subject.length > SUBJECT_MAX) {
+    return { error: `Subject must be under ${SUBJECT_MAX} characters` }
+  }
+  if (email != null && email !== '' && (typeof email !== 'string' || email.length > EMAIL_MAX || !EMAIL_RE.test(email))) {
+    return { error: 'Invalid email format' }
+  }
+
+  const safeType = VALID_TYPES.includes(type) ? type : 'general'
+  const safeSource = VALID_SOURCES.includes(source) ? source : 'feedback-form'
+  const stamp = now.toISOString()
+
+  return {
+    entry: {
+      type: safeType,
+      subject: (subject || '').trim().slice(0, SUBJECT_MAX) || `[${safeType}] Submission`,
+      message: message.trim().slice(0, MESSAGE_MAX),
+      email: (email || '').trim().slice(0, EMAIL_MAX),
+      source: safeSource,
+      status: 'new',
+      adminNotes: '',
+      createdAt: stamp,
+      updatedAt: stamp,
+    },
+  }
+}
 
 // ── Abuse limits ─────────────────────────────────────────────────────────────
 // This endpoint takes no authentication — deliberately, because the people most
@@ -59,6 +114,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
+  // Resolved here rather than at module scope so a credential problem surfaces
+  // as a logged failure on the request that hit it, not as an import-time
+  // crash that takes the whole route down with an opaque FUNCTION_INVOCATION_FAILED.
+  const db = adminDb()
+
   const ip = clientIp(req)
   for (const window of [BURST, HOURLY]) {
     const verdict = await consume(db, { bucket: 'support', key: `${ip}_${window.windowMs}`, ...window })
@@ -71,35 +131,15 @@ export default async function handler(req, res) {
     }
   }
 
+  // The server contract: exactly these five fields, everything else dropped.
+  // tests/unit/report-context.test.js pins this line — the feedback modal folds
+  // its captured context into `message` precisely so the contract never grows.
   const { type, subject, message, email, source } = req.body || {}
-
-  if (!message || !message.trim()) {
-    return res.status(400).json({ error: 'Message is required' })
+  const validated = validateSupportBody({ type, subject, message, email, source })
+  if (validated.error) {
+    return res.status(400).json({ error: validated.error })
   }
-  if (message.length > 5000) {
-    return res.status(400).json({ error: 'Message must be under 5000 characters' })
-  }
-  if (subject && subject.length > 200) {
-    return res.status(400).json({ error: 'Subject must be under 200 characters' })
-  }
-  if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
-    return res.status(400).json({ error: 'Invalid email format' })
-  }
-
-  const safeType = VALID_TYPES.includes(type) ? type : 'general'
-  const safeSource = VALID_SOURCES.includes(source) ? source : 'feedback-form'
-
-  const entry = {
-    type: safeType,
-    subject: (subject || '').trim().slice(0, 200) || `[${safeType}] Submission`,
-    message: message.trim().slice(0, 5000),
-    email: (email || '').trim().slice(0, 254),
-    source: safeSource,
-    status: 'new',
-    adminNotes: '',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
+  const { entry } = validated
 
   // Whether the message actually landed anywhere. A failed Firestore write used
   // to be logged and then answered with `{ ok: true }` — the user was told their
