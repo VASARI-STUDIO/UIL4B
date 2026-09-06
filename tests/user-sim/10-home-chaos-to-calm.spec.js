@@ -795,6 +795,144 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     }
   })
 
+  // ── C6: one pass, then it stops (salvaged from PR #269) ───────────────────
+  //
+  // FOUNDER (#269): the demo runs "one pass … then it stops. No loop."
+  //
+  // The three tests above pin that it MOVES and that what it types is real.
+  // None of them could fail on an animation that never ends, and until this
+  // change it never did: measured on the shipped build, 13 terms, one pass in
+  // ~48s, "Palette" typed a second time at 48.2s, still going at 75s.
+  //
+  // WCAG 2.2.2 (Pause, Stop, Hide) is the other half. It auto-starts, runs far
+  // past five seconds and sits beside other content, so a stop must exist and
+  // be findable — hence the last two tests here.
+
+  test('the typing demo stops on its own instead of looping forever', async ({ page }) => {
+    // One pass is ~46s of animation, so this test buys the pass plus a margin.
+    // It is deliberately the ONLY slow test in this block: termination cannot be
+    // observed any faster than the thing takes to terminate, and the cheap
+    // proxies for it (counting terms, diffing against the component's own hint
+    // list) would all pass against a loop that happens to agree with them.
+    test.setTimeout(120000)
+    await motionOn(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const input = page.locator('.hcmd-input')
+    await input.waitFor()
+    await expect
+      .poll(async () => (await input.getAttribute('placeholder')).includes(CARET), {
+        timeout: 9000,
+        message: 'the demo never started, so there is nothing to prove stopped',
+      })
+      .toBe(true)
+
+    // "Stopped" is three uninterrupted seconds with no caret. Nothing shorter
+    // will do: the caret is absent for 420ms on every other blink tick and for
+    // one TYPE_MS gap between words, so a single caret-free read proves nothing.
+    // A LOOP CAN NEVER SATISFY THIS — which is what makes this one assertion a
+    // complete guard against the defect, rather than a proxy for it.
+    const result = await page.evaluate(async (budget) => {
+      const field = document.querySelector('.hcmd-input')
+      const caret = '▏'
+      const started = performance.now()
+      const deadline = started + budget
+      let quietSince = null
+      while (performance.now() < deadline) {
+        const value = field.placeholder
+        if (value.includes(caret)) quietSince = null
+        else if (quietSince === null) quietSince = performance.now()
+        if (quietSince !== null && performance.now() - quietSince > 3000) {
+          return { stopped: true, afterMs: Math.round(performance.now() - started), value }
+        }
+        await new Promise((resolve) => { setTimeout(resolve, 50) })
+      }
+      return { stopped: false, afterMs: Math.round(budget), value: field.placeholder }
+    }, 90000)
+
+    expect(result.stopped,
+      `the demo was still typing after ${Math.round(result.afterMs / 1000)}s — it is looping. `
+      + `Last placeholder: ${JSON.stringify(result.value)}`).toBe(true)
+
+    // And it hands the field back to the resting sentence, not to an empty box.
+    // A visitor who arrives after the pass has finished must still be told what
+    // is searchable — that is the job the deleted "Try …" chips left behind.
+    expect(result.value, 'the demo stopped but left no caret-free resting text').not.toContain(CARET)
+    const terms = (result.value.split('—')[1] || '')
+      .split(',').map(s => s.replace(/…/g, '').trim()).filter(Boolean)
+    expect(terms.length,
+      `the demo finished on "${result.value}", which names nothing searchable`).toBeGreaterThan(1)
+    for (const term of terms) {
+      await input.fill(term)
+      await expect(page.locator('.hcmd-row').first(),
+        `the finished placeholder names "${term}", and the bar finds nothing for it`).toBeVisible()
+      await input.fill('')
+    }
+  })
+
+  test('taking the bar stops the demo for good, not just while focus is there', async ({ page }) => {
+    await motionOn(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const input = page.locator('.hcmd-input')
+    await input.waitFor()
+    await expect
+      .poll(async () => (await input.getAttribute('placeholder')).includes(CARET), { timeout: 9000 })
+      .toBe(true)
+
+    // Focus is the WCAG 2.2.2 stop. The bug this guards is that the stop used to
+    // be derived state rather than a latch, so it lasted exactly as long as
+    // focus did: click in, click out, and the demo started typing over you from
+    // the first term again. Blurring is therefore the whole point of this test.
+    await input.click()
+    await expect(input).toBeFocused()
+    await page.locator('.home-hero-h1').click()
+    await expect(input).not.toBeFocused()
+
+    // Three seconds is dozens of characters at 55ms each. One distinct value
+    // means nothing moved.
+    const seen = await samplePlaceholder(page, 3000)
+    expect(seen,
+      `the demo restarted after the visitor let go of the bar: ${JSON.stringify(seen)}`).toHaveLength(1)
+    expect(seen[0], 'a caret came back after the demo was stopped').not.toContain(CARET)
+  })
+
+  test('the ⌘K control says it stops the demo, and only while there is a demo to stop', async ({ page }) => {
+    await motionOn(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    const input = page.locator('.hcmd-input')
+    const kbd = page.locator('.hcmd-kbd')
+    await input.waitFor()
+    await expect
+      .poll(async () => (await input.getAttribute('placeholder')).includes(CARET), { timeout: 9000 })
+      .toBe(true)
+
+    // WCAG 2.2.2 asks for a mechanism that can be FOUND. This button always was
+    // the stop — it focuses the input, and focus ends the demo — but its
+    // accessible name only mentioned the focusing, so to a screen-reader user
+    // the stop did not exist. Asserting the name, not the click, is the point:
+    // the click already worked.
+    await expect(kbd,
+      'while the demo is running, the ⌘K control does not tell anyone it can stop it')
+      .toHaveAccessibleName(/stop/i)
+
+    // Pressing it is the real mechanism, so use it rather than simulating one.
+    await kbd.click()
+    await expect(input).toBeFocused()
+    await page.locator('.home-hero-h1').click()
+
+    // …and once there is nothing to stop it must stop claiming it can, or it is
+    // advertising a control over motion that has already ended.
+    await expect(kbd,
+      'the ⌘K control still offers to stop a demo that has already stopped')
+      .not.toHaveAccessibleName(/stop/i)
+    await expect(kbd).toHaveAccessibleName(/focus the tool search/i)
+  })
+
   test('the pricing panel leads with the approved ladder and does not invent proof', async ({ page }) => {
     await reducedMotion(page)
     watch(page, 'visitor deciding whether to pay')
