@@ -36,6 +36,11 @@ import { watch, go, restAfterMove } from './helpers.js'
 // tests/unit/preview-roles-contrast.test.js; swapping the component to a
 // different engine is what turns this red.
 import { derivePreviewRoles } from '../../src/utils/colors.js'
+// The pricing panel is derived from this ladder rather than typed, so the
+// assertion about it reads the same source the page does.
+import { purchasablePlans, resolvePlanLadder } from '../../src/config/planLadder.js'
+
+const BUYABLE_TIERS = purchasablePlans(resolvePlanLadder())
 
 const PERSONA = 'designer evaluating the workspace from the homepage'
 
@@ -997,19 +1002,45 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     await go(page, '/')
 
     // Founder-approved ladder (design-language-v2.md), headline "from $4/month".
+    //
+    // THE QUARTERLY ROW WAS DELIBERATELY REMOVED FROM THIS ASSERTION on
+    // 2026-09-06, and it is not a copy preference. This test used to require
+    // exactly three rows and pin the middle one to "$18" / "$6" — which made
+    // the suite hold the homepage to advertising a tier that cannot be bought.
+    // planLadder.js gives quarterly `checkoutPlan: null`, its own flag says
+    // offering it "would dead-end on 'Invalid selection'", /plans dropped it,
+    // and scripts/site-pricing.mjs already excluded it from the structured
+    // data. The front page was the last surface selling it.
+    //
+    // The amounts are unchanged — the panel still renders the approved $7 and
+    // $48 from `approvedTotal` — so this is not a price change. What changed is
+    // that the row set is now DERIVED from the ladder rather than counted here,
+    // so a tier becoming purchasable (or ceasing to be) moves this test with
+    // the product instead of against it. The sharper guard lives in
+    // 57-homepage-price-truth.spec.js.
     await expect(page.locator('.hprice-title')).toContainText('$4/month')
     const ladder = await page.locator('.hprice-row').evaluateAll(
       (rows) => rows.map((r) => r.textContent.replace(/\s+/g, ' ').trim()),
     )
-    expect(ladder.length).toBe(3)
-    expect(ladder[0]).toContain('$7')
-    expect(ladder[1]).toContain('$18')
-    expect(ladder[2]).toContain('$48')
-    // The mock headlined Pro at $6/mo. The approved ladder headlines $4 — $6 is
-    // legitimately the QUARTERLY per-month figure, so the check belongs on the
-    // headline, not on the panel as a whole.
+    expect(ladder.length, 'the pricing panel rendered no rows').toBe(BUYABLE_TIERS.length)
+    for (const plan of BUYABLE_TIERS) {
+      expect(
+        ladder.some((row) => row.toLowerCase().includes(plan.label.toLowerCase())),
+        `the panel no longer offers the ${plan.label} tier`,
+      ).toBe(true)
+      expect(
+        ladder.some((row) => row.includes(plan.totalLabel)),
+        `the ${plan.label} row no longer shows its approved total ${plan.totalLabel}`,
+      ).toBe(true)
+    }
+    // The mock headlined Pro at $6/mo. $6 was the QUARTERLY per-month figure,
+    // and quarterly is no longer offered, so $6 must not appear on this panel
+    // at all now — a stronger check than the headline-only one it replaces.
     await expect(page.locator('.hprice-title')).not.toContainText('$6')
-    expect(ladder[1], 'quarterly is the only $6/month row').toContain('$6')
+    expect(
+      ladder.some((row) => row.includes('$6')),
+      'a $6/month row is back — that was the quarterly rate, and quarterly cannot be bought',
+    ).toBe(false)
 
     // The strip below the panel makes NO social claim at all now, which is a
     // stronger form of "does not invent proof" than the one this test used to
