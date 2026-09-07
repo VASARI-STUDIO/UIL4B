@@ -287,8 +287,67 @@ function applyFieldOps(target, patch) {
   return target
 }
 
+/* ── A Firestore that can be told to refuse ────────────────────────────────
+ *
+ * WHY A FIXTURE NEEDS THIS AT ALL. The double answers every write from memory,
+ * so a write through it ALWAYS SUCCEEDS. That is exactly right for rendering a
+ * signed-in session and exactly wrong for rendering what a signed-in session
+ * looks like when sync has stopped — and "what does the user see when the write
+ * fails" is the whole of `project-sync-single-document`. Before this, the only
+ * honest answer a browser test could give was that it could not reach that
+ * state, which is how the state went unrendered for as long as it did.
+ *
+ * `signIn(page, { deny: ['sync/projects'] })` names PATH SUBSTRINGS that must
+ * answer with a FirebaseError instead of data. It models the production failure
+ * it is named after: a rules refusal is a permission-denied on one path, not a
+ * broken database. Nothing is denied unless a spec asks for it, so every
+ * existing test sees exactly the store it saw before.
+ *
+ * AN ENTRY MAY NAME THE OPERATIONS it refuses — { path, ops: ['get'] } — and
+ * that is not decoration. A blanket denial breaks the read AND the write, so a
+ * test of "the failed pull was reported" is also satisfied by the failed push
+ * being reported, and the pull's own reporting goes unproved. That exact hole
+ * was found by mutation: swallowing the pull's error left the suite green.
+ * Firestore rules can allow one and refuse the other, so this models something
+ * real as well as something separable.
+ *
+ * ops: 'get' (getDoc), 'set' (setDoc), 'list' (getDocs), 'watch' (onSnapshot).
+ */
+export const denials = DECLARED?.deny || []
+
+export function deniedFor(path, op) {
+  for (const entry of denials) {
+    const pattern = typeof entry === 'string' ? entry : entry?.path
+    if (!pattern || !String(path).includes(pattern)) continue
+    const ops = typeof entry === 'string' ? null : entry?.ops
+    if (Array.isArray(ops) && op && !ops.includes(op)) continue
+    const code = (typeof entry === 'string' ? null : entry?.code) || 'permission-denied'
+    const err = new Error(`Firebase: Error (${code}). [${FIXTURE_MARKER}]`)
+    err.code = code
+    err.name = 'FirebaseError'
+    return err
+  }
+  return null
+}
+
 /* ── What the helper declared, resolved once ───────────────────────────── */
 
 export const fakeAuth = DECLARED ? createFakeAuth(DECLARED) : null
 export const store = DECLARED ? new FakeStore(DECLARED.docs) : null
 export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' } : null
+
+/* WHAT ACTUALLY REACHED "FIRESTORE", READABLE FROM A SPEC.
+ *
+ * Without this the suite can assert what a page RENDERS and what localStorage
+ * HOLDS, but not what was pushed to the account — so "the delete propagated"
+ * could only ever be half-proved. A delete that clears the local list and
+ * pushes nothing is precisely the defect `project-sync-single-document`
+ * describes, and it is invisible to both of the other two.
+ *
+ * Only ever attached when a session is declared, which no production page has
+ * (see WHY IT CANNOT SHIP above), and it is the SAME store object the app
+ * writes through — not a copy, and not a log a spec could mistake for one.
+ */
+if (DECLARED) {
+  try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
+}

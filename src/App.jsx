@@ -7,6 +7,7 @@ import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/oneTapMount'
 import BillingBanner from './components/BillingBanner'
 import OfflineBanner from './components/OfflineBanner'
+import SyncNotice from './components/SyncNotice'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
@@ -462,6 +463,12 @@ function AppInner() {
 
       <AppFooter />
       <Toast message={message} visible={visible} type={type} />
+      {/* Mounted here rather than on /projects because the person whose sync
+          has stopped is, by definition, busy editing — and the surface they
+          are editing on is a tool page, not the page that lists what they
+          have saved. Renders nothing at all unless something has gone wrong
+          or changed under them. See src/utils/syncStatus.js. */}
+      <SyncNotice />
       <FeedbackButton />
       <GoogleOneTap />
     </div>
