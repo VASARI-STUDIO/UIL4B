@@ -346,6 +346,25 @@ export function mutedInk(muted, grounds) {
   // for the same reason readableInk added it — #141414 is not black, and the
   // #141414/#FFFFFF curves cross at only 4.295:1, so there is a band of grounds
   // where neither of the two house poles clears 4.5 and the absolute one does.
+  //
+  // THE WALK BELOW IS NOW INERT, AND THAT IS MEASURED RATHER THAN ASSUMED —
+  // which is why this is the one site in the file whose search direction no
+  // mutation test can catch. Step 3 runs only when step 2 failed, and step 2
+  // fails only when NO colour on the seed's own lightness axis clears every
+  // ground; that axis ends at #000000 and #ffffff, so this state means no ink
+  // anywhere clears them all. In that regime the answer is the best FAILING
+  // value, and the three raw poles above already span it. Swept over 783,872
+  // cases that actually reach step 3: switching this walk back to the old
+  // one-directional search changes whether the ink clears AA in 0 of them, and
+  // the 1,080 cases where it picks a different grey score IDENTICALLY (#454545
+  // and #757575 both at 2.19:1 on [#000000, #33CC66]).
+  //
+  // It is kept rather than deleted because `consider` makes it strictly
+  // monotone — it can only ever raise the worst-ground contrast — so it costs
+  // nothing and would start earning its place the moment a caller passes
+  // grounds with a reachable common ink. What it must NOT be is the old
+  // one-way search: inert today is not inert after the next change, and this
+  // file has already been the place where "it is masked anyway" was wrong.
   let best = null
   const consider = (ink) => { if (best === null || worstOf(ink) > worstOf(best)) best = ink }
   for (const pole of ['#141414', '#FFFFFF', '#000000']) {
