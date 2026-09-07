@@ -4,7 +4,7 @@ import PillNav from './components/PillNav'
 import Toast from './components/Toast'
 import AppFooter from './components/AppFooter'
 import FeedbackButton from './components/FeedbackButton'
-import GoogleOneTap from './components/GoogleOneTap'
+import GoogleOneTap from './components/oneTapMount'
 import BillingBanner from './components/BillingBanner'
 import OfflineBanner from './components/OfflineBanner'
 import { useToast } from './hooks/useToast'
@@ -14,6 +14,7 @@ import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytic
 import { purgeStaleUsage } from './utils/usageTracker'
 import { onboardingDestination } from './utils/onboardingState'
 import { readSessionHint, rootDestination } from './utils/sessionHint'
+import { openFirebaseGate } from './utils/firebaseAccess'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
 import { useAuth } from './contexts/AuthContext'
 import { isAdminEmail } from './utils/constants'
@@ -101,6 +102,12 @@ class ErrorBoundary extends Component {
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
   const location = useLocation()
+  // URGENT. Under VITE_DEFER_FIREBASE the auth listener is patient by default —
+  // it waits for LCP or idle before fetching the SDK — and that is right for
+  // the sales page, where nothing is waiting on the answer. Here something is:
+  // this component renders a spinner until `loading` clears. Opening the gate
+  // makes the wait exactly what it is today. A no-op in an unflagged build.
+  useEffect(() => { openFirebaseGate() }, [])
   // Wait for Firebase auth to resolve before deciding — otherwise a fresh load
   // or refresh of a protected route (e.g. /checkout) bounces a logged-in user
   // to /login because onAuthStateChanged hasn't fired yet.
@@ -130,6 +137,7 @@ function RequireAuth({ children }) {
 // already does and which this does not replace.
 function RequireAdmin({ children }) {
   const { user, loading } = useAuth()
+  useEffect(() => { openFirebaseGate() }, [])
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>

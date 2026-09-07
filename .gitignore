@@ -92,3 +92,12 @@ tests/flakeprobe-a0e1/artifacts/
 # local screenshot harness (agent scratch)
 shoot-tmp.mjs
 mi-tmp.mjs
+
+# scripts/firebase-deferral-trial.mjs — temporary copies of the two gated
+# contexts with docs/design/firebase-deferral-gated.patch applied, plus the
+# wrapper config that aliases them in. All three are deleted when it finishes;
+# ignored so a crashed run cannot leave a second auth implementation in the
+# tree looking like reviewed code.
+src/**/*.trial.jsx
+vite.config.trial.mjs
+.firebase-deferral-trial.patch
