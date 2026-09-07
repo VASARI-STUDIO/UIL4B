@@ -1424,7 +1424,16 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       if (!intrinsic) return
       intrinsicRef.current = { band, width: intrinsic }
     }
-    setRailOverflows(railOverflowsToolbar({ intrinsic, rowWidth: row.clientWidth }))
+    // THE ROW'S CONTENT BOX, NOT ITS `clientWidth`. `.plb-toolbar` carries
+    // `padding:10px var(--page-inline)` (20px a side at these widths) and
+    // `clientWidth` includes it, so passing `clientWidth` credited the flex
+    // line with 40px it does not have. Measured consequence on `main`: the
+    // cluster expanded at 1097px and did not fit until 1137px, so every width
+    // in 1097–1136 wrapped the toolbar to two rows at 105px instead of one at
+    // 57px. See the note above `railOverflowsToolbar` for the full table.
+    const cs = getComputedStyle(row)
+    const rowWidth = row.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+    setRailOverflows(railOverflowsToolbar({ intrinsic, rowWidth }))
   }, [toolsCollapsed])
 
   // No separate mount call: ResizeObserver fires once when observation begins,
