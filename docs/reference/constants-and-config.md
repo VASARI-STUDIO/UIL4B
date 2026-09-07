@@ -41,18 +41,32 @@ identical in both themes — the accent lightens in dark, the highlight does not
 > Corrected 2026-08-20. This table read `#3B82F6` / `#2563EB` — the pre-V2
 > accent — for four days after V2 shipped. Values verified by reading
 > `src/styles/global.css`, not by trusting the previous entry.
+>
+> **Re-verified 2026-09-06** against `[data-theme="dark"]` and
+> `[data-theme="light"]` in `src/styles/global.css`: `--brand`, `--accent` and
+> `--hi` all still hold the values above. The text-ramp table that used to sit
+> below this one did not survive the same check — see the section that replaced
+> it.
 
-## Dark contrast tokens (current values)
+## Text contrast tokens — read them from the stylesheet
 
-> ⚠️ These are the **live** values from `src/styles/global.css`. (The previous
-> CLAUDE.md listed `#b0b0b0 / #909090 / #757575` — that was stale.)
+**This table used to live here and every one of its eight values was wrong.**
+It carried a cool grey ramp (`#F2F3F5 / #B6BAC2 / #888D97 / #5C616B` dark,
+`#171717 / #525252 / #737373 / #a3a3a3` light); the shipped ramp is warm and has
+been since Design Language V2. It was recorded as "verified against source" in
+`doc-authority-map.md` and had drifted anyway, which is the whole argument for
+not keeping a second copy of a value.
 
-| Token | Dark | Light |
-|---|---|---|
-| `--t0` | `#F2F3F5` | `#171717` |
-| `--t1` | `#B6BAC2` | `#525252` |
-| `--t2` | `#888D97` | `#737373` |
-| `--t3` | `#5C616B` | `#a3a3a3` |
+Read them instead — one command, and it cannot go stale:
+
+```bash
+grep -nE '^\[data-theme="(dark|light)"\]' src/styles/global.css
+```
+
+`--t0`…`--t3` are defined once per theme, in the `[data-theme="dark"]` and
+`[data-theme="light"]` blocks near the top of the file. `@media
+(prefers-contrast: more)` overrides them further down; that block is part of the
+answer and a table here would never have shown it.
 
 ## Server env vars (non-`VITE_`, server-only)
 

@@ -21,7 +21,7 @@ public summary.
 
 ### Colour
 
-- **Colour System** — connected Palette, Semantic Colour, Tint, Gradient and Contrast tools at `/color/*`, with recovery paths, UI previews and production-ready exports
+- **Colour System** — connected Palette, Semantic Colour, Tint, Gradient and Contrast tools at `/create/*`, with recovery paths, UI previews and production-ready exports
 - **UI System Mode** — perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one brand seed, with WCAG evidence and CSS / DTCG / Tailwind export. **Admin-only while it is finished** — it is not on sale and no visitor can reach it
 
 ### Typography
@@ -43,20 +43,20 @@ public summary.
 The whole group carries `soon: true` in `src/data/toolTree.js`: it is badged
 "Soon" in the nav and its routes resolve to the honest workshop state.
 
-- **Component Designer** — Soon. Buttons, cards, inputs, badges, toggles, tables and tabs with live previews, shared design tokens, guided step-by-step mode and CSS export
+- **Component Designer** — Soon. Buttons, cards, inputs, badges, toggles, tables and tabs with live previews, shared Styles, guided step-by-step mode and CSS export
 - **Box Shadow Generator** — Soon. Layered CSS box shadows with live preview
 - **UI Auto-Builder** — Soon
 
 ### Discover & Learn
 
 - **Prompt Library** — personal + community AI prompt library with Pro-gated community prompts, popular/new sorting, and contributor submissions (+25 AI generations for approved prompts)
-- **Discover** — the community & external-resource hub. The Gradient Gallery is live; the wider galleries are still being built. Replaces the old "Library" framing — see [`docs/reference/discover.md`](docs/reference/discover.md)
-- **Learn** — an honest coming-soon surface. The information architecture and routes exist; the articles do not yet, and the old `/docs-*` URLs redirect to `/learn`
+- **Discover** — the community & external-resource hub. Six of its eight groups are live (Palette Library, Gradient Library, Font Gallery, Icon Library, Prompt Library, Curated Resources); Inspiration and Collections are still Soon. Replaces the old "Library" framing — see [`docs/reference/discover.md`](docs/reference/discover.md)
+- **Learn** — live, with five published reference guides at `/learn/<slug>`: colour contrast and the WCAG thresholds, modular type scales, colour spaces for interface work, dark and light themes, and choosing a brand colour. Neutral and factual by founder decision, not how-to guides for our own tools. Two of the eight roadmap topics are delivered; the old `/docs-*` URLs redirect to `/learn`. The live list is `src/data/learnIndex.js` — read it rather than this sentence
 
 ## Features
 
 - **Product-led home** — Connected-system hero with an interactive Create preview, clear tool pathways and shared public calls to action
-- **Projects** — Save palettes, fonts, and designs to named projects with archive/restore and type-to-confirm deletion; auto-created default project on first sign-in
+- **User Home** — `/projects` is where a signed-in visitor lands. Saved palettes, fonts and designs in named projects with archive/restore and type-to-confirm deletion, an auto-created default project on first sign-in, and a per-project progress read (which of colour, type, scale and icons a project actually has). Signed-out visitors still get the sales page
 - **Pro Subscription** — Stripe Embedded Checkout (monthly/yearly with 7-day trial), customer portal for billing management, cancellation retention flow with tailored offers. One-off ("lifetime") billing support is built and degrades honestly until the founder creates the live Stripe price; the retention coupon and portal cancellation flow are still owner configuration
 - **Command Palette** — `Cmd/Ctrl + K` to search and jump to any tool
 - **Dark / Light Theme** — System-aware with manual toggle, CSS custom property theming
@@ -88,12 +88,15 @@ Canonical detail (pages, contexts, the `/api` function budget) lives in
 api/                  Vercel serverless functions (Stripe, support, admin verification)
 api/_lib/             Shared server helpers — not counted against the function limit
 src/
-├── components/       Sidebar, TopBar, Toast, CommandPalette, GoogleOneTap
+├── components/       PillNav, AppFooter, Toast, CommandPalette, GoogleOneTap,
+│                     ExportPanel, plus admin/ discover/ library/ prompt/ seo/
+│                     userhome/ subfolders
 ├── contexts/         Auth, Theme, Appearance, I18n, Project, Workspace, Subscription, Export
 ├── data/             Tool and category definitions, community prompts
 ├── hooks/            useToast, useClipboard, useFirestoreSync
 ├── locales/          10 JSON locale files (en, en-US, de, es, fr, it, ja, ko, pt, zh)
-├── pages/            All page components (Dashboard, ColorStudio, UIBuilder, etc.)
+├── pages/            All page components (Home, ColorStudio, CreateTool,
+│                     LearnArticle, Projects, Admin, etc.)
 ├── styles/           global.css (single stylesheet)
 ├── utils/            Colour math, Firebase config, analytics, Stripe client, constants
 ├── App.jsx           Route definitions
