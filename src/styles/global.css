@@ -12500,7 +12500,19 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 /* Curated inspiration links credit the PLATFORM they open, not a person.
    Twelve invented designers used to render through the same <UserName> as real
    members — see the note in src/data/communityDesigns.js. */
-.ch-card-source{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* `flex-shrink:0` because THIS is the credit. `overflow:hidden` gives the
+   source a min-content contribution of zero, so in the `space-between` row it
+   was the only item that could give, and it gave first: measured at 360px on
+   the narrow two-column card, "Dribbble" needed 42px and was allotted 40 —
+   clipped to "Dribbbl…" to save two pixels, on the one element in the card that
+   says who the work belongs to. The category tag carries the squeeze instead:
+   it has no overflow rule, so it wraps its own text rather than truncating.
+
+   `flex-wrap:wrap` on the row was tried alongside this and REMOVED, not
+   forgotten: either change alone stops the clipping, so keeping both meant
+   reverting either one left the other quietly covering for it and the guard
+   below could not fail. One fix, one call site, one assertion that pins it. */
+.ch-card-source{flex:0 0 auto;font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── Admin: community review queue ──────────────────────────────────────────
    components/admin/CommunityQueue.jsx. The reviewer's side of the shared
