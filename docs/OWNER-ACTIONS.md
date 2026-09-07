@@ -560,6 +560,36 @@ to the UIL4B and preview referrers, and to the Web Fonts API only.
 **If you do nothing.** The key is in the browser bundle and anyone can spend our
 quota with it.
 
+## 4.12 · P1 — Your Stripe product still promises 1,000 AI actions a day
+
+**Do.** One of two, and we recommend the first:
+
+- **Recommended — run the tool you already have.** Sign in as admin, open the
+  Stripe setup panel and save. The code now rewrites the product description to
+  match what the server actually allows, so saving once fixes it and keeps
+  fixing it.
+- **Or edit it by hand.** Stripe → Products → **UIL4B Pro** → edit
+  **Description**. Paste exactly:
+  *"30 AI actions a day and 300 a month, unlimited project and custom-icon
+  saves, advanced colour controls, and the Pro export documents — the design
+  system book (PDF) and the brand guidelines presentation."*
+
+**Time.** 2 minutes either way.
+
+**Why.** The description said *"1,000 AI actions per day … and full design JSON
+export."* The server allows **30** a day, and the JSON export has never been
+built — it is a greyed-out "Soon" button. Stripe prints this sentence on the
+checkout page, on the emailed receipt and on the invoice, so it is the only
+version of the promise a customer reads **with their card already charged**. The
+code side is fixed and guarded by a test; the live product in your Stripe
+account keeps the old sentence until someone saves over it, because Stripe
+products are not rewritten by a deploy.
+
+**If you do nothing.** Every receipt and invoice you send keeps advertising 33×
+the AI allowance the product will actually give, and a file it cannot produce.
+That is the strongest chargeback and refund argument a customer could have, and
+it is in writing, from us.
+
 ---
 
 # 5 · Already confirmed — do not re-open

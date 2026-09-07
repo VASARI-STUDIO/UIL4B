@@ -35,7 +35,15 @@ export default function CheckoutReturn() {
           }
           setEmail(data.customerEmail || '')
           setCheckoutMode(data.mode || 'subscription')
-          setActivationPending(data.mode === 'payment' && data.entitlementActive !== true)
+          // Both modes, not just the one-off. This page used to state flatly
+          // that "Your Pro subscription is active" for every completed
+          // subscription checkout — including one whose webhooks never landed
+          // and whose account was still on Free. /api/checkout-status now
+          // reconciles that case and reports the result; when it could not, the
+          // honest line is that the payment arrived and access is settling.
+          setActivationPending(data.mode === 'payment'
+            ? data.entitlementActive !== true
+            : data.subscriptionActive !== true)
           setState('success')
         } else if (data.status === 'open') {
           // Payment not finished — send them back to retry.
@@ -68,7 +76,9 @@ export default function CheckoutReturn() {
             <p>
               {email ? <>A confirmation has been sent to <strong>{email}</strong>. </> : null}
               {checkoutMode !== 'payment'
-                ? 'Your Pro subscription is active across the toolkit.'
+                ? activationPending
+                  ? 'Your payment is confirmed. Pro access is still being attached to this account — keep this reference and reload in a moment if it hasn’t appeared.'
+                  : 'Your Pro subscription is active across the toolkit.'
                 : activationPending
                   ? 'Your one-off payment is confirmed. Pro access is still being attached to this account — keep this reference and reload in a moment if it hasn’t appeared.'
                   : 'Your one-off purchase is complete and Pro access is attached to this account.'}
