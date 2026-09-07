@@ -126,7 +126,11 @@ const EXPECTED_STATIC_FIREBASE_IMPORTERS = [
   // current user's ID token to call /api/ai. Reachable only through import(), so
   // it cannot pull the SDK into the first request wave. Reviewed 2026-09-07.
   'src/pages/BrandStarter.jsx',
-  'src/pages/LandingPromptGenerator.jsx',
+  // `src/pages/LandingPromptGenerator.jsx` was here until the 2026-09-06
+  // dead-source sweep deleted it — unrouted, unimported, and absent from every
+  // sourcemap in a production build. The `vanished` half of the assertion below
+  // is what caught it: a name left in this list after its file is gone makes the
+  // test red, which is the property that keeps the list honest.
   'src/components/prompt/SubmitPromptPanel.jsx',
   'src/utils/communityQueueApi.js',
   'src/utils/feedbackQueueApi.js',

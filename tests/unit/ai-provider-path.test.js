@@ -183,11 +183,21 @@ test('an unrecognised provider fails loud, and a missing one renders nothing', (
   }
 })
 
-test('THE ONE THAT MATTERS: both prompt tools keep `provider` and render it', () => {
-  // Both pages used to destructure data.prompt and data.platform and drop
+test('THE ONE THAT MATTERS: the prompt tool keeps `provider` and renders it', () => {
+  // The page used to destructure data.prompt and data.platform and drop
   // data.provider on the floor. That single omission is what made a dead
   // OpenRouter invisible everywhere except a devtools Network tab.
-  for (const page of ['pages/AiPromptGenerator.jsx', 'pages/LandingPromptGenerator.jsx']) {
+  //
+  // WAS TWO PAGES. `pages/LandingPromptGenerator.jsx` was deleted in the
+  // 2026-09-06 dead-source sweep — no importer, no route, absent from every
+  // sourcemap in a production build — and this loop read it from disk by path,
+  // so it failed with ENOENT rather than an assertion, which is how the
+  // reference was proven load-bearing before it was removed.
+  // AiPromptGenerator.jsx is deliberately NOT deleted: it is the only caller of
+  // the OpenRouter path and docs/OWNER-ACTIONS.md §4.5 asks the founder to
+  // choose between wiring it and cancelling OpenRouter. So this test still
+  // guards the surface the item is about, on the one page that can reach it.
+  for (const page of ['pages/AiPromptGenerator.jsx']) {
     const src = srcFile(page)
     assert.match(src, /provider:\s*data\.provider/,
       `${page} drops data.provider off the response again — the failover is invisible on this page`)

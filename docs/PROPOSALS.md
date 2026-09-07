@@ -623,6 +623,11 @@ item claims:
    Actual user-facing English prose is **~35 strings**. The rest are internal
    identifiers (71 lines in `UIBuilder.jsx` alone are `tokens.spacing`-style
    template literals), plus 9 `Bearer ${token}` auth calls.
+   *(2026-09-06: `UIBuilder.jsx` has since been deleted as dead source — no
+   importer, no route, in no chunk of a production build. The measurement above
+   is left as it was taken rather than rewritten to today; its point stands and
+   gets stronger, since 71 of the ~390 occurrences were never user-facing copy
+   and are now not even in the tree.)*
 2. **There is no translation job. The locale strings are dead code.** All four
    "token" strings in each of the ten locale files sit under the top-level
    `designExport` namespace — the retired Design System Export tool. **Nothing
