@@ -69,6 +69,25 @@ code.
 | **6** | **Firebase Storage is off** | [§4.3](OWNER-ACTIONS.md) | 10 min | Nothing that uploads a file can work |
 | **7** | **We cannot email a customer at all** | [§4.10](OWNER-ACTIONS.md) | 20 min + DNS | No welcome, no failed-payment notice, no way to reach anyone who is not currently looking at the app |
 | **8** | **OpenRouter has no reachable tool** — keep paying, or stop? | [§4.5](OWNER-ACTIONS.md) | 1 min to answer | You keep paying for a route no visitor can use |
+| **9** | **The homepage prints a price it did not ask Stripe for** — a first-time visitor can be shown two different numbers in one session | `src/pages/Home.jsx` | 10 min to decide | The first price a stranger ever sees is the one nobody checks |
+
+**On item 9**, found by walking the first-visit flow on 2026-09-07. The homepage
+price panel says *"Pro from $4/month"* as typed marketing copy, while `/plans`
+quotes whatever the live Stripe price service returns — and `Home.jsx` says so
+itself, in a comment: the ladder it names "is not guaranteed to be" what Stripe
+holds. So a visitor who reads the homepage and then opens `/plans` may be shown
+two prices for the same plan, and only one of them is real. This is **not** a bug
+to fix in code: the panel is deliberately decoupled, for the good reason that
+reading half a price ladder from a live service and hard-coding the other half
+would be worse. **Your options are:** (a) make Stripe's yearly price match the
+$4/month the homepage advertises, which costs nothing and makes the claim true;
+(b) drop the number from the homepage and let `/plans` be the only surface that
+quotes a price; or (c) leave it, and accept the mismatch until Stripe is
+configured. **Recommendation: (a)** — it is the same dashboard visit item 4
+already needs, and it is the only option that keeps a price on the homepage,
+which is where it earns its keep. **If you do nothing:** item 4 already means the
+checkout can charge a different figure from the one on screen; this adds a third
+figure, on the page a stranger sees first.
 
 **The release-blocking subset is 1 and 4.** Everything else can follow a launch;
 those two cannot. Item 1 stops anything reaching users at all, and item 4 means
@@ -110,6 +129,25 @@ Honest state rather than a clean bill of health.
 - **The browser suite has a known flake class** under runner contention. Re-run
   the full suite before treating a single red job as a regression, and say in the
   pull request which failures were flake and which were real.
+- **A community submission cannot be followed into the moderation queue by a
+  test.** Both ends are covered — the submit form renders and states that nothing
+  appears publicly until reviewed, and `/admin` → Submissions renders the queue —
+  but the write between them goes to Firestore, and the test session answers from
+  memory rather than from a server. So "submitted, therefore it arrives" is
+  checked by reading the code, not by rendering it. Not a defect; a boundary of
+  the fixture, recorded so nobody mistakes the green suite for proof of the round
+  trip.
+- **Resuming a half-finished submission after sign-up has no rendered test.**
+  `setSubmitIntent()` exists to reopen the form when a new account detours
+  through onboarding. Deleting that call leaves the whole flow-6 spec green,
+  which was verified deliberately — the sign-in gate's "Where you left off"
+  sentence comes from a different source, so the two promises read as one and
+  only the first is guarded.
+- **On a 390px-wide screen the project card's title control is 21px tall**,
+  under the 24px floor #413 applied to the shell. It is not flow-blocking — the
+  same card carries a full-height *Load* button and the ⋯ menu — so it was left
+  alone rather than fixed inside a flows pass, but it is the one signed-in
+  surface neither breakpoint audit owned.
 
 ---
 
