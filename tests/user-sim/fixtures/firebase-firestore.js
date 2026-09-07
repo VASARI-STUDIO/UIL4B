@@ -54,7 +54,7 @@ import {
   increment as realIncrement,
   deleteField as realDeleteField,
 } from 'firebase/firestore'
-import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER } from './test-session.js'
+import { fakeDb, IS_FAKE_DB, FIELD_OP, FIXTURE_MARKER, deniedFor } from './test-session.js'
 
 export * from 'firebase/firestore'
 
@@ -117,13 +117,20 @@ function snapshot(store, path) {
   }
 }
 
+/* A spec may declare paths this session must refuse — see `deniedFor` in
+ * test-session.js. Checked on every reference-taking call, because a rules
+ * refusal in production lands on reads and writes alike. */
 export function getDoc(reference) {
   if (!isFakeRef(reference)) return realGetDoc(reference)
+  const denied = deniedFor(reference.path, 'get')
+  if (denied) return Promise.reject(denied)
   return Promise.resolve(snapshot(reference.store, reference.path))
 }
 
 export function setDoc(reference, data, options) {
   if (!isFakeRef(reference)) return realSetDoc(reference, data, options)
+  const denied = deniedFor(reference.path, 'set')
+  if (denied) return Promise.reject(denied)
   reference.store.set(reference.path, data, !!options?.merge)
   return Promise.resolve()
 }
@@ -212,6 +219,8 @@ function runQuery(reference) {
 
 export function getDocs(source) {
   if (!isFakeRef(source)) return realGetDocs(source)
+  const denied = deniedFor(source.path, 'list')
+  if (denied) return Promise.reject(denied)
   return Promise.resolve(runQuery(source))
 }
 
@@ -223,6 +232,14 @@ export function getDocs(source) {
 export function onSnapshot(source, ...rest) {
   if (!isFakeRef(source)) return realOnSnapshot(source, ...rest)
   const next = typeof rest[0] === 'function' ? rest[0] : rest[0]?.next
+  const denied = deniedFor(source.path, 'watch')
+  if (denied) {
+    // A denied listener calls its ERROR callback and never its next one, which
+    // is what the real SDK does and is the branch src/ has to survive.
+    const onError = typeof rest[1] === 'function' ? rest[1] : rest[0]?.error
+    setTimeout(() => { if (onError) onError(denied) }, 0)
+    return () => {}
+  }
   const read = () => (source[KIND] === 'doc'
     ? snapshot(source.store, source.path)
     : runQuery(source))

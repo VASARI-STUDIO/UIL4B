@@ -224,6 +224,22 @@ function seedProject(i, design) {
  *              local flag and `onboarding.completedAt` on the account document
  *              — because those are the two the app reconciles, and a fixture
  *              that set only one would be a state no real account is in.
+ *   deny       path substrings this session's Firestore must REFUSE, e.g.
+ *              ['sync/projects']. Every read, write and listener whose path
+ *              contains one answers with a FirebaseError('permission-denied')
+ *              instead of data. Pass { path, code, ops } to choose the code, or
+ *              to refuse only some operations — ops: ['get'] denies the read
+ *              and lets the write through, which is how a test of the PULL's
+ *              error reporting is kept separable from the push's.
+ *
+ *              This is the one thing the in-memory double could not otherwise
+ *              express: a write through it always succeeds, so "what does a
+ *              user see when sync fails" was unreachable from a browser test —
+ *              and that is the whole of `project-sync-single-document`.
+ *              Nothing is denied unless a spec asks, so no existing test moves.
+ *   projectTombstones  deletes this account already made, keyed by project id
+ *              -> ISO timestamp, seeded into the same localStorage key
+ *              ProjectContext writes them to.
  *   subscription / docs / claims / email / uid / displayName — direct overrides
  *              for anything the four above do not cover. `docs` is merged over
  *              the seeded Firestore documents, keyed by path.
@@ -241,6 +257,8 @@ export async function signIn(page, opts = {}) {
     subscription,
     docs = {},
     claims = {},
+    deny = [],
+    projectTombstones = null,
     displayName,
   } = opts
 
@@ -269,6 +287,7 @@ export async function signIn(page, opts = {}) {
     photoURL: '',
     provider: 'password',
     claims,
+    deny,
     docs: {
       [`users/${uid}`]: {
         displayName: name,
@@ -317,6 +336,13 @@ export async function signIn(page, opts = {}) {
       // hint to begin with, and removing one is how the bug above happened.
       'vs-session': returning ? '1' : null,
       'vs-onboarded': onboarded ? '1' : null,
+      // Deletes this account already made. Its own key, because every reader of
+      // vs-projects counts that array's length — the save cap included — and a
+      // soft-deleted record inside it would refuse a save for a project the
+      // user had thrown away.
+      'vs-project-tombstones': projectTombstones
+        ? JSON.stringify({ [email]: projectTombstones })
+        : null,
     },
   })
 
