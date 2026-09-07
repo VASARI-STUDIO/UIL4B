@@ -178,3 +178,40 @@ export function modelFor(plan, toolId) {
   }
   return process.env.GEMINI_MODEL_FREE || MODELS.free[toolId] || MODELS.free['alt-text']
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE STRIPE PRODUCT DESCRIPTION — derived, never typed
+// ─────────────────────────────────────────────────────────────────────────────
+// api/setup-stripe.js used to carry this as a hand-typed constant reading
+// "1,000 AI actions per day, unlimited project and custom-icon saves, advanced
+// colour controls, and full design JSON export." Two of those claims were false
+// against this file and against the export table:
+//
+//   · 1,000 A DAY. The server has enforced 30 since the limits were derived
+//     downward from the shared free-tier ceiling (the long note above). A
+//     customer buying on that sentence is oversold by 33×.
+//   · FULL DESIGN JSON EXPORT. `json` in src/config/exportFormats.js has never
+//     carried `live: true` — it renders a "Soon" badge over a disabled button
+//     and ExportPanel has no branch that could build one. /plans, /checkout, the
+//     upgrade modal and Settings were all corrected for this when
+//     exportFormats.js was extracted. The Stripe PRODUCT is the copy nobody
+//     went back for.
+//
+// And this string is the WORST place for a false promise, because it is not on a
+// marketing page: Stripe prints the product description on the embedded
+// checkout, on the emailed receipt and on the invoice. It is the one copy of the
+// promise that reaches a customer with money already in hand.
+//
+// So it is derived from the same PLANS object the server enforces, and
+// tests/unit/stripe-product-truth.test.js fails if the two ever disagree — the
+// exportFormats.js / plans-truth.test.js pattern, applied to the receipt.
+//
+// The remaining half is not code: findOrCreateProduct now calls
+// stripe.products.update when a live product's description differs, but nothing
+// runs that until the founder POSTs /api/setup-stripe. That is logged in
+// docs/OWNER-ACTIONS.md.
+export function proProductDescription(plan = PLANS.pro) {
+  const daily = dailyLimitFor(plan, 'ai-default')
+  const monthly = monthlyLimitFor(plan, 'ai-default')
+  return `${daily} AI actions a day and ${monthly} a month, unlimited project and custom-icon saves, advanced colour controls, and the Pro export documents — the design system book (PDF) and the brand guidelines presentation.`
+}

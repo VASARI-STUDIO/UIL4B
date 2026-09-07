@@ -240,11 +240,28 @@ test('only a healthy status may clear the failure flags', () => {
   // customer.subscription.updated (status → past_due) and
   // invoice.payment_failed arrive with no ordering guarantee. Clearing
   // unconditionally meant whichever landed second wiped the other's work.
-  const hook = read('api/stripe-webhook.js')
-  assert.ok(/const healthy = sub\.status === 'active' \|\| sub\.status === 'trialing'/.test(hook),
-    'writeSubscription must gate the clear on a healthy status')
-  assert.ok(/const recovery = healthy/.test(hook),
+  //
+  // The gate MOVED (not weakened) when `current_period_end` was fixed: the
+  // subscription document's shape now lives in api/_lib/billing.js, because
+  // api/checkout-status.js has to write the identical document when it
+  // reconciles a subscription checkout the webhook never delivered. So this
+  // asserts the gate where it lives, plus the delegation that stops the webhook
+  // building a second copy of the document beside it.
+  //
+  // The behavioural counterpart — what writeSubscription actually writes for a
+  // past_due subscription — is tests/unit/subscription-period-end.test.js,
+  // which calls the webhook's own function with a fake Firestore.
+  const shape = read('api/_lib/billing.js')
+  assert.ok(/const healthy = sub\?\.status === 'active' \|\| sub\?\.status === 'trialing'/.test(shape),
+    'subscriptionDocFields must gate the clear on a healthy status')
+  assert.ok(/const recovery = healthy/.test(shape),
     'the cleared fields must be conditional on that gate')
+
+  const hook = read('api/stripe-webhook.js')
+  assert.ok(/writeSubscriptionDoc\(/.test(hook),
+    'the webhook must write through the shared document builder, not a copy of it')
+  assert.ok(!/paymentFailed: false/.test(hook.replace(/paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null,/g, '')),
+    'the webhook is clearing the failure flags outside the healthy gate again')
 })
 
 test('the four webhook fields are read by src/ — the audit found zero readers', () => {

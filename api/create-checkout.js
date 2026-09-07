@@ -6,7 +6,7 @@ import {
   LOOKUP_KEYS,
   PRICE_ENV_KEYS,
 } from './_lib/pricing.js'
-import { LIFETIME_SKU, parseBillingInterval } from './_lib/billing.js'
+import { LIFETIME_SKU, ensureStripeCustomer, parseBillingInterval } from './_lib/billing.js'
 import { planForUser } from './_lib/plans.js'
 import { failRequest } from './_lib/http.js'
 import { resolveOrigin } from './_lib/origins.js'
@@ -90,18 +90,15 @@ export default async function handler(req, res) {
     }).id === 'pro') {
       return res.status(409).json({ error: 'This account already has Pro access. No payment session was created.' })
     }
-    let customerId = userData?.stripeCustomerId || null
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        metadata: { firebaseUid: uid },
-      })
-      customerId = customer.id
-      await adminDb().collection('users').doc(uid).set(
-        { stripeCustomerId: customerId },
-        { merge: true }
-      )
-    }
+    // Read-create-write used to live inline here, and two first checkouts in
+    // flight (a double click, two tabs) both read null, both created a customer,
+    // and the second write won — orphaning a Stripe customer whose
+    // metadata.firebaseUid pointed at this same account. ensureStripeCustomer
+    // closes it with a uid-derived idempotency key plus a transactional claim;
+    // the long note is in _lib/billing.js.
+    const customerId = await ensureStripeCustomer(
+      stripe, adminDb(), uid, userData?.stripeCustomerId || null,
+    )
 
     const origin = resolveOrigin(req)
 

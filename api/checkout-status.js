@@ -4,6 +4,7 @@ import {
   lifetimeEntitlementFromSession,
   lifetimeGrantDecision,
   lifetimeGrantHealth,
+  reconcileSubscriptionCheckout,
   retrieveSessionWithCharge,
 } from './_lib/billing.js'
 import { failRequest } from './_lib/http.js'
@@ -108,12 +109,32 @@ export default async function handler(req, res) {
       }
     }
 
+    // The same safety net for SUBSCRIPTION checkouts, which had none. A
+    // subscription whose checkout.session.completed AND
+    // customer.subscription.created deliveries both failed left a customer who
+    // had paid on Free, while this page told them their Pro subscription was
+    // active. Ownership was established by the 403 above; the reconcile refuses
+    // on a revoked account and on a customer mismatch, and Stripe's own status
+    // decides the outcome — so this can add access, never fabricate it.
+    const { isPro: subscriptionActive } = await reconcileSubscriptionCheckout({
+      stripe,
+      db: adminDb(),
+      uid,
+      session,
+      userData,
+      customerId,
+    })
+
     return res.status(200).json({
       status: session.status, // 'open' | 'complete' | 'expired'
       paymentStatus: session.payment_status, // 'paid' | 'unpaid' | 'no_payment_required'
       mode: session.mode,
       interval: session.metadata?.billingInterval || null,
       entitlementActive,
+      // The subscription counterpart of `entitlementActive`. /checkout/return
+      // reads it so a subscription that has not attached yet is reported as
+      // "payment received, access settling" rather than as active.
+      subscriptionActive,
       customerEmail: session.customer_details?.email || null,
     })
   } catch (err) {

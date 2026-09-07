@@ -2,14 +2,20 @@ import { getStripeServer } from './_lib/stripe.js'
 import { adminAuth, credentialProblem } from './_lib/firebase-admin.js'
 // One list, shared with /api/verify-admin and /api/ai's diagnostic.
 import { ADMIN_EMAILS } from './_lib/admin.js'
+import { proProductDescription } from './_lib/plans.js'
 import {
   SUPPORTED_CURRENCIES, CURRENCY_CODES, BASE_CURRENCY, DEFAULT_PRICES,
   LOOKUP_KEYS, INTERVAL_MAP, BILLING_INTERVALS, LIFETIME_CURRENCY_CODES, toCents, fromCents,
 } from './_lib/pricing.js'
 
 const PRODUCT_NAME = 'UIL4B Pro'
-const PRODUCT_DESCRIPTION =
-  '1,000 AI actions per day, unlimited project and custom-icon saves, advanced colour controls, and full design JSON export.'
+// DERIVED, not typed. Stripe prints this on the embedded checkout, on the
+// receipt and on the invoice — it is the one copy of the promise that reaches a
+// customer with money in hand, and it used to advertise 1,000 AI actions a day
+// against a server that allows 30. See the note above proProductDescription()
+// in _lib/plans.js; tests/unit/stripe-product-truth.test.js fails if this file
+// and the enforced limits ever disagree again.
+const PRODUCT_DESCRIPTION = proProductDescription()
 
 async function requireAdmin(req) {
   const authHeader = req.headers.authorization
@@ -29,11 +35,31 @@ async function requireAdmin(req) {
   }
 }
 
-async function findOrCreateProduct(stripe) {
+// Creates the product, and — the half this was missing — CORRECTS a live one.
+//
+// This only ever created. So the moment a product existed in Stripe, the
+// description on every future receipt and invoice was frozen at whatever the
+// code said the day it was first run, and editing the constant changed nothing a
+// customer would ever see. That is how "1,000 AI actions per day" stayed on the
+// checkout page for months after the server had been lowered to 30.
+//
+// The update is unconditional on the description ONLY — the name, prices and
+// everything else a founder may have tuned in the dashboard are left alone.
+// Exported so tests/unit/stripe-product-truth.test.js can assert what THIS
+// function does to a live product, rather than what a copy of it would do.
+export async function findOrCreateProduct(stripe) {
   const existing = await stripe.products.list({ active: true, limit: 100 })
   const match = existing.data.find(p => p.name === PRODUCT_NAME)
-  if (match) return match
-  return stripe.products.create({ name: PRODUCT_NAME, description: PRODUCT_DESCRIPTION })
+  if (!match) {
+    return stripe.products.create({ name: PRODUCT_NAME, description: PRODUCT_DESCRIPTION })
+  }
+  if (match.description !== PRODUCT_DESCRIPTION) {
+    console.warn('setup-stripe: correcting a stale product description on the live product', {
+      productId: match.id, was: match.description, now: PRODUCT_DESCRIPTION,
+    })
+    return stripe.products.update(match.id, { description: PRODUCT_DESCRIPTION })
+  }
+  return match
 }
 
 // Reads the live price for each interval and flattens base + currency_options
