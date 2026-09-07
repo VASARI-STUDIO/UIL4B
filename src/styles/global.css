@@ -14167,3 +14167,189 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .bs-swatch{min-width:0;flex:1 1 84px}
   .bs-ladder-px{flex-basis:52px}
 }
+
+   /help and /principles — the two designed surfaces from group D of the
+   2026-08-20 founder batch. Direction, verbatim: "these are less documents are
+   more designed like a sales page style of large visual, main point, simple not
+   overly verbose points underneath."
+
+   Both render inside the PillNav app shell (`.app-page` already supplies the
+   inline padding and the nav clearance), so neither uses `.home-container` —
+   nesting that inside `.app-page` would pad the page twice. They borrow the
+   homepage's TYPE and its pill buttons, which is system coherence, and nothing
+   else: `.home-hero`'s min-height is earned by a search field, eleven
+   satellites and a workbench, and these heroes hold four elements.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Shared between the two surfaces ─────────────────────────────────────── */
+.hlp,.prn{display:flex;flex-direction:column;gap:clamp(56px,7vw,104px);padding-bottom:var(--s-8)}
+.hlp-hero,.prn-hero{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4);max-width:22ch}
+.hlp-h1,.prn-h1{font-family:var(--display);font-size:var(--fs-h1);font-weight:600;letter-spacing:-.026em;line-height:1.16;color:var(--t0);margin:0;max-width:16ch;
+  /* `.home-mark` paints a background on an INLINE element and carries
+     padding-block:.06em. Nothing here clips, but the extra leading keeps the
+     mark's box off the line above it at the largest clamp step. */
+  padding-block:.06em}
+.hlp-lede,.prn-lede{font-size:var(--fs-lede);line-height:1.55;color:var(--t1);margin:0;max-width:52ch}
+.hlp-hero-cta,.prn-hero-cta{margin-top:var(--s-2)}
+.hlp-hint{font-family:var(--mono);font-size:var(--fs-caption);color:var(--t2);margin:0}
+.hlp-h2,.prn-rule{font-family:var(--display);font-size:var(--fs-h2);font-weight:600;letter-spacing:-.02em;line-height:1.2;color:var(--t0);margin:0}
+
+/* The caption under every computed proof. Small, quiet, and the place the
+   functions are named — a figure whose provenance is not stated is an
+   illustration, and these are measurements. */
+.prn-cap,.hlp-run-note{grid-column:1/-1;margin:0;padding-top:var(--s-4);font-size:var(--fs-caption);line-height:1.6;color:var(--t2)}
+.prn-cap code,.hlp-run-note code{font-family:var(--mono);font-size:.92em;color:var(--t1)}
+
+/* ── /help: the opening visual ───────────────────────────────────────────────
+   One value in, the eleven stops the product generates, the files they leave
+   as. The panel is the page's large visual and the only full-bleed object on
+   it. */
+.hlp-run{display:grid;grid-template-columns:minmax(148px,auto) minmax(0,1fr) minmax(158px,auto);gap:var(--s-5) var(--s-6);align-items:center;
+  margin:0;padding:clamp(20px,3vw,32px);border:1px solid var(--border);border-radius:var(--radius-3xl);background:var(--bg-1);box-shadow:var(--shadow-cmd)}
+.hlp-run-seed{display:flex;align-items:center;gap:var(--s-3)}
+.hlp-run-chip{flex:0 0 auto;width:48px;height:48px;border-radius:var(--radius);border:1px solid var(--border)}
+.hlp-run-seed-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hlp-run-hex{font-family:var(--mono);font-size:var(--fs-body-s);font-weight:500;color:var(--t0)}
+.hlp-run-cap{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t3);line-height:1.4}
+
+.hlp-run-ramp{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:3px;list-style:none;margin:0;padding:0}
+.hlp-run-stop{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hlp-run-bar{display:block;height:clamp(76px,9vw,124px);border-radius:var(--radius-xs)}
+.hlp-run-stop-name{font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;color:var(--t1);line-height:1}
+.hlp-run-stop-hex{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);line-height:1}
+
+.hlp-run-out{display:flex;flex-direction:column;gap:var(--s-2)}
+.hlp-run-files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:var(--fs-caption);color:var(--t1);line-height:1.4}
+
+/* ── /help: bands ───────────────────────────────────────────────────────────
+   Buffer's "Here's what you can do with Buffer" arrangement — the heading held
+   in its own column with the set beside it, rather than a heading over a grid
+   of equal cards.
+   https://mobbin.com/screens/42990c6e-5536-41b6-b2bb-5332fbe87768 */
+.hlp-band{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:var(--s-6) clamp(32px,5vw,72px);align-items:start}
+.hlp-band-head{display:flex;flex-direction:column;gap:var(--s-3)}
+.hlp-band-lede{margin:0;font-size:var(--fs-body-s);line-height:1.6;color:var(--t1);max-width:44ch}
+
+/* Rows separated by a hairline, not enclosed in cards: four equally weighted
+   rounded rectangles is the construction the quality bar names, and these four
+   rows are deliberately not equal — one of them is the exception. */
+.hlp-starts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.hlp-start{padding:var(--s-5) 0;border-top:1px solid var(--border)}
+.hlp-start:first-child{border-top:0;padding-top:0}
+.hlp-start-link{display:flex;align-items:baseline;gap:var(--s-3);text-decoration:none;color:var(--t0)}
+.hlp-start-link:hover{text-decoration:none}
+.hlp-start-label{font-family:var(--display);font-size:var(--fs-h4);font-weight:600;letter-spacing:-.015em;color:var(--t0);transition:color var(--dur-1) var(--ease-standard)}
+.hlp-start-link:hover .hlp-start-label,.hlp-start-link:focus-visible .hlp-start-label{color:var(--accent-strong)}
+.hlp-start-opens{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.hlp-start-go{margin-left:auto;color:var(--t3);transition:transform var(--dur-2) var(--ease-out),color var(--dur-1) var(--ease-standard)}
+.hlp-start-link:hover .hlp-start-go,.hlp-start-link:focus-visible .hlp-start-go{transform:translateX(3px);color:var(--accent-strong)}
+.hlp-start-body{margin:var(--s-2) 0 0;font-size:var(--fs-body-s);line-height:1.65;color:var(--t1);max-width:64ch}
+
+.hlp-answers{margin:0;display:flex;flex-direction:column}
+.hlp-answer{padding:var(--s-5) 0;border-top:1px solid var(--border)}
+.hlp-answer:first-child{border-top:0;padding-top:0}
+.hlp-answer-q{font-size:var(--fs-h5);font-weight:600;color:var(--t0);line-height:1.4}
+.hlp-answer-a{margin:var(--s-2) 0 0;font-size:var(--fs-body-s);line-height:1.7;color:var(--t1);max-width:68ch}
+.hlp-answer-link{font-weight:500;text-decoration:underline;text-underline-offset:3px}
+
+.hlp-band--close{grid-template-columns:minmax(0,1fr)}
+.hlp-close{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4);padding-top:var(--s-6);border-top:1px solid var(--border)}
+
+/* ── /principles ────────────────────────────────────────────────────────────
+   Proof above claim, after Hashnode's editor section, and the rows alternate
+   side rather than tiling. The first row runs full width — that is the "large
+   visual" the direction asks for, and giving one row more weight than the rest
+   is what stops the page becoming the five-equal-cards section every principles
+   page in the Mobbin corpus ships.
+   https://mobbin.com/sites/sections/ce305258-5218-49f8-8cf0-cc49059d10e4 */
+.prn-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:clamp(48px,6vw,88px)}
+.prn-item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s-5) clamp(28px,4vw,64px);align-items:center}
+.prn-item[data-side="left"] .prn-proof{grid-column:1;grid-row:1}
+.prn-item[data-side="left"] .prn-say{grid-column:2;grid-row:1}
+.prn-item[data-side="right"] .prn-proof{grid-column:2;grid-row:1}
+.prn-item[data-side="right"] .prn-say{grid-column:1;grid-row:1}
+/* The lead row: one column, proof first at full width, the rule beneath it. */
+.prn-item[data-lead="true"]{grid-template-columns:minmax(0,1fr);gap:var(--s-6)}
+.prn-item[data-lead="true"] .prn-rule{font-size:var(--fs-h1);line-height:1.15;max-width:18ch}
+.prn-item[data-lead="true"] .prn-say{max-width:64ch}
+.prn-say{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3);min-width:0}
+.prn-body{margin:0;font-size:var(--fs-body-s);line-height:1.7;color:var(--t1);max-width:56ch}
+.prn-go{display:inline-flex;align-items:center;gap:8px;margin-top:var(--s-1);font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);text-decoration:none}
+.prn-go:hover{text-decoration:underline;text-underline-offset:3px}
+.prn-go span{transition:transform var(--dur-2) var(--ease-out)}
+.prn-go:hover span,.prn-go:focus-visible span{transform:translateX(3px)}
+.prn-proof{min-width:0}
+.prn-proof>figure{margin:0}
+
+/* Proof 1 — the two blues, each doing the job its ratio permits. */
+.prn-cx-rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--s-3)}
+.prn-cx-row{display:grid;grid-template-columns:minmax(112px,auto) minmax(0,1fr);gap:var(--s-2) var(--s-4);align-items:center;padding:var(--s-4);border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--bg-1)}
+.prn-cx-sample{display:flex;align-items:center;justify-content:center;height:56px;padding:0 var(--s-4);border:2px solid transparent;border-radius:var(--radius);font-size:var(--fs-body);font-weight:600;white-space:nowrap}
+.prn-cx-sample[data-boundary="true"]{font-weight:500}
+.prn-cx-read{display:flex;flex-direction:column;gap:2px;min-width:0}
+.prn-cx-ratio{font-family:var(--mono);font-size:var(--fs-h5);font-weight:500;color:var(--t0);line-height:1.2}
+.prn-cx-verdict{font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
+.prn-cx-role{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s-2);padding-top:var(--s-3);border-top:1px solid var(--border);font-size:var(--fs-caption);color:var(--t2)}
+.prn-cx-role b{font-family:var(--mono);font-weight:500;color:var(--t1)}
+
+/* Proof 2 — one token name, one value per ground. Both panels paint their own
+   theme's colours regardless of the theme the reader is in; that is the point,
+   and it is why these two are the only fixed grounds on either page. */
+.prn-th-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-3)}
+.prn-th-panel{display:flex;flex-direction:column;gap:var(--s-1);padding:var(--s-5);border:1px solid var(--border);border-radius:var(--radius-xl);min-width:0}
+.prn-th-theme{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+.prn-th-token{font-family:var(--mono);font-size:var(--fs-body-s);font-weight:500;overflow-wrap:anywhere}
+.prn-th-hex{font-family:var(--mono);font-size:var(--fs-caption);opacity:.85}
+.prn-th-ratio{font-family:var(--display);font-size:var(--fs-h3);font-weight:600;line-height:1.2;margin-top:var(--s-2)}
+
+/* Proof 3 — the ladder, at the sizes the arithmetic produces. */
+.prn-ty-rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.prn-ty-row{display:flex;align-items:baseline;gap:var(--s-4);padding:var(--s-2) 0;border-top:1px solid var(--border)}
+.prn-ty-row:first-child{border-top:0}
+.prn-ty-spec{flex:0 0 auto;min-width:2.6em;font-family:var(--display);font-weight:600;color:var(--t0);line-height:1.05;letter-spacing:-.02em}
+.prn-ty-name{font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1)}
+.prn-ty-px{margin-left:auto;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
+
+/* Proof 4 — the export offer, split by the flag that decides whether each
+   button does anything. */
+.prn-ex-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-4)}
+.prn-ex-col{min-width:0}
+.prn-ex-col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-caption);line-height:1.45;color:var(--t1)}
+.prn-ex-col li{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.prn-ex-col[data-unbuilt="true"] ul{color:var(--t2)}
+.prn-ex-h{margin:0 0 var(--s-3);padding-bottom:var(--s-2);border-bottom:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+
+/* Proof 5 — the two counts, off the registry, beside the badge itself. */
+.prn-sn-figures{display:flex;flex-wrap:wrap;gap:var(--s-5)}
+.prn-sn-fig{display:flex;flex-direction:column;gap:var(--s-1);padding:var(--s-5);border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--bg-1);flex:1 1 180px;min-width:0}
+.prn-sn-fig b{font-family:var(--display);font-size:var(--fs-display);font-weight:600;line-height:1;letter-spacing:-.03em;color:var(--t0)}
+.prn-sn-fig[data-soon="true"] b{color:var(--t2)}
+.prn-sn-fig>span{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:var(--fs-caption);color:var(--t2);line-height:1.4}
+
+/* ── Narrow ─────────────────────────────────────────────────────────────────
+   The ramp is eleven columns of type and cannot compress; below the desktop
+   band it becomes a scroller inside its own box rather than shrinking its stops
+   into unreadable slivers or pushing the page sideways. */
+@media(max-width:1180px){
+  .hlp-run-stop-hex{display:none}
+}
+@media(max-width:960px){
+  .hlp-run{grid-template-columns:minmax(0,1fr);gap:var(--s-5)}
+  .hlp-run-ramp{display:flex;overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:var(--s-2)}
+  .hlp-run-stop{flex:0 0 clamp(46px,11vw,72px)}
+  .hlp-run-bar{height:88px}
+  .hlp-run-stop-hex{display:block}
+  .hlp-band{grid-template-columns:minmax(0,1fr)}
+  .prn-item,.prn-item[data-side="left"],.prn-item[data-side="right"]{grid-template-columns:minmax(0,1fr)}
+  .prn-item[data-side="left"] .prn-proof,.prn-item[data-side="right"] .prn-proof{grid-column:1;grid-row:1}
+  .prn-item[data-side="left"] .prn-say,.prn-item[data-side="right"] .prn-say{grid-column:1;grid-row:2}
+  .prn-item[data-lead="true"] .prn-rule{font-size:var(--fs-h2)}
+  .prn-ex-cols{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:560px){
+  .hlp-hero,.prn-hero{max-width:none}
+  .hlp-start-link{flex-wrap:wrap;gap:var(--s-2)}
+  .hlp-start-go{margin-left:0}
+  .prn-cx-row{grid-template-columns:minmax(0,1fr)}
+  .prn-th-grid{grid-template-columns:minmax(0,1fr)}
+}
