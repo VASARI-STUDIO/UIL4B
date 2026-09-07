@@ -348,7 +348,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
             control with no explanation is the state this product keeps being
             told reads as broken. */}
         {tooShort && (
-          <p className="bs-note" role="status">
+          <p className="bs-note" role="status" data-testid="brand-starter-too-short">
             A few more words — {MIN_PROMPT_CHARS} characters is the minimum, so the answer is designed
             rather than guessed.
           </p>
