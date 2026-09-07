@@ -19,6 +19,7 @@ import {
   exhaustedError,
   parseStarterJson,
   sanitizeBrandStarter,
+  runMeteredTask,
 } from './_lib/aiGeneration.js'
 
 // Consolidated AI endpoint — POST /api/ai with { task, ...taskBody }.
@@ -1137,39 +1138,47 @@ export default async function handler(req, res) {
 
     const bucket = generationBucket(plan.id, monthStr())
     const ref = fireDb.doc(`daily-usage/${uid}_${bucket.suffix}`)
-    let used
-    try {
-      used = (await ref.get()).data()?.[toolId] || 0
-    } catch (e) {
+
+    // The unit is RESERVED before the provider is called, inside a transaction,
+    // and given back if nothing was generated — see runMeteredTask in
+    // _lib/aiGeneration.js for why a read-then-increment could not hold a cap.
+    // This bucket is the one where it bit hardest: a free account's allowance is
+    // ONE, so any concurrency at all doubled it.
+    const meters = [{ ref, field: toolId, limit: bucket.limit, period: bucket.period }]
+    const metered = await runMeteredTask({
+      db: fireDb,
+      meters,
+      run: async ([used]) => {
+        res.setHeader('Cache-Control', 'no-store')
+        const generated = await task.run(req, res, { plan, bucket, used })
+        // A runner that answered for itself — every failure path above does —
+        // has already sent a response, and NOTHING is counted. Returning null
+        // is what makes runMeteredTask refund the reservation, so
+        // "a failed request must not consume a free user's single use" holds.
+        if (!generated || generated === res || res.writableEnded || res.headersSent) return null
+        return generated
+      },
+    })
+
+    if (metered.storeError) {
+      const e = metered.storeError
       return res.status(500).json({ error: `Could not read your usage from Firestore (${String(e?.message || e).slice(0, 140)}).` })
     }
-
-    if (used >= bucket.limit) {
+    if (!metered.ok) {
       return res.status(429).json({
         error: exhaustedError(plan.id),
-        generation: { used, limit: bucket.limit, remaining: 0, period: bucket.period },
+        generation: { used: metered.counts[0], limit: bucket.limit, remaining: 0, period: bucket.period },
         plan: plan.id,
       })
     }
+    if (!metered.result) return
 
-    res.setHeader('Cache-Control', 'no-store')
-    const generated = await task.run(req, res, { plan, bucket, used })
-    // A runner that answered for itself — every failure path above does — has
-    // already sent a response, and NOTHING is counted. That is the whole of
-    // "a failed request must not consume a free user's single use": the
-    // increment is below this line, not above it.
-    if (!generated || generated === res || res.writableEnded || res.headersSent) return
-
-    try {
-      await ref.set({ [toolId]: await FieldValueIncrement(1) }, { merge: true })
-    } catch { /* usage write best-effort — never fail a successful generation */ }
-
-    return res.status(200).json(generated)
+    return res.status(200).json(metered.result)
   }
 
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
   const monthRef = fireDb.doc(`daily-usage/${uid}_${monthStr()}`)
-  let plan, limit, used, monthLimit, monthUsed
+  let plan, limit, monthLimit
   try {
     const userSnap = await fireDb.doc(`users/${uid}`).get()
     plan = planForUser({
@@ -1179,48 +1188,57 @@ export default async function handler(req, res) {
     })
     limit = dailyLimitFor(plan, toolId)
     monthLimit = monthlyLimitFor(plan, toolId)
-    const [usageSnap, monthSnap] = await Promise.all([usageRef.get(), monthRef.get()])
-    used = usageSnap.data()?.[toolId] || 0
-    monthUsed = monthSnap.data()?.[toolId] || 0
   } catch (e) {
     return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
   }
 
-  // Whichever ceiling is reached first. The message names WHICH one and when it
-  // frees up — "you have hit your limit" with no period and no reset time is
-  // the kind of dead end that makes a paying user think the product is broken
-  // rather than that they are being metered.
-  if (monthUsed >= monthLimit) {
+  // BOTH ceilings are reserved in ONE transaction, month first. The order is the
+  // reporting order: whichever is reached first is the one the message names,
+  // and the message has to name WHICH period is exhausted and when it frees up —
+  // "you have hit your limit" with no period and no reset time is the kind of
+  // dead end that makes a paying user think the product is broken rather than
+  // that they are being metered.
+  //
+  // One transaction over both, rather than two, because a monthly reservation
+  // that succeeded while the daily one refused would meter a call that never
+  // happened — the monthly ceiling would then fill from requests nobody ran.
+  const meters = [
+    { ref: monthRef, field: toolId, limit: monthLimit, period: 'month' },
+    { ref: usageRef, field: toolId, limit, period: 'day' },
+  ]
+  const metered = await runMeteredTask({
+    db: fireDb,
+    meters,
+    run: async ([monthUsed, used]) => {
+      res.setHeader('Cache-Control', 'no-store')
+      // Task runners either send an error response themselves (and return the
+      // res object / undefined) or return the success payload for the shared
+      // tail. `used`/`monthUsed` are the counts as they were BEFORE the
+      // reservation, so the runners' `used + 1` arithmetic is unchanged.
+      const result = await task.run(req, res, { plan, limit, used, monthUsed, monthLimit })
+      if (!result || result === res || res.writableEnded || res.headersSent) return null
+      return result
+    },
+  })
+
+  if (metered.storeError) {
+    const e = metered.storeError
+    return res.status(500).json({ error: `Could not read your plan/usage from Firestore (${String(e?.message || e).slice(0, 140)}). The service account may lack Firestore access, or the project/region is misconfigured.` })
+  }
+
+  if (!metered.ok) {
+    const [monthUsed, used] = metered.counts
+    const day = metered.blocked.period === 'day'
     return res.status(429).json({
-      error: `You've used all ${monthLimit} AI generations in your plan this month. It resets on the 1st.`,
-      usage: { used, limit, remaining: 0, monthUsed, monthLimit, period: 'month' },
+      error: day
+        ? task.limitError
+        : `You've used all ${monthLimit} AI generations in your plan this month. It resets on the 1st.`,
+      usage: { used, limit, remaining: 0, monthUsed, monthLimit, period: metered.blocked.period },
       plan: plan.id,
     })
   }
 
-  if (used >= limit) {
-    return res.status(429).json({
-      error: task.limitError,
-      usage: { used, limit, remaining: 0, monthUsed, monthLimit, period: 'day' },
-      plan: plan.id,
-    })
-  }
+  if (!metered.result) return
 
-  res.setHeader('Cache-Control', 'no-store')
-
-  // Task runners either send an error response themselves (and return the res
-  // object / undefined) or return the success payload for the shared tail.
-  const result = await task.run(req, res, { plan, limit, used, monthUsed, monthLimit })
-  if (!result || result === res || res.writableEnded || res.headersSent) return
-
-  try {
-    const inc = await FieldValueIncrement(1)
-    // Both buckets, or the monthly ceiling never fills and is decorative.
-    await Promise.all([
-      usageRef.set({ [toolId]: inc }, { merge: true }),
-      monthRef.set({ [toolId]: inc }, { merge: true }),
-    ])
-  } catch { /* usage write best-effort — never fail a successful generation */ }
-
-  return res.status(200).json(result)
+  return res.status(200).json(metered.result)
 }
