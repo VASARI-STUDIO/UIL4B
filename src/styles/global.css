@@ -2735,6 +2735,44 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .ggn-gal-link,
 .tt-back{display:inline-flex;align-items:center;min-height:24px}
 
+/* ── THE SAME FLOOR, FOR THREE CONTROLS THAT DO SOMETHING ──────────────────
+   Measured 2026-09-06/07, signed out, across 320–1920:
+
+     button.plb-hex      67.5 x 21   the hex on a palette swatch; copies it
+     button.snapv-value    56 x 23   the number beside a slider; click to type
+     button.ggn-copy     28.5 x 15   copies the gradient's CSS
+
+   Three, four and nine pixels short respectively. All three are real targets —
+   they act on a click — and all three are reached most often on a phone, where
+   they are also smallest. `min-height` only; the padding, type and colour are
+   untouched.
+
+   DELIBERATELY NOT INCLUDED, having been checked rather than assumed:
+     .stc-sc-link  54.3 x 14  "Learn more"
+     .stc-sc-ghost 71.7 x 21  "Use anyway"
+   Both are INERT. They are specimen elements inside the semantic-colour usage
+   examples (ColorStudio.jsx renders them inside a mock info banner reading
+   "Billing runs on the 1st"), they already carry `tabIndex={-1}` and
+   `cursor:default`, and they have no handler. WCAG 2.5.8 sizes targets, and
+   these are not targets — growing them would distort the example they exist to
+   show. They appear in a naive sweep only because `button` matches whatever
+   its tabindex.
+
+     .ggn-handle   20 x 20  the gradient stop handle
+   Real, and left alone on purpose: it is dragged along a bar whose stops can
+   sit 20px apart, so growing the handle changes how the bar is manipulated.
+   That is a design call for the founder, not a defect fix. */
+.plb-hex,
+.ggn-copy{display:inline-flex;align-items:center;justify-content:center;min-height:24px}
+/* `.snapv-value` keeps its right edge. It is `text-align:right` on a fixed
+   56px width so the digits line up under each other down the slider stack at
+   phone widths, and a flex container IGNORES `text-align` for its items — so
+   `justify-content:center` here would quietly re-centre every number while
+   leaving the box exactly where it was. That is why the test for this measures
+   the rendered TEXT with a Range rather than the element's own box: the box
+   never moves, so a box assertion could not fail. */
+.snapv-value{display:inline-flex;align-items:center;justify-content:flex-end;min-height:24px}
+
 @media(max-width:980px){
   .fg-hero-copy{grid-template-columns:1fr;gap:var(--s-4)}
   /* The dialog's own padding moved into its three bands, so the tablet step is

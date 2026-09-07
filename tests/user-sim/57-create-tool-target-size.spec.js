@@ -118,6 +118,110 @@ test.describe('Palette Builder adjustment sliders are draggable on a phone', () 
   })
 })
 
+test.describe('the small in-page controls that actually do something', () => {
+  // Three controls that act on a click and were 3, 4 and 9px short. Measured
+  // signed out across 320-1920 before the fix:
+  //   button.plb-hex      67.5 x 21   the hex on a palette swatch; copies it
+  //   button.snapv-value    56 x 23   the number beside a slider; click to type
+  //   button.ggn-copy     28.5 x 15   copies the gradient's CSS
+  //
+  // MUTATION: drop min-height:24px from either rule and the matching case goes
+  // red at its measured height above.
+  const CASES = [
+    ['/create/palette', '.plb-hex', 'the hex on a swatch'],
+    ['/create/palette', '.snapv-value', 'the value beside a slider'],
+    ['/create/gradient', '.ggn-copy', 'the CSS copy button'],
+  ]
+
+  for (const [route, selector, human] of CASES) {
+    test(`${selector} on ${route} — ${human}`, async ({ page }) => {
+      watch(page, 'someone copying a value out of a tool on a phone')
+      await page.setViewportSize({ width: 390, height: 844 })
+      await go(page, route)
+      const el = page.locator(selector).first()
+      await expect(el).toBeVisible()
+      await settle(page)
+
+      // POSITIVE CONTROL. These are the opposite case to `.stc-sc-link` and
+      // `.stc-sc-ghost`, which are specimen elements with tabIndex={-1} and no
+      // handler and are deliberately NOT held to this floor. So prove this one
+      // is really reachable before asserting it is really big enough.
+      const reachable = await el.evaluate((node) => node.tabIndex >= 0 && !node.disabled)
+      expect(reachable, `${selector} should be a control a person can reach`).toBe(true)
+
+      const box = await el.boundingBox()
+      expect(box, `${selector} has no box`).not.toBeNull()
+      expect(
+        Math.round(box.height * 10) / 10,
+        `${selector} is ${box.height.toFixed(1)}px tall — WCAG 2.5.8 asks ${MIN}px`,
+      ).toBeGreaterThanOrEqual(MIN)
+    })
+  }
+
+  test('the slider value keeps its right edge after being made taller', async ({ page }) => {
+    // A flex container ignores `text-align` for its items, so the min-height
+    // fix could have silently re-centred every number in the slider stack.
+    // `justify-content:flex-end` is what preserves the column of digits.
+    //
+    // ASSERTED AT 390px, AND ONLY THERE, because that is the only width where
+    // "a column of digits" exists. `.plb-adjust-fields` is a grid that runs
+    // `repeat(4, auto minmax(0,1fr))` on desktop, so the four values sit SIDE
+    // BY SIDE and having four different right edges is correct. Measured:
+    //   1440px  rights 283 / 601 / 876 / 1205, all on one row  (4 x 1)
+    //    640px  rights 283 / 624, two rows                     (2 x 2)
+    //    390px  rights 374 / 374 / 374 / 374, four rows        (1 x 4)
+    // The first draft of this test asserted a shared edge at 1440 and failed
+    // on a layout that was never wrong.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await go(page, '/create/palette')
+    await expect(page.locator('.snapv-value').first()).toBeVisible()
+    await settle(page)
+
+    // MEASURE THE TEXT, NOT THE BOX. The box is a fixed 56px and never moves,
+    // so `justify-content:center` would re-centre every number while leaving
+    // every bounding rect identical — an assertion on the element's own rect
+    // CANNOT FAIL for the thing this test exists to defend. The first draft did
+    // exactly that, and the mutation proved it: re-centring the values left the
+    // test green. A Range over the text node reports where the digits actually
+    // sit.
+    const vals = await page.evaluate(() => {
+      const list = [...document.querySelectorAll('.plb-adjust .snapv-value')]
+      return list.map((v) => {
+        const box = v.getBoundingClientRect()
+        const range = document.createRange()
+        range.selectNodeContents(v)
+        const text = range.getBoundingClientRect()
+        return {
+          right: Math.round(text.right),
+          top: Math.round(box.top),
+          // how far the digits stop short of the box's right edge
+          inset: Math.round(box.right - text.right),
+        }
+      })
+    })
+    expect(vals.length, 'the four adjustment sliders each have a value').toBeGreaterThanOrEqual(4)
+    // POSITIVE CONTROL: they really are stacked here, so a shared right edge
+    // means alignment rather than four boxes sitting on top of each other.
+    expect(
+      new Set(vals.map((v) => v.top)).size,
+      'the four values should be on four separate rows at 390px',
+    ).toBe(vals.length)
+    expect(
+      new Set(vals.map((v) => v.right)).size,
+      `the digits no longer share a right edge: ${vals.map((v) => v.right).join(', ')}`,
+    ).toBe(1)
+    // And they are flush right inside their box, not floating in the middle of
+    // it. `padding-right:6px` is the only thing that should separate them, so
+    // anything past ~8px means the text has been re-centred.
+    for (const v of vals) {
+      expect(
+        v.inset,
+        `the value sits ${v.inset}px in from its own right edge — it has been re-centred`,
+      ).toBeLessThanOrEqual(8)
+    }
+  })
+})
+
 test.describe('the library search field accepts a click anywhere in it', () => {
   // THIS ONE CANNOT BE A HEIGHT ASSERTION, which is why it clicks.
   //
