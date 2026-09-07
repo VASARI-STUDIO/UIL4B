@@ -4,6 +4,22 @@ import { requireAdmin } from './_lib/admin.js'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 import { cleanKey } from './_lib/env.js'
 import { classifyGeminiFinish } from './_lib/geminiFinish.js'
+import {
+  BRAND_STARTER_TOOL_ID,
+  MAX_PROMPT_CHARS,
+  MIN_PROMPT_CHARS,
+  PALETTE_MIN_ROLES,
+  PALETTE_MAX_ROLES,
+  BASE_MIN,
+  BASE_MAX,
+  RATIO_MIN,
+  RATIO_MAX,
+  fontChoiceList,
+  generationBucket,
+  exhaustedError,
+  parseStarterJson,
+  sanitizeBrandStarter,
+} from './_lib/aiGeneration.js'
 
 // Consolidated AI endpoint — POST /api/ai with { task, ...taskBody }.
 // Merges the former alt-text, scan-photo and generate-prompt routes into one
@@ -12,6 +28,14 @@ import { classifyGeminiFinish } from './_lib/geminiFinish.js'
 //   task 'alt-text'        → toolId 'alt-text'        (Gemini vision, WCAG alt text)
 //   task 'scan-photo'      → toolId 'scan-photo'      (Gemini vision, photo-rule JSON)
 //   task 'generate-prompt' → toolId 'prompts-ai'      (OpenRouter → Gemini fallback)
+//   task 'brand-starter'   → toolId 'brand-starter'   (OpenRouter → Gemini fallback)
+//
+// 'brand-starter' is a MODE here rather than a route of its own for the reason
+// this file exists: /api holds twelve handlers and Vercel allows twelve on this
+// plan, so a thirteenth file fails the build (tests/unit/account-deletion.test.js
+// asserts the count). It is also the reason src/data/moduleBoard.js recorded
+// "AI mode deferred to stay under Vercel 12-function limit — revisit" against
+// this feature. The consolidation is what makes revisiting it free.
 
 export const config = {
   api: { bodyParser: { sizeLimit: '8mb' } },
@@ -402,7 +426,12 @@ async function callOpenRouter(userMessage, opts = {}) {
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
       messages: [
-        { role: 'system', content: PROMPT_SYSTEM_PROMPT },
+        // `opts.system` defaults to the image-prompt brief, so every existing
+        // caller is unchanged — the parameter exists only so a second task can
+        // reuse the SAME provider race (and therefore the same failover, the
+        // same counters and the same operator alert) instead of writing a
+        // second one that nothing watches.
+        { role: 'system', content: opts.system || PROMPT_SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
       temperature: opts.temperature ?? 0.75,
@@ -439,7 +468,7 @@ async function callGemini(userMessage, opts = {}) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: `${PROMPT_SYSTEM_PROMPT}\n\n${userMessage}` }] }],
+      contents: [{ role: 'user', parts: [{ text: `${opts.system || PROMPT_SYSTEM_PROMPT}\n\n${userMessage}` }] }],
       generationConfig: { temperature: opts.temperature ?? 0.75, maxOutputTokens: opts.maxTokens ?? 600, topP: 0.9 },
     }),
   })
@@ -694,6 +723,172 @@ export function buildPromptUserMessage({ description, style, platform } = {}) {
   return userMessage
 }
 
+// ── brand-starter ────────────────────────────────────────────────────────────
+//
+// One description in, three artefacts out: a palette, a font pairing and a type
+// scale — the first three steps of the brand kit walkthrough (BRAND_KIT_STEPS in
+// src/utils/brandKitGuide.js). Each one lands in the real tool through the
+// hand-offs the galleries already use, so the answer is a STARTING POINT that
+// stays editable rather than a picture of one.
+//
+// It shares the OpenRouter → Gemini race with generate-prompt on purpose. A
+// second, private provider path would be a second thing that can fail silently,
+// and the whole provider-health apparatus below exists because the first one
+// did. Same race, same counters, same once-a-day operator email.
+//
+// COST CONTROLS, all four of them, because this spends the founder's money:
+//   1. the brief is capped at MAX_PROMPT_CHARS on the way in;
+//   2. maxTokens is 900 — enough for eight swatches and two font names, and not
+//      enough to be talked into an essay;
+//   3. temperature is low, because this returns JSON and creative sampling in a
+//      structured answer buys malformed output rather than better design;
+//   4. there is no retry. A malformed answer is REFUSED and costs the caller
+//      nothing (see the increment at the foot of the handler, which only runs
+//      after a runner returns a payload) — retrying would double the provider
+//      spend on the request most likely to fail twice.
+const STARTER_SYSTEM_PROMPT = `# Role
+
+You are a brand designer producing the FIRST DRAFT of a visual identity from a short brief. Your answer is a starting point that a person will then edit in a design tool — not a finished brand, and not a pitch.
+
+# Output contract — this is not negotiable
+
+Return ONE JSON object and nothing else. No prose before it, no explanation after it, no markdown, no code fences.
+
+The object has exactly these keys:
+
+{
+  "name": "a short name for this direction, 2-4 words, max 48 characters",
+  "rationale": "one plain sentence, max 200 characters, saying what the brief asked for and what you did about it",
+  "palette": [ { "role": "Background", "hex": "#FFFFFF" }, ... ],
+  "fonts": { "heading": "Family Name", "body": "Family Name" },
+  "typeScale": { "base": 16, "ratio": 1.25 }
+}
+
+# palette
+
+- Between ${PALETTE_MIN_ROLES} and ${PALETTE_MAX_ROLES} entries. Every hex is six digits with a leading #.
+- Every entry has a ROLE, and the role says what the colour is FOR in an interface: Background, Surface, Text, Muted text, Border, Primary, Accent, Success, Warning, Danger. Do not name colours ("Deep teal") — a role is a job, not a description.
+- The set must include a Background and a Text, and body text on that background must reach a contrast ratio of at least 4.5:1. This is the one hard requirement in the palette and it outranks the mood in the brief. A beautiful palette nobody can read is a failed answer.
+- No two entries share a hex.
+
+# fonts
+
+Choose a heading family and a body family FROM THIS LIST ONLY. Any family not on this list will be rejected outright and the whole answer discarded:
+
+${fontChoiceList()}
+
+- Answer with the family name exactly as written above. No weights, no fallbacks, no quotes.
+- Choosing the SAME family for both roles is a real answer and often the right one for interface work. Do not pair two faces just to look like you have made a decision.
+- Display-leaning sans faces (Oswald, Bebas-like weights, heavily mannered geometrics) belong in the heading slot, not the body slot.
+
+# typeScale
+
+- "base" is the body size in pixels: an integer between ${BASE_MIN} and ${BASE_MAX}.
+- "ratio" is the modular scale ratio between ${RATIO_MIN} and ${RATIO_MAX}. Dense interfaces and data-heavy products want the low end (1.15-1.25); editorial and marketing pages want the high end (1.333-1.5).
+
+# rationale
+
+One sentence, in plain English, that a designer would accept from a colleague. Say what in the brief drove the choice. Do not use "effortless", "elevate", "seamless", "cutting-edge", "vibrant" or "modern". Do not praise the brief and do not praise your own answer.
+
+# If the brief is thin
+
+Design anyway, for the most ordinary reading of it. Do not ask a question, do not return an error, and do not return an empty palette — the caller has spent part of a small allowance to be here and an empty answer is the worst possible use of it.`
+
+async function runBrandStarter(req, res, { plan, bucket, used }) {
+  const { description } = req.body || {}
+  if (typeof description !== 'string' || description.trim().length < MIN_PROMPT_CHARS) {
+    // 400 rather than a generation: this never reaches a provider, so it never
+    // costs money and never costs the caller a unit.
+    return res.status(400).json({
+      error: `Describe what you are designing for in at least ${MIN_PROMPT_CHARS} characters — "a calm booking app for dog groomers" is enough.`,
+    })
+  }
+
+  const brief = description.trim().slice(0, MAX_PROMPT_CHARS)
+  const userMessage = `Brief: ${brief}`
+
+  let text = ''
+  let servedBy = ''
+  let lastErr = null
+  let openrouterFailed = null
+  let geminiFailed = null
+  const opts = { system: STARTER_SYSTEM_PROMPT, temperature: 0.5, maxTokens: 900 }
+
+  if (OPENROUTER_KEY) {
+    try {
+      text = await callOpenRouter(userMessage, opts)
+      servedBy = 'openrouter'
+    } catch (err) {
+      lastErr = err
+      console.error('Brand starter: OpenRouter failed, will try Gemini fallback:', err.status || '', err.detail || err.message)
+      openrouterFailed = err
+    }
+  }
+
+  if (!text && GEMINI_KEY) {
+    try {
+      text = await callGemini(userMessage, opts)
+      servedBy = 'gemini'
+    } catch (err) {
+      lastErr = err
+      console.error('Brand starter: Gemini fallback failed:', err.status || '', err.detail || err.message)
+      geminiFailed = err
+    }
+  }
+
+  // Before the error returns, so a total outage is counted too — the same
+  // ordering ai-provider-path.test.js pins for generate-prompt, and for the
+  // same reason: the case most worth alerting on is the one an early return
+  // would skip.
+  await recordProviderOutcome({ openrouterFailed, geminiFailed, served: servedBy })
+
+  if (!text) {
+    if (lastErr?.status === 429) {
+      return res.status(429).json({
+        error: 'The AI provider is rate-limiting us right now. Nothing was used from your allowance — try again in a minute.',
+        retryAfter: 10,
+        quotaSpent: false,
+      })
+    }
+    return res.status(502).json({
+      error: 'The AI provider could not be reached, so nothing was generated. Your allowance is untouched — try again shortly.',
+      detail: String(lastErr?.detail || lastErr?.message || '').slice(0, 200),
+      quotaSpent: false,
+    })
+  }
+
+  const parsed = parseStarterJson(text)
+  if (!parsed) {
+    console.error('Brand starter: unparseable model answer from', servedBy, text.slice(0, 200))
+    return res.status(502).json({
+      error: 'The AI returned something this tool could not read, so nothing was applied. Your allowance is untouched — try again, or reword the brief.',
+      quotaSpent: false,
+    })
+  }
+
+  const verdict = sanitizeBrandStarter(parsed)
+  if (!verdict.ok) {
+    // The REASON goes to the server log, not to the user. "ratio out of range"
+    // is not something a person can act on; "it did not work and it cost you
+    // nothing" is.
+    console.error('Brand starter: rejected model answer from', servedBy, '—', verdict.reason)
+    return res.status(502).json({
+      error: 'The AI produced a result this tool refused to use — it named a font we cannot load, or a palette it could not complete. Your allowance is untouched, so try again.',
+      quotaSpent: false,
+    })
+  }
+
+  return {
+    starter: verdict.starter,
+    provider: servedBy,
+    plan: plan.id,
+    beta: true,
+    // The authoritative count, in the same shape the refusal below uses, so the
+    // meter is right after a success AND after a rejection.
+    generation: { used: used + 1, limit: bucket.limit, remaining: bucket.limit - used - 1, period: bucket.period },
+  }
+}
+
 async function runGeneratePrompt(req, res, { plan, limit, used, monthUsed, monthLimit }) {
   const { description, style, platform } = req.body || {}
   const userMessage = buildPromptUserMessage({ description, style, platform })
@@ -782,6 +977,19 @@ const TASKS = {
     configError: 'AI is not configured on the server: set OPENROUTER_API_KEY (and/or GEMINI_API_KEY) in the deployment environment.',
     configured: () => Boolean(OPENROUTER_KEY || GEMINI_KEY),
     run: runGeneratePrompt,
+  },
+  'brand-starter': {
+    toolId: BRAND_STARTER_TOOL_ID,
+    // `quota: 'generation'` is the ONLY task-level switch this file has, and it
+    // exists because this allowance is a different SHAPE, not a different
+    // number. Every other task meters a day and a month; a free Brand Starter
+    // is one per account FOR EVER, which no rolling window can express. See
+    // generationBucket() in _lib/aiGeneration.js.
+    quota: 'generation',
+    limitError: 'Brand Starter allowance used',
+    configError: 'AI is not configured on the server: set OPENROUTER_API_KEY (and/or GEMINI_API_KEY) in the deployment environment.',
+    configured: () => Boolean(OPENROUTER_KEY || GEMINI_KEY),
+    run: runBrandStarter,
   },
 }
 
@@ -901,6 +1109,64 @@ export default async function handler(req, res) {
   const fireDb = adminDb()
   const toolId = task.toolId
   const date = todayStr()
+
+  // ── the Brand Starter's own meter ─────────────────────────────────────────
+  //
+  // ONE bucket, chosen by plan: a free account counts against `uid_life`, which
+  // never resets, and a Pro account against the same `uid_m2026-09` document
+  // every other AI task already uses. Both live in `daily-usage`, which is
+  // absent from firestore.rules and therefore default-denied to every client —
+  // only the Admin SDK, which bypasses rules, can read or write it. That is
+  // what keeps this clear of a rules change, and rules changes are founder-
+  // gated and published separately.
+  //
+  // The response carries the count back so the UI can show what is left
+  // without ever reading the collection itself.
+  if (task.quota === 'generation') {
+    let plan
+    try {
+      const snap = await fireDb.doc(`users/${uid}`).get()
+      plan = planForUser({
+        subscription: snap.data()?.subscription || null,
+        lifetimeEntitlement: snap.data()?.lifetimeEntitlement || null,
+        email,
+      })
+    } catch (e) {
+      return res.status(500).json({ error: `Could not read your plan from Firestore (${String(e?.message || e).slice(0, 140)}).` })
+    }
+
+    const bucket = generationBucket(plan.id, monthStr())
+    const ref = fireDb.doc(`daily-usage/${uid}_${bucket.suffix}`)
+    let used
+    try {
+      used = (await ref.get()).data()?.[toolId] || 0
+    } catch (e) {
+      return res.status(500).json({ error: `Could not read your usage from Firestore (${String(e?.message || e).slice(0, 140)}).` })
+    }
+
+    if (used >= bucket.limit) {
+      return res.status(429).json({
+        error: exhaustedError(plan.id),
+        generation: { used, limit: bucket.limit, remaining: 0, period: bucket.period },
+        plan: plan.id,
+      })
+    }
+
+    res.setHeader('Cache-Control', 'no-store')
+    const generated = await task.run(req, res, { plan, bucket, used })
+    // A runner that answered for itself — every failure path above does — has
+    // already sent a response, and NOTHING is counted. That is the whole of
+    // "a failed request must not consume a free user's single use": the
+    // increment is below this line, not above it.
+    if (!generated || generated === res || res.writableEnded || res.headersSent) return
+
+    try {
+      await ref.set({ [toolId]: await FieldValueIncrement(1) }, { merge: true })
+    } catch { /* usage write best-effort — never fail a successful generation */ }
+
+    return res.status(200).json(generated)
+  }
+
   const usageRef = fireDb.doc(`daily-usage/${uid}_${date}`)
   const monthRef = fireDb.doc(`daily-usage/${uid}_${monthStr()}`)
   let plan, limit, used, monthLimit, monthUsed
