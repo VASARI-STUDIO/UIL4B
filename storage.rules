@@ -6,16 +6,51 @@ rules_version = '2';
 //   - Public read: approved prompts render these URLs in <img>/<video> tags,
 //     so anyone (including signed-out visitors) must be able to load them.
 //   - Write: only the authenticated owner may write under their own uid folder,
-//     and each object is capped at 25MB (client also compresses/limits uploads).
+//     each object is capped at 25MB (client also compresses/limits uploads), and
+//     it must declare an image or video content type — see below.
 //
 // Everything else is denied by default.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// WHY THE CONTENT TYPE IS CHECKED  [storage-rules-no-content-type]
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Read here is public BY DESIGN: approved prompts render these URLs in <img>
+// and <video> tags for signed-out visitors. That makes every object a page any
+// stranger can open — under firebasestorage.googleapis.com, under this
+// project's name.
+//
+// Without a content-type check, "media attached to a prompt" was only a
+// description of what the uploader happened to send. Any signed-in account
+// could store text/html at that URL and have the browser RENDER it, using the
+// project's own Storage domain as free hosting for a page it did not write.
+// utils/mediaUpload.js only ever sends what the user picked in an image or
+// video field, so nothing legitimate is refused by pinning that down.
+//
+// THE GAP THIS DOES NOT CLOSE, stated rather than left to be discovered.
+// `image/svg+xml` passes this check, and an SVG can carry script that runs when
+// the file is NAVIGATED TO directly (it does not run inside the <img> tags the
+// app itself uses). SVG is a supported upload here — utils/imageProcessing.js
+// passes it through unconverted rather than rasterising it — so excluding it
+// would refuse a working upload and silently push those submissions onto the
+// legacy base64-in-Firestore path with its 900KB cap. That is a product
+// decision, not a rules cleanup, and it is recorded in the pipeline rather than
+// taken unilaterally. What is closed here is everything that is not an image or
+// a video at all, which is where text/html lived.
 service firebase.storage {
   match /b/{bucket}/o {
     match /community-media/{uid}/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.size < 25 * 1024 * 1024;
+        && request.resource.size < 25 * 1024 * 1024
+        // An upload that declares NO content type is refused by this line too:
+        // matches() on a null evaluates to an error, and an error denies. That
+        // is pinned by a test rather than assumed. An explicit `!= null` guard
+        // was written here first and removed again — the mutation sweep proved
+        // no test could tell its presence from its absence, and a line no test
+        // can distinguish is a line that will rot.
+        && request.resource.contentType.matches('(image|video)/.*');
     }
   }
 }

@@ -84,6 +84,127 @@ export function exhaustedError(planId) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// THE METER — reserving a unit before the provider is called
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// THE DEFECT THIS CLOSES. api/ai.js used to read the counter with a plain
+// `get()`, compare it to the limit, call the provider, and only then increment.
+// Between the read and the increment there is a window of one whole provider
+// round trip — seconds — and every request that starts inside it reads the same
+// count. N requests fired together at `used === limit - 1` all read `limit - 1`,
+// all pass the comparison, and all run. The cap was soft by exactly the
+// concurrency, and nothing anywhere recorded that it had been exceeded.
+//
+// It matters here more than a per-user overshoot usually would: api/_lib/plans.js
+// derives every limit downward from ONE shared free-tier provider bucket, so an
+// account that overshoots is not spending its own allowance, it is spending
+// everyone's.
+//
+// THE FIX, and why it is a transaction rather than FieldValue.increment.
+// `increment` is atomic but unconditional — it cannot refuse. The decision here
+// is conditional on the value read ("is this below the limit?"), so the read and
+// the write have to be one serialisable unit. A Firestore transaction gives
+// exactly that: the commit is rejected if any document it READ changed, and the
+// callback is retried against the new value. The second of two concurrent
+// callers therefore re-runs its comparison against the count the first one wrote
+// and is refused.
+//
+// This is why the write below is `counts[i] + 1` and NOT FieldValue.increment:
+// a sentinel increment carries no read version, so it would commit even when
+// the value it was decided from is stale, and the transaction would guard
+// nothing.
+//
+// THE COST, stated plainly: the unit is now spent BEFORE the answer exists, so
+// a provider failure has to give it back. refundQuotaUnit is that, and
+// runMeteredTask calls it on every path where the runner did not produce a
+// generation. The founder's rule — "a failed request must not consume a free
+// user's single use" — survives, with a window: a process killed between the
+// reservation and the refund leaves the unit spent. That is a strictly smaller
+// hole than the one it replaces, and it fails toward refusing rather than
+// toward overspending a shared bucket.
+
+/**
+ * Reserve one unit across every meter, atomically, or refuse.
+ *
+ * `meters` is ordered by which refusal should be reported first — api/ai.js
+ * passes the monthly ceiling ahead of the daily one, because the message names
+ * WHICH period is exhausted and when it frees up.
+ *
+ * Each meter is `{ ref, field, limit, period }`. Returns the counts as they were
+ * BEFORE the reservation (which is what the response payloads report as `used`),
+ * so a caller never has to subtract one back off.
+ */
+export async function reserveQuotaUnit(db, meters) {
+  return db.runTransaction(async (tx) => {
+    // Every read first: a Firestore transaction refuses a read issued after a
+    // write, so the two loops cannot be merged into one.
+    const snaps = []
+    for (const m of meters) snaps.push(await tx.get(m.ref))
+    const counts = meters.map((m, i) => snaps[i].data()?.[m.field] || 0)
+    const blockedAt = meters.findIndex((m, i) => counts[i] >= m.limit)
+    // ALL OR NOTHING. A partial reservation — one bucket incremented while
+    // another refused — would meter a call that never happened, which is the
+    // same kind of silent wrongness in the opposite direction.
+    if (blockedAt !== -1) return { ok: false, blocked: meters[blockedAt], counts }
+    meters.forEach((m, i) => tx.set(m.ref, { [m.field]: counts[i] + 1 }, { merge: true }))
+    return { ok: true, counts }
+  })
+}
+
+/** Give a reserved unit back. Floors at zero so a double refund cannot go negative. */
+export async function refundQuotaUnit(db, meters) {
+  return db.runTransaction(async (tx) => {
+    const snaps = []
+    for (const m of meters) snaps.push(await tx.get(m.ref))
+    meters.forEach((m, i) => {
+      const current = snaps[i].data()?.[m.field] || 0
+      tx.set(m.ref, { [m.field]: current > 0 ? current - 1 : 0 }, { merge: true })
+    })
+  })
+}
+
+/**
+ * Reserve → run → refund-if-nothing-was-produced.
+ *
+ * The ENTIRE metered path lives here rather than in api/ai.js, so that the
+ * ordering the fix depends on — reserve strictly before the provider call — is
+ * one function a test can drive twice concurrently, instead of a sequence
+ * spelled out twice in a route handler that needs a signed-in request, a
+ * Firestore and a provider key to exercise.
+ *
+ * `run(counts)` returns the payload on success, or a falsy value when the runner
+ * already answered for itself (an error response, a refused model answer). Falsy
+ * means nothing was generated, so the unit is refunded.
+ *
+ * Outcomes, all three distinguishable by the caller:
+ *   { storeError }        Firestore could not be read/written  → 500
+ *   { ok: false, blocked, counts }  the meter refused          → 429
+ *   { ok: true, counts, result }    ran; result may be null    → 200 / already sent
+ */
+export async function runMeteredTask({ db, meters, run }) {
+  let reservation
+  try {
+    reservation = await reserveQuotaUnit(db, meters)
+  } catch (storeError) {
+    return { ok: false, storeError }
+  }
+  if (!reservation.ok) {
+    return { ok: false, blocked: reservation.blocked, counts: reservation.counts }
+  }
+  let result
+  try {
+    result = await run(reservation.counts)
+  } catch (err) {
+    // The refund must not mask the real failure, so its own error is swallowed
+    // and the provider's is rethrown.
+    await refundQuotaUnit(db, meters).catch(() => {})
+    throw err
+  }
+  if (!result) await refundQuotaUnit(db, meters).catch(() => {})
+  return { ok: true, counts: reservation.counts, result: result || null }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // INPUT LIMITS
 // ─────────────────────────────────────────────────────────────────────────────
 
