@@ -11,42 +11,90 @@
 //   2. The dismiss button rendered 23x23 — one pixel under WCAG 2.5.8's 24px
 //      minimum, from padding maths rather than an explicit box.
 //
-// The banner itself needs a signed-in user with a failing Stripe subscription,
-// which this suite has no way to create. So the markup is injected and the
-// REAL stylesheet is measured against it. That tests exactly the half unit
-// tests can't reach, and nothing it already covers.
+// ── THIS FILE USED TO INJECT ITS OWN MARKUP. IT NOW RENDERS THE COMPONENT ──
+//
+// The header here read, for as long as this file has existed:
+//
+//     "The banner itself needs a signed-in user with a failing Stripe
+//      subscription, which this suite has no way to create. So the markup is
+//      injected and the REAL stylesheet is measured against it."
+//
+// That was true and it was the best available answer, but it bought the
+// geometry at the price of the wiring. A hand-written copy of the component's
+// DOM measures the STYLESHEET against a shape a test author typed. It cannot
+// see the component render the wrong class for a severity, put the dismiss
+// button outside the flex row, or — the failure that would matter most — never
+// render at all for the state it exists to announce. The old MARKUP constant
+// carried a comment admitting exactly this: "if that component's class names
+// change, this stops measuring anything."
+//
+// `signIn()` (tests/user-sim/helpers.js) closed the gap the header described.
+// The session below is a Pro subscriber whose card failed two days ago, stated
+// as the `subscription` document api/stripe-webhook.js would have written —
+// so `billingAlert()` classifies it, `BillingBanner` chooses its own copy and
+// its own severity class, and what is measured is what ships. The geometry
+// assertions are unchanged; they now have something real underneath them.
+//
+// THE VACUITY GUARD MOVED WITH IT, and got stronger. It used to check that
+// `.bill-banner` computed to `position: fixed`, which proved the stylesheet
+// still had rules. It now also reads the TITLE the component chose, so a
+// banner that renders for the wrong reason — or renders the lapsed copy for a
+// subscription still inside its grace window — fails here rather than passing
+// as a correctly positioned rectangle.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
 
-// Mirrors BillingBanner.jsx's rendered structure. If that component's class
-// names change, this stops measuring anything and the assertions below will
-// fail loudly rather than pass vacuously — see the sanity check in each test.
-const MARKUP = `
-  <div class="bill-banner bill-banner--urgent" role="status">
-    <div class="bill-banner-body">
-      <p class="bill-banner-title">Your last payment didn't go through</p>
-      <p class="bill-banner-text">Pro stays on for 5 more days while you update your card.</p>
-      <div class="bill-banner-actions">
-        <button type="button" class="bill-banner-cta">Update payment method</button>
-        <a class="bill-banner-link" href="/settings">Settings</a>
-      </div>
-    </div>
-    <button type="button" class="bill-banner-x" aria-label="Dismiss this notice">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
-  </div>`
+// Two days into the seven-day past-due grace, so `billingAlert()` returns
+// `payment-failed` (urgent, still Pro) rather than `payment-lapsed`. The five
+// remaining days are arithmetic the component does, and are asserted below
+// rather than assumed — a banner that quietly said "0 more days" would be
+// telling a paying customer the wrong thing.
+const FAILED_DAYS_AGO = 2
+const GRACE_DAYS = 7
 
-async function mount(page) {
-  await page.evaluate((html) => {
-    document.querySelector('.bill-banner')?.remove()
-    document.body.insertAdjacentHTML('beforeend', html)
-  }, MARKUP)
-  // Vacuity guard: if the stylesheet no longer has these rules, the banner
-  // would be an unstyled static div and every geometry assertion below would
-  // pass by accident.
-  const positioned = await page.evaluate(
-    () => getComputedStyle(document.querySelector('.bill-banner')).position,
-  )
+function failingCard() {
+  const failedAt = Date.now() - FAILED_DAYS_AGO * 86_400_000
+  return {
+    status: 'past_due',
+    interval: 'monthly',
+    paymentFailed: true,
+    paymentFailedAt: failedAt,
+    currentPeriodEnd: failedAt + 28 * 86_400_000,
+    updatedAt: failedAt,
+  }
+}
+
+/**
+ * Put a Pro subscriber with a failing card on `/plans`, and wait for the app's
+ * own banner.
+ *
+ * Returns nothing: everything the tests need is on the page. The guard here is
+ * the whole reason this is a function — every assertion below is geometry, and
+ * geometry on an element that never rendered is the vacuous pass this suite
+ * keeps having to design against.
+ */
+async function withFailingCard(page) {
+  await signIn(page, { plan: 'pro', subscription: failingCard() })
+  await go(page, '/plans')
+
+  const banner = page.locator('.bill-banner')
+  await expect(banner, 'the app must raise its own banner for a failing card').toBeVisible()
+
+  // It must be the URGENT variant, chosen by the component from the alert's
+  // severity — the modifier the 320px layout rules key off.
+  await expect(banner).toHaveClass(/bill-banner--urgent/)
+
+  // And it must be saying the right thing. `daysLeft` is computed from the
+  // failure instant, so this is the component's arithmetic, not a literal.
+  await expect(banner.locator('.bill-banner-title'))
+    .toHaveText(/Your last payment didn’t go through/)
+  await expect(banner.locator('.bill-banner-text'))
+    .toHaveText(new RegExp(`Pro stays on for ${GRACE_DAYS - FAILED_DAYS_AGO} more days`))
+
+  // The stylesheet is still doing the positioning. Kept from the injected
+  // version: without it every geometry assertion below could pass against an
+  // unstyled static div.
+  const positioned = await banner.evaluate((el) => getComputedStyle(el).position)
   expect(positioned, 'the .bill-banner rules must still exist in global.css').toBe('fixed')
 }
 
@@ -54,8 +102,7 @@ test.describe('billing banner layout', () => {
   test('does not cover the feedback button at 320px', async ({ page }) => {
     watch(page, 'a Pro user with a failing card on a small phone')
     await page.setViewportSize({ width: 320, height: 800 })
-    await go(page, '/plans')
-    await mount(page)
+    await withFailingCard(page)
 
     const result = await page.evaluate(() => {
       const banner = document.querySelector('.bill-banner').getBoundingClientRect()
@@ -83,8 +130,7 @@ test.describe('billing banner layout', () => {
   test('every control meets the 24px minimum target size', async ({ page }) => {
     watch(page, 'a Pro user dismissing a billing notice by touch')
     await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/plans')
-    await mount(page)
+    await withFailingCard(page)
 
     const sizes = await page.evaluate(() => {
       const of = (sel) => {
@@ -104,8 +150,7 @@ test.describe('billing banner layout', () => {
   test('reads at AA and shows a visible focus ring', async ({ page }) => {
     watch(page, 'a keyboard user reading a billing notice')
     await page.setViewportSize({ width: 1440, height: 900 })
-    await go(page, '/plans')
-    await mount(page)
+    await withFailingCard(page)
 
     const m = await page.evaluate(() => {
       const srgb = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) }
@@ -141,13 +186,51 @@ test.describe('billing banner layout', () => {
     expect(m.ringVsCard, 'the focus ring must reach 3:1 against the card').toBeGreaterThanOrEqual(3)
   })
 
+  /* THE POSITIVE CONTROL FOR ALL THREE TESTS ABOVE.
+   *
+   * They now depend on a banner the app decided to render, so the thing that
+   * would make them vacuous is a banner that renders for EVERYONE — at which
+   * point they would keep passing while every healthy subscriber got a payment
+   * warning. Dismissal is the same shape of hazard from the other side.
+   *
+   * A Pro subscriber whose card is fine must see nothing at all, and the same
+   * banner must go away for good when it is dismissed. */
+  test('a healthy subscription raises no banner, and a dismissed one stays dismissed', async ({ page }) => {
+    watch(page, 'a Pro subscriber whose card is perfectly fine')
+    await signIn(page, { plan: 'pro' })
+    await go(page, '/plans')
+    // Something must have rendered, or "no banner" is a statement about a blank
+    // page rather than about billing.
+    await expect(page.locator('.global-feedback-btn')).toBeVisible()
+    await expect(
+      page.locator('.bill-banner'),
+      'a subscriber with nothing wrong must not be warned about their card',
+    ).toHaveCount(0)
+  })
+
+  test('a dismissed notice stays dismissed for the visit', async ({ page }) => {
+    watch(page, 'a Pro user dismissing a billing notice')
+    await withFailingCard(page)
+    await page.getByRole('button', { name: 'Dismiss this notice' }).click()
+    await expect(page.locator('.bill-banner')).toHaveCount(0)
+
+    // Same visit, different page: sessionStorage keeps it down. This is the
+    // half a unit test cannot reach, because the key is written by the
+    // component and read by the next mount of it.
+    await go(page, '/settings')
+    await expect(
+      page.locator('.bill-banner'),
+      'a notice dismissed once must not reappear on the next page of the same visit',
+    ).toHaveCount(0)
+  })
+
   /* The project-quota note (audit B6) must never reach a signed-out visitor.
    *
-   * Same limitation as the banner above: the note itself needs a signed-in user
-   * with saved projects, which this suite has no way to create, so the WARNED
-   * states are pinned exhaustively in tests/unit/project-quota.test.js instead.
-   * What only a browser can check is the half that is not quota maths at all —
-   * that nothing on the way in leaks a free-plan allowance at a stranger.
+   * THE SIGNED-IN HALF OF THIS IS NOW COVERED, in
+   * 57-signed-in-session.spec.js: a free account is told its allowance and the
+   * cap refuses the fourth save by name. This test keeps the half that is not
+   * quota maths at all — that nothing on the way in leaks a free-plan allowance
+   * at a stranger — and it is the direction that can only be checked here.
    *
    * THIS TEST CHANGED SHAPE ON 2026-09-05, and the property did not.
    *
