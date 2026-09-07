@@ -1,6 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore'
-import { db } from '../utils/firebase'
+// URGENT access, not patient: every code path below is already behind a
+// truthy `uid`, which only exists once auth has resolved to a signed-in user.
+// By then the deferred chunk is either loaded or in flight, so this awaits an
+// already-settled promise in the common case — and if it is the first Firestore
+// touch of the session, the person whose data is syncing is exactly who should
+// open the gate rather than wait behind it. See src/utils/firebaseAccess.js.
+import { loadFirestore } from '../utils/firebaseAccess'
 
 const SYNC_KEYS = [
   'vs-current-design',
@@ -35,14 +40,16 @@ export function useFirestoreSync(uid) {
     const data = getLocalData()
     data._updatedAt = Date.now()
     try {
-      await setDoc(doc(db, 'users', uid, 'sync', 'data'), data, { merge: true })
+      const fs = await loadFirestore()
+      await fs.setDoc(fs.doc(fs.db, 'users', uid, 'sync', 'data'), data, { merge: true })
     } catch {}
   }, [uid])
 
   const pullFromFirestore = useCallback(async () => {
     if (!uid) return
     try {
-      const snap = await getDoc(doc(db, 'users', uid, 'sync', 'data'))
+      const fs = await loadFirestore()
+      const snap = await fs.getDoc(fs.doc(fs.db, 'users', uid, 'sync', 'data'))
       if (!snap.exists()) return
       const remote = snap.data()
       applyRemoteData(remote)
@@ -54,14 +61,23 @@ export function useFirestoreSync(uid) {
 
     pullFromFirestore()
 
-    unsubRef.current = onSnapshot(
-      doc(db, 'users', uid, 'sync', 'data'),
-      (snap) => {
-        if (!snap.exists() || suppressRef.current) return
-        applyRemoteData(snap.data())
-      },
-      () => {}
-    )
+    // The subscribe is now asynchronous, so the cleanup below may run before it
+    // lands. `cancelled` is what stops a listener being attached to a uid the
+    // component has already moved off — without it, signing out and back in as
+    // someone else would leave the previous account's document streaming into
+    // this browser's localStorage.
+    let cancelled = false
+    loadFirestore().then((fs) => {
+      if (cancelled) return
+      unsubRef.current = fs.onSnapshot(
+        fs.doc(fs.db, 'users', uid, 'sync', 'data'),
+        (snap) => {
+          if (!snap.exists() || suppressRef.current) return
+          applyRemoteData(snap.data())
+        },
+        () => {}
+      )
+    }).catch(() => {})
 
     const onStorage = (e) => {
       if (!SYNC_KEYS.includes(e.key)) return
@@ -88,9 +104,10 @@ export function useFirestoreSync(uid) {
     window.addEventListener('vs-local-change', onLocalChange)
 
     return () => {
+      cancelled = true
       window.removeEventListener('storage', onStorage)
       window.removeEventListener('vs-local-change', onLocalChange)
-      if (unsubRef.current) unsubRef.current()
+      if (unsubRef.current) { unsubRef.current(); unsubRef.current = null }
       if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [uid, pushToFirestore, pullFromFirestore])
