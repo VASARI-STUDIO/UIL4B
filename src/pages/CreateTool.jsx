@@ -71,6 +71,13 @@ const TypeScale = lazy(() => import('./TypeScale'))
 // utils/usageTracker, so mounting it here adds no new entitlement surface.
 const AltTextGenerator = lazy(() => import('./AltTextGenerator'))
 
+// Brand Starter is the SECOND live AI tool, and it is the revisit of the item
+// src/data/moduleBoard.js filed as 'AI mode deferred to stay under Vercel
+// 12-function limit'. It mounts on /create/auto-builder -- the route its
+// dormant alpha already held, so no URL changed and no redirect was needed --
+// and calls /api/ai as a task rather than as a thirteenth function.
+const BrandStarter = lazy(() => import('./BrandStarter'))
+
 // Route → the component that is actually built. A Create route absent from this
 // map still renders the 🤫 state even if its group is flagged live — a safe
 // fallback that can never mount a half-finished screen.
@@ -88,6 +95,7 @@ const LIVE_TOOLS = {
   '/create/font-pair': FontMatcher,
   '/create/type-scale': TypeScale,
   '/create/alt-text': AltTextGenerator,
+  '/create/auto-builder': BrandStarter,
 }
 
 // Match toolTree's own path handling (lowercase, strip query/hash, drop trailing

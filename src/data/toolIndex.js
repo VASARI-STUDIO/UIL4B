@@ -235,8 +235,11 @@ export const CREATE_TOOL_SEARCH = {
     keywords: ['box', 'shadow', 'shadows', 'box shadow', 'css', 'elevation', 'layer', 'drop shadow', 'neumorphic'],
   },
   'auto-builder': {
-    description: 'Describe a business and auto-generate brand colours, fonts and a UI preview.',
-    keywords: ['auto', 'auto builder', 'auto-builder', 'generate', 'brand', 'ai', 'palette', 'font', 'logo', 'business', 'kit'],
+    // The old row promised 'a UI preview', which the dormant alpha faked and
+    // the shipped tool does not produce. Search copy is a claim like any
+    // other; this one now names the three artefacts that actually come back.
+    description: 'Describe what you are making and generate a palette, a font pairing and a type scale.',
+    keywords: ['auto', 'auto builder', 'auto-builder', 'brand starter', 'starter', 'generate', 'generator', 'brand', 'ai', 'palette', 'font', 'fonts', 'type scale', 'business', 'kit', 'beta'],
   },
   'file-converter': {
     description: 'Convert and compress images and video — WebP, MP4, GIF, frames and more.',

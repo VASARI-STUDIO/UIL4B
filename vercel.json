@@ -274,6 +274,10 @@
       "destination": "/create/aspect-ratio/index.html"
     },
     {
+      "source": "/create/auto-builder",
+      "destination": "/create/auto-builder/index.html"
+    },
+    {
       "source": "/create/color",
       "destination": "/create/color/index.html"
     },

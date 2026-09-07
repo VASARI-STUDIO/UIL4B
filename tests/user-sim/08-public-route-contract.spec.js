@@ -45,7 +45,10 @@ const RETIRED_OR_THIN_ROUTES = [
   '/color/ui',
   '/create/box-shadow',
   '/create/component-designer',
-  '/create/auto-builder',
+  // '/create/auto-builder' was here while it was a workshop placeholder. It
+  // now mounts Brand Starter (beta) and is `soon: false` in the tool tree, so
+  // EXPECTED_CRAWLER_ROUTES derives it above — the same move '/create/alt-text'
+  // made when it shipped.
   '/create/ai-prompt',
   '/create/landing-prompts',
   // '/create/alt-text' was here while the tool was staged. It is live again (founder
