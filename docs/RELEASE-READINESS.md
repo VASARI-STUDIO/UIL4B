@@ -1,7 +1,7 @@
 # Release readiness
 
 **One page. What is finished, what needs you, what needs somebody outside this
-project.** Everything here was measured on `5c6603a` on 2026-09-06, not
+project.** Everything here was measured on `8d4f9d8` on 2026-09-08, not
 remembered. Where a figure would go stale, this page names the command instead.
 
 Your to-do list is [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). This page is the
@@ -26,13 +26,13 @@ If you did exactly one thing today, do
 
 Measured on this branch. Each row is a command you or anyone can re-run.
 
-| Gate | Command | Result on 2026-09-06 |
+| Gate | Command | Result on 2026-09-08 |
 |---|---|---|
 | Lint | `npm run lint` | **0 errors, 25 warnings** — under the ceiling, which came down from 31 |
-| Build | `npm run build` | passes, and printed `prerender: wrote 35 route shells + a noindex 404 shell (19 on a section share card, 14 with a BreadcrumbList)` |
-| Unit | `npm run test:unit` | **1417 pass, 0 fail, 0 skipped** |
-| Firestore rules | `npm run test:rules` | **37 pass, 0 fail, 0 skipped** |
-| Browser acceptance | `npm run test:users` | run for this review; the result is in the pull request that carries this page |
+| Build | `npm run build` | passes, and printed `prerender: wrote 39 route shells + a noindex 404 shell (19 on a section share card, 16 with a BreadcrumbList)`. The deploy is **5.4 MB** (was 35 MB before the ffmpeg core moved off origin) |
+| Unit | `npm run test:unit` | **1687 pass, 0 fail, 0 skipped** |
+| Firestore and Storage rules | `npm run test:rules` | **102 pass, 0 fail, 0 skipped** — the emulator now runs Storage too |
+| Browser acceptance | `npm run test:users` | **802 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
 
 What the gate *requires* — as opposed to what it happened to report today —
 lives in [`reference/build-and-verify.md`](reference/build-and-verify.md) and
@@ -42,7 +42,7 @@ regression.
 
 **Also true, and worth knowing before you release:**
 
-- **35 routes are prerendered**, so a search engine or an AI crawler sees real
+- **39 routes are prerendered**, so a search engine or an AI crawler sees real
   HTML rather than an empty shell.
 - **Learn is live** — five published guides, not a coming-soon page.
 - **Discover is live** — six of its eight groups.
@@ -51,6 +51,27 @@ regression.
 - **The API is at 12 of 12 Vercel functions.** Not a problem today; it means the
   next endpoint has to replace one. `tests/unit/account-deletion.test.js` fails
   the build if it is exceeded, so this cannot be missed.
+- **Brand Starter is live in beta** at `/create/auto-builder`: a prompt becomes a
+  palette, a type pairing and starter copy. Free accounts get one run for the
+  life of the account, Pro gets twenty a month. Both numbers live in
+  `src/config/aiGeneration.js` and are yours to change; a unit test keeps the
+  server's copy identical.
+- **The homepage now says what you said.** The taglines are gone, the hero
+  exploration variants are retired, the tools section leads with your sentence,
+  and an export-kit section follows it. Every sales surface reads its claims
+  from `src/data/positioning.js`. The headline itself is item 10 below.
+- **Billing is correct on the money paths (#417).** Renewals used to write a
+  null period end, which disarmed the stale-subscription safety net; the
+  receipt description, the reconcile on `/checkout/return`, the silent price
+  fallback and a customer-creation race are fixed with it.
+- **Sync tells the user when it stops (#419).** The empty catch is gone, deletes
+  propagate, and the 1 MiB ceiling is announced with a size instead of
+  discovered. The per-project shape is written and inert behind one rule you
+  have not approved yet — item 11.
+- **Storage uploads must declare an image or video type (#418)**, and the AI
+  quota is reserved inside a transaction before the provider is called.
+- **The palette library has eight measured mood filters** and every gallery
+  ends with a way to submit your own (#416).
 
 ---
 
@@ -69,11 +90,15 @@ code.
 | **6** | **Firebase Storage is off** | [§4.3](OWNER-ACTIONS.md) | 10 min | Nothing that uploads a file can work |
 | **7** | **We cannot email a customer at all** | [§4.10](OWNER-ACTIONS.md) | 20 min + DNS | No welcome, no failed-payment notice, no way to reach anyone who is not currently looking at the app |
 | **8** | **OpenRouter has no reachable tool** — keep paying, or stop? | [§4.5](OWNER-ACTIONS.md) | 1 min to answer | You keep paying for a route no visitor can use |
-| **9** | **The homepage prints a price it did not ask Stripe for** — a first-time visitor can be shown two different numbers in one session | `src/pages/Home.jsx` | 10 min to decide | The first price a stranger ever sees is the one nobody checks |
+| **9** | **The homepage price now comes from the plan ladder in code** (`src/config/planLadder.js`), not typed copy — but that ladder is still not read from Stripe | `src/config/planLadder.js` | 10 min to decide | Item 4 already means checkout can differ from `/plans`; keep the ladder and Stripe in step by hand until then |
+| **10** | **The hero headline needs your yes or no.** It reads *"Build and export UI and brand design kits, in one unified location."* — assembled only from words you wrote, never seen by you | `src/data/positioning.js` | 1 min | It ships as written. If it is not how you would say it, the first sentence on the site is not yours |
+| **11** | **Three `firestore.rules` diffs wait unapplied**: the moderator role (#390), feedback `create` closed to strangers plus size bounds on signed-in writes (#418), and the per-project sync collection (#419). Each is written out in its pull request; none could be staged from here | [§1.3](OWNER-ACTIONS.md) | 10 min | Anyone can still write to the feedback queue; sync stays on the 1 MiB single document; you remain the only moderator |
 
-**On item 9**, found by walking the first-visit flow on 2026-09-07. The homepage
-price panel says *"Pro from $4/month"* as typed marketing copy, while `/plans`
-quotes whatever the live Stripe price service returns — and `Home.jsx` says so
+**On item 9**, found by walking the first-visit flow on 2026-09-07 and narrowed
+on 2026-09-08 (#415). The homepage price panel now derives its figure from
+`src/config/planLadder.js` rather than typed copy, so the number can no longer
+drift from the code's own ladder; but `/plans` still quotes whatever the live
+Stripe price service returns — and `Home.jsx` says so
 itself, in a comment: the ladder it names "is not guaranteed to be" what Stripe
 holds. So a visitor who reads the homepage and then opens `/plans` may be shown
 two prices for the same plan, and only one of them is real. This is **not** a bug
@@ -89,7 +114,7 @@ which is where it earns its keep. **If you do nothing:** item 4 already means th
 checkout can charge a different figure from the one on screen; this adds a third
 figure, on the page a stranger sees first.
 
-**The release-blocking subset is 1 and 4.** Everything else can follow a launch;
+**The release-blocking subset is 1, 4 and 10.** Item 10 costs one word and is the first sentence a visitor reads. Before this round it was 1 and 4. Everything else can follow a launch;
 those two cannot. Item 1 stops anything reaching users at all, and item 4 means
 advertising one price and charging another.
 
@@ -103,7 +128,7 @@ that none of it is mistaken for engineering work that has been forgotten.
 | Service | What it holds up | What it actually needs |
 |---|---|---|
 | **GitHub Actions** | Every automated test run | A cleared payment on the account. It does not expire or self-heal |
-| **Vercel** | Every deploy | Either an upgrade off Hobby or the monthly quota reset. Our half — taking 91% of the deploy weight off the origin — is in flight on `perf/ffmpeg-core-off-origin` |
+| **Vercel** | Every deploy | Either an upgrade off Hobby or the monthly quota reset. Our half is done (#406): the 32 MB ffmpeg core loads from jsDelivr and the deploy shrank from 35 MB to 5.4 MB |
 | **Stripe** | The price ladder, the webhook events, the retention offer | Dashboard configuration only. The code for all three is written and waiting |
 | **A sending domain** | Every email the product would send to a customer | SPF, DKIM and a return path on a real domain. Until then the only mail we send is inbound to you, from a shared sandbox address that is not deliverable in production |
 | **JDK 21** | `npm run test:rules` | **Not a blocker today.** A Zulu 21 JRE is installed on the founder's machine and the rules suite ran green on it (37 pass). The machine's *default* `java` is still 1.8, so the command needs the `PATH` prefix that `build-and-verify.md` records. CI does not care — it pins Temurin 21 itself |
