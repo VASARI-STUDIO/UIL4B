@@ -2,6 +2,10 @@ import { useMemo, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import ColorPickerPop from '../components/ColorPickerPop'
 import { contrastRatio, nearestPassingLightness, textColorForBg } from '../utils/colors'
+// The `contrast` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/contrast.css'
 
 // Colour Contrast Checker — the standalone /create/contrast page. Test a
 // foreground/background pair against WCAG 2.2, see the pair in a live preview,

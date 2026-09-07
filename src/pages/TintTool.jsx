@@ -7,6 +7,10 @@ import {
   hexToHct, hctToHex, hexToHsl, hslToHex, textColorForBg,
 } from '../utils/colors'
 import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
+// The `tint` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/tint.css'
 
 // Tint Scale Generator — the standalone /create/tint page. Turns one OR MORE base
 // colours into production-ready tonal ramps. Every ramp shares one set of

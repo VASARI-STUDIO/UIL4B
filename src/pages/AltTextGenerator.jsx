@@ -7,6 +7,10 @@ import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { toCsv } from '../utils/csv'
+// The `alt-text` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/alt-text.css'
 
 const ALT_TEXT_TOOL_ID = 'alt-text'
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif'

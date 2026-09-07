@@ -1,0 +1,94 @@
+/* alt-text.css — the `alt` family, lifted out of global.css.
+ * Imported by the page module that owns it, so Vite emits it as that page's
+ * chunk stylesheet and only that route pays for it.
+ *
+ * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
+ * so anything here now outranks every global rule at equal specificity —
+ * which is why a rule a later global rule overrides was left behind rather
+ * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+
+.alt-dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px 20px;border:2px dashed var(--border);border-radius:var(--radius-l);background:var(--bg-1);cursor:pointer;transition:all var(--t);color:var(--t2);margin-bottom:20px}
+
+.alt-dropzone-title{font-size:14px;font-weight:500;color:var(--t0)}
+
+.alt-dropzone-sub{font-size:12px;color:var(--t2)}
+
+.alt-options{display:flex;gap:18px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-start}
+
+.alt-context{display:flex;flex-direction:column;gap:6px}
+
+.alt-context label{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.06em}
+
+.alt-context input{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;color:var(--t0);font-family:var(--font);font-size:14px;outline:none;transition:border-color var(--t),box-shadow var(--t)}
+
+.alt-context input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+
+.alt-field-help{font-size:12px;line-height:1.45;color:var(--t2);max-width:46ch;margin:0}
+
+.alt-field-help strong{color:var(--t1);font-weight:600}
+
+.alt-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;flex-wrap:wrap}
+
+.alt-toolbar-info{font-size:13px;color:var(--t1)}
+
+.alt-toolbar-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.alt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:16px}
+
+.alt-card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);transition:border-color var(--t)}
+
+.alt-card-error{border-color:var(--err)}
+
+.alt-card-preview{position:relative;width:100%;aspect-ratio:16/10;background:var(--bg-2);overflow:hidden}
+
+.alt-card-preview img{width:100%;height:100%;object-fit:cover;display:block}
+
+.alt-card-preview-pending{display:flex;align-items:center;justify-content:center;height:100%;color:var(--t2);font-size:12px}
+
+.alt-card-remove{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.5);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--t)}
+
+.alt-card-remove:hover{background:rgba(0,0,0,.75)}
+
+.alt-card-body{display:flex;flex-direction:column;gap:10px;padding:14px}
+
+.alt-card-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px}
+
+.alt-card-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1);font-weight:500}
+
+.alt-card-size{color:var(--t2);font-family:var(--mono);flex-shrink:0}
+
+.alt-card-status{font-size:12px;color:var(--pending);font-weight:500}
+
+.alt-card-error{font-size:12px;color:var(--err-strong);background:rgba(239,68,68,.08);padding:8px 10px;border-radius:var(--radius-s);border:1px solid rgba(239,68,68,.2)}
+
+.alt-card-text{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);padding:10px 12px;color:var(--t0);font-family:var(--font);font-size:13px;line-height:1.5;outline:none;resize:none;max-height:260px;transition:border-color var(--t)}
+
+.alt-card-text:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+
+.alt-card-actions{display:flex;align-items:center;gap:8px}
+
+.alt-card-count{font-family:var(--mono);font-size:10px;color:var(--t2);flex:1}
+
+.alt-card-warn{font-size:12px;line-height:1.45;color:var(--warn-strong);background:rgba(202,138,4,.1);padding:8px 10px;border-radius:var(--radius-s);border:1px solid rgba(202,138,4,.25)}
+
+.alt-examples{margin-top:18px;padding:20px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
+
+.alt-examples-title{font-size:13px;font-weight:700;letter-spacing:.03em;color:var(--t0);margin-bottom:14px}
+
+.alt-examples-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+
+@media(max-width:560px){.alt-examples-grid{grid-template-columns:1fr}}
+
+.alt-example{padding:14px;border-radius:var(--radius-s);border:1px solid var(--border);position:relative}
+
+.alt-example-tag{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:99px}
+
+.alt-example-text{font-size:13px;color:var(--t0);margin:8px 0 6px;line-height:1.5}
+
+.alt-example-why{font-size:11.5px;color:var(--t2);line-height:1.5}
+
+.alt-tips{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+
+.alt-tips li{font-size:12.5px;color:var(--t1);line-height:1.55}
+
+.alt-tips code{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px;background:var(--bg-2)}
