@@ -7,6 +7,7 @@ import { useReveal } from '../hooks/useReveal'
 import { COLOUR_SYSTEMS } from '../config/colourSystems'
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import { freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
+import { BRAND_STARTER_BETA, allowanceSentence } from '../config/aiGeneration'
 import SystemCTA from '../components/SystemCTA'
 
 // The One-off ("lifetime") tier is GONE from this page. It was a third tab that
@@ -31,6 +32,13 @@ const BILLING_OPTIONS = [
 // and how it came to sell a JSON export that has never existed.
 //
 //   AI_LIMITS        → src/config/plans.js, unit-tested against api/_lib/plans.js
+//   allowanceSentence → src/config/aiGeneration.js, unit-tested against
+//                       api/_lib/aiGeneration.js, which is what /api/ai enforces.
+//                       The WHOLE sentence is imported, not just the digit: "1"
+//                       beside a feature name does not say one what, or for how
+//                       long, and "once per account" versus "a month" is the
+//                       difference between an honest trial and a lie a free user
+//                       finds out about in a month.
 //   FREE_SAVE_LIMITS → the same file; ProjectContext enforces it
 //   COLOUR_SYSTEMS   → the array the palette engine and the upgrade modal read
 //   BRAND_PALETTES   → the array PaletteBuilder gates on (`b.free`)
@@ -247,6 +255,10 @@ export default function Plans() {
             <li><Check /> Unlimited palettes, font pairings, type scales and gradients — none of it metered</li>
             <li><Check /> Style guide export in {listNames(FREE_EXPORTS)} — as often as you like</li>
             <li><Check /> {AI.free.daily} AI generations a day · {AI.free.monthly} a month</li>
+            {/* BETA IS DISCLOSED WHERE THE MONEY IS, not only on the tool. A
+                capability listed on a pricing page without its maturity is the
+                same class of claim as an unbuilt export sold as a benefit. */}
+            <li><Check /> Brand Starter{BRAND_STARTER_BETA && <span className="beta-badge">Beta</span>} — {allowanceSentence('free')}</li>
             <li><Check /> {FREE_SAVE_LIMITS.projects} saved projects and {FREE_SAVE_LIMITS.customIcons} custom icons</li>
             <li><Check /> {SYSTEMS_FREE.length} colour systems ({SYSTEMS_FREE.map((s) => s.label).join(' and ')}) and {BRANDS_FREE} brand palettes</li>
           </ul>
@@ -302,6 +314,7 @@ export default function Plans() {
               a vague adjective is what let the JSON claim sit here unnoticed. */}
           <ul className="sub-tier-list">
             <li><Check /> <strong>{AI.pro.daily} AI generations a day</strong> · {AI.pro.monthly} a month</li>
+            <li><Check /> Brand Starter{BRAND_STARTER_BETA && <span className="beta-badge">Beta</span>} — <strong>{allowanceSentence('pro')}</strong></li>
             <li><Check /> <strong>Unlimited</strong> saved projects and custom icons</li>
             <li><Check /> All {SYSTEMS_TOTAL} colour systems, plus HCT editing</li>
             <li><Check /> All {BRANDS_TOTAL} brand palettes</li>

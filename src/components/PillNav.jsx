@@ -61,7 +61,10 @@ const MENU_TOOL_COPY = {
   'type-scale': '',
   'component-designer': 'Shape components and their states.',
   'box-shadow': 'Build deliberate depth systems.',
-  'auto-builder': 'Generate a connected UI foundation.',
+  // Says what comes OUT, because that is the only honest way to describe a
+  // generator: the old line promised 'a connected UI foundation', which is
+  // three abstractions and no artefact.
+  'auto-builder': 'Describe it; get a palette, fonts and a scale.',
   // '' is deliberate and is NOT the same as deleting the key -- see
   // menuDescription. These seven labels are already the sentence: a gallery of
   // fonts, a pairing of fonts, a scale of type, a library of icons, a library of
@@ -1244,7 +1247,7 @@ export default function PillNav() {
                                 to={t.route}
                                 data-hue={t.hue}
                                 data-soon={t.soon ? 'true' : undefined}
-                                aria-label={t.soon ? `${t.label} — coming soon` : undefined}
+                                aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
                                 onClick={closeAll}
                                 data-pnav-menuitem
                               >
@@ -1261,6 +1264,13 @@ export default function PillNav() {
                                   <span className="pnav-tool-line">
                                     <span className="pnav-tool-label">{t.label}</span>
                                     {t.soon && <span className="soon-badge">Soon</span>}
+                                    {/* Beta and Soon can never both render: a tool
+                                        the tree marks Soon is not mounted, so there
+                                        is nothing to be in beta. They deliberately
+                                        share the badge SHAPE and differ only in
+                                        colour -- one is 'not yet', the other is
+                                        'yes, with a stated limit'. */}
+                                    {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
                                   </span>
                                   {menuDescription(activeSection, t) && <span className="pnav-tool-desc">{menuDescription(activeSection, t)}</span>}
                                 </span>
