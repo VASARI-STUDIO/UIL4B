@@ -1,30 +1,47 @@
 # UIL4B
 
-> UIL4B is a free, browser-based design toolkit and UI-inspiration platform for designers and developers. Build colour systems, pair fonts, browse 200k+ icons, convert images and video, generate accessible alt text and AI image/landing prompts, and export production-ready CSS and design tokens — all client-side, with a free tier and a $4.99/mo Pro plan.
+> UIL4B is a browser-based workspace for building UI systems. Build colour systems, pair fonts, browse 200,000+ icons, convert images and video, generate accessible alt text, and export production-ready CSS and design tokens — all client-side. Every core tool is free forever, with 5 AI generations a day and 40 a month; Pro is from $4 USD a month and raises that to 30 a day and 300 a month, adds the advanced colour controls, and removes the export watermark. Free and Pro run the same AI model.
 
 ## Tools
-- [Colour Palette Generator](https://www.uil4b.com/create/color): Build palettes with harmony modes, tint scales, gradients, image extraction, named colour libraries, and CSS/Tailwind/PNG/SVG export.
+- [Colour Palette Generator](https://www.uil4b.com/create/palette): Build palettes with harmony modes, tint scales, gradients, image extraction, named colour libraries, and CSS/Tailwind/PNG/SVG export.
+- [Semantic Colour Generator](https://www.uil4b.com/create/semantic-color): Derive success, warning, error and information colours that hold their contrast in both themes.
+- [Tint Scale Generator](https://www.uil4b.com/create/tint): Build perceptual tint and shade ramps from one seed colour.
+- [Gradient Generator](https://www.uil4b.com/create/gradient): Design linear, radial and conic gradients with a live inspector and CSS output.
+- [Contrast Checker](https://www.uil4b.com/create/contrast): Measure colour pairs against the WCAG thresholds and find the nearest passing fix.
 - [Font Pair Finder](https://www.uil4b.com/create/font-pair): Discover and preview Google Font pairings for headings and body, with live samples and CSS import export.
-- [Font Gallery](https://www.uil4b.com/create/font-gallery): Browse and compare 1,200+ Google Fonts by category, weight, and style.
+- [Font Gallery](https://www.uil4b.com/create/font-gallery): Browse and compare the Google Fonts catalogue by category, weight, and style.
 - [Type Scale Generator](https://www.uil4b.com/create/type-scale): Create modular type scales and export CSS/Tailwind/SCSS custom properties.
 - [Icon Library](https://www.uil4b.com/create/icons): Search 200,000+ open-source icons and copy SVG or JSX instantly.
-- [Box Shadow Generator](https://www.uil4b.com/create/box-shadow): Design layered CSS box shadows with live preview and Tailwind output.
-- [File Converter](https://www.uil4b.com/create/file-converter): Convert images (PNG/JPEG/WebP/AVIF), turn video into GIFs, and extract video frames — fully in-browser, nothing uploaded.
 - [Emoji Library](https://www.uil4b.com/create/emoji): Search and copy emoji by category with skin-tone variants.
-- [UI Builder](https://www.uil4b.com/create/component-designer): Assemble a complete design system (colour, type and scale) and export production-ready CSS.
-
-## AI tools
-- [AI Image Prompt Generator](https://www.uil4b.com/create/ai-prompt): Build structured, high-quality image prompts; scan a reference photo to extract its style.
-- [AI Landing Page Prompts](https://www.uil4b.com/create/landing-prompts): Generate landing-page copy and structure prompts for AI website builders.
+- [File Converter](https://www.uil4b.com/create/file-converter): Convert images (PNG/JPEG/WebP/AVIF), turn video into GIFs, and extract video frames — fully in-browser, nothing uploaded.
+- [Aspect & Resolution Calculator](https://www.uil4b.com/create/aspect-ratio): Canonical ratio names with device and screen presets.
 - [Alt Text Generator](https://www.uil4b.com/create/alt-text): Generate WCAG-compliant alt text for images with AI.
+- [SEO Inspector](https://www.uil4b.com/seo): Check a page's title, meta, headings and structured data.
 
-## Documentation
-- [SEO for Small Business](https://www.uil4b.com/docs-seo): Practical SEO fundamentals — local SEO, on-page, technical, and 2026 AI-search guidance.
-- [Marketing Fundamentals](https://www.uil4b.com/docs-marketing): Positioning, funnels, email, paid, and analytics for designers and small businesses.
-- [Brand Colour Guide](https://www.uil4b.com/docs-brand): How to choose brand colours — psychology, contrast, accessibility, and palette building.
-- [UI Design Themes](https://www.uil4b.com/docs-themes): Dark/light theming, current UI trends, and real-brand examples.
-- [AI Coding Assistants](https://www.uil4b.com/docs-ai): How to use Claude, Cursor, Gemini, Copilot and other AI tools for web development.
+## Learn
+Five published reference guides. Neutral and factual — design education, not documentation for these tools.
+
+- [Learn](https://www.uil4b.com/learn): Index of the published guides and the topics still to come.
+- [Colour contrast and the WCAG thresholds](https://www.uil4b.com/learn/colour-contrast): The thresholds, what counts as large text, how the ratio is calculated, non-text contrast, and what a ratio cannot see.
+- [Modular type scales](https://www.uil4b.com/learn/type-scales): The formula, choosing a ratio, how the ratio compounds, joining two scales with clamp(), and line length.
+- [Colour spaces for interface work](https://www.uil4b.com/learn/colour-spaces): Why HSL lightness is not lightness, what OKLCH measures instead, and gamut limits.
+- [Dark and light themes](https://www.uil4b.com/learn/theme-systems): One set of names and two sets of values; why inversion is not a theme; what prefers-color-scheme, prefers-contrast, forced-colors and color-scheme each decide.
+- [Choosing a brand colour](https://www.uil4b.com/learn/brand-colour): The jobs one hue is asked to do, and the ramp that resolves them.
+
+## Browse
+- [Discover](https://www.uil4b.com/discover): The community and curated-resource hub.
+- [Palette Library](https://www.uil4b.com/discover/palettes): 64 curated palettes, each openable in the Palette Generator.
+- [Gradient Library](https://www.uil4b.com/discover/gradients): 100 gradients with stored type, angle and stops.
+- [Prompt Library](https://www.uil4b.com/discover/prompts): AI prompts, a free selection for everyone and the full library with Pro.
+- [Curated Resources](https://www.uil4b.com/discover/resources): Hand-picked external design and development resources, each linked back to the relevant UIL4B tool.
 
 ## More
-- [Pricing](https://www.uil4b.com/#pricing): Free forever for core tools; Pro from $4.99/mo AUD for higher AI limits and synced projects.
+- [Pricing](https://www.uil4b.com/plans): Free forever for core tools; Pro from $4 USD a month for higher AI limits, advanced colour controls and unwatermarked export.
 - [Help Centre](https://www.uil4b.com/help): FAQs and support.
+- [Site map](https://www.uil4b.com/sitemap): Every live route, and what is still in the workshop.
+
+## Optional
+Not yet built. These routes resolve to an honest "still in the workshop" state rather than a working tool, and should not be described as available:
+
+- Component Designer, Box Shadow Generator and UI Auto-Builder, under /create/components
+- AI Image Prompt Generator (/create/ai-prompt) and AI Landing Page Prompts (/create/landing-prompts)
