@@ -79,7 +79,7 @@ function revealAll(scope) {
 // optical centre at ~86% of viewport height — the bottom seventh of the screen,
 // long after the reader had passed it. Keying to the step's own `center` puts
 // the trigger on the text, because the text is what is centred in the box.
-const STEP_SWAP = {
+export const STEP_SWAP = {
   // Scrolling DOWN: the step's centre has to rise to 52% of viewport height —
   // a hair above the middle — before its mode takes the panel.
   down: 52,
@@ -94,6 +94,17 @@ const STEP_SWAP = {
   // step only loses the panel by leaving the band the way it came in.
   up: 44,
 }
+
+// The two ScrollTrigger positions the swap actually installs, built in one
+// place so they can be asserted as VALUES rather than matched as source text.
+//
+// `center` is the load-bearing word and the original bug: keyed to `top` the
+// swap fired with the step's text at ~86% of viewport height. It is written
+// once, here, so no call site can drift back to `top` on its own.
+export const stepSwapTrigger = () => ({
+  start: `center ${STEP_SWAP.down}%`,
+  end: `center ${STEP_SWAP.up}%`,
+})
 
 // `options.onStepChange(tabId)` is called when the sticky section's active step
 // changes. It is invoked from a scroll callback, never from the effect body, so
@@ -168,8 +179,7 @@ export function useHomeMotion(scopeRef, options = {}) {
               // replaced by the next one to claim the panel.
               ScrollTrigger.create({
                 trigger: step,
-                start: `center ${STEP_SWAP.down}%`,
-                end: `center ${STEP_SWAP.up}%`,
+                ...stepSwapTrigger(),
                 onEnter: activate,
                 onEnterBack: activate,
               })
