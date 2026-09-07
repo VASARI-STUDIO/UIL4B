@@ -387,7 +387,7 @@ export const LEARN_GROUPS = [
   { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/learn', soon: true },
   { id: 'themes', label: 'UI Themes', desc: 'Dark, light and custom theme systems.', route: '/learn/theme-systems', soon: false },
   { id: 'brand', label: 'Brand Colour Guide', desc: 'Choose brand colours with confidence.', route: '/learn/brand-colour', soon: false },
-  { id: 'typography', label: 'Typography Guide', desc: 'Type that reads and scales cleanly.', route: '/learn', soon: true },
+  { id: 'typography', label: 'Typography Guide', desc: 'Type that reads and scales cleanly.', route: '/learn/typeface-metrics', soon: false },
   { id: 'seo', label: 'SEO', desc: 'Small-business and specialist playbooks.', route: '/learn', soon: true },
   { id: 'marketing', label: 'Marketing', desc: 'Positioning, messaging and social.', route: '/learn', soon: true },
   { id: 'ai-assistants', label: 'AI Coding Assistants', desc: 'Ship faster with AI in the loop.', route: '/learn', soon: true },
@@ -553,6 +553,8 @@ const DISCOVER_MENU = groupsToMenu(DISCOVER_GROUPS, [
 const LEARN_ARTICLE_ICONS = {
   'colour-contrast': 'contrast',
   'type-scales': 'typography',
+  'typeface-metrics': 'type',
+  'font-loading': 'loading',
   'colour-spaces': 'palette',
   'theme-systems': 'themes',
   'brand-colour': 'brand',
