@@ -85,10 +85,15 @@ stops being named here or stops being printed by `scripts/prerender.mjs`.
 > `npm run build` — see the warning below.
 
 The skips are the whole of `12-ui-system-builder.spec.js`, and nothing
-else. UI System mode went admin-only in founder batch 4 and this suite runs
-signed out, so the surface is unreachable rather than broken — the file
-carries the reason and the one-word change that re-enables it. Skipped is the
-honest state; do not "fix" the count by deleting the file.
+else. UI System mode is **unwired — for admins as well**: the founder removed
+both entry points from the Palette Builder on 2026-09-05, and nothing imports
+`components/UiSystemBuilder.jsx`, so it is in no chunk of any build. This
+paragraph said "went admin-only … and this suite runs signed out" until
+2026-09-07; that was two wrong reasons at once, since #407 gave the suite an
+auth harness and the door is not locked but missing. Skipped is the honest
+state; do not "fix" the count by deleting the file, and do not go looking for
+an auth gate to satisfy — there isn't one. Re-entering the tool means giving
+it its own route.
 
 The 25 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,

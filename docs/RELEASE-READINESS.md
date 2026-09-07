@@ -114,18 +114,37 @@ that none of it is mistaken for engineering work that has been forgotten.
 
 Honest state rather than a clean bill of health.
 
-- **`12-ui-system-builder.spec.js` is skipped in full.** UI System mode went
-  admin-only and that suite runs signed out, so the surface is unreachable rather
-  than broken. Skipped is the correct state; do not "fix" it by deleting the file.
+- **`12-ui-system-builder.spec.js` is skipped in full, and the reason printed
+  here until 2026-09-07 was wrong.** It said the mode "went admin-only and that
+  suite runs signed out". Both halves have stopped being true. The auth harness
+  exists (#407: `signIn(page, { admin: true })`), and the surface is **not
+  admin-only — it is unwired for everybody, admins included**. `PaletteBuilder
+  .jsx` removed *both* doors on the founder's 2026-09-05 instruction (the "UI
+  System / Admin" breadcrumb and the "Build UI system" button), nothing imports
+  `components/UiSystemBuilder.jsx`, and it is therefore in no chunk of any
+  build. Settled by RENDERING it rather than by reading the source: *"UI System
+  mode is unreachable for an ADMIN too"* in `57-signed-in-session.spec.js` signs
+  in as the founder, proves the session is admin by opening `/admin`, proves the
+  Palette Builder rendered, and only then asserts the controls are absent.
+  Skipped is still the correct state; re-entering the tool means giving it its
+  own route, not restoring a button.
 - **Two AI tools and the whole UI Component Builder group are badged *Soon*** and
   resolve to the workshop state. That is deliberate and honest — but see item 8
   above, because one of those unreachable tools is the only thing that would ever
   use OpenRouter.
-- **`AiPromptGenerator.jsx` and `LandingPromptGenerator.jsx` exist but no route
-  reaches them.** A page file existing is not evidence a route reaches it; this
-  is the same trap `doc-authority-map.md` documents.
-- **Seven `Docs*.jsx` components are unrouted drafts.** Every `/docs-*` URL is a
-  301 to `/learn`. They are not what `/learn` serves.
+- **`AiPromptGenerator.jsx` exists but no route reaches it.** A page file
+  existing is not evidence a route reaches it; this is the same trap
+  `doc-authority-map.md` documents. It is **deliberately kept** unrouted: it is
+  the only caller of the OpenRouter path and §4.5 of `OWNER-ACTIONS.md` asks you
+  to choose between wiring it up and cancelling OpenRouter. Deleting it would
+  make that decision by default.
+  `LandingPromptGenerator.jsx` was in this sentence and **is now deleted** — it
+  reached no chunk of a production build, and unlike its twin nothing depended
+  on keeping it.
+- **The seven `Docs*.jsx` unrouted drafts are deleted** (2026-09-06), with the
+  `DocsTOC` component only they used. Every `/docs-*` URL is still a 301 to
+  `/learn` — deleting a component does not touch a redirect table — and `/learn`
+  is what serves guides.
 - **The browser suite has a known flake class** under runner contention. Re-run
   the full suite before treating a single red job as a regression, and say in the
   pull request which failures were flake and which were real.

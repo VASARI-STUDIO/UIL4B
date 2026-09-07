@@ -39,12 +39,15 @@ import { primaryAvailableTool, buildToolHandoffUrl } from '../components/discove
 //
 // The card grid was the OTHER option and it is the one to avoid. Patreon's and
 // Kit's resource directories both work, and both work because every tile
-// carries a real product logo. We cannot: DiscoverCard.jsx generates a
+// carries a real product logo. We cannot: the generic card generated a
 // monogram from the title hash instead, deliberately — we never fetch an
 // external URL (that would be an SSRF surface on a user-supplied link). A grid
 // of generated letter-tiles is decoration standing in for hierarchy, which is
-// the exact pattern the founder has named as slop. So DiscoverCard is NOT used
-// here; see the report for the recommendation to retire it.
+// the exact pattern the founder has named as slop. So the generic card was NOT
+// used here — and having no other caller, DiscoverCard.jsx was retired on
+// 2026-09-06 by the dead-source sweep, which is the recommendation the report
+// made. This page renders its own rows; do not reintroduce a card grid here
+// without reading the paragraph above.
 //
 // ── Why each category band has a lead item ─────────────────────────────────
 //
@@ -85,7 +88,7 @@ function ExternalArrow() {
 }
 
 // Every external link in one place: the third-party convention this app already
-// uses in AppFooter, DiscoverCard and CommunityCard — noopener/noreferrer to
+// uses in AppFooter and CommunityCard — noopener/noreferrer to
 // close the opener channel, nofollow because a curated outbound link is not an
 // endorsement we want to pass ranking through, plus a visible arrow and an
 // sr-only phrase (the arrow is decorative, so it cannot carry the meaning).

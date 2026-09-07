@@ -89,7 +89,15 @@ export const KEY_PURPOSES = Object.freeze({
   'vs-feedback': { purpose: 'Feedback drafts written in this browser', pii: 'local' },
   'vs-usage': { purpose: 'AI generations used, per tool per day', pii: 'no' },
   'vs-uikit-guide': { purpose: 'Whether you are part-way through the brand kit walkthrough', pii: 'no' },
-  'vs-uib-intro-dismissed': { purpose: 'Builder intro dismissal state', pii: 'no' },
+  // `vs-uib-intro-dismissed` was here. Its only writer was src/pages/UIBuilder.jsx,
+  // deleted in the 2026-09-06 dead-source sweep (no importer, no route, absent
+  // from every sourcemap in a production build). A purpose entry for a key
+  // nothing writes is the same shape of stale record as an allowlist entry that
+  // outlives what it excused: it never fires, so it cannot announce itself, and
+  // it makes the privacy table describe storage this app does not use.
+  // Nothing else reads the key, so no describeKey() caller loses an answer —
+  // stemOf() would fall through to the undescribed path only if a browser still
+  // held the value, and the export's `vs-mystery` case already covers that.
   'vs-info-intro': { purpose: 'Info page intro dismissal state', pii: 'no' },
   'vs-admin-unlocked': { purpose: 'Admin panel access flag', pii: 'no' },
   'vs-chunk-reload': { purpose: 'Guard against a reload loop after a deploy', pii: 'no' },
