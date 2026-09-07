@@ -330,10 +330,19 @@ itself reflows at.
 repeated — this file, `murphys-law.md` and `build-and-verify.md` — and which was
 wrong in the same way in all three:
 
-- It omitted **640px**, which carries **30** `@media` blocks in `global.css`,
-  more than any other width and more than 768px's 19. Every shared browse
-  toolbar stacks there and nowhere else (`.lbry-toolbar`, `.lbry-filters`,
-  `.lbry-toolbar-action`).
+- It omitted **640px**, which carries more `@media` blocks in `global.css` than
+  any other width — more than 768px, the width the old triple named instead.
+  Count it rather than trusting a figure here; this sentence said "30 … and
+  768px's 19" and had drifted to 29 and 21 by 2026-09-06, which is what a
+  hand-carried tally always does:
+
+  ```bash
+  grep -oE '@media[^{]*640px[^{]*' src/styles/global.css | wc -l
+  ```
+
+  Every shared browse toolbar stacks at 640px and nowhere else
+  (`.lbry-toolbar`, `.lbry-filters`, `.lbry-toolbar-action`). **The ordering is
+  the claim; the counts were only ever a proxy for it.**
 - It left the **641–900px band** untested. At 834px — iPad portrait in landscape
   orientation, and a real device — the 640px overrides are all off, so a tablet
   is served the desktop branch. That band is where

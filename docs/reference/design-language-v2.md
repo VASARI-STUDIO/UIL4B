@@ -27,7 +27,7 @@ So V2 is a **visual and structural** source, not a content source. Apply it to
 | Keep | Where |
 |---|---|
 | Navigation system | `PillNav` |
-| The real interactive tools | `HomeWorkbench` (1,068 lines, 5 tabs) |
+| The real interactive tools | `HomeWorkbench` — five tabs, from `HOME_WORKBENCH_TABS` in `src/data/toolTree.js` |
 | Smooth scroll + micro-animations | `useHomeMotion()` — Lenis + GSAP, reduced-motion guarded |
 
 The sticky-scroll section must be driven by **`HomeWorkbench`'s existing tools**.

@@ -48,7 +48,7 @@ Billing and authentication remain human-validation zones; read
 The user's first product session should fulfil the promise made by the sales
 surface. Maintain consistent:
 
-- terminology for Workspace, Discover, Learn, projects, and exports;
+- terminology for Create, Discover, Learn, projects, and exports;
 - examples and artefacts;
 - expectations about free and paid capabilities;
 - tone and degree of guidance;

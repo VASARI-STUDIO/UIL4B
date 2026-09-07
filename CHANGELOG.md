@@ -146,6 +146,86 @@ that is said so explicitly below.
 call he made. The token-vocabulary row was answered on 2026-09-05 and the hero
 row still is not; both outcomes are in the decisions section above.
 
+### 2026-09-05 → 2026-09-06 — everything on `main` since #374, none of it live
+
+**Same warning as the section below: merged is not deployed.** Anchored to #374
+rather than counted, for the reason that section gives. Reconstructed from
+`git log` on `main` and from the `pipeline.js` rows that moved to `done`; a
+summary by theme, not one entry per pull request.
+
+**The ten founder decisions of 2026-09-05 were implemented.** The decisions
+themselves are recorded at the top of this file; this is where they landed.
+
+- **"Styles", not "tokens"** (#378, then #394). Every sales, navigation and tool
+  heading that said *tokens* now says *Styles*. The word `token` survives past
+  the export boundary only — the export panel, the generated filenames, the code
+  blocks, the `@uil4b/tokens` package — because renaming it there would break the
+  code of anyone consuming it. #394 took the homepage, which the first slice
+  could not, and regenerated `public/previews/cards.json` so the share card and
+  the page agree.
+- **The `pepsi` palette is renamed to its era**, and **`google` is free**, and
+  **`/community` tiles pick their ink per tile** (#378). Ten of the twelve
+  monograms flip white → black; no colour changed.
+- **Typography pricing: browsing is free, saving is Pro** (#376). The same shape
+  the colour tools already had.
+- **Learn is proper design education, in a neutral voice** (#380, #403). Five
+  published guides — colour contrast, modular type scales, colour spaces, dark
+  and light themes, choosing a brand colour. Two of the eight roadmap topic areas
+  are now delivered, and #403 was the first time a roadmap row stopped saying
+  *Soon* because the thing behind it existed.
+- **Discover ships curated first, community later** (#377). Curated Resources is
+  live; community *publishing* is re-scoped behind the approval queue the founder
+  chose on liability grounds.
+- **The founder note is opt-in, not a popup** (#375). The mechanism, the trigger
+  and the panel are built. The four sentences are still his to write — it is the
+  one piece of writing an agent will not do for him.
+
+**The sales surfaces stopped making claims the product could not keep.**
+
+- **`/plans` lost three false claims, one of which was being sold** (#388),
+  and gained a call to action that was previously invisible.
+- **Four homepage headlines the founder rejected by name can no longer come
+  back** (#398) — a test, not a convention.
+- **The secondary sales pages compressed** to a value proposition and a link
+  (#383), and the tool headers lost their generated furniture (#382, #386).
+
+**Product surfaces.**
+
+- **Projects became the User Home** (#385). A signed-in visitor lands there
+  rather than on the sales page, and each project card reports which of colour,
+  type, scale and icons it actually contains — measured against the defaults, so
+  an untouched project does not claim four ticks.
+- **A moderator role the founder can assign** (#390), with the feedback queue
+  that had been silently refusing to load. The role is built everywhere except
+  two founder-gated files; #400 recorded the owner action that unsticks it.
+- **The colour picker's recents reach every route** (#395), and the contrast
+  checker's fix row now finds the fix.
+- **Premium export gained a brand guidelines deck** and a logo to build it from
+  (#392).
+- **Home mini tools render the real tools** rather than lookalikes of them
+  (#379).
+
+**Housekeeping that removed code rather than adding it.**
+
+- **`Landing.jsx` was deleted** (#396). It was imported by nothing and routed
+  nowhere; the 156 `.landing-*` selectors it owned went with it. This is why the
+  lint ceiling came down from 31 to 25 — no warning was "fixed"; the files
+  carrying them stopped existing.
+- **#397 and #401 salvaged the two parked homepage pull requests** by rebasing
+  and re-measuring rather than estimating. Most of what was in them had already
+  been solved elsewhere; only #270's specimen band is still held, on the
+  founder's hero-shape pick.
+
+**Test infrastructure.**
+
+- **A bad run now names itself** (#399). Six defects fixed; the important one is
+  that a build asset which never arrives is reported as a *delivery failure* with
+  the reason, instead of as a missing element. Under several agents running
+  suites at once the app chunk can fail to load, and the suite used to blame the
+  page for it.
+- **Upgrade walls are named, exports count as activations, and the homepage is
+  measured on a throttled profile** (#402).
+
 ### 2026-09-02 → 2026-09-05 — everything on `main` since #295, none of it live
 
 **Read the second half of that heading first.** Everything below is merged and

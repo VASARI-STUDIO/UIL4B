@@ -14,7 +14,7 @@ which.
 the record — no other confirmation is needed, and no agent may claim a verdict
 that is not written here.
 
-_Last reviewed: 2026-09-05._
+_Last reviewed: 2026-09-06._
 
 ## What is waiting on you, shortest first
 
@@ -70,7 +70,9 @@ scale — and one canonical upgrade-gate event.
 **Cost / risk.** Small-to-moderate, no user-facing change. Risk is choosing the
 wrong activation definition and having to re-cut it later; cheap to revise.
 
-**Verdict:** _(APPROVE)_
+**Verdict:** _(APPROVED)_ — recorded 2026-08-14; the Resolved table has said
+APPROVED since the day it was answered. Normalised 2026-09-06: this line read
+“APPROVE”, which reads as a recommendation rather than a verdict.
 
 ---
 
@@ -121,7 +123,8 @@ merely find that something behaved oddly.
 **Cost / risk.** Cheap to decide, moderate to apply consistently. Real revenue
 implications either way, which is why it is Dylan's call and not mine.
 
-**Verdict:** _(APPROVED — "the free tier is a foot in the door")_
+**Verdict:** _(APPROVED — “the free tier is a foot in the door”)_, recorded
+2026-08-14.
 
 ---
 
@@ -142,7 +145,8 @@ own fallback chain must move in the same pass or the two surfaces disagree.
 new board — one hue in five tones rather than five hues. That is a taste call as
 much as a correctness one, which is why it is here rather than done.
 
-**Verdict:** _(APPROVE)_
+**Verdict:** _(APPROVED)_ — recorded 2026-08-14, shipped. Normalised 2026-09-06
+for the same reason as P-001: “APPROVE” is not a verdict.
 
 ---
 
@@ -154,8 +158,15 @@ swatches"* for the colour picker. Everything in that list except the tabs and
 the alpha slider has now shipped (`colour-picker-ui`). These two are here rather
 than done because building them needs an answer this document is for.
 
-**The problem with just building them.** `ColorPickerPop` has exactly three call
-sites, and none of them can consume what those two controls produce:
+**The problem with just building them.** No call site of `ColorPickerPop` can
+consume what those two controls produce:
+
+> **Re-counted 2026-09-06: the picker now has eight call sites, not three.**
+> #395 put the same picker (and its recents) on every route that needed one —
+> `HomeWorkbench`, `UiSystemBuilder`, `ContrastChecker`, `FileConverter` and
+> `TintTool` joined the three below. **The argument is unchanged and slightly
+> stronger:** every one of the new consumers also takes a single opaque hex, so
+> a Gradient or Image tab would now be dead in eight places rather than three.
 
 | Call site | Why not |
 |---|---|

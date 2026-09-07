@@ -99,7 +99,8 @@ When naming or describing a tool, lead with what the user walks away with.
   workspace organised around Workspace / Discover / Learn. No routes are
   removed; no in-app navigation is rebuilt yet.
 - **North star (a larger follow-on):** the in-app information architecture
-  (Sidebar, routes, `src/data/tools.jsx` taxonomy) is reorganised so the three
+  (the `PillNav` mega-menu, routes, `src/data/tools.jsx` taxonomy) is
+  reorganised so the three
   surfaces and the five Workspace sub-areas become the real navigation, and the
   outcome-oriented tool consolidations are actually built. This is a multi-slice
   effort, tracked separately — not part of the repositioning slice.
