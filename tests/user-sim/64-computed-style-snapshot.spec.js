@@ -75,7 +75,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // REGENERATING
 // ─────────────────────────────────────────────────────────────────────────────
-//   UPDATE_STYLE_BASELINE=1 npx playwright test 63-computed-style-snapshot --workers=1
+//   UPDATE_STYLE_BASELINE=1 npx playwright test 64-computed-style-snapshot --workers=1
 // `--workers=1` is not optional: the routes are one test each, so on several
 // workers each process would hold a fifth of the routes and write a fixture
 // missing the rest. The afterAll below refuses to write a partial file rather
