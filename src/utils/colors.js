@@ -865,43 +865,32 @@ export function adjustHandleColors(tracks, adj) {
   }
   return out
 }
-export function fixForeground(fg, bg, targetRatio) {
-  const fgHsl = hexToHsl(fg)
-  const [h, s] = fgHsl
-  const bgRgb = hexToRgb(bg)
-  const bgLum = luminance(bgRgb[0], bgRgb[1], bgRgb[2])
-  const isDk = bgLum < 0.5
-  let lo, hi
-  if (isDk) { lo = fgHsl[2]; hi = 100 } else { lo = 0; hi = fgHsl[2] }
-  let best = fg
-  for (let i = 0; i < 30; i++) {
-    const mid = (lo + hi) / 2
-    const t = hslToHex(h, s, Math.round(mid))
-    const r = contrastRatio(t, bg)
-    if (r >= targetRatio) { best = t; if (isDk) hi = mid; else lo = mid }
-    else { if (isDk) lo = mid; else hi = mid }
-  }
-  return best
-}
-
-export function fixBackground(fg, bg, targetRatio) {
-  const bgHsl = hexToHsl(bg)
-  const [h, s] = bgHsl
-  const fgRgb = hexToRgb(fg)
-  const fgLum = luminance(fgRgb[0], fgRgb[1], fgRgb[2])
-  const isFgLight = fgLum > 0.5
-  let lo, hi
-  if (isFgLight) { lo = 0; hi = bgHsl[2] } else { lo = bgHsl[2]; hi = 100 }
-  let best = bg
-  for (let i = 0; i < 30; i++) {
-    const mid = (lo + hi) / 2
-    const t = hslToHex(h, s, Math.round(mid))
-    const r = contrastRatio(fg, t)
-    if (r >= targetRatio) { best = t; if (isFgLight) lo = mid; else hi = mid }
-    else { if (isFgLight) hi = mid; else lo = mid }
-  }
-  return best
-}
+/*
+ * fixForeground AND fixBackground ARE GONE. Deleted 2026-09-07 by
+ * [contrast-search-one-directional-callers]; nothing in src/, api/, scripts/ or
+ * tests/ calls them, and the last caller was src/utils/workbenchInk.js.
+ *
+ * WHAT THEY DID AND WHY THEY WERE WRONG. Each bisected the moving colour's HSL
+ * lightness in ONE direction, chosen from the OTHER colour's luminance —
+ * fixForeground on `bgLum < 0.5` (walk the ink lighter), fixBackground on
+ * `fgLum > 0.5` (darken the ground). 0.5 is not the crossover. Black and white
+ * are equally readable at relative luminance 0.179, so on every ground between
+ * 0.179 and 0.5 the walk went AWAY from the answer, found nothing, and returned
+ * its INPUT — which reads like a clamp at the call site and is not one.
+ *
+ * THEY ARE DELETED RATHER THAN LEFT DEPRECATED BECAUSE THIS BUG CAME BACK THREE
+ * TIMES: the Contrast Checker's fix row (#395), preview inks (#393) and export
+ * ink (#405) each replaced them at one call site and left the helpers standing,
+ * and each time the next author reached for the helper that was still there. A
+ * dead helper that keeps the wrong rule alive is not free.
+ *
+ * nearestPassingLightness below is the replacement and the only search in this
+ * file: it scans BOTH directions, keeps the smaller move, and returns `null`
+ * — not the input — when no move on that axis can work. Contrast is symmetric,
+ * so it serves both sides; pass the colour to MOVE first. The four call sites
+ * that used to want fixBackground now pass the ground first, and the comments at
+ * each site record what the swap measured.
+ */
 
 /**
  * The NEAREST colour to `move`, on its own HSL lightness axis, that clears
@@ -945,10 +934,21 @@ export function fixBackground(fg, bg, targetRatio) {
  * is the defect above.
  *
  * CONTRAST IS SYMMETRIC, so one function serves both sides: pass the colour to
- * MOVE first and the one to hold fixed second. fixForeground/fixBackground stay
- * for HomeWorkbench's readableInk and labelGround, which pre-select their pole
- * by measured contrast and use the walk only as one candidate among six behind
- * a `>= 4.5` gate — a shape their direction bug cannot escape through.
+ * MOVE first and the one to hold fixed second.
+ *
+ * IT IS NOW THE ONLY SEARCH IN THIS FILE. The sentence that used to stand here
+ * said fixForeground/fixBackground could stay for HomeWorkbench's readableInk
+ * and labelGround, "which pre-select their pole by measured contrast and use the
+ * walk only as one candidate among six behind a `>= 4.5` gate — a shape their
+ * direction bug cannot escape through". That was measured and it was two-thirds
+ * wrong [contrast-search-one-directional-callers]. readableInk's walk did reach
+ * the gate — and returned its input on 100% of reaches, shipping #000000 where
+ * #121212 passes. mutedInk's walk sat behind the same shape and shipped 1,071
+ * inks under 4.5:1 over the 216-colour grid that this function clears. Only
+ * cardGrounds' gate held, and only because the ink it walks against is always an
+ * achromatic pole, far from the .179 crossover. The lesson is written down at
+ * each of those three sites: a `>= 4.5` gate says the ANSWER was checked, never
+ * that the SEARCH was sound, and the two are not the same claim.
  */
 export function nearestPassingLightness(move, against, targetRatio) {
   // Distance zero is a distance. A pair that already clears needs no move, and
