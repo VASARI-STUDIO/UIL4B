@@ -268,9 +268,33 @@ export default function FontMatcher({ onCopy, toast }) {
             <p className="fpr-hero-signature">Aa</p>
           </div>
           <div className="fpr-hero-intro">
+            {/* THE THIRD INSTANCE OF THE LEDE MOTIF, and the worst of them.
+                ────────────────────────────────────────────────────────────
+                It read: "Pair type like a creative director. Choose a voice
+                for the headline, a workhorse for the body, and test the
+                relationship in real layouts."
+
+                Two faults in one sentence. The three clauses are the page
+                describing its own workflow — choose, choose, test are the
+                controls directly below — which is the shape #386 removed from
+                the Type Scale and this pass removed from the Tint Scale and
+                the Gradient Generator. And "like a creative director" is the
+                other named motif: copy that argues for the product instead of
+                showing it. It flatters the reader and tells them nothing; the
+                specimens below are the only thing that can make that claim.
+
+                What replaces it is the model — two families in two roles, and
+                the fact that everything under the fold is those two together.
+                That is what a first-time visitor cannot infer from a hero
+                that currently reads "Inter + Inter".
+
+                NOT changed here: that this hero fills the whole first screen
+                at 390px, so the first control a phone user meets is a link to
+                a different tool. That is a layout decision for the founder,
+                and it is filed rather than fixed. */}
             <p>
-              Pair type like a creative director. Choose a voice for the headline,
-              a workhorse for the body, and test the relationship in real layouts.
+              Two families — one for headings, one for body. Every preview below is
+              those two, together.
             </p>
             <div className="fpr-hero-pair" aria-label="Current font pair">
               <span>{headingFont.family}</span>

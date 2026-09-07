@@ -92,10 +92,40 @@ export const LEAD_CAP = 359
 /** `.plb-toolbar{gap}` in global.css — the column gap between the two groups. */
 export const TOOLBAR_GAP = 18
 
+/* ROW WIDTH IS THE CONTENT BOX, NOT `clientWidth`. Read this before changing
+   the caller.
+
+   `.plb-toolbar` is `padding:10px var(--page-inline)`, and `--page-inline` is
+   20px at the widths this rule decides at. `clientWidth` INCLUDES that padding,
+   so a caller that passes it hands this function 40px of room the flex line
+   cannot use — and the cluster is then expanded onto a row it does not fit.
+
+   Measured on `main` at 2026-09-06, fresh load per width, one context each:
+
+     viewport  clientWidth  content  lead+gap+rail  toolbar height  rows
+       1096       1096       1056         1097          57px          1
+       1097       1097       1057         1097         105px          2   <-- wraps
+       1136       1136       1096         1097         105px          2
+       1137       1137       1097         1097          57px          1
+
+   Forty pixels of padding, forty pixels of wrong answer: the cluster expanded
+   at 1097 and did not fit until 1137, so every width in 1097–1136 rendered the
+   toolbar at 105px in two rows instead of 57px in one. That is the founder's
+   "wrapped to 105px tall" report, and it survived the previous fix because the
+   unit table below passed VIEWPORT widths as `rowWidth` while the call site
+   passed `clientWidth`. The helper was right and the wiring was wrong — the
+   exact split this repo keeps paying for, so the browser test in
+   tests/user-sim/23-responsive-mid-band.spec.js now pins the rendered height
+   rather than the arithmetic.
+
+   The name stays `rowWidth`; what changed is that it is documented as, and
+   asserted to be, the space a flex line actually has. */
+
 /**
  * @param {object} m
  * @param {number} m.intrinsic  the rail's width laid out on one line, in px
- * @param {number} m.rowWidth   `.plb-toolbar` client width, in px
+ * @param {number} m.rowWidth   `.plb-toolbar`'s CONTENT width — `clientWidth`
+ *                              minus its own inline padding, in px
  * @param {number} m.leadCap    the lead group's ceiling
  * @param {number} m.gap        the toolbar's column gap
  * @returns {boolean} true when the exploratory cluster must collapse

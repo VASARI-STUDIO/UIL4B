@@ -821,7 +821,19 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
           <div className="ggn-title-row">
             <h1 className="ggn-title">Gradient Generator</h1>
           </div>
-          <p className="ggn-sub">Compose on a direct canvas, refine every stop in the inspector, then hand off production-ready CSS, Tailwind or SVG.</p>
+          {/* THE LEDE STATES THE MODEL, NOT THE WORKFLOW. It used to read
+              "Compose on a direct canvas, refine every stop in the inspector,
+              then hand off production-ready CSS, Tailwind or SVG." — the same
+              three-clause workflow narration #386 removed from the Type Scale
+              and this pass removed from the Tint Scale, down to the shared
+              phrase "production-ready". Compose / refine / hand off are three
+              things a visitor can already see on this screen; what they cannot
+              infer is that a gradient here is only ever stops and positions,
+              and that the same two facts drive all three exports. Type and
+              angle ride on top of that, which is why this says "where each one
+              sits" rather than naming a line — the tool builds linear, radial
+              AND conic. */}
+          <p className="ggn-sub">Colour stops and where each one sits. Everything below is those two facts, as CSS, Tailwind or SVG.</p>
           {editLocked && (
             <p className="ggn-lock-note">
               <IcoLock size={12} />
