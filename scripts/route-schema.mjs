@@ -35,19 +35,29 @@
 //
 // ── NOT SHIPPED: FAQPage on /help ──────────────────────────────────────────
 //
-// /help does have genuine Q&A — HelpCentre.jsx holds a real `faqs` array. It is
-// still wrong here, for two independent reasons, either of which is enough:
+// /help does have genuine Q&A — the HELP_ANSWERS table in src/data/helpStart.js.
+// It is still wrong here, and the decision is UNCHANGED, but one of the two
+// reasons it used to rest on has been retired and saying so is the point of
+// this note:
 //
 //   1. GOOGLE STOPPED USING IT. Since August 2023 FAQ rich results are shown
 //      only for well-known authoritative government and health sites. On
 //      uil4b.com the markup earns no feature at all, so it is pure payload with
-//      a policy risk attached.
-//   2. THE ANSWERS ARE NOT ON THE PAGE. The FAQ is one of three tabs and is
-//      conditionally rendered — `{tab === 'faq' && <FAQTab />}` — so on load the
-//      questions are not in the DOM. Marking up content the page does not show
-//      is precisely what Google's structured-data guidelines prohibit, and the
-//      prerendered shell would be claiming it outright: these shells contain no
-//      React output at all, so the FAQ would exist only as a claim.
+//      a policy risk attached. This was always the stronger reason and it is
+//      now the only one.
+//   2. RETIRED 2026-09-06, when /help was rebuilt as a designed surface rather
+//      than a three-tab document. It used to read "the answers are not on the
+//      page": the FAQ was one of three tabs, conditionally rendered as
+//      `{tab === 'faq' && <FAQTab />}`, so on load the questions were not in
+//      the DOM at all. They are now — HelpCentre.jsx renders HELP_ANSWERS
+//      unconditionally in a <dl>. Anyone re-deriving this decision from the
+//      page must not reach for that argument again; it is false today.
+//
+//      What has NOT changed is the shell. A prerendered shell contains no React
+//      output, so FAQPage markup written into it would still be a claim about
+//      content the served document does not carry. That is a reason not to put
+//      it in the SHELL, not a reason the page could not carry it at runtime —
+//      which is why reason 1 is the one doing the work.
 //
 // ── NOT SHIPPED: Product/Offer on /plans ───────────────────────────────────
 //

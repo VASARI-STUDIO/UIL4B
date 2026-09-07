@@ -24,6 +24,12 @@ const STATIC_INDEXABLE_ROUTES = [
   // landing page over nothing. It now lists the published guides above its
   // roadmap, and each guide is advertised in its own right below.
   '/learn',
+  // /principles is public from its first commit: it has no roadmap phase and
+  // nothing on it is staged. Every rule it states is beside a proof computed on
+  // the page, and each links to a route that is already live — which is what
+  // the last test in this file asserts, so a Soon destination cannot arrive on
+  // it later without failing here.
+  '/principles',
 ]
 
 const LIVE_CREATE_ROUTES = CREATE_GROUPS.flatMap((group) => (
