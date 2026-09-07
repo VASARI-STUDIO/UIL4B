@@ -7,17 +7,35 @@ async function enter(page) {
   await expect(page.getByRole('heading', { name: 'UI System Builder' })).toBeVisible()
 }
 
-// SKIPPED, not deleted: UI System mode went ADMIN-ONLY (founder decision, this
-// batch — see canUseUiSystem in PaletteBuilder.jsx). Every test below enters
-// through the "Build UI system" button, which no longer exists for anyone but
-// an admin, and this suite runs signed out — there is no auth harness, so the
-// surface is genuinely unreachable from here rather than merely failing.
+// SKIPPED, not deleted — and the reason written here was wrong twice over.
 //
-// The assertions are still the right contract for the tool; they are simply
-// testing a door that is currently locked. When the tool is finished and goes
-// public, delete this `.skip` and the suite runs again unchanged. Until then it
-// would be dishonest to report these as passing, and wasteful to throw away
-// eleven tests' worth of behaviour that took real work to specify.
+// It used to say: "UI System mode went ADMIN-ONLY (founder decision, this batch
+// — see canUseUiSystem in PaletteBuilder.jsx) … this suite runs signed out —
+// there is no auth harness, so the surface is genuinely unreachable from here."
+// Neither half survives contact with the tree.
+//
+//   THERE IS AN AUTH HARNESS. #407 landed signIn(page, { admin: true }), and
+//   tests in this very suite use it. "Runs signed out" stopped being a reason.
+//
+//   AND THE DOOR IS NOT LOCKED, IT IS GONE. On 2026-09-05 the founder removed
+//   BOTH entry points from the Palette Builder — the "Build UI system" toolbar
+//   button AND the "UI System / Admin" breadcrumb — in favour of a guided
+//   walkthrough from the nav (components/UIKitGuide.jsx). `canUseUiSystem` is
+//   gone with them. Nothing imports components/UiSystemBuilder.jsx, so it is in
+//   no chunk of any production build. NO ADMIN CAN REACH IT EITHER.
+//
+// That mattered because a note saying "admin-only" sends the next agent looking
+// for an auth gate to satisfy, and there is no gate to find. Settled by
+// RENDERING rather than by reading source: "UI System mode is unreachable for an
+// ADMIN too" in 57-signed-in-session.spec.js signs in as the founder, proves the
+// session is admin by opening /admin, proves the Palette Builder rendered, and
+// only then asserts the controls are absent.
+//
+// The assertions below are still the right contract for the tool. Re-enabling
+// them needs a ROUTE, not a sign-in and not a restored button — see the long
+// comment in PaletteBuilder.jsx. Until then it would be dishonest to report
+// them as passing, and wasteful to throw away eight tests' worth of behaviour
+// that took real work to specify.
 test.describe.skip('UI System Builder', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {

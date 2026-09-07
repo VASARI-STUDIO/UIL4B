@@ -14,7 +14,8 @@ import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/me
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import { MODULE_BOARD } from '../data/moduleBoard'
-import { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../data/pipeline'
+// src/data/pipeline.js is NOT imported here. It is loaded by PipelineBoard with
+// a dynamic import() — see the note above that component for the measurement.
 import { resolvePromptProfileLink } from '../utils/promptSubmission'
 import { toCsv } from '../utils/csv'
 
@@ -616,9 +617,89 @@ const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', par
 // moving through the pipeline, and the prioritised next-to-do queue. Renders
 // from src/data/pipeline.js (no backend). Complements the Board tab, which
 // tracks each feature module.
+//
+// ── WHY THE DATA ARRIVES BY import() AND NOT BY import ──────────────────────
+//
+// src/data/pipeline.js is the engineering log: every note every agent has left,
+// as prose, inside the row objects this board renders. It is 672 KB of source
+// and it grows by a few KB every time anybody records what they did. A static
+// import put all of it in Admin-*.js, which was 776,482 bytes raw / 287,073
+// gzip — by a wide margin the largest chunk this app ships — and 84% of that
+// was this one file. The admin downloaded the project's whole engineering
+// history as JavaScript, and parsed it, in order to draw a table of it. Filed
+// twice, by #405 and #406, which is itself a sign of how visible it was.
+//
+// The dynamic import moves it into its own chunk. `{tab === 'pipeline' && ...}`
+// in the tab switch below means this component is not mounted until the Pipeline
+// tab is opened, so the effect — and therefore the request — does not fire on
+// any other tab. MEASURED, clean build either side: Admin-*.js 776,482 →
+// 113,900 bytes raw (-85%), 287,073 → 29,755 gzip (-90%), and the notes become
+// pipeline-*.js at 663,549 / 258,382 — paid for only by an admin who opens this
+// one tab, and by nobody else on any other admin screen.
+//
+// A DYNAMIC IMPORT RATHER THAN A BUILD-TIME JSON, deliberately. Emitting the
+// notes as a JSON asset would take them out of the JavaScript graph entirely
+// and cache them separately, which is a real advantage — but it needs a
+// generator, and a generator can go stale. An agent who edits pipeline.js and
+// does not re-run it would leave the founder's own board showing yesterday's
+// backlog while every check stayed green, which is precisely the class of
+// silent-wrong this repository keeps paying for. import() cannot go stale: it
+// resolves the same module by the same path, and the bundler regenerates the
+// chunk on every build.
+//
+// pipeline.js DOES NOT MOVE. Every agent's composition scripts and several
+// tests/unit/*.test.js files import it by that exact path, and
+// pipeline-board-renderable.test.js imports the same three exports this
+// component renders — so the board and its guard still read one source.
+//
+// GUARDED AT BUILD LEVEL by tests/unit/admin-chunk-carries-no-backlog.test.js,
+// which runs a real production build and fails if the backlog is back in the
+// Admin chunk. A comment asking the next agent not to re-add the static import
+// would not survive a refactor; that test will.
 function PipelineBoard() {
   const [todoFilter, setTodoFilter] = useState('all')
+  const [board, setBoard] = useState(null)
+  const [loadError, setLoadError] = useState('')
   const todoFilters = ['all', 'doing', 'todo', 'review', 'partial', 'blocked', 'deferred', 'done']
+
+  useEffect(() => {
+    let alive = true
+    import('../data/pipeline').then(
+      (mod) => { if (alive) setBoard(mod) },
+      // Named in words rather than swallowed. A chunk request can fail on a
+      // stale deploy, and a board that silently rendered zero rows would read
+      // as "the backlog is empty", which is the most misleading thing this
+      // surface could say.
+      (err) => {
+        console.error('[admin] the pipeline backlog chunk failed to load:', err?.message || err)
+        if (alive) setLoadError(err?.message || String(err))
+      },
+    )
+    return () => { alive = false }
+  }, [])
+
+  if (loadError) {
+    return (
+      <div className="adm-section">
+        <div className="adm-card">
+          <div className="adm-empty">
+            Could not load the backlog ({loadError}). This board reads
+            src/data/pipeline.js as a separate chunk; a failed request here is
+            usually a stale tab after a deploy. Reload the page.
+          </div>
+        </div>
+      </div>
+    )
+  }
+  if (!board) {
+    return (
+      <div className="adm-section">
+        <div className="adm-card"><div className="adm-empty">Loading the backlog…</div></div>
+      </div>
+    )
+  }
+
+  const { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } = board
   const visibleTodos = NEXT_TODO.filter(t => todoFilter === 'all' || t.status === todoFilter)
 
   return (

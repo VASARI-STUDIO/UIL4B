@@ -361,3 +361,110 @@ test('signing out from a signed-in session really signs out', async ({ page }) =
       { message: 'useSessionHint() must clear the hint when the session ends' })
     .toBe(null)
 })
+
+
+/* ── THE ADMIN'S OWN TWO SURFACES ──────────────────────────────────────────
+ *
+ * Both of these are here rather than in a unit test for the same reason the
+ * file's header gives: a correct fix can ship beside a test that exercises a
+ * helper in isolation. One measures a lazy chunk actually arriving in a
+ * browser; the other measures a control actually not being on a page. Neither
+ * question can be answered by reading source.
+ */
+
+test('the Pipeline tab loads the backlog when it is opened, and not before', async ({ page }) => {
+  // THE WIRING TEST for [admin-chunk-is-the-backlog]. src/data/pipeline.js is
+  // 672 KB of engineering notes that used to be a static import in Admin.jsx,
+  // so every admin downloaded and parsed the entire project history to open the
+  // Overview tab. PipelineBoard now reaches it with import().
+  //
+  // The unit guard next to this (admin-chunk-carries-no-backlog.test.js) walks
+  // the chunk graph and proves the static edge is gone. It cannot prove the tab
+  // still WORKS — a deferral that renders nothing passes a graph walk perfectly.
+  // This drives the real page.
+  //
+  // The two halves are also each other's control. "No request yet" would be
+  // true of a wrong URL matcher; the same matcher then has to fire after the
+  // click, or this test fails. And "rows are on screen" would be true of a
+  // static import; the request has to have been absent first.
+  watch(page, 'the founder opening the backlog board')
+
+  const backlogChunk = []
+  page.on('request', (r) => {
+    if (/\/assets\/pipeline-[^/]*\.js/.test(r.url())) backlogChunk.push(r.url())
+  })
+
+  await signIn(page, { admin: true })
+  await go(page, '/admin')
+  await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+
+  expect(
+    backlogChunk,
+    'the backlog chunk was fetched before the Pipeline tab was opened, so the deferral buys nothing '
+    + '- something is importing src/data/pipeline.js eagerly again',
+  ).toHaveLength(0)
+
+  await page.getByRole('tab', { name: 'Pipeline' }).click()
+
+  // It renders, from the lazily-loaded module: the App condition band, the
+  // process board, and real rows in the queue.
+  await expect(page.getByText('App condition')).toBeVisible()
+  await expect(page.getByText(/^Next to do \(\d+\)$/)).toBeVisible()
+  await expect(page.locator('.adm-pipe-todo').first()).toBeVisible()
+  const rows = await page.locator('.adm-pipe-todo').count()
+  expect(rows, 'the queue rendered no rows, so the backlog did not actually arrive').toBeGreaterThan(20)
+
+  expect(
+    backlogChunk.length,
+    'no request for the backlog chunk was seen even after the tab opened - either the tab is not '
+    + 'lazy after all, or this URL matcher no longer matches the emitted chunk name, in which case '
+    + 'the assertion above passed for free',
+  ).toBeGreaterThan(0)
+})
+
+test('UI System mode is unreachable for an ADMIN too, which is not what the docs said', async ({ page }) => {
+  // [ui-system-mode-unreachable-for-admins-too]. README, CLAUDE-adjacent docs
+  // and this suite's own 12-ui-system-builder.spec.js all described UI System
+  // mode as "admin-only", which sends the next agent looking for an auth
+  // harness that would prove nothing. The harness now exists (#407) and this is
+  // it being used to settle the question by RENDERING the page rather than by
+  // reading PaletteBuilder.jsx.
+  //
+  // The truth: PaletteBuilder.jsx removed BOTH doors on the founder's 2026-09-05
+  // instruction - the "UI System / Admin" breadcrumb and the "Build UI system"
+  // toolbar button - and nothing imports components/UiSystemBuilder.jsx, so it
+  // is in no chunk of any build. The surface is UNWIRED, not gated.
+  //
+  // THE POSITIVE CONTROLS MATTER MORE THAN THE ABSENCE HERE. "No button" is
+  // also what a page that never loaded looks like, and what a session that is
+  // not really an admin looks like. So: this session is proven to be an admin
+  // by /admin admitting it, and the palette page is proven to have rendered by
+  // its own seed field being on screen, before anything is asserted absent.
+  watch(page, 'the founder looking for UI System mode')
+  await signIn(page, { admin: true })
+
+  await go(page, '/admin')
+  await expect(
+    page.getByText(/ADMIN MODE/i).first(),
+    'control: this session must really be the founder, or an absence below means nothing',
+  ).toBeVisible()
+
+  await go(page, '/create/palette')
+  await expect(
+    page.getByRole('textbox', { name: 'Seed colour hex' }),
+    'control: the Palette Builder must have rendered, or an absence below means nothing',
+  ).toBeVisible()
+
+  for (const name of [/Build UI system/i, /Open UI System Pro mode/i, /UI System/]) {
+    await expect(
+      page.getByRole('button', { name }),
+      `an admin can see a "${name}" control on the Palette Builder, so the surface IS reachable and `
+      + 'the docs corrected alongside this test are now the thing that is wrong',
+    ).toHaveCount(0)
+  }
+  await expect(
+    page.getByRole('heading', { name: 'UI System Builder' }),
+    'the UI System Builder rendered for an admin, so it is gated rather than unwired',
+  ).toHaveCount(0)
+})

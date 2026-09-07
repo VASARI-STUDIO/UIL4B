@@ -4184,9 +4184,13 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
    markup they are about to copy. `pre-wrap` keeps every deliberate newline (one
    tag per line) while letting a long tag fold, and `overflow-wrap:anywhere`
    folds only where a line genuinely cannot fit, so short tags are untouched.
-   This is what the two sibling code blocks in this stylesheet already do —
-   `.bsg-code` and `.uib-code`. Wrapping needs no gesture and cannot hide a
-   character. */
+   This was written when two sibling code blocks in this stylesheet did the
+   same — `.bsg-code` and `.uib-code`. Both are gone: the dead-source sweep of
+   2026-09-06 deleted BoxShadowGenerator.jsx and UIBuilder.jsx, which reached no
+   chunk of a production build, and their selectors went with them. The
+   reasoning stands on its own and the rule below is unchanged; only the
+   now-missing siblings are corrected, so nobody greps for them.
+   Wrapping needs no gesture and cannot hide a character. */
 .seo-tags-code{font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
 @media(max-width:760px){.seo-grid{grid-template-columns:1fr}}
 .seo-ca-empty{padding:40px 20px;text-align:center;font-size:13px;color:var(--t3);border:1.5px dashed var(--border);border-radius:var(--radius-l)}

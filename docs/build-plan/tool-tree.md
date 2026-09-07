@@ -91,13 +91,20 @@ the meaning — `semantic-color`, `aspect-ratio`, and `component-designer` under
   - Tint Generator `/create/tint` — **live**
   - Gradient Generator `/create/gradient` — **live**
   - Contrast Checker `/create/contrast` — **live**
-  - **UI System Builder** — **admin-only**, and not a route in the tool tree.
-    Entered from a "Build UI system" button inside the Palette Builder, gated by
-    `canUseUiSystem`. Founder decision, batch 4: *"make the internal design
-    system for admins only."* Its acceptance suite
-    (`tests/user-sim/12-ui-system-builder.spec.js`) is skipped in full because
-    that suite runs signed out and the surface is therefore unreachable —
-    skipped is the honest state, not a broken test.
+  - **UI System Builder** — **unwired**, and not a route in the tool tree.
+    It *was* admin-only, entered from a "Build UI system" button inside the
+    Palette Builder and gated by `canUseUiSystem` (founder decision, batch 4:
+    *"make the internal design system for admins only."*). That is no longer the
+    state and this entry described it wrongly until 2026-09-07. On 2026-09-05 the
+    founder removed **both** doors — the button and the "UI System / Admin"
+    breadcrumb — in favour of a guided walkthrough from the nav
+    (`components/UIKitGuide.jsx`). Nothing imports `components/UiSystemBuilder
+    .jsx` now, so it is in no chunk of any build: **no admin can reach it
+    either.** Its acceptance suite
+    (`tests/user-sim/12-ui-system-builder.spec.js`) is skipped in full — not
+    because the suite runs signed out (it could sign in since #407), but because
+    there is no door for it to walk through. Skipped is the honest state, not a
+    broken test. Re-entering the tool means giving it its own route.
 - **Typography System Builder** — landing at `/create/typography`
   - Font Gallery `/create/font-gallery` — **live**
   - Font Pair Tool `/create/font-pair` — **live**
