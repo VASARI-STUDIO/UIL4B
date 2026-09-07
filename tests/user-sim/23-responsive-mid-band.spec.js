@@ -249,3 +249,76 @@ test.describe('workbench two-column threshold', () => {
     expect(missing, `stops rendered outside the ramp:\n  ${missing.join('\n  ')}`).toEqual([])
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1097–1136px: the band where the toolbar expanded onto a row it did not fit
+// ─────────────────────────────────────────────────────────────────────────────
+// The founder's standing report is "the palette toolbar … wrapped to 105px tall".
+// The band above pins 961–1080 and the workbench tests pin 980→981, so this
+// band sat between two pinned ranges and was reported by neither.
+//
+// WHAT WAS WRONG, and why the unit test could not see it. `fitRail()` in
+// PaletteBuilder.jsx asked `railOverflowsToolbar()` whether the exploratory
+// cluster fits beside the lead group, and passed `row.clientWidth` as the
+// available space. `.plb-toolbar` is `padding:10px var(--page-inline)` — 20px
+// a side here — and `clientWidth` INCLUDES that padding, so the rule was
+// credited with 40px the flex line cannot use.
+//
+// MEASURED on `main`, fresh context per width, geometry settled:
+//     viewport   content width   lead+gap+rail   toolbar height   rows
+//       1096         1056            1097            57px           1
+//       1097         1057            1097           105px           2
+//       1136         1096            1097           105px           2
+//       1137         1097            1097            57px           1
+// Forty pixels of padding, forty pixels of band: the cluster expanded at 1097
+// and did not fit until 1137.
+//
+// tests/unit/toolbar-fit.test.js passed throughout, because its measured table
+// hands the helper VIEWPORT widths as `rowWidth` while the call site handed it
+// `clientWidth`. The helper was right; the wiring was wrong. So this asserts
+// the RENDERED height at the widths that were wrong, which is the only place
+// the two can be caught disagreeing.
+//
+// MUTATION: restore `rowWidth: row.clientWidth` in fitRail() and 1097/1110/1136
+// go red at 105px while the unit suite stays green.
+test.describe('Palette Builder toolbar, 1097–1136px', () => {
+  const BAND = [1097, 1110, 1136]
+  const NEIGHBOURS = [1080, 1096, 1137, 1180]
+
+  test('the toolbar stays on one row across the band and its neighbours', async ({ page }) => {
+    watch(page, 'a designer working in a window a little narrower than full width')
+    await page.setViewportSize({ width: BAND[0], height: 900 })
+    await go(page, '/create/palette')
+    await expect(page.locator('.plb-toolbar')).toBeVisible()
+    await settle(page)
+
+    // Positive control: the toolbar really is measurable here, so a later
+    // "0 failures" cannot come from a page that never rendered the toolbar.
+    const control = await page.evaluate(() => {
+      const tb = document.querySelector('.plb-toolbar')
+      return {
+        groups: tb.querySelectorAll('.plb-toolbar-group').length,
+        height: Math.round(tb.getBoundingClientRect().height),
+      }
+    })
+    expect(control.groups, 'the toolbar renders both groups').toBe(2)
+    expect(control.height, 'the toolbar has a real height').toBeGreaterThan(30)
+
+    const twoRow = []
+    for (const width of [...BAND, ...NEIGHBOURS]) {
+      await page.setViewportSize({ width, height: 900 })
+      await settle(page)
+      const m = await page.evaluate(() => {
+        const tb = document.querySelector('.plb-toolbar')
+        const groups = [...tb.querySelectorAll('.plb-toolbar-group')]
+          .filter((g) => getComputedStyle(g).display !== 'none')
+        const tops = new Set(groups.map((g) => Math.round(g.getBoundingClientRect().top)))
+        return { height: Math.round(tb.getBoundingClientRect().height), rows: tops.size }
+      })
+      // One row of 36px controls plus 10px padding a side measures 57px here;
+      // 70 leaves room for a font or token change without admitting a wrap.
+      if (m.rows > 1 || m.height > 70) twoRow.push(`${width}px: ${m.height}px tall, ${m.rows} rows`)
+    }
+    expect(twoRow, `the toolbar wrapped to a second row at:\n  ${twoRow.join('\n  ')}`).toEqual([])
+  })
+})

@@ -316,13 +316,42 @@ export default function TintTool({ onCopy, toast }) {
         <NavLink to="/create/palette" className="tt-back" aria-label="Back to Palette Builder">
           <span aria-hidden="true">←</span> Palette Builder
         </NavLink>
+        {/* THE LEDE STATES THE MODEL, NOT THE WORKFLOW.
+            ──────────────────────────────────────────────────────────────────
+            It used to read: "Build a tonal system that designers can evaluate
+            and developers can ship. Start with one colour or import a palette,
+            tune the curve, then inspect real interface roles or copy
+            production-ready CSS."
+
+            Three clauses, and all three describe the page's own workflow to
+            someone who is looking at it — import, tune, copy are three controls
+            visible on this screen. #386 removed exactly this shape from the
+            Type Scale ("The paragraph lost two of its three clauses. What it
+            said … was the page describing its own workflow to someone who can
+            see it"), and left behind the one fact a first-time visitor needs
+            and cannot infer: the MODEL. There it was "One base size and one
+            ratio. Every step below is that multiplication."
+
+            Here the model is a base colour and a curve resolving to a target
+            tone per step — `toneForLabel()` maps every step label to a tone and
+            BOTH curves answer that same target, which is why this sentence is
+            true whether the user is on Perceived or Linear.
+
+            No figure is quoted on purpose. The four-up strip that used to sit
+            below this header was deleted for restating "11 stops per scale",
+            which the page already says twice more; putting the count back in
+            the lede would re-introduce the motif one line higher.
+
+            MOBBIN: Webflow, Framer, Figma and Squarespace all open a working
+            canvas with no explanatory paragraph at all.
+              https://mobbin.com/screens/6c7126d9-4bfa-46b3-bbb9-d14a22208f32
+              https://mobbin.com/screens/e9b2a738-c4cb-4bc2-a31f-b2e4086374a3
+              https://mobbin.com/screens/b62f7a88-50de-4ef0-bd2f-a238d83dd36a
+            This page is not a bare canvas — it is reachable cold from search —
+            so it keeps ONE sentence rather than none. */}
         <div className="tt-hero-copy">
           <h1>Tint Scale Generator</h1>
-          <p>
-            Build a tonal system that designers can evaluate and developers can
-            ship. Start with one colour or import a palette, tune the curve, then
-            inspect real interface roles or copy production-ready CSS.
-          </p>
+          <p>One base colour and one curve. Every step below is that colour at a measured tone.</p>
         </div>
       </header>
 
