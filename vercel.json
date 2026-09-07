@@ -390,6 +390,10 @@
       "destination": "/plans/index.html"
     },
     {
+      "source": "/principles",
+      "destination": "/principles/index.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/privacy/index.html"
     },
