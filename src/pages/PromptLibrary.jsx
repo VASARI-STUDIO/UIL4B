@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
@@ -16,6 +16,7 @@ import PromptCard from '../components/prompt/PromptCard'
 import PromptModal from '../components/prompt/PromptModal'
 import AddPromptPanel from '../components/prompt/AddPromptPanel'
 import SubmitPromptPanel from '../components/prompt/SubmitPromptPanel'
+import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 
 // Community submission surface name for the sign-in gate (utils/submitIntent).
 const SUBMIT_SURFACE = 'prompt'
@@ -144,6 +145,40 @@ export default function PromptLibrary({ onCopy, toast }) {
     if (!hasSubmitIntent(SUBMIT_SURFACE)) return
     openSubmitPanel()
   }, [authLoading, uid, openSubmitPanel])
+
+  // ── The closing CTA reaches the SAME trigger, from the other end of the page ─
+  //
+  // The submission panel mounts near the masthead. The closing CTA is the last
+  // thing on a page of a hundred cards, so a user who presses it and is left
+  // where they are has pressed a button that did nothing they can see — the
+  // panel opened several thousand pixels above them.
+  //
+  // So the CTA scrolls to what it opened. A ref FLAG rather than a timer or a
+  // rAF after the await: `openSubmit` awaits the sign-in prompt, and there is no
+  // fixed delay after which React is guaranteed to have committed the panel.
+  // Keying the scroll off `submitOpen` waits for the actual mount instead of
+  // guessing at one, and the flag keeps the masthead's own Submit button —
+  // which is already on screen — from scrolling the page out from under itself.
+  const submitPanelRef = useRef(null)
+  const scrollToPanel = useRef(false)
+  useEffect(() => {
+    if (!submitOpen || !scrollToPanel.current) return
+    scrollToPanel.current = false
+    submitPanelRef.current?.scrollIntoView({ block: 'center' })
+  }, [submitOpen])
+
+  // A plain function, not useCallback: it closes over `switchTab`, which the
+  // page rebuilds every render, so memoising would either hold a stale one or
+  // memoise nothing. Nothing downstream is memoised on this prop either.
+  const openSubmitFromClose = async () => {
+    scrollToPanel.current = true
+    // The panel only mounts on the community tab, so the CTA has to put the
+    // page on it. `switchTab` rather than a bare setTab: it is the page's own
+    // tab contract (it clears the search and category too), and a My-Prompts
+    // filter left applied to the community list is a view nobody chose.
+    if (tab !== 'community') switchTab('community')
+    await openSubmit()
+  }
 
   const isCommunity = tab === 'community'
   const sortedCommunity = useMemo(() => {
@@ -320,7 +355,9 @@ export default function PromptLibrary({ onCopy, toast }) {
 
       {/* Submit to community panel — signed-in only; see openSubmit above. */}
       {isCommunity && submitOpen && uid && (
-        <SubmitPromptPanel onClose={() => setSubmitOpen(false)} user={user} userProfile={userProfile} toast={toast} />
+        <div ref={submitPanelRef}>
+          <SubmitPromptPanel onClose={() => setSubmitOpen(false)} user={user} userProfile={userProfile} toast={toast} />
+        </div>
       )}
 
       {/* Gallery Grid */}
@@ -389,6 +426,20 @@ export default function PromptLibrary({ onCopy, toast }) {
           />
         </>
       )}
+
+      {/* The closing line, below the last card and below the Pro tease. The
+          prompt submission entry is ON this page rather than behind a route, so
+          the CTA calls it directly — which means a signed-out visitor meets
+          exactly the requireLogin gate the masthead's Submit button uses, with
+          the same COMMUNITY_SUBMIT_REASONS, because it IS that code path and
+          not a second copy of it. */}
+      <GalleryCloseCta
+        className="pl-cta"
+        detail="Write one and submit it to the community library — every submission is reviewed before it appears."
+        action="Create and submit your own"
+        onAction={openSubmitFromClose}
+        busy={authLoading}
+      />
 
       {/* Detail Modal */}
       {modalPrompt && (

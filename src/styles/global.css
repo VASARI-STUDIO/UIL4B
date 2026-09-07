@@ -11569,6 +11569,27 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .drh-head span{display:block;margin-bottom:7px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent-strong)}
 .drh-head h2{margin:0;font-family:var(--display);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
 .drh-head p{margin:0;font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
+
+/* ── GalleryCloseCta ─ the last block on a gallery page ─────────────────────
+   Founder request (2026-09-07): a closing "can't find what you're looking for"
+   on every gallery.
+
+   NO CARD, NO PANEL, NO TINT. Nothing here paints a background, and that is the
+   design rather than an omission: the page above it is a hundred cards, and one
+   more filled rectangle at the end would read as the hundred-and-first. What
+   ends the list is the RULE and the space — the same hairline `.drh-head` uses
+   to open it, so the grid is bracketed by one mark top and bottom rather than
+   by two unrelated decorations.
+
+   The generous bottom padding is load-bearing, not taste. `.global-feedback-btn`
+   is fixed at the bottom-right corner (20px/20px, 14px/14px on a phone), and
+   #413 found a FAB sitting on top of a footer control on a page with no scroll
+   room. A centred pill clears it on width alone at most sizes, but not at 320,
+   so the block keeps a floor of clear space under the action. */
+.gcta{display:flex;flex-direction:column;align-items:center;gap:12px;margin:clamp(52px,7vw,88px) 0 0;padding:clamp(36px,5vw,56px) 20px clamp(56px,7vw,72px);border-top:1px solid var(--border);text-align:center}
+.gcta-q{margin:0;font-family:var(--display);font-size:clamp(21px,2.6vw,30px);font-weight:500;letter-spacing:-.035em;color:var(--t0)}
+.gcta-detail{margin:0;max-width:52ch;font-size:13px;line-height:1.55;color:var(--t2)}
+.gcta-action{margin-top:6px}
 @media(max-width:720px){
   /* min-height 280, NOT 300 and NOT 0 (#surface-headers-read-as-ai).
      #331 worked this floor out at 300 against a copy block that still carried
@@ -11800,6 +11821,10 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-filter-dot{width:8px;height:8px;flex-shrink:0;border-radius:var(--radius-pill);box-shadow:inset 0 0 0 1px rgba(10,10,18,.16)}
 .lbry-filter-dot[data-dot="warm"]{background:linear-gradient(135deg,#FFA94D,#F0435F)}
 .lbry-filter-dot[data-dot="cool"]{background:linear-gradient(135deg,#4DA3FF,#7C5CFF)}
+/* Neutral selects on the ABSENCE of chroma, so its dot is the one swatch on the
+   tray with no hue in it at all. Same two-stop treatment as its neighbours so it
+   reads as a member of the set rather than as a disabled chip. */
+.lbry-filter-dot[data-dot="neutral"]{background:linear-gradient(135deg,#C9CCD2,#8A8F98)}
 .lbry-filter-dot[data-dot="dark"]{background:linear-gradient(135deg,#3A3F4B,#0E1015)}
 /* The pale dot needs a real edge, not the shared hairline: on the light theme
    its fill is within a few percent of the tray behind it, so at 8px the inset
@@ -11996,6 +12021,25 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
    far edge is the resting look those five surfaces already had. */
 @media(min-width:641px) and (max-width:980px){
   .lbry-toolbar-action{margin-left:0}
+  /* THE SEARCH FIELD'S BASIS IS WHAT DECIDES HOW MANY ROWS THIS BAND GETS.
+     Flex wraps on BASE sizes, not on shrunk ones, so a 240px basis reserves
+     240px for the field before anything is allowed to shrink — and whatever
+     does not fit after that goes to a second row, which is the 92px-ceiling
+     failure #318 designed this band to remove.
+
+     MEASURED on /discover/palettes at 768px, which is the surface that now
+     carries the most: 240 (search) + 340 (two collapsed triggers) + 137 (the
+     Create a palette link) + 20 (two row gaps) = 737 against a 714px row, so
+     the action wrapped and the toolbar went to 124px over its 92px ceiling.
+     At a 120px basis the same row totals 581 — which is exactly what this
+     surface totalled before it grew a second filter group, so the band's
+     budget is unchanged rather than merely loosened.
+
+     The field does NOT render at 120px. flex-grow:1 hands it every pixel the
+     other controls leave: 253px at 768, 130px at 641, and its 360px cap from
+     980 up. This lowers the FLOOR at which the row still fits, and nothing
+     else. */
+  .lbry-search{flex-basis:120px}
 }
 
 /* Font Gallery */

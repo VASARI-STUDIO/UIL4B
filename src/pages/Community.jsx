@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import { readCommunitySubmissions, sanitizeCommunitySubmission, writeCommunitySubmissions } from '../utils/communitySubmissions'
+import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
 import { buildQueueRecord, mergeSubmissions } from '../utils/communityQueue'
 import { listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
@@ -326,6 +327,20 @@ export default function Community({ toast }) {
             : 'No designs in this category yet.'}
         </div>
       )}
+
+      {/* The closing line, below the last card. The submission entry is on this
+          page, so the CTA calls `openSubmit` itself — the same function the
+          masthead's Submit design button uses, so a signed-out visitor meets
+          the identical requireLogin gate and reasons rather than a copy of
+          them. No scroll handling here, unlike /discover/prompts: what opens is
+          a MODAL, which arrives where the user already is. */}
+      <GalleryCloseCta
+        className="ch-cta"
+        detail="Submit a design of your own — it is credited to you, and reviewed before it appears."
+        action="Create and submit your own"
+        onAction={openSubmit}
+        busy={authLoading}
+      />
 
       {/* Only ever mounted for a signed-in user — a sign-out mid-flow closes it
           rather than leaving a form nobody can submit. */}
