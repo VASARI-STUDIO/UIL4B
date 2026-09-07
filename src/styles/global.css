@@ -3014,17 +3014,48 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 }
 
 /* Shared in-app footer */
-.app-footer{padding:var(--s-8) var(--page-inline) var(--s-5);border-top:1px solid var(--border);background:var(--bg-1)}
+/* THE BOTTOM PADDING IS FAB CLEARANCE, and it is load-bearing rather than
+   breathing room.
+   `.global-feedback-btn` is `position:fixed` in the bottom-right corner, so on
+   a SHORT page — where the footer's own bottom edge is the viewport's bottom
+   edge — it lands on the last row of the footer. Measured on the 404 at
+   1440x900: `.app-footer-attrib` occupied 1292.2..1393.9 and the FAB
+   1303..1420, blocking the link across its ENTIRE width (nine of nine sample
+   points returned the FAB from elementFromPoint), with `scrollHeight` equal to
+   the viewport — zero scroll room. The link was not merely awkward, it could
+   not be reached by any means. At 981px the overlap was the full 101.7px too.
+   Reserving the clearance INSIDE the footer is what makes that impossible
+   rather than unlikely: the padding travels with the footer, so the last row
+   can never come within the FAB's height of the document end, and the document
+   end is the lowest the viewport can ever reach. `.bill-banner` already
+   resolves the same collision the same way, at `bottom:74px`.
+   The value is derived from the FAB's own box (38px tall, 20px inset) plus a
+   gap, so the two cannot drift apart silently. */
+.app-footer{--fab-clearance:66px;padding:var(--s-8) var(--page-inline) max(var(--s-5),var(--fab-clearance));border-top:1px solid var(--border);background:var(--bg-1)}
 .app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
 .app-footer-tagline{max-width:42ch;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
-.app-footer-start{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:650;color:var(--t0);text-decoration:none}
+/* The footer's one call to action, and it measured 133x23.1 — under the 24px
+   minimum by nine tenths of a pixel, at every width. Mobbin/Retool gives the
+   equivalent footer CTA a real pill with a proper hit area; this keeps the
+   quieter text treatment the row is built around and only lifts the floor.
+   https://mobbin.com/sites/sections/fa5c03c7-be13-4344-b36f-16b5edddc2a0 */
+.app-footer-start{display:inline-flex;align-items:center;min-height:24px;gap:8px;font-size:var(--fs-body-s);font-weight:650;color:var(--t0);text-decoration:none}
 .app-footer-start:hover{gap:12px;color:var(--accent-strong);text-decoration:none}
 .app-footer-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-5)}
-.app-footer-group{display:flex;flex-direction:column;align-items:flex-start;gap:9px}
+.app-footer-group{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .app-footer-group p{margin-bottom:3px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
-.app-footer-links a{font-size:var(--fs-caption);color:var(--t1);text-decoration:none;font-weight:500;transition:color var(--t-fast)}
+/* 94.8x21.4 measured, at every width. These stack in a column with a 9px gap,
+   so a 24px circle centred on each one clears its neighbour by a hair and the
+   SPACING exception technically covers them — but "technically conforming and
+   still a 21px touch target" is the founder's standing complaint about this
+   footer, and the vertical rhythm in the stacked link columns on
+   Mobbin/Pitch and Mobbin/Retool is looser than this, not tighter.
+   https://mobbin.com/sites/sections/86c62119-372f-4602-9e63-254535ff22f4
+   The column gap drops to 6px so the visual pitch is unchanged (21.4+9 = 30.4
+   before, 24+6 = 30 after) while the pressable box grows. */
+.app-footer-links a{display:inline-flex;align-items:center;min-height:24px;font-size:var(--fs-caption);color:var(--t1);text-decoration:none;font-weight:500;transition:color var(--t-fast)}
 .app-footer-links a:hover{color:var(--accent-strong)}
 .app-footer-soon-link{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-caption);color:var(--t2);font-weight:500}
 .app-footer-soon-link em{padding:2px 5px;border:1px solid var(--border);border-radius:999px;font-family:var(--mono);font-size:8px;font-style:normal;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
@@ -3041,7 +3072,9 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    50% measured 2.4:1 in light, where the ground is white. */
 .app-footer-attrib{color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .app-footer-attrib:hover{color:var(--accent-strong);text-decoration-color:currentColor}
-.app-footer--compact{padding-block:var(--s-6) var(--s-4)}
+/* The compact variant keeps the FAB clearance for the same reason the full one
+   does — it sets `padding-block`, which would otherwise overwrite it. */
+.app-footer--compact{padding-block:var(--s-6) max(var(--s-4),var(--fab-clearance))}
 .app-footer--compact .app-footer-inner{grid-template-columns:minmax(220px,.8fr) minmax(420px,1.2fr);gap:var(--s-5) var(--s-7)}
 .app-footer--compact .app-footer-tagline{max-width:36ch}
 .app-footer--compact .app-footer-legal{padding-top:var(--s-4)}
@@ -3065,7 +3098,15 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    .app-footer-attrib above (founder direction 2026-09-02, no hover-only
    affordances on touch), and more so here: its two neighbours are plain spans,
    so nothing else in the row tells a reader this one is pressable. */
-.app-footer-note{padding:0;border:0;background:none;font:inherit;font-size:var(--fs-caption);font-weight:500;color:var(--t1);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px;transition:color var(--t-fast)}
+/* min-height 24 is WCAG 2.2 AA 2.5.8, and this control could not claim either
+   exception: it is not inline in a sentence (its neighbours are separate spans,
+   not prose it sits inside), and the legal row's flex gap does not open 24px of
+   undisturbed space around it. Measured at 109.8x21.4 on all thirteen surfaces
+   at all twenty widths in the 2026-09-06 sweep — the single most widespread
+   target-size failure in the shell. The text does not move: inline-flex with
+   the height as a FLOOR grows the pressable box by 1.3px above and below the
+   line box and leaves the type where it was. */
+.app-footer-note{display:inline-flex;align-items:center;min-height:24px;padding:0;border:0;background:none;font:inherit;font-size:var(--fs-caption);font-weight:500;color:var(--t1);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px;transition:color var(--t-fast)}
 .app-footer-note:hover{color:var(--accent-strong);text-decoration-color:currentColor}
 
 /* THE PANEL. The house dialog shell — same scrim, same radius, same entrance as
@@ -4056,7 +4097,15 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .seo-preview{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow);overflow:hidden}
 .seo-preview-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t2)}
 .seo-seg{display:flex;gap:2px;background:var(--bg-2);border-radius:var(--radius-pill);padding:2px}
-.seo-seg button{padding:3px 12px;border-radius:var(--radius-pill);border:none;background:transparent;color:var(--t2);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;letter-spacing:0;text-transform:none}
+/* The Desktop/Mobile switch measured 67.6x21 and 59.1x21 at every one of the
+   twenty widths swept on 2026-09-06 — the only control on /seo, and the one a
+   visitor presses to see the thing the page exists to show. `padding:3px`
+   against an 11px face is what held it under the 24px minimum. The segmented
+   control on Mobbin/MOUTHWASH Studio sits on a padded track with the same
+   quiet type and a comfortable press height, which is the shape this already
+   wanted: the TRACK keeps its 2px inset and the segments gain theirs.
+   https://mobbin.com/sites/sections/f1dc0b80-5422-410e-86fd-0d64a1b998e5 */
+.seo-seg button{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:3px 12px;border-radius:var(--radius-pill);border:none;background:transparent;color:var(--t2);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;letter-spacing:0;text-transform:none}
 .seo-seg button.is-active{background:var(--accent-strong);color:var(--accent-fg)}
 .seo-serp{padding:16px}
 .seo-serp.is-mobile{max-width:360px}
@@ -8806,7 +8855,13 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-ramp{display:flex;gap:4px;margin-bottom:10px;padding:0;border:none;background:none;cursor:pointer}
 .plb-ramp-bar{width:14px;height:34px;background:var(--plb-rc);border:none;border-radius:4px;transition:transform var(--t)}
 .plb-ramp:hover .plb-ramp-bar{transform:translateY(-2px)}
-.plb-hex{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.01em;text-transform:uppercase;color:inherit;background:none;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;transition:background var(--t)}
+/* min-height 24 (WCAG 2.2 AA 2.5.8). This is the copy-the-hex control on the
+   homepage palette board — the first thing on the front page a visitor is
+   invited to press — and the narrow-width rule below trims it to a 13px face
+   on 2px of padding, which measured 67.5x21 at 320, 360, 390, 414, 480, 560,
+   600, 662 and 768. The floor is set on the base rule so the narrow rule can go
+   on tuning type and padding without being able to drop back under it. */
+.plb-hex{display:inline-flex;align-items:center;justify-content:center;min-height:24px;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.01em;text-transform:uppercase;color:inherit;background:none;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;transition:background var(--t)}
 .plb-hex:hover{background:color-mix(in srgb,var(--plb-ink) 12%,transparent)}
 /* The column title names the COLOUR (utils/paletteNames.js, deterministic per
    hex); .plb-role under it names the SLOT. Both inherit the column ink. */
@@ -12445,7 +12500,19 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 /* Curated inspiration links credit the PLATFORM they open, not a person.
    Twelve invented designers used to render through the same <UserName> as real
    members — see the note in src/data/communityDesigns.js. */
-.ch-card-source{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* `flex-shrink:0` because THIS is the credit. `overflow:hidden` gives the
+   source a min-content contribution of zero, so in the `space-between` row it
+   was the only item that could give, and it gave first: measured at 360px on
+   the narrow two-column card, "Dribbble" needed 42px and was allotted 40 —
+   clipped to "Dribbbl…" to save two pixels, on the one element in the card that
+   says who the work belongs to. The category tag carries the squeeze instead:
+   it has no overflow rule, so it wraps its own text rather than truncating.
+
+   `flex-wrap:wrap` on the row was tried alongside this and REMOVED, not
+   forgotten: either change alone stops the clipping, so keeping both meant
+   reverting either one left the other quietly covering for it and the guard
+   below could not fail. One fix, one call site, one assertion that pins it. */
+.ch-card-source{flex:0 0 auto;font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── Admin: community review queue ──────────────────────────────────────────
    components/admin/CommunityQueue.jsx. The reviewer's side of the shared
