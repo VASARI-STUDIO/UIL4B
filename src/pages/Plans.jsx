@@ -104,7 +104,7 @@ function TierIcon({ pro = false }) {
 const FAQ = [
   {
     q: 'Do I need a card to use Free?',
-    a: `No. Free has no card requirement and no trial clock. Every colour, type, icon and image tool opens without an account, and using them is never metered. What Free limits is how much you can SAVE — ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} custom icons — and how much AI you can run, at ${AI.free.daily} generations a day.`,
+    a: `No. Free never asks for payment details, and there is no trial clock. Every colour, type, icon and image tool opens without an account, and using them is never metered. What Free limits is how much you can SAVE — ${FREE_SAVE_LIMITS.projects} projects and ${FREE_SAVE_LIMITS.customIcons} custom icons — and how much AI you can run, at ${AI.free.daily} generations a day.`,
   },
   {
     q: 'When exactly do I hit the paywall?',
@@ -278,7 +278,6 @@ export default function Plans() {
           {user
             ? <button className="btn sub-tier-btn" disabled>{isPro ? 'Included with Pro' : 'Your current plan'}</button>
             : <Link className="btn sub-tier-btn" to="/login?signup=1">Start on Free</Link>}
-          <div className="sub-tier-foot">No card required</div>
         </article>
 
         <article
@@ -499,7 +498,6 @@ export default function Plans() {
           PUT IT BACK the moment the portal is configured — it is a good line
           and it should be here. */}
       <div className="plans-trust">
-        <span><Check /> Free needs no card</span>
         <span><Check /> You keep the period you have paid for</span>
         <span><Check /> Nothing you saved is ever deleted</span>
       </div>
@@ -520,7 +518,7 @@ export default function Plans() {
       <SystemCTA
         eyebrow="Start on Free"
         title="Build first. Upgrade when your workflow asks for it."
-        description={`The complete toolkit is ready without a card. Pro raises the AI allowance, opens all ${SYSTEMS_TOTAL} colour systems and all ${BRANDS_TOTAL} brand palettes, and lifts the ${FREE_SAVE_LIMITS.projects}-project cap.`}
+        description={`The complete toolkit is ready today. Pro raises the AI allowance, opens all ${SYSTEMS_TOTAL} colour systems and all ${BRANDS_TOTAL} brand palettes, and lifts the ${FREE_SAVE_LIMITS.projects}-project cap.`}
         primaryLabel={user ? 'Open Create' : 'Start building free'}
         primaryTo={user ? '/create/color' : '/login'}
         secondaryLabel="Explore colour tools"

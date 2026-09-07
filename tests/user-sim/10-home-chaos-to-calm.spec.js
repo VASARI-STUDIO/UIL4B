@@ -27,6 +27,7 @@
 // IS the contract now; its unmet performance budgets moved to the
 // homepage-field-metrics item in src/data/pipeline.js).
 import { test, expect } from './base.js'
+import { heroHeadlineText } from '../../src/data/positioning.js'
 import { watch, go, restAfterMove } from './helpers.js'
 // The SAME engine PaletteStage calls. Imported so 8a can assert the
 // correspondence it is named for — that the preview is painted from the live
@@ -269,10 +270,12 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     //
     // Scoped to `.home-hero` because on this page the hero IS the first
     // viewport, and because the element is a stable boundary — where "above
-    // 800px" is a number that moves with every copy edit. The three hero
-    // directions behind ?hero=a|b|c all drop the mark entirely, so whichever
-    // one the founder picks this assertion travels with the shipped hero and
-    // its expected count is the only thing that changes.
+    // 800px" is a number that moves with every copy edit.
+    //
+    // The ?hero=a|b|c exploration this note used to hedge for is retired
+    // (founder, 2026-09-07: "Retire it, V2 hero decides"), so there is one
+    // hero and one expected count. The shipped headline still carries exactly
+    // one <mark>, now on "in one unified location".
     const hiElements = await page.evaluate(() => {
       const hero = document.querySelector('.home-hero')
       if (!hero) return null
@@ -328,11 +331,42 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     const families = wordsIn(await page.locator('#htools-title').innerText())
     expect(families.size, 'the tools heading rendered no words').toBeGreaterThan(3)
     const familiesNamed = [...wordsIn(headline)].filter((w) => families.has(w))
+
+    // THE THRESHOLD CAME DOWN FROM TWO TO ONE ON 2026-09-07, and it is replaced
+    // rather than merely relaxed.
+    //
+    // The founder was offered an agent-written headline and chose "build one
+    // from my words only". The line now in the hero is spliced from two of his
+    // own sentences and names the product's OUTPUT — "UI and brand design kits"
+    // — rather than listing the tool families. It shares exactly one word with
+    // the tools heading ("export"), so the old >= 2 failed it.
+    //
+    // His current explicit direction outranks a heuristic this suite invented
+    // (.claude/skills/uil4b-brand-design/SKILL.md authority order), so the
+    // heuristic gives way. But it is not simply loosened to a threshold that
+    // can barely fail: the intent it stood for — "the hero is about this
+    // product, and cannot drift from what the page sells" — is now carried by
+    // the STRONGER check directly below, which pins the rendered headline to
+    // the module that records what he said. A one-word overlap with the tools
+    // heading is kept on top of that as a cheap drift alarm.
     expect(familiesNamed.length,
-      `the h1 "${headline}" names ${familiesNamed.length} of the tool families in the `
-      + `tools heading (${[...families].join(', ')}) — it should name at least two, or it `
-      + 'is describing a category rather than this product',
-    ).toBeGreaterThanOrEqual(2)
+      `the h1 "${headline}" shares no word at all with the tools heading `
+      + `(${[...families].join(', ')}) — the hero and the section that lists the tools have `
+      + 'drifted apart completely',
+    ).toBeGreaterThanOrEqual(1)
+
+    // THE REPLACEMENT GUARD: the rendered hero says exactly what
+    // src/data/positioning.js records the founder as having said. That module
+    // is checked by tests/unit/positioning-truth.test.js, which proves every
+    // fragment of the assembled line is a verbatim run of one of his sentences.
+    // Together those two make "the headline is his words" a build rule instead
+    // of a claim in a comment — and this half is the one that catches an agent
+    // quietly rewriting the hero in place.
+    expect(headline,
+      'the hero headline no longer matches the assembled line in '
+      + 'src/data/positioning.js. That line is the founder’s own words and is pending his '
+      + 'yes/no — it must not be edited in the page.',
+    ).toBe(heroHeadlineText())
 
     // ── "token" is off this page ────────────────────────────────────────────
     //

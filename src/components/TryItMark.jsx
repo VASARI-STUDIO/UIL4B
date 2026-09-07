@@ -39,10 +39,10 @@
 // reader and no information for anyone, which is exactly what should be hidden.
 //
 // It is also purely additive: it renders beside the command bar and changes no
-// headline, no button, no layout and no copy. The hero SHAPE is a separate,
-// still-open founder decision (?hero=a|b|c, HomeHeroDirections.jsx) and nothing
-// here touches it — but note that all three explorations keep the command bar,
-// so whichever shape wins, this mark still has its control to point at.
+// headline, no button, no layout and no copy. The hero shape is settled —
+// founder, 2026-09-07, retiring the ?hero=a|b|c exploration in favour of the V2
+// hero — and that hero keeps the command bar, so the mark still has the control
+// it points at. He said he likes the mark; it stays.
 export default function TryItMark() {
   return (
     <span className="tim" aria-hidden="true">

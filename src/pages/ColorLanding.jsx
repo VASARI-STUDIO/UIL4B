@@ -106,7 +106,7 @@ export default function ColorLanding() {
             <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
           </Link>
         </div>
-        <p className="home-hero-hint">Free to start · no card · some options are Pro</p>
+        <p className="home-hero-hint">Free to start · some options are Pro</p>
       </header>
 
       {/* ── The five tools. This grid IS the page. ── */}

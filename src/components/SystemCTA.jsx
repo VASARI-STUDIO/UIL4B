@@ -10,7 +10,13 @@ export default function SystemCTA({
   primaryTo = '/login',
   secondaryLabel,
   secondaryTo,
-  hint = 'No credit card · Build in your browser',
+  // The payment half of this hint is gone — founder, 2026-09-07: the
+  // "no credit card required" line "all over the place is a huge AI Slop
+  // feature". Every consumer of this component sits at the bottom of a long
+  // sales page, so the default carried that claim onto every one of them at
+  // once. What is left says where the work happens, which is not a
+  // reassurance about payment and is not repeated anywhere else.
+  hint = 'Build in your browser',
 }) {
   const { user } = useAuth()
   const { openLogin } = useLoginPrompt()

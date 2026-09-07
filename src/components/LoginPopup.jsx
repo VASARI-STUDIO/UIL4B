@@ -11,7 +11,9 @@ import useModalDialog from '../hooks/useModalDialog'
 const DEFAULT_UNLOCKS = [
   'Your work saves and follows you to any device',
   'Live preview links you can share',
-  'Free — no card, no trial clock',
+  // "no card" removed 2026-09-07 on the founder's instruction; the trial
+  // clock is a separate, non-payment fact and it stays.
+  'Free — no trial clock',
 ]
 
 function GoogleIcon() {
