@@ -419,35 +419,71 @@ test('THE ONE THAT MATTERS: api/ai.js registers the task and meters it on ONE bu
     'the task meters against a hand-typed tool id instead of the shared constant')
 })
 
+// THE SHAPE THESE TWO PIN CHANGED ON 2026-09-07, and the invariant did not.
+//
+// [ai-quota-check-not-transactional] moved the meter from read → run →
+// increment to RESERVE → run → refund-if-nothing-was-produced, inside a
+// Firestore transaction (api/_lib/aiGeneration.js → runMeteredTask). The old
+// ordering — increment strictly after the early return — was the only thing
+// making "a failed request must not consume a free user's single use" true, and
+// it was ALSO what made the cap soft: between the read and the increment sat a
+// whole provider round trip, and two concurrent requests both passed.
+//
+// So both assertions below now pin the new ordering, which is strictly stronger:
+// the reservation happens before the provider is reached (no window at all), and
+// the refund is what keeps the founder's rule true afterwards. Neither was
+// relaxed to make the change pass — the race itself is covered behaviourally in
+// tests/unit/ai-quota-transaction.test.js, with two concurrent requests against
+// one bucket.
+
 test('THE ONE THAT MATTERS: a failed generation cannot consume the allowance', () => {
-  // The whole of "a free user's single use must never be consumed by a failed
-  // request". Asserted as an ORDERING in the handler, because that is the only
-  // thing that makes it true: every failure path in runBrandStarter answers on
-  // `res` itself and returns nothing, and the handler bails before the write.
+  // Still an ORDERING assertion, and still the whole of the founder's rule —
+  // just a different ordering. Every failure path in runBrandStarter answers on
+  // `res` itself; the runner callback turns that into `null`, and null is what
+  // makes runMeteredTask hand the reserved unit back.
   const branch = AI_CODE.slice(AI_CODE.indexOf("if (task.quota === 'generation')"))
-  const bail = branch.indexOf('res.writableEnded || res.headersSent')
-  const write = branch.indexOf('FieldValueIncrement(1)')
+  const reserve = branch.indexOf('runMeteredTask({')
   const run = branch.indexOf('await task.run(')
+  const bail = branch.indexOf('res.writableEnded || res.headersSent')
   assert.ok(run > -1, 'the generation branch no longer runs the task')
+  assert.ok(reserve > -1, 'the generation branch no longer reserves the unit — the cap is soft again')
   assert.ok(bail > -1, 'the guard that detects a runner which answered for itself is gone')
-  assert.ok(write > -1, 'nothing increments the bucket, so the allowance is not enforced at all')
-  assert.ok(run < bail && bail < write,
-    'the usage increment no longer sits AFTER the early return — a provider failure, a malformed '
-    + 'model answer or a 429 would now spend the user’s one free generation')
+  assert.ok(reserve < run,
+    'the unit is no longer reserved BEFORE the provider call — two concurrent requests can both pass')
+  assert.match(branch.slice(bail), /^res\.writableEnded \|\| res\.headersSent\) return null/,
+    'the runner that answered for itself no longer returns null, so nothing tells the meter to refund')
+  assert.doesNotMatch(branch, /FieldValueIncrement/,
+    'the bucket is being incremented outside the transaction again — that is the race, restored')
+
+  // The refund itself lives in the helper, and is the half that keeps a failed
+  // generation free. Without it, reserving early would make every provider
+  // outage cost a free user their one and only generation.
+  const lib = stripJs(read('api/_lib/aiGeneration.js'))
+  assert.match(lib, /if \(!result\) await refundQuotaUnit\(db, meters\)/,
+    'a runner that produced nothing no longer gets its reservation refunded')
 })
 
 test('the refusal is checked BEFORE the provider is called, not after', () => {
   const branch = AI_CODE.slice(AI_CODE.indexOf("if (task.quota === 'generation')"))
-  const check = branch.indexOf('used >= bucket.limit')
   const run = branch.indexOf('await task.run(')
-  assert.ok(check > -1, 'nothing compares the count against the limit')
-  assert.ok(check < run, 'the limit is checked after the generation has already been paid for')
+  const refusal = branch.indexOf('if (!metered.ok)')
+  assert.ok(refusal > -1, 'nothing turns a refused reservation into a 429')
+
+  // The reservation — the thing that decides — happens before the provider is
+  // reached, because runMeteredTask calls reserveQuotaUnit and only invokes
+  // `run` when it succeeded. That ordering is asserted in the helper, since the
+  // route's `run:` callback is written before the refusal is READ.
+  const lib = stripJs(read('api/_lib/aiGeneration.js'))
+  const libReserve = lib.indexOf('reservation = await reserveQuotaUnit(db, meters)')
+  const libRun = lib.indexOf('result = await run(reservation.counts)')
+  assert.ok(libReserve > -1 && libRun > -1, 'runMeteredTask no longer reserves and runs')
+  assert.ok(libReserve < libRun, 'the limit is checked after the generation has already been paid for')
 
   // ORDER IS NOT ENOUGH, and mutation testing is what showed it: changing the
-  // guard to `if (used >= bucket.limit && false)` left every assertion above
-  // green, because the string is still there and still in the right place while
-  // the refusal never fires. So the guard's exact shape is pinned — an
-  // unconditional comparison that returns 429 immediately. Anything else in the
+  // guard to `if (used >= bucket.limit && false)` left every assertion green,
+  // because the string was still there and still in the right place while the
+  // refusal never fired. So the guard's exact shape is pinned — an
+  // unconditional check that returns 429 immediately. Anything else in the
   // condition (a feature flag, a plan exemption, a `&& false` left in from
   // debugging) is a spent allowance being let through.
   //
@@ -457,12 +493,15 @@ test('the refusal is checked BEFORE the provider is called, not after', () => {
   // the mutation run is what caught that - with the suite already failing,
   // every one of the fourteen mutations looked like a kill and none of them
   // proved anything.
-  assert.match(branch, /\r?\n {4}if \(used >= bucket\.limit\) \{\r?\n {6}return res\.status\(429\)\.json\(\{/,
-    'the refusal is no longer an unconditional comparison returning 429 on the spot — '
+  assert.match(branch, /\r?\n {4}if \(!metered\.ok\) \{\r?\n {6}return res\.status\(429\)\.json\(\{/,
+    'the refusal is no longer an unconditional check returning 429 on the spot — '
     + 'the ordering assertion above cannot see a guard that has been disabled in place')
+  assert.match(lib, /const blockedAt = meters\.findIndex\(\(m, i\) => counts\[i\] >= m\.limit\)/,
+    'the meter no longer refuses at the limit — the comparison is where the cap actually lives')
   assert.match(branch, /exhaustedError\(plan\.id\)/,
     'the refusal no longer uses the shared message, so it can drift from what /plans promises')
   assert.match(branch, /status\(429\)/)
+  assert.ok(run > -1)
 })
 
 test('the count comes back on every answer, so the meter is never a guess', () => {
