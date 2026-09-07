@@ -161,9 +161,34 @@ test('deletion reaches every store that holds personal data', () => {
   // project, prompt and design.
   assert.ok(src.includes('recursiveDelete'), 'the sync subcollection must be deleted with the profile')
   assert.ok(src.includes("collection('community-prompts')"), 'community prompts carry authorUid')
+  assert.ok(src.includes("collection('community-submissions')"),
+    'community submissions carry authorUid and authorName (utils/communityQueue.js) and were missed until 2026-09-06')
   assert.ok(src.includes("collection('feedback')"), 'feedback carries the email they typed')
   assert.ok(src.includes('community-media/'), 'uploaded media is personal data too')
   assert.ok(src.includes("collection('daily-usage')"), 'AI usage counters are keyed by uid')
+})
+
+test('every collection whose rules key on authorUid is reached by the cascade', () => {
+  // DERIVED, not listed. `community-submissions` was added to firestore.rules
+  // with an authorUid ownership rule and never added to the delete — a
+  // hand-maintained list in the test above would have been just as blind. So
+  // the set of collections that store a uid is read off the rules file: any
+  // `match /<collection>/{...}` block whose body mentions authorUid is a
+  // collection this endpoint has to sweep, today and for the next one.
+  const rules = read('firestore.rules')
+  const src = read('api/delete-account.js')
+  const owned = []
+  // A block ends at a `}` indented exactly four spaces — nested function and
+  // subcollection bodies close deeper, so the lazy match cannot stop early.
+  const blocks = rules.matchAll(/match \/([a-z-]+)\/\{[^}]+\}\s*\{([\s\S]*?)\n {4}\}/g)
+  for (const [, name, body] of blocks) {
+    if (/authorUid/.test(body)) owned.push(name)
+  }
+  assert.ok(owned.includes('community-prompts') && owned.includes('community-submissions'),
+    `the rules parser found ${JSON.stringify(owned)} — it has stopped seeing the collections it is meant to`)
+  const missed = owned.filter((name) => !src.includes(`collection('${name}')`))
+  assert.deepEqual(missed, [],
+    `firestore.rules keys these collections on authorUid and api/delete-account.js never deletes from them: ${missed.join(', ')}`)
 })
 
 test('the usage-counter prefix range has two DIFFERENT bounds', () => {
