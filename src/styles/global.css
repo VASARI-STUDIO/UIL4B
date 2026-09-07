@@ -544,9 +544,6 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 
 @keyframes cs-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-/* State preset label: full name on desktop, abbreviation on mobile */
-.state-preset-short{display:none}
-@media(max-width:640px){.state-preset-full{display:none}.state-preset-short{display:inline}}
 .cs-chevron{color:var(--t2);transition:transform var(--dur-2) var(--ease-standard);flex-shrink:0}
 
 /* (The old .cs-add-menu dropdown + Pick-Colour/Extract overlay CSS was removed
@@ -6038,7 +6035,6 @@ html.lenis{scroll-behavior:auto!important}
    the hue tile goes grey. Hover lifts them just enough to stay legible — they
    remain clickable on purpose (the route lands on the honest 🤫 state). */
 .pnav-tool[data-soon]{opacity:.45}
-.pnav-tool[data-soon] .pnav-tool-label{color:var(--t3)}
 .pnav-tool[data-soon] .pnav-tool-ico{opacity:.6;filter:grayscale(1)}
 .pnav-tool[data-soon]:hover{opacity:.75}
 .pnav-tool[data-soon]:hover .pnav-tool-label{color:var(--t2)}
@@ -6094,7 +6090,6 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-acc-col[data-soon] .pnav-acc-colhead{color:var(--t3)}
 .pnav-acc-link .soon-badge{margin-left:auto}
 .pnav-acc-link[data-soon]{opacity:.45}
-.pnav-acc-link[data-soon] .pnav-acc-label{color:var(--t3)}
 .pnav-acc-link[data-soon] .pnav-acc-ico{opacity:.6;filter:grayscale(1)}
 /* Section-matched promo, rendered above the sheet CTA (title + blurb + 2 CTAs,
    no SVG mock on mobile). */
@@ -11120,7 +11115,6 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fpr-more-link:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 @media(max-width:980px){
   .fpr-hero-copy{grid-template-columns:1fr;gap:var(--s-4)}
-  .fpr-grid{grid-template-columns:1fr}
   /* Stacked: the panel is in the page flow, so it must not keep its own
      scroller. Back to hidden (what .fpr-panel sets) rather than visible —
      visible alongside overflow-x:hidden computes to auto and would leave the
