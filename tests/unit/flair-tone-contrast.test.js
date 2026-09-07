@@ -29,6 +29,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { luminance } from '../../src/utils/colors.js'
 
 const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8')
 // Blank out comments first, preserving offsets. This file's own measurement
@@ -127,7 +128,7 @@ test('every flair tone clears 4.5:1 on its OWN 12% tint, on every ground it land
       for (const g of grounds) {
         const r = ratio(rgb(value), tint(value, g, 0.12))
         if (r < AA) {
-          failures.push(`  .flair--${t} ${theme} ${value} on its own 12% tint over ${g} = ${r}:1`)
+          failures.push(`  .flair--${t} ${theme} ${value} on its own 12% tint over ${g} = ${show(r)}:1`)
         }
       }
     }
@@ -148,8 +149,8 @@ test('the gold gradient carries its label at both stops, in both themes', () => 
     for (const g of grounds) {
       const atWarm = ratio(rgb(tone), tint(warm, g, 0.20))
       const atTone = ratio(rgb(tone), tint(tone, g, 0.14))
-      if (atWarm < AA) failures.push(`  gold ${theme} ${tone} on the 20% ${warm} stop over ${g} = ${atWarm}:1`)
-      if (atTone < AA) failures.push(`  gold ${theme} ${tone} on the 14% ${tone} stop over ${g} = ${atTone}:1`)
+      if (atWarm < AA) failures.push(`  gold ${theme} ${tone} on the 20% ${warm} stop over ${g} = ${show(atWarm)}:1`)
+      if (atTone < AA) failures.push(`  gold ${theme} ${tone} on the 14% ${tone} stop over ${g} = ${show(atTone)}:1`)
     }
   }
   assert.equal(failures.length, 0,
@@ -172,7 +173,7 @@ test('the selected flair chip carries its label on the solid tone fill', () => {
   ]) {
     const ink = fg === '#fff' ? '#ffffff' : fg
     const r = ratio(rgb(ink), rgb(tone))
-    if (r < AA) failures.push(`  ${theme}: ${ink} on a solid ${tone} fill = ${r}:1`)
+    if (r < AA) failures.push(`  ${theme}: ${ink} on a solid ${tone} fill = ${show(r)}:1`)
   }
   assert.equal(failures.length, 0,
     'The selected chip is 11.5px text on a solid fill:\n' + failures.join('\n'))
