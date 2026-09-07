@@ -93,8 +93,120 @@ const testSessionDouble = () => ({
   },
 })
 
+// ── THE FIREBASE DEFERRAL FLAG ───────────────────────────────────────
+//
+//   VITE_DEFER_FIREBASE=1 npm run build      # deferred
+//   npm run build                            # today, unchanged (default)
+//
+// WHY A BUILD FLAG AND NOT A QUERY PARAM. The thing being changed is which
+// chunk `firebase-*.js` belongs to, and that is decided by rolldown at build
+// time from the shape of the import graph: a chunk reached by a static import
+// is emitted into the entry graph and listed in `modulepreload`; one reached
+// only by `import()` is not. No runtime switch can move those 116268 bytes out
+// of the first request wave — the browser has already asked for them before any
+// of our code runs. So the flag swaps the IMPLEMENTATION MODULE, and the two
+// implementations differ in exactly one way: static imports versus dynamic.
+//
+// `src/utils/firebaseAccess.js` (eager) is the default and resolves normally
+// everywhere — Node, ESLint, the unit tests — with no alias in play at all.
+// The alias below is the entire opt-in, and it exists only when the env var is
+// set, so an unflagged build is the build that ships today.
+//
+// The alias matches the CANONICAL specifier `.../firebaseAccess`, written with
+// no file extension. `tests/unit/firebase-deferral.test.js` fails the build if
+// any import of it is written another way, because an import the alias
+// silently missed would keep Firebase in the first wave while the flag claimed
+// otherwise — a flag that reports success and changes nothing.
+//
+// TWO SEAMS, one rule. Each entry is a module that exists twice — `X` (eager,
+// the default, resolved normally by everything) and `X.lazy` (deferred). The
+// alias swaps the second in for the first, and nothing else in the tree knows.
+//
+//   utils/firebaseAccess     the SDK itself: static imports vs `import()`
+//   components/oneTapMount   One Tap, whose module pulls GOOGLE_CLIENT_ID out
+//                            of utils/firebase and so drags the chunk with it
+//
+// `scripts/prerender.mjs` and the tests read the built output, not this list,
+// so adding a third seam needs only a line here and the `.lazy` twin.
+const DEFER_FIREBASE = process.env.VITE_DEFER_FIREBASE === '1'
+
+// EXPORTED so tests/unit/firebase-deferral.test.js can check every import
+// against the REAL regex rather than a second copy of it. A test that rebuilt
+// this rule would pass while the build silently missed a specifier — the exact
+// shape of failure this whole guard exists to prevent.
+export const DEFERRAL_SEAMS = [
+  ['utils/firebaseAccess', 'src/utils/firebaseAccess.lazy.js'],
+  ['components/oneTapMount', 'src/components/oneTapMount.lazy.jsx'],
+]
+
+// Matches the canonical relative specifier with no file extension, at any
+// depth: `./oneTapMount`, `../utils/firebaseAccess`, `../../utils/firebaseAccess`.
+export const seamSpecifier = (name) => {
+  const [dir, base] = name.split('/')
+  return new RegExp(`^(?:\\.\\.?/)+(?:${dir}/)?${base}$`)
+}
+
+const firebaseAccessAlias = DEFER_FIREBASE
+  ? DEFERRAL_SEAMS.map(([name, lazyPath]) => ({
+    find: seamSpecifier(name),
+    replacement: resolve(import.meta.dirname, lazyPath),
+  }))
+  : []
+
+
+// THE FLAG MUST NOT BE ABLE TO REPORT SUCCESS AND CHANGE NOTHING.
+//
+// A deferral is a claim about the chunk graph, and the graph is the only thing
+// that can confirm it. Every earlier attempt at this item failed in the same
+// direction: the code looked deferred, the build stayed green, and the bytes
+// were still in the first wave. So when the flag is on, the build WALKS THE
+// STATIC IMPORT GRAPH from the entry chunks and fails if the Firebase SDK is
+// still reachable without a dynamic `import()`.
+//
+// This is why `VITE_DEFER_FIREBASE=1` refuses to build against an unpatched
+// tree today. The two founder-gated contexts still import the SDK statically,
+// which not only leaves it in the first wave but SPLITS it across two
+// preloaded chunks — measured at 553193 first-wave bytes against 521019
+// unflagged, a 32 KB regression. Half a deferral is worse than none, and a
+// build that fails says so where a comment would not.
+const FIREBASE_MODULE = /(?:^|[/\\])(?:node_modules[/\\]@?firebase|node_modules[/\\]firebase[/\\]|src[/\\]utils[/\\]firebase\.js$)/
+const assertFirebaseIsDeferred = () => ({
+  name: 'uil4b-assert-firebase-deferred',
+  apply: 'build',
+  generateBundle(_options, bundle) {
+    if (!DEFER_FIREBASE) return
+    const chunks = Object.values(bundle).filter((c) => c.type === 'chunk')
+    const byName = new Map(chunks.map((c) => [c.fileName, c]))
+    const seen = new Set()
+    const queue = chunks.filter((c) => c.isEntry).map((c) => c.fileName)
+    const offenders = []
+    while (queue.length) {
+      const name = queue.shift()
+      if (seen.has(name)) continue
+      seen.add(name)
+      const chunk = byName.get(name)
+      if (!chunk) continue
+      const hit = (chunk.moduleIds || []).find((id) => FIREBASE_MODULE.test(id.replace(/\?.*$/, '')))
+      if (hit) offenders.push(`${name}  (e.g. ${hit.split(/[/\\]/).slice(-3).join('/')})`)
+      // STATIC imports only. `dynamicImports` is exactly the edge we want.
+      for (const next of chunk.imports || []) queue.push(next)
+    }
+    if (offenders.length) {
+      this.error(
+        'VITE_DEFER_FIREBASE=1, but the Firebase SDK is still reachable from the entry chunk '
+        + 'by STATIC import, so it stays in the first request wave:\n  '
+        + offenders.join('\n  ')
+        + '\n\nThe remaining static edges are in the two founder-gated contexts. Apply '
+        + 'docs/design/firebase-deferral-gated.patch (or run scripts/firebase-deferral-trial.mjs, '
+        + 'which applies it to temporary copies) and build again.',
+      )
+    }
+  },
+})
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), pricingHtml(), ...(mode === 'test' ? [testSessionDouble()] : [])],
+  plugins: [react(), pricingHtml(), assertFirebaseIsDeferred(), ...(mode === 'test' ? [testSessionDouble()] : [])],
+  resolve: { alias: firebaseAccessAlias },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
   },

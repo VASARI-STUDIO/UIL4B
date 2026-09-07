@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { trackActivation } from '../utils/analytics'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+// URGENT access: both sync effects are behind a truthy `uid`, so auth has
+// already resolved to a signed-in person whose projects are being synced.
+// See src/utils/firebaseAccess.js for patient vs urgent.
+import { loadFirestore } from '../utils/firebaseAccess'
 import { useAuth } from './AuthContext'
 import { useSubscription } from './SubscriptionContext'
-import { db } from '../utils/firebase'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
 
 const ProjectContext = createContext()
@@ -345,7 +347,9 @@ export function ProjectProvider({ children }) {
     suppressPushRef.current = true
     ;(async () => {
       try {
-        const snap = await getDoc(doc(db, 'users', uid, 'sync', SYNC_DOC))
+        const fs = await loadFirestore()
+        if (cancelled) return
+        const snap = await fs.getDoc(fs.doc(fs.db, 'users', uid, 'sync', SYNC_DOC))
         if (cancelled) return
         if (snap.exists()) {
           const remote = snap.data()
@@ -386,8 +390,9 @@ export function ProjectProvider({ children }) {
     pushTimerRef.current = setTimeout(() => {
       ;(async () => {
         try {
-          await setDoc(
-            doc(db, 'users', uid, 'sync', SYNC_DOC),
+          const fs = await loadFirestore()
+          await fs.setDoc(
+            fs.doc(fs.db, 'users', uid, 'sync', SYNC_DOC),
             // JSON round-trip strips undefined fields — Firestore rejects
             // documents containing undefined, which would silently fail sync.
             { list: JSON.parse(JSON.stringify(projects)), _updatedAt: Date.now() },

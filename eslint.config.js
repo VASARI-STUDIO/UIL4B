@@ -45,7 +45,12 @@ export default defineConfig([
     // Node-runtime code (Vercel serverless functions, build/maintenance scripts,
     // Playwright config + user-simulation acceptance tests).
     // These use process, Buffer, etc. — not browser globals.
-    files: ['api/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'playwright.config.js'],
+    //
+    // vite.config.js joined the list when it started reading an env var:
+    // VITE_DEFER_FIREBASE decides whether the Firebase deferral seams are
+    // aliased in, and a build-time decision can only be read from `process.env`.
+    // It was always Node code; it simply had no Node globals in it until then.
+    files: ['api/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'playwright.config.js', 'vite.config.js'],
     languageOptions: {
       globals: {
         ...globals.node,

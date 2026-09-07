@@ -1,7 +1,12 @@
-import { db, auth } from './firebase'
+import { firebaseNow, firestoreNow, loadFirestore } from './firebaseAccess'
 import { canWriteSharedAnalytics } from './environment'
 import { startTtvClock, takeTimeToValue } from './timeToValue'
-import { doc, setDoc, collection, getDocs, query, orderBy, limit, increment, deleteField } from 'firebase/firestore'
+// The Firestore SDK now arrives through the access broker rather than as a
+// static import, so a deferred build can keep it out of the first request
+// wave. Analytics is the easiest consumer to move: every shared write is
+// already gated on `auth.currentUser` and already fire-and-forget, so a
+// namespace that is not there yet is the case it was written for.
+// See src/utils/firebaseAccess.js.
 
 const ANALYTICS_KEY = 'vs-analytics'
 const SESSIONS_KEY = 'vs-sessions'
@@ -74,7 +79,7 @@ function attachUnloadFlush() {
 function bumpAggregate(field, n = 1) {
   try {
     // Only attempt server writes for signed-in users — rules are auth-only.
-    if (!auth?.currentUser) return
+    if (!firebaseNow()?.auth?.currentUser) return
     const key = sanitizeKey(field)
     pendingIncrements[key] = (pendingIncrements[key] || 0) + n
     attachUnloadFlush()
@@ -92,17 +97,28 @@ function flushAggregate() {
     // dropped rather than queued — they are not production data, and holding
     // them would just write them the moment someone opened the real site.
     if (!canWriteSharedAnalytics()) { pendingIncrements = {}; return }
-    if (!auth?.currentUser) { pendingIncrements = {}; return }
+    if (!firebaseNow()?.auth?.currentUser) { pendingIncrements = {}; return }
     const fields = pendingIncrements
     pendingIncrements = {}
     const keys = Object.keys(fields)
     if (!keys.length) return
     const day = todayStr()
-    const payload = { day }
-    for (const k of keys) payload[k] = increment(fields[k])
     // merge:true so concurrent writers from different users all accumulate.
     // Fire-and-forget; swallow rejection so an offline/denied write is silent.
-    setDoc(doc(db, AGGREGATE_COLLECTION, day), payload, { merge: true }).catch(() => {})
+    //
+    // Synchronous when the SDK is already here, which is every call after the
+    // first: the guard above has just proved someone is signed in, so auth has
+    // resolved and the chunk has landed. The promise path only runs when this
+    // is the first Firestore touch of the session.
+    const write = (fs) => {
+      if (!fs) return
+      const payload = { day }
+      for (const k of keys) payload[k] = fs.increment(fields[k])
+      fs.setDoc(fs.doc(fs.db, AGGREGATE_COLLECTION, day), payload, { merge: true }).catch(() => {})
+    }
+    const ready = firestoreNow()
+    if (ready) write(ready)
+    else loadFirestore().then(write).catch(() => {})
   } catch { /* offline / rules / SDK error — fall back to localStorage only */ }
 }
 
@@ -122,8 +138,9 @@ function recordAggregateTool(id) {
 export async function getAggregateAnalytics(days = 30) {
   const empty = { totalViews: 0, byPath: [], byTool: [], byIcon: [], byPack: [], iconCopies: 0, days: [] }
   try {
-    const q = query(collection(db, AGGREGATE_COLLECTION), orderBy('day', 'desc'), limit(days))
-    const snap = await getDocs(q)
+    const fs = await loadFirestore()
+    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), fs.orderBy('day', 'desc'), fs.limit(days))
+    const snap = await fs.getDocs(q)
     let totalViews = 0
     let iconCopies = 0
     const pathCounts = {}
@@ -435,16 +452,17 @@ export async function resetPageAnalytics() {
   // Aggregate layer: remove `views` + every `view__<path>` field from each
   // daily doc — retired routes vanish from the dashboard for every admin.
   try {
-    const q = query(collection(db, AGGREGATE_COLLECTION), orderBy('day', 'desc'), limit(400))
-    const snap = await getDocs(q)
+    const fs = await loadFirestore()
+    const q = fs.query(fs.collection(fs.db, AGGREGATE_COLLECTION), fs.orderBy('day', 'desc'), fs.limit(400))
+    const snap = await fs.getDocs(q)
     await Promise.all(snap.docs.map(docSnap => {
       const data = docSnap.data() || {}
       const payload = {}
       for (const field of Object.keys(data)) {
-        if (field === 'views' || field.startsWith('view__')) payload[field] = deleteField()
+        if (field === 'views' || field.startsWith('view__')) payload[field] = fs.deleteField()
       }
       if (!Object.keys(payload).length) return null
-      return setDoc(doc(db, AGGREGATE_COLLECTION, docSnap.id), payload, { merge: true }).catch(() => {})
+      return fs.setDoc(fs.doc(fs.db, AGGREGATE_COLLECTION, docSnap.id), payload, { merge: true }).catch(() => {})
     }))
     return true
   } catch {
