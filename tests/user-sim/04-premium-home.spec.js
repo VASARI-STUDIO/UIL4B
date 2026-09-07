@@ -58,15 +58,26 @@ test.describe('premium homepage', () => {
     // any design product was part of why. The full reasoning and the property
     // pins live in 10-home-chaos-to-calm, which owns this contract; here the
     // check is only that the hero still names the work.
+    // THE EXPECTED WORDS CHANGED WITH THE HEADLINE, 2026-09-07. The hero now
+    // carries a line assembled from the founder's own sentences ("Build and
+    // export UI and brand design kits, in one unified location."), which names
+    // the OUTPUT rather than the material — so the old
+    // /colour|color|type|token|system/ probe no longer matches and would have
+    // failed on a correct page. It is replaced, not deleted: the contract this
+    // line stands for is that the h1 names the work, and "design kits" is how
+    // the shipped headline names it. 10-home-chaos-to-calm still owns the
+    // property pins.
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText(/colour|color|type|token|system/i)
+    await expect(heading).toContainText(/design kits|unified location/i)
 
-    // The kicker still does the job the "operating workspace" pill and then the
-    // mono stat line each did before it: say what this is before the headline
-    // lands. What changed is that it is now ONE quiet category line rather than
-    // a four-item statistics strip — the strip was the most recognisable piece
-    // of generic SaaS furniture on the page.
-    await expect(page.locator('.home-hero-kicker')).toBeVisible()
+    // THE KICKER ASSERTION IS GONE, AND ITS INVERSE TAKES ITS PLACE.
+    // `.home-hero-kicker` carried "UI system toolkit"; the founder removed it
+    // on 2026-09-07 — "these all over the place is a huge AI Slop feature" —
+    // and asked that nothing replace it. So the check flips: the element must
+    // be ABSENT, which is what stops a future edit quietly reinstating a
+    // category line above the headline. Paired with the stat-strip check below,
+    // which has the same shape and the same history.
+    await expect(page.locator('.home-hero-kicker'), 'the hero kicker tagline is back').toHaveCount(0)
     await expect(page.locator('.home-hero-stats'), 'the hero stat strip is back').toHaveCount(0)
 
     // The figures did not disappear — they moved beside the toolset grid they
