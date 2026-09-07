@@ -3014,7 +3014,24 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 }
 
 /* Shared in-app footer */
-.app-footer{padding:var(--s-8) var(--page-inline) var(--s-5);border-top:1px solid var(--border);background:var(--bg-1)}
+/* THE BOTTOM PADDING IS FAB CLEARANCE, and it is load-bearing rather than
+   breathing room.
+   `.global-feedback-btn` is `position:fixed` in the bottom-right corner, so on
+   a SHORT page — where the footer's own bottom edge is the viewport's bottom
+   edge — it lands on the last row of the footer. Measured on the 404 at
+   1440x900: `.app-footer-attrib` occupied 1292.2..1393.9 and the FAB
+   1303..1420, blocking the link across its ENTIRE width (nine of nine sample
+   points returned the FAB from elementFromPoint), with `scrollHeight` equal to
+   the viewport — zero scroll room. The link was not merely awkward, it could
+   not be reached by any means. At 981px the overlap was the full 101.7px too.
+   Reserving the clearance INSIDE the footer is what makes that impossible
+   rather than unlikely: the padding travels with the footer, so the last row
+   can never come within the FAB's height of the document end, and the document
+   end is the lowest the viewport can ever reach. `.bill-banner` already
+   resolves the same collision the same way, at `bottom:74px`.
+   The value is derived from the FAB's own box (38px tall, 20px inset) plus a
+   gap, so the two cannot drift apart silently. */
+.app-footer{--fab-clearance:66px;padding:var(--s-8) var(--page-inline) max(var(--s-5),var(--fab-clearance));border-top:1px solid var(--border);background:var(--bg-1)}
 .app-footer-inner{display:grid;grid-template-columns:minmax(240px,1.2fr) minmax(420px,1fr);gap:var(--s-7) var(--s-8);width:100%;margin:0 auto}
 .app-footer-brand{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
 .app-footer-mark{font-family:var(--display);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
@@ -3055,7 +3072,9 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    50% measured 2.4:1 in light, where the ground is white. */
 .app-footer-attrib{color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
 .app-footer-attrib:hover{color:var(--accent-strong);text-decoration-color:currentColor}
-.app-footer--compact{padding-block:var(--s-6) var(--s-4)}
+/* The compact variant keeps the FAB clearance for the same reason the full one
+   does — it sets `padding-block`, which would otherwise overwrite it. */
+.app-footer--compact{padding-block:var(--s-6) max(var(--s-4),var(--fab-clearance))}
 .app-footer--compact .app-footer-inner{grid-template-columns:minmax(220px,.8fr) minmax(420px,1.2fr);gap:var(--s-5) var(--s-7)}
 .app-footer--compact .app-footer-tagline{max-width:36ch}
 .app-footer--compact .app-footer-legal{padding-top:var(--s-4)}
