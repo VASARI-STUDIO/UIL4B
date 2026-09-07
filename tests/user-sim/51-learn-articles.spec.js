@@ -204,10 +204,12 @@ test.describe('Learn articles', () => {
     expect(rowCount, 'the metrics table lost rows it cannot lose').toBeGreaterThanOrEqual(4)
 
     const aspects = []
+    const matched = []
     const lastDigits = []
     for (let i = 0; i < rowCount; i += 1) {
       const cells = await metricRows.nth(i).locator('td[data-num]').allInnerTexts()
       lastDigits.push(cells[0].trim().slice(-1), cells[1].trim().slice(-1))
+      matched.push(cells[3].trim())
       expect(cells, `metrics row ${i} does not print four figures`).toHaveLength(4)
       const aspect = Number(cells[0])
       const cap = Number(cells[1])
@@ -224,11 +226,30 @@ test.describe('Learn articles', () => {
       expect(cells[3].trim()).toMatch(/^\d+\.\dpx$/)
       aspects.push(aspect)
     }
-    // The first row is the reference the last column matches against, so its own
-    // matched size is the size the column is computed at. A derivation that
-    // stopped dividing would print 16.0px in every row instead of just this one.
-    const firstMatched = (await metricRows.first().locator('td[data-num]').allInnerTexts())[3]
-    expect(firstMatched.trim(), 'the reference row does not match itself at 16px').toBe('16.0px')
+    // The last column is the guide's own formula — u = (m / m′) s at 16px — run
+    // per row against the first row's x-height. The reference row must therefore
+    // match itself at exactly 16px.
+    expect(matched[0], 'the reference row does not match itself at 16px').toBe('16.0px')
+
+    // …and that assertion ALONE let a mutation through: replacing the whole
+    // derivation with a constant 16 kept row one right and made every other row
+    // wrong without changing the shape of anything. So the column is checked
+    // against the columns it is derived FROM. Each printed size is recomputed
+    // from the printed aspect values, which are rounded to three places, so the
+    // tolerance is a tenth of a pixel rather than an equality.
+    expect(new Set(matched).size,
+      `every face matches at the same size (${matched.join(', ')}) — the last column has stopped`
+      + ' dividing by the reference and is printing the base size back')
+      .toBeGreaterThan(1)
+    for (let i = 0; i < rowCount; i += 1) {
+      const derived = (aspects[0] / aspects[i]) * 16
+      const printed = Number(matched[i].replace('px', ''))
+      expect(Math.abs(printed - derived),
+        `row ${i} prints ${matched[i]} but its own x-height (${aspects[i]}) against the`
+        + ` reference (${aspects[0]}) gives ${derived.toFixed(2)}px — the matched-size column`
+        + ' does not follow from the columns beside it')
+        .toBeLessThan(0.1)
+    }
     // And the section's claim: the faces do not agree. If every row measured the
     // same, the table would be measuring one font under five names.
     expect(new Set(aspects.map((a) => a.toFixed(3))).size,

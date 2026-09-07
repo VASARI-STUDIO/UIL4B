@@ -360,21 +360,39 @@ test('no standards figure is stated outside the block that cites it', () => {
   assert.match(loadingProse, /\b100ms\b/)
 })
 
-test('every clause either guide quotes is listed as one of its sources', () => {
+test('every CLAUSE either guide quotes is listed as one of its sources', () => {
+  // This compared BASE URLs in its first form, and a mutation survived it:
+  // dropping the size-adjust source from font-loading changed nothing, because
+  // the guide's other Level 5 source carried the same base. A reader following
+  // the sources list would have found no way to reach the clause the page had
+  // just quoted. So the comparison is now on the FULL URL, fragment and all —
+  // one entry per clause, not per specification.
+  //
+  // Normalised only for the slash before the fragment: a guide writes a clause
+  // as `${FONTS4}/#anchor`, so the constant has no trailing slash and the href
+  // in the sources list does.
+  const clause = (href) => href.replace(/\/+#/, '#')
+
   for (const slug of ['typeface-metrics', 'font-loading']) {
     const article = LEARN_ARTICLES.find((a) => a.slug === slug)
     const source = slug === 'typeface-metrics' ? metricsSource : loadingSource
-    // Trailing slashes are stripped on both sides: the article links a clause as
-    // `${FONTS4}/#anchor`, so its base carries a slash the constant does not.
-    const trim = (href) => href.split('#')[0].replace(/\/+$/, '')
-    const bases = new Set(article.sources.map((s) => trim(s.href)))
+    const listed = new Set(article.sources.map((s) => clause(s.href)))
     const cited = [...source.matchAll(/href=\{`\$\{([A-Z0-9]+)\}([^`]*)`\}/g)]
     assert.ok(cited.length >= 3, `${slug} carries fewer than three linked clauses`)
-    for (const [, constant] of cited) {
+
+    for (const [, constant, fragment] of cited) {
       const declared = new RegExp(`const ${constant} = '([^']+)'`).exec(source)
       assert.ok(declared, `${slug} links through ${constant}, which it does not declare`)
-      assert.ok(bases.has(trim(declared[1])),
-        `${slug} quotes a clause on ${declared[1]}, which is not in its sources list`)
+      const full = clause(`${declared[1]}${fragment}`)
+      assert.ok(listed.has(full),
+        `${slug} quotes ${full}, which is not one of its sources — a reader following the`
+        + ' list cannot reach the clause the page just put in front of them')
     }
+
+    // A positive control on the loop: it must be comparing something, and the
+    // set it compares against must not be empty.
+    assert.ok(listed.size >= 3, `${slug} lists fewer than three sources to check against`)
+    assert.ok([...cited].some(([, , fragment]) => fragment.includes('#')),
+      `${slug} quotes no clause with a fragment, so the check above is comparing bases again`)
   }
 })
