@@ -43,7 +43,20 @@ const LEDES = [
     heading: 'Gradient Generator',
     text: 'Colour stops and where each one sits. Everything below is those two facts, as CSS, Tailwind or SVG.',
   },
+  {
+    route: '/create/font-pair',
+    selector: '.fpr-hero-intro p',
+    heading: 'Font Pair',
+    text: 'Two families — one for headings, one for body. Every preview below is those two, together.',
+  },
 ]
+
+// The persona claim is its own motif and gets its own guard: "like a creative
+// director" told the reader nothing the specimens do not show better. It is
+// listed separately from `production-ready` because it is a different failure —
+// flattery rather than a vague capability claim — and because a future rewrite
+// is far more likely to reach for one than the other.
+const BANNED_PHRASES = ['production-ready', 'like a creative director']
 
 for (const lede of LEDES) {
   test(`${lede.route} opens on the model, in one sentence`, async ({ page }) => {
@@ -69,7 +82,7 @@ for (const lede of LEDES) {
   })
 }
 
-test('neither tool sells itself with "production-ready"', async ({ page }) => {
+test('no tool sells itself instead of showing itself', async ({ page }) => {
   // The vague-claim vocabulary the anti-slop bar names. Both old ledes used it;
   // it is the one word they shared, so it is worth a guard of its own.
   //
@@ -88,9 +101,11 @@ test('neither tool sells itself with "production-ready"', async ({ page }) => {
     expect(body.length, `${route} should have rendered real text`).toBeGreaterThan(400)
     expect(body).toContain(heading)
 
-    expect(
-      body.toLowerCase(),
-      `${route} is back to claiming "production-ready" instead of showing the output`,
-    ).not.toContain('production-ready')
+    for (const phrase of BANNED_PHRASES) {
+      expect(
+        body.toLowerCase(),
+        `${route} is selling itself with "${phrase}" instead of showing the output`,
+      ).not.toContain(phrase)
+    }
   }
 })
