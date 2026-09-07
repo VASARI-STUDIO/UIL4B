@@ -13,8 +13,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { ALL_CSS } from './appStylesheets.js'
 
-const CSS = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8')
+// Every stylesheet, not just global.css. A custom property used in a page
+// stylesheet and defined nowhere is exactly as invalid as one used here, and
+// eleven families are no longer in global.css at all — scanning it alone would
+// quietly stop checking them rather than fail.
+const CSS = ALL_CSS
 
 const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map(m => m[1]))
 
