@@ -457,6 +457,17 @@ test.describe('the pricing page and the server agree', () => {
     // Both tiers state the SAME sentence the tool states and the server
     // enforces. Imported, never typed — if the founder changes the allowance,
     // this follows rather than going stale.
+    //
+    // WHAT THIS ASSERTION CANNOT SEE, stated so nobody tries to make it:
+    // replacing {allowanceSentence('pro')} with the literal string it currently
+    // returns leaves this test GREEN, because the rendered DOM is identical.
+    // Mutation testing confirmed it survives here. That is not a hole — it is
+    // the division of labour tests/unit/plans-truth.test.js already documents:
+    // a DOM assertion cannot see a claim that stopped being derived, and a
+    // source assertion cannot see a component that stopped rendering. The
+    // typed-literal mutation IS killed, by "/plans derives the allowance
+    // instead of typing it" in tests/unit/ai-generation-truth.test.js. Both
+    // halves are needed and neither subsumes the other.
     await expect(page.locator('.sub-tier-list').first()).toContainText(allowanceSentence('free'))
     await expect(page.locator('.sub-tier-list').nth(1)).toContainText(allowanceSentence('pro'))
 
