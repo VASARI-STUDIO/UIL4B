@@ -14183,8 +14183,14 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 
 /* ── Shared between the two surfaces ─────────────────────────────────────── */
 .hlp,.prn{display:flex;flex-direction:column;gap:clamp(56px,7vw,104px);padding-bottom:var(--s-8)}
-.hlp-hero,.prn-hero{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4);max-width:22ch}
-.hlp-h1,.prn-h1{font-family:var(--display);font-size:var(--fs-h1);font-weight:600;letter-spacing:-.026em;line-height:1.16;color:var(--t0);margin:0;max-width:16ch;
+/* NO max-width ON THE HERO ITSELF. It carried `max-width:22ch`, and `ch` on a
+   flex container resolves against the CONTAINER's font size — the inherited
+   16px body face, not the 56px display face of the h1 inside it. Measured at
+   1440: the whole hero was ~180px wide and the headline broke onto six lines
+   beside 1100px of nothing. The children carry their own measure instead,
+   where `ch` resolves against the type it is actually setting. */
+.hlp-hero,.prn-hero{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4);width:100%}
+.hlp-h1,.prn-h1{font-family:var(--display);font-size:var(--fs-h1);font-weight:600;letter-spacing:-.026em;line-height:1.16;color:var(--t0);margin:0;max-width:19ch;
   /* `.home-mark` paints a background on an INLINE element and carries
      padding-block:.06em. Nothing here clips, but the extra leading keeps the
      mark's box off the line above it at the largest clamp step. */
@@ -14204,7 +14210,7 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    One value in, the eleven stops the product generates, the files they leave
    as. The panel is the page's large visual and the only full-bleed object on
    it. */
-.hlp-run{display:grid;grid-template-columns:minmax(148px,auto) minmax(0,1fr) minmax(158px,auto);gap:var(--s-5) var(--s-6);align-items:center;
+.hlp-run{display:grid;grid-template-columns:minmax(148px,auto) minmax(0,1fr) minmax(196px,auto);gap:var(--s-5) var(--s-6);align-items:center;
   margin:0;padding:clamp(20px,3vw,32px);border:1px solid var(--border);border-radius:var(--radius-3xl);background:var(--bg-1);box-shadow:var(--shadow-cmd)}
 .hlp-run-seed{display:flex;align-items:center;gap:var(--s-3)}
 .hlp-run-chip{flex:0 0 auto;width:48px;height:48px;border-radius:var(--radius);border:1px solid var(--border)}
@@ -14233,6 +14239,11 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 /* Rows separated by a hairline, not enclosed in cards: four equally weighted
    rounded rectangles is the construction the quality bar names, and these four
    rows are deliberately not equal — one of them is the exception. */
+/* Capped at a reading measure rather than filling the 1fr column. Without it
+   the row rule ran the full ~900px and `margin-left:auto` parked each row's
+   arrow that far from the label it belongs to, which read as two unrelated
+   things rather than one link. */
+.hlp-starts,.hlp-answers{max-width:68ch}
 .hlp-starts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .hlp-start{padding:var(--s-5) 0;border-top:1px solid var(--border)}
 .hlp-start:first-child{border-top:0;padding-top:0}
@@ -14272,6 +14283,11 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .prn-item[data-lead="true"]{grid-template-columns:minmax(0,1fr);gap:var(--s-6)}
 .prn-item[data-lead="true"] .prn-rule{font-size:var(--fs-h1);line-height:1.15;max-width:18ch}
 .prn-item[data-lead="true"] .prn-say{max-width:64ch}
+/* The lead proof is the page's largest object, but "large" is not the same as
+   "stretched": across the full 1370px column its two rows read as thin bands
+   with the measurement stranded from the sample it measures. Capped so it
+   stays the biggest thing on the page and stays dense. */
+.prn-item[data-lead="true"] .prn-proof{max-width:920px}
 .prn-say{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3);min-width:0}
 .prn-body{margin:0;font-size:var(--fs-body-s);line-height:1.7;color:var(--t1);max-width:56ch}
 .prn-go{display:inline-flex;align-items:center;gap:8px;margin-top:var(--s-1);font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);text-decoration:none}
@@ -14347,7 +14363,7 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .prn-ex-cols{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:560px){
-  .hlp-hero,.prn-hero{max-width:none}
+  .hlp-h1,.prn-h1,.hlp-lede,.prn-lede{max-width:none}
   .hlp-start-link{flex-wrap:wrap;gap:var(--s-2)}
   .hlp-start-go{margin-left:0}
   .prn-cx-row{grid-template-columns:minmax(0,1fr)}
