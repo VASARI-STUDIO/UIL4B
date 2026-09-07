@@ -47,8 +47,54 @@ const pricingHtml = () => ({
   },
 })
 
+/* ── A SIGNED-IN SESSION FOR THE ACCEPTANCE SUITE, AND ONLY FOR IT ─────────
+ *
+ * The acceptance suite had no way to be signed in, so every signed-in surface
+ * in the product was unaudited — see the long argument in
+ * tests/user-sim/fixtures/test-session.js.
+ *
+ * This is the whole mechanism: under `--mode test`, the two Firebase entry
+ * points `src/utils/firebase.js` imports are resolved to doubles under tests/.
+ * Everything downstream — AuthContext (which is founder-gated and untouched),
+ * RequireAuth, useSubscription, the project cap, the export gate — then sees a
+ * real session because it sees a real Firebase telling it there is one.
+ *
+ * WHY A PLUGIN AND NOT `resolve.alias`. An alias entry is matched against the
+ * raw import SPECIFIER, so the doubles' own `import … from 'firebase/auth'`
+ * would match it too and each file would resolve to itself. A resolveId hook
+ * can ask WHO is importing, which is the question that has to be answered:
+ * everyone gets the double, the doubles get the real package.
+ *
+ * WHY IT CANNOT SHIP. `testSessionDouble` is only CONSTRUCTED when the mode is
+ * 'test'. A production build does not contain a disabled copy of it and does
+ * not contain a flag that would enable it — the plugin is simply not in the
+ * pipeline, so `firebase/auth` and `firebase/firestore` resolve to the real
+ * packages and nothing under tests/ is reachable from any entry.
+ * tests/unit/test-session-not-in-production.test.js runs a real production
+ * build and greps every emitted file to prove it, and was verified by planting
+ * a leak and watching it go red.
+ */
+const DOUBLED = {
+  'firebase/auth': resolve(import.meta.dirname, 'tests/user-sim/fixtures/firebase-auth.js'),
+  'firebase/firestore': resolve(import.meta.dirname, 'tests/user-sim/fixtures/firebase-firestore.js'),
+}
+const DOUBLE_FILES = new Set(Object.values(DOUBLED).map((p) => p.replace(/\\/g, '/')))
+
+const testSessionDouble = () => ({
+  name: 'uil4b-test-session-double',
+  enforce: 'pre',
+  resolveId(source, importer) {
+    const target = DOUBLED[source]
+    if (!target) return null
+    // The doubles themselves must reach the REAL package, or each would
+    // resolve to itself. This is the reason for the hook.
+    if (importer && DOUBLE_FILES.has(importer.replace(/\\/g, '/'))) return null
+    return target
+  },
+})
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), pricingHtml()],
+  plugins: [react(), pricingHtml(), ...(mode === 'test' ? [testSessionDouble()] : [])],
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
   },

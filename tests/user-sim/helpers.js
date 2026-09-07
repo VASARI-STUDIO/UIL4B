@@ -5,9 +5,31 @@
 // finding, and tests can add their own UX observations with note(). Findings
 // from all workers append to report/findings.jsonl; the global teardown (and
 // summarize.js) turn that into the human-readable feedback report.
+//
+// ── THE THREE DOORS ────────────────────────────────────────────────────────
+//
+//   signIn(page, { plan })  WHO is walking in. Declares a free, Pro or admin
+//                           session before the page loads, so RequireAuth,
+//                           canSaveProjects, useSubscription().isPro, the
+//                           project cap and the export gate all accept it as
+//                           they would a real account. Call it BEFORE go().
+//                           Cannot exist in a production build — see the long
+//                           note above the function, and
+//                           tests/user-sim/fixtures/test-session.js.
+//
+//   go(page, url)           Navigate, and come back when the ROUTE is on
+//                           screen rather than when its loading fallback is.
+//
+//   ready(page, what)       The wait go() is built on, for a page that is
+//                           already navigating or has swapped route in place.
+//
+// Reach for a bare page.goto() and tests/unit/one-tap-stub.test.js fails the
+// build; the one documented hole is goRaw(), which names its two callers.
 import fs from 'node:fs'
 import path from 'node:path'
 import { expect } from '@playwright/test'
+import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
+import { ADMIN_EMAILS } from '../../src/utils/constants.js'
 
 export const REPORT_DIR = path.join(process.cwd(), 'tests', 'user-sim', 'report')
 export const FINDINGS_FILE = path.join(REPORT_DIR, 'findings.jsonl')
@@ -88,6 +110,217 @@ export function watch(page, persona) {
       record({ persona, severity, kind: 'ux-observation', where: where || page.url(), message })
     },
   }
+}
+
+/* ── BEING SIGNED IN ────────────────────────────────────────────────────────
+ *
+ * The third door in this file, beside `go()` and `ready()`, and the one that
+ * decides WHO is walking through them.
+ *
+ * WHAT IT IS FOR
+ * Until this existed the suite could only walk the product as a stranger.
+ * 20-billing-banner.spec.js said so in its own header and hand-wrote a copy of
+ * BillingBanner's markup instead of rendering it; `multi-breakpoint-ux-audit`
+ * and `audit-coverage-not-run` in src/data/pipeline.js both record whole
+ * categories as unaudited "because they are unreachable from a signed-out
+ * session"; and #388 shipped the plans overhaul admitting the `isPro` branches
+ * were verified by READING them rather than rendering them. Half the product
+ * could not be looked at.
+ *
+ * WHAT IT IS NOT
+ * It is not a login and it does not click anything. It DECLARES a session
+ * before the page loads, and the app's own Firebase — doubled for the test
+ * build only, see tests/user-sim/fixtures/test-session.js — answers with it.
+ * The session is therefore real to every consumer: `RequireAuth` admits it,
+ * `useSessionHint` records it, `canSaveProjects` is true, the project cap
+ * counts against it, `useSubscription().isPro` follows the plan, the export
+ * gate opens or does not, and `auth.currentUser` carries it for the hooks that
+ * read roles off a token. Nothing in src/ is aware any of this is happening,
+ * and src/contexts/AuthContext.jsx — which is founder-gated — is untouched.
+ *
+ * IT CANNOT EXIST IN A PRODUCTION BUILD. The doubles are wired in by a Vite
+ * plugin that is only constructed under `--mode test`; a production build does
+ * not carry a disabled copy of it. tests/unit/test-session-not-in-production.test.js
+ * runs a real production build and greps every emitted file to prove it.
+ *
+ * NO FIREBASE HOST IS CONTACTED. The doubles answer from memory rather than
+ * intercepting requests, so this is stronger than the One Tap stub's promise:
+ * there is no request to escape. Assert it with `firebaseRequests()` below —
+ * and give that assertion a positive control, because "nothing escaped" is
+ * trivially true of a page that never rendered.
+ *
+ * ORDER MATTERS: call it BEFORE the first navigation. It installs an init
+ * script, which runs before the app's own module scripts on every subsequent
+ * page load; a page that has already booted signed out stays signed out.
+ */
+
+/** Every host the Firebase SDK would talk to. Exported so a spec can assert on it. */
+export const FIREBASE_HOSTS = [
+  'identitytoolkit.googleapis.com',
+  'securetoken.googleapis.com',
+  'firestore.googleapis.com',
+  'firebaseinstallations.googleapis.com',
+  'firebaseremoteconfig.googleapis.com',
+  'firebasestorage.googleapis.com',
+  'www.googleapis.com',
+  'apis.google.com',
+  'accounts.google.com',
+]
+
+/**
+ * Start recording every request this page makes to a Firebase host.
+ * Returns a live array of URLs — read it after the flow, not during.
+ */
+export function firebaseRequests(page) {
+  const seen = []
+  page.on('request', (req) => {
+    let host
+    try { host = new URL(req.url()).hostname } catch { return }
+    if (FIREBASE_HOSTS.includes(host)) seen.push(req.url())
+  })
+  return seen
+}
+
+/** A saved project shaped the way ProjectContext.saveProject writes them. */
+function seedProject(i, design) {
+  const at = new Date(Date.UTC(2026, 8, 1 + i, 9)).toISOString()
+  return {
+    id: `seed-${i + 1}`,
+    name: `Seeded Project ${i + 1}`,
+    design: JSON.parse(JSON.stringify(design)),
+    createdAt: at,
+    updatedAt: at,
+  }
+}
+
+/**
+ * Sign this page in, as a free or a Pro account.
+ *
+ *   await signIn(page, { plan: 'pro' })
+ *   await go(page, '/projects')
+ *
+ * OPTIONS
+ *   plan       'free' (default) or 'pro'. Pro is granted the way the product
+ *              grants it — a `subscription` document on `users/{uid}` that
+ *              SubscriptionContext reads over a snapshot — NOT by setting a
+ *              flag. So `planForSubscription()` is the code being exercised,
+ *              and a change to it changes what these tests see.
+ *   admin      true to use the founder's address from utils/constants.js.
+ *              Separate from `plan` on purpose: admin implies Pro through a
+ *              DIFFERENT branch (the email allowlist), and conflating the two
+ *              would make an admin-only failure look like a Pro failure.
+ *   projects   a count, or an array of project records. Written to the same
+ *              localStorage key ProjectContext saves to, under the account's
+ *              own email key, so the cap counts them.
+ *   returning  default true: seed the first-paint session hint the way
+ *              useSessionHint() would have written it on a previous load.
+ *              Pass false to get a genuinely cold first visit — which is what
+ *              a test of the `/` routing decision has to use, or it proves
+ *              nothing but its own seed.
+ *   onboarded  default true. An account that still owes onboarding is sent to
+ *              /onboarding by onboardingDestination(), not to the User Home,
+ *              so a signed-in fixture that skipped this would be measuring the
+ *              survey. Written BOTH ways it can be true — the `vs-onboarded`
+ *              local flag and `onboarding.completedAt` on the account document
+ *              — because those are the two the app reconciles, and a fixture
+ *              that set only one would be a state no real account is in.
+ *   subscription / docs / claims / email / uid / displayName — direct overrides
+ *              for anything the four above do not cover. `docs` is merged over
+ *              the seeded Firestore documents, keyed by path.
+ *
+ * Returns the resolved account, so a spec can assert against the same email the
+ * app is using rather than repeating a literal.
+ */
+export async function signIn(page, opts = {}) {
+  const {
+    plan = 'free',
+    admin = false,
+    projects = 0,
+    returning = true,
+    onboarded = true,
+    subscription,
+    docs = {},
+    claims = {},
+    displayName,
+  } = opts
+
+  const email = (opts.email || (admin ? ADMIN_EMAILS[0] : `${plan}.user@uil4b.test`)).toLowerCase()
+  const uid = opts.uid || `test-uid-${admin ? 'admin' : plan}`
+  const name = displayName || (admin ? 'Founder' : plan === 'pro' ? 'Pia Pro' : 'Freya Free')
+
+  // The entitlement, expressed as the document Stripe's webhook would have
+  // written. `planForSubscription` in SubscriptionContext is what turns it into
+  // Pro; nothing here decides.
+  const sub = subscription !== undefined ? subscription : (plan === 'pro' ? {
+    status: 'active',
+    interval: 'monthly',
+    currentPeriodEnd: Date.now() + 30 * 86_400_000,
+    cancelAtPeriodEnd: false,
+  } : null)
+
+  const list = Array.isArray(projects)
+    ? projects
+    : Array.from({ length: projects }, (_, i) => seedProject(i, DEFAULT_DESIGN))
+
+  const session = {
+    uid,
+    email,
+    displayName: name,
+    photoURL: '',
+    provider: 'password',
+    claims,
+    docs: {
+      [`users/${uid}`]: {
+        displayName: name,
+        email,
+        photoURL: '',
+        location: '',
+        website: '',
+        bio: '',
+        company: '',
+        flair: '',
+        ...(sub ? { subscription: sub } : {}),
+        ...(onboarded ? { onboarding: { completedAt: Date.now() - 7 * 86_400_000 } } : {}),
+      },
+      ...docs,
+    },
+  }
+
+  /* THE DECLARATION IS RE-READ ON EVERY LOAD; THE STORAGE IS SEEDED ONCE.
+   *
+   * Both halves matter, and getting the second one wrong cost a wrong test
+   * result while this was being built. `addInitScript` runs before every
+   * document, which is right for the session — a stored Firebase session
+   * survives a reload the same way — and WRONG for localStorage: re-seeding on
+   * every load overwrites whatever the app itself wrote in between. The first
+   * version of this cleared `vs-session` on the second navigation, so a test of
+   * "did useSessionHint() record the session?" was answered by the fixture
+   * rather than by the app, and reported a flash that had not happened.
+   *
+   * So the seed is prior state, written once per tab, and everything after that
+   * belongs to the app. */
+  await page.addInitScript(({ session: s, storage }) => {
+    window.__UIL4B_TEST_SESSION__ = s
+    try {
+      if (sessionStorage.getItem('__uil4b_test_seeded') === '1') return
+      sessionStorage.setItem('__uil4b_test_seeded', '1')
+      for (const [key, value] of Object.entries(storage)) {
+        if (value !== null) localStorage.setItem(key, value)
+      }
+    } catch { /* a blocked store is the app's problem to survive, not ours */ }
+  }, {
+    session,
+    storage: {
+      'vs-projects': JSON.stringify(list.length ? { [email]: list } : {}),
+      // Written the way useSessionHint() writes it. `returning: false` writes
+      // NOTHING rather than removing the key — a fresh browser context has no
+      // hint to begin with, and removing one is how the bug above happened.
+      'vs-session': returning ? '1' : null,
+      'vs-onboarded': onboarded ? '1' : null,
+    },
+  })
+
+  return { email, uid, displayName: name, plan: admin ? 'pro' : plan, projects: list }
 }
 
 /**
