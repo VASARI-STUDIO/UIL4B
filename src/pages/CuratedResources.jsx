@@ -6,6 +6,7 @@ import CategoryGlyph from '../components/discover/CategoryGlyph'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
+import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { DISCOVER_RESOURCES } from '../data/discoverResources'
 import { FILTER_CATEGORIES, CATEGORY_MAP } from '../data/discoverCategories'
 import { primaryAvailableTool, buildToolHandoffUrl } from '../components/discover/discoverUtils'
@@ -311,6 +312,25 @@ export default function CuratedResources() {
           </div>
         </>
       )}
+
+      {/* The closing line, below the last resource in either view.
+
+          THIS GALLERY IS THE ONE WITH NO SUBMISSION SURFACE, and the CTA says
+          so rather than pretending otherwise. `SUBMIT_SURFACES` in
+          utils/submitIntent.js is exactly ['community','gradient','palette',
+          'prompt'] — there is no resource queue, no review path and no
+          moderation route for a link somebody sends in. What DOES exist is the
+          route this page's own masthead already uses for the same job: the
+          feedback form, behind the "Suggest a resource" button at the top. The
+          closing CTA leads to the same place, so the page answers the question
+          the same way at both ends, and the wording drops "submit" because
+          nothing is submitted — a human reads it and decides. */}
+      <GalleryCloseCta
+        className="cur-cta"
+        detail="This is a hand-picked list, not a search index. Send us the tool you were hoping to find and we will look at it."
+        action="Suggest a resource"
+        to="/feedback"
+      />
     </div>
   )
 }
