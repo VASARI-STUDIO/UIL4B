@@ -121,6 +121,11 @@ const EXPECTED_STATIC_FIREBASE_IMPORTERS = [
   'src/pages/Settings.jsx',
   'src/pages/AiPromptGenerator.jsx',
   'src/pages/AltTextGenerator.jsx',
+  // The Brand Starter (#411) is the same shape as AltTextGenerator: a lazy tool
+  // page (CreateTool.jsx: lazy(() => import('./BrandStarter'))) that reads the
+  // current user's ID token to call /api/ai. Reachable only through import(), so
+  // it cannot pull the SDK into the first request wave. Reviewed 2026-09-07.
+  'src/pages/BrandStarter.jsx',
   'src/pages/LandingPromptGenerator.jsx',
   'src/components/prompt/SubmitPromptPanel.jsx',
   'src/utils/communityQueueApi.js',
