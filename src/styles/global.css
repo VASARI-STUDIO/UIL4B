@@ -14442,3 +14442,29 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .prn-cx-row{grid-template-columns:minmax(0,1fr)}
   .prn-th-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* ── SYNC NOTICE ────────────────────────────────────────────────────────────
+   The banner that says sync has stopped, or that another device's copy is what
+   you are now looking at.
+
+   UNDER THE HEADER, NOT IN THE TOAST CORNER, and the position is a decision
+   rather than taste. Bottom-right already holds .global-feedback-btn and
+   .toast; bottom-left holds .bill-banner. More than that, a toast is the wrong
+   FORM for this: a toast disappears, and "your work is not reaching your
+   account" is a condition that is still true after the animation ends. So it
+   sits where a condition banner belongs and stays until it is resolved or
+   dismissed. */
+.sync-notice{position:fixed;top:calc(var(--nav-h,56px) + 12px);left:50%;transform:translateX(-50%);display:flex;align-items:flex-start;gap:11px;width:min(560px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--ring),var(--warm-shadow-lg);color:var(--t0);padding:13px 13px 13px 12px;border-radius:var(--radius-l);font-family:var(--font);z-index:130}
+.sync-notice-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
+.sync-notice-ico svg{width:15px;height:15px}
+.sync-notice--error{border-color:color-mix(in srgb,var(--err) 45%,var(--bh))}
+.sync-notice--error .sync-notice-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
+.sync-notice--info .sync-notice-ico{background:var(--accent-bg);color:var(--accent)}
+.sync-notice-msg{flex:1;min-width:0;font-size:13px;font-weight:500;line-height:1.45;color:var(--t0);letter-spacing:-.005em}
+.sync-notice-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.sync-notice-dismiss{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-s);border:0;background:transparent;color:var(--t2);cursor:pointer}
+.sync-notice-dismiss:hover{background:var(--hvr);color:var(--t0)}
+@media (max-width:520px){
+  .sync-notice{width:calc(100vw - 24px);flex-wrap:wrap}
+  .sync-notice-actions{margin-left:auto}
+}

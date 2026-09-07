@@ -1,0 +1,36 @@
+diff --git a/firestore.rules b/firestore.rules
+index 5360bda..41def5f 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -49,6 +49,31 @@ service cloud.firestore {
+       match /sync/{docId} {
+         allow read, write: if isOwner();
+       }
++
++      // PER-PROJECT SYNC — one document per saved project.
++      //
++      // WHY IT EXISTS: every project the account owns was pushed into the
++      // single `sync/projects` document above. A brand logo is capped at
++      // 32 KB (utils/brandLogo.js), so about thirty logo projects reach
++      // Firestore's 1 MiB per-document ceiling — and Pro has no project cap.
++      // Past it every write was rejected, and the client swallowed the
++      // rejection, so sync stopped forever with no signal to the user.
++      // (project-sync-single-document, 2026-09-06 engineering review.)
++      //
++      // WHAT IT GRANTS: exactly what `sync/{docId}` already grants — the
++      // owner, and nobody else, over documents under their own user
++      // document. It is the same trust boundary applied to a second
++      // subcollection; it opens no path to anything the owner could not
++      // already read or write, and it touches no billing or entitlement
++      // field (those are locked on users/{userId} above and are not
++      // reachable from here).
++      //
++      // A document here is { project, updatedAt, deletedAt, _updatedAt }.
++      // `deletedAt` is a tombstone, which is what makes a delete propagate
++      // as a delete instead of being resurrected by the next pull.
++      match /projects/{projectId} {
++        allow read, write: if isOwner();
++      }
+     }
+ 
+     // Feedback — anyone can create, only admin can read/update/delete
