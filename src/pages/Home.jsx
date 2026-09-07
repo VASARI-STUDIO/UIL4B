@@ -14,6 +14,7 @@ import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, categoryDestinatio
 import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 import { paletteBuilderUrl } from '../data/paletteGallery'
+import { APPROVED_CURRENCY, cheapestPerMonth, purchasablePlans, resolvePlanLadder, savingsVsMonthly } from '../config/planLadder'
 
 // ── The V2 homepage ──────────────────────────────────────────────────────────
 //
@@ -127,32 +128,64 @@ const STEPS = [
 
 /* ── Pricing ──────────────────────────────────────────────────────────────────
  *
- * ⚠️ DISPLAY VALUES ONLY — NOT WIRED TO STRIPE.
+ * DERIVED FROM src/config/planLadder.js, WHICH IS THE ONE LADDER.
  *
- * These are the founder-approved marketing ladder recorded in
- * docs/reference/design-language-v2.md ("Deviations from the mock", 2026-08-16):
- * monthly $7 · quarterly $18 ($6/mo) · yearly $48 ($4/mo), headline "from
- * $4/month".
+ * This block used to be a hand-typed PRICE_LADDER array living here, and by the
+ * 2026-09-06 sweep it had drifted into three claims the rest of the app had
+ * already retracted. All three sat on the FRONT PAGE, which is the first
+ * pricing any visitor sees:
  *
- * The live price service (`useProPrice` / `api/_lib/pricing.js`) knows only
- * MONTHLY and YEARLY — there is no quarterly price object — and its amounts are
- * whatever Stripe currently returns, which is not guaranteed to be this ladder.
- * Reading half the panel from the service and hard-coding the other half would
- * put two different numbers for the same plan on one page.
+ *   1. IT SOLD A QUARTERLY PLAN THAT CANNOT BE BOUGHT. planLadder.js gives
+ *      quarterly `checkoutPlan: null` and says so in its own flag: "offering
+ *      quarterly today would dead-end on 'Invalid selection'". /plans dropped
+ *      the tier, and scripts/site-pricing.mjs already excludes it from the
+ *      structured data for exactly this reason. The homepage was the last
+ *      surface still advertising it — the same shape as the "Full design JSON"
+ *      defect, a thing promised on a sales surface that the product cannot
+ *      deliver.
+ *   2. IT SAID "Cancel any time" ON THE MONTHLY ROW. Plans.jsx removed that
+ *      line under a founder flag because [stripe-retention-config] is blocked
+ *      and the Stripe Customer Portal has no cancellation flow enabled, so it
+ *      "is a promise the billing system cannot currently honour". Deleting it
+ *      from the pricing page and leaving it on the homepage retracted nothing.
+ *   3. IT TYPED THE HEADLINE. planLadder.js exports cheapestPerMonth() and
+ *      documents it as "the honest headline: the cheapest per-month figure
+ *      among the tiers we will actually sell. Never typed into copy." The
+ *      headline here was the literal string "$4/month".
  *
- * So this panel is marketing copy: it names the ladder, links to /plans, and
+ * The amounts are unchanged — `approvedTotal` in planLadder.js IS the
+ * founder-approved ladder from docs/reference/design-language-v2.md, re-approved
+ * 2026-08-20 — so this is not a price change. What changes is that a tier
+ * cannot appear here unless something can accept the click, and the headline
+ * follows the ladder instead of being retyped beside it.
+ *
+ * STILL DISPLAY-ONLY, AND DELIBERATELY: no usePrices() call is added here.
  * /plans remains the only surface that quotes a live, currency-correct,
- * checkout-backed price. Pricing, Stripe and plan files are founder-gated and
- * owned by a separate workstream — nothing here touches them.
- *
- * TO WIRE LATER: add a quarterly price to the price service, then replace
- * PRICE_LADDER with useProPrice() output and delete this comment.
+ * checkout-backed price, and the homepage's LCP budget on
+ * [homepage-field-metrics] is why this page does not open a request for a panel
+ * five screens down. resolvePlanLadder() with no `prices` returns the approved
+ * fallbacks, which is exactly what this panel rendered before.
  */
-const PRICE_LADDER = [
-  { id: 'monthly', cadence: 'Monthly', perMonth: '$7', total: '$7 billed monthly', note: 'Cancel any time' },
-  { id: 'quarterly', cadence: 'Quarterly', perMonth: '$6', total: '$18 billed every 3 months', note: 'Save $3 a quarter' },
-  { id: 'yearly', cadence: 'Yearly', perMonth: '$4', total: '$48 billed yearly', note: 'Best value · 7-day free trial', best: true },
-]
+const RESOLVED_LADDER = resolvePlanLadder()
+// Only the tiers a visitor can actually buy today. Quarterly has no
+// checkoutPlan, so it is absent by construction rather than by being deleted
+// from a second list somebody has to remember to keep in step.
+const PRICE_LADDER = purchasablePlans(RESOLVED_LADDER)
+const CHEAPEST = cheapestPerMonth(RESOLVED_LADDER)
+
+// Each row's note, derived from the ladder rather than written beside it.
+// A tier with a trial says so (Checkout.jsx grants it on yearly only, which is
+// what `trialDays` mirrors); a tier that beats monthly by a real margin says by
+// how much; monthly states the thing a buyer would otherwise meet at the till,
+// in the same words the /plans FAQ already uses.
+function ladderNote(plan) {
+  const bits = []
+  const saving = savingsVsMonthly(plan, RESOLVED_LADDER)
+  if (saving) bits.push(`Save ${saving}%`)
+  if (plan.trialDays) bits.push(`${plan.trialDays}-day free trial`)
+  if (!bits.length) bits.push('No trial — bills immediately')
+  return bits.join(' · ')
+}
 
 const PRO_INCLUDES = [
   'Every colour, type, icon and image tool',
@@ -695,8 +728,11 @@ export default function Home() {
           <div className="home-container">
             <div className="hprice-panel" data-reveal>
               <div className="hprice-lead">
+                {/* Computed from the cheapest tier that can actually reach
+                    checkout, never typed. If the ladder changes, or a tier
+                    stops being purchasable, this sentence follows it. */}
                 <h2 className="hh2 hprice-title" id="hprice-title">
-                  Pro from <span className="hprice-hi">$4/month</span>.
+                  Pro from <span className="hprice-hi">{CHEAPEST.perMonthLabel}/month</span>.
                 </h2>
                 <p className="hprice-lede">
                   Free covers the complete core toolkit with no card and no trial clock. Pro
@@ -718,13 +754,13 @@ export default function Home() {
                 <ul className="hprice-rows">
                   {PRICE_LADDER.map((row) => (
                     <li className="hprice-row" key={row.id} data-best={row.best || undefined}>
-                      <span className="hprice-cadence">{row.cadence}</span>
+                      <span className="hprice-cadence">{row.label}</span>
                       <span className="hprice-amount">
-                        <strong>{row.perMonth}</strong>
+                        <strong>{row.perMonthLabel}</strong>
                         <span className="hprice-per">/month</span>
                       </span>
-                      <span className="hprice-total">{row.total}</span>
-                      <span className="hprice-note">{row.note}</span>
+                      <span className="hprice-total">{row.totalLabel} {row.cadence}</span>
+                      <span className="hprice-note">{ladderNote(row)}</span>
                     </li>
                   ))}
                 </ul>
@@ -732,9 +768,13 @@ export default function Home() {
                   See plans and start free
                   <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
                 </Link>
+                {/* The currency comes from the ladder too. It was the word
+                    "USD" typed here beside amounts that are USD by virtue of
+                    APPROVED_CURRENCY — one more thing that could go stale
+                    quietly. */}
                 <p className="hprice-fine">
-                  Prices shown in USD. Your local currency and the exact amount are confirmed on
-                  the plans page and again at checkout.
+                  Prices shown in {APPROVED_CURRENCY.toUpperCase()}. Your local currency and the
+                  exact amount are confirmed on the plans page and again at checkout.
                 </p>
               </div>
             </div>
