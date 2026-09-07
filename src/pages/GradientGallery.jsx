@@ -6,6 +6,7 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
+import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { GALLERY_GRADIENTS, GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
 import { mergeSubmissions } from '../utils/communityQueue'
@@ -209,6 +210,19 @@ export default function GradientGallery({ toast }) {
           onClear={clearAll}
         />
       )}
+
+      {/* The closing line, last child of the page. Same reasoning as the Palette
+          Library: the Gradient Generator is where a gradient gets made and where
+          its own "Submit to community" button already lives, running the
+          requireLogin gate 09-auth-modal-accessibility covers. Sending a submit
+          intent ahead of the user would open that form over a gradient they had
+          not built. */}
+      <GalleryCloseCta
+        className="grg-cta"
+        detail="Build one in the Gradient Generator — then submit it to the community from there."
+        action="Create and submit your own"
+        to="/create/gradient"
+      />
     </div>
   )
 }
