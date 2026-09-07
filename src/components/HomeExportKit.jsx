@@ -171,7 +171,22 @@ export default function HomeExportKit({ system }) {
           <div className="hkit-side">
             {/* Not a card grid — a list of what the panel makes, in the order
                 exportFormats.js lists them, with the Pro rows badged exactly as
-                /plans badges them. */}
+                /plans badges them.
+
+                NAMES ONLY, AND THE `desc` FIELD IS DELIBERATELY NOT RENDERED.
+                Two reasons, one of them a build rule. The rule: the `book`
+                format's description ends "…type specimens and every token", and
+                P-019 rule R keeps the word "token" past the EXPORT BOUNDARY
+                only — 10-home-chaos-to-calm.spec.js fails the build when it
+                appears on this page, and it caught exactly that here. Editing
+                exportFormats.js to suit a sales surface would be the wrong fix:
+                that copy is the export panel's, and the panel is past the
+                boundary where the word is correct.
+
+                The other reason is that it reads better. The spread beside this
+                list already shows what the document is; six paragraphs
+                restating it is the "copy that argues instead of shows" the
+                founder rejected by name. The names are the deliverables. */}
             <ul className="hkit-formats">
               {live.map((f) => (
                 <li className="hkit-format" key={f.id}>
@@ -179,7 +194,6 @@ export default function HomeExportKit({ system }) {
                     {f.name}
                     {proIds.has(f.id) && <em className="hkit-format-pro">Pro</em>}
                   </span>
-                  <span className="hkit-format-desc">{f.desc}</span>
                 </li>
               ))}
             </ul>

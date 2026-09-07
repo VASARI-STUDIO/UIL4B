@@ -6893,7 +6893,40 @@ html.lenis{scroll-behavior:auto!important}
    cannot make the hero taller than the screen it is measured against. Clamped at
    980px so an ultra-tall monitor does not stretch the copy into a void, and
    floored by the content itself via min-height on a flow element. */
-.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:min(100svh,980px);margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-7)) 24px var(--s-8)}
+/* THE FLOOR CAME DOWN FROM min(100svh,980px) TO min(78svh,760px), MEASURED.
+
+   #413 reported the hero leaving dead space with none of the next section on
+   screen. Re-measured here at twenty widths on the production build, one fresh
+   browser context per width (never a resize):
+
+     width x height   hero h   last ink   dead px   next section visible
+     1080 x 900        900.0     607.8     292.3     0px
+     1280 x 900        900.0     653.0     247.0     0px
+     1440 x 900        900.0     687.3     212.7     0px
+     1536 x 900        900.0     690.4     209.6     0px
+     1920 x 1080       980.0     738.4     241.6     100px
+
+   Every width from 1080 to 1536 put the next section's top edge EXACTLY at the
+   fold. That is the worst possible place for it: a page that ends flush at the
+   viewport edge reads as finished, and the 200-290px of empty hero above it is
+   what the visitor scrolls past to find out otherwise.
+
+   Below 1080 the hero was already content-height — 111-350px of the next
+   section showed and there was a constant 46px of trailing space. So the
+   defect was never the hero's CONTENT, it was the floor overriding it.
+
+   WHY THIS NUMBER. 78svh/760px sits just under the hero's own content height
+   at every desktop width, so the content floors it and the floor only does its
+   job on short viewports. What that buys, re-measured after the change, is a
+   deliberate 165-320px peek at every width — enough to show the next section
+   has begun.
+
+   AND IT DOES NOT UNDO THE REASON THE FLOOR EXISTS. The founder's note was
+   "the mini tools are visible before scrolling". The section that peeks is
+   `.hsteps`, whose first --sec-pad (160px at 1440) is padding and whose next
+   element is the heading — the workbench sits far below that. The peek shows
+   the section has started; it does not show the tools. */
+.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:min(78svh,760px);margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-7)) 24px var(--s-8)}
 /* The 70px top margin here was headroom for the absolutely-positioned satellite
    field, which V2 removed. Keeping it pushed the hero's primary CTA below an
    800px fold once the command bar arrived — see the below-the-fold test. */
@@ -7228,7 +7261,7 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
 /* `align-self` matters: the step is a flex column, so an inline-flex child
    stretches to the full measure and the underline becomes a full-width rule
    instead of sitting under the words. */
-.hstep-cta{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;margin-top:var(--s-5);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t0);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:4px;transition:border-color var(--dur-2) var(--ease-standard),gap var(--dur-2) var(--ease-standard)}
+.hstep-cta{display:inline-flex;align-self:flex-start;align-items:center;gap:8px;margin-top:var(--s-5);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t0);text-decoration:none;border-bottom:1px solid var(--border);padding-bottom:4px;min-height:24px;transition:border-color var(--dur-2) var(--ease-standard),gap var(--dur-2) var(--ease-standard)}
 .hstep-cta:hover{border-color:var(--t0);gap:12px;text-decoration:none}
 .hstep-cta:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
@@ -7290,7 +7323,11 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
 .hkit-page-rail{display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .hkit-page-mark{font-weight:700;color:var(--t2)}
 .hkit-page-secs{display:inline-flex;gap:6px;margin-left:auto}
-.hkit-page-secs span{opacity:.42}
+/* NOT opacity. These are 11px NUMERALS — text — and dimming --t3 to .42
+   measured 1.8:1 in light and 1.99:1 in dark, far under the 4.5:1 floor.
+   Inactive/active is carried by colour instead, which costs no contrast:
+   --t3 measures ~5.1:1 on --bg-1 in light and ~6.4:1 in dark. */
+.hkit-page-secs span{color:var(--t3)}
 .hkit-page-secs span[data-on]{opacity:1;color:var(--accent-strong)}
 .hkit-page-folio{color:var(--t2)}
 .hkit-page-title{font-size:clamp(22px,2.4vw,30px);font-weight:800;letter-spacing:-.03em;line-height:1.1;color:var(--t0)}
@@ -7321,7 +7358,6 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
 .hkit-format:first-child{border-top:0;padding-top:0}
 .hkit-format-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-body-s);font-weight:700;letter-spacing:-.01em;color:var(--t0)}
 .hkit-format-pro{display:inline-flex;align-items:center;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:10.5px;font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong)}
-.hkit-format-desc{font-size:var(--fs-caption);line-height:1.5;color:var(--t2);text-wrap:pretty}
 .hkit-cta{align-self:flex-start;max-width:100%}
 
 @media(min-width:981px){
