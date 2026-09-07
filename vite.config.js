@@ -143,7 +143,7 @@ export const DEFERRAL_SEAMS = [
 // depth: `./oneTapMount`, `../utils/firebaseAccess`, `../../utils/firebaseAccess`.
 export const seamSpecifier = (name) => {
   const [dir, base] = name.split('/')
-  return new RegExp(`^(?:\.\.?/)+(?:${dir}/)?${base}$`)
+  return new RegExp(`^(?:\\.\\.?/)+(?:${dir}/)?${base}$`)
 }
 
 const firebaseAccessAlias = DEFER_FIREBASE
@@ -169,7 +169,7 @@ const firebaseAccessAlias = DEFER_FIREBASE
 // preloaded chunks — measured at 553193 first-wave bytes against 521019
 // unflagged, a 32 KB regression. Half a deferral is worse than none, and a
 // build that fails says so where a comment would not.
-const FIREBASE_MODULE = /(?:^|[\/])(?:node_modules[\/]@?firebase|node_modules[\/]firebase[\/]|src[\/]utils[\/]firebase\.js$)/
+const FIREBASE_MODULE = /(?:^|[/\\])(?:node_modules[/\\]@?firebase|node_modules[/\\]firebase[/\\]|src[/\\]utils[/\\]firebase\.js$)/
 const assertFirebaseIsDeferred = () => ({
   name: 'uil4b-assert-firebase-deferred',
   apply: 'build',
@@ -187,7 +187,7 @@ const assertFirebaseIsDeferred = () => ({
       const chunk = byName.get(name)
       if (!chunk) continue
       const hit = (chunk.moduleIds || []).find((id) => FIREBASE_MODULE.test(id.replace(/\?.*$/, '')))
-      if (hit) offenders.push(`${name}  (e.g. ${hit.split(/[\/]/).slice(-3).join('/')})`)
+      if (hit) offenders.push(`${name}  (e.g. ${hit.split(/[/\\]/).slice(-3).join('/')})`)
       // STATIC imports only. `dynamicImports` is exactly the edge we want.
       for (const next of chunk.imports || []) queue.push(next)
     }
