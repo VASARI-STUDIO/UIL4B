@@ -19,19 +19,19 @@
     "kicker": null,
     "headline": [
       {
-        "text": " Colour, type and icons that stay ",
+        "text": "Build and export UI and brand design kits, ",
         "hi": false
       },
       {
-        "text": "one system",
+        "text": "in one unified location",
         "hi": true
       },
       {
-        "text": ". ",
+        "text": ".",
         "hi": false
       }
     ],
-    "sub": "Every tool here reads and writes the same values, so the hex you change in the palette builder is the hex your export ships."
+    "sub": "Gone are the days of searching through bookmark folders upon bookmark folders to find each tool."
   },
   "sections": [
     {

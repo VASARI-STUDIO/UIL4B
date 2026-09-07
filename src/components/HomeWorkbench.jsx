@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import ColorPickerPop from './ColorPickerPop'
 import {
@@ -1591,7 +1591,7 @@ function TypographyPanel({ state, onChange, announce }) {
 
 /* ── the workbench ───────────────────────────────────────────────────────── */
 
-export default function HomeWorkbench({ variant = 'section', activeTab, onTabChange }) {
+export default function HomeWorkbench({ variant = 'section', activeTab, onTabChange, onSystemChange }) {
   // Controlled when `activeTab` is supplied, uncontrolled otherwise. The
   // internal value is kept in step either way, so a caller can hand the
   // selection over mid-session (the V2 scroll sync does exactly that) without
@@ -1612,6 +1612,26 @@ export default function HomeWorkbench({ variant = 'section', activeTab, onTabCha
   const [image, setImage] = useState(DEFAULT_IMAGE_STATE)
   const [icon, setIcon] = useState(DEFAULT_ICON_STATE)
   const [typography, setTypography] = useState(DEFAULT_TYPE_STATE)
+
+  // THE SYSTEM THIS PANEL IS CURRENTLY HOLDING, REPORTED UPWARD.
+  //
+  // The export section below the tools grid renders the real brand-guidelines
+  // spread, and it has to render it from THESE values — the ones the visitor
+  // has been pressing Generate on — or it is a picture of an export rather
+  // than the export. This is the only thing that leaves the component, it is
+  // read-only, and nothing here changes what the panels do.
+  //
+  // Reported from an effect keyed on the two bags it reads, so a parent that
+  // does not pass the prop pays nothing and the callback fires after paint
+  // rather than during render.
+  useEffect(() => {
+    if (!onSystemChange) return
+    onSystemChange({
+      palette: swatches.map((sw) => sw.hex),
+      baseSize: typography.base,
+      ratio: typography.ratio,
+    })
+  }, [onSystemChange, swatches, typography])
 
   const announce = useCallback((message) => setStatus(message), [])
 

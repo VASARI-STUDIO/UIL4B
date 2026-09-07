@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
 import HomeCommandBar from '../components/HomeCommandBar'
+import HomeExportKit from '../components/HomeExportKit'
 import TryItMark from '../components/TryItMark'
-// TEMPORARY — the hero-direction explorer for `hero-copy-still-reads-ai`.
-// Renders `children` (the shipped hero) unless ?hero=a|b|c is present.
-import HomeHeroDirections from '../components/HomeHeroDirections'
+// The ?hero=a|b|c exploration that used to wrap this hero is GONE — founder,
+// 2026-09-07: "Retire it, V2 hero decides." See the note above the <h1>.
 import NavIcon from '../components/NavIcon'
 import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
@@ -14,6 +14,7 @@ import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, categoryDestinatio
 import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 import { paletteBuilderUrl } from '../data/paletteGallery'
+import { HERO_HEADLINE, SURFACE_LINE, line } from '../data/positioning'
 import { APPROVED_CURRENCY, cheapestPerMonth, purchasablePlans, resolvePlanLadder, savingsVsMonthly } from '../config/planLadder'
 
 // ── The V2 homepage ──────────────────────────────────────────────────────────
@@ -308,6 +309,16 @@ export default function Home() {
   // them. Nothing is more irritating than a control that keeps changing back.
   const pinnedRef = useRef(false)
 
+  // WHAT THE WORKBENCH IS CURRENTLY HOLDING, so the export section below the
+  // tools grid can draw the real deck from the visitor's own palette and type
+  // scale rather than from a fixture. Read-only: nothing here writes back into
+  // the workbench, and the callback is memoised so the effect that reports it
+  // does not re-fire on every render of this page.
+  const [system, setSystem] = useState(null)
+  const onSystemChange = useCallback((next) => {
+    setSystem({ ...next, href: paletteBuilderUrl(next.palette) })
+  }, [])
+
   const onStepChange = useCallback((tab) => {
     if (pinnedRef.current) return
     setMode(tab)
@@ -353,7 +364,6 @@ export default function Home() {
             index as the ⌘K palette, and it is the most product-specific thing
             on the page — but it now carries its own small label instead of
             being the referent for a pun in the headline. */}
-        <HomeHeroDirections toolCount={LIVE_TOOL_COUNT}>
         <header className="home-hero">
           <div className="home-hero-core">
             {/* THE "UI system toolkit" KICKER IS GONE, and nothing takes its
@@ -386,17 +396,42 @@ export default function Home() {
                 [hero-copy-still-reads-ai] owns it and is blocked on the
                 founder's pick of direction A, B or C. This slice changes one
                 word and deliberately does not touch the structure. */}
+            {/* ⚠️ ASSEMBLED FROM THE FOUNDER'S OWN WORDS, AND PENDING HIS YES.
+
+                He was offered an agent draft and chose "build one from my words
+                only", so every word below is cut from a sentence he wrote on
+                2026-09-07 and nothing is invented:
+
+                  "Build and export UI and brand design kits"
+                      ← the verbatim head of `build-and-export`
+                  "in one unified location"
+                      ← the verbatim tail of `one-unified-location`
+
+                The comma between them is punctuation. No synonym was
+                substituted and no connective was added. Both source sentences,
+                and the two proofreading edits applied to them ("your" →
+                "you're", sentence case), are in src/data/positioning.js and
+                docs/reference/positioning.md.
+
+                NOTHING HERE IS TYPED. The strings come from HERO_HEADLINE so
+                this element cannot drift from the record of what he said, and
+                so tests/unit/positioning-truth.test.js can check the splice
+                against its own sources rather than against a copy of them.
+
+                THE MARK is the page's single `--hi` element in this viewport
+                (design-language-v2.md budgets one), and scripts/og-cards.mjs
+                throws if the h1 stops highlighting a phrase, because the share
+                card paints the same highlight. */}
             <h1 className="home-hero-h1">
-              <span className="home-hero-line"><span className="home-hero-line-in">Colour, type and icons</span></span>
+              <span className="home-hero-line"><span className="home-hero-line-in">{HERO_HEADLINE.lead}</span></span>
               <span className="home-hero-line"><span className="home-hero-line-in">
-                that stay <mark className="home-mark">one system</mark>.
+                <mark className="home-mark">{HERO_HEADLINE.mark}</mark>{HERO_HEADLINE.tail}
               </span></span>
             </h1>
 
-            <p className="home-hero-sub">
-              Every tool here reads and writes the same values, so the hex you change in the
-              palette builder is the hex your export ships. Nothing to install.
-            </p>
+            {/* The sub-line is a whole founder sentence, taken by id rather than
+                typed. The headline says what you get; this says what stops. */}
+            <p className="home-hero-sub">{line(SURFACE_LINE.homeHeroSub)}</p>
 
             {/* The visible "Search every tool" line above the bar is gone on the
                 founder's 2026-09-03 instruction, along with the "Try …" chips
@@ -451,7 +486,6 @@ export default function Home() {
             <p className="home-hero-hint">Free to use.</p>
           </div>
         </header>
-        </HomeHeroDirections>
 
         {/* ── The working half: five steps, one live workbench ──
             The left column narrates; the right column is the REAL
@@ -510,8 +544,18 @@ export default function Home() {
                 neither that there are five nor that the work travels. It says
                 that and stops. */}
             <div className="hsteps-head" data-reveal>
+              {/* THE FOUNDER'S SENTENCE, 2026-09-07: the heading "should be more
+                  something like 'all the design tools your constantly searching
+                  for in one unified location.'" Two proofreading edits and no
+                  others — "your" → "you're", and sentence case with a comma
+                  before the closing clause. It is NOT agent copy and must not be
+                  tightened by one: three salvages this week found agent
+                  "Option 1 — RECOMMENDED" drafts mistaken for his.
+
+                  Read from positioning.js by id, so this heading and the record
+                  of what he said cannot drift apart. */}
               <h2 className="hh2" id="hsteps-title">
-                Five tools. Each one hands your work to the full tool.
+                {line(SURFACE_LINE.toolsSectionHeading)}
               </h2>
 
               {/* THE HEADING'S OWN CLAIM, SHOWN INSTEAD OF ASSERTED — and NOT a
@@ -586,7 +630,7 @@ export default function Home() {
               </ol>
 
               <div className="hsteps-sticky">
-                <HomeWorkbench variant="sticky" activeTab={mode} onTabChange={onTabChange} />
+                <HomeWorkbench variant="sticky" activeTab={mode} onTabChange={onTabChange} onSystemChange={onSystemChange} />
               </div>
             </div>
           </div>
@@ -687,6 +731,18 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* ── The export kit ──
+            Founder, 2026-09-07: "we need to also feature the high quality design
+            kit export features as a section on the homepage. maybe after showing
+            each tool." This is that slot — after the tools grid, before the
+            starting points.
+
+            It takes the workbench's live palette and type scale and draws a real
+            page of the real brand-guidelines deck from them, so the section
+            demonstrates the export rather than describing it. Formats come out of
+            exportFormats.js; nothing unbuilt appears. See HomeExportKit. */}
+        <HomeExportKit system={system} />
 
         {/* ── Starting points ── */}
         <section className="hcomm" aria-labelledby="hcomm-title">

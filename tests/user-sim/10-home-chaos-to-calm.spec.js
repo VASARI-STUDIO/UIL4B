@@ -269,10 +269,12 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     //
     // Scoped to `.home-hero` because on this page the hero IS the first
     // viewport, and because the element is a stable boundary — where "above
-    // 800px" is a number that moves with every copy edit. The three hero
-    // directions behind ?hero=a|b|c all drop the mark entirely, so whichever
-    // one the founder picks this assertion travels with the shipped hero and
-    // its expected count is the only thing that changes.
+    // 800px" is a number that moves with every copy edit.
+    //
+    // The ?hero=a|b|c exploration this note used to hedge for is retired
+    // (founder, 2026-09-07: "Retire it, V2 hero decides"), so there is one
+    // hero and one expected count. The shipped headline still carries exactly
+    // one <mark>, now on "in one unified location".
     const hiElements = await page.evaluate(() => {
       const hero = document.querySelector('.home-hero')
       if (!hero) return null
