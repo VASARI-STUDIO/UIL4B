@@ -89,14 +89,28 @@ the unrouted pages — `Dashboard`, `CategoryDashboard`, `ExternalResources`,
 > exactly this: it was sent to a hero in `IconLibrary.jsx`, changed it, and the
 > change rendered nowhere. **Grep for the import before editing a page file** —
 > a page component existing is not evidence that a route reaches it.
-- **Shells / hub**: Home, Landing, CreateTool (the honest workshop state for
-  unbuilt routes), SurfaceLanding (Discover + Learn), SiteMap, Community,
-  GradientGallery, InfoCentre, HelpCentre, Feedback, Settings, Projects,
-  Onboarding. *(Community + GradientGallery are the live part of the **Discover**
-  surface — see `discover.md`; Projects stays Workspace-private.)*
+- **Shells / hub**: Home, CreateTool (the honest workshop state for
+  unbuilt routes), SurfaceLanding (Discover + Learn), LearnArticle, SiteMap,
+  Community, GradientGallery, PaletteGallery, CuratedResources, InfoCentre,
+  HelpCentre, Feedback, Settings, Projects, Onboarding. *(Community, the two
+  galleries and CuratedResources are the live part of the **Discover** surface —
+  see `discover.md`.)*
+
+  > **`Landing.jsx` was in this list and is deleted** (#396). It was dead code:
+  > nothing imported it, and no built bundle contained a line of it. `Home.jsx`
+  > is the sales page. Do not re-add it from this list's history.
+
+  > **`Projects.jsx` is now the User Home** (#385). It still sits at
+  > `/projects`, but a signed-in visitor lands there rather than on the sales
+  > page, and it renders the `src/components/userhome/` set — daily band,
+  > starter row, project cards with per-project progress. The name is the route,
+  > not the page's job.
 - **Docs (dormant)**: DocsAI, DocsBrand, DocsDesign, DocsMarketing, DocsSEO,
-  DocsSocial, DocsThemes. The components exist but the `/docs-*` routes redirect
-  to `/learn` until the Learn content library ships.
+  DocsSocial, DocsThemes. The components exist and **no route reaches any of
+  them** — every `/docs-*` URL is a 301 to `/learn`, which is now a real surface
+  with five published guides (`src/data/learn/`, indexed by `learnIndex.js` and
+  rendered by `LearnArticle.jsx`). These seven are the pre-Learn drafts; they are
+  not what `/learn` serves, and editing one changes nothing a visitor can see.
 - **Billing**: Plans, Checkout, CheckoutReturn.
 - **Admin**: Admin (gated by `ADMIN_EMAILS` + session admin code).
 - **Legal**: Privacy, Terms.
@@ -145,9 +159,11 @@ previews (+ palette-card PNG) for `/p/:code` short links (vercel.json rewrite).
 
 Shared server helpers (NOT counted as functions) live in `api/_lib/`:
 `accountDeletion.js`, `admin.js`, `billing.js`, `env.js`, `firebase-admin.js`,
-`geminiFinish.js`, `http.js`, `origins.js`, `plans.js`, `pricing.js`,
-`rateLimit.js`, `stripe.js`. Read the directory rather than this list — helpers
-are uncapped, so they get added without anything forcing a doc update.
+`geminiFinish.js`, `http.js`, `moderators.js`, `origins.js`, `plans.js`,
+`pricing.js`, `rateLimit.js`, `stripe.js`. Read the directory rather than this
+list — helpers are uncapped, so they get added without anything forcing a doc
+update, and `moderators.js` is the proof: it arrived in #390 and this line did
+not notice for a week.
 
 **Before adding an API route:** you are likely at or near the cap. Prefer
 extending an existing route (e.g. action-switch on `req.body`) or moving logic

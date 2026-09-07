@@ -17,6 +17,14 @@ are asking."* That pass deleted the two QA audits, re-verified the three homepag
 documents rather than deferring them again, rewrote `OWNER-ACTIONS.md` for a
 reader in a hurry, and added the fifth trap below.
 
+**Revised 2026-09-06**, on the founder: *"also complete a document review"* and
+*"make sure we get this app in a nice tidy round state so i can continue from that
+point with a new round of changes."* That pass ran the gate before writing
+anything, checked every figure and every named file against `5c6603a`, added the
+`public/` section this map never had, added `RELEASE-READINESS.md`, and added the
+sixth trap below — which is the first one whose cost lands on the founder rather
+than on an agent.
+
 ---
 
 ## Why this file exists
@@ -72,7 +80,7 @@ written down anywhere before.
 | Which skill to load | `.claude/skills/README.md` | — |
 | How to use the imported taste skills here | **This file**, "Imported taste skills" below | Those skills' own claims about what fonts and icon packs are "available" |
 
-## The four failure modes, and what to do about each
+## The failure modes, and what to do about each
 
 **1. A hand-maintained number.** Test counts, route totals, file tallies. These
 *always* drift, and the drift is invisible because a stale number still looks
@@ -125,10 +133,54 @@ and the honest signal — a local gate run — is invisible on the PR.
 > `src/data/pipeline.js` (`ci` and `deploy`) and is an owner action in
 > `docs/OWNER-ACTIONS.md` §1.
 
-The same shape, one layer out: **everything merged since #295 is not deployed**,
-because Vercel is rate-limiting. "Merged" is not "live", and no document said so
-until this one did. Anchored to a PR rather than counted — the count was wrong
-within the hour of being written, when #374 landed.
+**6. An instruction to a human that cannot be carried out.** Found 2026-09-06,
+and new in kind because the cost lands on the founder rather than on an agent.
+Failure mode 2 is an agent editing a file no route reaches — it wastes a pass and
+somebody notices. This is `OWNER-ACTIONS.md` §4.5 telling the founder to *“open
+the AI Image Prompt Generator and generate one prompt”*: `/create/ai-prompt` is
+badged **Soon** and renders the workshop state, so there is no button anywhere on
+the site that does it. He would open the page, find nothing to click, and have no
+way to tell a broken runbook from a broken product.
+
+The consequence was worse than a wasted trip. That tool is the **only** caller of
+the OpenRouter path — the live Alt Text tool runs on Gemini — so the account has
+been paying for a provider no visitor can reach, and the Admin panel that would
+have reported it correctly said “no generations to judge by” the whole time.
+
+**This item had already failed this way once.** `openrouter-path-verification` in
+`pipeline.js` records the previous version asking for a confirmation the
+diagnostic could not give, and calls that “the silent failover reproduced inside
+the procedure meant to catch it.” The rewrite fixed *which fact* to look for and
+not *whether the founder could get at it*.
+
+> **Rule.** A runbook step is only real if the surface it names is reachable
+> **today, by the person it is addressed to**. Before writing “open X and do Y”,
+> check X's `soon` flag and grep that a route mounts it — the same check failure
+> mode 2 demands, applied to instructions rather than to code. If it is not
+> reachable, the item is a decision, not a task, and must say so.
+
+The same shape, one layer out: **everything merged since #295 is not deployed**.
+"Merged" is not "live", and no document said so until this one did. Anchored to a
+PR rather than counted — the count was wrong within the hour of being written,
+when #374 landed.
+
+> **Updated 2026-09-06, and the cause turned out to be different from the
+> message.** Vercel's own answer was *"Deployment rate limited — retry in 24
+> hours"*, which reads as a transient throttle that waiting clears. Waiting did
+> not clear it. The real constraint is **Fast Origin Transfer**: `dist/assets`
+> was 35 MB and 32,129,114 bytes of that was one file,
+> `ffmpeg-core-<hash>.wasm` — 91% of the whole deployable byte-mass — which is
+> re-hashed on every deploy, so every edge region re-fetches all 32 MB after
+> each one. Roughly 300 region-first-hits exhausts the Hobby plan's 10 GB month.
+> The fix (serve the engine from jsDelivr, pinned) is in flight on
+> `perf/ffmpeg-core-off-origin`; the account-side decision is
+> `OWNER-ACTIONS.md` §1.1.
+>
+> **The trap, and it is a variant of #5.** A platform's error message named a
+> symptom with a plausible remedy attached to it, and the remedy was wrong. Two
+> documents repeated the message as the diagnosis for four days. **When a
+> vendor's message tells you to wait, check what is actually being metered
+> before you wait.**
 
 ## Per-file register
 
@@ -140,20 +192,37 @@ Verdicts from this pass. **KEEP** = accurate and needed · **UPDATE** = fixed he
 | File | Verdict | Why |
 |---|---|---|
 | `CLAUDE.md` | UPDATE | Accurate. Gains a link to this map. |
-| `README.md` | UPDATE | Accurate; said "four unit tests read the prerendered shells" and it is six. Now names the files. |
+| `README.md` | **UPDATE 2026-09-06** | Named three deleted components in its structure block (`Sidebar`, `TopBar`, `Dashboard`), pointed the colour tools at the pre-#266 `/color/*` prefix, and called Learn "an honest coming-soon surface … the articles do not yet" exist — five have shipped. Also said "four unit tests read the prerendered shells" and it is six; now names the files. |
 | `CHANGELOG.md` | KEEP | Historical record. It names seven files that no longer exist — correctly, because it is the record *of* their deletion. Do not repair those as broken links. |
 | `PRODUCT.md` | NEW | Written by `$impeccable init` (2026-09-04). The durable product record every other Impeccable command reads. Deliberately short: it **links** for positioning, routes, tokens, gate and backlog rather than restating them. What it OWNS is `## Evidence on Hand` — the counted list of real content and, more importantly, the list of things this product has never had and no surface may invent. Also records the deliberate refusal to write a `DESIGN.md`, because `global.css` and `design-language-v2.md` already own that ground and every doc table of design values here has drifted at least once. |
+
+### `public/` — the documents strangers read
+
+**This section did not exist until 2026-09-06, and its absence was the bug.**
+Every table above covers documents *we* read. `public/llms.txt` is a document
+**other people's crawlers read**, it ships in the deploy, and nothing in this map
+had ever assigned it an owner.
+
+| File | Verdict | Why |
+|---|---|---|
+| `public/llms.txt` | **UPDATE 2026-09-06** | Four faults, all of the kind this map exists to catch. (1) **It quoted `$4.99/mo` — a pre-ladder price — twice**, one of them labelled AUD over a USD ladder. This is the *same defect* `index.html` had, recorded as fixed under `seo-per-route-share-and-schema`: "the only price a non-JS reader could see stayed pre-ladder for weeks." The fix there was to generate the figure from `planLadder.js`; `llms.txt` was never brought into that fix. (2) Its whole **Documentation** section pointed at five `/docs-*` URLs that are **301s to `/learn`**, not pages. (3) It listed four **Soon** tools as live. (4) It linked `/#pricing`, an anchor that exists nowhere in `src/`. Now mirrors the generated `index.html` sentence and the real `/learn` guides. |
+
+> **The gap that is still open.** `tests/unit/price-consistency.test.js` walks
+> `src/` only, so it guards no file in `public/` — which is exactly how a stale
+> price survived there. A guard tying `llms.txt`'s price to `planLadder.js`, the
+> way `scripts/site-pricing.mjs` ties `index.html`'s, is the durable fix and is
+> **not** built yet. Until it is, treat any figure in `public/` as unguarded.
 
 ### `docs/reference/`
 
 | File | Verdict | Why |
 |---|---|---|
-| `architecture.md` | UPDATE | Three claims the code contradicts — see the top of this file. Fixed. |
+| `architecture.md` | **UPDATE 2026-09-06** | Three claims the code contradicted on 2026-09-05, fixed then. Three more today: it still listed the deleted `Landing.jsx` as a live shell, omitted `LearnArticle`, `PaletteGallery` and `CuratedResources`, and said the `/docs-*` redirects stood “until the Learn content library ships” — which it has. `api/_lib/moderators.js` was missing from the helper list a week after #390 added it. |
 | `build-and-verify.md` | UPDATE | Sole home of the gate. Its hand-carried counts were removed by **#312**, which landed while this pass was running and restated every row as a *property* — 0 errors, 0 failures, 0 skipped. `tests/unit/gate-doc.test.js` now fails CI if a count comes back. This branch deliberately did not touch the counts, so the two passes did not collide; only the duplicated breakpoint row was changed here. |
 | `css-conventions.md` | UPDATE | Now owns the widths-to-test question, and names 640px and the 641–900 band. |
 | `positioning.md` | KEEP | Canonical story. Its Workspace/Create naming note is explicit and correct. |
 | `murphys-law.md` | UPDATE | Carried a third breakpoint answer; now links to the one home. |
-| `constants-and-config.md` | KEEP | Verified against source — admin email, brand hexes, contrast tokens all match `global.css` and `constants.js`. |
+| `constants-and-config.md` | **UPDATE 2026-09-06** | This row said "Verified against source — admin email, brand hexes, contrast tokens all match". The admin email and the brand hexes did. **The contrast-token table did not, and all eight of its values were wrong** — it carried a cool grey ramp against a stylesheet that has shipped a warm one since Design Language V2. The table is deleted and replaced with the one-line `grep` that answers it, per the #312 pattern. **Verifying a table and verifying one row of it are not the same act**, and a verdict of "verified" that covers a table nobody re-checked is worse than no verdict, because it stops the next reader looking. |
 | `tech-stack.md` | KEEP | Verified. |
 | `human-validation-zones.md` | KEEP | Binding and current. |
 | `git-workflow.md` | KEEP | Current. |
@@ -169,9 +238,10 @@ Verdicts from this pass. **KEEP** = accurate and needed · **UPDATE** = fixed he
 | File | Verdict | Why |
 |---|---|---|
 | `PROPOSALS.md` | KEEP | Founder verdict queue. |
-| `OWNER-ACTIONS.md` | **REWRITTEN 2026-09-05** | Founder-gated actions, restructured on the founder’s instruction that our writing takes too long to parse. Every item carries Do / Time / Why / If you do nothing. §1 is what is stopped, §2 is the short list of what still needs him, §3 is the ten decisions he made on 2026-09-05 **restated so no agent asks twice — `CHANGELOG.md` remains their canonical home**, §4 onward is console work. `tests/unit/ai-provider-path.test.js` still pins the OpenRouter procedure. |
+| `RELEASE-READINESS.md` | **NEW 2026-09-06** | One page answering “can we release?” — what is done (measured, with the command beside each figure), what is blocked on the founder, and what is blocked on an outside service. It **owns nothing**: the gate stays `build-and-verify.md`, the to-do list stays `OWNER-ACTIONS.md`, the queue stays `pipeline.js`. Written because the founder asked for the app “in a nice tidy round state” and no single document answered that question. |
+| `OWNER-ACTIONS.md` | **REWRITTEN 2026-09-05, re-verified 2026-09-06** | Founder-gated actions, restructured on the founder’s instruction that our writing takes too long to parse. Every item carries Do / Time / Why / If you do nothing. §1 is what is stopped, §2 is the short list of what still needs him, §3 is the ten decisions he made on 2026-09-05 **restated so no agent asks twice — `CHANGELOG.md` remains their canonical home**, §4 onward is console work. `tests/unit/ai-provider-path.test.js` still pins the OpenRouter procedure. |
 | `build-plan/tool-tree.md` | KEEP | Derived from `toolTree.js` and says so. |
-| `design/homepage-spec-2026-08.md` | KEEP, **re-verified 2026-09-05** | Still a live spec, but its consumer list has changed and the old one would mislead. #262 **merged**. #269 is **empty** (C2 shipped as #363) and closable. #264 **cannot be rebased** — it edits `src/components/TopBar.jsx`, deleted from `main`. Only **#270** is genuinely open against it. **Deletable when #270 lands or closes**, and not before. |
+| `design/homepage-spec-2026-08.md` | KEEP, **re-verified 2026-09-05** | Still a live spec, but its consumer list has changed and the old one would mislead. #262 **merged**. #269 is **empty** (C2 shipped as #363) and closable. #264 **cannot be rebased** — it edits `src/components/TopBar.jsx`, deleted from `main`. **#270 was salvaged by #401 on 2026-09-06** — nine of its thirteen items were already solved elsewhere, and only its specimen band is still held, on the founder’s hero-shape pick (P-006). **Deletable when that pick lands**, and not before. |
 | `design/anti-slop-and-hero-2026-08.md` | KEEP, **re-verified 2026-09-05** | Same correction. Two things keep it alive rather than one: §2.3 is the spec for #270’s specimen band, and §2.12 is the source of `PROPOSALS.md` P-006, P-008, P-009 and P-010 — four open founder verdicts, each of which names a section of it as its evidence. **Do not delete while those are PENDING**, or four proposals lose their evidence line. (P-011 cites the spec, not this file.) It still references `src/data/homeGallery.js`, which does not exist on `main` and now never will, since #264 is not landing; read it as a spec, not a description of `main`. |
 | `design/motion-reference-2026-08-23.md` | KEEP | Founder-supplied reference; frames deliberately uncommitted. |
 | `research/homepage-patterns-2026-08.md` | KEEP, **verified 2026-09-05** | 1,371 lines, 95 Mobbin captures. Checked for deletion this pass and **kept**: it is the cited Inputs line of `homepage-spec-2026-08.md` and the Sources line of `anti-slop-and-hero-2026-08.md`, both of which are still live. Deleting it would leave two live specs citing nothing. **Delete it in the same commit as those two**, not before — it has no other consumer. |
@@ -377,9 +447,12 @@ It has the same failure mode as everything it documents. Three defences:
 2. **Every verdict says what evidence produced it**, so the next reader can
    re-check rather than re-derive.
 3. **When you find a stale instruction, fix the instruction and add the trap
-   here** if it is a new *kind* of trap. Five kinds are listed above; the fifth
-   was added on 2026-09-05 and is the first one where the repository is right and
-   an external tool is the thing lying. A sixth would be worth knowing about.
+   here** if it is a new *kind* of trap. Six kinds are listed above. The fifth,
+   added 2026-09-05, is the first where the repository is right and an external
+   tool is the thing lying. The sixth, added 2026-09-06, is the first whose cost
+   lands on the **founder** rather than on an agent — an instruction addressed to
+   him that no reachable surface could satisfy. A seventh would be worth knowing
+   about.
 
 If this file and the thing it points at disagree, **the thing it points at
 wins** — and this file is the bug.

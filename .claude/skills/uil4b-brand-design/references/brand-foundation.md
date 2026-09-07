@@ -15,7 +15,8 @@ Its primary audience is product and web designers, front-end developers, and
 indie hackers who assemble and hand off UI systems. The product is one brand,
 account, and subscription organised into three connected surfaces:
 
-- **Workspace** for creating systems and project outputs.
+- **Create** for building systems and project outputs. ("Workspace" is the
+  internal code name only — `WorkspaceContext` — and must not appear in UI copy.)
 - **Discover** for finding, saving, remixing, and submitting useful resources.
 - **Learn** for understanding the principles behind the work.
 

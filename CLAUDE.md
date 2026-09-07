@@ -28,10 +28,15 @@ clear sales-page structure, continuous Create workbenches, restrained motion,
 consistent controls. Three surfaces:
 
 - **Create** — build, validate and export. The primary live surface.
-- **Discover** — browse community systems and curated resources. Intentionally
-  partial; the wider gallery and community build remains.
-- **Learn** — understand the methods behind the tools. Honest coming-soon until
-  scoped content routes ship.
+- **Discover** — browse community systems and curated resources. Six of eight
+  groups are live; Inspiration and Collections are still Soon, and community
+  *publishing* is deliberately deferred behind the approval queue (§3.9 of
+  `OWNER-ACTIONS.md`).
+- **Learn** — understand the methods behind the tools. **Live**, with five
+  published guides; two of the eight roadmap topics are delivered. Neutral and
+  factual, not how-to guides for our own tools — founder decision, 2026-09-05.
+  `src/data/learnIndex.js` is the list; do not describe this surface as
+  coming-soon again without checking it.
 
 The homepage is a sales page with a working mini-workspace, not a dashboard. A
 first-time visitor should understand what the product does immediately.
@@ -153,6 +158,7 @@ Read the relevant one before working in that area.
 | Ideas awaiting founder approve/deny, and their verdicts | [`PROPOSALS.md`](docs/PROPOSALS.md) |
 | **What the gate requires** (and the lint-warning ceiling) | [`build-and-verify.md`](docs/reference/build-and-verify.md) |
 | Founder-only console / credential / live-service work | [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) |
+| **Can we release?** — what is done, on him, or on an outside service | [`RELEASE-READINESS.md`](docs/RELEASE-READINESS.md) |
 | Execution order, blockers, known-unfixed bugs | `src/data/pipeline.js` |
 | Per-module product status | `src/data/moduleBoard.js` |
 | Shipped release history, and the record of founder decisions already made | [`CHANGELOG.md`](CHANGELOG.md) |

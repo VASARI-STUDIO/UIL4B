@@ -11,23 +11,65 @@ Engineering work is not here — it is in `src/data/pipeline.js`. Ideas waiting 
 your verdict are in [`PROPOSALS.md`](PROPOSALS.md). Decisions you have already
 made are in [`CHANGELOG.md`](../CHANGELOG.md).
 
-_Last reviewed: 2026-09-06._
+_Last reviewed: 2026-09-06 (documentation review — every item re-checked against
+the code, two rewritten, one found impossible)._
 
 **Engineering is stopped on five of these.** The queue records these as waiting
-on you and nothing can move on them: the GitHub bill (§1.1), **the moderator
-role permission (§1.3)**, the Stripe retention setup (§4.6), a live Stripe
-checkout test (§6), and a verified sending domain (§4.10). A sixth — moving
-Firebase off the public critical path — needs a design from us before you can
-approve anything, so we will bring it to you rather than the other way round.
+on you and nothing can move on them: the deploy block (§1.1), the GitHub bill
+(§1.2), **the moderator role permission (§1.3)**, the Stripe retention setup
+(§4.6), and a verified sending domain (§4.10). A live Stripe checkout test (§6)
+also needs you but blocks nothing today.
+
+**One item changed shape today and you should know why.** §4.5 asked you to open
+the AI Image Prompt Generator and generate a prompt. **You cannot** — that tool
+is not reachable by anyone, so the check was impossible. It is rewritten below
+as a decision instead of a task, and it is the only place in this file where you
+may be paying for something no visitor can use.
+
+**Are we ready to release?** [`RELEASE-READINESS.md`](RELEASE-READINESS.md) —
+one page, what is done, what is on you, what is on someone else.
 
 ---
 
-# 1 · Stopped right now — two bills and a permission
+# 1 · Stopped right now — a deploy block, a bill and a permission
 
 These three are not engineering problems and no amount of waiting fixes any of
-them.
+them. **They are in order of how much each one unblocks.**
 
-## 1.1 · GitHub is running no tests at all. Pay the bill.
+## 1.1 · Nothing is live. Vercel has not deployed since 2 September.
+
+**Do.** Vercel → your team → **Usage**. Look at two numbers: **Fast Origin
+Transfer** and deployments. If Fast Origin Transfer is at or near its limit,
+either upgrade off Hobby or wait for the monthly reset. Tell us which you chose.
+
+**Time.** A few minutes to upgrade; up to a month if you wait for the reset.
+
+**Why.** This is the single biggest thing on the page. **Every change merged
+since 2 September is sitting on `main` and has never reached uil4b.com** — well
+over a hundred pull requests now, and it grows every day. Vercel first answered
+*"Deployment rate limited — retry in 24 hours"*, and that message on its own
+suggested waiting would fix it. Waiting has not fixed it.
+
+**The cause we found, in plain terms.** The video/image converter's engine is a
+single 32 MB file, and it was being served from our own site. It is 91% of
+everything we deploy. Vercel's Hobby plan includes **10 GB a month** of that kind
+of traffic, and — because the file gets a new name on every deploy — every
+region has to fetch all 32 MB again after each one. **About 300 visitors is the
+entire month's allowance, from one file.**
+
+**This half is ours, and it is nearly done.** We are moving that engine to a free
+public CDN (jsDelivr, pinned to one exact version), which takes 91% of the weight
+off your bill permanently. It is in flight on the `perf/ffmpeg-core-off-origin`
+branch and is not waiting on you.
+
+**So your part is only the dashboard.** Check the Usage page and decide upgrade
+versus wait. **We have not seen your Vercel usage numbers — only you can.**
+
+**If you do nothing.** The live site keeps serving the 2 September build. Every
+fix in the changelog since then is invisible to real visitors, so none of it
+counts yet — and our fix, when it merges, cannot deploy either.
+
+## 1.2 · GitHub is running no tests at all. Pay the bill.
 
 **Do.** GitHub → Settings → Billing → clear the failed payment, or raise the
 spending limit.
@@ -49,22 +91,6 @@ once.
 new change keeps looking broken, and the only proof anything works is an agent
 running the tests on their own machine and pasting the output into the pull
 request.
-
-## 1.2 · Vercel will not deploy. Nothing merged since 2 September is live.
-
-**Do.** Vercel → your team → Usage / Billing. Clear the deployment limit, or wait
-out the window Vercel names.
-
-**Time.** A few minutes to upgrade; 24 hours if you would rather wait.
-
-**Why.** Vercel answered *"Deployment rate limited — retry in 24 hours"*.
-**Every change merged since 2 September** is sitting on `main` and has never
-reached uil4b.com — around eighty pull requests, and it grows every day this
-stays unfixed.
-
-**If you do nothing.** The live site keeps serving the 2 September build. Every
-fix listed in the changelog since then is invisible to real visitors, so none of
-it counts yet.
 
 ## 1.3 · The moderator role is built and switched off. One setting turns it on.
 
@@ -162,13 +188,13 @@ objected to three times.
 
 **Full working:** [`PROPOSALS.md` P-006](PROPOSALS.md).
 
-**Related, and it needs no decision from you:** of the three homepage pull
-requests still parked, **#269 is empty** (its one good change already shipped as
-#363), **#264 cannot be rebased** (a file it edits no longer exists — its good
-parts are re-filed as separate jobs), and **#270's specimen band still works and
-is *not* waiting on your hero choice.** An earlier note said it was; that was
-measured and found wrong — the band fits in all three shapes on desktop and
-phone.
+**Related, and it needs no decision from you:** the three parked homepage pull
+requests are now closed out. **#269 and #270 have both been salvaged** — #397 and
+#401 took everything in them that still worked, and found that most of it had
+already been fixed elsewhere. **#264 cannot be rebased** (a file it edits no
+longer exists; its good parts are re-filed as separate jobs). The only piece of
+#270 still held back is its specimen band, and that one *is* waiting on your
+shape pick above.
 
 ## 2.2 · Quieter text now looks like normal text on some palettes. Keep it?
 
@@ -253,8 +279,8 @@ the export panel, the generated file names, the code blocks, the `@uil4b/tokens`
 package. That is the one place it is correct, expected, and searched for by the
 developer consuming it; renaming it there would break customers' code.
 
-**Status.** Implementation is in flight in a separate pull request. Roughly 35
-lines of English copy, no translation work.
+**Status. Shipped**, in two parts — #394 took the homepage and #378 the rest.
+Nothing is outstanding and nothing is waiting on you.
 
 ## 3.2 · The `pepsi` palette → **rename it to its era**
 
@@ -406,35 +432,47 @@ reason underneath it and send it to us; that is a real fault and we will fix it.
 **If you do nothing.** Feedback submitted through the site may still be
 unreviewed, and you will not know which.
 
-## 4.5 · P1 — Prove the AI is using the provider you are paying for
+## 4.5 · P1 — You are paying OpenRouter for a tool nobody can open. Keep it or stop it?
 
-**Do.** Sign in, open the **AI Image Prompt Generator**, generate one prompt, and
-read the badge on the result card.
+**The question.** **A** — we make the AI Image Prompt Generator reachable, then
+you run the two-minute check. **B** — you cancel or pause OpenRouter until we do.
 
-- Badge says **OpenRouter** → pass. Write the date here and close this item.
-- Badge says **Gemini · fallback** → fail. The prompt in front of you will look
-  perfectly good. **That is the defect, not a glitch.**
+**We recommend A**, because the tool is written and only the last wire is
+missing. But B costs you nothing to choose and saves the subscription.
 
-**Time.** 2 minutes.
+**This item used to be a task and it was impossible.** It said: sign in, open the
+AI Image Prompt Generator, generate one prompt, read the badge. **You cannot open
+that tool.** `/create/ai-prompt` is badged *Soon* and shows the "still in the
+workshop" page. The page component exists but no route reaches it, so there is no
+button anywhere on the site that runs it.
 
-**Why this is not already closed.** Your key was set on 2026-08-07 and that is
-recorded as done. But a key being *present* is also what a wrong, revoked or
-out-of-credit key looks like. **Only a real generation proves the route works.**
+**Why that matters more than a broken to-do.** OpenRouter is used by **exactly
+one thing** — the prompt generator. The Alt Text tool, which *is* live, runs on
+Gemini. So **no visitor to uil4b.com can cause an OpenRouter request at all**,
+and Admin → Overview → AI provider health will keep saying "no generations to
+judge by" forever. That is not a fault in the panel; there is genuinely nothing
+to count.
 
-**Two other ways to see the same thing.** Admin → Overview → **AI provider
-health** gives seven days of counts across all users, plus a plain verdict.
-*"No generations to judge by" is not a pass* — generate one prompt and reload.
-The same numbers are on `?diag=1` under `providerHealth` for when you want raw
-JSON; it needs an admin login and answers 404 to a plain browser visit.
+**Time.** One minute to answer. Two minutes for the check itself, *after* we ship
+A.
 
-**Reading a failure.** Every generation response carries `provider: "openrouter"`
-or `provider: "gemini"`, and the badge is just that field on screen. 401/403 = key
-wrong or revoked · 429 = rate-limited or out of credit · 5xx = OpenRouter outage ·
-HTTP 502 "AI provider rejected the API key" = both providers down · HTTP 500 "AI
-is not configured" = neither key is set.
+**The check, for when it becomes possible.** Generate one prompt and read the
+badge on the result card. Every generation response carries
+`provider: "openrouter"` or `provider: "gemini"`. **OpenRouter → pass.** **Gemini
+→ fail, and the prompt in front of you will look perfectly good — that is the
+defect, not a glitch.** 401/403 = key wrong or revoked · 429 = rate-limited or
+out of credit · 5xx = OpenRouter outage · HTTP 502 "AI provider rejected the API
+key" = both providers down · HTTP 500 "AI is not configured" = neither key is set.
 
-**If you do nothing.** The app looks healthy while the provider you pay for is
-dead, and every generation quietly comes from the free fallback.
+**Why a key being set is not the answer.** You set the key on 2026-08-07 and that
+is recorded as done. A key that is *present* is also what a wrong, revoked or
+out-of-credit key looks like. Only a real generation tells them apart.
+
+**Your answer:** _______________
+
+**If you do nothing.** You keep paying a monthly bill for a route that no user
+can reach, and you will not find out, because the panel that would tell you has
+nothing to report.
 
 ## 4.6 · P1 — Stripe Customer Portal has no retention offer
 

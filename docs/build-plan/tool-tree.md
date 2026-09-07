@@ -121,30 +121,55 @@ the meaning — `semantic-color`, `aspect-ratio`, and `component-designer` under
 
 ### DISCOVER (browse — community: inspiration + free-to-copy assets)
 
-Surface landing `/discover` — Soon.
+Surface landing `/discover` — **live**.
 
-- **Community Palettes** `/discover/palettes` — **live**
-- **Community Gradients** `/discover/gradients` — **live**
+Six of the eight groups are live. `DISCOVER_GROUPS` in `src/data/toolTree.js`
+carries the flags; check there rather than trusting the bolding here.
+
+- **Palette Library** `/discover/palettes` — **live**
+- **Gradient Library** `/discover/gradients` — **live**
+- **Font Gallery** — **live** (the Create tool, surfaced here to browse)
+- **Icon Library** — **live** (same)
 - **Prompt Library** `/discover/prompts` — **live.** A free selection for
   everyone; the full library with Pro. *(This moved: it is no longer `/prompts`.)*
-- **Inspiration** — curated external sites (Mobbin, Godly, Lapa Ninja, …), each
-  linking back to the relevant Create tool. Real outbound destinations.
-- **Curated Resources** — the ~45 links in `discoverResources.js`
-- **Collections**
+- **Curated Resources** `/discover/resources` — **live** (#377). The links in
+  `discoverResources.js`, each carrying its related UIL4B tool.
+- **Inspiration** — Soon. Curated external sites (Mobbin, Godly, Lapa Ninja, …),
+  each linking back to the relevant Create tool. Real outbound destinations.
+- **Collections** — Soon.
+
+Community **publishing** is a separate thing from these browse surfaces and is
+deliberately not built yet: #377 re-scoped it, and §3.9 of `OWNER-ACTIONS.md`
+records the founder's decision that nothing publishes without his approval.
 
 ### LEARN (understand — all documentation)
 
-Surface landing `/learn` — Soon.
+Surface landing `/learn` — **live**, and it lists what is written and what is not.
 
-**There is no live Learn content yet, and the route list makes that look
-otherwise.** Every `/docs-*` URL is a **redirect to `/learn`**, not a page:
-`/docs` · `/docs-design` · `/docs-social` · `/docs-themes` · `/docs-brand` ·
-`/docs-seo` · `/docs-marketing` · `/docs-ai` · `/design-reference`. The planned
-subjects below are therefore scope, not shipped surface:
+**Learn has real content now.** This section used to say "there is no live Learn
+content yet"; that stopped being true with #380 and #403. Five guides are
+published, prerendered, and reachable at `/learn/<slug>`:
 
-- Design Principles · UI Themes · Brand Colour Guide · Typography Guide ·
-  SEO (Small-Business + Specialist) · Marketing Fundamentals / Social &
-  Marketing · AI Coding Assistants
+- `colour-contrast` · `type-scales` · `colour-spaces` · `theme-systems` ·
+  `brand-colour`
+
+They are **design education, not documentation for our tools**, and their voice
+is neutral and factual — both founder decisions, 2026-09-05. The bodies live in
+`src/data/learn/`, indexed by `src/data/learnIndex.js`.
+
+**The roadmap is derived, not listed here.** `LEARN_GROUPS` in
+`src/data/toolTree.js` carries the eight topic areas and a `soon` flag on each;
+`LEARN_ROADMAP` is the filtered "still to write" list, and every surface that
+shows the roadmap reads it. Two areas are delivered (**UI Themes**, **Brand
+Colour Guide**) and six still carry `soon`. Flip a row's flag when a guide
+covering it ships — do not re-list them here, or this file becomes the second
+copy again.
+
+Every `/docs-*` URL is still a **301 to `/learn`**, not a page: `/docs` ·
+`/docs-design` · `/docs-social` · `/docs-themes` · `/docs-brand` · `/docs-seo` ·
+`/docs-marketing` · `/docs-ai` · `/design-reference`. The seven `Docs*.jsx`
+components those names came from are unrouted drafts and are **not** what
+`/learn` serves.
 
 **Genuinely live, in the app shell rather than the tool tree:** `/help`
 (Help Centre) and `/info` (Info Centre). `/faq` redirects to `/help#faq`.

@@ -14,7 +14,7 @@ count in this table — see *Why there are no test counts here*, below.
 
 | Gate | Command | Pass condition |
 |---|---|---|
-| Lint | `npx eslint .` | **0 errors.** The advisory warnings are pre-existing and capped at **31** — work may not raise that ceiling. This is the only number in the table, and it is a bound rather than a tally. |
+| Lint | `npx eslint .` | **0 errors.** The advisory warnings are pre-existing and capped at **25** — work may not raise that ceiling. This is the only number in the table, and it is a bound rather than a tally. |
 | Build | `npm run build` | passes **and prints its prerender line**: `prerender: wrote N route shells + a noindex 404 shell` |
 | Unit | `npm run test:unit` | **0 failures, 0 skipped** |
 | Firestore rules | `npm run test:rules` | **0 failures.** Needs a JDK 21 on `PATH` — see below |
@@ -90,7 +90,7 @@ signed out, so the surface is unreachable rather than broken — the file
 carries the reason and the one-word change that re-enables it. Skipped is the
 honest state; do not "fix" the count by deleting the file.
 
-The 31 lint warnings are pre-existing and advisory
+The 25 lint warnings are pre-existing and advisory
 (`react-hooks/set-state-in-effect`, `react-refresh/only-export-components`,
 `react-hooks/preserve-manual-memoization`, `react-hooks/exhaustive-deps`).
 **Match the ceiling, don't add new ones, and don't "fix" the existing ones as
@@ -106,6 +106,14 @@ fault**, not a baseline. The deltas in it ("moved unit 457 → 484") describe th
 tree at that commit and cannot go stale, which is exactly why they are safe to
 keep and why nothing above restates them. Do not check a run against anything
 in this section.
+
+**The lint ceiling came down 31 → 25 (2026-09-06).** Measured, not estimated:
+`npm run lint` on `5c6603a` reports `25 problems (0 errors, 25 warnings)`. The
+six retired over the preceding fortnight went with the code that carried them —
+`Landing.jsx`, `TopBar.jsx`, `Sidebar.jsx` and `UIPreviewModal.jsx` were deleted
+in #348 and #396, and three of `ColorStudio.jsx`'s four sections went with them.
+Nobody "fixed" a warning; the files stopped existing. That is the only direction
+this figure is allowed to move, and it is why the row above now reads 25.
 
 Founder batch 4 (2026-08-11) added no lint warnings; it moved unit
 (+7 tests: the per-point snap radius, the centre detent, the cross-axis slider
