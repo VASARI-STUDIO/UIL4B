@@ -5,7 +5,9 @@ import { findArticle, nextArticle, readingMinutes } from '../data/learnIndex'
 import ColourContrast from '../data/learn/colourContrast'
 import BrandColour from '../data/learn/brandColour'
 import ColourSpaces from '../data/learn/colourSpaces'
+import FontLoading from '../data/learn/fontLoading'
 import ThemeSystems from '../data/learn/themeSystems'
+import TypefaceMetrics from '../data/learn/typefaceMetrics'
 import TypeScales from '../data/learn/typeScales'
 
 // The Learn article shell: one layout, every article.
@@ -25,7 +27,7 @@ import TypeScales from '../data/learn/typeScales'
 //
 // This whole page is already one lazy chunk off App.jsx. Splitting each article
 // again would have meant a template-literal dynamic import, which resolves at
-// runtime and so cannot be checked by anything. Three articles is a small
+// runtime and so cannot be checked by anything. The whole set is still a small
 // chunk; a filename the build cannot see is a permanent hazard.
 //
 // Each body exports ONLY its component, which is why the source list lives on
@@ -44,6 +46,8 @@ import TypeScales from '../data/learn/typeScales'
 const BODIES = {
   'colour-contrast': ColourContrast,
   'type-scales': TypeScales,
+  'typeface-metrics': TypefaceMetrics,
+  'font-loading': FontLoading,
   'colour-spaces': ColourSpaces,
   'theme-systems': ThemeSystems,
   'brand-colour': BrandColour,
@@ -55,6 +59,8 @@ const BODIES = {
 const TOOL_LEDE = {
   'colour-contrast': 'The Contrast Checker runs the formula above on any pair, gives the verdict against all four thresholds at once, and offers the nearest passing colour when a pair falls short.',
   'type-scales': 'The Type Scale Generator builds the ladder from a base and a ratio at each end of the range, previews it at three viewport widths in real families, and exports the clamp() for every step.',
+  'typeface-metrics': 'The Font Gallery draws the full catalogue as specimens rather than as names, filters it by category, and puts two families side by side at the same size — which is the only way to see the difference this article measures.',
+  'font-loading': 'The Font Pairing tool ends at the import and the CSS for the two families it suggests, which is the declaration this article is about: it is what decides how many files are fetched and what the reader looks at while they arrive.',
   'colour-spaces': 'The Tint Scale Generator builds a 50–950 ramp from one colour, and its lightness curve is exactly the choice this article is about: Perceived spaces the stops by HCT tone, Linear by HSL lightness. The two are visibly different on the same seed.',
   'theme-systems': 'The Semantic Colour Generator builds the role layer this article describes: it derives error, success, warning and info from hue arcs that keep each one legible as itself, then picks every shade by measured contrast — 4.5:1 for text, 3:1 for a boundary — separately for a light scene and a dark one.',
   'brand-colour': 'The Palette Generator starts from one seed, builds the harmony and the tonal ramp from it, and rates each colour it produces against black and white ink — so the value that clears a threshold and the value that does not are on screen together rather than checked one at a time afterwards.',
