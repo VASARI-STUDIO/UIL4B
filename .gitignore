@@ -13,6 +13,9 @@ Desktop.ini
 
 # Node (if ever added)
 node_modules/
+# Bare form too: agent worktrees hold node_modules as a directory JUNCTION,
+# and a trailing-slash pattern does not match a junction, so it showed as ??.
+node_modules
 yarn.lock
 
 # Build
