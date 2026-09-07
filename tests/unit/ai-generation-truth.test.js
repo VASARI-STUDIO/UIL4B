@@ -442,6 +442,24 @@ test('the refusal is checked BEFORE the provider is called, not after', () => {
   const run = branch.indexOf('await task.run(')
   assert.ok(check > -1, 'nothing compares the count against the limit')
   assert.ok(check < run, 'the limit is checked after the generation has already been paid for')
+
+  // ORDER IS NOT ENOUGH, and mutation testing is what showed it: changing the
+  // guard to `if (used >= bucket.limit && false)` left every assertion above
+  // green, because the string is still there and still in the right place while
+  // the refusal never fires. So the guard's exact shape is pinned — an
+  // unconditional comparison that returns 429 immediately. Anything else in the
+  // condition (a feature flag, a plan exemption, a `&& false` left in from
+  // debugging) is a spent allowance being let through.
+  //
+  // The line-break class is written as an alternation rather than a bare
+  // newline escape: this repository checks out CRLF, so a source-text regex
+  // that only allows a bare LF never matches anything. The NO-OP control in
+  // the mutation run is what caught that - with the suite already failing,
+  // every one of the fourteen mutations looked like a kill and none of them
+  // proved anything.
+  assert.match(branch, /\r?\n {4}if \(used >= bucket\.limit\) \{\r?\n {6}return res\.status\(429\)\.json\(\{/,
+    'the refusal is no longer an unconditional comparison returning 429 on the spot — '
+    + 'the ordering assertion above cannot see a guard that has been disabled in place')
   assert.match(branch, /exhaustedError\(plan\.id\)/,
     'the refusal no longer uses the shared message, so it can drift from what /plans promises')
   assert.match(branch, /status\(429\)/)
