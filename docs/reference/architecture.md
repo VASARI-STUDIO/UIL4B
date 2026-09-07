@@ -78,9 +78,21 @@ the unrouted pages — `Dashboard`, `CategoryDashboard`, `ExternalResources`,
 - **Colour**: ColorLanding, ColorStudio, PaletteBuilder, TintTool,
   GradientGenerator, ContrastChecker.
 - **Other tools**: FontGallery, FontMatcher, TypeScale, RatioCalculator,
-  BoxShadowGenerator, IconEmojiLibrary, FileConverter, SeoInspector,
-  AltTextGenerator, AiPromptGenerator, LandingPromptGenerator, PromptLibrary,
-  UIBuilder, AutoBuilder, StyleGuide.
+  IconEmojiLibrary, FileConverter, SeoInspector, AltTextGenerator,
+  AiPromptGenerator, BrandStarter, PromptLibrary, StyleGuide.
+
+  > **Four names came off this list on 2026-09-06** — `BoxShadowGenerator`,
+  > `LandingPromptGenerator`, `UIBuilder` and `AutoBuilder`. The first three
+  > were deleted by the dead-source sweep: a `--sourcemap` build put them in no
+  > chunk, nothing imported them, and no route reached them. `AutoBuilder` was
+  > already gone before that sweep ran and this line had not noticed — which is
+  > the cost this list keeps paying, and the reason the sweep is a build
+  > measurement rather than a read of this file.
+  >
+  > **`AiPromptGenerator.jsx` is still unrouted and was deliberately kept.** It
+  > is the only caller of the OpenRouter path, and `docs/OWNER-ACTIONS.md §4.5`
+  > asks the founder to choose between wiring it up and cancelling OpenRouter.
+  > Deleting it would have made that decision by default.
 
 > **`IconLibrary.jsx` and `EmojiLibrary.jsx` are unrouted.** Both files still
 > exist and neither is imported anywhere. `CreateTool.jsx` maps **both**
@@ -105,12 +117,14 @@ the unrouted pages — `Dashboard`, `CategoryDashboard`, `ExternalResources`,
   > page, and it renders the `src/components/userhome/` set — daily band,
   > starter row, project cards with per-project progress. The name is the route,
   > not the page's job.
-- **Docs (dormant)**: DocsAI, DocsBrand, DocsDesign, DocsMarketing, DocsSEO,
-  DocsSocial, DocsThemes. The components exist and **no route reaches any of
-  them** — every `/docs-*` URL is a 301 to `/learn`, which is now a real surface
-  with five published guides (`src/data/learn/`, indexed by `learnIndex.js` and
-  rendered by `LearnArticle.jsx`). These seven are the pre-Learn drafts; they are
-  not what `/learn` serves, and editing one changes nothing a visitor can see.
+- **Docs (deleted 2026-09-06)**: `DocsAI`, `DocsBrand`, `DocsDesign`,
+  `DocsMarketing`, `DocsSEO`, `DocsSocial` and `DocsThemes` — the seven
+  pre-Learn drafts — **are gone**, with the `DocsTOC` component only they used.
+  No route ever reached them: every `/docs-*` URL is a 301 to `/learn`, which is
+  the real surface (`src/data/learn/`, indexed by `learnIndex.js` and rendered
+  by `LearnArticle.jsx`). The redirects are unchanged and still land on `/learn`
+  — deleting a component does not touch a redirect table. Do not re-add these
+  from this list's history; `/learn` is where guides live.
 - **Billing**: Plans, Checkout, CheckoutReturn.
 - **Admin**: Admin (gated by `ADMIN_EMAILS` + session admin code).
 - **Legal**: Privacy, Terms.
@@ -131,12 +145,16 @@ There **is** a branded 404: `src/pages/NotFound.jsx` sits behind
 
 Shared UI: `PillNav`, `AppFooter`, `CommandPalette`,
 `Toast`, `AuthGate` ⚠️, `GoogleOneTap` ⚠️, `LoginPopup`, `ProUpgradeModal`,
-`FeedbackButton` / `FeedbackModal`, `UIKitGuide`, `DocsTOC`,
+`FeedbackButton` / `FeedbackModal`, `UIKitGuide`,
 `HomeWorkbench`, `SnapSlider`, `ColorPickerPop`, `ExportPanel`, `FontPicker`,
 `SystemCTA`, `ShuffleIcon`, the `UiSystem*` builder set, plus `discover/`,
 `prompt/` and `seo/` subfolders. (`CategoryMiniTool` was deleted in #196; `Sidebar`, `TopBar` and
 `UIPreviewModal` were deleted in 2026-09 — all three were unreachable once
-App.jsx moved to PillNav, and no built bundle contained a line of them.)
+App.jsx moved to PillNav, and no built bundle contained a line of them.
+`DocsTOC` and `discover/DiscoverCard` went the same way on 2026-09-06: the
+first was imported only by the seven deleted Docs drafts, the second by
+nothing at all — `CuratedResources.jsx` renders its own card and says in a
+comment why it does not use a generic one.)
 
 ## API routes (`/api`) — 12-function limit
 

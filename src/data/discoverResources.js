@@ -21,8 +21,8 @@
 //   added         ISO date — drives the "Recently added" sort
 //   featured      true → appears in the Featured rail with a STAFF PICK badge
 //
-// Security: card faces are generated locally from title+category (see
-// DiscoverCard). We NEVER fetch the external URL. All external links carry
+// Security: card faces are generated locally from title+category. We NEVER
+// fetch the external URL. All external links carry
 // rel="noopener noreferrer nofollow" target="_blank".
 
 export const DISCOVER_RESOURCES = [

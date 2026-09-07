@@ -22,7 +22,7 @@ public summary.
 ### Colour
 
 - **Colour System** — connected Palette, Semantic Colour, Tint, Gradient and Contrast tools at `/create/*`, with recovery paths, UI previews and production-ready exports
-- **UI System Mode** — perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one brand seed, with WCAG evidence and CSS / DTCG / Tailwind export. **Admin-only while it is finished** — it is not on sale and no visitor can reach it
+- **UI System Mode** — perceptual 100–900 Brand, Success, Warning, Error, Information and Neutral scales from one brand seed, with WCAG evidence and CSS / DTCG / Tailwind export. **Unwired while it is finished** — it is not on sale, and it is reachable by nobody, admins included. Both entry points were removed from the Palette Builder on 2026-09-05 (founder instruction) and nothing imports `components/UiSystemBuilder.jsx`, so it is in no chunk of any build. This line said "admin-only" until 2026-09-07, which sent agents looking for an auth gate that does not exist
 
 ### Typography
 

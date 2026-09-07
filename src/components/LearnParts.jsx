@@ -2,9 +2,10 @@
 //
 // There are four, and the count is the point. An article surface accumulates
 // callout boxes — "tip", "warning", "pro technique", "key insight" — until the
-// reader cannot tell which box is load-bearing, and the retired DocsDesign.jsx
-// in this repo had already got to three variants plus a stat tile plus a
-// before/after grid. Emphasis only works while it is scarce.
+// reader cannot tell which box is load-bearing, and the pre-Learn DocsDesign
+// draft in this repo had already got to three variants plus a stat tile plus a
+// before/after grid (that file was deleted as dead source on 2026-09-06; the
+// lesson it taught is why this list stays at four). Emphasis only works while it is scarce.
 //
 // So: a citation, a table, a formula, and a one-line aside. Everything else is
 // a paragraph, a heading or a list.

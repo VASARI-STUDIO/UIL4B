@@ -131,7 +131,7 @@ test('-strong clears AA as small text on every bare ground, in both themes', () 
 
 test('-strong clears AA on its own tint, which is the ground these badges use', () => {
   // The case bare grounds miss. .tag-pass, .sub-save, .cs-sw-badge.*,
-  // .dsc-pill-free, .smap-stage and ~20 more paint their text on a
+  // .smap-stage and ~20 more paint their text on a
   // color-mix tint of the SAME token, so the ground moves with the colour.
   const bad = []
   for (const theme of ['light', 'dark']) {
