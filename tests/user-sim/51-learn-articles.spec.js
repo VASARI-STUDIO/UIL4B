@@ -204,8 +204,10 @@ test.describe('Learn articles', () => {
     expect(rowCount, 'the metrics table lost rows it cannot lose').toBeGreaterThanOrEqual(4)
 
     const aspects = []
+    const lastDigits = []
     for (let i = 0; i < rowCount; i += 1) {
       const cells = await metricRows.nth(i).locator('td[data-num]').allInnerTexts()
+      lastDigits.push(cells[0].trim().slice(-1), cells[1].trim().slice(-1))
       expect(cells, `metrics row ${i} does not print four figures`).toHaveLength(4)
       const aspect = Number(cells[0])
       const cap = Number(cells[1])
@@ -232,6 +234,46 @@ test.describe('Learn articles', () => {
     expect(new Set(aspects.map((a) => a.toFixed(3))).size,
       'every face on this page reports the same x-height — the table is not measuring them separately')
       .toBeGreaterThan(1)
+
+    // THE PRECISION GUARD, and it is here rather than in the unit half because
+    // only a browser knows what a browser rounds.
+    //
+    // This table was measured at 100px and printed three decimals. At 100px the
+    // ink extents come back rounded to whole pixels, so every ratio was a
+    // multiple of 0.01 and the third decimal was ALWAYS a zero the component had
+    // invented. That defect prints a perfectly well-formed table, satisfies
+    // every assertion above, and is invisible on disk.
+    //
+    // A digit that cannot vary is a digit that was not measured, so: across
+    // every printed x-height and cap height, the last place must not be zero in
+    // all of them.
+    expect(lastDigits.length, 'no ratios were read, so this guard is vacuous')
+      .toBeGreaterThanOrEqual(8)
+    expect(lastDigits.every((d) => d === '0'),
+      `every measured ratio ends in 0 (${lastDigits.join('')}) — the last decimal place is not`
+      + ' being measured, it is being padded, which is what measuring at too small an em does')
+      .toBe(false)
+
+    // And the direct form of the same check, against the browser rather than
+    // against the rendered digits: re-measure at the em the component uses and
+    // at the em that was wrong, and confirm the small one is the one that
+    // rounds. If Chromium ever stopped rounding at 100px this would go red and
+    // the guard above would become untestable rather than merely unnecessary.
+    const rounding = await page.evaluate(() => {
+      const ctx = document.createElement('canvas').getContext('2d')
+      const stack = getComputedStyle(document.documentElement).getPropertyValue('--font').trim()
+      const at = (em) => {
+        ctx.font = `${em}px ${stack}`
+        return ctx.measureText('x').actualBoundingBoxAscent / em
+      }
+      return { small: at(100), large: at(1000) }
+    })
+    expect(Number.isInteger(rounding.small * 100),
+      `an ink extent measured at 100px came back as ${rounding.small * 100}px rather than a whole`
+      + ' pixel — the premise of the precision guard above no longer holds').toBe(true)
+    expect(rounding.large * 1000 % 1,
+      'the same measurement at 1000px is also a whole pixel, so the larger em buys no precision')
+      .not.toBe(0)
 
     // ── /learn/font-loading ────────────────────────────────────────────────
     await go(page, '/learn/font-loading')

@@ -191,6 +191,41 @@ test('THE ONE THAT MATTERS: the metrics table measures the running stylesheet', 
   // to be the size the guide works the example at.
   assert.ok(metricsTable.includes(`const AT_PX = ${AT_PX}`),
     `TypeMetricsTable matches at a different size from the ${AT_PX}px the guide works`)
+})
+
+test('THE PRECISION ONE: the em is large enough for the decimals the table prints', () => {
+  // Found in a browser, not here, and it is the reason this test exists.
+  //
+  // The table was measured at 100px and printed three decimal places. At 100px
+  // Chromium returns the ink extents ALREADY ROUNDED to whole pixels — Manrope's
+  // x came back as exactly 54 — so every ratio was a multiple of 0.01 and the
+  // third decimal place was always a zero this component had invented. The
+  // figures looked more precise than the measurement behind them, which on a
+  // surface whose promise is that its figures are checkable is the worst kind of
+  // wrong: checkable, and false in the last digit.
+  //
+  // So this does not check that EM is 1000. It checks the RELATIONSHIP: an ink
+  // extent resolved to one pixel at an em of E supports log10(E) decimal places
+  // in the ratio, so the em must be at least 10^(places printed). Raising the
+  // precision without raising the em fails here, and so does lowering the em.
+  const em = Number(/const EM = (\d+)/.exec(metricsTable)?.[1])
+  assert.ok(Number.isFinite(em) && em > 0, 'TypeMetricsTable no longer declares an em to measure at')
+
+  const printed = [...metricsTable.matchAll(/r\.(?:aspect|cap)\.toFixed\((\d+)\)/g)].map(([, n]) => Number(n))
+  assert.ok(printed.length >= 2,
+    'TypeMetricsTable no longer prints the two measured ratios — this check has nothing to guard')
+
+  for (const places of printed) {
+    assert.ok(em >= 10 ** places,
+      `TypeMetricsTable prints ${places} decimal places from a measurement taken at ${em}px.`
+      + ` One pixel of ink at that em is ${(1 / em).toFixed(6)} of an em, so the last`
+      + ` ${places - Math.log10(em)} digit(s) cannot be measured and would be invented.`
+      + ` Measure at ${10 ** places}px or print ${Math.log10(em)} places.`)
+  }
+
+  // A positive control on the arithmetic above: the em that was actually wrong
+  // must be rejected by the same rule that accepts the one in the file.
+  assert.equal(100 >= 10 ** 3, false, 'the rule this test applies would have passed the defect it exists for')
   // And the guide renders it. A measured table nobody mounts proves nothing.
   assert.match(metricsSource, /<TypeMetricsTable \/>/, 'the guide no longer renders TypeMetricsTable')
   assert.match(metricsSource, /import TypeMetricsTable from '\.\.\/\.\.\/components\/TypeMetricsTable'/)
