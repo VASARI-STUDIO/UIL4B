@@ -71,7 +71,12 @@ export const CREATE_GROUPS = [
     tools: [
       { id: 'component-designer', label: 'Component Designer', route: '/create/component-designer', soon: true },
       { id: 'box-shadow', label: 'Box Shadow', route: '/create/box-shadow', soon: true },
-      { id: 'auto-builder', label: 'Auto-Builder', route: '/create/auto-builder', soon: true },
+      // `auto-builder` MOVED OUT of this group to AI Studio below. It was filed
+      // here because its dormant alpha rendered a fake UI hero; what it
+      // actually produces is a palette, a font pairing and a type scale, and
+      // src/data/moduleBoard.js has recorded it under area 'AI' the whole time.
+      // The route and the id are unchanged, so no redirect is needed and every
+      // existing link still lands.
     ],
   },
   {
@@ -91,13 +96,20 @@ export const CREATE_GROUPS = [
     label: 'AI Studio',
     hue: 'ai',
     home: '/create/ai-tools',
-    desc: 'Generators for prompts, pages and alt text.',
+    desc: 'Brand starters, image prompts and alt text.',
     // Live because Alt Text is live and mounted in CreateTool's LIVE_TOOLS. The
     // three unbuilt siblings now carry their own Soon badge, which is exactly
     // the per-tool behaviour the header comment describes.
     soon: false,
     tools: [
       { id: 'alt-text', label: 'Alt Text', route: '/create/alt-text', soon: false },
+      // ⚠️ `beta: true` is NOT a second `soon`. A Soon tool renders the workshop
+      // state and nobody can use it; a Beta tool is LIVE, mounted, metered and
+      // fully usable, and the badge states a limit on the OUTPUT and the
+      // allowance rather than on the availability. The two flags are read in
+      // different places for that reason: `soon` gates routing, prerendering
+      // and search, while `beta` only ever adds a label.
+      { id: 'auto-builder', label: 'Brand Starter', route: '/create/auto-builder', soon: false, beta: true },
       { id: 'ai-prompt', label: 'Image Prompt', route: '/create/ai-prompt', soon: true },
       { id: 'landing-prompts', label: 'Landing-Page Prompt', route: '/create/landing-prompts', soon: true },
       // Prompt Library is no longer here — it moved to Discover, where the
@@ -170,6 +182,10 @@ export function createTools() {
       route: t.route,
       group: g.id,
       soon: !!(g.soon || t.soon),
+      // Carried through so the mega-menu row and the search index read ONE
+      // flag. A tool cannot be beta by virtue of its group -- a category is
+      // not a maturity -- so this is the tool's own flag only.
+      beta: !!t.beta,
     })),
   )
 }
@@ -422,7 +438,7 @@ const MENU_ICONS = {
   'font-gallery': 'type',
   'type-scale': 'typography',
   'component-designer': 'component',
-  'auto-builder': 'auto',
+  'auto-builder': 'ai',
   icons: 'icons',
   emoji: 'emoji',
   'file-converter': 'imagery',
@@ -448,12 +464,12 @@ const CREATE_MENU_SPEC = [
   // separately-labelled group that has not shipped.
   [
     { label: 'Typography', ids: ['font-gallery', 'font-pair', 'type-scale'] },
-    { label: 'Components', ids: ['component-designer', 'box-shadow', 'auto-builder'] },
+    { label: 'Components', ids: ['component-designer', 'box-shadow'] },
   ],
   [
     { label: 'Icons', ids: ['icons', 'emoji'] },
     { label: 'Media', ids: ['file-converter', 'ratio'] },
-    { label: 'AI', ids: ['alt-text', 'ai-prompt', 'landing-prompts'] },
+    { label: 'AI', ids: ['alt-text', 'auto-builder', 'ai-prompt', 'landing-prompts'] },
   ],
 ]
 
@@ -468,6 +484,7 @@ function buildCreateMenu() {
     label: t.label,
     route: t.route,
     soon: t.soon,
+    beta: t.beta,
     icon: MENU_ICONS[t.id] || t.id,
     hue: TOOL_HUE[t.id],
   })

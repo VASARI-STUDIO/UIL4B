@@ -63,7 +63,7 @@ export const PAGE_TITLES = {
   '/terms': 'UI L4B | Terms',
   '/sitemap': 'UI L4B | Sitemap',
   '/admin': 'UI L4B | Admin',
-  '/create/auto-builder': 'UI L4B | UI Auto-Builder',
+  '/create/auto-builder': 'UI L4B | Brand Starter',
   '/create/file-converter': 'UI L4B | File Converter',
   ...LEARN_PAGE_TITLES,
 }
@@ -99,7 +99,7 @@ export const PAGE_DESCRIPTIONS = {
   '/create/box-shadow': 'Design layered box shadows with real-time preview. Fine-tune blur, spread, offset, and colour for each layer.',
   '/create/components': 'Design UI components with live preview and production-ready CSS out — buttons, cards, inputs and the shadows under them.',
   '/create/component-designer': 'Build complete UI design systems with guided steps. Pick colours, fonts, type scales, and export production-ready CSS.',
-  '/create/auto-builder': 'Automatically generate a full UI design system from a single colour or inspiration URL using AI.',
+  '/create/auto-builder': 'Describe what you are making and get a palette, a font pairing and a type scale to start from — each opens in the tool that owns it.',
   '/projects': 'Manage and organise your saved design projects. Access colour palettes, font selections, and exported assets.',
   '/settings': 'Customise your UI L4B experience. Manage theme, appearance, subscription, and account preferences.',
   '/login': 'Sign in to UI L4B to save projects, sync settings, and unlock AI-powered design tools.',
