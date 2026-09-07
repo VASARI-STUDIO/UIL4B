@@ -14037,6 +14037,21 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    https://mobbin.com/flows/fd22b0b9-1d07-4b64-8514-7dd5580ac298 */
 .beta-badge{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);border:1px solid var(--accent);color:var(--accent-strong);background:var(--accent-bg);line-height:1;flex:0 0 auto}
 
+/* DARK THEME RAISES THE INK, and it is a measured fix rather than a taste one.
+   tests/user-sim/39-accent-contrast.spec.js caught this badge on /plans at
+   4.33:1 against a 4.5 floor: --accent-strong (#4A90FF) over --accent-bg
+   composited on the tier card (#262F3E) at 11px/500. --accent-soft is the
+   LIGHTER accent in dark, which is the direction that gains contrast on a dark
+   ground -- it measures 8.03:1 on the same composite, so this clears with real
+   margin rather than sitting on the line. Light theme is untouched: it already
+   measures 5.24:1 and the soft token there is a pale blue that would fail.
+   [data-theme] ONLY, with no prefers-color-scheme companion: this stylesheet
+   never resolves the colour scheme itself -- a JS resolver stamps the
+   attribute, and tests/unit/theme-resolution.test.js fails the build on a
+   second resolver, because a media block cannot see an explicit choice and
+   would fight the attribute on "explicit light on a dark device". */
+[data-theme="dark"] .beta-badge,[data-theme="dark"] .bs-beta{color:var(--accent-soft);border-color:var(--accent-soft)}
+
 .bs-head h1{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
 .bs-beta{font-size:var(--fs-micro);font-family:var(--mono);font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--accent);color:var(--accent-strong);background:var(--accent-bg);line-height:1;align-self:center}
 /* What beta MEANS, next to the word, rather than left for the reader to guess.
