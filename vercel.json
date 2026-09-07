@@ -378,12 +378,20 @@
       "destination": "/learn/colour-spaces/index.html"
     },
     {
+      "source": "/learn/font-loading",
+      "destination": "/learn/font-loading/index.html"
+    },
+    {
       "source": "/learn/theme-systems",
       "destination": "/learn/theme-systems/index.html"
     },
     {
       "source": "/learn/type-scales",
       "destination": "/learn/type-scales/index.html"
+    },
+    {
+      "source": "/learn/typeface-metrics",
+      "destination": "/learn/typeface-metrics/index.html"
     },
     {
       "source": "/plans",

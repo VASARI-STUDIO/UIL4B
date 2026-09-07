@@ -184,6 +184,107 @@ test.describe('Learn articles', () => {
     expect(clearsBoth, 'a stop now clears 4.5:1 on both grounds — the section above the'
       + ' table says not one of them does').toBe(0)
   })
+  test('THE THREE TYPE TABLES MEASURE THE BROWSER THEY ARE IN', async ({ page }) => {
+    watch(page, 'reader checking the figures the two typography guides publish about their own type')
+
+    // ── /learn/typeface-metrics ────────────────────────────────────────────
+    // TypeMetricsTable paints each font stack to a canvas and reads the ink
+    // above the baseline. It waits for document.fonts.ready and drops any
+    // named family the product's own detector cannot confirm rendered, so it
+    // can legitimately come back with nothing — which is right, and silent.
+    // Every claim the section makes is about the numbers in it.
+    await go(page, '/learn/typeface-metrics')
+    const metrics = page.locator('[aria-label*="measured per em"]')
+    await expect(metrics, 'TypeMetricsTable rendered nothing — no face was measurable').toBeVisible()
+    const metricRows = metrics.locator('tbody tr')
+    // Two product faces and three generics. A generic can never be missing, so
+    // fewer than four rows means a webfont row was dropped AND a generic failed.
+    await expect(metricRows).not.toHaveCount(0)
+    const rowCount = await metricRows.count()
+    expect(rowCount, 'the metrics table lost rows it cannot lose').toBeGreaterThanOrEqual(4)
+
+    const aspects = []
+    for (let i = 0; i < rowCount; i += 1) {
+      const cells = await metricRows.nth(i).locator('td[data-num]').allInnerTexts()
+      expect(cells, `metrics row ${i} does not print four figures`).toHaveLength(4)
+      const aspect = Number(cells[0])
+      const cap = Number(cells[1])
+      expect(Number.isFinite(aspect) && Number.isFinite(cap),
+        `metrics row ${i} printed something that is not a ratio: ${cells.join(' / ')}`).toBe(true)
+      // A real face measured off real ink: the x-height is inside the em box and
+      // the capitals are taller than the lowercase. A row that failed to measure
+      // and printed a placeholder cannot satisfy both.
+      expect(aspect, `row ${i} has an x-height of ${aspect} per em`).toBeGreaterThan(0)
+      expect(aspect).toBeLessThan(1)
+      expect(cap, `row ${i} measures a cap height (${cap}) no taller than its x-height (${aspect})`)
+        .toBeGreaterThan(aspect)
+      expect(cells[2].trim()).toMatch(/^\d+\.\d%$/)
+      expect(cells[3].trim()).toMatch(/^\d+\.\dpx$/)
+      aspects.push(aspect)
+    }
+    // The first row is the reference the last column matches against, so its own
+    // matched size is the size the column is computed at. A derivation that
+    // stopped dividing would print 16.0px in every row instead of just this one.
+    const firstMatched = (await metricRows.first().locator('td[data-num]').allInnerTexts())[3]
+    expect(firstMatched.trim(), 'the reference row does not match itself at 16px').toBe('16.0px')
+    // And the section's claim: the faces do not agree. If every row measured the
+    // same, the table would be measuring one font under five names.
+    expect(new Set(aspects.map((a) => a.toFixed(3))).size,
+      'every face on this page reports the same x-height — the table is not measuring them separately')
+      .toBeGreaterThan(1)
+
+    // ── /learn/font-loading ────────────────────────────────────────────────
+    await go(page, '/learn/font-loading')
+
+    // FontFaceTable reads the @font-face rules out of the CSSOM and computes
+    // each range's size. A cross-origin sheet throws rather than returning
+    // nothing, so an empty table here is a real possibility.
+    const faces = page.locator('[aria-label*="has been downloaded"]')
+    await expect(faces, 'FontFaceTable rendered nothing — no @font-face rule was readable').toBeVisible()
+    const faceRows = faces.locator('tbody tr')
+    await expect(faceRows).toHaveCount(4)
+    const counts = []
+    for (let i = 0; i < 4; i += 1) {
+      const row = faceRows.nth(i)
+      const nums = await row.locator('td[data-num]').allInnerTexts()
+      expect(nums, `face row ${i} does not print a weight range and a code-point count`).toHaveLength(2)
+      const points = Number(nums[1].replace(/[^\d]/g, ''))
+      expect(points, `face row ${i} reports ${nums[1]} code points`).toBeGreaterThan(0)
+      counts.push(points)
+      // Every face on this page is declared `swap`, which the guide says in the
+      // section above and this reads back off the rendered row.
+      await expect(row.locator('td').nth(1)).toHaveText('swap')
+      await expect(row.locator('td').last()).toContainText(/^(Yes|No)/)
+    }
+    // The section's premise: a family is split, and the two halves are not the
+    // same size. One count repeated four times means the range is not being read.
+    expect(new Set(counts).size,
+      `the four faces report ${[...new Set(counts)].join(', ')} code points — the ranges are not being computed separately`)
+      .toBe(2)
+
+    // FallbackShiftTable paints the same sentence in the declared stack and in
+    // the stack with its webfont removed. The section's whole argument is that
+    // those two are different widths.
+    const shift = page.locator('[aria-label*="without its webfont"]')
+    await expect(shift, 'FallbackShiftTable rendered nothing — the webfont was not confirmed').toBeVisible()
+    const shiftRows = shift.locator('tbody tr')
+    await expect(shiftRows).toHaveCount(3)
+    const widths = []
+    for (let i = 0; i < 3; i += 1) {
+      const cells = await shiftRows.nth(i).locator('td[data-num]').allInnerTexts()
+      expect(cells, `shift row ${i} does not print a width and a difference`).toHaveLength(2)
+      expect(cells[0].trim()).toMatch(/^\d+\.\d{2}px$/)
+      widths.push(Number(cells[0].replace('px', '')))
+      // The first row IS the baseline, so it has nothing to differ from; every
+      // other row must print a real signed percentage rather than a blank.
+      if (i === 0) expect(cells[1].trim()).toBe('—')
+      else expect(cells[1].trim()).toMatch(/^[+−]\d+\.\d{2}%$/)
+    }
+    expect(widths[0], 'the declared stack and the stack without its webfont measure the same width —'
+      + ' the section above says the line re-breaks when the file lands')
+      .not.toBe(widths[1])
+  })
+
   test('an unknown guide is a real 404, not the landing page wearing a new URL', async ({ page }) => {
     watch(page, 'visitor following a stale link to a guide that never shipped')
     await go(page, '/learn/a-guide-that-does-not-exist')

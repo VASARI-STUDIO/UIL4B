@@ -170,6 +170,15 @@ const ICONS = {
       <path d="M5 17h9" />
     </>
   ),
+  // A glyph descending onto a baseline: the file arriving underneath text that
+  // is already being read, which is what /learn/font-loading is about.
+  loading: (
+    <>
+      <path d="M12 4.5v8.5" />
+      <path d="m8.5 9.5 3.5 3.5 3.5-3.5" />
+      <path d="M5 18.5h14" />
+    </>
+  ),
   seo: (
     <>
       <circle cx="10.5" cy="10.5" r="6" />
