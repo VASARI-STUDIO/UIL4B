@@ -24,7 +24,14 @@ async function resolveLivePrice(stripe, interval) {
     try {
       const price = await stripe.prices.retrieve(envId, { expand: ['currency_options'] })
       if (priceMatchesInterval(price, interval)) return price
-    } catch { /* fall through to the lookup key */ }
+    } catch (err) {
+      // Falling through to the lookup key is correct, but doing it in silence is
+      // not: a STRIPE_PRICE_* env var pointing at a deleted or wrong-account
+      // price would look identical to the var not being set at all.
+      console.warn('get-prices: the configured price id could not be read — falling back to the lookup key', {
+        interval, envKey: PRICE_ENV_KEYS[interval], error: err?.message, type: err?.type,
+      })
+    }
   }
   const found = await stripe.prices.list({
     lookup_keys: [LOOKUP_KEYS[interval]],
@@ -79,7 +86,18 @@ async function fetchPrices() {
       cachedAt = now
     }
     return response
-  } catch {
+  } catch (err) {
+    // THE ONE CATCH THAT MUST NEVER BE EMPTY. A revoked STRIPE_SECRET_KEY or a
+    // Stripe outage serves the DEFAULT_PRICES table to every visitor, with
+    // `source: fallback` in the JSON and — before this — nothing at all
+    // server-side that anyone would ever read. The outer handler catch below
+    // does log, but it is unreachable: this function never throws.
+    //
+    // Empty catch bodies have cost this repo twice already; the feedback queue
+    // rendered a permission refusal as "No submissions yet".
+    console.error('get-prices: Stripe lookup failed — serving the fallback price table to every visitor', {
+      error: err?.message, type: err?.type, code: err?.code, statusCode: err?.statusCode,
+    })
     return responseFromLive()
   }
 }

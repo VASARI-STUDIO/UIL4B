@@ -7,6 +7,7 @@ import {
   lifetimeGrantHealth,
   retrieveSessionWithCharge,
   revocationUpdate,
+  writeSubscriptionDoc,
 } from './_lib/billing.js'
 
 export const config = { api: { bodyParser: false } }
@@ -27,32 +28,23 @@ async function upsertSubscription(subscription) {
   return writeSubscription(uid, subscription)
 }
 
-async function writeSubscription(uid, sub) {
-  // Only a HEALTHY status may clear the failure flags. This used to clear them
-  // unconditionally, and Stripe sends customer.subscription.updated (status →
-  // past_due) alongside invoice.payment_failed with no ordering guarantee — so
-  // whenever the subscription event landed second it wiped the flag the invoice
-  // event had just set. The visible symptom was the failure banner never
-  // appearing; the invisible one is that clearing `paymentFailedAt` destroys
-  // the grace window's anchor and drops a retrying customer straight to Free.
-  const healthy = sub.status === 'active' || sub.status === 'trialing'
-  const recovery = healthy
-    ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null }
-    : {}
-
-  await adminDb().collection('users').doc(uid).set({
-    subscription: {
-      id: sub.id,
-      status: sub.status,
-      priceId: sub.items?.data?.[0]?.price?.id || null,
-      interval: sub.items?.data?.[0]?.price?.recurring?.interval || null,
-      currentPeriodEnd: sub.current_period_end ? sub.current_period_end * 1000 : null,
-      cancelAtPeriodEnd: sub.cancel_at_period_end || false,
-      trialEndsAt: sub.trial_end ? sub.trial_end * 1000 : null,
-      ...recovery,
-      updatedAt: Date.now(),
-    },
-  }, { merge: true })
+// The subscription document's SHAPE lives in _lib/billing.js, not here, for two
+// reasons that both cost money when they are ignored:
+//
+//   · `current_period_end` is not a field on Subscription any more. Stripe moved
+//     it onto SubscriptionItem in 2025-03-31.basil and stripe@22.2.0 pins
+//     2026-05-27.dahlia, so the `sub.current_period_end` this used to read was
+//     `undefined` on every SDK path and `currentPeriodEnd` was written null —
+//     which silently disables the stale-period safety net in _lib/plans.js. The
+//     long note in _lib/billing.js is the evidence.
+//   · api/checkout-status.js has to write the SAME document when it reconciles a
+//     subscription checkout the webhook never delivered. Two hand-written copies
+//     of this object drift, and a drift here puts a customer on the wrong plan.
+//
+// `db` is injectable so tests/unit/subscription-period-end.test.js can assert
+// what THIS CALL SITE writes, not merely what the helper returns.
+export async function writeSubscription(uid, sub, db = null) {
+  await writeSubscriptionDoc(db || adminDb(), uid, sub)
 }
 
 // Resolves the Firebase uid for a Stripe customer id (used by invoice events
