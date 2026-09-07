@@ -206,30 +206,14 @@ const NOT_A_PLAN_PRICE = [
     why: 'Not money at all: normalizeCustomBase substitutes with the backreference '
       + '"$1" when rewriting an SVG stroke and fill.',
   },
-  {
-    file: 'src/pages/DocsDesign.jsx',
-    context: /BeforeAfter|loss aversion|Kahneman/,
-    why: 'Learn-surface writing about behavioural economics. The amounts are the '
-      + "loss-aversion example and a deliberately bad ad line, not our plans.",
-  },
-  {
-    file: 'src/pages/DocsMarketing.jsx',
-    context: /Stat value=|ROAS|CPC|Budget Tiers|returned per|Testing phase|Scaling what works|Multi-channel/,
-    why: 'Learn-surface writing about marketing. Third-party benchmarks — email '
-      + 'ROI, ad cost-per-click, monthly ad-spend tiers. None of it is our price.',
-  },
-  {
-    file: 'src/pages/DocsSocial.jsx',
-    context: /reach:|sweet spot|boosted post|Organic/,
-    why: 'Learn-surface writing about social. A table of monthly ad budgets and '
-      + 'what each realistically buys in reach.',
-  },
-  {
-    file: 'src/pages/DocsThemes.jsx',
-    context: /MockupRow|Revenue|Free forever|Free tier/,
-    why: 'Theme specimens. Each visual style is shown on a throwaway hero and a '
-      + 'throwaway revenue card so the treatment can be compared.',
-  },
+  // FOUR MORE ENTRIES CAME OFF for the same reason, on 2026-09-06:
+  // src/pages/DocsDesign.jsx, DocsMarketing.jsx, DocsSocial.jsx and
+  // DocsThemes.jsx. They were unrouted, unimported draft Learn pages — absent
+  // from every sourcemap in a production build — and the dead-source sweep
+  // deleted them. As with the two above, the removal did not have to be
+  // remembered: "no allowlist entry outlives the thing it excuses" went red on
+  // all four the moment the files went, which is the third time that assertion
+  // has paid for itself.
 ]
 
 // ── The allowed amounts, computed from the ladder ────────────────────────────
@@ -340,7 +324,16 @@ test('the scan sees a real population, so it cannot pass by finding nothing', ()
   const { files, occurrences } = scan()
   assert.ok(files.length >= 150,
     `expected to walk the whole of src/, found only ${files.length} files`)
-  assert.ok(occurrences.length >= 30,
+  // 30 → 20 on 2026-09-06, and the reason matters more than the number. The
+  // dead-source sweep deleted four unrouted Learn drafts whose mock-ups held 22
+  // fake amounts, so the RAW population fell 51 → 29 and the old floor failed on
+  // a tree that had lost no coverage at all. Measured either side, with the same
+  // allowlist: files 300 → 283, occurrences 51 → 29, CHECKED 10 → 10. The
+  // unchanged number is the one that matters — every price this guard actually
+  // compares against the ladder is still here; what left was allowlisted mock
+  // money in files nothing could render. The floor below is re-set against 29
+  // with headroom, and `checked >= 6` underneath is untouched.
+  assert.ok(occurrences.length >= 20,
     `expected src/ to be full of price-shaped strings, found only ${occurrences.length}`)
 
   // The stronger half of the bound: prices that were actually COMPARED, rather

@@ -103,7 +103,7 @@ test('the nav no longer advertises Curated Resources as Soon', () => {
 test('every external link on the Curated Resources page carries the full rel', async () => {
   // Curated URLs are third-party. noopener/noreferrer closes the opener channel;
   // nofollow is the convention this app already applies to curated and
-  // member-submitted outbound links (AppFooter, DiscoverCard, CommunityCard).
+  // member-submitted outbound links (AppFooter, CommunityCard).
   const src = await page('../../src/pages/CuratedResources.jsx')
   const anchors = src.match(/<a\b[\s\S]*?>/g) || []
   assert.ok(anchors.length > 0, 'expected at least one raw anchor')
