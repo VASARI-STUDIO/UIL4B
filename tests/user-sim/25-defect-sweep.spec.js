@@ -288,9 +288,22 @@ const COLLAPSED_WIDTHS = [768, 834]
 // /discover/palettes and /create/font-gallery are here for the reason the list above is
 // wider than the audit: the tray is shared CSS, and a fix measured on one
 // consumer has already been shown to leave another broken.
+//
+// [path, box, item, expandedRows, expandedChips, onlyWidths, collapsedTriggers]
+//
+// The last field exists because a surface's EXPANDED tray count and its
+// COLLAPSED trigger count stopped being the same number on 2026-09-07. It
+// defaults to `expandedRows`, so every row that was correct before still is.
 const FILTER_TRAYS = [
   ['/discover/gradients', '.lbry-filters', '.lbry-filter', 2, 12],
-  ['/discover/palettes', '.lbry-filters', '.lbry-filter', 1, 6],
+  // TWO GROUPS since 2026-09-07, with two different shapes on purpose.
+  // Collection (All palettes / Curated / Brand) is the page's primary split and
+  // stays a visible segmented row — that is the one expanded tray with 3 chips
+  // measured here. Mood is a nine-value facet and is a labelled menu at EVERY
+  // width, so it contributes a trigger and no chip row: nine chips took the
+  // sticky toolbar to 314px at 320px wide and wrapped it to two rows at 1280.
+  // The two together are the two triggers the collapsed test below counts.
+  ['/discover/palettes', '.lbry-filters', '.lbry-filter', 1, 3, null, 2],
   ['/create/font-gallery', '.lbry-filters', '.lbry-filter', 2, 8],
   // The two Create libraries the founder asked to match the galleries. Emoji
   // carries the widest tray in the app — 12 categories — which is what makes it
@@ -444,7 +457,10 @@ test('S4 · the Icon and Emoji toolbars are the same height on a desktop, and th
 test('S4 · in the 641–980 band each Library filter collapses to a trigger that names its selection, and every option is inside the menu', async ({ browser }) => {
   budget(FILTER_TRAYS.length * COLLAPSED_WIDTHS.length)
   const damage = []
-  for (const [path, , , groups] of FILTER_TRAYS) {
+  for (const [path, , , groups, , , collapsedTriggers] of FILTER_TRAYS) {
+    // A surface whose groups do not all have an expanded form states its
+    // trigger count explicitly; everywhere else the two numbers agree.
+    const expectedTriggers = collapsedTriggers ?? groups
     for (const w of COLLAPSED_WIDTHS) {
       // Wait on the TOOLBAR, not on the trigger. Waiting on the thing under
       // test turns "the collapse did not happen" into a 15s timeout with no
@@ -454,8 +470,8 @@ test('S4 · in the 641–980 band each Library filter collapses to a trigger tha
 
       const triggers = page.locator('.lbry-filtertrig')
       const found = await triggers.count()
-      if (found !== groups) {
-        damage.push(`${path} @${w}px: expected ${groups} collapsed filter trigger(s), found ${found}`)
+      if (found !== expectedTriggers) {
+        damage.push(`${path} @${w}px: expected ${expectedTriggers} collapsed filter trigger(s), found ${found}`)
         await ctx.close()
         continue
       }

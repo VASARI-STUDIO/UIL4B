@@ -161,6 +161,25 @@ export default function LibraryFilterGroup({
   // The option that means "no filter". Only consulted in multiSelect mode.
   resetId = 'all',
   hint,
+  // ── OPT IN TO THE MENU AT EVERY WIDTH ──────────────────────────────
+  //
+  // For a group with too many options to ever be a row of chips. The Palette
+  // Library's eight moods are the first: MEASURED before this existed, the tray
+  // took the sticky toolbar to 314px at 320px wide and 273px at 390px — more
+  // than half a small phone's viewport, permanently on screen — and on desktop
+  // it wrapped the toolbar to two rows at 1280px while fitting at 1366 and
+  // above, so the page changed height between two ordinary laptop sizes.
+  //
+  // The measured `overflows` path below cannot fix either case. It is switched
+  // off under 641px by design (#298), and above the band it is deliberately
+  // blind to sibling groups (see the oscillation note) — which is exactly what
+  // let 627px of mood tray sit down beside 223px of collection tray at 1280.
+  //
+  // So this is a decision about the OPTIONS rather than about a viewport, taken
+  // once at the call site: nine options is a menu everywhere, not a row of chips
+  // that is a row of chips at some widths. That also removes the shape change
+  // itself, which is the fault #323 was fixing when it collapsed the emoji tray.
+  alwaysCollapsed = false,
 }) {
   const trayRef = useRef(null)
   // The wrapper that exists in BOTH forms, so the column can be measured while
@@ -172,7 +191,7 @@ export default function LibraryFilterGroup({
   const intrinsicRef = useRef({ options: null, width: 0 })
   const narrowBand = useMediaQuery(COLLAPSE_QUERY)
   const [overflows, setOverflows] = useState(false)
-  const collapsed = narrowBand || overflows
+  const collapsed = alwaysCollapsed || narrowBand || overflows
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
   const { triggerRef, popRef } = usePopover(open, close, { arrowNav: true })

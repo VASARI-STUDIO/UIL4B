@@ -14,7 +14,13 @@ import { go, restingScrollY, watch } from './helpers.js'
 
 const ROUTE = '/discover/palettes'
 const HEAD = '.pgl-section-head'
-const TRAY = '[aria-label^="Filter palettes"]'
+// Two trays since 2026-09-07: WHERE a palette came from and WHAT it feels like
+// are separate questions now, so a mood no longer clears the collection. The
+// assertions below are unchanged in substance — the Dark step just presses the
+// chip where Dark now lives, and resets the collection first so it is testing
+// Dark rather than Curated-and-Dark.
+const TRAY = '[aria-label^="Filter palettes by collection"]'
+const MOOD_TRAY = '[aria-label^="Filter palettes by mood"]'
 
 const headings = (page) => page.locator(`${HEAD} h3`).allTextContents()
 
@@ -144,7 +150,10 @@ test.describe('palette library sections', () => {
     // groups — measured: Dark matches 3 brand and 24 curated. Labelling that
     // "Curated collection", as the page did, was simply false, and the flat
     // grid meant there was no heading under it to disagree.
-    await page.locator(TRAY).getByRole('button', { name: 'Dark', exact: true }).click()
+    await page.locator(TRAY).getByRole('button', { name: 'All palettes', exact: true }).click()
+    // Mood is a menu (nine options), so the chip has to be opened to first.
+    await page.locator('.pgl-toolbar .lbry-filtertrig:has(.lbry-filtertrig-k:text-is("Mood"))').click()
+    await page.locator(MOOD_TRAY).getByRole('button', { name: 'Dark', exact: true }).click()
     await expect(page.locator('.pgal-card[data-kind="brand"]').first()).toBeVisible()
     await expect(page.locator('.pgal-card[data-kind="curated"]').first()).toBeVisible()
     await expect(eyebrow).not.toHaveText(/curated collection|brand systems/i)
