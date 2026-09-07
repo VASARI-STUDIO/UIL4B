@@ -637,8 +637,14 @@ test('the beta label is a word, not a decoration', () => {
   for (const banned of ['gradient', 'blur', 'shadow', 'animation', 'filter']) {
     assert.ok(!badge[1].includes(banned), `.beta-badge uses ${banned} — the word is the whole treatment`)
   }
-  for (const sparkle of ['✨', '⭐', 'sparkle', 'magic', 'AI magic']) {
-    assert.ok(!PAGE.includes(sparkle), `BrandStarter.jsx ships "${sparkle}"`)
+  // Comments stripped, and this one was caught in the act: the page's own note
+  // explaining the rule says "no sparkle, no shimmer, no gradient", so a raw
+  // scan failed on the prose that describes the prohibition. The rule is about
+  // what SHIPS to a user. (The inverse of the same hazard is why
+  // plans-truth.test.js strips comments too — there, prose naming a retired
+  // figure would have made the guard pass while the claim was live.)
+  for (const sparkle of ['✨', '⭐', 'sparkle', 'shimmer', 'magic']) {
+    assert.ok(!PAGE_CODE.includes(sparkle), `BrandStarter.jsx ships "${sparkle}"`)
   }
   assert.match(PAGE_CODE, />Beta<\/span>/, 'the beta badge no longer renders on the tool')
 })
