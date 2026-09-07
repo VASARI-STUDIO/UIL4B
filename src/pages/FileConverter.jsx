@@ -11,11 +11,6 @@ import {
   draftToConverterSettings,
   readImageHandoff,
 } from '../utils/imageHandoff'
-// Self-hosted ffmpeg core (single-threaded). Vite emits these as fingerprinted,
-// same-origin assets — no third-party CDN. `?url` yields just the asset URL, so
-// the ~32 MB wasm is only fetched when a conversion actually runs, not on load.
-import ffmpegCoreURL from '@ffmpeg/core?url'
-import ffmpegWasmURL from '@ffmpeg/core/wasm?url'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MODES = [
@@ -63,10 +58,66 @@ const MAX_CANVAS_DIM = 16384
 // the item instead so the batch — and the UI — always finishes.
 const ENCODE_TIMEOUT_MS = 30000
 
-// ffmpeg.wasm is loaded from bundled npm packages (single-threaded core; works
-// without cross-origin isolation). Core asset URLs are imported at the top of
-// this file; the FFmpeg class + util are dynamically imported in getFfmpeg so
-// their code only loads when a video conversion is first used.
+// ── The ffmpeg.wasm engine, and why it is NOT served from uil4b.com ──────────
+//
+// THE BILL THAT PAID FOR THIS. The core is 32,129,114 bytes of WebAssembly. It
+// used to be imported here as `@ffmpeg/core?url`, which made Vite emit it into
+// `dist/assets/ffmpeg-core-<hash>.wasm` — one file that was 91% of the entire
+// deployable byte-mass (dist/assets was 35 MB; everything else in it is ~3 MB).
+// Vercel's Hobby plan allows 10 GB/month of FAST ORIGIN TRANSFER — bytes served
+// from the origin rather than from an edge cache — and the project hit it. The
+// mechanism is the content hash: every deploy renames the file, so the warm
+// copy in every edge region is discarded and the next visitor in each region
+// pulls the whole thing from origin again.
+//
+// How much that costs per miss depends on whether the edge compresses wasm,
+// which is NOT something this repo can verify from here — production is not
+// reachable from the sandbox. The measurable bracket: 32,129,114 bytes
+// uncompressed, and 9,260,281 bytes when a host does compress it (measured
+// against jsDelivr in Chromium, which served exactly those two numbers). So
+// somewhere between about 300 and 1,100 region-first-hits spends the whole
+// month, from one file, with ~80 undeployed merges queued behind it. The
+// bracket does not change the decision: after this, the number is zero.
+//
+// SO THE ENGINE IS FETCHED FROM jsDelivr, PINNED TO AN EXACT VERSION. These are
+// the same bytes the npm package ships, and that is measured rather than
+// assumed — both files were downloaded on 2026-09-06 and hashed against
+// node_modules/@ffmpeg/core/dist/esm, which is why the suite can fulfil these
+// URLs from the local copy and still be testing the real thing:
+//   ffmpeg-core.js   sha256 c972f5abeafcd5f3949e54edfbdc74a9badb27025809feb1945d468ffbcfb7f1
+//   ffmpeg-core.wasm sha256 2390efa7fb66e7e42dbae15427571a5ffc96b829480904c30f471f0a78967f61
+// jsDelivr serves them with `access-control-allow-origin: *` and `immutable`
+// caching, so `toBlobURL` below can read them cross-origin and the browser
+// keeps them for a year.
+//
+// WHY A PINNED VERSION AND NOT A RANGE. `@ffmpeg/core@0.12.6` names one
+// immutable artifact. A floating tag (`@latest`, `@0.12`) would let a
+// third party change the engine underneath a shipped build with no review, and
+// jsDelivr could not mark it immutable. tests/unit/ffmpeg-core-off-origin.test.js
+// fails if this version and the installed @ffmpeg/core ever disagree.
+//
+// WHY NO SECOND CDN AS A FALLBACK. A mirror would be a code path that only
+// executes during someone else's outage — the kind that rots unnoticed and is
+// a second pinned version to keep in step. The honest failure is already built:
+// getFfmpeg throws, `engineState` goes to 'error', and the UI says the engine
+// failed and that the Image tab still works. Image conversion — the tab this
+// page opens on — is pure canvas and needs none of this.
+//
+// SINGLE-THREADED CORE, deliberately: `@ffmpeg/core` not `@ffmpeg/core-mt`. The
+// mt build needs SharedArrayBuffer and therefore COOP/COEP cross-origin
+// isolation headers. Measured in Chromium against the built site on
+// 2026-09-06: `crossOriginIsolated` is false and `SharedArrayBuffer` is
+// undefined, because vercel.json sets neither header. The mt core would not
+// run here; this one does, and needs no header work at all.
+//
+// LOADED ONLY ON CONVERT, NEVER ON PAGE OPEN. These are plain strings; the
+// FFmpeg class and util are dynamic imports inside getFfmpeg, which only runs
+// when someone presses Convert. A visitor who opens the converter — or the
+// homepage workbench, which mounts the same image panel — downloads none of it.
+const FFMPEG_CORE_VERSION = '0.12.6'
+const FFMPEG_CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`
+const ffmpegCoreURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.js`
+const ffmpegWasmURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatBytes(b) {
@@ -229,8 +280,10 @@ export default function FileConverter({ toast }) {
         </h1>
         <p>
           Convert images between PNG, JPEG, WebP, AVIF and favicon ICO, turn short
-          videos into GIFs, or extract video frames — all in your browser. Image
-          conversion is fully offline; video tools load a converter engine on demand.
+          videos into GIFs, or extract video frames — all in your browser; your
+          files are never uploaded. Image conversion is fully offline. The video
+          tools download a converter engine — about 9 MB — from a public code
+          CDN the first time you use one, then keep it cached.
         </p>
       </div>
 
@@ -683,7 +736,11 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   )
 }
 
-// ── ffmpeg loader (shared by GIF + Frames) ───────────────────────────────────
+// ── ffmpeg loader — Video → GIF is its ONLY caller ──────────────────────────
+// The header used to say "shared by GIF + Frames". It is not: Video → Frames
+// seeks a <video> element and paints each frame to a canvas (see `extract`
+// below), and never touches ffmpeg. Worth stating, because it is the reason
+// only one mode of four pays the engine download at all.
 let ffmpegInstance = null
 let ffmpegLoadPromise = null
 
@@ -768,7 +825,7 @@ function VideoToGif({ toast }) {
     setResult(null)
     let ffmpeg
     try {
-      if (!ffmpegInstance) { setEngineState('loading'); setProgress('Loading converter engine… (~30 MB, first run only)') }
+      if (!ffmpegInstance) { setEngineState('loading'); setProgress('Loading converter engine… (about 9 MB, first run only)') }
       ffmpeg = await getFfmpeg()
       setEngineState('ready')
     } catch {
