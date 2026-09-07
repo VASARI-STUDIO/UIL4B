@@ -356,7 +356,17 @@ export default function Home() {
         <HomeHeroDirections toolCount={LIVE_TOOL_COUNT}>
         <header className="home-hero">
           <div className="home-hero-core">
-            <p className="home-hero-kicker">UI system toolkit</p>
+            {/* THE "UI system toolkit" KICKER IS GONE, and nothing takes its
+                slot. Founder, 2026-09-07: the tagline "all over the place is a
+                huge AI Slop feature". A category label floating above a headline
+                that already names the category is a second label for the same
+                thing — the same reasoning that retired the bracketed eyebrows
+                (#382, #391, #398) and the stat line. Writing a better kicker
+                here would rebuild the feature he named, so the answer is empty.
+
+                og-cards.mjs read this element and threw when it moved; it now
+                treats the kicker as optional and omits the card's eyebrow band
+                when there is none. Regenerate with `npm run og:cards`. */}
 
             {/* The mark lands on "one system", which is the actual claim and the
                 one a visitor can check: the same values move between tools.
@@ -424,7 +434,21 @@ export default function Home() {
               <a className="ui-pill ui-pill-quiet ui-pill-lg" href="#workbench">See it working</a>
             </div>
 
-            <p className="home-hero-hint">Free to use. No card.</p>
+            {/* "No card." IS GONE — founder, 2026-09-07, on the payment
+                reassurance being "all over the place". It was a whole sentence
+                that was only that claim, so the sentence goes rather than being
+                reworded into a fresh one in the same slot.
+
+                WHAT SURVIVES IS ONE CLAUSE, AND IT IS OPEN. "Free to use." is
+                not the string he named and it is not a payment reassurance, so
+                deleting it too would be this agent extending his instruction.
+                But it does sit in the same micro-line slot, under the buttons,
+                where anti-slop-and-hero-2026-08.md's tell 8 already flagged the
+                page for reassuring three times — and the CTA beside it says
+                "Start building free", which is the same fact. Whether the line
+                stays at all is his call, raised in the PR rather than settled
+                here. */}
+            <p className="home-hero-hint">Free to use.</p>
           </div>
         </header>
         </HomeHeroDirections>
@@ -475,7 +499,7 @@ export default function Home() {
                     converted here"; Icon: "Nothing here saves to My Icons…";
                     Typography: "It does not save a font kit"; Palette: the
                     Generate note). Gradient stages no state to save.
-                  · "no account" → the hero's "Free to use. No card." above, and
+                  · "no account" → the hero's "Free to use." above, and
                     Palette's "on the free Auto system" below.
                   · "names where it hands off" → every `.hw-foot` does exactly
                     this, in the sentence next to the button it describes.
@@ -735,7 +759,7 @@ export default function Home() {
                   Pro from <span className="hprice-hi">{CHEAPEST.perMonthLabel}/month</span>.
                 </h2>
                 <p className="hprice-lede">
-                  Free covers the complete core toolkit with no card and no trial clock. Pro
+                  Free covers the complete core toolkit with no trial clock. Pro
                   raises the AI limits and unlocks saved projects, exports and submissions.
                 </p>
                 <ul className="hprice-includes">
@@ -786,7 +810,7 @@ export default function Home() {
           description="Build a coherent UI system in one place, then take it straight into production."
           secondaryLabel="See our plans"
           secondaryTo="/plans"
-          hint="No credit card · Upgrade only when you're ready"
+          hint="Upgrade only when you're ready"
         />
       </main>
     </div>

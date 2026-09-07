@@ -108,8 +108,15 @@ export async function readTokens() {
 export async function readHero() {
   const src = await readFile(path.join(root, 'src', 'pages', 'Home.jsx'), 'utf8')
 
+  // THE KICKER IS OPTIONAL, AND ITS ABSENCE IS THE NORMAL CASE since
+  // 2026-09-07 — the founder removed the "UI system toolkit" tagline from
+  // the hero and asked that nothing replace it. This used to throw, which
+  // was right while the element was load-bearing: a card that silently lost
+  // its eyebrow would have been a hole. Now a missing kicker is a DECISION,
+  // so the card drops the eyebrow band with it rather than inventing a
+  // stand-in. The h1 and sub below still throw, because those moving IS
+  // still a break.
   const kicker = src.match(/<p className="home-hero-kicker">([^<]+)<\/p>/)
-  if (!kicker) throw new Error('og-cards: the homepage kicker has moved')
 
   const h1 = src.match(/<h1 className="home-hero-h1">([\s\S]*?)<\/h1>/)
   if (!h1) throw new Error('og-cards: the homepage h1 has moved')
@@ -141,7 +148,7 @@ export async function readHero() {
   }
 
   return {
-    kicker: tidy(kicker[1]).trim(),
+    kicker: kicker ? tidy(kicker[1]).trim() : null,
     headline,
     // First sentence only. The full sub is two sentences and the second
     // ("Nothing to install.") is a detail the card has no room for; the card
@@ -285,7 +292,7 @@ h1 mark{background:${tokens.hi};color:${tokens.hiFg};border-radius:6px;
     <span class="mark">UI<span>L4B</span></span>
   </div>
   <div>
-    <div class="eyebrow">${hero.kicker}</div>
+    ${hero.kicker ? `<div class="eyebrow">${hero.kicker}</div>` : ''}
     <h1>${headline}</h1>
     <p class="blurb">${hero.sub}</p>
   </div>

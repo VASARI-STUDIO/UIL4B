@@ -85,8 +85,12 @@ export default function HomeHeroDirections({ toolCount, children }) {
             {toolCount} tools for colour, type, icons and images.
           </h1>
           <SearchBar />
+          {/* The payment clause that opened this line is gone (founder,
+              2026-09-07). "Or …" was a continuation of it, so the sentence is
+              reread rather than left dangling: the link is now the whole line,
+              which is what it always was for. */}
           <p className="hero-a-under">
-            Free to use, no card. Or <Link to="/create/palette">open the palette builder</Link>.
+            <Link to="/create/palette">Open the palette builder</Link>.
           </p>
         </div>
       )}
@@ -154,7 +158,7 @@ export default function HomeHeroDirections({ toolCount, children }) {
           </h1>
           <SearchBar />
           <p className="hero-a-under">
-            <Link to="/login?signup=1">Start building free</Link> · free to use, no card.
+            <Link to="/login?signup=1">Start building free</Link>
           </p>
         </div>
       )}

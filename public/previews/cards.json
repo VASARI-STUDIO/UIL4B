@@ -16,7 +16,7 @@
     "ink": "#0F0F10"
   },
   "hero": {
-    "kicker": "UI system toolkit",
+    "kicker": null,
     "headline": [
       {
         "text": " Colour, type and icons that stay ",
