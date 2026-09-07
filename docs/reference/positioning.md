@@ -13,6 +13,48 @@ validate, and export interface foundations without tab-hopping.**
 That sentence is canonical. The homepage hero may express it in punchier
 marketing language, but it must not contradict it.
 
+## The founder's value proposition — his words, 2026-09-07
+
+These four sentences are the canonical statement of what UIL4B is for. They
+are the **founder's own words**, given on 2026-09-07. The only edits applied
+are the two a proofreader would make — `your` → `you're`, and sentence case
+with a closing full stop. Nothing is tightened, re-ordered or paraphrased.
+
+| id | Line |
+|---|---|
+| `forget-the-app-name` | No more trying to remember the name of the specific app for the tool you liked. |
+| `bookmark-folders` | Gone are the days of searching through bookmark folders upon bookmark folders to find each tool. |
+| `build-and-export` | Build and export UI and brand design kits and content for website building. |
+| `one-unified-location` | All the design tools you're constantly searching for, in one unified location. |
+
+**No surface types these.** `src/data/positioning.js` is the machine-readable
+copy and every sales surface derives from it —  the homepage hero sub-line,
+`/plans`'s framing line, `/help`'s opening, `public/llms.txt`'s summary and the
+share cards. `tests/unit/positioning-truth.test.js` fails the build if a
+surface states a competing value claim of its own.
+
+**Do not add a fifth line.** The array is a record of what the founder said,
+not a copy deck an agent tops up. A new claim needs him to make it.
+
+### The hero headline is assembled from two of them, and is NOT yet approved
+
+> **Build and export UI and brand design kits, _in one unified location_.**
+
+Every word traces to a line above: the lead is the verbatim head of
+`build-and-export`, the marked run is the verbatim tail of
+`one-unified-location`. The comma is punctuation. The founder chose "build one
+from my words only" over an agent draft; the line is **pending his yes or no**
+and is flagged as such in the PR that introduced it. If the answer is no, the
+replacement is another splice of these same sentences — not an agent sentence.
+
+### Relationship to the canonical one-liner above
+
+The operating-workspace sentence stays canonical for *strategy* — what the
+product is and how its surfaces are organised. These four are canonical for
+*what the product says to a visitor*. They do not contradict it: "one unified
+location" and "without tab-hopping" are the same claim, and "build and export
+UI and brand design kits" is the export-for-handoff outcome named in plainer
+words.
 ## Why the shift
 
 UIL4B was framed as "every design tool in one place" / "a free browser-based

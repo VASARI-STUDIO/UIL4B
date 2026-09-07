@@ -26,6 +26,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { markSvg } from './brand-mark.mjs'
 import { DEFAULT_CARD, SECTIONS, toolNamesFor } from './share-cards.mjs'
+// The share card says what the homepage says because BOTH read this module.
+// It used to scrape the rendered strings out of Home.jsx with three regexes;
+// the hero now renders those strings from positioning.js by id, so scraping
+// the JSX would have captured the expression, not the sentence. Importing the
+// source is strictly better than parsing its consumer.
+import { HERO_HEADLINE, SURFACE_LINE, line } from '../src/data/positioning.js'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const out = path.join(root, 'public', 'previews')
@@ -106,47 +112,39 @@ export async function readTokens() {
  * producing a card with a hole in it.
  */
 export async function readHero() {
-  const src = await readFile(path.join(root, 'src', 'pages', 'Home.jsx'), 'utf8')
+  // NOTHING IS PARSED OUT OF Home.jsx ANY MORE.
+  //
+  // The kicker this function used to read is gone for good — the founder
+  // removed the "UI system toolkit" tagline on 2026-09-07 and asked that
+  // nothing replace it, so the card drops its eyebrow band rather than
+  // inventing a stand-in. `kicker: null` is the permanent, correct answer and
+  // renderCard() omits the element when it sees one.
+  //
+  // The headline and sub come from src/data/positioning.js, which is the same
+  // module the hero renders from. The old contract — 'the card cannot claim
+  // something the homepage does not say' — is now structural rather than
+  // enforced by a regex that threw: there is one string and two consumers.
+  const headline = [
+    // The trailing space is LOAD-BEARING: the card concatenates its runs into
+    // one line, so without it the PNG reads "…design kits,in one unified
+    // location". The hero itself does not need it — there the two runs are
+    // separate .home-hero-line blocks.
+    { text: `${HERO_HEADLINE.lead} `, hi: false },
+    { text: HERO_HEADLINE.mark, hi: true },
+    { text: HERO_HEADLINE.tail, hi: false },
+  ].filter((r) => r.text.trim() !== '')
 
-  const kicker = src.match(/<p className="home-hero-kicker">([^<]+)<\/p>/)
-  if (!kicker) throw new Error('og-cards: the homepage kicker has moved')
-
-  const h1 = src.match(/<h1 className="home-hero-h1">([\s\S]*?)<\/h1>/)
-  if (!h1) throw new Error('og-cards: the homepage h1 has moved')
-
-  const sub = src.match(/<p className="home-hero-sub">([\s\S]*?)<\/p>/)
-  if (!sub) throw new Error('og-cards: the homepage sub has moved')
-
-  // The h1 is two wrapper spans around the words, with a <mark> on the phrase
-  // the page highlights. Drop the wrappers, keep the mark as a flagged run so
-  // the card can paint the same highlight the page does.
-  const runs = []
-  let rest = h1[1].replace(/<\/?span[^>]*>/g, '')
-  const markRe = /<mark[^>]*>([\s\S]*?)<\/mark>/g
-  let at = 0
-  let m
-  while ((m = markRe.exec(rest)) !== null) {
-    runs.push({ text: rest.slice(at, m.index), hi: false })
-    runs.push({ text: m[1], hi: true })
-    at = m.index + m[0].length
-  }
-  runs.push({ text: rest.slice(at), hi: false })
-
-  const tidy = (s) => s.replace(/\s+/g, ' ')
-  const headline = runs
-    .map((r) => ({ text: tidy(r.text), hi: r.hi }))
-    .filter((r) => r.text !== '')
+  // The mark is what makes the card the page's card and not a generic banner.
+  // Kept as a throw: if a future headline drops the highlight, the card's
+  // design has to be revisited rather than silently flattened.
   if (!headline.some((r) => r.hi)) {
-    throw new Error('og-cards: the homepage h1 no longer highlights a phrase')
+    throw new Error('og-cards: the hero headline no longer highlights a phrase')
   }
 
   return {
-    kicker: tidy(kicker[1]).trim(),
+    kicker: null,
     headline,
-    // First sentence only. The full sub is two sentences and the second
-    // ("Nothing to install.") is a detail the card has no room for; the card
-    // never says anything the page does not, but it need not say all of it.
-    sub: `${tidy(sub[1]).trim().split('. ')[0]}.`,
+    sub: line(SURFACE_LINE.homeHeroSub),
   }
 }
 
@@ -285,7 +283,7 @@ h1 mark{background:${tokens.hi};color:${tokens.hiFg};border-radius:6px;
     <span class="mark">UI<span>L4B</span></span>
   </div>
   <div>
-    <div class="eyebrow">${hero.kicker}</div>
+    ${hero.kicker ? `<div class="eyebrow">${hero.kicker}</div>` : ''}
     <h1>${headline}</h1>
     <p class="blurb">${hero.sub}</p>
   </div>
