@@ -2,20 +2,39 @@
 // HTML export is styled using the user's chosen palette + fonts as the
 // actual page styling so it serves as a live preview / brand reference.
 
-import { hexToRgb } from './colors'
+// Explicit extension so `node --test` can import this module directly for the
+// unit suite; Vite resolves it identically.
+import { hexToRgb, contrastRatio } from './colors.js'
 
-function lum(hex) {
+export const EXPORT_DARK_INK = '#0F172A'
+export const EXPORT_LIGHT_INK = '#F8FAFC'
+
+/**
+ * The ink for text painted ON a swatch in the exported style guide.
+ *
+ * MEASURED, NOT GUESSED. This was `lum(bg) > 0.5 ? dark : light`, and 0.5 is
+ * not the crossover: black and white are equally readable at relative
+ * luminance 0.179, so on every ground between 0.179 and 0.5 the rule chose the
+ * WORSE ink. Swept over the 6-level-per-channel grid (216 grounds) on
+ * 2026-09-06: 80 grounds got the lower-contrast pole, and 75 of them got an ink
+ * that FAILS AA while the other pole passes — #009900 took near-white at
+ * 3.61:1 when near-black clears 4.72:1. That is the same defect the Contrast
+ * Checker and HomeWorkbench were each fixed for (see nearestPassingLightness
+ * and textColorForBg in ./colors.js), surviving in the one module that writes
+ * a document a client is handed and keeps.
+ *
+ * For a mid-luminance chromatic fill there may be NO ink that clears 4.5:1;
+ * that is a property of the fill, and this still returns the better pole.
+ * tests/unit/export-builder-ink.test.js pins the sweep.
+ */
+export function contrastText(bg) {
   try {
-    const [r, g, b] = hexToRgb(hex)
-    const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
-    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+    return contrastRatio(EXPORT_DARK_INK, bg) >= contrastRatio(EXPORT_LIGHT_INK, bg)
+      ? EXPORT_DARK_INK
+      : EXPORT_LIGHT_INK
   } catch {
-    return 0.5
+    return EXPORT_DARK_INK
   }
-}
-
-function contrastText(bg) {
-  return lum(bg) > 0.5 ? '#0F172A' : '#F8FAFC'
 }
 
 function googleFontUrl(families) {
