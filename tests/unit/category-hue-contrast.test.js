@@ -26,6 +26,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { contrastRatio } from '../../src/utils/colors.js'
 
 const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8')
 // Comments first — this file's own prose, and the measurement tables in
@@ -64,18 +65,27 @@ const blankMediaBlocks = (css, opener) => {
 }
 const CSS = blankMediaBlocks(WITHOUT_COMMENTS, '@media (prefers-contrast')
 
-const srgb = (c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4)
-const lum = (hex) => {
-  const h = hex.replace('#', '')
-  return 0.2126 * srgb(parseInt(h.slice(0, 2), 16))
-    + 0.7152 * srgb(parseInt(h.slice(2, 4), 16))
-    + 0.0722 * srgb(parseInt(h.slice(4, 6), 16))
-}
-const ratio = (a, b) => {
-  const hi = Math.max(lum(a), lum(b))
-  const lo = Math.min(lum(a), lum(b))
-  return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100
-}
+// THE ARITHMETIC IS THE APP'S OWN, AND IT IS NOT ROUNDED.
+//
+// This file used to carry a private srgb/lum/ratio triple that ended
+// `Math.round(r * 100) / 100`. Two things were wrong with that.
+//
+// The rounding was the one that mattered. Rounding to two places BEFORE the
+// comparison hands the floor a free half-hundredth in both directions: a pair
+// measuring 4.4951:1 rounds to 4.5 and clears `>= AA`. So the assertion could
+// not fail on the near miss — which is precisely the defect a contrast floor
+// exists to catch, and precisely the band a hue nudge lands in. Round for the
+// MESSAGE (a failure quoting 4.49523:1 is unreadable), never for the compare.
+//
+// The second is that a test which reimplements the formula is only checking
+// its own copy of it. `contrastRatio` in src/utils/colors.js is what the
+// Contrast Checker, the palette engine and derivePreviewRoles all report to
+// the user; if the two ever disagreed, this file would happily certify a pair
+// the product itself calls a failure. preview-roles-contrast.test.js and
+// plans-truth.test.js already take that route.
+const ratio = (a, b) => contrastRatio(a, b)
+/** Two places, for humans reading a failure. Never fed back into a compare. */
+const show = (r) => Math.round(r * 100) / 100
 
 const HUES = ['--hue-colour', '--hue-type', '--hue-component', '--hue-imagery', '--hue-ai', '--hue-icons']
 const AA = 4.5
@@ -142,7 +152,7 @@ test('every category hue clears 4.5:1 on every ground it is painted on', () => {
     ]) {
       for (const g of grounds) {
         const r = ratio(value, g)
-        if (r < AA) failures.push(`  ${t} ${theme} ${value} on ${g} = ${r}:1 (needs ${AA})`)
+        if (r < AA) failures.push(`  ${t} ${theme} ${value} on ${g} = ${show(r)}:1 (needs ${AA})`)
       }
     }
   }
@@ -223,7 +233,7 @@ test('-strong clears AA on every ground under the largest tint the sheet paints'
           [`hover +${MAX_TINT * 100}%`, mixT(brand, hovered, MAX_TINT)],
         ]) {
           const r = ratio(ink, ground)
-          if (r < AA) failures.push(`  ${t}-strong ${theme} ${ink} on ${label} ${ground} = ${r}:1 (needs ${AA})`)
+          if (r < AA) failures.push(`  ${t}-strong ${theme} ${ink} on ${label} ${ground} = ${show(r)}:1 (needs ${AA})`)
         }
       }
     }
@@ -246,7 +256,7 @@ test('-strong is a genuine step away from the brand value, not a copy of it', ()
       const worstBrand = Math.min(...grounds.map((g) => ratio(brand, g)))
       const worstInk = Math.min(...grounds.map((g) => ratio(ink, g)))
       assert.ok(worstInk > worstBrand,
-        `${t} ${theme}: -strong ${ink} (${worstInk}) is not more readable than ${brand} (${worstBrand})`)
+        `${t} ${theme}: -strong ${ink} (${show(worstInk)}) is not more readable than ${brand} (${show(worstBrand)})`)
     }
   }
 })
@@ -294,6 +304,6 @@ test('--accent and --accent-strong still carry the roles the sheet documents', (
     `--accent ${light} now clears AA on white; the pair has collapsed`)
   for (const g of LIGHT_GROUNDS) {
     assert.ok(ratio(strong, g) >= AA,
-      `--accent-strong ${strong} is ${ratio(strong, g)}:1 on ${g} — it is the readable one`)
+      `--accent-strong ${strong} is ${show(ratio(strong, g))}:1 on ${g} — it is the readable one`)
   }
 })

@@ -24,22 +24,29 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { contrastRatio } from '../../src/utils/colors.js'
 
 const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8')
 const CSS = RAW.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
 
-const srgb = (c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4)
-const lum = (hex) => {
-  const h = hex.replace('#', '')
-  return 0.2126 * srgb(parseInt(h.slice(0, 2), 16))
-    + 0.7152 * srgb(parseInt(h.slice(2, 4), 16))
-    + 0.0722 * srgb(parseInt(h.slice(4, 6), 16))
-}
-const ratio = (a, b) => {
-  const hi = Math.max(lum(a), lum(b))
-  const lo = Math.min(lum(a), lum(b))
-  return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100
-}
+// THE ARITHMETIC IS THE APP'S OWN, AND IT IS NOT ROUNDED.
+//
+// This file used to carry a private srgb/lum/ratio triple ending
+// `Math.round(r * 100) / 100`. Rounding to two places BEFORE the comparison
+// hands every floor here a free half-hundredth, so a token measuring 6.9951:1
+// rounded to 7 and cleared AAA. That is worse in THIS file than in its
+// siblings: the whole point of `prefers-contrast: more` is that a visitor has
+// asked the OS for more headroom, so certifying a value that only reaches the
+// floor once it has been rounded up to it defeats the block's reason to exist.
+// Round for the MESSAGE, never for the compare.
+//
+// `contrastRatio` is imported rather than reimplemented because a test that
+// carries its own copy of the formula only ever checks that copy. It is the
+// same function the Contrast Checker reports to the user. Same route as
+// preview-roles-contrast.test.js and plans-truth.test.js.
+const ratio = (a, b) => contrastRatio(a, b)
+/** Two places, for humans reading a failure. Never fed back into a compare. */
+const show = (r) => Math.round(r * 100) / 100
 
 /** Brace-matched body of the first block matching `selector` after `from`. */
 const bodyAfter = (selector, from) => {
@@ -129,7 +136,7 @@ test('every token the block touches moves toward MORE contrast, never less', () 
       if (!value) { failures.push(`  ${theme} ${token} is not declared in the block`); continue }
       const worst = (v) => Math.min(...GROUNDS[theme].map((g) => ratio(v, g)))
       if (worst(value) <= worst(base)) {
-        failures.push(`  ${theme} ${token}: ${base} (${worst(base)}) -> ${value} (${worst(value)}) is not an improvement`)
+        failures.push(`  ${theme} ${token}: ${base} (${show(worst(base))}) -> ${value} (${show(worst(value))}) is not an improvement`)
       }
     }
   }
@@ -141,12 +148,12 @@ test('the text roles clear AAA and stay a ladder rather than collapsing', () => 
     const worst = (t) => Math.min(...GROUNDS[theme].map((g) => ratio(declared(theme, t), g)))
     const [t1, t2, t3] = ['--t1', '--t2', '--t3'].map(worst)
     for (const [name, r] of [['--t1', t1], ['--t2', t2], ['--t3', t3]]) {
-      assert.ok(r >= 7, `${theme} ${name} is ${r}:1 under prefers-contrast; AAA body text is 7:1`)
+      assert.ok(r >= 7, `${theme} ${name} is ${show(r)}:1 under prefers-contrast; AAA body text is 7:1`)
     }
     // Solving every role to 7 flat collapses all three onto one value in light.
     // The preference is about legibility, not about deleting the hierarchy.
     assert.ok(t1 > t2 && t2 > t3,
-      `${theme} text roles are no longer a ladder (${t1} / ${t2} / ${t3}). Grade the\n`
+      `${theme} text roles are no longer a ladder (${show(t1)} / ${show(t2)} / ${show(t3)}). Grade the\n`
       + 'targets (9 / 8 / 7) rather than solving each one to the same floor.')
   }
 })
@@ -155,9 +162,9 @@ test('borders reach the 1.4.11 non-text floor, and hover stays distinct from res
   for (const theme of ['light', 'dark']) {
     const worst = (t) => Math.min(...GROUNDS[theme].map((g) => ratio(declared(theme, t), g)))
     assert.ok(worst('--border') >= 3,
-      `${theme} --border is ${worst('--border')}:1 under prefers-contrast; 1.4.11 asks 3:1`)
+      `${theme} --border is ${show(worst('--border'))}:1 under prefers-contrast; 1.4.11 asks 3:1`)
     assert.ok(worst('--bh') >= 4.5,
-      `${theme} --bh is ${worst('--bh')}:1; at 3:1 it solves to the same value as --border\n`
+      `${theme} --bh is ${show(worst('--bh'))}:1; at 3:1 it solves to the same value as --border\n`
       + 'and hover stops being visible as a change')
   }
 })
@@ -168,7 +175,7 @@ test('the accent pair is lifted per theme, not swapped blind', () => {
     for (const token of ['--accent', '--accent-strong']) {
       const worst = Math.min(...GROUNDS[theme].map((g) => ratio(declared(theme, token), g)))
       assert.ok(worst >= 7,
-        `${theme} ${token} is ${worst}:1 under prefers-contrast, under the 7:1 aimed for here`)
+        `${theme} ${token} is ${show(worst)}:1 under prefers-contrast, under the 7:1 aimed for here`)
     }
   }
   // In DARK, --accent (#6FA8FF, 6.54) is stronger than --accent-strong (#4A90FF,
