@@ -48,3 +48,32 @@ export const DEFAULT_DESIGN = {
     bodySpacing: 0,
   },
 }
+
+/**
+ * The tint configuration the Colour Studio builds out of a project's saved tint
+ * settings — the shape of the `tintScale` memo in src/pages/ColorStudio.jsx.
+ *
+ * DERIVED HERE RATHER THAN COPIED AT THE CALL SITE for the same reason the rest
+ * of this file exists: /help renders the ramp a brand-new project generates, and
+ * the only way that strip can stay true is if it is built from the same object
+ * the studio is built from. A hard-coded copy would go on rendering the old ramp
+ * on the day the defaults change, and nothing would fail.
+ *
+ * `anchor: 5` is the 500 stop — the position in the eleven-stop ladder that
+ * holds the base colour unchanged — and `hueShift: 0` means the ramp does not
+ * drift in hue. Both are fixed in ColorStudio too; only the three project
+ * settings vary.
+ */
+export function tintConfigFor(design = DEFAULT_DESIGN) {
+  const { lumBias, satDecay, oled } = design.tints
+  return {
+    hex: design.palette.base,
+    anchor: 5,
+    hueShift: 0,
+    satMin: -satDecay,
+    satMax: satDecay / 2,
+    lMin: oled ? 3 : 5,
+    lMax: lumBias,
+    mode: 'perceived',
+  }
+}

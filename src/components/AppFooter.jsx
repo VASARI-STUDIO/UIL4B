@@ -40,6 +40,7 @@ const FOOTER_GROUPS = [
     links: [
       ['/discover', 'Discover'],
       ['/learn', 'Learn'],
+      ['/principles', 'Design principles'],
       ['/plans', 'Plans'],
       ['/sitemap', 'Sitemap'],
     ],

@@ -323,20 +323,36 @@ test('NO INVENTED STRUCTURED DATA: no shell claims a rating, a review or stock',
 test('NO FAQPage on /help, and the built shell proves it', {
   skip: !built && 'run `npm run build` first',
 }, () => {
-  // /help does hold genuine Q&A. It still gets no FAQPage, for two independent
-  // reasons recorded in scripts/route-schema.mjs: Google restricted FAQ rich
-  // results to authoritative government and health sites in 2023, so it earns
-  // nothing here; and the answers live behind a tab that is conditionally
-  // rendered, so they are not in the DOM — and certainly not in a prerendered
-  // shell, which contains no React output at all. Marking up content the page
-  // does not show is what the guidelines prohibit.
-  assert.ok(!read('dist/help/index.html').includes('FAQPage'),
-    'the /help shell claims a FAQPage it does not render')
-  // The conditional render, quoted so the reason above stays checkable.
-  assert.match(read('src/pages/HelpCentre.jsx'), /\{tab === 'faq' && <FAQTab \/>\}/,
-    'HelpCentre.jsx no longer renders its FAQ conditionally — if the answers are '
-    + 'now in the DOM on load, revisit the FAQPage decision in route-schema.mjs '
-    + '(the Google restriction is still the stronger of the two reasons)')
+  // /help does hold genuine Q&A. It still gets no FAQPage, and since 2026-09-06
+  // it rests on ONE reason rather than two — see scripts/route-schema.mjs.
+  // Google restricted FAQ rich results to authoritative government and health
+  // sites in 2023, so the markup earns nothing here and carries a policy risk.
+  //
+  // THE SECOND REASON IS GONE AND THIS TEST CHANGED WITH IT. It used to quote
+  // `{tab === 'faq' && <FAQTab />}` to keep "the answers are not in the DOM"
+  // checkable. /help is no longer a tabbed document: HELP_ANSWERS renders
+  // unconditionally. Asserting the old conditional would now be asserting that
+  // a page stays worse so a comment can stay true, so what is pinned instead is
+  // the pair of facts that are actually load-bearing today — the answers ARE
+  // rendered on load, and no shell claims a FAQPage anyway.
+  const help = read('src/pages/HelpCentre.jsx')
+  assert.match(help, /HELP_ANSWERS\.map\(/,
+    'HelpCentre.jsx no longer renders the answers from HELP_ANSWERS')
+  assert.ok(!/tab === 'faq'/.test(help),
+    'the FAQ is behind a tab again — reason 2 in route-schema.mjs was retired on the '
+    + 'basis that it is not, so restore that reason or restore this render')
+
+  // Not just /help: no shell anywhere may claim a FAQPage. The old assertion
+  // read one file, so a FAQPage emitted onto every route would have passed
+  // everywhere except the one page it was written about.
+  const shells = ['dist/index.html', 'dist/404.html',
+    ...prerenderRoutes().map((r) => `dist${r}/index.html`)]
+  let checked = 0
+  for (const shell of shells) {
+    assert.ok(!read(shell).includes('FAQPage'), `${shell} claims a FAQPage it does not render`)
+    checked += 1
+  }
+  assert.ok(checked >= 25, `only read ${checked} shells — this passed by finding nothing`)
 })
 
 test('the built shells carry the images and the breadcrumbs', {
