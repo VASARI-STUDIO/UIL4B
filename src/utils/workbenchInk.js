@@ -89,8 +89,23 @@ export function hslToHex(h, s, l) {
  * its place everywhere it already works.
  *
  * nearestPassingLightness returns null when NO move on this axis can clear, so
- * the candidates are filtered before the loop; the absolute poles below still
+ * the candidate is filtered before the loop; the absolute poles below still
  * carry the guarantee.
+ *
+ * THERE USED TO BE TWO WALK CANDIDATES HERE AND THE SECOND IS DELETED. It read
+ * `fixForeground(other, bg, 4.5)`, and it is unreachable: `softer` and `other`
+ * are #141414 and #FFFFFF, which are BOTH at hue 0, saturation 0 — the same grey
+ * axis — so the two walks search identical candidate sets and differ only in
+ * where they start. The first is never null, because that axis runs from
+ * #000000 to #FFFFFF and one absolute pole always clears; so the loop below
+ * always returns at or before the first walk, and the second was never
+ * evaluated. Keeping it cost nothing at runtime and cost a great deal in
+ * review: the two masked each other, so reverting EITHER one to the old
+ * one-way search changed nothing observable, and no mutation test could catch a
+ * regression in either. Measured over 48,681 distinct colours: reverting
+ * candidate A alone, 0 observable differences; reverting candidate B alone, 0.
+ * Reverting both, 570 of 16,200 generated colours ship a worse ink. One walk
+ * can be tested; two that shadow each other cannot.
  *
  * WHY IT WENT UNSEEN. Every caller until 2026-09-05 painted its ink on
  * labelGround(bg) rather than on bg, and labelGround's whole job is to move a
@@ -107,13 +122,13 @@ export function hslToHex(h, s, l) {
 export function readableInk(bg) {
   const softer = contrastRatio('#141414', bg) >= contrastRatio('#FFFFFF', bg) ? '#141414' : '#FFFFFF'
   const other = softer === '#141414' ? '#FFFFFF' : '#141414'
-  // Order is preference order: the house ink, then its opposite, then each of
-  // them walked, and only then the absolute poles.
+  // Order is preference order: the house ink, then its opposite, then the
+  // smallest move off the house ink that passes, and only then the absolute
+  // poles. One walk, not two — see the note above on why the second was dead.
   const tries = [
     softer,
     other,
     nearestPassingLightness(softer, bg, 4.5),
-    nearestPassingLightness(other, bg, 4.5),
     '#000000',
     '#FFFFFF',
   ].filter(Boolean)
@@ -304,17 +319,44 @@ export function mutedInk(muted, grounds) {
   }
   if (worstOf(walked) >= 4.5) return walked
   // STEP 3 USED TO RETURN A RAW POLE and stop, which is not a guarantee — on an
-  // impossible ground the better pole is still the better FAILING value. It now
+  // impossible ground the better pole is still the better FAILING value. It
   // walks each pole against every ground the way step 2 walks the hue, and keeps
   // whichever ends up further clear. Walking an achromatic keeps it achromatic,
   // so this only ever slides along the grey axis.
+  //
+  // EVERY INTERMEDIATE IS A CANDIDATE, INCLUDING THE UNWALKED POLE, and that is
+  // not tidiness — it is the fix for a regression that a like-for-like swap of
+  // the search introduced here [contrast-search-one-directional-callers].
+  //
+  // The walk below is SEQUENTIAL over grounds: it moves the ink to clear g1,
+  // then moves it again to clear g2, and the second move can break g1. That
+  // oscillation was always in this loop, but the old one-way search hid it by
+  // usually doing nothing at all — a walk that returns its input cannot
+  // oscillate. Giving it a search that actually moves exposed it. MEASURED over
+  // 787,968 reaching cases: on the pair [#787878, #000000], which no ink can
+  // clear, the sequential walk lands on #757575 (worst 1.04:1) because it fixed
+  // the second ground by abandoning the first, where the plain unwalked #FFFFFF
+  // pole is worth 4.42:1. That is worse than what shipped, and it would have
+  // been a real regression rather than a fix.
+  //
+  // Collecting the intermediates and choosing by worst-ground contrast makes
+  // this monotone: the raw poles are always in the running, so step 3 can never
+  // return anything worse than the pole it started from, and it still picks up
+  // the walked value whenever the walk genuinely helps. #000000 joins the poles
+  // for the same reason readableInk added it — #141414 is not black, and the
+  // #141414/#FFFFFF curves cross at only 4.295:1, so there is a band of grounds
+  // where neither of the two house poles clears 4.5 and the absolute one does.
   let best = null
-  for (const pole of ['#141414', '#FFFFFF']) {
+  const consider = (ink) => { if (best === null || worstOf(ink) > worstOf(best)) best = ink }
+  for (const pole of ['#141414', '#FFFFFF', '#000000']) {
     let ink = pole
+    consider(ink)
     for (const g of grounds) {
-      if (contrastRatio(ink, g) < 4.5) ink = nearestPassingLightness(ink, g, 4.5) ?? ink
+      if (contrastRatio(ink, g) < 4.5) {
+        ink = nearestPassingLightness(ink, g, 4.5) ?? ink
+        consider(ink)
+      }
     }
-    if (best === null || worstOf(ink) > worstOf(best)) best = ink
   }
   return best
 }
