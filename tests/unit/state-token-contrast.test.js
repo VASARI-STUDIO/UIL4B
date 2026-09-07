@@ -29,6 +29,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { luminance } from '../../src/utils/colors.js'
 
 const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8')
 // Blank out comments before parsing. global.css documents these tokens with
@@ -36,17 +37,37 @@ const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), '
 // dead values — both would otherwise parse as declarations.
 const CSS = RAW.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
 
-const srgb = (c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4)
 const rgb = (hex) => {
   const h = hex.replace('#', '')
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16))
 }
-const lumOf = (c) => 0.2126 * srgb(c[0]) + 0.7152 * srgb(c[1]) + 0.0722 * srgb(c[2])
+
+// THE ARITHMETIC IS THE APP'S OWN, AND IT IS NOT ROUNDED.
+//
+// This file used to carry a private srgb/lumOf/ratio triple ending
+// `Math.round(r * 100) / 100`. The rounding was the defect: rounded to two
+// places BEFORE the comparison, a token measuring 4.4951:1 became 4.5 and
+// cleared `>= AA`. Every floor in this file — AA for small text, 3:1 for the
+// base tokens, AA again for -fg on a fill — was therefore blind to a near
+// miss, which is the only way these values ever fail. They are hand-picked
+// hexes nudged one step at a time; nobody has ever broken one by 2:1.
+//
+// `luminance` is imported rather than reimplemented because a test carrying
+// its own copy of the formula only checks that copy. It is the same function
+// the Contrast Checker reports to the user, so this file can no longer certify
+// a pair the product itself calls a failure. Same route as
+// preview-roles-contrast.test.js and plans-truth.test.js.
+//
+// It takes CHANNELS, not a hex: `mix` below composites to fractional channel
+// values, and re-quantising those to a hex before measuring would throw away
+// the very precision the unrounded compare exists to keep.
 const ratio = (a, b) => {
-  const hi = Math.max(lumOf(a), lumOf(b))
-  const lo = Math.min(lumOf(a), lumOf(b))
-  return Math.round(((hi + 0.05) / (lo + 0.05)) * 100) / 100
+  const hi = Math.max(luminance(...a), luminance(...b))
+  const lo = Math.min(luminance(...a), luminance(...b))
+  return (hi + 0.05) / (lo + 0.05)
 }
+/** Two places, for humans reading a failure. Never fed back into a compare. */
+const show = (r) => Math.round(r * 100) / 100
 const mix = (fg, pct, bg) => fg.map((c, i) => c * (pct / 100) + bg[i] * (1 - pct / 100))
 
 // Every `selector{...}` block, in source order.
@@ -122,7 +143,7 @@ test('-strong clears AA as small text on every bare ground, in both themes', () 
       const ink = rgb(resolve(`--${r}-strong`, theme))
       for (const [name, g] of Object.entries(GROUNDS[theme])) {
         const v = ratio(ink, rgb(g))
-        if (v < AA) bad.push(`${theme} --${r}-strong on ${name}: ${v}`)
+        if (v < AA) bad.push(`${theme} --${r}-strong on ${name}: ${show(v)}`)
       }
     }
   }
@@ -141,7 +162,7 @@ test('-strong clears AA on its own tint, which is the ground these badges use', 
       for (const [name, g] of Object.entries(GROUNDS[theme])) {
         for (const t of TINTS) {
           const v = ratio(ink, mix(base, t, rgb(g)))
-          if (v < AA) bad.push(`${theme} --${r}-strong on ${t}% --${r} over ${name}: ${v}`)
+          if (v < AA) bad.push(`${theme} --${r}-strong on ${t}% --${r} over ${name}: ${show(v)}`)
         }
       }
     }
@@ -159,7 +180,7 @@ test('the base tokens stay usable at the 3:1 floor they are kept for', () => {
       const ink = rgb(resolve(`--${r}`, theme))
       for (const [name, g] of Object.entries(GROUNDS[theme])) {
         const v = ratio(ink, rgb(g))
-        if (v < 3) bad.push(`${theme} --${r} on ${name}: ${v}`)
+        if (v < 3) bad.push(`${theme} --${r} on ${name}: ${show(v)}`)
       }
     }
   }
@@ -176,7 +197,7 @@ test('-fg clears AA as the ink ON a filled state control', () => {
       const fill = rgb(resolve(`--${r}`, theme))
       const ink = rgb(resolve(`--${r}-fg`, theme))
       const v = ratio(ink, fill)
-      if (v < AA) bad.push(`${theme} --${r}-fg on --${r}: ${v}`)
+      if (v < AA) bad.push(`${theme} --${r}-fg on --${r}: ${show(v)}`)
     }
   }
   assert.deepEqual(bad, [])
