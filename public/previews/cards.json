@@ -37,6 +37,7 @@
     {
       "id": "colour",
       "label": "Colour",
+      "blurb": "Palettes, tints, gradients and contrast",
       "tools": [
         "Palette",
         "Semantic Colour",
@@ -48,6 +49,7 @@
     {
       "id": "type",
       "label": "Typography",
+      "blurb": "Pair fonts and build scales that hold up",
       "tools": [
         "Font Gallery",
         "Font Pair",
@@ -57,6 +59,7 @@
     {
       "id": "icons",
       "label": "Icons & Emoji",
+      "blurb": "200,000 icons and every emoji, copy-ready",
       "tools": [
         "Icon Library",
         "Emoji Library"
@@ -65,6 +68,7 @@
     {
       "id": "media",
       "label": "Imagery & Media",
+      "blurb": "Convert, compress and measure",
       "tools": [
         "File Converter",
         "Aspect & Resolution"
@@ -73,6 +77,7 @@
     {
       "id": "ai",
       "label": "AI Tools",
+      "blurb": "Alt text and prompts, metered honestly",
       "tools": [
         "Alt Text",
         "Brand Starter"
@@ -81,6 +86,7 @@
     {
       "id": "discover",
       "label": "Discover",
+      "blurb": "Curated palettes, gradients and prompts",
       "tools": [
         "Palette Library",
         "Gradient Library",
@@ -90,10 +96,25 @@
     {
       "id": "plans",
       "label": "Plans",
+      "blurb": "The whole toolkit is free. Pro adds room",
       "tools": [
         "Free forever",
         "Pro monthly",
         "Pro yearly"
+      ]
+    },
+    {
+      "id": "learn",
+      "label": "Learn",
+      "blurb": "7 guides on colour, typography and accessibility",
+      "tools": [
+        "Colour contrast",
+        "Type scales",
+        "Typeface metrics",
+        "Before the font arrives",
+        "Colour spaces",
+        "Dark and light themes",
+        "Brand colour"
       ]
     }
   ]
