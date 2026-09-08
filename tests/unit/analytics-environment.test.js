@@ -14,6 +14,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { stripComments } from './helpers/source-text.js'
 import {
   isProductionHost, canWriteSharedAnalytics, environmentLabel, PRODUCTION_HOSTS,
 } from '../../src/utils/environment.js'
@@ -139,5 +140,30 @@ test('analytics can never break the thing it is measuring', () => {
       .split('\n')
       .some(line => line.includes(`${fn}(`) && line.includes('try {') && line.includes('catch'))
     assert.ok(wrapped, `${file}: ${fn} must be wrapped so a failure cannot block the user's action`)
+  }
+})
+
+// ── The privacy page names the analytics the app actually mounts ────────────
+
+test('the privacy page discloses Vercel Web Analytics exactly when main.jsx mounts it', () => {
+  // src/main.jsx renders <Analytics /> from @vercel/analytics on every route,
+  // and /privacy said nothing about it — while /help, for a time, claimed
+  // "no third-party analytics trackers". A privacy policy is a claim about
+  // what runs; it is held here to the import that decides what runs, in both
+  // directions, so removing the package must also remove the sentence.
+  const main = stripComments(read('src/main.jsx'))
+  const mounted = /from '@vercel\/analytics\/react'/.test(main) && /<Analytics \/>/.test(main)
+  const privacy = stripComments(read('src/pages/Privacy.jsx'))
+  if (mounted) {
+    assert.match(privacy, /Vercel Web Analytics/, 'main.jsx mounts Vercel Analytics and /privacy does not name it')
+    // The three facts a reader needs, as Vercel's own privacy page states
+    // them: no cookies, nothing tied to an IP address, a request hash that is
+    // discarded after 24 hours.
+    assert.match(privacy, /sets no cookies/, '/privacy no longer says the analytics set no cookies')
+    assert.match(privacy, /IP address/, '/privacy no longer says what happens to the IP address')
+    assert.match(privacy, /24 hours/, '/privacy no longer says how long the visitor hash lives')
+  } else {
+    assert.doesNotMatch(privacy, /Vercel Web Analytics/,
+      '/privacy names an analytics service main.jsx no longer mounts')
   }
 })

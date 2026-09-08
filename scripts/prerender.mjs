@@ -36,6 +36,7 @@ import { prerenderRoutes } from './route-matrix.mjs'
 import { DEFAULT_CARD, cardFor, cardUrl } from './share-cards.mjs'
 import { breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
 import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
+import { buildLlmsTxt } from './llms-txt.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const dist = path.join(root, 'dist')
@@ -254,6 +255,15 @@ async function main() {
     console.error(`prerender: sitemap routes with no entry in routeMetaMap.js: ${untitled.join(', ')}`)
     process.exit(1)
   }
+
+  // ── llms.txt ─────────────────────────────────────────────────────────────
+  // The served copy is written here from the same generator that writes the
+  // committed public/llms.txt (`npm run sync:llms`), for the same reason the
+  // route shells are: a file read by a machine deciding what this product IS
+  // must be derived at build time, not copied from whatever was last committed.
+  // Vite has already copied public/ into dist/ by now, so this overwrites it.
+  await writeFile(path.join(dist, 'llms.txt'), buildLlmsTxt(), 'utf8')
+  console.log('prerender: wrote llms.txt from positioning.js and the config truth tables')
 
   // The counts are printed because they are the only place a human sees the
   // matrix move. A route silently dropping out of the matrix, or a whole

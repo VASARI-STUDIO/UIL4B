@@ -77,6 +77,10 @@ import { Link } from 'react-router-dom'
 import { useReveal } from '../hooks/useReveal'
 import { SystemRunStrip } from '../components/SystemProofs'
 import { HELP_ANSWERS, HELP_STARTS, LIVE_TOOLS, SOON_TOOLS, STARTS_WITH_CONTENT } from '../data/helpStart'
+// The opening line is the founder's, read by id from the one module every
+// sales surface derives its value claim from. positioning-truth.test.js fails
+// if this page types the sentence instead.
+import { SURFACE_LINE, line } from '../data/positioning'
 
 export default function HelpCentre() {
   useReveal()
@@ -87,9 +91,12 @@ export default function HelpCentre() {
         <h1 className="hlp-h1">
           Open any tool. It starts with <mark className="home-mark">something</mark> in it.
         </h1>
+        {/* Opens on SURFACE_LINE.helpOpening — the founder's forget-the-app-name
+            sentence, chosen there because a /help visitor arrived looking for a
+            specific tool. Read by id, never typed. */}
         <p className="hlp-lede">
-          No account, no setup, no blank canvas. Sign in later if you want the same
-          work on another device.
+          {line(SURFACE_LINE.helpOpening)} No account, no setup, no blank canvas. Sign in
+          later if you want the same work on another device.
         </p>
         <div className="hlp-hero-cta">
           <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/create/palette">

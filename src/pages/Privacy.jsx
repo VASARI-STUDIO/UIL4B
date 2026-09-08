@@ -93,6 +93,18 @@ export default function Privacy() {
           When you are <strong>signed in</strong>, UIL4B records anonymous, aggregate usage counts in our Firestore database (Sydney region) to understand which features are useful and where to invest. Specifically, we increment per-day tallies of which page paths are visited (for example <span className="storage-key">/create/color</span>) and how many times tools are used (for example a font copy or a colour pick). These are running totals shared across all users — they contain <strong>no message content, no prompt text, no colours or fonts you chose, and nothing that identifies you</strong>. We cannot tie a count back to an individual account. Signed-out visitors send nothing; their usage is tracked only in localStorage on their own device.
         </p>
 
+        {/* Named because src/main.jsx mounts <Analytics /> from @vercel/analytics
+            on every route. This page said nothing about it, and /help once
+            claimed "no third-party analytics trackers" while it ran. The
+            sentence states what Vercel's own privacy page states
+            (vercel.com/docs/analytics/privacy-policy, read 2026-09-08) and
+            nothing more; tests/unit/analytics-environment.test.js holds it to
+            the import in main.jsx in both directions. */}
+        <h2 className="legal-h legal-h--tight">Vercel Web Analytics</h2>
+        <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 24 }}>
+          UIL4B also runs Vercel Web Analytics, which records each page view with the page URL, referrer, approximate location, device type, operating system and browser; it sets no cookies, ties nothing to your IP address, and tells visits apart by a hash of the request that Vercel discards after 24 hours.
+        </p>
+
         <h2 className="legal-h">{t('privacy.s4Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}>{t('privacy.s4Text')}</p>
         {renderList(s4Items)}
