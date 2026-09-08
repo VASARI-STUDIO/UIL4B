@@ -10702,6 +10702,18 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-filtermenu .lbry-filter{width:100%;justify-content:flex-start;border-radius:var(--radius)}
 .lbry-filtermenu .lbry-filter:hover{background:var(--bg-2)}
 .lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-2);color:var(--t0)}
+/* IN DARK, --card AND --bg-2 ARE THE SAME HEX (#191A1D), so every "raised
+   surface on the tray" fill above paints nothing there: the tray's sliding
+   indicator is --card on a --bg-2 tray, and the menu's active and hover rows
+   are --bg-2 on a --card menu. Measured 2026-09-08 on /discover/palettes with
+   Brand and Warm selected — indicator rgb(25,26,29) on rgb(25,26,29), active
+   option rgb(25,26,29) on rgb(25,26,29) — leaving text colour (242 vs 159) as
+   the only sign of which option is on, and hover with no feedback at all.
+   One step up the dark surface scale, dark only, so light is untouched. */
+[data-theme="dark"] .lbry-filter-ind{background:var(--bg-3)}
+[data-theme="dark"] .lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{background:var(--bg-3)}
+[data-theme="dark"] .lbry-filtermenu .lbry-filter:hover{background:var(--hvr)}
+[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-3)}
 /* The count is the option's own metadata (1,655 emoji), so it belongs at the
    far end of the row rather than tucked against the label. */
 .lbry-filtermenu .lbry-filter-count{margin-left:auto}
