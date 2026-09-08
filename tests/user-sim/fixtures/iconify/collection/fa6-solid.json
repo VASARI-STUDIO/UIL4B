@@ -1,0 +1,25 @@
+{
+  "prefix": "fa6-solid",
+  "total": 18,
+  "title": "Font Awesome Solid",
+  "uncategorized": [
+    "arrow-right",
+    "arrow-left",
+    "arrow-up",
+    "star",
+    "heart",
+    "house",
+    "magnifying-glass",
+    "gear",
+    "user",
+    "bell",
+    "check",
+    "xmark",
+    "bars",
+    "envelope",
+    "calendar",
+    "camera",
+    "copy",
+    "download"
+  ]
+}

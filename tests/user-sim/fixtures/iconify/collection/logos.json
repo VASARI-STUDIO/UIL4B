@@ -1,0 +1,25 @@
+{
+  "prefix": "logos",
+  "total": 18,
+  "title": "SVG Logos",
+  "uncategorized": [
+    "github-icon",
+    "gitlab",
+    "figma",
+    "react",
+    "vue",
+    "svelte",
+    "nodejs-icon",
+    "javascript",
+    "typescript-icon",
+    "python",
+    "stripe",
+    "vercel-icon",
+    "firebase",
+    "google-icon",
+    "apple",
+    "microsoft-icon",
+    "arrow-kit",
+    "aws"
+  ]
+}

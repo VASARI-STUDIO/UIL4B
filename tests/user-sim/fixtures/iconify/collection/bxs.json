@@ -1,0 +1,25 @@
+{
+  "prefix": "bxs",
+  "total": 18,
+  "title": "BoxIcons Solid",
+  "uncategorized": [
+    "right-arrow",
+    "left-arrow",
+    "up-arrow",
+    "star",
+    "heart",
+    "home",
+    "search",
+    "cog",
+    "user",
+    "bell",
+    "check",
+    "x",
+    "menu",
+    "envelope",
+    "calendar",
+    "camera",
+    "copy",
+    "download"
+  ]
+}

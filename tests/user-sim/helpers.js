@@ -45,7 +45,11 @@ const EXPECTED_NOISE = [
   /_vercel\/insights/,
   /fonts\.googleapis\.com/, /fonts\.gstatic\.com/,
   /googleapis\.com/, /firebaseinstallations/, /identitytoolkit/,
-  /api\.iconify\.design/,
+  // api.iconify.design used to be listed here. It is not any more, because the
+  // catalogue is now served from tests/user-sim/fixtures/iconify/ for every
+  // context (see iconify-stub.js) — so an Iconify error in the console is a
+  // stub that stopped covering a page, and that must show up as a finding, for
+  // the reason the One Tap note below gives.
   // `vite preview` serves dist/ as static files and runs no Vercel functions,
   // so EVERY /api/* request 404s here regardless of whether it is correct.
   // 22-feedback-and-focus.spec.js relies on that to exercise the failed-send
@@ -97,6 +101,15 @@ export function watch(page, persona) {
       && /ERR_FAILED/.test(msg.text())
       && /assets\/(?:gsap|ScrollTrigger)-/.test(url)
     if (deliberateMotionAbort) return
+    // 66-icon-library-offline-fixture.spec.js answers every Iconify host with
+    // the 429/403 measured on 2026-09-08 ON PURPOSE, to render the page's
+    // failure state. Chromium logs each refused response (75 of them: 25 packs
+    // by 3 hosts), and none is a finding about the app. Same shape as the
+    // motion persona above: keyed on the persona AND the host, so a refusal
+    // anywhere else still surfaces.
+    const deliberateIconifyRefusal = persona === 'visitor whose icon catalogue is refused'
+      && /api\.(?:iconify\.design|simplesvg\.com|unisvg\.com)/.test(url)
+    if (deliberateIconifyRefusal) return
     if (isExpectedNoise(msg.text(), url)) return
     const source = url
       ? ` (${url}${location.lineNumber != null ? `:${location.lineNumber}:${location.columnNumber || 0}` : ''})`

@@ -1,0 +1,23 @@
+{
+  "prefix": "skill-icons",
+  "total": 16,
+  "title": "Skill Icons",
+  "uncategorized": [
+    "github-dark",
+    "github-light",
+    "gitlab-dark",
+    "figma-dark",
+    "react-dark",
+    "vuejs-dark",
+    "svelte",
+    "nodejs-dark",
+    "javascript",
+    "typescript",
+    "python-dark",
+    "firebase-dark",
+    "docker",
+    "postgresql-dark",
+    "aws-dark",
+    "vercel-dark"
+  ]
+}

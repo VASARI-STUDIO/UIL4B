@@ -1,0 +1,27 @@
+{
+  "prefix": "tabler",
+  "total": 20,
+  "title": "Tabler Icons",
+  "uncategorized": [
+    "arrow-right",
+    "arrow-narrow-up",
+    "arrow-back-up",
+    "star",
+    "star-filled",
+    "heart",
+    "heart-filled",
+    "home",
+    "search",
+    "settings",
+    "user",
+    "bell",
+    "check",
+    "x",
+    "menu-2",
+    "mail",
+    "calendar",
+    "camera",
+    "copy",
+    "download"
+  ]
+}

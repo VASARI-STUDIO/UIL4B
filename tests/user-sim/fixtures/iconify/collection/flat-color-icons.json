@@ -1,0 +1,23 @@
+{
+  "prefix": "flat-color-icons",
+  "total": 16,
+  "title": "Flat Color Icons",
+  "uncategorized": [
+    "home",
+    "search",
+    "settings",
+    "like",
+    "ok",
+    "cancel",
+    "calendar",
+    "camera",
+    "download",
+    "upload",
+    "folder",
+    "document",
+    "contacts",
+    "businessman",
+    "idea",
+    "briefcase"
+  ]
+}

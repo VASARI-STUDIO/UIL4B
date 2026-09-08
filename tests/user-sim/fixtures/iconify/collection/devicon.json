@@ -1,0 +1,24 @@
+{
+  "prefix": "devicon",
+  "total": 17,
+  "title": "Devicon",
+  "uncategorized": [
+    "github",
+    "gitlab",
+    "figma",
+    "react",
+    "vuejs",
+    "svelte",
+    "nodejs",
+    "javascript",
+    "typescript",
+    "python",
+    "firebase",
+    "google",
+    "apple",
+    "windows11",
+    "docker",
+    "postgresql",
+    "amazonwebservices-wordmark"
+  ]
+}

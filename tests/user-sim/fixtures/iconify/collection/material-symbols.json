@@ -1,0 +1,29 @@
+{
+  "prefix": "material-symbols",
+  "total": 22,
+  "title": "Material Symbols",
+  "uncategorized": [
+    "arrow-right-alt",
+    "arrow-back",
+    "arrow-upward",
+    "arrow-forward-rounded",
+    "star",
+    "star-outline",
+    "star-rounded",
+    "favorite",
+    "home",
+    "home-outline",
+    "search",
+    "settings",
+    "person",
+    "notifications",
+    "check",
+    "close",
+    "menu",
+    "mail",
+    "calendar-month",
+    "photo-camera",
+    "content-copy",
+    "download"
+  ]
+}

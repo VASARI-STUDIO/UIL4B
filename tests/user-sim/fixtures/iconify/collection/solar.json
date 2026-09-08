@@ -1,0 +1,30 @@
+{
+  "prefix": "solar",
+  "total": 23,
+  "title": "Solar",
+  "uncategorized": [
+    "arrow-right-bold",
+    "arrow-left-bold",
+    "arrow-up-bold",
+    "arrow-right-linear",
+    "arrow-right-outline",
+    "star-bold",
+    "star-linear",
+    "heart-bold",
+    "home-bold",
+    "home-linear",
+    "magnifer-bold",
+    "settings-bold",
+    "user-bold",
+    "bell-bold",
+    "check-circle-bold",
+    "close-circle-bold",
+    "hamburger-menu-bold",
+    "letter-bold",
+    "calendar-bold",
+    "camera-bold",
+    "copy-bold",
+    "download-bold",
+    "star-bold-duotone"
+  ]
+}
