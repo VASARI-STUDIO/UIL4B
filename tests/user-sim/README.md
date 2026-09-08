@@ -47,7 +47,12 @@ npm run test:users:report   # re-print the last run's feedback summary
 
 `test:users` builds the app itself — you do **not** need a separate
 `npm run build`. The suite then starts `vite preview` on port 4174 by itself
-(and reuses one that is already running).
+(and reuses one that is already running). To run it beside another run, set
+`PLAYWRIGHT_PORT` to a free port: that moves the preview server AND every file
+the run writes to `report/<port>/`, so two concurrent runs never share a
+`findings.jsonl`, a `results.json` or an `artifacts/` directory (see
+`report-dir.js`). Unset, everything lands in `report/` as it always has. Set the
+same variable for `test:users:report`, which reads the same resolver.
 
 ## The feedback loop
 

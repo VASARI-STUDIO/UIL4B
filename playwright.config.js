@@ -3,18 +3,23 @@
 // (vite preview), so what passes here is what ships.
 import fs from 'node:fs'
 import { defineConfig } from '@playwright/test'
+import { resolvePreviewPort, resolveReportDir } from './tests/user-sim/report-dir.js'
 
 // Managed sandboxes pin a Chromium at /opt/pw-browsers/chromium that may not
 // match this @playwright/test version's expected revision; prefer it when it
 // exists, otherwise fall back to Playwright's own resolution.
 const PINNED_CHROMIUM = '/opt/pw-browsers/chromium'
 const executablePath = fs.existsSync(PINNED_CHROMIUM) ? PINNED_CHROMIUM : undefined
-const previewPort = Number(process.env.PLAYWRIGHT_PORT || 4174)
+const previewPort = resolvePreviewPort()
+// Per-runner evidence directory, keyed on the same variable as the port so
+// concurrent suites cannot write into each other's report. Unset, it is
+// tests/user-sim/report exactly as before — see tests/user-sim/report-dir.js.
+const reportDir = resolveReportDir()
 const previewUrl = `http://127.0.0.1:${previewPort}`
 
 export default defineConfig({
   testDir: 'tests/user-sim',
-  outputDir: 'tests/user-sim/report/artifacts',
+  outputDir: `${reportDir}/artifacts`,
   globalSetup: './tests/user-sim/global-setup.js',
   globalTeardown: './tests/user-sim/global-teardown.js',
   fullyParallel: true,
@@ -22,7 +27,7 @@ export default defineConfig({
   timeout: 30000,
   reporter: [
     ['list'],
-    ['json', { outputFile: 'tests/user-sim/report/results.json' }],
+    ['json', { outputFile: `${reportDir}/results.json` }],
   ],
   use: {
     baseURL: previewUrl,
