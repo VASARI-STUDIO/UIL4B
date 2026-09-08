@@ -23,6 +23,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { classifyGeminiFinish } from '../../api/_lib/geminiFinish.js'
+import { ALL_CSS } from './appStylesheets.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
@@ -31,7 +32,10 @@ const stripComments = (src) => src
 
 const AI = stripComments(read('api/ai.js'))
 const PAGE = stripComments(read('src/pages/AltTextGenerator.jsx'))
-const CSS = read('src/styles/global.css')
+// Every stylesheet, not just global.css: the `alt` family now lives in
+// src/styles/pages/alt-text.css, and reading global.css alone would make the
+// assertions below pass by looking at nothing.
+const CSS = ALL_CSS
 
 // A response shaped the way Gemini actually shapes them.
 const reply = (finishReason, text) => ({

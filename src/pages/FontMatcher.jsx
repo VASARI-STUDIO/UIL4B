@@ -12,6 +12,10 @@ import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, suggestPairings,
 } from '../utils/googleFonts'
 import { consumePairDraft, readPairDraft, setScaleDraft } from '../utils/typeHandoff'
+// The `font-pair` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/font-pair.css'
 
 // Font Pair — the standalone /create/font-pair page. Two families, one specimen, and a
 // reason for every suggestion.

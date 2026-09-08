@@ -1,0 +1,267 @@
+/* semantic-color.css — the `stc` family, lifted out of global.css.
+ * Imported by the page module that owns it, so Vite emits it as that page's
+ * chunk stylesheet and only that route pays for it.
+ *
+ * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
+ * so anything here now outranks every global rule at equal specificity —
+ * which is why a rule a later global rule overrides was left behind rather
+ * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+
+/* ─── UI State Colours section (ColorStudio States) ─── */
+/* ── The solo Semantic Colours tool header ──────────────────────────────────
+   What is left after #surface-headers-read-as-ai: a title, a description and
+   the tool's own action. The eyebrow rule (`.stc-hero-eyebrow`) and the
+   four-fact status row (`.stc-status`) are DELETED, not commented out, along
+   with their responsive blocks — the founder marked both motifs "AI" on the
+   Font Gallery and asked for the change to reach every header that matched.
+   The sibling rules they were copied from (`.tt-status`, `.ggn-status`,
+   `.fpr-status`) went in the same pass, so there is no house style left to
+   converge back onto. `.sec-h` is still deliberately NOT touched - it is
+   site-wide. */
+.stc-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-6);flex-wrap:wrap;margin-bottom:var(--s-5)}
+.stc-hero-id{max-width:680px;min-width:0}
+.stc-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
+.stc-hero-id>p{max-width:600px;margin:12px 0 0;font-size:15px;line-height:1.65;color:var(--t1)}
+.stc-hero-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+/* The action is already a button with its own metrics; the hero must not also
+   push it right with `margin-left:auto`, which is what `.stc-copy-btn` does for
+   the section-header context it was written for. */
+.stc-hero-actions .stc-copy-btn{margin-left:0}
+
+.stc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;cursor:pointer}
+
+.stc-head-title{display:flex;align-items:center;gap:12px}
+
+.stc-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
+
+.stc-kicker{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+
+.stc-copy-btn{margin-left:auto;padding:7px 14px;border:none;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:opacity var(--t)}
+
+.stc-copy-btn:hover{opacity:.85}
+
+.stc-copy-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.stc-role{margin-bottom:22px}
+
+.stc-role-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+
+.stc-dot{width:10px;height:10px;border-radius:3px;flex:none}
+
+.stc-role-name{font-size:13px;font-weight:700;text-transform:capitalize}
+
+.stc-role-presets{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+
+.stc-ramp{display:flex;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border)}
+
+.stc-cell{flex:1;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:filter var(--dur-1) var(--ease-standard);min-width:0}
+
+.stc-cell:hover{filter:brightness(1.06)}
+
+.stc-cell:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+.stc-cell-tone{font-size:11px;font-weight:700;font-family:var(--mono)}
+
+.stc-cell-hex{font-size:9px;font-family:var(--mono);opacity:.75}
+
+.stc-hue{margin:0 0 10px}
+
+.stc-hue-row{display:flex;align-items:center;gap:12px}
+
+.stc-hue-val{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t1);min-width:34px;text-align:right}
+
+@media(max-width:640px){.stc-cell{min-height:52px}}
+
+.stc-toolbar-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
+
+.stc-toolbar-copy>span:last-child{font-size:11px;color:var(--t2)}
+
+.stc-bundles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 var(--s-6)}
+
+.stc-bundle:first-child{grid-column:span 2}
+
+.stc-bundle{display:flex;min-width:0;min-height:128px;flex-direction:column;gap:10px;padding:14px;text-align:left;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t),box-shadow var(--t)}
+
+.stc-bundle:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
+
+.stc-bundle--on{color:var(--t0);border-color:color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
+
+.stc-bundle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.stc-bundle-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+
+.stc-bundle-top strong{font-size:12px;font-weight:650}
+
+.stc-bundle-top>span{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+
+.stc-bundle--on .stc-bundle-top>span{color:var(--accent-strong)}
+
+.stc-bundle-swatches{display:flex;height:12px;overflow:hidden;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent);border-radius:var(--radius-xs)}
+
+.stc-bundle-swatches i{flex:1;background:var(--stc-bundle-c)}
+
+.stc-bundle small{font-size:10.5px;line-height:1.45;color:var(--t2)}
+
+.stc-role{margin-bottom:0;padding:var(--s-5);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l)}
+
+.stc-role+.stc-role{margin-top:12px}
+
+.stc-role-head{align-items:flex-start;margin-bottom:14px}
+
+.stc-role-id{display:flex;align-items:center;gap:10px;min-width:210px}
+
+.stc-role-id>span:last-child{display:flex;flex-direction:column;gap:3px}
+
+.stc-role-id small{font-size:10px;color:var(--t2)}
+
+.stc-role-cue{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex:0 0 auto;font-family:var(--mono);font-size:14px;font-weight:750;color:var(--t0);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs)}
+
+.stc-role-name{font-size:13px;font-weight:700;text-transform:none}
+
+.stc-ramp{overflow-x:auto;scrollbar-width:thin}
+
+.stc-cell{flex:1 0 64px}
+
+.stc-preview-section{margin-top:var(--s-8);padding-top:var(--s-6);border-top:1px solid var(--border)}
+
+.stc-subhead{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-5);margin-bottom:var(--s-5)}
+
+.stc-subhead h2,.stc-handoff h2{margin:5px 0 5px;font-size:22px;font-weight:650;letter-spacing:-.025em;color:var(--t0)}
+
+.stc-subhead p,.stc-handoff p{max-width:650px;margin:0;font-size:12px;line-height:1.55;color:var(--t2)}
+
+.stc-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-l)}
+
+.stc-preview{padding:var(--s-5);color:#172033;background:#f7f8fa}
+
+.stc-preview+.stc-preview{border-left:1px solid var(--border)}
+
+.stc-preview--dark{color:#f3f5f7;background:#111318}
+
+.stc-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid color-mix(in srgb,currentColor 14%,transparent)}
+
+.stc-preview-head strong{font-size:12px}
+
+.stc-preview-head span{font-size:9px;letter-spacing:.04em;text-transform:uppercase;opacity:.6}
+
+.stc-scene-list{display:flex;flex-direction:column;gap:10px}
+
+.stc-scene{min-width:0}
+
+.stc-scene-ico{flex:0 0 auto}
+
+.stc-scene-ico--spin{animation:stc-sc-spin 1.1s linear infinite;transform-origin:50% 50%}
+
+/* Shared row shell: icon / two-line lead / trailing control. */
+.stc-sc-row,.stc-sc-alert{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:var(--stc-soft);color:var(--stc-ink)}
+.stc-sc-row{grid-template-columns:minmax(0,1fr) auto}
+.stc-sc-row:has(.stc-sc-act-ico){grid-template-columns:auto minmax(0,1fr) auto}
+.stc-sc-lead{display:flex;min-width:0;flex-direction:column;gap:2px}
+.stc-sc-lead strong{font-size:11.5px;font-weight:650;line-height:1.25}
+.stc-sc-lead small{font-size:9.5px;line-height:1.35;opacity:.78}
+
+/* SUCCESS - a switch. The track is the 600 so the control reads as filled. */
+.stc-sc-switch{position:relative;display:inline-flex;flex:0 0 auto;width:34px;height:20px;padding:2px;border-radius:999px;background:color-mix(in srgb,var(--stc-ink) 22%,transparent)}
+.stc-sc-switch--on{background:var(--stc-solid);justify-content:flex-end}
+.stc-sc-switch i{width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+
+/* WARNING - an advisory field. The border carries it and the action stays live. */
+.stc-sc-field{display:flex;flex-direction:column;gap:5px;padding:11px 12px;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:var(--stc-soft);color:var(--stc-ink)}
+.stc-sc-label{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.72}
+.stc-sc-input{width:100%;padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--stc-ink);background:#fff;border:1.5px solid var(--stc-strong);border-radius:var(--radius-xs);pointer-events:none}
+.stc-sc-help{display:flex;align-items:center;gap:6px;font-size:10px;line-height:1.3;color:var(--stc-ink)}
+.stc-sc-ghost{margin-left:auto;padding:3px 8px;font-family:var(--font);font-size:9.5px;font-weight:650;color:var(--stc-ink);background:transparent;border:1px solid var(--stc-strong);border-radius:var(--radius-xs);cursor:default}
+
+/* ERROR - the alert, and the only solid fill in the set. */
+.stc-sc-alert-ico{display:inline-flex;color:var(--stc-strong)}
+.stc-sc-solid{flex:0 0 auto;padding:6px 11px;font-family:var(--font);font-size:10px;font-weight:700;color:#fff;background:var(--stc-solid);border:1px solid var(--stc-solid);border-radius:var(--radius-xs);cursor:default;white-space:nowrap}
+
+/* INFO - the quietest object here, deliberately. No fill, a hairline only. */
+.stc-sc-note{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:10.5px;line-height:1.4;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:transparent;color:var(--stc-onpanel)}
+.stc-sc-note .stc-scene-ico{color:var(--stc-onpanel)}
+.stc-sc-link{margin-left:auto;padding:0;font-family:var(--font);font-size:10px;font-weight:700;color:var(--stc-onpanel);background:none;border:0;text-decoration:underline;text-underline-offset:2px;cursor:default;white-space:nowrap}
+
+/* PENDING - an activity row with a turning icon and a status badge. */
+.stc-sc-act-ico{display:inline-flex;color:var(--stc-strong)}
+.stc-sc-badge{flex:0 0 auto;padding:3px 9px;font-family:var(--font);font-size:9.5px;font-weight:700;color:var(--stc-ink);background:var(--stc-tint);border:1px solid var(--stc-border);border-radius:999px;white-space:nowrap}
+
+.stc-preview--dark .stc-sc-row,
+.stc-preview--dark .stc-sc-alert,
+.stc-preview--dark .stc-sc-field{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 15%,#111318);border-color:color-mix(in srgb,var(--stc-liftd) 38%,#111318)}
+
+.stc-preview--dark .stc-sc-help,
+.stc-preview--dark .stc-sc-label{color:var(--stc-inkd)}
+
+.stc-preview--dark .stc-sc-note{color:var(--stc-onpaneld);border-color:color-mix(in srgb,var(--stc-liftd) 38%,#111318)}
+
+.stc-preview--dark .stc-sc-note .stc-scene-ico{color:var(--stc-onpaneld)}
+
+.stc-preview--dark .stc-sc-act-ico,
+.stc-preview--dark .stc-sc-alert-ico{color:var(--stc-liftd)}
+
+.stc-preview--dark .stc-sc-link{color:var(--stc-onpaneld)}
+
+.stc-preview--dark .stc-sc-input{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 10%,#111318);border-color:var(--stc-liftd)}
+
+.stc-preview--dark .stc-sc-ghost{color:var(--stc-inkd);border-color:var(--stc-liftd)}
+
+.stc-preview--dark .stc-sc-badge{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 26%,#111318);border-color:color-mix(in srgb,var(--stc-liftd) 45%,#111318)}
+
+.stc-preview--dark .stc-sc-switch{background:color-mix(in srgb,var(--stc-inkd) 22%,transparent)}
+
+.stc-preview--dark .stc-sc-switch--on{background:var(--stc-solidd)}
+
+.stc-preview--dark .stc-sc-switch i{background:#111318}
+
+.stc-preview--dark .stc-sc-solid{color:#111318;background:var(--stc-solidd);border-color:var(--stc-solidd)}
+
+.stc-handoff{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.25fr);gap:var(--s-6);align-items:start;margin-top:var(--s-5);padding:var(--s-6);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l)}
+
+.stc-handoff-copy{display:flex;align-items:flex-start;flex-direction:column}
+
+.stc-handoff p code{font-family:var(--mono);font-size:10px;color:var(--t1)}
+
+.stc-handoff .stc-copy-btn{margin:var(--s-5) 0 0}
+
+.stc-code{max-height:360px;margin:0;padding:16px;font-family:var(--mono);font-size:10px;line-height:1.65;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);overflow:auto}
+
+.stc-code:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+@media(max-width:980px){
+  .stc-bundles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stc-handoff{grid-template-columns:1fr}
+}
+
+@media(max-width:768px){
+  /* S1: the ten tone cells WRAP instead of scrolling off the side. As a single
+     row they were `flex:1 0 64px`, and that 0 flex-shrink pinned a 640px floor
+     under a container measured at 252px on a 320px phone - 3 of 10 cells
+     visible, 28 of 40 tones across the four ramps unreachable without
+     discovering a swipe there was no cue for. There was no cue: overlay
+     scrollbars render nothing under touch, and .stc-ramp's border-radius draws
+     the right edge ROUNDED AND CLOSED, so the control actively signalled "this
+     is the end of the scale" while the toolbar said "40 canonical tokens".
+     Five columns, two rows, every tone on screen and none below 24px.
+     overflow stays `hidden` rather than becoming `visible`: this element also
+     sets overflow-y, and `visible` on one axis beside a clipping value on the
+     other computes to `auto` - which would leave the scroller behind, i.e. the
+     defect, while looking like the fix. See css-conventions.md. */
+  .stc-ramp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));overflow:hidden}
+  .stc-cell{flex:none;min-width:0}
+  .stc-preview-grid{grid-template-columns:1fr}
+  .stc-preview+.stc-preview{border-left:0;border-top:1px solid var(--border)}
+}
+
+@media(max-width:560px){
+  .stc-copy-btn{width:100%;margin-left:0}
+  .stc-bundles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stc-bundle{min-height:0}
+  .stc-role{padding:16px}
+  .stc-role-presets{width:100%;margin-left:0;justify-content:flex-start}
+  .stc-preview{padding:16px}
+  .stc-sc-alert{grid-template-columns:auto minmax(0,1fr)}
+  .stc-sc-solid{grid-column:2;justify-self:start}
+  .stc-sc-note{flex-wrap:wrap}
+  .stc-sc-link{margin-left:0}
+  .stc-handoff{padding:16px}
+}

@@ -1,0 +1,134 @@
+/* plans.css — the `plans` family, lifted out of global.css.
+ * Imported by the page module that owns it, so Vite emits it as that page's
+ * chunk stylesheet and only that route pays for it.
+ *
+ * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
+ * so anything here now outranks every global rule at equal specificity —
+ * which is why a rule a later global rule overrides was left behind rather
+ * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+
+.plans-page{max-width:1120px}
+
+.plans-tiers{grid-template-columns:minmax(260px,.78fr) minmax(0,1.22fr);align-items:stretch;gap:20px}
+
+.plans-tiers .plans-free-card{background:var(--bg-1);box-shadow:none}
+
+.plans-card-intro{font-size:13px;line-height:1.55;color:var(--t2);margin:0}
+
+.plans-pro-intro{color:var(--t1);font-size:13.5px}
+
+.plans-price-slot{min-height:40px}
+
+.plans-price-detail{font-size:11px;line-height:1.4;color:var(--t2);min-height:1.4em}
+
+.plans-outcomes{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:10px;flex:1}
+
+.plans-outcome-group{padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
+
+.plans-outcome-group h2{margin:0 0 8px;font-size:12px;line-height:1.3;color:var(--t0)}
+
+.plans-outcome-group p{margin:0;font-size:12px;line-height:1.5;color:var(--t2)}
+
+.plans-outcome-metrics{display:flex;flex-direction:column;gap:10px}
+
+.plans-outcome-metrics div{display:flex;flex-direction:column;gap:2px}
+
+.plans-outcome-metrics strong{font-size:22px;line-height:1;letter-spacing:-.02em;color:var(--accent-strong)}
+
+.plans-outcome-metrics span{font-size:11px;line-height:1.35;color:var(--t2)}
+
+.plans-price-retry{align-self:flex-start;margin-top:8px}
+
+.plans-unavailable-note{margin:0;text-align:center;font-size:12px;line-height:1.5;color:var(--t1)}
+
+.plans-anchor{margin:44px auto 0;max-width:760px;text-align:center;font-size:var(--fs-body);color:var(--t1);line-height:1.55}
+
+.plans-anchor strong{color:var(--t0)}
+
+.plans-excludes{margin-top:2px;padding-top:14px;border-top:1px solid var(--border)}
+
+.plans-excludes-h{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:9px}
+
+.plans-excludes ul{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none}
+
+.plans-excludes li{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.5;color:var(--t2)}
+
+/* ── Before you pay. Three disclosures on hairline rules, NOT three cards:
+      the plan cards are the only card shape on this page, and boxing the
+      disclosure would make it read as another sales panel. */
+.plans-notes{display:grid;grid-template-columns:repeat(3,1fr);gap:0 28px;align-items:start;margin:34px 0 0;padding-top:20px;border-top:1px solid var(--border)}
+.plans-notes-h{grid-column:1/-1;margin:0 0 18px;font-family:var(--mono);font-size:var(--fs-caption);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.plans-note{padding-left:22px;border-left:1px solid var(--border)}
+.plans-note:first-of-type{padding-left:0;border-left:none}
+.plans-note h3{margin:0 0 8px;font-size:13.5px;font-weight:640;line-height:1.35;color:var(--t0);text-wrap:balance}
+.plans-note p{margin:0;font-size:12.5px;line-height:1.6;color:var(--t2)}
+.plans-note-foot{margin-top:8px!important;color:var(--t3)!important}
+
+/* The Soon badge, matching the export panel's own (Mobbin/Clerk prints
+   "Coming soon" inline against the feature it belongs to rather than in a
+   footnote, so the reader cannot take the claim without the caveat). */
+.plans-soon-inline,.plans-soon-badge{display:inline-flex;align-items:center;padding:1px 7px;border:1px solid var(--border);border-radius:999px;background:var(--bg-2);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
+.plans-soon-inline{margin:0 4px;vertical-align:baseline}
+.plans-soon-list{display:flex;flex-direction:column;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.plans-soon-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12.5px;color:var(--t1)}
+.plans-soon-list li:last-child{border-bottom:none}
+.plans-soon-name{min-width:0;overflow-wrap:anywhere}
+
+.plans-compare-wrap{margin-top:20px}
+
+.plans-compare-table{width:100%;min-width:520px;border-collapse:collapse;font-size:var(--fs-body-s)}
+
+.plans-compare-table th,.plans-compare-table td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border)}
+
+.plans-compare-table thead th{font-family:var(--mono);font-size:var(--fs-caption);text-transform:uppercase;letter-spacing:.06em;color:var(--t2)}
+
+.plans-compare-table td:first-child{color:var(--t1);font-weight:560}
+
+.plans-pro-banner{display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:18px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 10%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));font-size:13px;color:var(--t1);line-height:1.5}
+
+.plans-pro-banner svg{flex-shrink:0;color:var(--accent)}
+
+.plans-pro-banner a{color:var(--accent-strong);font-weight:600;white-space:nowrap}
+
+.plans-compare{text-align:center;margin-top:8px;font-size:12px;color:var(--t1);min-height:1.4em}
+
+.plans-compare span{margin-right:4px}
+
+.plans-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 28px;margin-top:26px;padding-top:22px;border-top:1px solid var(--border)}
+
+.plans-trust span{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--t2)}
+
+.plans-faq{max-width:720px;margin:44px auto 0}
+
+.plans-faq-h{font-size:20px;font-weight:700;letter-spacing:-.02em;text-align:center;margin-bottom:18px;color:var(--t0)}
+
+.plans-faq-item{border-bottom:1px solid var(--border)}
+
+.plans-faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 2px;background:none;border:none;font-family:var(--font);font-size:15px;font-weight:600;color:var(--t0);text-align:left;cursor:pointer;transition:color var(--dur-2) var(--ease-standard)}
+
+.plans-faq-q:hover{color:var(--accent-strong)}
+
+.plans-faq-q svg{flex-shrink:0;color:var(--t2);transition:transform var(--dur-2) var(--ease-out)}
+
+.plans-faq-a{padding:0 2px 18px;font-size:14px;line-height:1.6;color:var(--t1)}
+
+@media(max-width:900px){
+  .plans-tiers{grid-template-columns:1fr}
+  .plans-outcomes{grid-template-columns:1fr}
+}
+
+@media(max-width:560px){
+  .plans-compare-table{min-width:0;font-size:var(--fs-caption);table-layout:fixed}
+  .plans-notes{grid-template-columns:1fr;gap:0}
+  .plans-note{padding-left:0;border-left:none;padding-top:16px;border-top:1px solid var(--border)}
+  .plans-note:first-of-type{padding-top:0;border-top:none}
+  .plans-soon-list li{align-items:flex-start;flex-wrap:wrap}
+  .plans-compare-table th,.plans-compare-table td{padding:10px 8px;overflow-wrap:anywhere}
+  /* 44/28/28. The capability name is the only cell that ever needs two lines,
+     so it takes the slack; the two value columns stay equal so Free and Pro
+     read as a pair being compared rather than a column and an afterthought. */
+  .plans-compare-table th:first-child,.plans-compare-table td:first-child{width:44%}
+  .plans-compare-table th:nth-child(2),.plans-compare-table td:nth-child(2),
+  .plans-compare-table th:nth-child(3),.plans-compare-table td:nth-child(3){width:28%}
+  .plans-compare-table thead th{letter-spacing:.03em}
+}

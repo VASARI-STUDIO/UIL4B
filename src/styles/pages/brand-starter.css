@@ -1,0 +1,123 @@
+/* brand-starter.css — the `bs` family, lifted out of global.css.
+ * Imported by the page module that owns it, so Vite emits it as that page's
+ * chunk stylesheet and only that route pays for it.
+ *
+ * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
+ * so anything here now outranks every global rule at equal specificity —
+ * which is why a rule a later global rule overrides was left behind rather
+ * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+
+.bs-head h1{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.bs-beta{font-size:var(--fs-micro);font-family:var(--mono);font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--accent);color:var(--accent-strong);background:var(--accent-bg);line-height:1;align-self:center}
+/* What beta MEANS, next to the word, rather than left for the reader to guess.
+   A badge with no stated limit is a mood. */
+.bs-beta-note{margin:10px 0 0;font-size:var(--fs-caption);color:var(--t3);line-height:1.55;max-width:62ch}
+
+.bs{display:flex;flex-direction:column;gap:28px;margin-top:24px}
+
+/* The allowance, on a rule rather than in a panel: it is orientation, not an
+   object. Above the field, because someone about to spend the only generation
+   they will ever get should know that before they write the brief. */
+.bs-allowance{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px 14px;margin:0;padding-bottom:12px;border-bottom:1px solid var(--border);font-size:var(--fs-caption)}
+.bs-allowance-plan{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.bs-allowance-figure{color:var(--t1)}
+.bs-allowance-left{margin-left:auto;font-family:var(--mono);color:var(--t2)}
+
+/* THE QUOTA WALL. A strip attached to the composer, not a modal over the tool.
+   Mobbin: Base44 puts the month-limit notice on the top edge of the prompt
+   field with one text link and a dismiss, and the composer stays exactly where
+   it was — https://mobbin.com/screens/a44dad2b-f50e-4acb-9267-b75f480f1ecd
+   REJECTED: Krea AI's full-screen modal of three gradient pricing cards
+   (https://mobbin.com/screens/dffee797-6dd4-4dc2-8fb5-a26404efdf99), which is
+   the "equally weighted rounded card" and "gradient as a premium signal"
+   failures at the moment the user is least receptive to either. */
+.bs-wall{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px 20px;padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-s);background:var(--bg-2)}
+.bs-wall-text{margin:0;flex:1 1 260px;font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
+.bs-wall-actions{display:flex;align-items:center;gap:16px;flex:0 0 auto}
+.bs-wall-link{font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong)}
+.bs-wall-close{border:0;background:none;padding:0;font:inherit;font-size:var(--fs-caption);color:var(--t3);cursor:pointer}
+.bs-wall-close:hover{color:var(--t1)}
+
+.bs-composer{display:flex;flex-direction:column;gap:8px}
+.bs-label{font-size:var(--fs-h5);font-weight:600;color:var(--t0)}
+.bs-hint{margin:0;font-size:var(--fs-caption);color:var(--t3);line-height:1.5}
+.bs-field{width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font:inherit;font-size:var(--fs-body);line-height:1.6;resize:vertical;min-height:96px}
+.bs-field:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.bs-field::placeholder{color:var(--t3)}
+.bs-field:disabled{opacity:.6;cursor:not-allowed}
+.bs-composer-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+/* Mobbin: HubSpot's brand-voice input carries a live "541 / 10,000 words max".
+   A field that silently stops accepting characters reads as broken, so the cap
+   is rendered rather than only enforced.
+   https://mobbin.com/flows/64163e57-f2de-456b-89d8-e6ff18316f55 */
+.bs-count{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+.bs-note{margin:0;font-size:var(--fs-caption);color:var(--t3);line-height:1.55;max-width:70ch}
+.bs-note--warn{color:var(--warn-strong)}
+
+/* Status in words, not in motion. The anti-slop bar names "loading effects
+   imply intelligence without explaining system state" — so this says what is
+   being done and roughly how long, and animates nothing. */
+.bs-working{margin:0;padding:14px 16px;border:1px dashed var(--border);border-radius:var(--radius-s);font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
+
+.bs-error{display:flex;align-items:flex-start;flex-wrap:wrap;gap:12px 20px;padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--err);border-radius:var(--radius-s);background:var(--bg-2)}
+.bs-error-text{margin:0;flex:1 1 260px;font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
+
+/* ── the result ─────────────────────────────────────────────────────────── */
+/* The radius is declared AT REST, not in the :focus-visible rule. A focus
+   style that changes geometry is what tests/unit/focus-ring-geometry.test.js
+   exists to refuse -- the outline has to trace the shape the element already
+   has, or the ring appears to resize the thing it is pointing at. */
+.bs-result{display:flex;flex-direction:column;gap:0;border-radius:var(--radius-s)}
+.bs-result:focus-visible{outline:2px solid var(--accent);outline-offset:6px}
+.bs-result-h{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding-bottom:6px}
+.bs-result-name{margin:0;font-size:var(--fs-h3);font-weight:600;color:var(--t0);letter-spacing:-.01em}
+.bs-rationale{margin:0 0 4px;font-size:var(--fs-body-s);color:var(--t1);line-height:1.6;max-width:70ch}
+
+/* Bands, not cards. Mono numeral + label on a hairline rule, which is the
+   orientation language the User Home settled on.
+   Mobbin: Bloom's "Design Language" section sets Colors / Fonts / Tone under
+   plain labels with the artefacts themselves as the only visual weight.
+   https://mobbin.com/flows/ffbc50b7-dbf3-433c-a294-55e03799a693 */
+.bs-band{padding:22px 0;border-top:1px solid var(--border)}
+.bs-band-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.bs-band-n{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);letter-spacing:.1em}
+.bs-band-label{margin:0;font-size:var(--fs-h5);font-weight:600;color:var(--t0)}
+.bs-band-open{margin-left:auto;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);white-space:nowrap}
+
+.bs-swatches{display:flex;flex-wrap:wrap;gap:14px;margin:0;padding:0;list-style:none}
+.bs-swatch{display:flex;flex-direction:column;gap:6px;min-width:92px}
+/* A swatch is a real object, so it is the one thing here that gets a border and
+   a radius. 56px tall rather than a dot: a colour has to be judged at a size,
+   and a role label under it is the difference between a palette and six dots. */
+.bs-chip{display:block;width:100%;height:56px;border-radius:var(--radius-xs);border:1px solid var(--border)}
+.bs-swatch-role{font-size:var(--fs-micro);font-weight:600;color:var(--t1);line-height:1.3}
+.bs-swatch-hex{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+
+/* The measured fact under the palette. Not a badge and not a tick — a sentence
+   with a number in it, because the number is the evidence. */
+.bs-measure{margin:16px 0 0;font-size:var(--fs-caption);color:var(--t2);line-height:1.6;max-width:74ch}
+.bs-measure strong{color:var(--t0);font-weight:600}
+
+.bs-specimen{padding:14px 0;border-bottom:1px solid var(--border)}
+.bs-specimen:last-of-type{border-bottom:0}
+/* The specimen is set in the REAL family, loaded on arrival. A name rendered in
+   the page's own face is a claim about a typeface nobody can see. */
+.bs-specimen-face{margin:0 0 6px;color:var(--t0);line-height:1.25;overflow-wrap:anywhere}
+.bs-specimen-meta{margin:0;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);letter-spacing:.04em}
+
+.bs-scale-figure{margin:0 0 14px;font-family:var(--mono);font-size:var(--fs-body-s);color:var(--t1)}
+.bs-ladder{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.bs-ladder li{display:flex;align-items:baseline;gap:16px}
+.bs-ladder-px{flex:0 0 68px;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);text-align:right}
+.bs-ladder-sample{color:var(--t0);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Said out loud, at the end, because "did this just change my project?" is the
+   question a generator has to answer before the user asks it. */
+.bs-result-foot{margin:0;padding-top:20px;border-top:1px solid var(--border);font-size:var(--fs-caption);color:var(--t3);line-height:1.6;max-width:74ch}
+
+@media(max-width:640px){
+  .bs-allowance-left{margin-left:0;width:100%}
+  .bs-band-open{margin-left:0;width:100%}
+  .bs-swatch{min-width:0;flex:1 1 84px}
+  .bs-ladder-px{flex-basis:52px}
+}
