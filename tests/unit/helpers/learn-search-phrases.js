@@ -1,7 +1,7 @@
 // A phrase a reader could only have got from reading one guide.
 //
 // Shared by tests/unit/learn-search.test.js and
-// tests/user-sim/65-learn-index-search-card.spec.js so both halves search for
+// tests/user-sim/67-learn-index-search-card.spec.js so both halves search for
 // the SAME kind of thing: a run of consecutive words from a guide's body such
 // that (a) at least one of the words is absent from that guide's own metadata,
 // so a match has to go through the body rather than the card, and (b) for

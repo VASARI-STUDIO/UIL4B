@@ -1,6 +1,6 @@
 // The search over the Learn guides, on disk.
 //
-// tests/user-sim/65-learn-index-search-card.spec.js drives the field in a
+// tests/user-sim/67-learn-index-search-card.spec.js drives the field in a
 // browser. What is asserted here is the half a browser cannot show cheaply:
 // that the text the field searches is the guides' PROSE and not a copy of
 // their metadata, that a match on something only the body says reaches the
