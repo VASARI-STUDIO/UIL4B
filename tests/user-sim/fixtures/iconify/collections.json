@@ -1,0 +1,302 @@
+{
+  "lucide": {
+    "name": "Lucide",
+    "total": 214,
+    "samples": [
+      "arrow-right",
+      "arrow-left",
+      "arrow-up"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "tabler": {
+    "name": "Tabler Icons",
+    "total": 20,
+    "samples": [
+      "arrow-right",
+      "arrow-narrow-up",
+      "arrow-back-up"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "iconoir": {
+    "name": "Iconoir",
+    "total": 20,
+    "samples": [
+      "arrow-right",
+      "arrow-left",
+      "arrow-up"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "heroicons": {
+    "name": "HeroIcons",
+    "total": 20,
+    "samples": [
+      "arrow-right",
+      "arrow-left",
+      "arrow-up"
+    ],
+    "height": 24,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "ph": {
+    "name": "Phosphor",
+    "total": 21,
+    "samples": [
+      "arrow-right",
+      "arrow-left",
+      "arrow-up"
+    ],
+    "height": 256,
+    "category": "UI 24px",
+    "palette": false
+  },
+  "mdi": {
+    "name": "Material Design Icons",
+    "total": 21,
+    "samples": [
+      "arrow-right",
+      "arrow-left",
+      "arrow-up"
+    ],
+    "height": 24,
+    "category": "General",
+    "palette": false
+  },
+  "material-symbols": {
+    "name": "Material Symbols",
+    "total": 22,
+    "samples": [
+      "arrow-right-alt",
+      "arrow-back",
+      "arrow-upward"
+    ],
+    "height": 24,
+    "category": "General",
+    "palette": false
+  },
+  "solar": {
+    "name": "Solar",
+    "total": 23,
+    "samples": [
+      "arrow-right-bold",
+      "arrow-left-bold",
+      "arrow-up-bold"
+    ],
+    "height": 24,
+    "category": "General",
+    "palette": false
+  },
+  "fa6-solid": {
+    "name": "Font Awesome Solid",
+    "total": 18,
+    "samples": [
+      "arrow-right",
+      "arrow-left",
+      "arrow-up"
+    ],
+    "height": 24,
+    "category": "General",
+    "palette": false
+  },
+  "bxs": {
+    "name": "BoxIcons Solid",
+    "total": 18,
+    "samples": [
+      "right-arrow",
+      "left-arrow",
+      "up-arrow"
+    ],
+    "height": 24,
+    "category": "General",
+    "palette": false
+  },
+  "logos": {
+    "name": "SVG Logos",
+    "total": 18,
+    "samples": [
+      "github-icon",
+      "gitlab",
+      "figma"
+    ],
+    "height": 32,
+    "category": "Logos",
+    "palette": true
+  },
+  "flat-color-icons": {
+    "name": "Flat Color Icons",
+    "total": 16,
+    "samples": [
+      "home",
+      "search",
+      "settings"
+    ],
+    "height": 48,
+    "category": "General",
+    "palette": true
+  },
+  "devicon": {
+    "name": "Devicon",
+    "total": 17,
+    "samples": [
+      "github",
+      "gitlab",
+      "figma"
+    ],
+    "height": 128,
+    "category": "Logos",
+    "palette": true
+  },
+  "skill-icons": {
+    "name": "Skill Icons",
+    "total": 16,
+    "samples": [
+      "github-dark",
+      "github-light",
+      "gitlab-dark"
+    ],
+    "height": 256,
+    "category": "Logos",
+    "palette": true
+  },
+  "vscode-icons": {
+    "name": "VSCode Icons",
+    "total": 16,
+    "samples": [
+      "file-type-js",
+      "file-type-typescript",
+      "file-type-reactjs"
+    ],
+    "height": 32,
+    "category": "Logos",
+    "palette": true
+  },
+  "token-branded": {
+    "name": "Web3 Icons Branded",
+    "total": 16,
+    "samples": [
+      "btc",
+      "eth",
+      "sol"
+    ],
+    "height": 24,
+    "category": "Logos",
+    "palette": true
+  },
+  "simple-icons": {
+    "name": "Simple Icons",
+    "total": 18,
+    "samples": [
+      "github",
+      "gitlab",
+      "figma"
+    ],
+    "height": 24,
+    "category": "Logos",
+    "palette": false
+  },
+  "circle-flags": {
+    "name": "Circle Flags",
+    "total": 18,
+    "samples": [
+      "gb",
+      "us",
+      "fr"
+    ],
+    "height": 512,
+    "category": "Flags",
+    "palette": true
+  },
+  "flag": {
+    "name": "Flag Icons",
+    "total": 16,
+    "samples": [
+      "gb-4x3",
+      "us-4x3",
+      "fr-4x3"
+    ],
+    "height": 32,
+    "category": "Flags",
+    "palette": true
+  },
+  "flagpack": {
+    "name": "Flagpack",
+    "total": 16,
+    "samples": [
+      "gb",
+      "us",
+      "fr"
+    ],
+    "height": 24,
+    "category": "Flags",
+    "palette": true
+  },
+  "cif": {
+    "name": "CoreUI Flags",
+    "total": 16,
+    "samples": [
+      "gb",
+      "us",
+      "fr"
+    ],
+    "height": 32,
+    "category": "Flags",
+    "palette": true
+  },
+  "twemoji": {
+    "name": "Twitter Emoji",
+    "total": 16,
+    "samples": [
+      "grinning-face",
+      "red-heart",
+      "star"
+    ],
+    "height": 36,
+    "category": "Emoji",
+    "palette": true
+  },
+  "fluent-emoji": {
+    "name": "Fluent Emoji",
+    "total": 16,
+    "samples": [
+      "grinning-face",
+      "red-heart",
+      "star"
+    ],
+    "height": 32,
+    "category": "Emoji",
+    "palette": true
+  },
+  "noto": {
+    "name": "Noto Emoji",
+    "total": 16,
+    "samples": [
+      "grinning-face",
+      "red-heart",
+      "star"
+    ],
+    "height": 128,
+    "category": "Emoji",
+    "palette": true
+  },
+  "openmoji": {
+    "name": "OpenMoji",
+    "total": 16,
+    "samples": [
+      "grinning-face",
+      "red-heart",
+      "star"
+    ],
+    "height": 72,
+    "category": "Emoji",
+    "palette": true
+  }
+}

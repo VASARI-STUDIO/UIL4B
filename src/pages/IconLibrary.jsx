@@ -1483,7 +1483,11 @@ export default function IconLibrary({ onCopy, embedded }) {
       cdn: false
     })))
     setVisible(PAGE_SIZE)
-    setMode(cdnOk.current === false ? 'Offline' : 'Embedded')
+    // "Built-in icons", not "Offline": this branch is reached when the icon
+    // SERVICE refused (a 429 rate limit was measured on 2026-09-08), and the
+    // browser is online the whole time. The notice above the grid says what
+    // happened; this line says what is being shown.
+    setMode(cdnOk.current === false ? 'Built-in icons' : 'Embedded')
     setLoading(false)
   }, [activeCat])
 
@@ -2096,7 +2100,13 @@ export default function IconLibrary({ onCopy, embedded }) {
         ) : (
           <>
             {loadError && (
-              <div className="ig-notice">
+              // role="status": the sentence is the only thing telling a
+              // screen-reader user that the grid under it is the built-in set
+              // rather than the catalogue they searched. Rendered with every
+              // Iconify host refused (429/403) on 2026-09-08 the state was
+              // otherwise complete — the sentence, Try again and the built-in
+              // grid — but nothing announced it.
+              <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
                 <button type="button" className="ui-pill ui-pill-out ui-pill-sm" onClick={() => retryRef.current?.()}>Try again</button>
               </div>

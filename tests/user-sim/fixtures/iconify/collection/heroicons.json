@@ -1,0 +1,27 @@
+{
+  "prefix": "heroicons",
+  "total": 20,
+  "title": "HeroIcons",
+  "uncategorized": [
+    "arrow-right",
+    "arrow-left",
+    "arrow-up",
+    "arrow-right-solid",
+    "star",
+    "star-solid",
+    "heart",
+    "home",
+    "magnifying-glass",
+    "cog-6-tooth",
+    "user",
+    "bell",
+    "check",
+    "x-mark",
+    "bars-3",
+    "envelope",
+    "calendar",
+    "camera",
+    "document-duplicate",
+    "arrow-down-tray"
+  ]
+}

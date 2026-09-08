@@ -7,9 +7,14 @@
 // are both describing a suite that was fetching deleted files.
 import { summarize } from './summarize.js'
 import { assertNoStaleBuildAssets, assertOneTapNeverLeft } from './base.js'
+import { assertIconifyNeverLeft } from './iconify-stub.js'
 
 export default function globalTeardown() {
   summarize()
   assertNoStaleBuildAssets()
   assertOneTapNeverLeft()
+  // Same standing as the One Tap guard: the icon catalogue is served from a
+  // fixture, and a run in which a request reached api.iconify.design was
+  // decided by a third party's rate limit, not by the app.
+  assertIconifyNeverLeft()
 }

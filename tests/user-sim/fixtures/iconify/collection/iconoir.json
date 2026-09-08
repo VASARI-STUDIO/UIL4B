@@ -1,0 +1,27 @@
+{
+  "prefix": "iconoir",
+  "total": 20,
+  "title": "Iconoir",
+  "uncategorized": [
+    "arrow-right",
+    "arrow-left",
+    "arrow-up",
+    "star",
+    "star-solid",
+    "heart",
+    "heart-solid",
+    "home",
+    "search",
+    "settings",
+    "user",
+    "bell",
+    "check",
+    "xmark",
+    "menu",
+    "mail",
+    "calendar",
+    "camera",
+    "copy",
+    "download"
+  ]
+}
