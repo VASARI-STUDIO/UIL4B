@@ -6690,6 +6690,13 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
 .hkit-format-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-body-s);font-weight:700;letter-spacing:-.01em;color:var(--t0)}
 .hkit-format-pro{display:inline-flex;align-items:center;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:10.5px;font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong)}
 .hkit-cta{align-self:flex-start;max-width:100%}
+/* `.ui-pill` is nowrap, and this label needs 302px in the 286px a 320 phone
+   leaves it (measured 2026-09-08): the arrow was pushed past the pill's edge.
+   Below 360 the pill takes two lines at the same 44px minimum rather than
+   losing its last word — the label is the hand-off's whole meaning. */
+@media(max-width:359px){
+  .hkit-cta{white-space:normal;height:auto;min-height:44px;padding-top:10px;padding-bottom:10px;text-align:center;line-height:1.25}
+}
 
 @media(min-width:981px){
   .hkit-grid{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:var(--s-7);align-items:start}
