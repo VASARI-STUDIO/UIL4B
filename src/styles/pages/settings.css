@@ -11,8 +11,7 @@
   .settings-grid{grid-template-columns:1fr;gap:20px}
   .settings-section-h h2{font-size:24px}
   .settings-card-h,.settings-card-body,.settings-profile{padding-left:18px!important;padding-right:18px!important}
-  .settings-profile{flex-wrap:wrap;gap:14px}
-  .settings-profile-info{flex:1 1 calc(100% - 78px);min-width:0}
+  .settings-profile{flex-wrap:wrap}
 }
 
 @media(max-width:480px){
@@ -88,7 +87,31 @@
 .settings-avatar-remove:hover{color:var(--t1)}
 .settings-profile-info{flex:1;min-width:0}
 .settings-profile-name{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.015em;color:var(--t0);line-height:1.35}
-.settings-profile-email{font-size:13px;color:var(--t2);margin-top:2px}
+/* `overflow-wrap:anywhere`: an address has no spaces to break at, and this
+   column is 172px on a 320 phone. */
+.settings-profile-email{font-size:13px;color:var(--t2);margin-top:2px;overflow-wrap:anywhere}
+/* The phone layout of the profile row, placed AFTER the base rules above for
+   the same reason the section-nav overrides further down are: the ≤640 block
+   at the top of this file used to carry `gap:14px` and
+   `.settings-profile-info{flex:1 1 calc(100% - 78px)}`, and both were dead —
+   the base `.settings-profile{gap:18px}` and `.settings-profile-info{flex:1}`
+   come later at equal specificity and won. Measured at 320 (2026-09-08): the
+   row never wrapped, the name/email column was 81px of a 250px row beside the
+   Sign out button, the name broke onto two lines and the email overflowed it.
+   With the basis honoured the avatar and the column share the first row
+   (64 + 14 + 172 = 250) and Sign out drops to the second. */
+@media(max-width:640px){
+  .settings-profile{gap:14px}
+  .settings-profile-info{flex:1 1 calc(100% - 78px)}
+}
+/* Accessibility → Theme. `.toggle-row .theme-seg` is a fixed 250px in
+   global.css; beside its label in a 250px card body at 320 that overflowed
+   the card by 23px and cut "System" to "Syste", with the label crushed into a
+   75px, five-line column. Below 520 the control takes the row under its label. */
+@media(max-width:520px){
+  .settings-card .toggle-row{flex-wrap:wrap;gap:10px}
+  .settings-card .toggle-row .theme-seg{flex:1 1 100%;width:auto}
+}
 
 /* Below the two-column layout the section nav lies down into a row. It used to
    become a horizontal SCROLLER, which hid three of its five sections off-screen
@@ -147,3 +170,7 @@
    docs/reference/css-conventions.md). */
 .settings-data-note{font-size:13px;color:var(--t1);line-height:1.65;padding:12px 0;max-width:64ch}
 .settings-row--pad{padding-top:16px;padding-bottom:16px}
+/* Settings → Privacy & legal. Was an inline flex row with no wrap: at 320 the
+   two pills need 284px of a 250px card body, so "Terms of service" ran under
+   the card edge and the feedback button (rendered 2026-09-08, both themes). */
+.settings-legal-links{display:flex;flex-wrap:wrap;gap:8px;padding-top:14px;border-top:1px solid var(--border);margin-top:6px}

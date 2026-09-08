@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { getSyncState, subscribeSync, clearSyncEntry } from '../utils/syncStatus'
+import useOnline from '../hooks/useOnline'
 
 // THE ONE PLACE A FAILED SYNC IS ALLOWED TO BE SEEN FROM.
 //
@@ -44,9 +45,21 @@ export default function SyncNotice() {
   // there — is read by the very next render instead of a frame later, and the
   // subscription cannot tear on a concurrent one.
   const state = useSyncExternalStore(subscribeSync, getSyncState, getSyncState)
+  const online = useOnline()
 
   const entry = state.first
   if (!entry) return null
+
+  // WHILE OFFLINE, THE OFFLINE BANNER SPEAKS AND THIS ONE WAITS. Both are
+  // fixed, centred, under the nav — the same slot — and a lost connection is
+  // precisely when a sync fails, so the two arrived together: measured
+  // 2026-09-08 at 320, 390 and 1280, this notice (z-index 130) sat on top of
+  // .offline-banner (119) and hid it. The offline banner already says the
+  // work is safe and that things resume on their own; a second card saying
+  // "your projects aren't syncing — this device looks offline" over it adds
+  // nothing a person can act on. The entry is NOT cleared — it is still true
+  // — so the moment the connection returns this renders again, with Try again.
+  if (!online) return null
 
   const isError = entry.level === 'error'
 

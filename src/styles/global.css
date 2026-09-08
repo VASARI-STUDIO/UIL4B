@@ -6690,6 +6690,13 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
 .hkit-format-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-body-s);font-weight:700;letter-spacing:-.01em;color:var(--t0)}
 .hkit-format-pro{display:inline-flex;align-items:center;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:10.5px;font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong)}
 .hkit-cta{align-self:flex-start;max-width:100%}
+/* `.ui-pill` is nowrap, and this label needs 302px in the 286px a 320 phone
+   leaves it (measured 2026-09-08): the arrow was pushed past the pill's edge.
+   Below 360 the pill takes two lines at the same 44px minimum rather than
+   losing its last word — the label is the hand-off's whole meaning. */
+@media(max-width:359px){
+  .hkit-cta{white-space:normal;height:auto;min-height:44px;padding-top:10px;padding-bottom:10px;text-align:center;line-height:1.25}
+}
 
 @media(min-width:981px){
   .hkit-grid{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:var(--s-7);align-items:start}
@@ -10702,6 +10709,18 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-filtermenu .lbry-filter{width:100%;justify-content:flex-start;border-radius:var(--radius)}
 .lbry-filtermenu .lbry-filter:hover{background:var(--bg-2)}
 .lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-2);color:var(--t0)}
+/* IN DARK, --card AND --bg-2 ARE THE SAME HEX (#191A1D), so every "raised
+   surface on the tray" fill above paints nothing there: the tray's sliding
+   indicator is --card on a --bg-2 tray, and the menu's active and hover rows
+   are --bg-2 on a --card menu. Measured 2026-09-08 on /discover/palettes with
+   Brand and Warm selected — indicator rgb(25,26,29) on rgb(25,26,29), active
+   option rgb(25,26,29) on rgb(25,26,29) — leaving text colour (242 vs 159) as
+   the only sign of which option is on, and hover with no feedback at all.
+   One step up the dark surface scale, dark only, so light is untouched. */
+[data-theme="dark"] .lbry-filter-ind{background:var(--bg-3)}
+[data-theme="dark"] .lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{background:var(--bg-3)}
+[data-theme="dark"] .lbry-filtermenu .lbry-filter:hover{background:var(--hvr)}
+[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]{background:var(--bg-3)}
 /* The count is the option's own metadata (1,655 emoji), so it belongs at the
    far end of the row rather than tucked against the label. */
 .lbry-filtermenu .lbry-filter-count{margin-left:auto}
@@ -12938,7 +12957,17 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .sync-notice-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .sync-notice-dismiss{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-s);border:0;background:transparent;color:var(--t2);cursor:pointer}
 .sync-notice-dismiss:hover{background:var(--hvr);color:var(--t0)}
+/* ON A PHONE THE ACTIONS DROP UNDER THE SENTENCE. `flex-wrap:wrap` alone did
+   nothing here: the message is `flex:1;min-width:0`, so it shrank to whatever
+   the buttons left over and never wrapped them — measured 2026-09-08, the
+   size-ceiling sentence rendered 11 lines in a 230px column beside "Try again"
+   at 320, and 7 lines at 390. Giving the message a basis of the full row less
+   the icon is what makes the actions the thing that wraps. Emergent's credit
+   notice is the shape: the paragraph runs the width of the card and its two
+   actions sit on their own row beneath it —
+   https://mobbin.com/screens/821ee5aa-8dbc-4885-ac84-265a17a7cc9b */
 @media (max-width:520px){
-  .sync-notice{width:calc(100vw - 24px);flex-wrap:wrap}
+  .sync-notice{width:calc(100vw - 24px);flex-wrap:wrap;row-gap:8px}
+  .sync-notice-msg{flex:1 1 calc(100% - 37px)}
   .sync-notice-actions{margin-left:auto}
 }
