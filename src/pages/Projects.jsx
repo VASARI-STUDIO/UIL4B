@@ -12,6 +12,10 @@ import { buildCSSVars } from '../utils/exportBuilder'
 import DailyBand from '../components/userhome/DailyBand'
 import StarterRow from '../components/userhome/StarterRow'
 import ProjectCard from '../components/userhome/ProjectCard'
+// The `projects` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/projects.css'
 
 // Read-only sample design systems shown under the "Community" tab.
 const COMMUNITY_PROJECTS = [

@@ -7,6 +7,13 @@ import StarterRow from '../../../src/components/userhome/StarterRow'
 import { DEFAULT_DESIGN } from '../../../src/data/designDefaults'
 import { nextToolSuggestion } from '../../../src/utils/userHome'
 import '../../../src/styles/global.css'
+// This fixture mounts ProjectCard / DailyBand / StarterRow DIRECTLY rather than
+// through src/pages/Projects.jsx, so it does not get that page's stylesheet the
+// way the real route does — the `uh` and `proj` families live in
+// src/styles/pages/projects.css since the per-route CSS split. Without this the
+// cards render unstyled: .uh-grid loses `display:grid`, .uh-card loses
+// `overflow:visible`, and the actions menu opens clipped, behind a <select>.
+import '../../../src/styles/pages/projects.css'
 
 // THE SIGNED-IN USER HOME, mountable without a session.
 //

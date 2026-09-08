@@ -9,6 +9,10 @@ import { BRAND_PALETTES } from '../data/brandPalettes'
 import { freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
 import { BRAND_STARTER_BETA, allowanceSentence } from '../config/aiGeneration'
 import SystemCTA from '../components/SystemCTA'
+// The `plans` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/plans.css'
 
 // The One-off ("lifetime") tier is GONE from this page. It was a third tab that
 // could not be bought — the checkout stayed disabled pending a live Stripe

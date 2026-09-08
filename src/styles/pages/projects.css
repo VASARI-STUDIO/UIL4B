@@ -1,0 +1,235 @@
+/* projects.css — the `proj` and `uh` families, lifted out of global.css.
+ * Imported by the page module that owns it, so Vite emits it as that page's
+ * chunk stylesheet and only that route pays for it.
+ *
+ * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
+ * so anything here now outranks every global rule at equal specificity —
+ * which is why a rule a later global rule overrides was left behind rather
+ * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+
+.proj-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+
+.proj-search{position:relative;display:flex;align-items:center;flex:1;min-width:200px;max-width:340px}
+
+.proj-search svg{position:absolute;left:11px;color:var(--t3);pointer-events:none}
+
+.proj-search input{width:100%;padding:9px 30px 9px 32px;border:1px solid var(--border);border-radius:9px;background:var(--bg-1);color:var(--t0);font-size:13px}
+
+.proj-search input:focus{outline:none;border-color:var(--brand)}
+
+.proj-search button{position:absolute;right:8px;width:24px;height:24px;border:none;background:var(--bg-3);color:var(--t2);border-radius:50%;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center}
+
+.proj-sort{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
+
+.proj-sort select{padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--bg-1);color:var(--t1);font-size:13px;cursor:pointer}
+
+.proj-count{margin-left:auto;font-size:12px;color:var(--t2);font-weight:500}
+
+.proj-folders{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+
+.proj-folder-chip{padding:5px 14px;border-radius:999px;font-size:11px;font-weight:600;font-family:var(--font);border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;transition:all var(--t)}
+
+.proj-folder-chip:hover{color:var(--t0);border-color:var(--bh)}
+
+.proj-folder-note{margin-left:auto;align-self:center;font-size:11px;color:var(--t2)}
+
+.proj-folder-note a{color:var(--accent-strong);font-weight:600;text-decoration:none}
+
+.proj-folder-note a:hover{text-decoration:underline}
+
+.proj-detail{max-width:520px}
+
+.proj-detail-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px}
+
+.proj-detail-swatch{display:flex;flex-direction:column;gap:6px}
+
+.proj-detail-swatch-chip{height:48px;border-radius:var(--radius-s);border:1px solid var(--border)}
+
+.proj-detail-swatch-hex{font-family:var(--mono);font-size:10px;color:var(--t2);text-align:center}
+
+.proj-detail-meta{display:flex;flex-direction:column;gap:8px}
+
+.proj-detail-meta-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px}
+
+.proj-detail-meta-row span{color:var(--t2)}
+
+.proj-detail-meta-row strong{color:var(--t0);font-weight:600}
+
+.proj-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+
+.proj-tab{padding:8px 16px;font-size:13px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
+
+.proj-tab:hover{color:var(--t0)}
+
+/* ─── Projects: Cards ─── */
+.proj-card{transition:transform var(--dur-2) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.proj-card:hover{transform:translateY(-2px);box-shadow:var(--warm-shadow-lg)}
+.proj-card-active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.proj-card-icon{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:6px;object-fit:contain;background:rgba(255,255,255,.9);padding:3px;box-shadow:0 1px 6px rgba(0,0,0,.2)}
+.proj-detail-icon{width:32px;height:32px;border-radius:6px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:2px}
+.proj-detail-icon-lg{width:56px;height:56px;border-radius:8px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:4px}
+.proj-detail-icon-empty{display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:20px}
+
+.proj-new-modal{max-width:460px}
+
+.proj-new-folders{display:flex;flex-wrap:wrap;gap:6px}
+
+.proj-new-start{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.proj-new-start-opt{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+
+.proj-new-start-opt:hover{border-color:var(--brand)}
+
+.proj-new-start-opt strong{font-size:13px;font-weight:700;color:var(--t0)}
+
+.proj-new-start-opt span{font-size:11px;color:var(--t2);line-height:1.4}
+
+@media(max-width:520px){.proj-new-start{grid-template-columns:1fr}}
+
+/* The shared eyebrow. One rule, four call sites, so the labelling is visibly
+   one system rather than four near-misses. */
+.uh-eyebrow{display:flex;align-items:baseline;gap:var(--s-2);margin:0 0 var(--s-2);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--t3)}
+.uh-eyebrow-kind{font-weight:500;letter-spacing:.06em;color:var(--accent-strong)}
+.uh-eyebrow-kind::before{content:'\00b7';margin-right:.5em;color:var(--t3)}
+
+/* ── Masthead ───────────────────────────────────────────────────── */
+/* .sec-h is kept alongside so the h1 inherits the site's display treatment;
+   only the spacing changes, because a 48px gap under the title pushed the band
+   and the first row of projects below the fold on a laptop. */
+.uh-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-5);flex-wrap:wrap;margin-bottom:var(--s-5)}
+.uh-head-main{min-width:0}
+.uh-sub{max-width:56ch;font-size:var(--fs-body-s);line-height:1.6;color:var(--t2)}
+.uh-head-actions{display:flex;gap:var(--s-2);flex-wrap:wrap}
+
+/* Quick data tracking. Mono + tabular figures so the numbers line up and read
+   as measurements rather than as marketing. Any figure that would be zero is
+   dropped upstream in utils/userHome.js and never reaches this list. */
+.uh-stats{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);margin-top:var(--s-3);padding:0;list-style:none;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.02em;color:var(--t2);font-variant-numeric:tabular-nums}
+.uh-stats li{display:flex;align-items:baseline;gap:.35em}
+.uh-stats li + li{padding-left:var(--s-4);border-left:1px solid var(--border)}
+.uh-stats strong{font-weight:700;font-size:var(--fs-caption);color:var(--t0)}
+.uh-quota{margin-top:var(--s-3);max-width:58ch;font-size:var(--fs-caption);line-height:1.65;color:var(--t2)}
+.uh-quota-link{font-weight:600;color:var(--accent-strong)}
+
+/* ── The band: NEXT | TIP ─────────────────────────────────────────── */
+/* Two hairlines and a gap. No fill, no radius, no shadow — see the note above.
+   The vertical rule between the columns is the only divider, and it is dropped
+   at narrow widths where the columns stack and it would point the wrong way. */
+.uh-band{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-5) var(--s-7);margin:0 0 var(--s-6);padding:var(--s-4) 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.uh-band-col + .uh-band-col{padding-left:var(--s-7);border-left:1px solid var(--border)}
+.uh-band-text{margin:0;font-size:var(--fs-body-s);line-height:1.65;color:var(--t1);max-width:62ch}
+.uh-band-go{font-weight:600;color:var(--accent-strong);white-space:nowrap}
+.uh-tip{color:var(--t1)}
+@media(max-width:860px){
+  .uh-band{grid-template-columns:1fr;gap:var(--s-4)}
+  .uh-band-col + .uh-band-col{padding-left:0;padding-top:var(--s-4);border-left:none;border-top:1px solid var(--border)}
+}
+
+.uh-skel{display:block;width:min(38ch,100%);height:1em;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2) 0%,var(--bg-3) 50%,var(--bg-2) 100%);background-size:200% 100%;animation:uh-skel-slide var(--fl-shimmer-dur) var(--ease-standard) infinite}
+
+.uh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:var(--s-4)}
+
+.uh-card{padding:0;overflow:visible;display:flex;flex-direction:column}
+
+/* The palette, at a size you can actually read it at. 40px rather than a hairline
+   because “see what is in each project at a glance” is the whole brief, and an
+   8px spine is a decoration that gestures at a palette instead of showing one.
+   Nothing is typeset on top of it: the old header set the project name in white
+   over a two-colour blend, so legibility depended on the user's own colours and
+   any dark-on-light palette broke it. */
+.uh-card-art{height:40px;border-radius:var(--radius-xl) var(--radius-xl) 0 0;border-bottom:1px solid var(--border)}
+.uh-card-body{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-4);flex:1}
+.uh-card-top{display:flex;align-items:center;gap:var(--s-2)}
+.uh-card-icon{width:22px;height:22px;border-radius:var(--radius-xs);object-fit:contain;flex:0 0 auto}
+
+/* The name, set in the project's OWN heading face. A button because it opens
+   the detail sheet; styled as text because it is the card's title. */
+.uh-card-name{flex:1;min-width:0;padding:0;border:none;background:none;font-size:var(--fs-h5);font-weight:700;letter-spacing:-.015em;line-height:1.25;color:var(--t0);text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.uh-card-name:hover{color:var(--accent-strong)}
+
+.uh-tag{flex:0 0 auto;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 7px;line-height:1.4}
+.uh-tag--live{color:var(--accent-strong);background:var(--accent-bg);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+
+/* What is in it. Mono, because these are values read off the project rather
+   than prose about it. Wraps rather than truncating — two font names and a
+   scale do not fit one line at 300px and the second line is not a failure. */
+.uh-card-meta{margin:0;font-family:var(--mono);font-size:var(--fs-micro);line-height:1.7;letter-spacing:.01em;color:var(--t2);font-variant-numeric:tabular-nums}
+.uh-dot{margin:0 .5em;color:var(--t3)}
+
+.uh-card-rename{display:flex;gap:var(--s-2)}
+.uh-card-rename input{flex:1;min-width:0;font-size:var(--fs-body-s);font-weight:600}
+
+.uh-parts{display:flex;align-items:flex-start;gap:var(--s-2);flex-wrap:nowrap;margin-top:auto;font-size:var(--fs-micro)}
+
+.uh-parts-dots{display:inline-flex;gap:5px;flex:0 0 auto;padding-top:.35em}
+
+.uh-part{width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--t3)}
+
+.uh-parts-label{flex:1;min-width:0;font-family:var(--mono);font-weight:600;letter-spacing:.03em;line-height:1.6;color:var(--t2)}
+
+.uh-card-when{flex:0 0 auto;font-family:var(--mono);letter-spacing:.02em;line-height:1.6;color:var(--t3);white-space:nowrap}
+
+.uh-card-foot{display:flex;align-items:center;gap:var(--s-2)}
+.uh-card-folder{margin-left:auto}
+.uh-card-folder select{padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t2);font-family:var(--mono);font-size:var(--fs-micro);cursor:pointer}
+
+/* Deletion still types the name. The ⋯ row only ARMS this — a one-click destroy
+   in a menu that also holds “Rename” is how people lose work. */
+.uh-card-confirm{display:flex;flex-direction:column;gap:var(--s-2)}
+.uh-card-confirm p{margin:0;font-size:var(--fs-micro);line-height:1.6;color:var(--err-strong)}
+.uh-card-confirm input{font-size:var(--fs-body-s)}
+.uh-card-confirm-actions{display:flex;gap:var(--s-2)}
+.uh-danger{color:var(--err-strong);border-color:color-mix(in srgb,var(--err) 45%,transparent)}
+.uh-danger:disabled{opacity:.5;cursor:not-allowed}
+
+.uh-actions{position:relative;flex:0 0 auto}
+
+.uh-actions-trigger{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid transparent;border-radius:var(--radius-pill);background:none;color:var(--t3);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+
+.uh-actions-trigger:hover,.uh-actions-trigger[aria-expanded="true"]{background:var(--hvr);border-color:var(--border);color:var(--t0)}
+
+.uh-menu{min-width:230px}
+
+.uh-menu-hint{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+
+.uh-menu-danger{color:var(--err-strong)}
+
+.uh-menu-danger:hover{background:color-mix(in srgb,var(--err) 9%,transparent);color:var(--err-strong)}
+
+/* ── Waiting, and signed out ─────────────────────────────────────── */
+.uh-resolving{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s-3);min-height:220px;color:var(--t2);font-size:var(--fs-body-s)}
+.uh-resolving p{margin:0}
+
+/* Left-aligned on a tinted ground rather than a centred card with a circular
+   icon. The centred-icon-card is the shape this page is deliberately not made
+   of, and it would be the only one on the page if it stayed. */
+.uh-signin{max-width:60ch;margin-bottom:var(--s-6);padding:var(--s-5);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 var(--radius-l) var(--radius-l) 0;background:var(--bg-2)}
+.uh-signin h2{margin:0 0 var(--s-2);font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0)}
+.uh-signin p{margin:0 0 var(--s-4);font-size:var(--fs-body-s);line-height:1.65;color:var(--t2)}
+
+/* ── Daily starters ────────────────────────────────────────────── */
+.uh-starters{margin-top:var(--s-8);padding-top:var(--s-5);border-top:1px solid var(--border)}
+.uh-band + .uh-starters{margin-top:var(--s-6);padding-top:0;border-top:none}
+.uh-starters-head{margin-bottom:var(--s-4)}
+.uh-starters-note{margin:0;max-width:60ch;font-size:var(--fs-micro);line-height:1.6;color:var(--t3)}
+.uh-starter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr));gap:var(--s-3);padding:0;list-style:none}
+.uh-starter{display:flex;flex-direction:column;height:100%;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);overflow:hidden;text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.uh-starter:hover{border-color:var(--bh);text-decoration:none;transform:translateY(-2px);box-shadow:var(--shadow-cmd)}
+/* The artefact itself, at a size it can be judged at. */
+.uh-starter-art{display:block;height:64px;border-bottom:1px solid var(--border)}
+.uh-starter-body{display:flex;flex-direction:column;gap:2px;padding:var(--s-3)}
+.uh-starter-kind{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.uh-starter-name{font-size:var(--fs-body-s);font-weight:650;letter-spacing:-.01em;color:var(--t0)}
+.uh-starter-fact{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2);font-variant-numeric:tabular-nums}
+.uh-starter-opens{margin-top:var(--s-1);font-size:var(--fs-micro);color:var(--t3)}
+
+@media(max-width:640px){
+  .uh-head{margin-bottom:var(--s-4)}
+  .uh-card-foot{flex-wrap:wrap}
+  .uh-card-folder{margin-left:0;width:100%}
+  .uh-card-folder select{width:100%}
+  .uh-head-actions{width:100%}
+  .uh-stats li + li{padding-left:var(--s-3)}
+  .uh-parts{flex-wrap:wrap}
+  .uh-card-when{flex:1 0 100%}
+}
