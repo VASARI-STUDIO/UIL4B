@@ -205,13 +205,13 @@ had ever assigned it an owner.
 
 | File | Verdict | Why |
 |---|---|---|
-| `public/llms.txt` | **UPDATE 2026-09-06** | Four faults, all of the kind this map exists to catch. (1) **It quoted `$4.99/mo` — a pre-ladder price — twice**, one of them labelled AUD over a USD ladder. This is the *same defect* `index.html` had, recorded as fixed under `seo-per-route-share-and-schema`: "the only price a non-JS reader could see stayed pre-ladder for weeks." The fix there was to generate the figure from `planLadder.js`; `llms.txt` was never brought into that fix. (2) Its whole **Documentation** section pointed at five `/docs-*` URLs that are **301s to `/learn`**, not pages. (3) It listed four **Soon** tools as live. (4) It linked `/#pricing`, an anchor that exists nowhere in `src/`. Now mirrors the generated `index.html` sentence and the real `/learn` guides. |
+| `public/llms.txt` | **GENERATED 2026-09-08** | **Now derived, not written.** `scripts/llms-txt.mjs` writes it from `src/data/positioning.js` (the summary line, by `SURFACE_LINE.llmsSummary`), `scripts/site-pricing.mjs`, `src/config/plans.js`, `aiGeneration.js`, `exportFormats.js`, `planLadder.js`, the tool tree, `learnIndex.js` and `routeMetaMap.js`; `npm run sync:llms` regenerates the committed copy and `scripts/prerender.mjs` writes the served one from the same function. `tests/unit/llms-txt-truth.test.js` fails the build on drift or on any composed number that is not the server-enforced figure. By 2026-09-08 the hand-typed file had drifted again — the Brand Starter missing while "UI Auto-Builder" sat under not-yet-built, "five guides" against seven, a summary selling design-token exports that are not live — which is the record that prose does not go stale loudly. **History, 2026-09-06:** Four faults, all of the kind this map exists to catch. (1) **It quoted `$4.99/mo` — a pre-ladder price — twice**, one of them labelled AUD over a USD ladder. This is the *same defect* `index.html` had, recorded as fixed under `seo-per-route-share-and-schema`: "the only price a non-JS reader could see stayed pre-ladder for weeks." The fix there was to generate the figure from `planLadder.js`; `llms.txt` was never brought into that fix. (2) Its whole **Documentation** section pointed at five `/docs-*` URLs that are **301s to `/learn`**, not pages. (3) It listed four **Soon** tools as live. (4) It linked `/#pricing`, an anchor that exists nowhere in `src/`. Now mirrors the generated `index.html` sentence and the real `/learn` guides. |
 
-> **The gap that is still open.** `tests/unit/price-consistency.test.js` walks
-> `src/` only, so it guards no file in `public/` — which is exactly how a stale
-> price survived there. A guard tying `llms.txt`'s price to `planLadder.js`, the
-> way `scripts/site-pricing.mjs` ties `index.html`'s, is the durable fix and is
-> **not** built yet. Until it is, treat any figure in `public/` as unguarded.
+> **Closed 2026-09-08.** The guard this paragraph asked for exists:
+> `tests/unit/llms-txt-truth.test.js` ties every number `llms.txt` composes to
+> `planLadder.js`, `plans.js` and `aiGeneration.js`, and asserts the committed
+> file is the generator's output. Nothing else in `public/` is guarded that
+> way; `sitemap.xml` and `previews/cards.json` have their own drift tests.
 
 ### `docs/reference/`
 

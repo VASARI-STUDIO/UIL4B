@@ -17,6 +17,7 @@
     "og:cards": "node scripts/og-cards.mjs",
     "sync:rewrites": "node scripts/sync-vercel-rewrites.mjs",
     "sync:sitemap": "node scripts/sync-sitemap.mjs",
+    "sync:llms": "node scripts/llms-txt.mjs",
     "icons": "node scripts/brand-icons.mjs"
   },
   "dependencies": {

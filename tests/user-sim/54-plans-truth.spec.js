@@ -34,6 +34,7 @@ import {
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
+import { SURFACE_LINE, line } from '../../src/data/positioning.js'
 
 const PERSONA = 'someone deciding whether this is worth paying for'
 
@@ -192,5 +193,25 @@ test.describe('/plans advertises only what the product has', () => {
       expect(text, `the page carries manufactured pressure or social proof matching ${pattern}`)
         .not.toMatch(pattern)
     }
+  })
+})
+
+test.describe('/plans says what the founder said', () => {
+  test('the hero carries the founder’s framing line, rendered, from positioning.js', async ({ page }) => {
+    // The unit guard proves Plans.jsx CALLS line(SURFACE_LINE.plansFraming).
+    // This proves the sentence reaches a visitor: the hero's text is compared
+    // to the module's own record of the line, computed here rather than read
+    // off the page, so a page that stopped rendering the paragraph goes red
+    // while the helper stays perfect.
+    watch(page, PERSONA)
+    await go(page, '/plans')
+    await expectRendered(page)
+
+    const hero = await page.locator('.plans-hero').innerText()
+    expect(hero.length, 'the plans hero rendered empty').toBeGreaterThan(40)
+    expect(hero, 'the hero no longer carries the founder’s framing line').toContain(line(SURFACE_LINE.plansFraming))
+    // The founder’s line is a plain paragraph in the hero, not a badge or a
+    // tagline slot — the taglines were retired 2026-09-07 and must not return.
+    await expect(page.locator('.plans-hero .plans-framing')).toHaveCount(1)
   })
 })

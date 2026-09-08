@@ -114,6 +114,48 @@ test('the homepage renders its headline and sub from the module, not from typed 
   }
 })
 
+// The founder decided 2026-09-07 that EVERY sales surface reads from the
+// module. Home.jsx was first; these are the rest. Same two-sided shape as the
+// homepage test: the page must call line() with the id SURFACE_LINE assigns
+// it, and must NOT also carry the sentence as a literal.
+const DERIVED_SURFACES = [
+  ['src/pages/Plans.jsx', 'plansFraming', "'../data/positioning'"],
+  ['src/pages/HelpCentre.jsx', 'helpOpening', "'../data/positioning'"],
+  ['scripts/llms-txt.mjs', 'llmsSummary', "'../src/data/positioning.js'"],
+]
+
+test('/plans, /help and the llms.txt generator derive their line from the module', () => {
+  for (const [file, key, from] of DERIVED_SURFACES) {
+    const src = read(file)
+    assert.ok(src.includes(`line(SURFACE_LINE.${key})`),
+      `${file} no longer renders line(SURFACE_LINE.${key}) — its positioning line is typed, or gone`)
+    assert.ok(src.includes(`from ${from}`), `${file} does not import positioning.js`)
+    for (const [id, text] of Object.entries(FOUNDER)) {
+      assert.ok(!src.includes(text),
+        `${file} types the founder line "${id}" as a literal as well as deriving it. Delete the `
+        + 'literal — two copies of one sentence is how they drift apart.')
+    }
+  }
+})
+
+test('every SURFACE_LINE mapping has a surface that actually reads it', () => {
+  // A mapping with no consumer is a promise the module makes and nothing keeps
+  // — which is exactly what plansFraming, helpOpening and llmsSummary were for
+  // a day: declared in SURFACE_LINE while the three surfaces still typed their
+  // own sentence. Each key must be read, by name, by at least one file.
+  const consumers = [
+    'src/pages/Home.jsx',
+    ...DERIVED_SURFACES.map(([file]) => file),
+    'scripts/og-cards.mjs',
+  ].map((file) => [file, read(file)])
+  for (const key of Object.keys(SURFACE_LINE)) {
+    const readBy = consumers.filter(([, src]) => src.includes(`SURFACE_LINE.${key}`)).map(([f]) => f)
+    assert.ok(readBy.length > 0, `SURFACE_LINE.${key} is mapped in positioning.js but no surface reads it`)
+    assert.ok(VALUE_PROPOSITION.some((l) => l.id === SURFACE_LINE[key]),
+      `SURFACE_LINE.${key} names "${SURFACE_LINE[key]}", which is not a founder line`)
+  }
+})
+
 test('the share card says what the hero says', () => {
   // The card is generated from the same module the hero renders from, so the
   // check is that the GENERATED artefact agrees — cards.json is committed, and
