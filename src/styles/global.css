@@ -12938,7 +12938,17 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .sync-notice-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .sync-notice-dismiss{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-s);border:0;background:transparent;color:var(--t2);cursor:pointer}
 .sync-notice-dismiss:hover{background:var(--hvr);color:var(--t0)}
+/* ON A PHONE THE ACTIONS DROP UNDER THE SENTENCE. `flex-wrap:wrap` alone did
+   nothing here: the message is `flex:1;min-width:0`, so it shrank to whatever
+   the buttons left over and never wrapped them — measured 2026-09-08, the
+   size-ceiling sentence rendered 11 lines in a 230px column beside "Try again"
+   at 320, and 7 lines at 390. Giving the message a basis of the full row less
+   the icon is what makes the actions the thing that wraps. Emergent's credit
+   notice is the shape: the paragraph runs the width of the card and its two
+   actions sit on their own row beneath it —
+   https://mobbin.com/screens/821ee5aa-8dbc-4885-ac84-265a17a7cc9b */
 @media (max-width:520px){
-  .sync-notice{width:calc(100vw - 24px);flex-wrap:wrap}
+  .sync-notice{width:calc(100vw - 24px);flex-wrap:wrap;row-gap:8px}
+  .sync-notice-msg{flex:1 1 calc(100% - 37px)}
   .sync-notice-actions{margin-left:auto}
 }
