@@ -158,7 +158,8 @@ test.describe('the Learn index', () => {
     const hit = cards.first().locator('.lidx-hit')
     await expect(hit).toBeVisible()
     const marked = (await hit.locator('mark').innerText()).toLowerCase()
-    expect(phrase.split(' ')).toContain(marked)
+    expect(phrase.split(' ').some((t) => marked.includes(t)), `the mark "${marked}" carries no term of "${phrase}"`).toBe(true)
+    expect(marked, 'the mark is a stub of a word rather than the word').toMatch(/^\S+$/)
     await expect(status).toHaveText(new RegExp(`^1 guide matches “${esc(phrase)}”\\.$`))
     // The card is still under its topic's heading, so the grouping survives a
     // search rather than collapsing to a flat list.

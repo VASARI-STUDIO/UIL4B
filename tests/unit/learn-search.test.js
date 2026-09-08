@@ -72,8 +72,10 @@ test('THE ONE THAT MATTERS: a phrase only the body says finds exactly its guide,
       `"${phrase}" should find only ${a.slug}, found ${hits.map((h) => h.article.slug).join(', ') || 'nothing'}`)
     assert.equal(hits[0].place, 'body', `"${phrase}" was matched somewhere other than the body`)
     assert.ok(hits[0].snippet, `${a.slug}: a body-only match carries no snippet, so the card cannot show why it matched`)
-    assert.ok(phrase.split(' ').includes(normalise(hits[0].snippet.match)),
-      `${a.slug}: the snippet marks "${hits[0].snippet.match}", which is not a term of the query`)
+    // The mark covers the whole word the term sits in, so "scales" for "scale".
+    assert.ok(phrase.split(' ').some((t) => normalise(hits[0].snippet.match).includes(t)),
+      `${a.slug}: the snippet marks "${hits[0].snippet.match}", which carries no term of the query`)
+    assert.match(hits[0].snippet.match, /^\S+$/, `${a.slug}: the mark "${hits[0].snippet.match}" is not one whole word`)
     // And the negative control: the same search with NO bodies finds nothing.
     assert.deepEqual(searchGuides(phrase, LEARN_ARTICLES, {}), [],
       `"${phrase}" matched without any body text — the phrase is in the metadata after all`)
@@ -114,6 +116,10 @@ test('every term has to match, and the strongest field decides the order', () =>
 test('a snippet keeps the guide\'s own casing and snaps to word boundaries', () => {
   const s = snippetAround('The linearisation threshold reads 0.04045. WCAG’s own definition said 0.03928 until 2021.', "wcag's", 40)
   assert.equal(s.match, 'WCAG’s')
+  // A term inside a longer word marks the whole word, not a stub of it.
+  const whole = snippetAround('two relative luminances differ', 'luminance')
+  assert.equal(whole.match, 'luminances')
+  assert.equal(whole.after, ' differ')
   assert.ok(/^…\S/.test(s.before), `the before-text opens mid-word: "${s.before}"`)
   assert.ok(/\S…$/.test(s.after), `the after-text closes mid-word: "${s.after}"`)
   assert.ok(s.before.startsWith('…') && s.after.endsWith('…'), 'a mid-text snippet is ellipsised at both ends')
@@ -166,10 +172,19 @@ test('the index copy stays in Learn\'s neutral register', () => {
   // The founder's decision of 2026-09-05: neutral, no first person, no
   // marketing. tests/unit/learn-figures.test.js holds the guides to it; this
   // holds the index that fronts them.
+  // What is checked is the COPY: the JSX text after the component's `return (`
+  // with expression containers and tags removed, plus every string and
+  // template literal in the file (the status sentences are built in code).
+  // Not the code itself — `!!bodies` is a boolean cast, not an exclamation.
   const page = read('src/components/LearnGuideIndex.jsx')
-  const strings = page.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+  const code = page.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+  const at = code.indexOf('return (')
+  assert.ok(at !== -1, 'LearnGuideIndex.jsx has no return (')
+  const jsxText = code.slice(at).replace(/\{[^}]*\}/g, ' ').replace(/<[^>]*>/g, ' ')
+  const literals = [...code.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)].map((m) => m[2]).join(' ')
+  const copy = `${jsxText} ${literals}`
+  assert.ok(copy.replace(/\s+/g, '').length > 200, 'the copy extraction came back nearly empty — the guard is vacuous')
   for (const banned of [/\b(we|our|us|I)\b/, /\b(effortless|supercharge|reimagine|unlock|powerful|amazing)\b/i, /!/]) {
-    const jsxText = strings.replace(/\{[^}]*\}/g, ' ').replace(/<[^>]*>/g, ' ')
-    assert.ok(!banned.test(jsxText), `LearnGuideIndex.jsx copy matches ${banned}`)
+    assert.ok(!banned.test(copy), `LearnGuideIndex.jsx copy matches ${banned}`)
   }
 })

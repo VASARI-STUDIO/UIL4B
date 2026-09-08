@@ -68,9 +68,17 @@ export function snippetAround(text, term, width = 90) {
   const shown = same ? String(text) : norm
   const at = norm.indexOf(term)
   if (at === -1) return null
-  const half = Math.floor((width - term.length) / 2)
-  let start = Math.max(0, at - half)
-  let end = Math.min(norm.length, at + term.length + half)
+  // Mark the WHOLE word the term sits in. "luminance" found inside
+  // "luminances" would otherwise mark nine letters and leave an "s" hanging
+  // after the highlight, which reads as a typo rather than a match.
+  const wordChar = /[a-z0-9]/i
+  let mStart = at
+  while (mStart > 0 && wordChar.test(norm[mStart - 1])) mStart -= 1
+  let mEnd = at + term.length
+  while (mEnd < norm.length && wordChar.test(norm[mEnd])) mEnd += 1
+  const half = Math.floor((width - (mEnd - mStart)) / 2)
+  let start = Math.max(0, mStart - half)
+  let end = Math.min(norm.length, mEnd + half)
   // Snap to word boundaries so the snippet does not open or close mid-word.
   if (start > 0) {
     const sp = norm.lastIndexOf(' ', start)
@@ -81,9 +89,9 @@ export function snippetAround(text, term, width = 90) {
     end = sp === -1 ? end : sp
   }
   return {
-    before: (start > 0 ? '…' : '') + shown.slice(start, at),
-    match: shown.slice(at, at + term.length),
-    after: shown.slice(at + term.length, end) + (end < norm.length ? '…' : ''),
+    before: (start > 0 ? '…' : '') + shown.slice(start, mStart),
+    match: shown.slice(mStart, mEnd),
+    after: shown.slice(mEnd, end) + (end < norm.length ? '…' : ''),
   }
 }
 

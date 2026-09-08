@@ -103,6 +103,11 @@ export default function LearnGuideIndex() {
   }
 
   const reveal = touched ? {} : { 'data-reveal': true }
+  const empty = searching && !!bodies && hits.length === 0
+  // The live region keeps its sentence for assistive technology in every
+  // state, but when the empty state prints the same sentence as its heading
+  // a sighted reader would see it twice, so it is visually hidden then.
+  const statusClass = empty ? 'lidx-status sr-only' : 'lidx-status'
 
   return (
     <>
@@ -125,9 +130,9 @@ export default function LearnGuideIndex() {
           </nav>
         )}
       </div>
-      <p className="lidx-status" role="status" aria-live="polite" aria-atomic="true">{status}</p>
+      <p className={statusClass} role="status" aria-live="polite" aria-atomic="true">{status}</p>
 
-      {searching && bodies && hits.length === 0 ? (
+      {empty ? (
         <div className="lidx-empty">
           <p className="lidx-empty-h">No guide mentions “{query.trim()}”.</p>
           <p className="lidx-empty-p">
