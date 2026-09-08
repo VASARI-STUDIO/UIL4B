@@ -48,7 +48,9 @@ export const articleFiles = () => LEARN_ARTICLES.map((a) => path.join(dir, a.fil
  * matter for a word COUNT but do for a word SEARCH:
  *
  *   · `&nbsp;` and the dash entities become a space rather than nothing, so
- *     "font&nbsp;size" searches as two words rather than as "fontsize";
+ *     "font&nbsp;size" searches as two words rather than as "fontsize", and
+ *     the quote entities become the mark they stand for, so "WCAG&rsquo;s"
+ *     searches as "wcag's" rather than as "wcags";
  *   · a module-level `const X = '...'` line (a URL prefix, say) is not prose
  *     and is dropped, as `import` and `export` lines already are.
  */
@@ -56,6 +58,8 @@ export function searchableProse(source) {
   const s = source
     .replace(/&(?:nbsp|thinsp|ensp|emsp);/g, ' ')
     .replace(/&(?:ndash|mdash|minus);/g, ' ')
+    .replace(/&(?:rsquo|lsquo|apos|#39);/g, '\u2019')
+    .replace(/&(?:ldquo|rdquo|quot);/g, '"')
     .replace(/^\s*(?:const|let|var|return)\b.*$/gm, ' ')
   return proseOf(s)
 }
