@@ -184,6 +184,21 @@ unreachability sweep across eight routes, plus the three specific guarantees —
 specimens that truncate without shrinking, palette tools that stay ≥24px, and a
 visible submit CTA).
 
+**Running `test:users` beside another run: set `PLAYWRIGHT_PORT`.** Several
+agents run the suite at once. The variable picks the `vite preview` port (default
+4174, `--strictPort`) AND, since 2026-09-08, the report directory: with it set the
+run writes to `tests/user-sim/report/<port>/` (artifacts, `results.json`,
+`findings.jsonl` and the two audit ledgers); without it, to `tests/user-sim/report/`
+exactly as before, which is what CI uploads. Pick a port nothing is listening on
+in the same command (`netstat -ano | grep LISTENING | grep ":$P "`), run
+`PLAYWRIGHT_PORT=$P npm run test:users`, and set the same variable for
+`npm run test:users:report` or it summarises the default directory. The port
+keeps the preview servers and the reports apart; it does NOT give each run its own
+`dist/` — two runs in one checkout still rebuild under each other, and `base.js`
+fails the run when that happens — so concurrent runs also need their own
+checkout. `tests/unit/per-runner-report-dir.test.js` imports the config under
+different ports and fails if two resolve to one directory or the default moves.
+
 **`test:users` now prerenders too.** It ran `vite build --mode test` alone,
 which overwrote dist/ WITHOUT the prerender step — so running it before the unit
 suite silently skipped every test that asserts against the built shells, and the
