@@ -9,6 +9,10 @@
 
 .plans-page{max-width:1120px}
 
+/* The founder's framing line sits above the lede as its own paragraph; the
+ * global reset zeroes p margins, so the gap between the two is set here. */
+.plans-framing{margin-bottom:10px}
+
 .plans-tiers{grid-template-columns:minmax(260px,.78fr) minmax(0,1.22fr);align-items:stretch;gap:20px}
 
 .plans-tiers .plans-free-card{background:var(--bg-1);box-shadow:none}

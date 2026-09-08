@@ -8,6 +8,10 @@ import { COLOUR_SYSTEMS } from '../config/colourSystems'
 import { BRAND_PALETTES } from '../data/brandPalettes'
 import { freeFormats, proOnlyFormats, unbuiltFormats } from '../config/exportFormats'
 import { BRAND_STARTER_BETA, allowanceSentence } from '../config/aiGeneration'
+// The page's framing line is the founder's, read by id from the one module
+// every sales surface derives its value claim from. positioning-truth.test.js
+// fails if this page types the sentence instead.
+import { SURFACE_LINE, line } from '../data/positioning'
 import SystemCTA from '../components/SystemCTA'
 // The `plans` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
@@ -203,6 +207,11 @@ export default function Plans() {
             which was not true of saving, of the colour systems, or of the
             brand palettes. */}
         <h1>The whole toolkit is <em>free</em>. Pro adds room.</h1>
+        {/* The framing line — what the money buys — is SURFACE_LINE.plansFraming,
+            the founder's build-and-export sentence. Read from positioning.js by
+            id, never typed here: a typed copy is how this page and the hero came
+            to describe the product in two different ways. */}
+        <p className="plans-framing">{line(SURFACE_LINE.plansFraming)}</p>
         <p>
           Every colour, type, icon and image tool opens in your browser without an account,
           and using them is never metered. What Free limits is how much you can keep and how
