@@ -265,3 +265,60 @@ test('a reviewer with the admin claim can approve', async () => {
     setDoc(submissionDoc(adminDb, 'mine'), submission({ status: 'approved' })),
   )
 })
+
+// ── provider-health: the server's own counter, unreachable from every client ──
+//
+// api/ai.js counts every generate-prompt outcome into provider-health/{day}
+// through the Admin SDK, and relies on ONE property of this file for that
+// collection to be operator-only: the name appears nowhere in it, and the
+// rules default-deny anything they do not match. tests/unit/ai-provider-
+// path.test.js keeps the one-line absence check; THIS is the behavioural half,
+// on the emulator, and it is also what a future rules edit that names the
+// collection would have to get past. Each refusal sits beside a success on the
+// same client so a broken emulator cannot pass it.
+
+const HEALTH = 'provider-health'
+const healthDoc = (db, id = '2026-09-08') => doc(db, HEALTH, id)
+
+async function seedHealth(id, data) {
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), HEALTH, id), data)
+  })
+}
+
+test('provider-health: a signed-in user can neither read nor write the counter', async () => {
+  await seedHealth('2026-09-08', { openrouterOk: 4, openrouterFail: 1 })
+  await assertFails(getDoc(healthDoc(aliceDb())))
+  await assertFails(setDoc(healthDoc(aliceDb()), { openrouterOk: 999 }))
+  await assertFails(setDoc(healthDoc(aliceDb()), { openrouterFail: 0 }, { merge: true }))
+  await assertFails(deleteDoc(healthDoc(aliceDb())))
+  // The once-a-day alert marker lives in the same collection.
+  await assertFails(setDoc(healthDoc(aliceDb(), 'alert-2026-09-08'), { at: 'now' }))
+  // Positive control: the same client, the same environment, a document the
+  // rules DO grant — so the refusals above are the rules and not the emulator.
+  await assertSucceeds(setDoc(userDoc(aliceDb()), PROFILE))
+})
+
+test('provider-health: an anonymous client is refused too', async () => {
+  await seedHealth('2026-09-08', { openrouterOk: 4 })
+  const anon = testEnv.unauthenticatedContext().firestore()
+  await assertFails(getDoc(healthDoc(anon)))
+  await assertFails(setDoc(healthDoc(anon), { openrouterOk: 999 }))
+})
+
+test('provider-health: even the admin claim does not reach it — only the Admin SDK does', async () => {
+  // The claim api/verify-admin.js grants opens community moderation, not this.
+  // A client-side admin page reads the verdict through /api/ai?diag=1, which
+  // is the Admin SDK on the server; nothing in the browser touches the counter.
+  await seedHealth('2026-09-08', { openrouterOk: 4 })
+  const admin = testEnv.authenticatedContext('admin-uid', { admin: true }).firestore()
+  await assertFails(getDoc(healthDoc(admin)))
+  await assertFails(setDoc(healthDoc(admin), { openrouterOk: 0 }))
+  // ...while the seed itself is readable with the rules off, which is the
+  // server's path and proves the document exists to be refused.
+  let seen
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    seen = (await getDoc(doc(ctx.firestore(), HEALTH, '2026-09-08'))).data()
+  })
+  assert.equal(seen.openrouterOk, 4)
+})
