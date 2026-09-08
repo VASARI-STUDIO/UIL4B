@@ -51,7 +51,13 @@ before(async () => {
   assert.match(patched, RULE_MATCHER,
     'the patch must actually contain the rule these tests are about')
   testEnv = await initializeTestEnvironment({
-    projectId: process.env.GCLOUD_PROJECT || 'demo-uil4b',
+    // Its OWN project id. Every rules test file runs as its own process under
+    // node --test, and initializeTestEnvironment loads its rules into the
+    // emulator PER PROJECT ID - so two files sharing 'demo-uil4b' race, and the
+    // patched copy here lost to firestore-rules.test.js's live rules on
+    // 2026-09-09 (4 PERMISSION_DENIED failures that passed alone). Same answer
+    // firestore-rules-pending.test.js and storage-rules.test.js already use.
+    projectId: 'demo-uil4b-per-project',
     firestore: { rules: patched },
   })
 })
