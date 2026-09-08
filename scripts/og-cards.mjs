@@ -340,7 +340,7 @@ async function main() {
       // The homepage hero as it was when the front-door card was drawn. This is
       // the half the old hand-made card had no way to keep true.
       hero,
-      sections: SECTIONS.map((s) => ({ id: s.id, label: s.label, tools: toolNamesFor(s) })),
+      sections: SECTIONS.map((s) => ({ id: s.id, label: s.label, blurb: s.blurb, tools: toolNamesFor(s) })),
     }, null, 2)}\n`,
     'utf8',
   )

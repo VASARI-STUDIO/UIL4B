@@ -12573,6 +12573,29 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .lidx-title{font-size:19px;font-weight:650;letter-spacing:-.015em;line-height:1.3;color:var(--t0)}
 .lidx-dek{font-size:14px;line-height:1.6;color:var(--t2);flex:1}
 .lidx-go{font-size:13.5px;font-weight:600;color:var(--accent-strong)}
+/* The search field and the per-topic sections on /learn (LearnGuideIndex.jsx).
+   The field is the shared .lbry-search every library uses; what is added is
+   its placement, the topic headings, the live status line, the body-text
+   snippet on a matched card, and the empty state. Counts use --t2 rather
+   than --t3 because these sit on --bg-0, not on a white card. */
+.lidx-tools{display:flex;flex-direction:column;align-items:center;gap:var(--s-3);max-width:560px;margin:var(--s-5) auto 0}
+.lidx-tools .lbry-search{width:100%;flex:0 0 auto}
+.lidx-topics{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s-2) var(--s-4);font-family:var(--mono);font-size:var(--fs-caption);letter-spacing:.04em}
+.lidx-topics a{display:inline-flex;align-items:center;gap:6px;min-height:24px;color:var(--t1);text-decoration:none;border-bottom:1px solid transparent}
+.lidx-topics a:hover,.lidx-topics a:focus-visible{color:var(--t0);border-bottom-color:var(--t0);text-decoration:none}
+.lidx-topics a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lidx-topic-n{font-family:var(--mono);font-size:var(--fs-caption);font-weight:500;letter-spacing:.06em;color:var(--t2)}
+.lidx-status{min-height:1.5em;margin:var(--s-3) auto 0;max-width:560px;text-align:center;font-size:var(--fs-body-s);line-height:1.5;color:var(--t2)}
+.lidx-sections{display:flex;flex-direction:column;gap:var(--s-7);margin-top:var(--s-6)}
+.lidx-topic-sec{scroll-margin-top:96px}
+.lidx-topic-h{display:flex;align-items:baseline;gap:var(--s-3);margin:0 0 var(--s-4);font-size:var(--fs-h3);font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--t0)}
+.lidx-topic-h .lidx-topic-n{text-transform:uppercase}
+.lidx-hit{display:block;font-size:13px;line-height:1.5;color:var(--t2);border-left:2px solid var(--border);padding-left:10px;overflow-wrap:anywhere}
+.lidx-hit mark{background:var(--accent-bg);color:var(--t0);font-weight:600;border-radius:3px;padding:0 2px}
+.lidx-empty{max-width:48ch;margin:var(--s-6) auto 0;text-align:center}
+.lidx-empty-h{font-size:var(--fs-h4);font-weight:600;line-height:1.3;color:var(--t0);overflow-wrap:anywhere}
+.lidx-empty-p{margin-top:var(--s-2);font-size:var(--fs-body-s);line-height:1.6;color:var(--t2)}
+.lidx-empty .ui-pill{margin-top:var(--s-4)}
 
 /* ══ THE USER HOME (.uh-*) ═════════════════════════════════════════
    /projects, which signed-in visitors now land on instead of the sales page.

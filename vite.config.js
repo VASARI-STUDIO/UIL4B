@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { applyPricingHtml } from './scripts/site-pricing.mjs'
+// The Learn guides' prose as a virtual module, derived from src/data/learn/*.jsx
+// on every build — see scripts/learn-search-text.mjs for why it is not rendered.
+import { learnSearchTextPlugin } from './scripts/learn-search-text.mjs'
 
 // The app version, baked in at build time so a bug report can say WHICH build
 // it came from. Without it "cannot reproduce" is ambiguous between "fixed
@@ -205,7 +208,7 @@ const assertFirebaseIsDeferred = () => ({
 })
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), pricingHtml(), assertFirebaseIsDeferred(), ...(mode === 'test' ? [testSessionDouble()] : [])],
+  plugins: [react(), pricingHtml(), learnSearchTextPlugin(), assertFirebaseIsDeferred(), ...(mode === 'test' ? [testSessionDouble()] : [])],
   resolve: { alias: firebaseAccessAlias },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
