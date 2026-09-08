@@ -246,6 +246,18 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
       if (data?.generation && typeof data.generation === 'object') {
         setServer(data.generation)
         setDismissedWall(false)
+        // A REFUSAL BECAUSE THE ALLOWANCE IS SPENT IS THE WALL'S NEWS, NOT AN
+        // ERROR'S. The server's 429 carries the same count the wall is built
+        // from, so before this the page rendered the sentence twice — once as
+        // the strip above the field, once as a red alert under it, with a
+        // "Try again" button that could never succeed. Rendered 2026-09-08 at
+        // 320 through 1920, both themes. One state, said once, is the whole
+        // point of the strip; an alert is for something that went WRONG, and
+        // nothing did.
+        if (!r.ok && data.generation.remaining === 0) {
+          setStatus('idle')
+          return
+        }
       }
 
       if (!r.ok) throw new Error(data.error || `The request failed (HTTP ${r.status}).`)
