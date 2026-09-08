@@ -1,0 +1,25 @@
+{
+  "prefix": "simple-icons",
+  "total": 18,
+  "title": "Simple Icons",
+  "uncategorized": [
+    "github",
+    "gitlab",
+    "figma",
+    "react",
+    "vuedotjs",
+    "svelte",
+    "nodedotjs",
+    "javascript",
+    "typescript",
+    "python",
+    "stripe",
+    "vercel",
+    "firebase",
+    "google",
+    "apple",
+    "apachearrow",
+    "docker",
+    "postgresql"
+  ]
+}

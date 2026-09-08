@@ -34,6 +34,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test as base, expect } from '@playwright/test'
 import { REPORT_DIR } from './helpers.js'
+// The Iconify catalogue, served from tests/user-sim/fixtures/iconify/ on every
+// context by the same wrap below. Its reasoning lives in that file; it is a
+// separate module so this one keeps the properties tests/unit/one-tap-stub.test.js
+// pins (an empty JavaScript body, no abort anywhere in here).
+import { stubIconify } from './iconify-stub.js'
 
 export { expect }
 
@@ -411,7 +416,7 @@ export const test = base.extend({
   browser: [async ({ browser }, use) => {
     if (!browser[PATCHED]) {
       const newContext = browser.newContext.bind(browser)
-      browser.newContext = async (...args) => watchBuildAssets(await stubOneTap(await newContext(...args)))
+      browser.newContext = async (...args) => watchBuildAssets(await stubIconify(await stubOneTap(await newContext(...args))))
       browser[PATCHED] = true
     }
     await use(browser)

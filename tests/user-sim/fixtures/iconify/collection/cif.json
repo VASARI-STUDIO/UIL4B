@@ -1,0 +1,23 @@
+{
+  "prefix": "cif",
+  "total": 16,
+  "title": "CoreUI Flags",
+  "uncategorized": [
+    "gb",
+    "us",
+    "fr",
+    "de",
+    "es",
+    "it",
+    "nl",
+    "se",
+    "no",
+    "dk",
+    "fi",
+    "ie",
+    "pt",
+    "jp",
+    "br",
+    "au"
+  ]
+}
