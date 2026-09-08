@@ -4,7 +4,8 @@ import PillNav from '../components/PillNav'
 import NavIcon from '../components/NavIcon'
 import { useReveal } from '../hooks/useReveal'
 import { DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
-import { LEARN_ARTICLES, readingMinutes } from '../data/learnIndex'
+import LearnGuideIndex from '../components/LearnGuideIndex'
+import { LEARN_ARTICLES } from '../data/learnIndex'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
 import { GALLERY_PALETTES } from '../data/paletteGallery'
 import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
@@ -237,19 +238,9 @@ export default function SurfaceLanding({ surface }) {
             <div className="home-head home-head-center" data-reveal>
               <h2 className="home-h2">Reference, not opinion.</h2>
             </div>
-            <div className="lidx-grid">
-              {LEARN_ARTICLES.map((a) => (
-                <Link className="lidx-card" key={a.slug} to={`/learn/${a.slug}`} data-reveal>
-                  <span className="lidx-top">
-                    <span className="lidx-topic">{a.topic}</span>
-                    <span className="lidx-time">{readingMinutes(a.words)} min</span>
-                  </span>
-                  <span className="lidx-title">{a.title}</span>
-                  <span className="lidx-dek">{a.dek}</span>
-                  <span className="lidx-go">Read&nbsp;&rarr;</span>
-                </Link>
-              ))}
-            </div>
+            {/* Grouped by the topic each guide declares, behind a search over
+                their full text. See src/components/LearnGuideIndex.jsx. */}
+            <LearnGuideIndex />
           </div>
         </section>
       )}

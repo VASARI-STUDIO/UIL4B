@@ -1208,7 +1208,7 @@
   },
   "/learn": {
    "390": {
-    ".lidx-card": ["flex","static","rgb(11, 94, 215)","rgb(255, 255, 255)","Manrope, system-ui, -apple-system, sans-serif","16px","400","26.4px","normal","start","none","24px","24px","24px","24px","0px","0px","0px","0px","1px","1px","rgb(218, 216, 207)","14px","12px","none","column","normal","normal","1","none","visible","visible","auto"],
+    ".lidx-card": ["flex","static","rgb(11, 94, 215)","rgb(255, 255, 255)","Manrope, system-ui, -apple-system, sans-serif","16px","400","26.4px","normal","start","none","24px","24px","24px","24px","0px","0px","0px","0px","1px","1px","rgb(218, 216, 207)","14px","12px","none","column","normal","normal","0","none","visible","visible","auto"],
     ".lidx-dek": ["block","static","rgb(95, 95, 89)","rgba(0, 0, 0, 0)","Manrope, system-ui, -apple-system, sans-serif","14px","400","22.4px","normal","start","none","0px","0px","0px","0px","0px","0px","0px","0px","0px","0px","rgb(95, 95, 89)","0px","normal","none","row","normal","normal","1","none","visible","visible","auto"],
     ".lidx-go": ["block","static","rgb(11, 94, 215)","rgba(0, 0, 0, 0)","Manrope, system-ui, -apple-system, sans-serif","13.5px","600","22.275px","normal","start","none","0px","0px","0px","0px","0px","0px","0px","0px","0px","0px","rgb(11, 94, 215)","0px","normal","none","row","normal","normal","1","none","visible","visible","auto"],
     ".lidx-time": ["block","static","rgb(108, 108, 102)","rgba(0, 0, 0, 0)","\"JetBrains Mono\", ui-monospace, SFMono-Regular, Menlo, monospace","10px","700","16.5px","0.6px","start","uppercase","0px","0px","0px","0px","0px","0px","0px","0px","0px","0px","rgb(108, 108, 102)","0px","normal","none","row","normal","normal","1","none","visible","visible","auto"],

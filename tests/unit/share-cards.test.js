@@ -152,9 +152,9 @@ test('THE STALENESS ONE: the committed cards were drawn from today\'s tokens', a
 
   // And the tool names printed on each card, which change whenever a tool ships
   // or is renamed.
-  const live = SECTIONS.map((s) => ({ id: s.id, label: s.label, tools: toolNamesFor(s) }))
+  const live = SECTIONS.map((s) => ({ id: s.id, label: s.label, blurb: s.blurb, tools: toolNamesFor(s) }))
   assert.deepEqual(manifest.sections, live,
-    'a section\'s label or its tool list has changed since the cards were drawn, '
+    'a section\'s label, blurb or tool list has changed since the cards were drawn, '
     + 'so a card is advertising the wrong tools. Run `npm run og:cards`.')
 })
 

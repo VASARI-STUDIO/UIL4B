@@ -251,7 +251,7 @@ export const LEARN_ARTICLES = Object.freeze([
       { id: 'the-ramp', title: 'What the ramp is for' },
       { id: 'no-single-stop', title: 'No single stop clears both grounds' },
       { id: 'neutrals', title: 'The neutral carries more of the screen' },
-      { id: 'state-collision', title: 'When the brand hue is spoken for' },
+      { id: 'state-collision', title: 'When the brand hue is already spoken for' },
     ],
   },
 ])
