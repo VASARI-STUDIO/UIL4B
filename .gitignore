@@ -24,6 +24,8 @@ dist/
 .npm-cache/
 tmp/
 debug.log
+# ...including the per-port subdirectories a PLAYWRIGHT_PORT run writes
+# (tests/user-sim/report/<port>/) — the trailing slash covers them.
 tests/user-sim/report/
 test-results/
 playwright-report/
