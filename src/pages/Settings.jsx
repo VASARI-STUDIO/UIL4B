@@ -989,7 +989,7 @@ export default function Settings({ toast }) {
                     </li>
                   ))}
                 </ul>
-                <div style={{ display: 'flex', gap: 8, paddingTop: 14, borderTop: '1px solid var(--border)', marginTop: 6 }}>
+                <div className="settings-legal-links">
                   <NavLink to="/privacy" className="btn">Privacy policy</NavLink>
                   <NavLink to="/terms" className="btn">Terms of service</NavLink>
                 </div>

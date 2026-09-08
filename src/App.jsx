@@ -463,12 +463,6 @@ function AppInner() {
 
       <AppFooter />
       <Toast message={message} visible={visible} type={type} />
-      {/* Mounted here rather than on /projects because the person whose sync
-          has stopped is, by definition, busy editing — and the surface they
-          are editing on is a tool page, not the page that lists what they
-          have saved. Renders nothing at all unless something has gone wrong
-          or changed under them. See src/utils/syncStatus.js. */}
-      <SyncNotice />
       <FeedbackButton />
       <GoogleOneTap />
     </div>
@@ -498,6 +492,18 @@ export default function App() {
             top-centre under the nav rather than in a corner — see the CSS note
             on .offline-banner. */}
         <OfflineBanner />
+        {/* And the sync notice, for the same reason a third time. It was
+            mounted inside AppInner's shell beside <Toast>, under a comment
+            explaining it belonged on every route because "the person whose
+            sync has stopped is, by definition, busy editing — and the surface
+            they are editing on is a tool page". Every tool page takes the
+            CHROMELESS_PATHS early return above the shell, so those were
+            exactly the routes it never reached: measured 2026-09-08, a
+            refused sync showed on /projects and /discover/palettes and was
+            absent from the DOM on /create/palette, /create/type-scale,
+            /create/font-pair, /create/contrast, /create/tint and
+            /create/auto-builder. See tests/user-sim/65-new-surfaces-breakpoints.spec.js. */}
+        <SyncNotice />
       </ProModalProvider>
     </LoginPromptProvider>
   )
