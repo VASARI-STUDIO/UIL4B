@@ -147,3 +147,7 @@
    docs/reference/css-conventions.md). */
 .settings-data-note{font-size:13px;color:var(--t1);line-height:1.65;padding:12px 0;max-width:64ch}
 .settings-row--pad{padding-top:16px;padding-bottom:16px}
+/* Settings → Privacy & legal. Was an inline flex row with no wrap: at 320 the
+   two pills need 284px of a 250px card body, so "Terms of service" ran under
+   the card edge and the feedback button (rendered 2026-09-08, both themes). */
+.settings-legal-links{display:flex;flex-wrap:wrap;gap:8px;padding-top:14px;border-top:1px solid var(--border);margin-top:6px}
