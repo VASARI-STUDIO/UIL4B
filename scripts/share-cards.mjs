@@ -43,6 +43,17 @@
 // since — which is the "committed artefact goes stale" failure that would
 // otherwise be silent.
 //
+// ── Learn is a section since 2026-09-08 ─────────────────────────────────────
+//
+// /learn and every /learn/<slug> guide used to fall back to the homepage card,
+// which the learn-content row in pipeline.js listed as a gap from the day the
+// first guide shipped. The Learn card is drawn in the same system as the tool
+// sections, and its subject is the section's real content: the guides, by the
+// nav label each carries in learnIndex.js, and a blurb that COUNTS them. Both
+// are derived from the registry rather than typed, and so are the routes — so
+// a new guide inherits the card and, because cards.json records the guide
+// list, fails tests/unit/share-cards.test.js until the card is redrawn with it.
+//
 // ── Nine routes deliberately keep the homepage card ────────────────────────
 //
 // /home IS the homepage, so the homepage card is the correct picture, not a
@@ -52,6 +63,7 @@
 // nothing. /seo is a real tool with no section of its own — flagged rather than
 // forced into a category it does not belong to.
 import { CREATE_GROUPS } from '../src/data/toolTree.js'
+import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES, TOPICS } from '../src/data/learnIndex.js'
 
 export const CARD_DIR = '/previews'
 
@@ -72,6 +84,14 @@ export const DEFAULT_CARD = Object.freeze({
  * appears on its section's card the next time the cards are generated, with no
  * edit here.
  */
+const listOf = (items) => items.length < 2
+  ? items.join('')
+  : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+
+/** "7 guides on colour, typography and accessibility" — every figure derived. */
+export const learnBlurb = () =>
+  `${LEARN_ARTICLES.length} guides on ${listOf(TOPICS.map((t) => t.toLowerCase()))}`
+
 export const SECTIONS = Object.freeze([
   Object.freeze({
     id: 'colour',
@@ -133,6 +153,19 @@ export const SECTIONS = Object.freeze([
     group: null,
     tools: Object.freeze(['Free forever', 'Pro monthly', 'Pro yearly']),
     routes: Object.freeze(['/plans']),
+  }),
+  // Last so that railSections() still finds AI Tools first for --hue-ai:
+  // Learn wears the hue the /learn landing paints its own cards with, and
+  // like Plans it owns no band of its own on the homepage rail.
+  Object.freeze({
+    id: 'learn',
+    label: 'Learn',
+    eyebrow: 'Reference guides',
+    blurb: learnBlurb(),
+    hue: 'ai',
+    group: null,
+    tools: Object.freeze(LEARN_ARTICLES.map((a) => a.navLabel)),
+    routes: Object.freeze(['/learn', ...LEARN_ARTICLE_ROUTES]),
   }),
 ])
 
