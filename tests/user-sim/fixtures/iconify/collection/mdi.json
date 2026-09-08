@@ -1,0 +1,28 @@
+{
+  "prefix": "mdi",
+  "total": 21,
+  "title": "Material Design Icons",
+  "uncategorized": [
+    "arrow-right",
+    "arrow-left",
+    "arrow-up",
+    "star",
+    "star-outline",
+    "heart",
+    "heart-outline",
+    "home",
+    "home-outline",
+    "magnify",
+    "cog",
+    "account",
+    "bell",
+    "check",
+    "close",
+    "menu",
+    "email",
+    "calendar",
+    "camera",
+    "content-copy",
+    "download"
+  ]
+}

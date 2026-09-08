@@ -82,6 +82,36 @@ every viewport.
 That is why specs import `test` from `./base.js` and never from
 `@playwright/test` — `tests/unit/one-tap-stub.test.js` enforces it.
 
+### The icon catalogue is a fixture
+
+`/create/icons` fetches the Iconify catalogue live (`api.iconify.design`, then
+`api.simplesvg.com` and `api.unisvg.com`): twenty-five `/collection` requests on
+first paint, a `/search` per query and an `.svg` per cell. After a day of
+full-suite runs from one machine the API answered **429** and both fallbacks
+**403** without CORS headers; the pack-label test in `25-defect-sweep` went red
+and every icon-page visit logged ~100 CORS findings — the gate was being decided
+by a third party's rate limit.
+
+So the same `base.js` wrap serves those three hosts from
+`tests/user-sim/fixtures/iconify/` (`iconify-stub.js`): `collections.json`,
+one `collection/<pack>.json` per pack the page requests, `search.json` as a
+mixed-pack search index the stub filters by query and prefix, and `icon.svg`
+for every glyph. `66-icon-library-offline-fixture.spec.js` is the positive
+control — it counts the requests the page made through the fixture, so a grid
+that renders nothing cannot pass — and the global teardown fails the run if one
+request reached a real Iconify host or asked for something the fixture does not
+hold.
+
+**To check the real catalogue**, opt out for one run:
+
+```bash
+UIL4B_LIVE_ICONIFY=1 npm run test:users            # nothing stubbed; the teardown guard stands down and says so
+UIL4B_LIVE_ICONIFY=1 npx playwright test tests/user-sim/25-defect-sweep.spec.js
+```
+
+That is a human looking at the live API, never the gate: a run that hits the
+network can be failed by the rate limit above.
+
 ## Adding a persona / goal
 
 1. Create a `NN-name.spec.js` file, taking the next free number, and start it
@@ -91,6 +121,8 @@ That is why specs import `test` from `./base.js` and never from
 3. Assert the user's *goal*, not implementation details, and use
    `fb.note(severity, message)` for observations that shouldn't fail the run.
 
-Notes for sandboxed runners: external hosts (fonts, Firebase, iconify) are
-blocked and are whitelisted as expected noise in `helpers.js`; the pinned
-Chromium at `/opt/pw-browsers/chromium` is used automatically when present.
+Notes for sandboxed runners: external hosts (fonts, Firebase) are blocked and
+are whitelisted as expected noise in `helpers.js`; Iconify is not on that list
+because it is served from the fixture above, so an Iconify console error is a
+finding. The pinned Chromium at `/opt/pw-browsers/chromium` is used
+automatically when present.

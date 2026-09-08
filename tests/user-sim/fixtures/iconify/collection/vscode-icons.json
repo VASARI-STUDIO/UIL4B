@@ -1,0 +1,23 @@
+{
+  "prefix": "vscode-icons",
+  "total": 16,
+  "title": "VSCode Icons",
+  "uncategorized": [
+    "file-type-js",
+    "file-type-typescript",
+    "file-type-reactjs",
+    "file-type-vue",
+    "file-type-svelte",
+    "file-type-python",
+    "file-type-json",
+    "file-type-css",
+    "file-type-html",
+    "file-type-markdown",
+    "folder-type-src",
+    "folder-type-test",
+    "default-folder",
+    "default-file",
+    "file-type-git",
+    "file-type-docker"
+  ]
+}

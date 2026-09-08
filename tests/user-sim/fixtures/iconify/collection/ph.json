@@ -1,0 +1,28 @@
+{
+  "prefix": "ph",
+  "total": 21,
+  "title": "Phosphor",
+  "uncategorized": [
+    "arrow-right",
+    "arrow-left",
+    "arrow-up",
+    "arrow-right-bold",
+    "arrow-right-fill",
+    "star",
+    "star-fill",
+    "heart",
+    "house",
+    "magnifying-glass",
+    "gear",
+    "user",
+    "bell",
+    "check",
+    "x",
+    "list",
+    "envelope",
+    "calendar",
+    "camera",
+    "copy",
+    "download-simple"
+  ]
+}
