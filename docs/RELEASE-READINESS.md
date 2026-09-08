@@ -1,7 +1,7 @@
 # Release readiness
 
 **One page. What is finished, what needs you, what needs somebody outside this
-project.** Everything here was measured on `8d4f9d8` on 2026-09-08, not
+project.** Everything here was measured on `0f3be11a` on 2026-09-08, not
 remembered. Where a figure would go stale, this page names the command instead.
 
 Your to-do list is [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). This page is the
@@ -30,9 +30,9 @@ Measured on this branch. Each row is a command you or anyone can re-run.
 |---|---|---|
 | Lint | `npm run lint` | **0 errors, 25 warnings** — under the ceiling, which came down from 31 |
 | Build | `npm run build` | passes, and printed `prerender: wrote 39 route shells + a noindex 404 shell (19 on a section share card, 16 with a BreadcrumbList)`. The deploy is **5.4 MB** (was 35 MB before the ffmpeg core moved off origin) |
-| Unit | `npm run test:unit` | **1687 pass, 0 fail, 0 skipped** |
+| Unit | `npm run test:unit` | **1696 pass, 0 fail, 0 skipped** |
 | Firestore and Storage rules | `npm run test:rules` | **102 pass, 0 fail, 0 skipped** — the emulator now runs Storage too |
-| Browser acceptance | `npm run test:users` | **802 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
+| Browser acceptance | `npm run test:users` | **829 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
 
 What the gate *requires* — as opposed to what it happened to report today —
 lives in [`reference/build-and-verify.md`](reference/build-and-verify.md) and
@@ -72,6 +72,10 @@ regression.
   quota is reserved inside a transaction before the provider is called.
 - **The palette library has eight measured mood filters** and every gallery
   ends with a way to submit your own (#416).
+- **Every route now loads only its own stylesheet (#424).** Eleven page sheets
+  left `global.css` (687 → 588 kB), a computed-style snapshot over 25 routes
+  proves nothing painted differently, and the one-directional contrast walk
+  that kept returning is gone with its seven callers measured (#423).
 
 ---
 
