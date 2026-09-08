@@ -5,6 +5,10 @@ import { useProject } from '../contexts/ProjectContext'
 import { useExport } from '../contexts/ExportContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
+// The `semantic-color` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/semantic-color.css'
 
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
 

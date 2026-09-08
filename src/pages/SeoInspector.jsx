@@ -2,6 +2,10 @@ import { useState } from 'react'
 import MetaInspector from '../components/seo/MetaInspector'
 import SchemaGenerator from '../components/seo/SchemaGenerator'
 import ContentAnalyzer from '../components/seo/ContentAnalyzer'
+// The `seo-inspector` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/seo-inspector.css'
 
 // SEO Specialist — a small workspace of client-side SEO tools.
 const TABS = [

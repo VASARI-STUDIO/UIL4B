@@ -9,6 +9,10 @@ import FontLoading from '../data/learn/fontLoading'
 import ThemeSystems from '../data/learn/themeSystems'
 import TypefaceMetrics from '../data/learn/typefaceMetrics'
 import TypeScales from '../data/learn/typeScales'
+// The `learn-article` page stylesheet. Imported here rather than from global.css so
+// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
+// opens this page downloads it, and it arrives with the chunk, before paint.
+import '../styles/pages/learn-article.css'
 
 // The Learn article shell: one layout, every article.
 //

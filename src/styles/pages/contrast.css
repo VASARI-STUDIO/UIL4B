@@ -1,0 +1,170 @@
+/* contrast.css — the `cc` family, lifted out of global.css.
+ * Imported by the page module that owns it, so Vite emits it as that page's
+ * chunk stylesheet and only that route pays for it.
+ *
+ * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
+ * so anything here now outranks every global rule at equal specificity —
+ * which is why a rule a later global rule overrides was left behind rather
+ * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+
+/* ─── Colour Contrast Checker (/color/contrast) — cc- ─── */
+/* NOT 1fr 1fr. The two panels do not hold comparable content: the left one is
+   controls — two fields, a radio pair, three one-line-ish sentences — and the
+   right one is a rendered PAGE that has to look like a page, with a 24px
+   heading, a paragraph, two buttons and a caption, each with a chip beside it
+   on the same line. Equal halves starved the specimen and left slack under the
+   controls. Whereby's settings/preview split is the same shape and the same
+   ratio (mobbin.com/screens/e86cb1da-6690-4693-bff7-5632af4a4f9c). */
+.cc-grid{display:grid;grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);gap:24px;align-items:start}
+.cc-panel{display:flex;flex-direction:column}
+/* `align-items:center`, not `flex-end`. Each field now carries Whereby's
+   verdict badge UNDER its input, so the tallest thing in the row is no longer
+   the input — bottom-aligning put the swap button level with the badges
+   instead of the controls it swaps. */
+.cc-fields{display:flex;gap:12px;align-items:center}
+.cc-field{flex:1;min-width:0}
+.cc-field-row{display:flex;gap:8px;align-items:center}
+.cc-picker{width:42px;height:42px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);cursor:pointer;flex-shrink:0}
+.cc-hex-input{flex:1;min-width:0;height:42px;padding:0 12px;font-family:var(--mono);font-size:13px;color:var(--t0);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);transition:border-color var(--t)}
+.cc-hex-input:focus{outline:none;border-color:var(--brand)}
+.cc-hex-input--bad{border-color:#D64545}
+.cc-swap{width:42px;height:42px;flex-shrink:0;font-size:16px;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
+.cc-swap:hover{border-color:var(--brand);color:var(--t0)}
+.cc-hint{font-size:12px;color:var(--t2);line-height:1.5;margin:10px 0 0}
+.cc-ratio{display:flex;align-items:baseline;gap:14px;margin:24px 0 16px}
+/* `nowrap` because this is ONE token. The verdict beside it is a full sentence
+   now rather than the two words it used to be, so it wins more of the row, and
+   at 390px that broke "3.81 : 1" across two lines with the ": 1" orphaned
+   underneath — measured, not guessed. The 560px rule stacks them instead. */
+.cc-ratio-num{font-family:var(--mono);font-size:36px;font-weight:700;letter-spacing:-.02em;color:var(--t0);white-space:nowrap}
+.cc-ratio-verdict{font-size:13px;font-weight:600}
+/* THE CONTRAST CHECKER WAS FAILING ITS OWN TEST. Measured on the white card in
+   light theme, against the 4.5:1 that 13px/600 text needs and that this page
+   exists to enforce:
+       .cc-pass  #2E9E5B  3.41:1
+       .cc-mixed #C98A1B  2.94:1   <- the verdict line, the page's headline
+       .cc-fail  #D64545  4.38:1
+   All three were hard-coded hexes, so they also never responded to the theme -
+   and #D64545 measured 3.97:1 on the dark card, failing there too.
+
+   #323 fixed this in two halves: it put the DARK theme on the project's own
+   --ok/--warn/--err, and left LIGHT as three hard-coded hexes because no light
+   token was dark enough to use. That token now exists, so the halves join up
+   and the hexes go. One declaration each, theme-aware, no override block:
+       .cc-pass   #1F7040 -> --ok-strong    6.09 -> 7.47 on the white card
+       .cc-mixed  #8A5E10 -> --warn-strong  5.69 -> 7.37
+       .cc-fail   #C02F2F -> --err-strong   5.69 -> 7.78
+   Dark is unchanged in value: --ok-strong and --warn-strong ARE --ok and --warn
+   there, and --err-strong is a shade lighter (6.72 on the dark card, was 6.29).
+   The page that enforces the standard now states it with the same tokens it
+   would tell you to use. */
+.cc-pass{color:var(--ok-strong)}
+.cc-mixed{color:var(--warn-strong)}
+.cc-fail{color:var(--err-strong)}
+.cc-checks{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:6px}
+.cc-check{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
+.cc-check-mark{width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0}
+/* The glyph sits on its own tint over --bg-2, which is a LIGHTER ground than the
+   card - so it needs to be darker than the verdict text, not the same colour.
+   Measured before: pass 2.70:1, fail 3.43:1 on those tints. */
+.cc-check--pass .cc-check-mark{background:rgba(46,158,91,.14);color:var(--ok-strong)}
+.cc-check--fail .cc-check-mark{background:rgba(214,69,69,.12);color:var(--err-strong)}
+/* Was `.cc-check-label`, holding a tier name ("AA · normal text") on one line.
+   It is now a full sentence about a real object, so it wraps, and the row it
+   sits in aligns to the top rather than the middle. The class was RENAMED
+   rather than restyled: 06-colour-tool-workbenches' AA sweep has always listed
+   `.cc-check-name` in its selector set and no such element existed, so the
+   check labels on the page that enforces contrast were the one thing that
+   sweep never measured. The OR-list hid it — the other five selectors kept the
+   positive control above its floor. */
+.cc-check-body{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cc-check-name{font-weight:600;color:var(--t0);line-height:1.45}
+.cc-check-foot{font-size:11.5px;line-height:1.45;color:var(--t2)}
+.cc-check-min{margin-left:auto;padding-top:1px;font-family:var(--mono);font-size:11px;color:var(--t2);white-space:nowrap}
+
+.cc-level{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+
+.cc-level-opts{display:inline-flex;padding:2px;border:1px solid var(--border);border-radius:999px;background:var(--bg-2)}
+
+.cc-level-opt{padding:5px 14px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--t2);background:none;border:none;border-radius:999px;cursor:pointer;transition:color var(--t),background var(--t)}
+
+/* ── Whereby's inline per-field verdict ──
+   Page tokens only, exactly like `.cc-verdict`: this sits beside a field whose
+   value is the user's colour, and the moment it borrowed that colour it would
+   go unreadable at the ratios it exists to report. 06-colour-tool-workbenches
+   measures it in both themes with the rest. */
+.cc-field-badge{display:flex;align-items:center;gap:6px;margin:8px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t1)}
+.cc-field-badge-mark{font-weight:700}
+.cc-field-badge--pass .cc-field-badge-mark{color:var(--ok-strong)}
+.cc-field-badge--fail .cc-field-badge-mark{color:var(--err-strong)}
+.cc-field-badge-vs{font-family:var(--font);font-weight:500;color:var(--t2)}
+.cc-unfixable{margin-top:14px}
+/* Fix rows — chip colour + ink arrive as custom props set via ref */
+.cc-fixes{display:flex;flex-direction:column;gap:8px}
+.cc-fix{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
+.cc-fix-chip{padding:5px 10px;font-family:var(--mono);font-size:11px;font-weight:600;border-radius:var(--radius-s);background:var(--cc-chip);color:var(--cc-chip-ink);flex-shrink:0}
+.cc-fix-desc{font-size:12px;color:var(--t1);flex:1;min-width:0}
+.cc-fix-apply,.cc-fix-copy{padding:6px 12px;font-size:12px;font-weight:600;background:none;border:1px solid var(--border);border-radius:var(--radius-s);color:var(--t1);cursor:pointer;transition:all var(--t);flex-shrink:0}
+.cc-fix-apply:hover,.cc-fix-copy:hover{border-color:var(--brand);color:var(--t0)}
+/* Live preview — fg/bg arrive as custom props set via ref */
+/* ── The live preview [contrast-checker-overhaul] ──
+   The four .cc-preview-* rules this replaces styled four lines that described
+   the test instead of being one. The design specification, the Mobbin
+   references behind it and the one rule the chips obey are all in the header of
+   src/pages/ContrastChecker.jsx — kept there because it is a decision about
+   what the page SAYS, not about how it is painted. */
+.cc-lede{font-size:12.5px;color:var(--t2);line-height:1.55;margin:0 0 14px}
+.cc-preview{display:flex;flex-direction:column;gap:18px;padding:24px;border-radius:var(--radius);border:1px solid var(--border);background:var(--cc-bg);color:var(--cc-fg)}
+.cc-spec-row{display:flex;align-items:flex-start;gap:12px}
+.cc-spec-row>:first-child{flex:1;min-width:0;margin:0}
+.cc-spec-h{font-size:24px;font-weight:700;letter-spacing:-.015em;line-height:1.25}
+.cc-spec-body{font-size:16px;line-height:1.55}
+.cc-spec-small{font-size:12px;line-height:1.5}
+.cc-spec-link{text-decoration:underline}
+.cc-spec-actions{display:flex;flex-wrap:wrap;gap:8px}
+/* The solid button inverts the pair on purpose — same ratio, read the other way
+   round, which is the point the hint under the preview makes. */
+.cc-spec-btn{display:inline-block;padding:9px 16px;font-size:14px;font-weight:600;border:2px solid var(--cc-fg);border-radius:var(--radius-s);background:var(--cc-fg);color:var(--cc-bg)}
+.cc-spec-btn--ghost{background:transparent;color:var(--cc-fg)}
+/* PAGE TOKENS ONLY. A chip painted in the pair under test goes unreadable
+   exactly when the pair fails — the moment its reader needs it most. `--bg-1`
+   and `--border` are opaque, so the chip stays legible over any --cc-bg, and
+   06-colour-tool-workbenches measures these in both themes. */
+.cc-verdict{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:4px 8px;font-family:var(--mono);font-size:11px;font-weight:700;line-height:1;white-space:nowrap;border-radius:999px;background:var(--bg-1);border:1px solid var(--border);color:var(--t1)}
+.cc-verdict-mark{font-weight:700}
+.cc-verdict--pass .cc-verdict-mark{color:var(--ok-strong)}
+.cc-verdict--fail .cc-verdict-mark{color:var(--err-strong)}
+.cc-more{display:flex;gap:20px;flex-wrap:wrap;margin-top:32px}
+.cc-more-link{font-size:13px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
+.cc-more-link:hover{color:var(--accent-strong)}
+/* Collapsed at 1040px rather than 900px. The left column grew three sentences
+   and a radio pair, and measured at 900px the narrower of the two asymmetric
+   columns is ~400px, where "Buttons, borders and focus rings are visible
+   against it." wraps to three lines and its ≥ 3:1 stack drifts off the row it
+   belongs to. One column earlier is better than two bad ones. */
+@media(max-width:1040px){.cc-grid{grid-template-columns:1fr}}
+/* The "make it pass" row stops being a single non-wrapping strip. Chip, copy and
+   two buttons in one row left the description ~85px at 390px, so
+   "AAA (7:1) — adjust the text" wrapped onto two lines while the buttons either
+   side of it stayed on one — the row read as broken rather than tight, and the
+   sentence that says WHAT to fix was the only thing squeezed. Two grid rows:
+   the chip and its sentence together, then the two actions side by side across
+   the full width, which also takes them from ~60px wide to a real touch target. */
+@media(max-width:560px){
+  .cc-fields{flex-direction:column;align-items:stretch}
+  .cc-swap{width:100%}
+  /* The 36px numeral and a sentence do not share a 315px row. Stacked, the
+     number keeps its size and the headline gets the full width it reads best
+     at. */
+  .cc-ratio{flex-direction:column;align-items:flex-start;gap:4px}
+  .cc-fix{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
+  .cc-fix-chip{grid-area:1/1}
+  .cc-fix-desc{grid-area:1/2;align-self:center}
+  .cc-fix-apply{grid-area:2/1}
+  .cc-fix-copy{grid-area:2/2}
+  .cc-fix-apply,.cc-fix-copy{min-height:40px}
+  /* Below ~520px the chip and a 24px heading fight for the same line and the
+     heading loses to a 2-3 word wrap. Stack instead: the chip reads as a
+     caption on its element, which is still the association that matters. */
+  .cc-spec-row{flex-direction:column;align-items:flex-start;gap:8px}
+}
