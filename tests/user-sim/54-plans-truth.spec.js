@@ -197,7 +197,7 @@ test.describe('/plans advertises only what the product has', () => {
 })
 
 test.describe('/plans says what the founder said', () => {
-  test('the hero carries the founder's framing line, rendered, from positioning.js', async ({ page }) => {
+  test('the hero carries the founder’s framing line, rendered, from positioning.js', async ({ page }) => {
     // The unit guard proves Plans.jsx CALLS line(SURFACE_LINE.plansFraming).
     // This proves the sentence reaches a visitor: the hero's text is compared
     // to the module's own record of the line, computed here rather than read
@@ -209,8 +209,8 @@ test.describe('/plans says what the founder said', () => {
 
     const hero = await page.locator('.plans-hero').innerText()
     expect(hero.length, 'the plans hero rendered empty').toBeGreaterThan(40)
-    expect(hero, 'the hero no longer carries the founder's framing line').toContain(line(SURFACE_LINE.plansFraming))
-    // The founder's line is a plain paragraph in the hero, not a badge or a
+    expect(hero, 'the hero no longer carries the founder’s framing line').toContain(line(SURFACE_LINE.plansFraming))
+    // The founder’s line is a plain paragraph in the hero, not a badge or a
     // tagline slot — the taglines were retired 2026-09-07 and must not return.
     await expect(page.locator('.plans-hero .plans-framing')).toHaveCount(1)
   })

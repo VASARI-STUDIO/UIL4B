@@ -349,7 +349,7 @@ for (const theme of ['light', 'dark']) {
 }
 
 test.describe('/help opens on what the founder said', () => {
-  test('the lede carries the founder's opening line, rendered, from positioning.js', async ({ page }) => {
+  test('the lede carries the founder’s opening line, rendered, from positioning.js', async ({ page }) => {
     // Same shape as the /plans check: the sentence is computed from the module
     // here and looked for in the RENDERED lede, so the wiring is what is under
     // test, not the helper.

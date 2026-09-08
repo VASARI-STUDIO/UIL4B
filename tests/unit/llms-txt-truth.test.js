@@ -149,7 +149,8 @@ test('no unbuilt export format is described as available, and the Pro ones are n
     assert.ok(!freePlan.includes(f.name), `Free is offered the gated "${f.name}"`)
   }
   for (const f of freeFormats()) {
-    const short = (/\(([^)]+)\)\s*$/.exec(f.name) || [, f.name])[1]
+    const m = /\(([^)]+)\)\s*$/.exec(f.name)
+    const short = m ? m[1] : f.name
     assert.ok(freePlan.includes(short), `Free no longer lists ${f.name}`)
   }
   assert.equal(EXPORT_FORMATS.some((f) => f.pro && !f.live), false)
