@@ -1,7 +1,7 @@
 # Release readiness
 
 **One page. What is finished, what needs you, what needs somebody outside this
-project.** Everything here was measured on `0f3be11a` on 2026-09-08, not
+project.** Everything here was measured on `0ca89a65` on 2026-09-09, not
 remembered. Where a figure would go stale, this page names the command instead.
 
 Your to-do list is [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). This page is the
@@ -26,13 +26,13 @@ If you did exactly one thing today, do
 
 Measured on this branch. Each row is a command you or anyone can re-run.
 
-| Gate | Command | Result on 2026-09-08 |
+| Gate | Command | Result on 2026-09-09 |
 |---|---|---|
 | Lint | `npm run lint` | **0 errors, 25 warnings** — under the ceiling, which came down from 31 |
-| Build | `npm run build` | passes, and printed `prerender: wrote 39 route shells + a noindex 404 shell (19 on a section share card, 16 with a BreadcrumbList)`. The deploy is **5.4 MB** (was 35 MB before the ffmpeg core moved off origin) |
-| Unit | `npm run test:unit` | **1696 pass, 0 fail, 0 skipped** |
-| Firestore and Storage rules | `npm run test:rules` | **102 pass, 0 fail, 0 skipped** — the emulator now runs Storage too |
-| Browser acceptance | `npm run test:users` | **829 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
+| Build | `npm run build` | passes, and printed `prerender: wrote 39 route shells + a noindex 404 shell (27 on a section share card, 16 with a BreadcrumbList)`. The deploy is **5.6 MB** (was 35 MB before the ffmpeg core moved off origin) |
+| Unit | `npm run test:unit` | **1750 pass, 0 fail, 0 skipped** |
+| Firestore and Storage rules | `npm run test:rules` | **105 pass, 0 fail, 0 skipped** — the emulator now runs Storage too |
+| Browser acceptance | `npm run test:users` | **859 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
 
 What the gate *requires* — as opposed to what it happened to report today —
 lives in [`reference/build-and-verify.md`](reference/build-and-verify.md) and
@@ -72,6 +72,15 @@ regression.
   quota is reserved inside a transaction before the provider is called.
 - **The palette library has eight measured mood filters** and every gallery
   ends with a way to submit your own (#416).
+- **The 2026-09-09 round (#426–#431):** every sales surface reads the value
+  proposition from `positioning.js` and `llms.txt` is generated from the truth
+  tables; the homepage LCP cause is measured (the entry chunk's static Firebase
+  import, not the animation or the font — the fix waits on the gated patch, item
+  11); acceptance runs write per-port report directories; ten breakpoint
+  defects on the new surfaces are fixed, including the sync notice never
+  mounting on the Create tools; Learn has a per-topic index, search over the
+  guides' text and its own share card; the icon tests no longer depend on the
+  live Iconify API, which rate-limited this machine to 429 after a day of runs.
 - **Every route now loads only its own stylesheet (#424).** Eleven page sheets
   left `global.css` (687 → 588 kB), a computed-style snapshot over 25 routes
   proves nothing painted differently, and the one-directional contrast walk
@@ -132,7 +141,7 @@ that none of it is mistaken for engineering work that has been forgotten.
 | Service | What it holds up | What it actually needs |
 |---|---|---|
 | **GitHub Actions** | Every automated test run | A cleared payment on the account. It does not expire or self-heal |
-| **Vercel** | Every deploy | Either an upgrade off Hobby or the monthly quota reset. Our half is done (#406): the 32 MB ffmpeg core loads from jsDelivr and the deploy shrank from 35 MB to 5.4 MB |
+| **Vercel** | Every deploy | Either an upgrade off Hobby or the monthly quota reset. Our half is done (#406): the 32 MB ffmpeg core loads from jsDelivr and the deploy shrank from 35 MB to 5.6 MB |
 | **Stripe** | The price ladder, the webhook events, the retention offer | Dashboard configuration only. The code for all three is written and waiting |
 | **A sending domain** | Every email the product would send to a customer | SPF, DKIM and a return path on a real domain. Until then the only mail we send is inbound to you, from a shared sandbox address that is not deliverable in production |
 | **JDK 21** | `npm run test:rules` | **Not a blocker today.** A Zulu 21 JRE is installed on the founder's machine and the rules suite ran green on it (37 pass). The machine's *default* `java` is still 1.8, so the command needs the `PATH` prefix that `build-and-verify.md` records. CI does not care — it pins Temurin 21 itself |
