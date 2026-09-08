@@ -191,11 +191,11 @@ Honest state rather than a clean bill of health.
   which was verified deliberately — the sign-in gate's "Where you left off"
   sentence comes from a different source, so the two promises read as one and
   only the first is guarded.
-- **On a 390px-wide screen the project card's title control is 21px tall**,
-  under the 24px floor #413 applied to the shell. It is not flow-blocking — the
-  same card carries a full-height *Load* button and the ⋯ menu — so it was left
-  alone rather than fixed inside a flows pass, but it is the one signed-in
-  surface neither breakpoint audit owned.
+- ~~**On a 390px-wide screen the project card's title control is 21px tall**~~
+  — closed 2026-09-08. It measured 21.25px at *every* width (17px type,
+  line-height 1.25), not only at 390; `.uh-card-name` now carries a 24px
+  `min-height` and `tests/user-sim/65-new-surfaces-breakpoints.spec.js`
+  measures it at 390 and 1440 (`npx playwright test 65-new-surfaces`).
 
 ---
 
