@@ -26,10 +26,52 @@
 //      utils/lockedPreview.js is that the check belongs where the data is
 //      produced. Here that means the at-cap branch renders NO save control —
 //      absent, not disabled and not hidden by CSS.
+//
+// ── WHAT CHANGED, AND WHY (2026-09-08) ──────────────────────────────────────
+//
+// The innermost layer of the gate — ProjectContext.saveProject refusing a save
+// at the cap — used to be one regex: `if (current.length >= projectLimit) {`
+// followed within 160 characters by `throw new Error`. That proved the source
+// contained a comparison and a throw. It could not tell `>=` from `>` (a
+// fourth project on a three-project plan), could not see whether
+// duplicateProject answers to the same cap, could not see whether the limit
+// came from the plan or from a constant, and would have stayed green on a
+// throw that fired for Pro too.
+//
+// So the provider is now EXECUTED. ProjectContext.jsx cannot be imported by
+// node --test (extensionless relative imports, React, the Firestore SDK), so
+// its JSX is compiled by the same oxc transform Vite uses for the app, its
+// eight imports are replaced by stubs (a React small enough to run one render:
+// state slots, refs, memo, callbacks, and effects that do NOT run — the sync
+// and the auto-created default project are other files' concerns), and the
+// context value the Provider hands its children is read straight off the
+// element it returns. The store is a localStorage the test can seed and read
+// back. Same harness shape as modal-contract.test.js.
+//
+// WHAT STAYS A SOURCE ASSERTION, and why:
+//   · Tests 1–3 sweep FontGallery, FontMatcher and TypeScale for the ABSENCE
+//     of a gate (no isPro, no useSubscription, no openProModal). An absence has
+//     no behavioural equivalent short of rendering every page in every plan
+//     state, and .jsx cannot be loaded here anyway; the thing guarded is that
+//     the pages do not contain a second scheme.
+//   · Tests 4–7 and 9–11 read the shape of SaveTypeSystem.jsx and global.css.
+//     The wall's real behaviour — one input and one save button under the cap,
+//     none at all at it, nothing merely hidden — is rendered through the real
+//     stylesheet and measured by tests/user-sim/51-typography-paywall.spec.js
+//     ("under the cap the save works; at the cap there is nothing to reveal",
+//     "no save control anywhere is merely hidden"). These are the fast
+//     structural layer over the same rule, and the wiring lines (the gate ids,
+//     the `free: true` login prompt, commit() re-resolving the quota) are
+//     source by nature.
+//   · Plans.jsx copy: the page copy is the artefact.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import vm from 'node:vm'
+import { transformWithOxc } from 'vite'
+import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
+import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -78,6 +120,111 @@ function atCapArms(src) {
     atLimit: src.slice(open + OPEN.length, mid),
     under: src.slice(mid + MID.length, end),
   }
+}
+
+// ── Loading ProjectContext.jsx ──────────────────────────────────────────────
+
+const CTX_PATH = 'src/contexts/ProjectContext.jsx'
+const { code: ctxCompiled } = await transformWithOxc(read(CTX_PATH), CTX_PATH, {
+  lang: 'jsx',
+  jsx: { runtime: 'classic', pragma: 'h', pragmaFrag: 'Fragment' },
+})
+
+const ALICE = { uid: 'alice-uid', email: 'Alice@Example.com' }   // mixed case on purpose
+const ALICE_KEY = 'alice@example.com'                             // the key the store uses
+const FREE = { id: 'free', limits: { projects: FREE_SAVE_LIMITS.projects } }
+const PRO = { id: 'pro', limits: { projects: Infinity } }
+
+const project = (i) => ({
+  id: `p${i}`, name: `Project ${i}`, design: { ...DEFAULT_DESIGN },
+  createdAt: '2026-09-01T00:00:00.000Z', updatedAt: '2026-09-01T00:00:00.000Z',
+})
+const projects = (n) => Array.from({ length: n }, (_, i) => project(i + 1))
+
+/**
+ * Execute the provider once, as React would for one render, and hand back the
+ * context value it gives its children plus the store and the activation log.
+ */
+function loadProjectContext({ user = ALICE, plan = FREE, saved = [] } = {}) {
+  let out = ctxCompiled
+
+  const rewrite = (re, to, what) => {
+    assert.match(out, re,
+      `this harness could not find ${what} in the compiled ${CTX_PATH}. The file was refactored; `
+      + 'update the rewrite so this test keeps executing the real source. Do NOT delete the '
+      + 'test — it is the innermost layer of the save cap, and the regex it replaced could not '
+      + 'tell >= from >.')
+    out = out.replace(re, to)
+  }
+
+  const IMPORT = /^import\s[\s\S]*?\sfrom\s+["'][^"']+["'];?\r?\n/m
+  let imports = 0
+  while (IMPORT.test(out)) { rewrite(IMPORT, '', `import #${imports + 1}`); imports += 1 }
+  assert.ok(imports >= 5, `${CTX_PATH} has ${imports} imports; the harness expected its React and utils block`)
+  assert.ok(!/^\s*import\s/m.test(out), `${CTX_PATH} still has an import the harness did not strip`)
+
+  rewrite(/^export \{ DEFAULT_DESIGN \};?\r?\n/m, '', 'the DEFAULT_DESIGN re-export')
+  rewrite(/^export function ProjectProvider/m, 'function ProjectProvider', 'the provider export')
+  rewrite(/^export const useProject/m, 'const useProject', 'the hook export')
+  assert.ok(!/^\s*export\s/m.test(out), `${CTX_PATH} still has an export the harness did not strip`)
+
+  const store = new Map()
+  if (user) store.set('vs-projects', JSON.stringify({ [ALICE_KEY]: saved }))
+  const activations = []
+
+  // A React small enough to run one render of one provider.
+  const slots = []
+  let cursor = 0
+  const notModelled = (name) => () => { throw new Error(`${name} is not modelled by this harness`) }
+  const sandbox = {
+    console,
+    localStorage: {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => store.set(k, String(v)),
+      removeItem: (k) => store.delete(k),
+    },
+    createContext: () => ({ Provider: 'ProjectContext.Provider' }),
+    useContext: () => null,
+    useState: (init) => {
+      const i = cursor++
+      if (slots.length <= i) slots[i] = typeof init === 'function' ? init() : init
+      const set = (next) => { slots[i] = typeof next === 'function' ? next(slots[i]) : next }
+      return [slots[i], set]
+    },
+    useCallback: (fn) => fn,
+    useMemo: (fn) => fn(),
+    useRef: (v) => ({ current: v }),
+    useEffect: () => {},
+    h: (type, props, ...children) => ({ type, props, children }),
+    trackActivation: (...args) => activations.push(args),
+    loadFirestore: notModelled('loadFirestore'),
+    mergeProjects: notModelled('mergeProjects'),
+    projectListsEqual: notModelled('projectListsEqual'),
+    mergeTombstones: notModelled('mergeTombstones'),
+    pruneTombstones: (t) => t,
+    readRemoteProjects: notModelled('readRemoteProjects'),
+    writeRemoteProjects: notModelled('writeRemoteProjects'),
+    syncFailureMessage: notModelled('syncFailureMessage'),
+    classifyError: notModelled('classifyError'),
+    reportSyncFailure() {}, reportSyncNotice() {}, reportSyncOk() {},
+    useAuth: () => ({ user }),
+    useSubscription: () => ({ plan }),
+    DEFAULT_DESIGN,
+  }
+
+  const body = `(function(){\n${out}\n;return { ProjectProvider };\n})()`
+  const { ProjectProvider } = vm.runInNewContext(body, sandbox, { filename: CTX_PATH })
+
+  /** One render. The Provider element's `value` prop IS the context. */
+  const render = () => {
+    cursor = 0
+    const element = ProjectProvider({ children: null })
+    assert.equal(element.type, 'ProjectContext.Provider', 'the provider no longer renders its context Provider')
+    return element.props.value
+  }
+
+  const stored = () => JSON.parse(store.get('vs-projects') || '{}')[ALICE_KEY] || []
+  return { render, stored, activations }
 }
 
 // ── The free half ───────────────────────────────────────────────────────────
@@ -188,7 +335,8 @@ test('5 · at the cap there is no save control to reveal', () => {
   // THE ASSERTION THIS FILE EXISTS FOR. The wall must REPLACE the save
   // controls, not sit beside them hidden. Structurally: `quota.atLimit` selects
   // between two arms of one ternary, the wall in the true arm and the input in
-  // the false arm — so no render can produce both.
+  // the false arm — so no render can produce both. Rendered and counted for
+  // real in tests/user-sim/51-typography-paywall.spec.js.
   const arms = atCapArms(SAVE)
   assert.ok(arms, 'the at-cap branch is no longer a single ternary on quota.atLimit')
 
@@ -227,14 +375,98 @@ test('7 · no stylesheet rule can hide or reveal a save control', () => {
 test('8 · the refusal is re-resolved at commit, not trusted from the render', () => {
   // Belt and braces. The render decides what to DRAW; commit() decides what to
   // DO. If someone later reintroduces a disabled-but-present button, this is
-  // the layer that still refuses.
+  // the layer that still refuses. A wiring line, so a source assertion.
   const code = stripComments(SAVE)
   assert.match(code, /projectQuota\(projects\.length, projectLimit\)\.atLimit/,
     'commit() no longer re-resolves the quota before saving')
-  // ...and the innermost layer, which is the one the colour tools already have.
-  const ctx = stripComments(read('src/contexts/ProjectContext.jsx'))
-  assert.match(ctx, /if \(current\.length >= projectLimit\) \{[\s\S]{0,160}throw new Error/,
-    'ProjectContext.saveProject no longer throws at the cap')
+})
+
+// ── The innermost layer, EXECUTED ───────────────────────────────────────────
+
+test('8a · the harness really runs the provider, so nothing below is vacuous', () => {
+  const { render } = loadProjectContext({ saved: projects(1) })
+  const value = render()
+  assert.equal(typeof value.saveProject, 'function', 'the context value has no saveProject')
+  assert.equal(value.canSaveProjects, true, 'a signed-in user cannot save at all')
+  assert.equal(value.projectLimit, FREE_SAVE_LIMITS.projects, 'the free limit is not the one src/config/plans.js quotes')
+  assert.equal(value.projects.length, 1, 'the provider did not read the seeded store')
+})
+
+test('8b · ProjectContext.saveProject refuses at the cap, and says how many the plan allows', () => {
+  // The colour tools already have this layer; without it the typography wall
+  // is a suggestion. `>=` rather than `>`: at exactly the limit there is no
+  // slot, and the regex this replaced could not tell the two apart.
+  const LIMIT = FREE_SAVE_LIMITS.projects
+  const { render, stored, activations } = loadProjectContext({ saved: projects(LIMIT) })
+  const value = render()
+  assert.equal(value.atProjectLimit, true, 'a full free account does not report itself at the limit')
+  assert.throws(() => value.saveProject('One more'),
+    new RegExp(`up to ${LIMIT} projects`),
+    'a save at the cap went through, or the refusal does not say what the cap is')
+  assert.equal(stored().length, LIMIT, 'the refused save still wrote a project')
+  assert.deepEqual(activations, [], 'a refused save counted as an activation')
+})
+
+test('8c · under the cap the save goes through, is kept, and is the activation moment', () => {
+  const LIMIT = FREE_SAVE_LIMITS.projects
+  const { render, stored, activations } = loadProjectContext({ saved: projects(LIMIT - 1) })
+  const value = render()
+  assert.equal(value.atProjectLimit, false)
+  const id = value.saveProject('  Editorial system  ')
+  assert.ok(id, 'a save under the cap returned no id')
+  const kept = stored()
+  assert.equal(kept.length, LIMIT, 'the save was not written through to the store')
+  assert.equal(kept.at(-1).id, id)
+  assert.equal(kept.at(-1).name, 'Editorial system', 'the name is not trimmed')
+  assert.deepEqual(activations, [['project', 'save']], 'a genuine first save did not fire the activation event')
+
+  // The slot the save just took is the last one: the very next save refuses.
+  assert.throws(() => render().saveProject('And another'), new RegExp(`up to ${LIMIT} projects`))
+})
+
+test('8d · a blank project is a container, not work — no activation', () => {
+  const { render, activations } = loadProjectContext({ saved: [] })
+  render().saveProject('', { blank: true })
+  assert.deepEqual(activations, [], 'creating an empty shell was counted as the first real win')
+})
+
+test('8e · duplicating is a new save and answers to the same cap', () => {
+  // A duplicate button that quietly created a fourth project on a
+  // three-project plan would be the cap leaking, and the cap is what Pro sells.
+  const LIMIT = FREE_SAVE_LIMITS.projects
+  const full = loadProjectContext({ saved: projects(LIMIT) })
+  assert.throws(() => full.render().duplicateProject('p1'), new RegExp(`up to ${LIMIT} projects`),
+    'duplicate at the cap created a project')
+  assert.equal(full.stored().length, LIMIT)
+
+  const room = loadProjectContext({ saved: projects(LIMIT - 1) })
+  const id = room.render().duplicateProject('p1')
+  const kept = room.stored()
+  assert.equal(kept.length, LIMIT, 'the duplicate was not written through')
+  assert.equal(kept.at(-1).id, id)
+  assert.equal(kept.at(-1).name, 'Project 1 copy')
+  assert.notEqual(id, 'p1', 'the copy reused the source id')
+})
+
+test('8f · Pro has no cap, and the limit comes from the plan rather than the context', () => {
+  // The number lives in SubscriptionContext (mirrored from src/config/plans.js).
+  // If the provider ever grew its own constant, changing the plan would stop
+  // changing the cap — so the plan is varied here and the cap has to follow.
+  const pro = loadProjectContext({ plan: PRO, saved: projects(10) })
+  const value = pro.render()
+  assert.equal(value.projectLimit, Infinity)
+  assert.equal(value.atProjectLimit, false, 'a Pro account with ten projects reports itself capped')
+  assert.ok(value.saveProject('Eleventh'), 'Pro was refused a save')
+  assert.equal(pro.stored().length, 11)
+
+  const wider = loadProjectContext({ plan: { id: 'free', limits: { projects: 5 } }, saved: projects(3) })
+  const w = wider.render()
+  assert.equal(w.projectLimit, 5, 'the cap ignored the plan')
+  assert.equal(w.atProjectLimit, false, 'three of five reports itself at the limit — the cap is hard-coded to three')
+  assert.ok(w.saveProject('Fourth'))
+
+  const unlimited = loadProjectContext({ plan: { id: 'free' }, saved: projects(3) })
+  assert.equal(unlimited.render().projectLimit, Infinity, 'a plan with no limits block is treated as capped')
 })
 
 test('9 · saving needs an account, not a subscription', () => {
@@ -250,6 +482,17 @@ test('9 · saving needs an account, not a subscription', () => {
   assert.ok(triggerBody, 'the save trigger changed shape')
   assert.ok(!/openProModal|raiseWall/.test(triggerBody),
     'clicking Save while signed out raises the paywall instead of the login prompt')
+
+  // And the innermost layer agrees, EXECUTED: signed out, the context refuses
+  // with a sign-in message — on the Pro plan as much as on Free — and reports
+  // that saving is not available at all rather than that the cap is reached.
+  for (const plan of [FREE, PRO]) {
+    const value = loadProjectContext({ user: null, plan }).render()
+    assert.equal(value.canSaveProjects, false, `${plan.id}: signed out reports it can save`)
+    assert.equal(value.projects.length, 0)
+    assert.throws(() => value.saveProject('Anything'), /Sign in/,
+      `${plan.id}: a signed-out save was refused for the wrong reason, or not refused`)
+  }
 })
 
 test('10 · the allowance stays quiet until it is worth knowing', () => {

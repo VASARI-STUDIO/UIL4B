@@ -30,8 +30,12 @@ import path from 'node:path'
 import { expect } from '@playwright/test'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { ADMIN_EMAILS } from '../../src/utils/constants.js'
+import { resolveReportDir } from './report-dir.js'
 
-export const REPORT_DIR = path.join(process.cwd(), 'tests', 'user-sim', 'report')
+// Keyed on PLAYWRIGHT_PORT, the same way playwright.config.js keys its
+// outputDir and JSON report, so one run's five evidence files share a
+// directory and two concurrent runs never share one. See report-dir.js.
+export const REPORT_DIR = path.join(process.cwd(), ...resolveReportDir().split('/'))
 export const FINDINGS_FILE = path.join(REPORT_DIR, 'findings.jsonl')
 
 // Network noise that is expected inside the sandboxed test runner (external
@@ -561,7 +565,8 @@ function buildAssetHint(page) {
     + ' means the machine could not deliver the file (ERR_NO_BUFFER_SPACE and'
     + ' ERR_INSUFFICIENT_RESOURCES are resource exhaustion, seen with several suites running at'
     + ' once). Read the route above as a casualty of that, not as a defect. The test and the'
-    + ' whole run both fail on this.'
+    + ' whole run both fail on this. If another suite was running at the same time, check it'
+    + ' had its own PLAYWRIGHT_PORT (the report directory follows the port) and its own checkout.'
 }
 
 /**

@@ -357,7 +357,9 @@ function assertAssetsArrivedThisTest(seen) {
     + 'connection could not deliver the file: ERR_NO_BUFFER_SPACE and ERR_INSUFFICIENT_'
     + 'RESOURCES are resource exhaustion, seen when several agents run suites at once. Either '
     + 'way the whole run is void and the global teardown fails it. Re-run with nothing else '
-    + 'building, and give each concurrent agent its own PLAYWRIGHT_PORT *and* its own checkout.',
+    + 'building, and give each concurrent agent its own PLAYWRIGHT_PORT *and* its own checkout: '
+    + 'the port keeps the preview servers and the report directories apart '
+    + '(tests/user-sim/report/<port>/), the checkout keeps the dist/ builds apart.',
   )
 }
 
@@ -399,7 +401,9 @@ export function assertNoStaleBuildAssets() {
       : '')
     + '\n\nEvery result in this run is void — the passes as much as the failures. Re-run it with '
     + 'nothing else building, and give each concurrent agent its own PLAYWRIGHT_PORT *and* its '
-    + 'own checkout. See tests/flakeprobe-a0e1/README.md.',
+    + 'own checkout: the port keeps the preview servers and the report directories apart '
+    + '(tests/user-sim/report/<port>/), the checkout keeps the dist/ builds apart. See '
+    + 'tests/flakeprobe-a0e1/README.md.',
   )
 }
 
