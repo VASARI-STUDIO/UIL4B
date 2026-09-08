@@ -34,8 +34,11 @@
 .bs-wall{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px 20px;padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-s);background:var(--bg-2)}
 .bs-wall-text{margin:0;flex:1 1 260px;font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
 .bs-wall-actions{display:flex;align-items:center;gap:16px;flex:0 0 auto}
-.bs-wall-link{font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong)}
-.bs-wall-close{border:0;background:none;padding:0;font:inherit;font-size:var(--fs-caption);color:var(--t3);cursor:pointer}
+/* Both are targets, and both measured under the 24px floor #413 applied to the
+   shell (link 23.1px, Dismiss 21.4px at every width). Inline-flex with a
+   min-height rather than padding, so the text baseline does not move. */
+.bs-wall-link{display:inline-flex;align-items:center;min-height:24px;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong)}
+.bs-wall-close{display:inline-flex;align-items:center;min-height:24px;border:0;background:none;padding:0;font:inherit;font-size:var(--fs-caption);color:var(--t3);cursor:pointer}
 .bs-wall-close:hover{color:var(--t1)}
 
 .bs-composer{display:flex;flex-direction:column;gap:8px}
@@ -82,7 +85,8 @@
 .bs-band-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .bs-band-n{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);letter-spacing:.1em}
 .bs-band-label{margin:0;font-size:var(--fs-h5);font-weight:600;color:var(--t0)}
-.bs-band-open{margin-left:auto;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);white-space:nowrap}
+/* A target, measured 23.1px tall at every width — under the 24px floor. */
+.bs-band-open{display:inline-flex;align-items:center;min-height:24px;margin-left:auto;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);white-space:nowrap}
 
 .bs-swatches{display:flex;flex-wrap:wrap;gap:14px;margin:0;padding:0;list-style:none}
 .bs-swatch{display:flex;flex-direction:column;gap:6px;min-width:92px}
