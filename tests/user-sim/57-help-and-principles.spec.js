@@ -20,6 +20,7 @@ import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { DEFAULT_DESIGN, tintConfigFor } from '../../src/data/designDefaults.js'
 import { contrastRatio, generateTintScale, T_LABELS } from '../../src/utils/colors.js'
 import { stepPx } from '../../src/utils/fluidType.js'
+import { SURFACE_LINE, line } from '../../src/data/positioning.js'
 
 /* The two figures /help prints, derived here from the registry itself so the
    page cannot satisfy this by printing its own arithmetic back at us. */
@@ -346,3 +347,18 @@ for (const theme of ['light', 'dark']) {
     })
   }
 }
+
+test.describe('/help opens on what the founder said', () => {
+  test('the lede carries the founder's opening line, rendered, from positioning.js', async ({ page }) => {
+    // Same shape as the /plans check: the sentence is computed from the module
+    // here and looked for in the RENDERED lede, so the wiring is what is under
+    // test, not the helper.
+    watch(page, 'a first-time visitor looking for where to start')
+    await go(page, '/help')
+    await expectRendered(page, '/help')
+
+    const lede = page.locator('.hlp-hero .hlp-lede')
+    await expect(lede).toHaveCount(1)
+    await expect(lede).toContainText(line(SURFACE_LINE.helpOpening))
+  })
+})
