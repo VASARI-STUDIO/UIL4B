@@ -7739,7 +7739,10 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .plb-visopt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
 .plb-visopt--on>svg{color:var(--brand)}
 .plb-visopt-l{flex:1}
-.plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#16A34A;background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
+/* 9px bold on a 15% green tint: #16A34A measured 2.69:1 in light and 4.07:1
+   in dark (2026-09-09). --ok-strong is the text companion of the state token
+   (tests/unit/state-token-contrast): 6.1:1 on the light tint, 7.7:1 on dark. */
+.plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
 .plb-scrolllist{display:flex;flex-direction:column;gap:2px;max-height:min(50vh,380px);overflow-y:auto;overscroll-behavior:contain}
 .plb-varrow{display:flex;align-items:center;gap:8px;width:100%;padding:0;background:none;border:none;border-radius:var(--radius-s);text-align:left}
 button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
