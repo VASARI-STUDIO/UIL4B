@@ -156,9 +156,26 @@ export async function readHero() {
  * measured row beneath, and the wordmark small in the corner. No gradients, no
  * glow, no stock geometry — the composition is a grid and the type carries it.
  */
+/**
+ * The label a section card prints above its name, or null for no band.
+ *
+ * EXPORTED so a test can read the rule rather than the picture. Until the
+ * 2026-09-09 anti-slop audit every section without its own `eyebrow` fell back
+ * to "Design toolkit" — the retired framing ("a free browser-based design
+ * toolkit" is the story docs/reference/positioning.md replaced), set as a
+ * letter-spaced category label above a headline, which is the exact kicker
+ * the homepage card dropped when the founder retired "UI system toolkit" as
+ * "a huge AI Slop feature". A section that has something true to say above
+ * its name (Learn: "Reference guides") still says it; the rest say nothing.
+ */
+export function sectionEyebrow(section) {
+  return section.eyebrow || null
+}
+
 function cardHtml(section, tokens, fontDataUri) {
   const hue = tokens.hues[section.hue]
   const tools = toolNamesFor(section)
+  const eyebrow = sectionEyebrow(section)
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 @font-face{font-family:Manrope;src:url(${fontDataUri}) format('woff2');font-weight:200 800;font-display:block}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -182,7 +199,7 @@ h1{font-size:104px;line-height:.94;font-weight:800;letter-spacing:-.045em;max-wi
 <div class="body">
   <div class="mark">UI<span>L4B</span></div>
   <div>
-    <div class="eyebrow">${section.eyebrow || 'Design toolkit'}</div>
+    ${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ''}
     <h1>${section.label}</h1>
     <p class="blurb">${section.blurb}.</p>
   </div>

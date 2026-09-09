@@ -341,7 +341,12 @@ test.describe('public UI quality release', () => {
     })
     await go(page, '/discover')
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Find systems worth stealing.' })).toBeVisible()
+    // The h1 is the surface's name. "Find systems worth stealing." was here
+    // until 2026-09-09 — a line the founder had already thrown out on the
+    // homepage ('"Systems worth stealing." is bad copy', 56-founder-rejected-
+    // headlines.spec.js) with "Find" in front of it. 70-anti-slop-marketing
+    // and the 62 tagline walk keep it off every route.
+    await expect(page.getByRole('heading', { level: 1, name: 'Discover' })).toBeVisible()
     await expect.poll(
       () => page.evaluate(() => JSON.parse(localStorage.getItem('vs-community-submissions'))),
     ).toEqual([expect.objectContaining({

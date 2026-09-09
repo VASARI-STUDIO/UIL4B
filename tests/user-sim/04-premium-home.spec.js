@@ -80,13 +80,15 @@ test.describe('premium homepage', () => {
     await expect(page.locator('.home-hero-kicker'), 'the hero kicker tagline is back').toHaveCount(0)
     await expect(page.locator('.home-hero-stats'), 'the hero stat strip is back').toHaveCount(0)
 
-    // The figures did not disappear — they moved beside the toolset grid they
-    // describe. Still derived from the tool tree, still never the mock's
-    // invented "40+ TOOLS".
-    const facts = page.locator('.htools-facts')
-    await expect(facts).toContainText('tools live today')
-    await expect(facts).toContainText('icons, via Iconify')
-    await expect(facts).not.toContainText('40+')
+    // The figures moved beside the toolset grid on 2026-09-07 and were
+    // removed from there on 2026-09-09: the founder marked the three-up
+    // figure strip "AI" on the Font Gallery masthead and asked for the change
+    // to reach every header that matches, and a figure strip under a section
+    // heading matches. So this check flips the same way the kicker check did —
+    // the strip must be ABSENT, wherever it is put. The mock's invented
+    // "40+ TOOLS" cannot come back through a component that no longer exists;
+    // 70-anti-slop-marketing.spec.js owns the rendered absence.
+    await expect(page.locator('.htools-facts'), 'the figure strip is back').toHaveCount(0)
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
     await expect(page.getByText(/Component tooling is coming next/)).toBeVisible()
 
