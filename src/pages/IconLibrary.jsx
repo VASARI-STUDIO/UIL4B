@@ -1420,7 +1420,7 @@ async function getCollectionNames(pack) {
 
 const PAGE_SIZE = 120
 
-export default function IconLibrary({ onCopy, embedded }) {
+export default function IconLibrary({ onCopy, embedded, onCatalogue }) {
   const { t } = useI18n()
   const { isPro, plan } = useSubscription()
   // Free-tier custom-icon allowance (Pro → Infinity). Single source: the plan.
@@ -1724,6 +1724,16 @@ export default function IconLibrary({ onCopy, embedded }) {
 
   // Consume the homepage draft on commit — see the `selected` initialiser above.
   useEffect(() => { consumeIconDraft() }, [])
+
+  // Tell the masthead whether the grid under it is the CATALOGUE or the
+  // built-in fallback. IconEmojiLibrary's status pill used to read
+  // navigator.onLine alone, so with every Iconify host refusing (429/403 —
+  // the 2026-09-08 outage) it said "Live library connected" in green directly
+  // above the notice saying the icon service could not be reached. `loadError`
+  // is the same flag that renders that notice, so the pill and the notice can
+  // never disagree again. Reported through a callback rather than lifted,
+  // because the fetch lifecycle (reqId, cdnOk, the retry ref) lives here.
+  useEffect(() => { onCatalogue?.(loadError ? 'fallback' : 'live') }, [loadError, onCatalogue])
 
   // Initial load: all packs, so the grid shows catalogue breadth on first paint.
   useEffect(() => {

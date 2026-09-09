@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import useOnline from '../hooks/useOnline'
 import { useI18n } from '../contexts/I18nContext'
@@ -33,6 +33,19 @@ export default function IconEmojiLibrary({ onCopy }) {
   // effect, so no cascading-render lint warning and no extra commit).
   const [mounted, setMounted] = useState(() => new Set([tab]))
   const online = useOnline()   // the shared signal; see src/hooks/useOnline.js
+  // What the icon grid is actually showing: 'live' (the Iconify catalogue) or
+  // 'fallback' (the built-in set, because every host refused). Reported by
+  // IconLibrary from the same flag that renders its "Couldn't reach the icon
+  // service" notice. The pill below used to read navigator.onLine ALONE, so
+  // during the 2026-09-08 outage (429 from api.iconify.design, 403 from both
+  // fallbacks, browser online throughout) it said "Live library connected" in
+  // green directly above that notice. The browser's connection is not the
+  // catalogue's state; the pill now reflects the thing it is standing above.
+  const [catalogue, setCatalogue] = useState('live')
+  const onCatalogue = useCallback((state) => setCatalogue(state), [])
+  // The fallback reading belongs to the ICON grid only: the emoji library is
+  // built in and never asks the catalogue for anything.
+  const iconFallback = tab === 'icon' && catalogue === 'fallback'
   const tabRefs = useRef({})
   if (!mounted.has(tab)) setMounted(new Set(mounted).add(tab))
 
@@ -115,9 +128,12 @@ export default function IconEmojiLibrary({ onCopy }) {
               </button>
             </div>
             <div className="lib-head-status">
-              <span className={online ? 'lib-net is-online' : 'lib-net is-offline'}>
+              {/* Three readings, one truth each. "Built-in icons" is the grid's own
+                  status line for this state (IconLibrary's `mode`), reused rather
+                  than a new sentence; the notice above the grid says why. */}
+              <span className={!online ? 'lib-net is-offline' : iconFallback ? 'lib-net is-fallback' : 'lib-net is-online'}>
                 <i aria-hidden="true" />
-                {online ? 'Live library connected' : 'Offline · built-in assets remain available'}
+                {!online ? 'Offline · built-in assets remain available' : iconFallback ? 'Built-in icons' : 'Live library connected'}
               </span>
               <span className="lib-keyhint">Use ← → to switch</span>
             </div>
@@ -134,7 +150,7 @@ export default function IconEmojiLibrary({ onCopy }) {
       >
         {mounted.has('icon') && (
           <Suspense fallback={fallback}>
-            <IconLibrary embedded onCopy={onCopy} />
+            <IconLibrary embedded onCopy={onCopy} onCatalogue={onCatalogue} />
           </Suspense>
         )}
       </div>
