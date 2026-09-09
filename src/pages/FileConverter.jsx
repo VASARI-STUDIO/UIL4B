@@ -132,8 +132,13 @@ function formatBytes(b) {
 function sizeDelta(orig, out) {
   if (!orig || out == null) return null
   const pct = Math.round((1 - out / orig) * 100)
-  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller`, color: 'var(--ok)' }
-  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger`, color: 'var(--err)' }
+  // The -strong inks, not the raw state colours: this is 12px TEXT and the
+  // batch line sits on the page ground, where --ok measured 4.32:1 in light
+  // (2026-09-09, every width). --ok-strong is the text-grade step of the
+  // same hue in both themes; the card lines move with it so one delta does
+  // not read in two greens.
+  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller`, color: 'var(--ok-strong)' }
+  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger`, color: 'var(--err-strong)' }
   return { pct: 0, dir: 'same', label: 'same size', color: 'var(--t2)' }
 }
 
@@ -619,7 +624,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                   </div>
                   <div className="fc-name" title={it.name}>{it.name}</div>
                   {it.error ? (
-                    <div style={{ fontSize: 10, color: 'var(--err)' }}>{it.error}</div>
+                    <div style={{ fontSize: 10, color: 'var(--err-strong)' }}>{it.error}</div>
                   ) : it.out ? (
                     <>
                       <div style={{ fontSize: 10, color: 'var(--t2)' }}>
