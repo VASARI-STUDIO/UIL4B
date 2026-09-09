@@ -9480,7 +9480,11 @@ input.ggn-stop-hex{font-family:var(--mono);padding:0}
   .ggn-imports{grid-template-columns:1fr}
 }
 /* Generator: import-colours block (palette / saved projects) */
-.ggn-imports{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+/* 240, not 220: a 220px card leaves the text column 118px beside the 64px
+   stripes, and "Saved project · 3 colours" is 123px at 11px — every saved
+   project's meta line ended in an ellipsis at 1280, 1440 and 1920
+   (measured 2026-09-09). 240 gives the column 138px. */
+.ggn-imports{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
 .ggn-import{display:flex;align-items:center;gap:12px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius);padding:10px 12px;cursor:pointer;font-family:var(--font);text-align:left;transition:border-color var(--t),transform var(--t)}
 .ggn-import:hover{border-color:var(--ggn-accent);transform:translateY(-1px)}
 .ggn-import-stripes{display:flex;flex-shrink:0;width:64px;height:36px;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--ggn-line)}
