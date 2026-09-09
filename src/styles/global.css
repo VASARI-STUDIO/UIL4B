@@ -1183,7 +1183,9 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    control, so on a desktop "end" is the case that keeps all six tones on
    screen — measured cut off at 1280, 1440 and 1920 before this. */
 .emoji-tone-pop[data-pop-align="end"]{left:auto;right:0}
-.emoji-tone-pop[data-pop-align="clamp"]{left:50%;transform:translateX(-50%)}
+/* clamp follows usePopover's convention after #434: the hook writes --pop-x
+   (the panel's left edge pinned EDGE_PAD from the viewport), not a centre. */
+.emoji-tone-pop[data-pop-align="clamp"]{left:var(--pop-x,0px)}
 .emoji-tone-pop[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
 .emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:all var(--dur-2) var(--ease-standard)}
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
