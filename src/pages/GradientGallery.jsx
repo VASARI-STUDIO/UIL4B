@@ -108,9 +108,14 @@ export default function GradientGallery({ toast }) {
 
   return (
     <div className="sec grg-wrap">
+      {/* No description under the title — anti-slop audit, 2026-09-09. It read
+          "Production-ready CSS gradients with a point of view. Copy the rule in
+          one tap, save a favourite, or open any of them in the Gradient
+          Generator and make it yours." — the Palette Library's sentence with
+          the nouns swapped ("with a point of view … make it yours"), so it was
+          a template, and every action it listed is a button on the cards. */}
       <DiscoverGalleryHero
         title="Gradient Library"
-        description="Production-ready CSS gradients with a point of view. Copy the rule in one tap, save a favourite, or open any of them in the Gradient Generator and make it yours."
         action={(
           <Link className="btn" to="/create/gradient">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
@@ -187,8 +192,10 @@ export default function GradientGallery({ toast }) {
         />
       </LibraryToolbar>
 
+      {/* The "Curated collection" eyebrow is gone: a label above a heading that
+          already names the set — the motif the founder marked "AI" on these
+          mastheads (DiscoverGalleryHero.jsx). Anti-slop audit, 2026-09-09. */}
       <DiscoverResultHead
-        eyebrow="Curated collection"
         title="Gradients worth building with"
         count={visible.length}
         noun="gradient"
