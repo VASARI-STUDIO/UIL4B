@@ -8317,6 +8317,12 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-galpopup-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font-size:12px;font-weight:600;color:var(--t2)}
 .plb-galpopup-body .pgal-grid{grid-template-columns:repeat(2,1fr);gap:14px 12px}
 .plb-galpopup-body .pgal-stripes{height:110px}
+/* At 110px the five stripes are ~20px each, under the 24px floor; they all do
+   the same thing as "Use →", so the card's whole face is one target and the
+   labelled control is the one that has to clear the floor. It measured
+   285x20 (2026-09-09). Scoped to the popup: Discover's own card is its own
+   surface. */
+.plb-galpopup-body .pgal-use{min-height:24px;padding-top:2px;padding-bottom:2px}
 .plb-galpopup-body .plb-menu-sub a{color:var(--accent-strong);text-decoration:none}
 .plb-galpopup-body .plb-menu-sub a:hover{text-decoration:underline}
 /* Palette-history menu — plb-varrow rows with a mini strip + relative time */
