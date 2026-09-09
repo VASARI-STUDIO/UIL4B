@@ -73,8 +73,11 @@ const RETIRED = [
   // The homepage closing banner's hint and headline.
   'upgrade only when',
   'first decision to clean handoff',
-  // The gallery masthead template, and the negation over the resources grid.
-  'with a point of view',
+  // The negation over the Curated Resources grid heading. (The gallery
+  // masthead sentences — "…with a point of view…" — are NOT swept: they were
+  // deleted and restored in the same audit because three contracts pin a
+  // masthead with a description and the 390px masthead is a hole without one;
+  // they wait on the founder's rewrite.)
   'hand-picked, not scraped',
 ]
 

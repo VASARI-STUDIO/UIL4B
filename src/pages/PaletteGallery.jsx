@@ -265,14 +265,10 @@ export default function PaletteGallery({ toast }) {
 
   return (
     <div className="sec pgl-page">
-      {/* No description under the title — anti-slop audit, 2026-09-09. It read
-          "Colour systems with a point of view — ours, plus the published brand
-          palettes behind the interfaces you already know. Copy a swatch, save a
-          favourite, or open the complete palette in the builder and make it
-          yours." — the Gradient Library's sentence with the nouns swapped, and
-          every action it listed is a control on the cards. The collection
-          filter under it already names the two sets. */}
-      <DiscoverGalleryHero title="Palette Library" />
+      <DiscoverGalleryHero
+        title="Palette Library"
+        description="Colour systems with a point of view — ours, plus the published brand palettes behind the interfaces you already know. Copy a swatch, save a favourite, or open the complete palette in the builder and make it yours."
+      />
 
       <LibraryToolbar
         className="pgl-toolbar"

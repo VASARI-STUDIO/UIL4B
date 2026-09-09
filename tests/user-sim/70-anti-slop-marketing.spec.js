@@ -275,29 +275,15 @@ test.describe('the 404', () => {
 })
 
 test.describe('the gallery mastheads', () => {
-  test('the Gradient and Palette libraries open on their name, not a templated sentence', async ({ page }) => {
-    // Was: "Production-ready CSS gradients with a point of view. … make it
-    // yours." and "Colour systems with a point of view — … make it yours." —
-    // one sentence with the nouns swapped, listing actions the cards already
-    // carry as buttons. The "Curated collection" eyebrow over the gradient
-    // grid heading was the label-above-a-heading motif the founder marked
-    // "AI" on these mastheads.
-    watch(page, PERSONA)
-    for (const route of ['/discover/gradients', '/discover/palettes']) {
-      await go(page, route)
-      await expectRendered(page, route)
-      const hero = page.locator('.dgh-hero')
-      await expect(hero).toHaveCount(1)
-      await expect(hero.getByRole('heading', { level: 1 })).toHaveText(/Library$/)
-      await expect(hero.locator('.dgh-copy p'), `${route} has a masthead sentence again`).toHaveCount(0)
-    }
-    // The gradient grid heading has no eyebrow above it, and still counts.
-    const head = page.locator('.drh-head').first()
-    await go(page, '/discover/gradients')
-    await expectRendered(page, '/discover/gradients')
-    await expect(head.locator('div > span')).toHaveCount(0)
-    await expect(head.locator('p[aria-live]')).toContainText(/\d+ gradients?/)
-  })
+  // THE PALETTE AND GRADIENT LIBRARY MASTHEAD SENTENCES WERE DELETED AND PUT
+  // BACK, in the same audit. "…with a point of view … make it yours." is one
+  // sentence with the nouns swapped, and it is on the founder's list to
+  // rewrite — but three standing contracts pin the masthead as title +
+  // description (15-discover-library-parity, 34-palette-library-sections),
+  // and without the sentence the 390px masthead is 183px of dead space, the
+  // exact defect 40-gallery-hero was written for. A hole is worse than a
+  // templated line, so the line stays until he writes its replacement. The
+  // audit's only gallery-chrome change is the one below.
 
   test('the Curated Resources grid heading has no "not scraped" label above it', async ({ page }) => {
     watch(page, PERSONA)
