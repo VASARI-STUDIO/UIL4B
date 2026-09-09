@@ -12204,8 +12204,17 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .ui-modal[tabindex="-1"]:focus-visible,.cp-panel[tabindex="-1"]:focus-visible{outline:none}
 
 @media(max-width:780px){
-  .ui-pro{max-width:460px;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "rail" "body"}
-  .ui-pro-rail{border-left:none;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:18px 22px;margin-top:16px}
+  /* Body BEFORE the rail in the single column. The rail is ~500px tall on a
+     phone (eight named strips, one per column at ≤480), and with it between
+     the head and the body the amount, the price-service error and both
+     buttons sat 290–520px below the bottom of a 320–430px screen — measured
+     from the Palette Builder's colour-system gate, both themes, 2026-09-09.
+     The sheet scrolled, but the one thing the dialog exists to say was two
+     screens down. Only the paint order moves: DOM order is still head, rail,
+     body, the rail holds no focusable control, so Tab order and a screen
+     reader's reading order are unchanged. */
+  .ui-pro{max-width:460px;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "body" "rail"}
+  .ui-pro-rail{border-left:none;border-top:1px solid var(--border);padding:18px 22px}
   .ui-pro-rail-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
   .ui-pro-head{padding:22px 22px 0}
   .ui-pro-body{padding:14px 22px 22px}
@@ -12215,6 +12224,13 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
   .ui-pro-body{padding:12px 16px 20px}
   .ui-pro-rail{padding:16px}
   .ui-pro-rail-list{grid-template-columns:minmax(0,1fr)}
+  /* 24px of slack for a 320×568 screen: with the rail painted last (above)
+     the price-service error and its two buttons ended 5px past the sheet's
+     scroll box on the smallest phone. The list tightens, the error block
+     loses its outer margin; nothing is hidden and nothing is smaller than
+     the tap floor. */
+  .ui-pro-list{margin-top:12px;gap:7px}
+  .ui-pro-plans-err{margin-top:12px;padding:12px}
 }
 
 /* -- Accent-text rule enforcement on the auth + popup surfaces --------------

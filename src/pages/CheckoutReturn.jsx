@@ -108,7 +108,13 @@ export default function CheckoutReturn() {
             <h2>We couldn’t confirm your checkout</h2>
             <p>If you completed payment, activation may still be processing. Unpaid one-off checkouts never grant Pro access.</p>
             <div className="checkout-return-actions">
-              <NavLink to="/checkout" className="btn btn-accent">Try again</NavLink>
+              {/* Was "Try again" → /checkout. With no ?plan on it, Checkout
+                  renders "Invalid checkout selection — choose Monthly or
+                  Yearly from Plans", so the button offered a retry and landed
+                  on a page saying the retry was invalid. Rendered 2026-09-09.
+                  The plan is chosen on /plans; send them there, in Checkout's
+                  own words for the same link. */}
+              <NavLink to="/plans" className="btn btn-accent">Back to Plans</NavLink>
               <NavLink to="/settings" className="btn">Back to settings</NavLink>
             </div>
           </div>
