@@ -1,7 +1,7 @@
 # Release readiness
 
 **One page. What is finished, what needs you, what needs somebody outside this
-project.** Everything here was measured on `0ca89a65` on 2026-09-09, not
+project.** Everything here was measured on `ca1e735d` on 2026-09-10, not
 remembered. Where a figure would go stale, this page names the command instead.
 
 Your to-do list is [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). This page is the
@@ -26,13 +26,13 @@ If you did exactly one thing today, do
 
 Measured on this branch. Each row is a command you or anyone can re-run.
 
-| Gate | Command | Result on 2026-09-09 |
+| Gate | Command | Result on 2026-09-10 |
 |---|---|---|
 | Lint | `npm run lint` | **0 errors, 25 warnings** — under the ceiling, which came down from 31 |
 | Build | `npm run build` | passes, and printed `prerender: wrote 39 route shells + a noindex 404 shell (27 on a section share card, 16 with a BreadcrumbList)`. The deploy is **5.6 MB** (was 35 MB before the ffmpeg core moved off origin) |
-| Unit | `npm run test:unit` | **1750 pass, 0 fail, 0 skipped** |
+| Unit | `npm run test:unit` | **1757 pass, 0 fail, 0 skipped** |
 | Firestore and Storage rules | `npm run test:rules` | **105 pass, 0 fail, 0 skipped** — the emulator now runs Storage too |
-| Browser acceptance | `npm run test:users` | **859 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
+| Browser acceptance | `npm run test:users` | **961 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
 
 What the gate *requires* — as opposed to what it happened to report today —
 lives in [`reference/build-and-verify.md`](reference/build-and-verify.md) and
@@ -81,6 +81,14 @@ regression.
   mounting on the Create tools; Learn has a per-topic index, search over the
   guides' text and its own share card; the icon tests no longer depend on the
   live Iconify API, which rate-limited this machine to 429 after a day of runs.
+- **The 2026-09-10 round (#433–#437):** the anti-slop pass below the hero (taglines,
+  the closing banner, the figure strip and typed Pro claims out; the footer
+  tagline gone from every page); breakpoint audits of the six core tools (14
+  fixes) and the media, icon and content tools (10 fixes, including the icon
+  pill that claimed a live library while the catalogue was refused); the six
+  user flows walked end to end (7 fixes) and their follow-ups (9 fixes,
+  including Export being unreachable on phones, refusals shown as green success
+  toasts, and `/settings` opening on the upgrade pitch).
 - **Every route now loads only its own stylesheet (#424).** Eleven page sheets
   left `global.css` (687 → 588 kB), a computed-style snapshot over 25 routes
   proves nothing painted differently, and the one-directional contrast walk
