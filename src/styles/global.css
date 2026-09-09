@@ -11747,18 +11747,15 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 /* Edge flipping, driven by data attributes that usePopover writes after
    measuring the TRIGGER (never the positioned panel — that oscillates). */
 .pop[data-pop-align="start"]{right:auto;left:0}
-.pop[data-pop-align="clamp"]{right:auto;left:50%;transform:translateX(-50%)}
+/* Neither edge fits: pin the panel EDGE_PAD from the viewport's left. The
+   offset is written by placePopover; centring on the trigger (the old rule)
+   sent a panel off the far edge whenever the trigger was near one. */
+.pop[data-pop-align="clamp"]{right:auto;left:var(--pop-x,0px)}
 .pop[data-pop-side="top"]{top:auto;bottom:calc(100% + var(--s-2))}
 .pop[data-pop-side="top"]{animation-name:pop-in-up}
 @keyframes pop-in-up{
   from{opacity:0;transform:translateY(6px) scale(.985)}
   to{opacity:1;transform:translateY(0) scale(1)}
-}
-.pop[data-pop-align="clamp"][data-pop-side="top"],
-.pop[data-pop-align="clamp"]{animation-name:pop-in-centre}
-@keyframes pop-in-centre{
-  from{opacity:0;transform:translate(-50%,-6px) scale(.985)}
-  to{opacity:1;transform:translate(-50%,0) scale(1)}
 }
 .pop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
