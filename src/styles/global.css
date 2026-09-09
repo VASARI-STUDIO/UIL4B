@@ -7832,6 +7832,13 @@ button.plb-varrow:hover{background:var(--bg-2)}
      the row; a hairline says so without adding a fourth kind of button. */
   .plb-toolbar-group.rail-overflow>.plb-savewrap{position:relative}
   .plb-toolbar-group.rail-overflow>.plb-savewrap::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:1px;height:20px;background:var(--border)}
+  /* Save / export is the LAST control on the row, hard against the right
+     edge, and its menu carries .plb-menu--left (left:0) like every other
+     toolbar dropdown. Measured 2026-09-09 at 1440, signed in: the 264px menu
+     ran 109px past the viewport — "Copy link to this pale", "Submit to the
+     comm" — for every signed-in desktop user. Hang it from the right edge
+     here, where the row is a row; the ≤960 sheet below ignores both. */
+  .plb-toolbar-group.rail-overflow>.plb-savewrap .plb-menu{left:auto;right:0}
 }
 .plb-imgstage{position:relative;width:100%;aspect-ratio:var(--plb-img-ar,1.6);max-width:calc(min(48vh,420px) * var(--plb-img-ar,1.6));margin-inline:auto;overflow:hidden;border-radius:var(--radius-s);background:var(--bg-2);touch-action:none;user-select:none}
 .plb-imgstage-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
@@ -8276,7 +8283,12 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
 .plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
 /* Merged Save & share menu — a touch wider to fit the export action list. */
-.plb-savemenu{min-width:264px}
+/* A fixed width, not a minimum: an absolutely positioned box is shrink-to-fit,
+   and .plb-menu-item is nowrap, so a saved project called "Quarterly rebrand
+   exploration for the northern hemisphere retail launch, revision fourteen"
+   made the menu 552px wide (measured 2026-09-09) — ellipsis never engaged
+   because the box grew instead. */
+.plb-savemenu{width:280px}
 
 /* Colour-gallery popup — one large tabbed panel that hosts the community grid,
    the variations list and the brand palettes. Overrides the base .plb-menu
