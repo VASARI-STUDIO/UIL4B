@@ -9385,7 +9385,10 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 .ggn-copy:hover{text-decoration:underline;text-underline-offset:2px}
 .ggn-css{display:block;width:100%;text-align:left;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);padding:12px 14px;cursor:pointer;transition:border-color var(--t)}
 .ggn-css:hover{border-color:var(--ggn-line-2)}
-.ggn-css code{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ggn-t1);word-break:break-all;white-space:pre-wrap}
+/* break-all split "#7C3AED" across two lines in the 1024–1136 two-column band
+   and at 390 (2026-09-09): a hex value read as two values. `anywhere` wraps
+   at spaces first and only enters a token that cannot fit a line alone. */
+.ggn-css code{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ggn-t1);word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
 .ggn-fmt{display:inline-flex;gap:3px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);padding:3px;margin-bottom:9px}
 .ggn-fmt-btn{font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--ggn-t2);background:transparent;border:none;border-radius:var(--radius-xs);padding:5px 12px;cursor:pointer;transition:all var(--t)}
 .ggn-fmt-btn:hover{color:var(--ggn-t0)}
