@@ -210,7 +210,7 @@ function AppInner() {
   // page before Firebase has finished loading. See utils/sessionHint.js.
   useSessionHint()
   useSmoothScroll()
-  const { message, visible, type, toast } = useToast()
+  const { message, visible, type, toast, dismiss } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
   const navigate = useNavigate()
@@ -464,7 +464,7 @@ function AppInner() {
       </main>
 
       <AppFooter />
-      <Toast message={message} visible={visible} type={type} />
+      <Toast message={message} visible={visible} type={type} onDismiss={dismiss} />
       <FeedbackButton />
       <GoogleOneTap />
     </div>

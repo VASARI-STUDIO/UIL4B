@@ -87,6 +87,78 @@ const hitWithin = (loc, selector) => loc.evaluate((el, sel) => {
 }, selector)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 4 — toasts: the clock follows the message, and an error can be sent away
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('4 — an error toast stays until it is read or dismissed; a success stays short', () => {
+  const duplicateAtCap = async (page) => {
+    await page.getByRole('button', { name: /^Actions for/ }).first().click()
+    const dup = page.getByRole('button', { name: 'Duplicate' })
+    // Rendering this at 390 found a ninth defect: the hovered card's lift is
+    // a transform, so the menu was boxed inside the card and the next card's
+    // art painted over Duplicate. Fixed in projects.css; held here.
+    await expect.poll(() => hitWithin(dup, '.uh-menu').then((h) => h.inside),
+      'a tap on Duplicate must reach the menu, not the card below it').toBe(true)
+    await dup.click()
+  }
+
+  for (const size of [PHONE, DESK]) {
+    test(`${size[0]}px: the refusal toast outlives the old clock, announces as an alert, and Dismiss works from the keyboard`, async ({ browser }) => {
+      const { context, page } = await open(browser, size)
+      watch(page, `a free account at the cap duplicating a project (${size[0]}px)`)
+      await signIn(page, { plan: 'free', projects: CAP })
+      await go(page, '/projects')
+      await duplicateAtCap(page)
+
+      const toast = page.locator('.toast-error.show')
+      await expect(toast).toBeVisible()
+      await expect(toast).toContainText(`Free plan saves up to ${CAP} projects`)
+      await expect(toast).toHaveAttribute('role', 'alert')
+      // The old clock was 1.8s for everything. An error holds for at least six.
+      await page.waitForTimeout(TOAST_MIN_MS + 700)
+      await expect(toast, `the refusal vanished inside ${TOAST_MIN_MS + 700}ms — that is the old clock`).toBeVisible()
+
+      // A keyboard user can send it away: a real button, reachable, that closes it.
+      const dismiss = toast.getByRole('button', { name: 'Dismiss' })
+      await expect(dismiss).toBeVisible()
+      await dismiss.focus()
+      expect(await focused(page)).toMatch(/Dismiss/)
+      await page.keyboard.press('Enter')
+      await expect(page.locator('.toast.show')).toHaveCount(0)
+      // …and once hidden the ✕ is not a tab stop lurking inside an aria-hidden box.
+      await expect(page.locator('.toast[inert]')).toHaveCount(1)
+      await context.close()
+    })
+  }
+
+  test('an error left alone stays at least six seconds — the floor is the contract', async ({ browser }) => {
+    const { context, page } = await open(browser, DESK)
+    watch(page, 'a free account at the cap reading the refusal')
+    await signIn(page, { plan: 'free', projects: CAP })
+    await go(page, '/projects')
+    await duplicateAtCap(page)
+    const toast = page.locator('.toast-error.show')
+    await expect(toast).toBeVisible()
+    await page.waitForTimeout(TOAST_ERROR_MIN_MS - 600)
+    await expect(toast).toBeVisible()
+    await expect(page.locator('.toast.show')).toHaveCount(0, { timeout: 2500 })
+    await context.close()
+  })
+
+  test('a success is still short — the control', async ({ browser }) => {
+    const { context, page } = await open(browser, DESK)
+    watch(page, 'a free account with a slot to spare duplicating a project')
+    await signIn(page, { plan: 'free', projects: CAP - 1 })
+    await go(page, '/projects')
+    await duplicateAtCap(page)
+    const toast = page.locator('.toast-success.show')
+    await expect(toast).toContainText('Duplicated')
+    await expect(toast).toHaveAttribute('role', 'status')
+    await expect(page.locator('.toast.show'), 'a short success must be gone within three seconds').toHaveCount(0, { timeout: 3200 })
+    await context.close()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 5 — /settings opens on Account
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('5 — settings opens on Account, and remembers the section you chose', () => {

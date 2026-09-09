@@ -1258,6 +1258,13 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .toast-success .toast-ico{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .toast-error .toast-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
 .toast-info .toast-ico{background:var(--accent-bg);color:var(--accent)}
+/* The dismiss control. The toast itself stays pointer-events:none — it must
+   never block what is under it — so the one thing that is meant to be pressed
+   opts back in. Negative margins keep the box the same height it was. */
+.toast-x{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;margin:-4px -6px -4px 0;border:none;border-radius:var(--radius-s);background:none;color:var(--t2);cursor:pointer;pointer-events:auto;transition:background var(--t),color var(--t)}
+.toast-x svg{width:14px;height:14px}
+.toast-x:hover{background:var(--bg-2);color:var(--t0)}
+.toast:not(.show) .toast-x{pointer-events:none}
 /* Success motion: icon spring-pop + checkmark stroke draw (E3, motion-safe) */
 .toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
 .toast-success.show .toast-ico{animation:toast-pop var(--dur-4) var(--ease-spring) both}
