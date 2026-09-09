@@ -175,8 +175,13 @@ export default function AltTextGenerator({ toast }) {
 
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
+  // Resolves true only when a result landed on the card. generateAll counts
+  // these: it used to toast "Generated N alt texts" for N = everything it
+  // TRIED, so a refused request ended with a green tick saying the work was
+  // done, directly above a card saying it was not (rendered 2026-09-09 with
+  // /api/ai answering 500 and again 429, 320 through 1920, both themes).
   const generateForItem = async (item, retries = 2) => {
-    if (!item.base64) return
+    if (!item.base64) return false
     // Two ceilings, not one. The local tracker only knows about the daily
     // count, so a user could be blocked by the MONTHLY limit while every local
     // check said they were fine — and the server's refusal then read as a
@@ -185,7 +190,7 @@ export default function AltTextGenerator({ toast }) {
       const why = quota.message || 'Daily limit reached — resets at midnight'
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: why } : p))
       toast?.(why)
-      return
+      return false
     }
     // Clear the truncation flag too, or a retry that succeeds in full still
     // wears the warning from the attempt before it.
@@ -220,20 +225,25 @@ export default function AltTextGenerator({ toast }) {
       // onto the item so the card can say the answer is unfinished — a partial
       // description presented as complete is the bug this whole flag exists for.
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, altText: data.altText, truncated: Boolean(data.truncated), status: 'done' } : p))
+      return true
     } catch (err) {
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: err.message } : p))
+      return false
     }
   }
 
   const generateAll = async () => {
     setBusy(true)
     const targets = items.filter(it => it.status === 'ready' || it.status === 'error')
+    let done = 0
     for (let i = 0; i < targets.length; i++) {
-      await generateForItem(targets[i])
+      if (await generateForItem(targets[i])) done++
       if (i < targets.length - 1) await delay(4500)
     }
     setBusy(false)
-    toast?.(`Generated ${targets.length} alt text${targets.length === 1 ? '' : 's'}`)
+    // The count is what LANDED. Nothing landed: the cards carry the reason,
+    // and a toast announcing a success that did not happen is the fault above.
+    if (done > 0) toast?.(`Generated ${done} alt text${done === 1 ? '' : 's'}`)
   }
 
   const copyOne = async (it) => {
