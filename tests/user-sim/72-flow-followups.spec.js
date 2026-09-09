@@ -45,7 +45,7 @@
 //   M3  PaletteBuilder  setSaveError(err.message) → toast?.(err.message)     3 red, 2 of 3
 //   M4  useToast.js     toastDuration(msg, kind) → 1800                      4 red, 3 of 4
 //   M5  Settings.jsx    rememberedSection() || 'account' → 'support'         5 red, 2 of 3
-//   M6  global.css      .ui-login--interrupt .ui-login-aside-foot → none   6 red, 3 of 3
+//   M6  global.css      .ui-login--interrupt .ui-login-aside-foot → none   6 red, 2 of 3 (the gate pair; the sign-up case is green by design)
 //   M7  Onboarding.jsx  settled !== '/onboarding' → false                    7 red, 2 of 2
 //   M8  useModalDialog  requestAnimationFrame(fn) → fn() (synchronous)       8 red, 2 of 2; modal-contract.test.js red
 //   M9  projects.css    .uh-card:has(.uh-menu){z-index:2} removed            4 red, 1 of 4 (the 390 case)
