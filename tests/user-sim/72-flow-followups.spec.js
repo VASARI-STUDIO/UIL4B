@@ -87,6 +87,46 @@ const hitWithin = (loc, selector) => loc.evaluate((el, sel) => {
 }, selector)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 6 — the gate's way out is visible on a phone
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390', () => {
+  for (const theme of THEMES) {
+    test(`390px ${theme}: the gate's way-out line is visible, inside the dialog, and above the fold`, async ({ browser }) => {
+      const { context, page } = await open(browser, PHONE, theme)
+      watch(page, `a stranger meeting the sign-in gate on a phone (${theme})`)
+      await go(page, '/create/palette')
+      await page.locator('button[aria-label="Save / export"]').click()
+      const dialog = page.getByRole('dialog', { name: /Log in to continue/i })
+      await expect(dialog).toBeVisible()
+      const foot = dialog.locator('.ui-login-aside-foot')
+      await expect(foot).toBeVisible()
+      await expect(foot).toContainText(/Not now\? Closing this changes nothing/)
+      const [footBox, dialogBox] = await Promise.all([foot.boundingBox(), dialog.boundingBox()])
+      expect(footBox.y + footBox.height, 'the line must sit inside the dialog\'s visible box').toBeLessThanOrEqual(dialogBox.y + dialogBox.height + 1)
+      expect(footBox.y + footBox.height, 'and above the bottom of the screen').toBeLessThanOrEqual(PHONE[1])
+      await context.close()
+    })
+  }
+
+  test('390px: on the signup variant "Already have an account? Sign in" is still on screen — the line paid for itself in spacing', async ({ browser }) => {
+    const { context, page } = await open(browser, PHONE)
+    watch(page, 'a first-time visitor creating an account on a phone')
+    await go(page, '/create/palette')
+    await page.locator('.pnav-mobile').click()
+    await page.getByRole('button', { name: 'Start for Free' }).click()
+    const dialog = page.locator('.ui-login')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.locator('.ui-login-aside-foot')).toBeVisible()
+    const sw = dialog.getByRole('button', { name: /Already have an account/ })
+    await expect(sw).toBeVisible()
+    const [swBox, dialogBox] = await Promise.all([sw.boundingBox(), dialog.boundingBox()])
+    expect(swBox.y + swBox.height, 'the switch control must not be pushed below the modal\'s visible box').toBeLessThanOrEqual(dialogBox.y + dialogBox.height + 1)
+    expect(swBox.y + swBox.height).toBeLessThanOrEqual(PHONE[1])
+    await context.close()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 7 — /onboarding for an account that has finished
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('7 — an onboarded account typing /onboarding lands on its home', () => {

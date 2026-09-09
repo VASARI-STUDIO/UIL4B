@@ -12030,12 +12030,28 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .ui-login-aside .ui-login-why-h{color:var(--t2)}
 /* margin-top:auto pushes this to the foot of the column at width. In the
    band layout the pane is not stretched, so it simply follows the list. */
-/* Hidden in the band layout on purpose. This line exists to resolve the FOOT
-   of a stretched column; a phone has no stretched column, and the ~48px it
-   costs there pushed a real control ("Already have an account? Sign in") below
-   the fold on the signup variant. The way OUT is unaffected either way — the
-   close button, Escape and the scrim all still dismiss. */
-.ui-login-aside-foot{display:none;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--t2);text-wrap:pretty}
+/* SHOWN AT EVERY WIDTH. This was display:none in the band layout: the line
+   exists to resolve the foot of a stretched column, and on a phone its ~48px
+   pushed "Already have an account? Sign in" below the fold on the signup
+   variant. The flow audit (#436) measured the other side of that trade: at
+   390px the sign-in gate had no visible way out — a corner ✕ and a scrim, and
+   nothing that says what closing does. A gate whose only exit is unlabelled is
+   the shape of a dark pattern whatever the intent, so the sentence stays and
+   the band layout pays for it in spacing, not in a control: a tighter margin
+   and rule here, and the aside's own padding and list gap below 781px (see the
+   max-width:780px block). Measured at 390×844 after: the gate's dialog runs
+   y=44–800 with this line ending at y=271 (the aside sits above the form on
+   the band layout), and on the signup variant "Already have an account? Sign
+   in" ends at y=826 inside a modal box ending at y=828 — nothing that was on
+   screen has left it. Held by tests/user-sim/72-flow-followups.spec.js. */
+.ui-login-aside-foot{display:block;margin:8px 0 0;padding-top:6px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--t2);text-wrap:pretty}
+/* The room the way-out line costs on a phone, paid back by the aside's own
+   spacing rather than by hiding a sentence: 8px of padding, 2px of list
+   margin and 3px per list gap. */
+@media(max-width:780px){
+  .ui-login-aside{padding:12px 22px}
+  .ui-login-gets{margin-top:12px;gap:5px}
+}
 
 /* The close button leaves .ui-modal-head, because at width the head is no
    longer this dialog's top-right corner — the form column is. Same treatment
