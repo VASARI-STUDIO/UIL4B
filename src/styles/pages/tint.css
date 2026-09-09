@@ -73,7 +73,9 @@
 
 .tt-select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 
-.tt-check{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.45;color:var(--t1);cursor:pointer;margin-bottom:6px}
+/* The label is the press target (it wraps the input): 12px text at 1.45 made
+   it 17px tall. min-height keeps it a 24px row without moving the text. */
+.tt-check{display:flex;align-items:center;gap:9px;min-height:24px;font-size:12px;line-height:1.45;color:var(--t1);cursor:pointer;margin-bottom:6px}
 
 .tt-check input{margin-top:2px;accent-color:var(--brand);cursor:pointer;flex:0 0 auto}
 
