@@ -5621,6 +5621,12 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-sheet-promo{margin-top:20px;padding:16px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 8%,var(--bg-0));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border))}
 .pnav-sheet-promo .pnav-promo-title{font-size:var(--fs-h5)}
 .pnav-sheet-promo .pnav-promo-actions{margin-top:12px}
+/* Saved projects / Export rows: the bar's icon buttons, which are display:none
+   below 768px, as sheet rows. A button and a Link share .pnav-acc-link, so the
+   button needs the form reset the link never did. */
+.pnav-sheet-tools{margin-top:12px;padding-top:8px;border-top:1px solid var(--border)}
+.pnav-sheet-tool{width:100%;font-family:var(--font);font-weight:560;color:var(--t1);background:none;border:none;cursor:pointer;text-align:left}
+.pnav-sheet-tool .pnav-acc-ico svg{width:18px;height:18px}
 /* Sticky, opaque, and 128px tall — so mid-scroll it sat on top of about two
    tool rows with nothing to say it was a layer. Measured at 390x844 with Create
    open: Type Scale, Component Designer and Box Shadow were underneath it.

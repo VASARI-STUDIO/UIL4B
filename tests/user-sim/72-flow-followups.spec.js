@@ -87,6 +87,67 @@ const hitWithin = (loc, selector) => loc.evaluate((el, sel) => {
 }, selector)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 1 — Export on a phone
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('1 — the phone sheet carries Export and Saved projects', () => {
+  for (const theme of THEMES) {
+    test(`390px ${theme}: the sheet's Export row opens the export panel, by pointer and by keyboard`, async ({ browser }) => {
+      const { context, page } = await open(browser, PHONE, theme)
+      watch(page, `a phone user looking for Export (${theme})`)
+      await signIn(page, { plan: 'free', projects: 1 })
+      await go(page, '/create/palette')
+
+      // The bar's button is still gone below 769px — the sheet stands in for it.
+      await expect(page.locator('.pnav-export')).toBeHidden()
+      await page.locator('.pnav-mobile').click()
+      const sheet = page.locator('.pnav-sheet')
+      await expect(sheet).toBeVisible()
+      const exportRow = sheet.getByRole('button', { name: 'Export', exact: true })
+      await expect(exportRow).toBeVisible()
+      await expect(sheet.getByRole('link', { name: 'Saved projects' })).toHaveAttribute('href', '/projects')
+
+      await exportRow.click()
+      const panel = page.locator('[role="dialog"][aria-labelledby="exp-title"]')
+      await expect(panel).toBeVisible()
+      await expect(sheet, 'the sheet closes under the panel it opened').toHaveCount(0)
+      await page.keyboard.press('Escape')
+      await expect(panel).toHaveCount(0)
+
+      // Keyboard: the row is a real button.
+      await page.locator('.pnav-mobile').click()
+      await sheet.getByRole('button', { name: 'Export', exact: true }).focus()
+      await page.keyboard.press('Enter')
+      await expect(panel).toBeVisible()
+      await context.close()
+    })
+  }
+
+  test('768px: the same row, at the top of the band the bar hides its buttons in', async ({ browser }) => {
+    const { context, page } = await open(browser, [768, 1024])
+    watch(page, 'a tablet user looking for Export')
+    await signIn(page, { plan: 'free', projects: 1 })
+    await go(page, '/create/palette')
+    await page.locator('.pnav-mobile').click()
+    await page.locator('.pnav-sheet').getByRole('button', { name: 'Export', exact: true }).click()
+    await expect(page.locator('[role="dialog"][aria-labelledby="exp-title"]')).toBeVisible()
+    await context.close()
+  })
+
+  test('a sales route has nothing to export, so the sheet says nothing — the same gate as the bar', async ({ browser }) => {
+    const { context, page } = await open(browser, PHONE)
+    watch(page, 'a phone visitor on /plans')
+    await signIn(page, { plan: 'free', projects: 1 })
+    await go(page, '/plans')
+    await page.locator('.pnav-mobile').click()
+    const sheet = page.locator('.pnav-sheet')
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Export', exact: true })).toHaveCount(0)
+    await expect(sheet.getByRole('link', { name: 'Saved projects' }), 'the account row stays').toHaveCount(1)
+    await context.close()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 2 — the Palette Builder's menus paint on top at 390
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('2 — the save menu and the colour-system menu take the tap at 390', () => {
