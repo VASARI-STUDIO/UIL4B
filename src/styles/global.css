@@ -12393,7 +12393,13 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .fpr-keep,.tsc-keep{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .fpr-keep-note,.tsc-keep-note{flex:1;min-width:200px;margin:0;font-size:11.5px;line-height:1.5;color:var(--t2)}
 @media (max-width:560px){
-  .svt-menu{width:min(320px,calc(100vw - 24px))}
+  /* The menu opens UPWARD from a button that sits mid-screen, and at the
+     project cap the wall makes it 419px tall: at 390px the wall's heading was
+     24px above the viewport (2026-09-09), the first thing it says cut off.
+     Same bottom-sheet idiom .plb-menu already uses below 961px. Still a child
+     of .svt-wrap, so the outside-press dismissal is unchanged. */
+  .svt-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-height:min(76dvh,560px);padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70}
+  .svt-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .svt-wrap{width:100%}
   .svt-trigger{width:100%;justify-content:center}
   .fpr-keep,.tsc-keep{gap:10px}
