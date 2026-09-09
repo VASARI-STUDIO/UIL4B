@@ -106,7 +106,10 @@
 
 .seo-faq-head{display:flex;align-items:center;justify-content:space-between}
 
-.seo-faq-del{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px;border-radius:var(--radius-s);display:flex;transition:color var(--dur-1) var(--ease-standard)}
+/* min 24px: the 14px glyph plus 2px padding made this an 18x18 target at
+   every width from 320 to 1920 (2026-09-09), under WCAG 2.2 AA 2.5.8 and the
+   floor 58-target-size-24 holds the shell to. The glyph stays 14px. */
+.seo-faq-del{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px;min-width:24px;min-height:24px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center;transition:color var(--dur-1) var(--ease-standard)}
 
 .seo-faq-del:hover{color:var(--err-strong)}
 

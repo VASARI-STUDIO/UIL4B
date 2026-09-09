@@ -59,7 +59,10 @@
 
 .alt-card-status{font-size:12px;color:var(--pending);font-weight:500}
 
-.alt-card-error{font-size:12px;color:var(--err-strong);background:rgba(239,68,68,.08);padding:8px 10px;border-radius:var(--radius-s);border:1px solid rgba(239,68,68,.2)}
+/* The message inside a failed card. Was `.alt-card-error`, the same name the
+   card itself wears through `alt-card-${status}` (its rule is the border-color
+   one above), so this padding, tint and radius were painted on the card too. */
+.alt-card-error-msg{font-size:12px;color:var(--err-strong);background:rgba(239,68,68,.08);padding:8px 10px;border-radius:var(--radius-s);border:1px solid rgba(239,68,68,.2)}
 
 .alt-card-text{background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);padding:10px 12px;color:var(--t0);font-family:var(--font);font-size:13px;line-height:1.5;outline:none;resize:none;max-height:260px;transition:border-color var(--t)}
 

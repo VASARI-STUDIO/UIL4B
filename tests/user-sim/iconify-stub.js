@@ -60,6 +60,28 @@ export const ICONIFY_STUB_HEADER = 'x-uil4b-iconify-stub'
  */
 export const REFUSED_VALUE = 'refused'
 
+/**
+ * Answer every Iconify host on this PAGE the way the network did on
+ * 2026-09-08 — 429 from api.iconify.design, 403 from both fallbacks —
+ * fulfilled, never aborted, and stamped REFUSED_VALUE so the context's audit
+ * counts it as a deliberate refusal. A page route outranks the context
+ * route, which is how the refused state is rendered over the fixture. Call
+ * it before go(); page.unrouteAll() hands the page back to the fixture.
+ *
+ * Shared from here rather than copied into each spec on purpose: the unit
+ * guard forbids a spec naming one of these hosts, and it is right to — a
+ * per-spec route that drifted from this one would refuse differently from
+ * the outage it reproduces. 66-icon-library-offline-fixture is the guard's
+ * one named exemption and keeps its own copy as the documented original.
+ */
+export async function refuseIconify(page) {
+  const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }
+  await page.route((u) => u.hostname === ICONIFY_HOSTS[0],
+    (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'Too Many Requests' }))
+  await page.route((u) => ICONIFY_HOSTS.slice(1).includes(u.hostname),
+    (route) => route.fulfill({ status: 403, contentType: 'text/plain', headers, body: 'Forbidden' }))
+}
+
 /** Set this (to anything non-empty) to bypass the fixture and hit the live API. */
 export const LIVE_ICONIFY_ENV = 'UIL4B_LIVE_ICONIFY'
 

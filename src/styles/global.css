@@ -687,12 +687,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .cs-hue-name{font-size:11px;font-weight:600;color:var(--t1)}
 .cs-hue-val{font-family:var(--mono);font-size:10px;color:var(--t3)}
 /* `input.` prefix: must outrank the global input[type="range"] reset above */
-input.cs-hue-slider{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));outline:none;cursor:pointer;border:1px solid var(--border)}
-input.cs-hue-slider::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:transparent}
-input.cs-hue-slider::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:transparent}
+/* The INPUT is the hit area and the TRACK is the paint. The gradient and the
+   hairline used to sit on the input itself at 14px tall, which made the whole
+   control a 14px target (measured 2026-09-09 on every custom-hue row, 320 to
+   1920). The input is now 24px of transparent box and the track pseudo-
+   elements carry the 12px gradient bar the page has always shown, so the
+   paint is unchanged and a thumb press lands 5px either side of it. */
+input.cs-hue-slider{-webkit-appearance:none;appearance:none;width:100%;height:24px;border-radius:var(--radius-pill);background:transparent;outline:none;cursor:pointer;border:0}
+input.cs-hue-slider::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));border:1px solid var(--border)}
+input.cs-hue-slider::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));border:1px solid var(--border)}
 input.cs-hue-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;margin-top:-3px;border-radius:50%;background:#fff;border:2px solid var(--t0);box-shadow:var(--shadow-xs)}
 input.cs-hue-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--t0);box-shadow:var(--shadow-xs)}
-input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
+input.cs-hue-slider:focus-visible::-webkit-slider-runnable-track{box-shadow:0 0 0 3px var(--accent-bg)}
+input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--accent-bg)}
 .cs-hue-ends{display:flex;justify-content:space-between;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
 .cs-hue-hex{width:96px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);background:var(--bg-0);color:var(--t0);font-family:var(--mono);font-size:11px;text-transform:uppercase}
 .cs-hue-hex::placeholder{color:var(--t3);text-transform:none;letter-spacing:0}
@@ -1150,7 +1157,10 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
 .emoji-vhead h3{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
 .emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
-.emoji-section-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+/* --t2, not --t3: at 10px on the --bg-3 chip this measured 4.07:1 in light
+   (#6c6c66 on #e4e2da) at every width, under AA. --t2 takes it to 4.95:1;
+   dark was already clear and stays so. Same reasoning as .arc-ratio-card-use. */
+.emoji-section-count{font-size:10px;font-weight:700;color:var(--t2);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
 .emoji-cell{display:flex;align-items:center;justify-content:center;width:var(--emoji-cell,42px);height:var(--emoji-cell,42px);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard);position:relative}
 .emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2);z-index:2}
 .emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent);z-index:2}
@@ -1167,6 +1177,16 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .emoji-tone-btn.open{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-strong)}
 .emoji-tone-btn svg{color:currentColor}
 .emoji-tone-pop{position:absolute;top:calc(100% + 6px);left:0;display:flex;gap:4px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:40;animation:fg-fade var(--dur-1) var(--ease-entrance)}
+/* Placement is written by usePopover (placePopover): end-aligned on the
+   trigger by default, start-aligned when that would run off the left edge,
+   upward when there is more room above. The trigger is the toolbar's last
+   control, so on a desktop "end" is the case that keeps all six tones on
+   screen — measured cut off at 1280, 1440 and 1920 before this. */
+.emoji-tone-pop[data-pop-align="end"]{left:auto;right:0}
+/* clamp follows usePopover's convention after #434: the hook writes --pop-x
+   (the panel's left edge pinned EDGE_PAD from the viewport), not a centre. */
+.emoji-tone-pop[data-pop-align="clamp"]{left:var(--pop-x,0px)}
+.emoji-tone-pop[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
 .emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:all var(--dur-2) var(--ease-standard)}
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
@@ -3265,7 +3285,10 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .fc-tab{position:relative;display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fc-tab:hover{color:var(--t0)}
 .fc-tab.on{background:var(--card);color:var(--t0);box-shadow:var(--ring)}
-.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t3)}
+/* --t2, not --t3: the 8px SOON tag measured 4.07:1 on its chip in light at
+   every width (2026-09-09). --t2 is 4.95:1. The size is left as found and
+   flagged: 8px uppercase is the smallest type on the page. */
+.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
 /* Alpha badge — token-driven accent pill (no hardcoded colours). */
 .fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
 .fc-drop{cursor:pointer;transition:border-color var(--t),background var(--t),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
@@ -3286,6 +3309,9 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .fc-video{width:100%;max-height:380px;border-radius:var(--radius);background:#000;display:block}
 .fc-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-top:10px}
 .fc-status-err{color:var(--err-strong)}
+/* The byte count beside the engine-download sentence: tabular so it does not
+   jitter as it climbs. */
+.fc-status-bytes{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--t1);white-space:nowrap}
 .fc-progress{height:8px;background:var(--bg-3);border-radius:999px;overflow:hidden;margin-top:10px}
 .fc-progress-bar{height:100%;background:var(--brand);border-radius:999px;transition:width var(--dur-2) var(--ease-out)}
 .fc-soon-card{padding:36px 28px;text-align:left;border-style:dashed}

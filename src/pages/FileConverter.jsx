@@ -132,8 +132,13 @@ function formatBytes(b) {
 function sizeDelta(orig, out) {
   if (!orig || out == null) return null
   const pct = Math.round((1 - out / orig) * 100)
-  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller`, color: 'var(--ok)' }
-  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger`, color: 'var(--err)' }
+  // The -strong inks, not the raw state colours: this is 12px TEXT and the
+  // batch line sits on the page ground, where --ok measured 4.32:1 in light
+  // (2026-09-09, every width). --ok-strong is the text-grade step of the
+  // same hue in both themes; the card lines move with it so one delta does
+  // not read in two greens.
+  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller`, color: 'var(--ok-strong)' }
+  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger`, color: 'var(--err-strong)' }
   return { pct: 0, dir: 'same', label: 'same size', color: 'var(--t2)' }
 }
 
@@ -619,7 +624,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                   </div>
                   <div className="fc-name" title={it.name}>{it.name}</div>
                   {it.error ? (
-                    <div style={{ fontSize: 10, color: 'var(--err)' }}>{it.error}</div>
+                    <div style={{ fontSize: 10, color: 'var(--err-strong)' }}>{it.error}</div>
                   ) : it.out ? (
                     <>
                       <div style={{ fontSize: 10, color: 'var(--t2)' }}>
@@ -744,7 +749,42 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
 let ffmpegInstance = null
 let ffmpegLoadPromise = null
 
-async function getFfmpeg(onLog) {
+// Fetch one core file and report bytes as they arrive. @ffmpeg/util's own
+// toBlobURL(url, type, true, cb) was NOT used for this: it throws when the
+// byte count disagrees with Content-Length and then re-reads a body it has
+// already consumed — which is exactly what happens when a CDN serves the wasm
+// gzipped (Content-Length is the compressed size, the reader yields the
+// decompressed bytes). This reader asserts nothing about the total: it hands
+// back whatever arrived and lets the caller decide whether the total is
+// usable. Falls back to a plain arrayBuffer() when streaming is unavailable.
+async function fetchCoreFile(url, mimeType, onBytes) {
+  const resp = await fetch(url)
+  if (!resp.ok) throw new Error(`${url}: HTTP ${resp.status}`)
+  const total = Number(resp.headers.get('content-length')) || 0
+  const reader = resp.body?.getReader?.()
+  let buf
+  if (!reader) {
+    buf = await resp.arrayBuffer()
+    onBytes?.({ received: buf.byteLength, total: buf.byteLength })
+  } else {
+    const chunks = []
+    let received = 0
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+      received += value.length
+      onBytes?.({ received, total })
+    }
+    const data = new Uint8Array(received)
+    let at = 0
+    for (const c of chunks) { data.set(c, at); at += c.length }
+    buf = data.buffer
+  }
+  return URL.createObjectURL(new Blob([buf], { type: mimeType }))
+}
+
+async function getFfmpeg(onLog, onBytes) {
   if (ffmpegInstance) return ffmpegInstance
   if (ffmpegLoadPromise) return ffmpegLoadPromise
   ffmpegLoadPromise = (async () => {
@@ -754,9 +794,11 @@ async function getFfmpeg(onLog) {
     ])
     const ffmpeg = new FFmpeg()
     if (onLog) ffmpeg.on('log', ({ message }) => onLog(message))
+    // The wasm is the download (32 MB raw, ~9 MB compressed); the .js core is
+    // a few KB and not worth a second progress line.
     await ffmpeg.load({
       coreURL: await toBlobURL(ffmpegCoreURL, 'text/javascript'),
-      wasmURL: await toBlobURL(ffmpegWasmURL, 'application/wasm'),
+      wasmURL: await fetchCoreFile(ffmpegWasmURL, 'application/wasm', onBytes),
     })
     ffmpeg._fetchFile = fetchFile
     ffmpegInstance = ffmpeg
@@ -783,6 +825,9 @@ function VideoToGif({ toast }) {
   const [engineState, setEngineState] = useState('idle') // idle|loading|ready|error
   const [working, setWorking] = useState(false)
   const [progress, setProgress] = useState('')
+  // Bytes of the engine received so far, and the total when the CDN stated one
+  // the count can be measured against. null outside the engine download.
+  const [engineBytes, setEngineBytes] = useState(null)
   const [result, setResult] = useState(null) // { url, bytes }
 
   // Unmount-only URL cleanup via a ref — with [srcUrl, result] deps the
@@ -826,10 +871,20 @@ function VideoToGif({ toast }) {
     let ffmpeg
     try {
       if (!ffmpegInstance) { setEngineState('loading'); setProgress('Loading converter engine… (about 9 MB, first run only)') }
-      ffmpeg = await getFfmpeg()
+      // The 9 MB sentence above is the promise; the bytes are the evidence.
+      // Measured 2026-09-09: the engine download showed a spinner and that one
+      // sentence for its whole duration, at every width — on a phone connection
+      // that is a minute of nothing moving. The count is shown against the
+      // stated total only while it is consistent with it (a gzipped transfer
+      // reports the compressed size and the reader yields more than that).
+      ffmpeg = await getFfmpeg(null, ({ received, total }) => {
+        setEngineBytes({ received, total: total >= received ? total : 0 })
+      })
+      setEngineBytes(null)
       setEngineState('ready')
     } catch {
       setEngineState('error')
+      setEngineBytes(null)
       setWorking(false)
       setProgress('')
       toast('Could not load the converter engine. Check your connection or try the Image tab.')
@@ -949,7 +1004,20 @@ function VideoToGif({ toast }) {
           </div>
 
           {progress && (
-            <div className="fc-status"><span className="fc-spinner" aria-hidden="true" />{progress}</div>
+            <div className="fc-status" role="status">
+              <span className="fc-spinner" aria-hidden="true" />
+              {progress}
+              {engineBytes && (
+                <span className="fc-status-bytes">
+                  {formatBytes(engineBytes.received)}{engineBytes.total ? ` of ${formatBytes(engineBytes.total)}` : ''}
+                </span>
+              )}
+            </div>
+          )}
+          {engineBytes?.total > 0 && (
+            <div className="fc-progress" role="progressbar" aria-label="Converter engine download" aria-valuemin={0} aria-valuemax={engineBytes.total} aria-valuenow={engineBytes.received}>
+              <div className="fc-progress-bar" style={{ width: `${Math.min(100, Math.round((engineBytes.received / engineBytes.total) * 100))}%` }} />
+            </div>
           )}
           {engineState === 'error' && (
             <div className="fc-status fc-status-err">
