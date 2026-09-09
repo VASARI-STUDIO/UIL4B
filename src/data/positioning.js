@@ -137,3 +137,9 @@ export const SURFACE_LINE = Object.freeze({
   // The section DRAWS a page of the export; the sentence that names what is
   // being drawn is his build-and-export line. Anti-slop audit, 2026-09-09.
   homeExportHeading: 'build-and-export',
+  // /plans's closing band. It read "Build first. Upgrade when your workflow
+  // asks for it." over a "No trial clock on Free" reassurance hint — agent copy
+  // in the slot where the retired "No credit card required" line used to sit.
+  // The founder's own closing claim is the unified-location sentence.
+  plansClosing: 'one-unified-location',
+})
