@@ -5801,10 +5801,12 @@ html.lenis{scroll-behavior:auto!important}
    the element rule on class count — the same fix `.snapv--grad` already uses
    two hundred lines below. The gradient goes on the ELEMENT and the runnable
    track is made transparent and full-height, so the strip is the control. */
-.cpk-instrument .cpk-hue{-webkit-appearance:none;appearance:none;display:block;width:100%;height:22px;margin:0;padding:0;border:0;border-top:1px solid var(--border);border-radius:0;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);outline:none;cursor:pointer}
-.cpk-instrument .cpk-hue::-webkit-slider-runnable-track{height:22px;border-radius:0;background:transparent}
-.cpk-instrument .cpk-hue::-moz-range-track{height:22px;border-radius:0;background:transparent}
-.cpk-instrument .cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:3px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab;position:relative;z-index:2}
+/* 24px, not 22: WCAG 2.5.8's floor, and the one control in the picker that a
+   phone user drags. Measured 22px on all four tools that mount it. */
+.cpk-instrument .cpk-hue{-webkit-appearance:none;appearance:none;display:block;width:100%;height:24px;margin:0;padding:0;border:0;border-top:1px solid var(--border);border-radius:0;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);outline:none;cursor:pointer}
+.cpk-instrument .cpk-hue::-webkit-slider-runnable-track{height:24px;border-radius:0;background:transparent}
+.cpk-instrument .cpk-hue::-moz-range-track{height:24px;border-radius:0;background:transparent}
+.cpk-instrument .cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:5px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab;position:relative;z-index:2}
 .cpk-instrument .cpk-hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
 .cpk-instrument .cpk-hue:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .cpk-row{display:flex;align-items:center;gap:var(--s-1)}
