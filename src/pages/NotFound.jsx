@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
+import { CREATE_GROUPS, DISCOVER_GROUPS, createTools } from '../data/toolTree'
 
 // A real 404, replacing `<Route path="*" element={<Navigate to="/" replace />} />`.
 //
@@ -20,11 +21,35 @@ import { NavLink, useLocation } from 'react-router-dom'
 // carries noindex, see scripts/prerender.mjs), and tell the person what
 // happened plus where to go instead.
 
+// WHERE TO GO INSTEAD — read from the tool tree, not typed (anti-slop audit,
+// 2026-09-09).
+//
+// The four cards used to be hand-written, and two of the four were wrong:
+// "Palette Generator" is not what the product calls /create/palette anywhere
+// else (the tree, the nav, the hero rail and /help all say Palette / Palette
+// Builder), and "Community palettes, gradients and prompts" described Discover
+// with a word that is false — the palettes are curated and brand, and the
+// community half is the group still marked Soon. The one-line descriptions
+// were the seventh hand-kept copy of the tool inventory that
+// [handkept-tool-lists-remaining] exists to stop.
+//
+// So a card is a tool's own label over its group's label, and the Discover
+// card counts the libraries that actually open, the same derivation the
+// /discover hero uses. Nothing here can name a tool the tree does not have:
+// an unknown id throws at import, which fails the build.
+const TOOLS = createTools()
+const GROUP_LABEL = Object.fromEntries(CREATE_GROUPS.map((g) => [g.id, g.label]))
+const suggestTool = (id) => {
+  const tool = TOOLS.find((t) => t.id === id && !t.soon)
+  if (!tool) throw new Error(`NotFound suggests "${id}", which is not a live tool in CREATE_GROUPS`)
+  return { to: tool.route, label: tool.label, desc: GROUP_LABEL[tool.group] }
+}
+const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
 const SUGGESTIONS = [
-  { to: '/create/palette', label: 'Palette Generator', desc: 'Build a colour system from one seed' },
-  { to: '/create/type-scale', label: 'Type Scale', desc: 'A responsive type ladder with real breakpoints' },
-  { to: '/create/icons', label: 'Icon Library', desc: 'Search, customise and copy clean SVG' },
-  { to: '/discover', label: 'Discover', desc: 'Community palettes, gradients and prompts' },
+  suggestTool('palette'),
+  suggestTool('type-scale'),
+  suggestTool('icons'),
+  { to: '/discover', label: 'Discover', desc: `${DISCOVER_LIVE} libraries open` },
 ]
 
 export default function NotFound() {
