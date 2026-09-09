@@ -1,8 +1,9 @@
-import { useRef, useEffect } from 'react'
-import { useNavigate, Navigate, Link } from 'react-router-dom'
+import { useRef, useEffect, useState } from 'react'
+import { useNavigate, Navigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { FIRST_WINS, FIRST_WIN_SKIPPED } from '../utils/firstWin'
 import { trackFirstWinChoice, startTimeToValue } from '../utils/analytics'
+import { onboardingDestination } from '../utils/onboardingState'
 
 // Where a brand-new account lands when it does NOT pick a starting point.
 //
@@ -68,7 +69,16 @@ function ArrowIcon() {
 export default function Onboarding() {
   const { user, userProfile, updateProfile, loading } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const headingRef = useRef(null)
+  // Set the moment a choice is made, before completion is written to the
+  // profile. State rather than a ref because it is READ during render, and
+  // because it has to reach the render that sees the completed profile:
+  // react-router wraps navigate() in a transition, so the profile write (a
+  // plain state update) can paint this page once more, at /onboarding, before
+  // the route changes — and without this flag that paint would redirect to
+  // the User Home instead of the tool the person just chose.
+  const [leaving, setLeaving] = useState(false)
 
   // New sign-ups reach /onboarding via a `navigate(..., {replace:true})` that
   // manages no focus of its own (App.jsx), so a keyboard/AT user would be
@@ -82,6 +92,23 @@ export default function Onboarding() {
   // Onboarding only makes sense for a signed-in user. While auth is still
   // resolving we show the flow shell; if definitively signed out, go to login.
   if (!loading && !user) return <Navigate to="/login" replace />
+
+  // An account that has already finished — /onboarding typed as a URL, or an
+  // old bookmark — used to get the whole flow again, and finishing it a second
+  // time overwrote the firstWin the admin table reads (#436, flow 6). The
+  // decision is onboardingDestination(), the same function the router uses
+  // for `/`, so the two cannot disagree: the account's record when the
+  // profile carries it, else the local mirror AuthContext syncs from the
+  // account on load. Two cases are exempt — a person mid-choice (`leaving`:
+  // their own completion write must not bounce them off the tool they picked)
+  // and a brand-new sign-up sent here by App.jsx (`state.fresh`: the mirror is
+  // per-browser, so a previous account's flag on this device must not skip a
+  // new account's first screen).
+  const fresh = location.state?.fresh === true
+  const settled = onboardingDestination(userProfile)
+  if (user && userProfile && !leaving && !fresh && settled !== '/onboarding') {
+    return <Navigate to={settled} replace />
+  }
 
   const firstName = userProfile?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
 
@@ -122,6 +149,7 @@ export default function Onboarding() {
   // newer and more specific statement of intent than whatever they clicked
   // before the account existed.
   const chooseFirstWin = (win) => {
+    setLeaving(true)
     persist({ firstWin: win.id })
     recordFirstWin(win.id)
     takeResumeTarget()
@@ -139,6 +167,7 @@ export default function Onboarding() {
   // `firstWin` is deliberately not persisted: nothing was chosen, and writing
   // "skipped" onto the profile would put a non-answer in the admin table.
   const skipFirstWin = () => {
+    setLeaving(true)
     persist()
     recordFirstWin(FIRST_WIN_SKIPPED)
     // Declining a starting point shouldn't discard why they signed up — resume

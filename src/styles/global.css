@@ -1258,6 +1258,21 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .toast-success .toast-ico{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .toast-error .toast-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
 .toast-info .toast-ico{background:var(--accent-bg);color:var(--accent)}
+/* The dismiss control. The toast itself stays pointer-events:none — it must
+   never block what is under it — so the one thing that is meant to be pressed
+   opts back in. Negative margins keep the box the same height it was. */
+.toast-x{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;margin:-4px -6px -4px 0;border:none;border-radius:var(--radius-s);background:none;color:var(--t2);cursor:pointer;pointer-events:auto;transition:background var(--t),color var(--t)}
+.toast-x svg{width:14px;height:14px}
+.toast-x:hover{background:var(--bg-2);color:var(--t0)}
+.toast:not(.show) .toast-x{pointer-events:none}
+
+/* ── SaveRefusal (src/components/SaveRefusal.jsx) ──
+   The free cap's refusal, rendered under the field it refused, on /projects
+   and inside the Palette Builder's save menu. Lifted out of pages/projects.css
+   when the component became shared: that file only ships with the /projects
+   chunk and the homepage renders the palette tool. */
+.uh-quota-link{font-weight:600;color:var(--accent-strong)}
+.uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
 /* Success motion: icon spring-pop + checkmark stroke draw (E3, motion-safe) */
 .toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
 .toast-success.show .toast-ico{animation:toast-pop var(--dur-4) var(--ease-spring) both}
@@ -5606,6 +5621,12 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-sheet-promo{margin-top:20px;padding:16px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 8%,var(--bg-0));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border))}
 .pnav-sheet-promo .pnav-promo-title{font-size:var(--fs-h5)}
 .pnav-sheet-promo .pnav-promo-actions{margin-top:12px}
+/* Saved projects / Export rows: the bar's icon buttons, which are display:none
+   below 768px, as sheet rows. A button and a Link share .pnav-acc-link, so the
+   button needs the form reset the link never did. */
+.pnav-sheet-tools{margin-top:12px;padding-top:8px;border-top:1px solid var(--border)}
+.pnav-sheet-tool{width:100%;font-family:var(--font);font-weight:560;color:var(--t1);background:none;border:none;cursor:pointer;text-align:left}
+.pnav-sheet-tool .pnav-acc-ico svg{width:18px;height:18px}
 /* Sticky, opaque, and 128px tall — so mid-scroll it sat on top of about two
    tool rows with nothing to say it was a layer. Measured at 390x844 with Create
    open: Type Scale, Component Designer and Box Shadow were underneath it.
@@ -8540,6 +8561,19 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
   .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up var(--dur-2) var(--ease-entrance)}
   .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .plb-scrolllist{max-height:min(52dvh,420px)}
+  /* WHY A z-index:70 SHEET LOST TO A z-index:30 FOOTER (#436, flow 1 and 2).
+     .plb is display:flex, and a FLEX ITEM with a z-index forms a stacking
+     context whether or not it is positioned — so at ≤768, where .plb-toolbar
+     is position:static, its z-index:30 still boxes every menu inside it at
+     level 30, and .plb-adjust (also 30, later in the DOM) paints over the
+     lot. Measured at 390: elementFromPoint on "Analogous" returned the
+     footer, and only setting either z-index to auto changed that. The
+     action rail adds a second box: .rail-overflow's mask-image is a stacking
+     context too, and the Save / export sheet inside it sat under the swatch
+     columns. While a sheet is open the toolbar outranks the footer and the
+     rail drops its mask; nothing changes at rest. */
+  .plb-toolbar:has(.plb-menu){z-index:71}
+  .plb-toolbar-group.rail-overflow:has(.plb-menu){-webkit-mask-image:none;mask-image:none}
   .plb-galpopup{padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:min(82dvh,640px)}
   .plb-galpopup::before{margin:10px auto 2px}
   .plb-galpopup-head{padding:8px 16px 12px}
@@ -12030,12 +12064,25 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .ui-login-aside .ui-login-why-h{color:var(--t2)}
 /* margin-top:auto pushes this to the foot of the column at width. In the
    band layout the pane is not stretched, so it simply follows the list. */
-/* Hidden in the band layout on purpose. This line exists to resolve the FOOT
+/* Hidden in the band layout BY DEFAULT. This line exists to resolve the FOOT
    of a stretched column; a phone has no stretched column, and the ~48px it
    costs there pushed a real control ("Already have an account? Sign in") below
-   the fold on the signup variant. The way OUT is unaffected either way — the
-   close button, Escape and the scrim all still dismiss. */
+   the fold on the sign-up pane — 09-auth-modal-accessibility pins that pane to
+   "nothing below the fold at 390", and with this line it overflows by 21px.
+   THE INTERRUPT GATE IS THE EXCEPTION, below. The flow audit (#436) measured
+   that at 390px the sign-in gate had no visible way out — a corner ✕ and a
+   scrim, and nothing that says what closing does. A gate whose only exit is
+   unlabelled is the shape of a dark pattern whatever the intent, so when this
+   dialog interrupts an action (.ui-login--interrupt: LoginPopup carries a
+   reason) the sentence shows at every width, in compact spacing. Measured at
+   390×844 after: the gate runs y=36–808 of 844 with this line ending at y=275
+   and zero overflow; the sign-up pane is byte-identical to before (y=22–822,
+   zero overflow, its switch control ending at y=799).
+   Held by tests/user-sim/72-flow-followups.spec.js. */
 .ui-login-aside-foot{display:none;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--t2);text-wrap:pretty}
+@media(max-width:780px){
+  .ui-login--interrupt .ui-login-aside-foot{display:block;margin:8px 0 0;padding-top:6px}
+}
 
 /* The close button leaves .ui-modal-head, because at width the head is no
    longer this dialog's top-right corner — the form column is. Same treatment
