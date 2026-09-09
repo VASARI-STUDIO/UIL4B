@@ -136,8 +136,16 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
 
         {/* The right rail: the systems this subscription actually buys, drawn
             live from the user's own seed. Placed between the head and the body
-            in DOM order so the single-column layout reads promise -> proof ->
-            price, and grid-template-areas moves it to the right at width. */}
+            in DOM order, and grid-template-areas moves it to the right at
+            width.
+
+            Below 780px it is PAINTED LAST, not second. The single column used
+            to read promise -> proof -> price, and on a phone the proof is
+            ~500px of strips, so the price — or the "we couldn't load prices"
+            block and its buttons — sat a full screen or more below the fold
+            (measured 2026-09-09 at 320/390/430 from the palette's colour-
+            system gate). The rail has no focusable control, so the DOM order
+            stays and only the paint order changes; see global.css. */}
         <ProHarmonyPreview seed={seed} />
 
         <div className="ui-pro-body">
@@ -149,18 +157,30 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
               once against a dead /api/get-prices, this quoted the fallback
               ladder's "from $4/month" directly above "We couldn't load current
               prices just now" — two contradictory claims about money on the
-              same screen. If we cannot say the real number, we say nothing. */}
-          <p className="ui-pro-from" aria-live="polite" hidden={priceUnavailable}>
-            {settled && headline?.perMonthLabel ? (
-              <>
-                <span className="ui-pro-from-lead">from</span>
-                <span className="ui-pro-from-amount">{headline.perMonthLabel}</span>
-                <span className="ui-pro-from-per">/month</span>
-              </>
-            ) : (
-              <span className="sk ui-pro-from-skel"><span className="sr-only">Loading prices…</span></span>
-            )}
-          </p>
+              same screen. If we cannot say the real number, we say nothing.
+
+              NOT RENDERED, rather than given the `hidden` attribute. It carried
+              `hidden={priceUnavailable}` from 2026-09-05 to 2026-09-09 and the
+              contradiction shipped anyway: .ui-pro-from is `display:flex` in
+              global.css, and an author-level display rule outranks the user
+              agent's `[hidden]{display:none}`, so the attribute was set and
+              the price painted regardless. Rendered against a dead
+              /api/get-prices on 2026-09-09: "FROM $4 /month" over the error
+              block, exactly the screen this comment says was fixed. A branch
+              cannot be overridden by a stylesheet. */}
+          {!priceUnavailable && (
+            <p className="ui-pro-from" aria-live="polite">
+              {settled && headline?.perMonthLabel ? (
+                <>
+                  <span className="ui-pro-from-lead">from</span>
+                  <span className="ui-pro-from-amount">{headline.perMonthLabel}</span>
+                  <span className="ui-pro-from-per">/month</span>
+                </>
+              ) : (
+                <span className="sk ui-pro-from-skel"><span className="sr-only">Loading prices…</span></span>
+              )}
+            </p>
+          )}
 
           <ul className="ui-pro-list">
             {features.map((f) => (

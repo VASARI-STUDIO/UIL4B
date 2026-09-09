@@ -50,12 +50,14 @@ async function saveAProject(page, name) {
   await page.getByRole('button', { name: 'Save Current' }).click()
   await page.getByPlaceholder(/Brand v1/i).fill(name)
   await page.getByRole('button', { name: 'Save', exact: true }).click()
-  // The page answers through the toast either way — the saved name, or the
-  // refusal ProjectContext threw. Reading the toast rather than the project
-  // count is deliberate: it is the sentence the user is actually given.
-  const toast = page.locator('.toast')
-  await expect(toast).toBeVisible()
-  return (await toast.innerText()).trim()
+  // The page answers in words either way — the saved name in the toast, or
+  // the refusal ProjectContext threw, held in the form under the field it
+  // refused (69-flow-audit moved it there from the toast, where it wore the
+  // success tick and was gone in 1.8s). Reading the sentence rather than the
+  // project count is deliberate: it is what the user is actually given.
+  const answer = page.locator('[data-testid="project-save-refusal"], .toast.show').first()
+  await expect(answer).toBeVisible()
+  return (await answer.innerText()).trim()
 }
 
 test.describe('a signed-in free account', () => {
