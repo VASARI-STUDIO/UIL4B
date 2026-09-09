@@ -36,6 +36,13 @@ surface states a competing value claim of its own.
 **Do not add a fifth line.** The array is a record of what the founder said,
 not a copy deck an agent tops up. A new claim needs him to make it.
 
+Two more surfaces read a line by id since the 2026-09-09 anti-slop audit, and
+neither adds a word: the homepage export section's heading is
+`build-and-export` (it replaced "Your system leaves as a document, not a
+screenshot.") and the `/plans` closing band's heading is `one-unified-location`
+(it replaced "Build first. Upgrade when your workflow asks for it."). The
+mapping is `SURFACE_LINE` in `src/data/positioning.js`.
+
 ### The hero headline is assembled from two of them, and is NOT yet approved
 
 > **Build and export UI and brand design kits, _in one unified location_.**

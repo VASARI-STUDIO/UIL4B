@@ -93,11 +93,16 @@ export default function HelpCentre() {
         </h1>
         {/* Opens on SURFACE_LINE.helpOpening — the founder's forget-the-app-name
             sentence, chosen there because a /help visitor arrived looking for a
-            specific tool. Read by id, never typed. */}
-        <p className="hlp-lede">
-          {line(SURFACE_LINE.helpOpening)} No account, no setup, no blank canvas. Sign in
-          later if you want the same work on another device.
-        </p>
+            specific tool. Read by id, never typed.
+
+            IT IS THE WHOLE LEDE NOW. Two agent sentences used to follow it:
+            "No account, no setup, no blank canvas." — a three-part reassurance
+            of the kind the founder retired ("No credit card required", "Free
+            to use. No card.") — and "Sign in later if you want the same work
+            on another device.", which the "Do I need an account?" answer below
+            already says, at the place a reader would look for it. Anti-slop
+            audit, 2026-09-09. */}
+        <p className="hlp-lede">{line(SURFACE_LINE.helpOpening)}</p>
         <div className="hlp-hero-cta">
           <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/create/palette">
             Open the palette builder

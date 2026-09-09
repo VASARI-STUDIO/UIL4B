@@ -261,7 +261,6 @@ export default function CuratedResources() {
       {filtering ? (
         <>
           <DiscoverResultHead
-            eyebrow="Curated resources"
             title="Matching resources"
             count={visible.length}
             noun="resource"
@@ -284,8 +283,10 @@ export default function CuratedResources() {
         </>
       ) : (
         <>
+          {/* "Hand-picked, not scraped" is gone: "not an X" defensive negation,
+              the tell the founder rejected on the homepage tools heading, above
+              a heading on a page called Curated. Anti-slop audit, 2026-09-09. */}
           <DiscoverResultHead
-            eyebrow="Hand-picked, not scraped"
             title="Everything worth a tab"
             count={DISCOVER_RESOURCES.length}
             noun="resource"

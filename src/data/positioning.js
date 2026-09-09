@@ -130,4 +130,16 @@ export const SURFACE_LINE = Object.freeze({
   // The homepage tools section, on the founder's 2026-09-07 instruction that
   // the heading should read "more something like" this line.
   toolsSectionHeading: 'one-unified-location',
+  // The homepage export section's heading (HomeExportKit, passed down from
+  // Home.jsx). It read "Your system leaves as a document, not a screenshot."
+  // — the "not an X" defensive negation the founder threw out by name on the
+  // tools heading ("Not a screenshot. The actual tools, running here.", 2026-08).
+  // The section DRAWS a page of the export; the sentence that names what is
+  // being drawn is his build-and-export line. Anti-slop audit, 2026-09-09.
+  homeExportHeading: 'build-and-export',
+  // /plans's closing band. It read "Build first. Upgrade when your workflow
+  // asks for it." over a "No trial clock on Free" reassurance hint — agent copy
+  // in the slot where the retired "No credit card required" line used to sit.
+  // The founder's own closing claim is the unified-location sentence.
+  plansClosing: 'one-unified-location',
 })

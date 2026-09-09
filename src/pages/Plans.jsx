@@ -528,15 +528,29 @@ export default function Plans() {
         ))}
       </div>
 
+      {/* THE CLOSING BAND — trimmed by the anti-slop audit, 2026-09-09.
+          Three things came off it and nothing was written in their place:
+            · the "Start on Free" eyebrow, which restated the button under it;
+            · "Build first. Upgrade when your workflow asks for it." — agent
+              copy; the heading is now the founder's own sentence, read by id
+              (SURFACE_LINE.plansClosing), the way the framing line above is;
+            · the "No trial clock on Free" hint — a payment reassurance in the
+              micro-line slot the retired "No credit card required" occupied,
+              and the third time this page said it.
+          The description keeps only its derived half: every figure is read
+          from the module that enforces it, the sentence "The complete toolkit
+          is ready today." that preceded them is gone.
+          54-plans-truth.spec.js still needs this block painted and its button
+          reachable, and it is. */}
       <SystemCTA
-        eyebrow="Start on Free"
-        title="Build first. Upgrade when your workflow asks for it."
-        description={`The complete toolkit is ready today. Pro raises the AI allowance, opens all ${SYSTEMS_TOTAL} colour systems and all ${BRANDS_TOTAL} brand palettes, and lifts the ${FREE_SAVE_LIMITS.projects}-project cap.`}
+        eyebrow={null}
+        title={line(SURFACE_LINE.plansClosing)}
+        description={`Pro raises the AI allowance, opens all ${SYSTEMS_TOTAL} colour systems and all ${BRANDS_TOTAL} brand palettes, and lifts the ${FREE_SAVE_LIMITS.projects}-project cap.`}
         primaryLabel={user ? 'Open Create' : 'Start building free'}
         primaryTo={user ? '/create/color' : '/login'}
         secondaryLabel="Explore colour tools"
         secondaryTo="/create/color"
-        hint="No trial clock on Free"
+        hint={null}
       />
     </div>
   )

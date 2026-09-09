@@ -91,7 +91,19 @@ function designFrom(system) {
   }
 }
 
-export default function HomeExportKit({ system }) {
+/**
+ * @param {object} props
+ * @param {object|null} props.system  what the workbench is holding right now
+ * @param {string} props.heading      the section heading. PASSED IN, never
+ *   typed here: Home.jsx reads it from positioning.js by id
+ *   (SURFACE_LINE.homeExportHeading), so tests/unit/positioning-truth.test.js
+ *   can see the consumer. The heading this replaced — "Your system leaves as a
+ *   document, not a screenshot." — was the "not an X" defensive negation the
+ *   founder rejected on the tools heading (Home.jsx, v1 of #hsteps-title),
+ *   and this section's own note above says the artefact "needs no sentence
+ *   underneath telling the reader it is real". Anti-slop audit, 2026-09-09.
+ */
+export default function HomeExportKit({ system, heading }) {
   const design = designFrom(system)
   // The real reader and the real section planner, not a copy of them.
   const d = readGuidelines(design)
@@ -110,9 +122,7 @@ export default function HomeExportKit({ system }) {
     <section className="hkit" aria-labelledby="hkit-title">
       <div className="home-container">
         <div className="hkit-head" data-reveal>
-          <h2 className="hh2" id="hkit-title">
-            Your system leaves as a document, not a screenshot.
-          </h2>
+          <h2 className="hh2" id="hkit-title">{heading}</h2>
         </div>
 
         <div className="hkit-grid" data-reveal>
