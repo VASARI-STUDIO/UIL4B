@@ -140,6 +140,11 @@ class El {
   getAttribute(k) { return this._attrs.has(k) ? this._attrs.get(k) : null }
   hasAttribute(k) { return this._attrs.has(k) }
 
+  contains(n) {
+    for (let c = n; c; c = c.parentElement) if (c === this) return true
+    return false
+  }
+
   focus() {
     this.focusCount += 1
     // THE WHOLE POINT OF THE HARNESS. A detached node cannot take focus, and
@@ -187,6 +192,16 @@ function makeDom() {
     marked: 0,
     unmarked: 0,
     listeners: [],
+    // requestAnimationFrame, held rather than run: the hook now restores focus
+    // a frame after cleanup, and the tests need to observe the gap.
+    frames: [],
+    frameSeq: 0,
+  }
+  /** Run every frame callback queued so far, the way the next paint would. */
+  dom.frame = () => {
+    const queued = dom.frames
+    dom.frames = []
+    for (const f of queued) f.fn()
   }
 
   const body = new El(dom, 'body')
@@ -266,6 +281,8 @@ const loadHook = (dom) => {
     useEffect: (fn) => { cleanup = fn() },
     getLenis: () => (dom.lenisPresent ? dom.lenis : null),
     markScrollContainers: () => { dom.marked += 1; return () => { dom.unmarked += 1 } },
+    requestAnimationFrame: (fn) => { const id = ++dom.frameSeq; dom.frames.push({ id, fn }); return id },
+    cancelAnimationFrame: (id) => { dom.frames = dom.frames.filter((f) => f.id !== id) },
   }
 
   const body = `(function(){\n${out}\n;return useModalDialog;\n})()`
@@ -283,7 +300,11 @@ const loadHook = (dom) => {
     refs.length = 0
     refs[0] = { current: node }
     useModalDialog(onClose, options)
-    return { ref: refs[0], close: () => { const c = cleanup; cleanup = null; return c?.() } }
+    const close = () => { const c = cleanup; cleanup = null; return c?.() }
+    /** The effect re-running on the SAME component: React runs the old
+     *  cleanup, then the effect body again, with the refs it already holds. */
+    const rerun = () => { close(); refCursor = 0; useModalDialog(onClose, options) }
+    return { ref: refs[0], close, rerun }
   }
 }
 
@@ -442,8 +463,53 @@ test('closing returns focus to whatever opened the dialog', () => {
   const s = scene()
   assert.equal(s.dom.document.activeElement, s.dialog)
   s.close()
+  s.dom.frame()
   assert.equal(s.dom.document.activeElement, s.opener,
     'focus was not returned to the control that opened the dialog')
+})
+
+// THE DEFECT THE FLOW AUDIT TRACED (#436): keydown@input → keypress@button →
+// click. A synchronous restore puts the opener under the very key that closed
+// the dialog, and an opener that clicks on Enter reopens it.
+test('the restore waits a frame, so the key that closed the dialog cannot land on the opener', () => {
+  const s = scene()
+  s.close()
+  assert.notEqual(s.dom.document.activeElement, s.opener,
+    'focus reached the opener in the same tick as the close. The keypress of the Enter '
+    + 'that closed the dialog is still to be dispatched, and it will land on this button.')
+  assert.equal(s.dom.frames.length, 1, 'exactly one restore is queued for the next frame')
+  s.dom.frame()
+  assert.equal(s.dom.document.activeElement, s.opener,
+    'after the frame the opener must hold focus — deferring is not the same as forgetting')
+})
+
+test('a dialog whose effect re-runs before the frame keeps its original opener', () => {
+  // A caller that passes a fresh onClose each render re-runs the effect: old
+  // cleanup, then the body again. activeElement at that moment is the dialog
+  // itself, so a naive capture would make the dialog its own opener and the
+  // queued restore would fire underneath a dialog that is still open.
+  const s = scene()
+  s.rerun()
+  assert.equal(s.dom.frames.length, 0, 'the previous cleanup\'s frame must be cancelled, not left to fire under an open dialog')
+  assert.equal(s.dom.document.activeElement, s.dialog, 'the re-run must not move focus')
+  s.close()
+  s.dom.frame()
+  assert.equal(s.dom.document.activeElement, s.opener,
+    'the re-run lost the real opener — the dialog recorded itself as the thing to return to')
+})
+
+test('the deferred restore yields to focus that moved somewhere live in the meantime', () => {
+  // Closing one dialog can open another in the same event. That dialog has
+  // taken focus by the time the frame fires; handing it back to the first
+  // opener would be the hook fighting itself.
+  const s = scene()
+  const elsewhere = s.dom.el('button')
+  s.dom.document.body.appendChild(elsewhere)
+  s.close()
+  elsewhere.focus()
+  s.dom.frame()
+  assert.equal(s.dom.document.activeElement, elsewhere,
+    'the restore took focus away from an element that claimed it after the close')
 })
 
 // THE DEFECT THE STATIC TRACER COULD NOT SEE.
@@ -463,6 +529,7 @@ test('closing restores to a surviving ANCESTOR when the opener has unmounted', (
   assert.ok(!s.opener.isConnected, 'scene setup: the opener should be detached')
 
   s.close()
+  s.dom.frame()
   assert.notEqual(s.dom.document.activeElement, s.dom.document.body,
     'the opener had unmounted and focus fell to <body>. A keyboard user is now at '
     + 'the top of the document with no idea where they are — restore to the nearest '
@@ -480,6 +547,7 @@ test('a container given tabindex to receive focus KEEPS it', () => {
   const s = scene()
   s.opener.remove()
   s.close()
+  s.dom.frame()
   assert.equal(s.menu.getAttribute('tabindex'), '-1',
     'the ancestor was made focusable and then had the attribute taken away again, '
     + 'which blurs it straight back to <body>')
