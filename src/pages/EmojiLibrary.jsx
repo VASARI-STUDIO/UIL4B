@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import usePopover from '../hooks/usePopover'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import { EMOJI_DATA } from '../data/emojiData'
@@ -119,7 +120,17 @@ export default function EmojiLibrary({ onCopy, embedded }) {
   const [index, setIndex] = useState(getLoadedEmojiIndex)
   const [indexState, setIndexState] = useState(() => (getLoadedEmojiIndex() ? 'ready' : 'idle'))
   const virtRef = useRef(null)
-  const toneRef = useRef(null)
+  // The skin-tone popover is a non-modal disclosure like every other popover
+  // in the app, so it takes the shared contract (Escape, outside press,
+  // focus in, tab out) — and, the reason it moved here: EDGE FLIPPING. Its
+  // trigger is the last control in the toolbar, hard against the right
+  // margin on any desktop, and the panel was `left:0` on the trigger. At
+  // 1280 the six tones needed 250px from x=1179, so the fourth was cut in
+  // half and the last two were outside the viewport (measured 2026-09-09,
+  // both themes; the same at 1440 and 1920). placePopover hangs the panel
+  // off whichever edge of the trigger has room.
+  const closeTone = useCallback(() => setToneOpen(false), [])
+  const { triggerRef: toneTriggerRef, popRef: tonePopRef } = usePopover(toneOpen, closeTone, { arrowNav: true })
 
   const query = normaliseQuery(search)
 
@@ -230,16 +241,6 @@ export default function EmojiLibrary({ onCopy, embedded }) {
     return () => window.removeEventListener('online', retry)
   }, [indexState, requestIndex])
 
-  // Close the skin-tone popover on any press outside it.
-  useEffect(() => {
-    if (!toneOpen) return
-    const onDown = (e) => {
-      if (toneRef.current && !toneRef.current.contains(e.target)) setToneOpen(false)
-    }
-    document.addEventListener('pointerdown', onDown)
-    return () => document.removeEventListener('pointerdown', onDown)
-  }, [toneOpen])
-
   const handleCopy = useCallback((emoji) => {
     const text = supportsSkinTone(emoji) ? toneOf(emoji, skinTone) : emoji
     navigator.clipboard.writeText(text)
@@ -284,8 +285,9 @@ export default function EmojiLibrary({ onCopy, embedded }) {
           <>
           {/* Skin tone lives in a compact popover instead of six inline buttons —
               one control in the toolbar, the choices on demand. */}
-          <div className="emoji-tone-wrap" ref={toneRef}>
+          <div className="emoji-tone-wrap">
             <button
+              ref={toneTriggerRef}
               type="button"
               className={`emoji-tone-btn${toneOpen ? ' open' : ''}`}
               onClick={() => setToneOpen(o => !o)}
@@ -298,7 +300,7 @@ export default function EmojiLibrary({ onCopy, embedded }) {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
             </button>
             {toneOpen && (
-              <div className="emoji-tone-pop" role="menu" aria-label="Skin tone">
+              <div ref={tonePopRef} className="emoji-tone-pop" role="menu" aria-label="Skin tone" tabIndex={-1}>
                 {TONES.map((tone, i) => (
                   <button
                     key={i}

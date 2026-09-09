@@ -1167,6 +1167,14 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .emoji-tone-btn.open{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-strong)}
 .emoji-tone-btn svg{color:currentColor}
 .emoji-tone-pop{position:absolute;top:calc(100% + 6px);left:0;display:flex;gap:4px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:40;animation:fg-fade var(--dur-1) var(--ease-entrance)}
+/* Placement is written by usePopover (placePopover): end-aligned on the
+   trigger by default, start-aligned when that would run off the left edge,
+   upward when there is more room above. The trigger is the toolbar's last
+   control, so on a desktop "end" is the case that keeps all six tones on
+   screen — measured cut off at 1280, 1440 and 1920 before this. */
+.emoji-tone-pop[data-pop-align="end"]{left:auto;right:0}
+.emoji-tone-pop[data-pop-align="clamp"]{left:50%;transform:translateX(-50%)}
+.emoji-tone-pop[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
 .emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:all var(--dur-2) var(--ease-standard)}
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
