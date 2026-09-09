@@ -19,7 +19,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { fixturePacks, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
+import { fixturePacks, isLiveIconify, refuseIconify } from './iconify-stub.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -63,14 +63,8 @@ const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, 
 // for this persona and these hosts only — see 66-icon-library-offline-fixture.
 const REFUSED = 'visitor whose icon catalogue is refused'
 
-/** Every Iconify host answers the way the network did on 2026-09-08, stamped as a deliberate refusal. */
-async function refuseIconify(page) {
-  const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }
-  await page.route((u) => u.hostname === 'api.iconify.design',
-    (route) => route.fulfill({ status: 429, contentType: 'text/plain', headers, body: 'Too Many Requests' }))
-  await page.route((u) => u.hostname === 'api.simplesvg.com' || u.hostname === 'api.unisvg.com',
-    (route) => route.fulfill({ status: 403, contentType: 'text/plain', headers, body: 'Forbidden' }))
-}
+// The refusal itself is iconify-stub.js's refuseIconify: the same 429/403 the
+// network gave on 2026-09-08, stamped as deliberate for the context audit.
 
 test.describe('/create/icons · the masthead pill says what the grid is showing', () => {
   // The pill read navigator.onLine alone, so with every host refusing (429
