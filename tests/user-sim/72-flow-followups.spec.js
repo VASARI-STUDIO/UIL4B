@@ -87,6 +87,35 @@ const hitWithin = (loc, selector) => loc.evaluate((el, sel) => {
 }, selector)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 7 — /onboarding for an account that has finished
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('7 — an onboarded account typing /onboarding lands on its home', () => {
+  for (const size of [PHONE, DESK]) {
+    test(`${size[0]}px: redirected to ${SIGNED_IN_HOME}; a new account still gets the flow`, async ({ browser }) => {
+      const { context, page } = await open(browser, size)
+      watch(page, `an established account typing /onboarding (${size[0]}px)`)
+      await signIn(page, { plan: 'free', projects: 1, onboarded: true })
+      await go(page, '/onboarding')
+      await expect(page).toHaveURL(new RegExp(`${SIGNED_IN_HOME}/?$`))
+      await expect(page.getByTestId('onboarding-first-win')).toHaveCount(0)
+      await context.close()
+
+      const fresh = await open(browser, size)
+      watch(fresh.page, `a brand-new account at /onboarding (${size[0]}px)`)
+      await signIn(fresh.page, { plan: 'free', projects: 0, onboarded: false })
+      await go(fresh.page, '/onboarding')
+      await expect(fresh.page.getByTestId('onboarding-first-win')).toBeVisible()
+      // Choosing a start still opens the tool, not the User Home: completion
+      // is written to the profile in the same click, and that write must not
+      // trip the redirect above.
+      await fresh.page.locator(`[data-first-win="${FIRST_WINS[0].id}"]`).click()
+      await expect(fresh.page).toHaveURL(new RegExp(`${FIRST_WINS[0].route}(\\?|$)`))
+      await fresh.context.close()
+    })
+  }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 8 — the shared dialog hook hands focus back a frame later
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('8 — the dialog hook hands focus back a frame after the close, not inside it', () => {

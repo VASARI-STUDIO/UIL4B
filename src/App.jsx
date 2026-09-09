@@ -234,7 +234,9 @@ function AppInner() {
   useEffect(() => {
     if (authLoading || !authUser || !pendingOnboarding) return
     clearPendingOnboarding()
-    if (location.pathname !== '/onboarding') navigate('/onboarding', { replace: true })
+    // `fresh` tells Onboarding this is a brand-new account: it must render the
+    // flow even if this browser holds another account's completion flag.
+    if (location.pathname !== '/onboarding') navigate('/onboarding', { replace: true, state: { fresh: true } })
   }, [authLoading, authUser, pendingOnboarding, clearPendingOnboarding, location.pathname, navigate])
 
   useEffect(() => {

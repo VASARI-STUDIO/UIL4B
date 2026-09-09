@@ -303,6 +303,10 @@ const loadHook = (dom) => {
     const close = () => { const c = cleanup; cleanup = null; return c?.() }
     /** The effect re-running on the SAME component: React runs the old
      *  cleanup, then the effect body again, with the refs it already holds. */
+    // The hook is called outside React on purpose — this whole harness is
+    // that — and the rule keys on the function's NAME, which is why the
+    // anonymous mount above never tripped it.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const rerun = () => { close(); refCursor = 0; useModalDialog(onClose, options) }
     return { ref: refs[0], close, rerun }
   }
