@@ -103,7 +103,8 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
 
       await page.keyboard.press('Escape')
       await expect(dialog).toHaveCount(0)
-      expect(await focused(page), 'closing must return focus to what opened it').toMatch(/Save \/ export/)
+      // The restore lands a frame after the close (#436 follow-up 8), so poll.
+      await expect.poll(() => focused(page), 'closing must return focus to what opened it').toMatch(/Save \/ export/)
       // …and nothing was taken away.
       expect(await page.locator('.plb-col').count()).toBeGreaterThanOrEqual(3)
       await context.close()
@@ -138,7 +139,7 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       // Way back first: Escape closes and returns focus to the opener.
       await page.keyboard.press('Escape')
       await expect(dialog).toHaveCount(0)
-      expect(await focused(page), 'Escape must hand focus back to the opener').toMatch(/New Project/)
+      await expect.poll(() => focused(page), 'Escape must hand focus back to the opener').toMatch(/New Project/)
 
       // Then the way through.
       await page.keyboard.press('Enter')
@@ -337,7 +338,7 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     // Declining is a real button and it hands focus back to the wall's opener.
     await modal.getByRole('button', { name: 'Maybe later' }).click()
     await expect(modal).toHaveCount(0)
-    expect(await focused(page), 'Maybe later must return focus to the Unlock button').toMatch(/Unlock with Pro/)
+    await expect.poll(() => focused(page), 'Maybe later must return focus to the Unlock button').toMatch(/Unlock with Pro/)
     await context.close()
   })
 })

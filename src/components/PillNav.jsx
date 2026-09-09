@@ -1344,6 +1344,29 @@ export default function PillNav() {
               </div>
             )
           })}
+          {/* Saved projects and Export. The bar's two icon buttons are
+              display:none below 768px and, until #436 measured it, nothing in
+              this sheet stood in for them: the style guide, the book and the
+              guidelines could not be reached on a phone at all. Same actions,
+              same gating as the bar (no Export on a sales route), as a flat
+              row group the way a phone menu lists its account-level actions
+              (Mobbin: Noom's "My stuff", Cash App's menu). */}
+          {(user || !isSalesPage) && (
+            <div className="pnav-sheet-tools">
+              {user && (
+                <Link className="pnav-acc-link pnav-sheet-tool" to="/projects" onClick={closeAll}>
+                  <span className="pnav-acc-ico" aria-hidden="true"><BookmarkIcon /></span>
+                  <span className="pnav-acc-label">Saved projects</span>
+                </Link>
+              )}
+              {!isSalesPage && (
+                <button type="button" className="pnav-acc-link pnav-sheet-tool" aria-haspopup="dialog" onClick={openExport}>
+                  <span className="pnav-acc-ico" aria-hidden="true"><ExportIcon /></span>
+                  <span className="pnav-acc-label">Export</span>
+                </button>
+              )}
+            </div>
+          )}
           {sheetPromo && (
             <div className="pnav-sheet-promo">
               <span className="pnav-promo-eyebrow">{sheetPromo.eyebrow}</span>

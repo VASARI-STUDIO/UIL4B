@@ -13,6 +13,7 @@ import useModalDialog from '../hooks/useModalDialog'
 import DailyBand from '../components/userhome/DailyBand'
 import StarterRow from '../components/userhome/StarterRow'
 import ProjectCard from '../components/userhome/ProjectCard'
+import SaveRefusal from '../components/SaveRefusal'
 // The `projects` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
@@ -348,23 +349,6 @@ function NewProjectModal({ folders, onClose, onCreate, error }) {
   )
 }
 
-// The cap, refused in place.
-//
-// `message` is whatever saveProject() threw — never re-worded here, because
-// ProjectContext is the one place that knows the rule and its sentence already
-// names the limit and the way forward. What this adds is the two things a
-// vanishing toast could not carry: it stays until the person acts, and the
-// "go Pro" it mentions is a link they can follow. The link text is the one the
-// type-scale save menu already uses for the same edge, so the two surfaces say
-// one thing.
-function SaveRefusal({ message, testId }) {
-  return (
-    <p className="uh-save-refusal" role="alert" data-testid={testId}>
-      <span>{message}</span>{' '}
-      <NavLink to="/plans" className="uh-quota-link">See what Pro adds</NavLink>
-    </p>
-  )
-}
 
 export default function Projects({ toast }) {
   const navigate = useNavigate()

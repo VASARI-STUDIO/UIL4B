@@ -210,7 +210,7 @@ function AppInner() {
   // page before Firebase has finished loading. See utils/sessionHint.js.
   useSessionHint()
   useSmoothScroll()
-  const { message, visible, type, toast } = useToast()
+  const { message, visible, type, toast, dismiss } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
   const navigate = useNavigate()
@@ -234,7 +234,9 @@ function AppInner() {
   useEffect(() => {
     if (authLoading || !authUser || !pendingOnboarding) return
     clearPendingOnboarding()
-    if (location.pathname !== '/onboarding') navigate('/onboarding', { replace: true })
+    // `fresh` tells Onboarding this is a brand-new account: it must render the
+    // flow even if this browser holds another account's completion flag.
+    if (location.pathname !== '/onboarding') navigate('/onboarding', { replace: true, state: { fresh: true } })
   }, [authLoading, authUser, pendingOnboarding, clearPendingOnboarding, location.pathname, navigate])
 
   useEffect(() => {
@@ -462,7 +464,7 @@ function AppInner() {
       </main>
 
       <AppFooter />
-      <Toast message={message} visible={visible} type={type} />
+      <Toast message={message} visible={visible} type={type} onDismiss={dismiss} />
       <FeedbackButton />
       <GoogleOneTap />
     </div>

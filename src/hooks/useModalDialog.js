@@ -26,6 +26,9 @@ import { markScrollContainers } from '../utils/scrollContainment.js'
 // a tab every time they opened it.
 export default function useModalDialog(onClose, { enabled = true, initialFocus = null } = {}) {
   const ref = useRef(null)
+  // The restore this hook still owes from its last cleanup — see the end of
+  // the effect. Held on a ref so an effect re-run can take it over.
+  const pendingRestore = useRef(null)
 
   useEffect(() => {
     if (!enabled) return undefined
@@ -40,9 +43,21 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
     //
     // Remembering the chain costs a handful of nodes and lets us hand focus to
     // the nearest thing that still exists.
-    const opener = document.activeElement
-    const openerChain = []
-    for (let n = opener; n && n !== document.body; n = n.parentElement) openerChain.push(n)
+    let openerChain
+    if (pendingRestore.current) {
+      // The effect re-ran before the previous cleanup's frame fired — a caller
+      // handed us a fresh onClose, say. activeElement is still inside THIS
+      // dialog, so capturing it now would record the dialog as its own
+      // opener. Take over the chain that cleanup was about to restore to, and
+      // cancel its frame so it cannot fire under a dialog that is still open.
+      cancelAnimationFrame(pendingRestore.current.frame)
+      openerChain = pendingRestore.current.chain
+      pendingRestore.current = null
+    } else {
+      const opener = document.activeElement
+      openerChain = []
+      for (let n = opener; n && n !== document.body; n = n.parentElement) openerChain.push(n)
+    }
     const node = ref.current
 
     // THE SCROLL LOCK, and why one line of it was decoration.
@@ -103,21 +118,48 @@ export default function useModalDialog(onClose, { enabled = true, initialFocus =
       document.body.style.overflow = ''
       getLenis()?.start()
       unmark()
-      const restore = openerChain.find(el => el.isConnected && typeof el.focus === 'function')
-      if (!restore) return
-      // A surviving ANCESTOR is usually a container, which is not focusable on
-      // its own, so give it tabindex="-1" first.
+      // THE RESTORE WAITS ONE FRAME. It used to run right here, synchronously,
+      // and the flow audit (#436) caught what that does, with a trace:
       //
-      // The attribute is deliberately LEFT IN PLACE. Removing it straight after
-      // .focus() blurs the element right back to <body> — the browser drops
-      // focus the moment the node stops being focusable — which is a silent
-      // no-op that looks like a working restore in code review. tabindex="-1"
-      // means "reachable by script, never by Tab", so leaving it costs nothing:
-      // it does not join the tab order and it does not change layout.
-      if (restore.tabIndex < 0 && !restore.hasAttribute('tabindex')) {
-        restore.setAttribute('tabindex', '-1')
-      }
-      restore.focus()
+      //   keydown@input → keypress@button[New Project] → click
+      //
+      // Enter in the dialog's name field closed it; this cleanup put focus on
+      // the opener in the SAME tick; the same key's keypress then arrived at
+      // the opener — a button, so it clicked — and the dialog reopened over the
+      // project it had just created. Projects.jsx cancelled that one keydown
+      // locally. The defect belongs to every dialog this hook serves (any
+      // control that closes on Enter, restored onto any opener that clicks on
+      // Enter), so the fix lives here: hand focus back after the browser has
+      // finished dispatching whatever key closed us. LoginPromptContext defers
+      // by a frame for exactly this reason.
+      //
+      // Focus that moved somewhere live in the meantime is left alone. A
+      // dialog that opens another in the same event has already claimed it,
+      // and taking it back would be this hook fighting itself.
+      const chain = openerChain
+      const frame = requestAnimationFrame(() => {
+        pendingRestore.current = null
+        const active = document.activeElement
+        if (active && active !== document.body && active.isConnected
+          && active !== node && !node?.contains(active)) return
+        const restore = chain.find(el => el.isConnected && typeof el.focus === 'function')
+        if (!restore) return
+        // A surviving ANCESTOR is usually a container, which is not focusable
+        // on its own, so give it tabindex="-1" first.
+        //
+        // The attribute is deliberately LEFT IN PLACE. Removing it straight
+        // after .focus() blurs the element right back to <body> — the browser
+        // drops focus the moment the node stops being focusable — which is a
+        // silent no-op that looks like a working restore in code review.
+        // tabindex="-1" means "reachable by script, never by Tab", so leaving
+        // it costs nothing: it does not join the tab order and it does not
+        // change layout.
+        if (restore.tabIndex < 0 && !restore.hasAttribute('tabindex')) {
+          restore.setAttribute('tabindex', '-1')
+        }
+        restore.focus()
+      })
+      pendingRestore.current = { frame, chain }
     }
   }, [onClose, enabled, initialFocus])
 
