@@ -8555,6 +8555,19 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
   .plb-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;min-width:0;max-width:none;max-height:min(76dvh,560px);overflow-y:auto;overscroll-behavior:contain;padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70;animation:plb-sheet-up var(--dur-2) var(--ease-entrance)}
   .plb-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .plb-scrolllist{max-height:min(52dvh,420px)}
+  /* WHY A z-index:70 SHEET LOST TO A z-index:30 FOOTER (#436, flow 1 and 2).
+     .plb is display:flex, and a FLEX ITEM with a z-index forms a stacking
+     context whether or not it is positioned — so at ≤768, where .plb-toolbar
+     is position:static, its z-index:30 still boxes every menu inside it at
+     level 30, and .plb-adjust (also 30, later in the DOM) paints over the
+     lot. Measured at 390: elementFromPoint on "Analogous" returned the
+     footer, and only setting either z-index to auto changed that. The
+     action rail adds a second box: .rail-overflow's mask-image is a stacking
+     context too, and the Save / export sheet inside it sat under the swatch
+     columns. While a sheet is open the toolbar outranks the footer and the
+     rail drops its mask; nothing changes at rest. */
+  .plb-toolbar:has(.plb-menu){z-index:71}
+  .plb-toolbar-group.rail-overflow:has(.plb-menu){-webkit-mask-image:none;mask-image:none}
   .plb-galpopup{padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:min(82dvh,640px)}
   .plb-galpopup::before{margin:10px auto 2px}
   .plb-galpopup-head{padding:8px 16px 12px}

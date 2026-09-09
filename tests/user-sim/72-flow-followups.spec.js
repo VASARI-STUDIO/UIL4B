@@ -87,6 +87,60 @@ const hitWithin = (loc, selector) => loc.evaluate((el, sel) => {
 }, selector)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 2 — the Palette Builder's menus paint on top at 390
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('2 — the save menu and the colour-system menu take the tap at 390', () => {
+  for (const theme of THEMES) {
+    test(`390px ${theme}: Save is hittable, and a colour system can be picked over the adjust footer`, async ({ browser }) => {
+      const { context, page } = await open(browser, PHONE, theme)
+      watch(page, `a phone user saving and re-systemising a palette (${theme})`)
+      await signIn(page, { plan: 'free', projects: CAP - 1 })
+      await go(page, '/create/palette')
+
+      await page.locator('button[aria-label="Save / export"]').click()
+      const menu = page.locator('.plb-savemenu')
+      await expect(menu).toBeVisible()
+      const save = menu.getByRole('button', { name: 'Save', exact: true })
+      await expect.poll(() => hitWithin(save, '.plb-savemenu').then((h) => h.inside),
+        'a tap on Save must reach the save menu, not the swatch columns behind it').toBe(true)
+      await page.keyboard.press('Escape')
+      await expect(menu).toHaveCount(0)
+
+      // The colour-system menu: a real click, no force — Playwright refuses a
+      // click the footer would intercept, which is exactly how #436 found it.
+      const trigger = page.locator('button.plb-harm')
+      const current = (await trigger.textContent()) || ''
+      const pick = COLOUR_SYSTEMS.find((s) => s.free && !current.includes(s.label))
+      await trigger.click()
+      const harm = page.locator('.plb-harmmenu')
+      await expect(harm).toBeVisible()
+      const row = harm.getByRole('menuitemradio', { name: new RegExp(`^${pick.label}`) })
+      await expect.poll(() => hitWithin(row, '.plb-harmmenu').then((h) => h.inside),
+        `a tap on "${pick.label}" must reach the menu, not the adjust footer`).toBe(true)
+      await row.click({ timeout: 4000 })
+      await expect(trigger).toContainText(pick.label)
+      await context.close()
+    })
+  }
+
+  test('1280px: the save menu stays inside the viewport (the #434 clamp, held)', async ({ browser }) => {
+    const { context, page } = await open(browser, DESK)
+    watch(page, 'a desktop user opening Save / export')
+    await signIn(page, { plan: 'free', projects: CAP - 1 })
+    await go(page, '/create/palette')
+    await page.locator('button[aria-label="Save / export"]').click()
+    const menu = page.locator('.plb-savemenu')
+    await expect(menu).toBeVisible()
+    const box = await menu.boundingBox()
+    expect(box.x + box.width, 'the menu must not run past the right edge').toBeLessThanOrEqual(DESK[0])
+    expect(box.x).toBeGreaterThanOrEqual(0)
+    const hit = await hitWithin(menu.getByRole('button', { name: 'Save', exact: true }), '.plb-savemenu')
+    expect(hit.inside, `Save is covered by ${hit.top}`).toBe(true)
+    await context.close()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 3 — the Palette Builder refuses the cap in place
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('3 — the palette save menu refuses the cap under the field, not in a green toast', () => {
