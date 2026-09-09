@@ -1150,7 +1150,10 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
 .emoji-vhead h3{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
 .emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
-.emoji-section-count{font-size:10px;font-weight:700;color:var(--t3);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+/* --t2, not --t3: at 10px on the --bg-3 chip this measured 4.07:1 in light
+   (#6c6c66 on #e4e2da) at every width, under AA. --t2 takes it to 4.95:1;
+   dark was already clear and stays so. Same reasoning as .arc-ratio-card-use. */
+.emoji-section-count{font-size:10px;font-weight:700;color:var(--t2);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
 .emoji-cell{display:flex;align-items:center;justify-content:center;width:var(--emoji-cell,42px);height:var(--emoji-cell,42px);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard);position:relative}
 .emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2);z-index:2}
 .emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent);z-index:2}
@@ -3273,7 +3276,10 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .fc-tab{position:relative;display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fc-tab:hover{color:var(--t0)}
 .fc-tab.on{background:var(--card);color:var(--t0);box-shadow:var(--ring)}
-.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t3)}
+/* --t2, not --t3: the 8px SOON tag measured 4.07:1 on its chip in light at
+   every width (2026-09-09). --t2 is 4.95:1. The size is left as found and
+   flagged: 8px uppercase is the smallest type on the page. */
+.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
 /* Alpha badge — token-driven accent pill (no hardcoded colours). */
 .fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
 .fc-drop{cursor:pointer;transition:border-color var(--t),background var(--t),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
