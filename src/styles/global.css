@@ -687,12 +687,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .cs-hue-name{font-size:11px;font-weight:600;color:var(--t1)}
 .cs-hue-val{font-family:var(--mono);font-size:10px;color:var(--t3)}
 /* `input.` prefix: must outrank the global input[type="range"] reset above */
-input.cs-hue-slider{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));outline:none;cursor:pointer;border:1px solid var(--border)}
-input.cs-hue-slider::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:transparent}
-input.cs-hue-slider::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:transparent}
+/* The INPUT is the hit area and the TRACK is the paint. The gradient and the
+   hairline used to sit on the input itself at 14px tall, which made the whole
+   control a 14px target (measured 2026-09-09 on every custom-hue row, 320 to
+   1920). The input is now 24px of transparent box and the track pseudo-
+   elements carry the 12px gradient bar the page has always shown, so the
+   paint is unchanged and a thumb press lands 5px either side of it. */
+input.cs-hue-slider{-webkit-appearance:none;appearance:none;width:100%;height:24px;border-radius:var(--radius-pill);background:transparent;outline:none;cursor:pointer;border:0}
+input.cs-hue-slider::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));border:1px solid var(--border)}
+input.cs-hue-slider::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));border:1px solid var(--border)}
 input.cs-hue-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;margin-top:-3px;border-radius:50%;background:#fff;border:2px solid var(--t0);box-shadow:var(--shadow-xs)}
 input.cs-hue-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--t0);box-shadow:var(--shadow-xs)}
-input.cs-hue-slider:focus-visible{box-shadow:0 0 0 3px var(--accent-bg)}
+input.cs-hue-slider:focus-visible::-webkit-slider-runnable-track{box-shadow:0 0 0 3px var(--accent-bg)}
+input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--accent-bg)}
 .cs-hue-ends{display:flex;justify-content:space-between;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
 .cs-hue-hex{width:96px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);background:var(--bg-0);color:var(--t0);font-family:var(--mono);font-size:11px;text-transform:uppercase}
 .cs-hue-hex::placeholder{color:var(--t3);text-transform:none;letter-spacing:0}
