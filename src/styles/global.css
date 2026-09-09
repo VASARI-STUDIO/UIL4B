@@ -8040,8 +8040,16 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pop-x:hover{color:var(--t0);background:var(--bg-2)}
 
 /* Tints panel + per-column HCT picker (anchored inside the column) */
-.plb-tintpop,.plb-picker{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:45;width:206px;padding:10px}
-.plb-picker{width:248px}
+/* Centred on the column, but never past the board's edge: on the FIRST column
+   a centred 206px panel sat at x=-10 at 1024px and x=-2 at 1097px (measured
+   2026-09-09), cutting the T95/T90 labels. clamp() keeps 8px inside the column
+   on either side; a column narrower than the panel resolves to the left bound,
+   which is the edge a person can actually see past (the Add rail is to the
+   right). Mobbin: Runway and Magnific shift an anchored colour panel inward
+   rather than let it leave the canvas. <=768 replaces this with a full-width
+   sheet below. */
+.plb-tintpop,.plb-picker{position:absolute;bottom:96px;left:clamp(8px,calc(50% - 103px),calc(100% - 214px));z-index:45;width:206px;padding:10px}
+.plb-picker{width:248px;left:clamp(8px,calc(50% - 124px),calc(100% - 256px))}
 .plb-tint-list{display:flex;flex-direction:column;gap:2px;max-height:min(46vh,330px);overflow-y:auto;overscroll-behavior:contain}
 .plb-tint-row{display:flex;align-items:center;gap:8px;width:100%;padding:5px 6px;background:none;border:none;border-radius:7px;cursor:pointer;transition:background var(--t)}
 .plb-tint-row:hover{background:var(--bg-2)}
