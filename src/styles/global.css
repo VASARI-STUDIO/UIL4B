@@ -3300,6 +3300,9 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .fc-video{width:100%;max-height:380px;border-radius:var(--radius);background:#000;display:block}
 .fc-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-top:10px}
 .fc-status-err{color:var(--err-strong)}
+/* The byte count beside the engine-download sentence: tabular so it does not
+   jitter as it climbs. */
+.fc-status-bytes{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--t1);white-space:nowrap}
 .fc-progress{height:8px;background:var(--bg-3);border-radius:999px;overflow:hidden;margin-top:10px}
 .fc-progress-bar{height:100%;background:var(--brand);border-radius:999px;transition:width var(--dur-2) var(--ease-out)}
 .fc-soon-card{padding:36px 28px;text-align:left;border-style:dashed}
