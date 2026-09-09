@@ -442,7 +442,13 @@ export default function AltTextGenerator({ toast }) {
                 <span className="alt-card-size">{formatBytes(it.size)}</span>
               </div>
               {it.status === 'generating' && <div className="alt-card-status">Generating…</div>}
-              {it.status === 'error' && <div className="alt-card-error">{it.error}</div>}
+              {/* Its own class, not the card's modifier. `alt-card-${status}` puts
+                  `alt-card-error` on the CARD, and the message used to carry the
+                  same name — so the message's rule (red tint, 12px, 8px padding, a
+                  small radius, a red hairline) landed on the whole card: a refused
+                  generation turned the card into a padded red box with its preview
+                  inset. Rendered 2026-09-09 at 320 through 1920, both themes. */}
+              {it.status === 'error' && <div className="alt-card-error-msg">{it.error}</div>}
               {it.altText && (
                 <>
                   {it.truncated && (
