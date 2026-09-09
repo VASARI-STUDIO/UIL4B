@@ -73,7 +73,9 @@
 
 .tt-select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 
-.tt-check{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:1.45;color:var(--t1);cursor:pointer;margin-bottom:6px}
+/* The label is the press target (it wraps the input): 12px text at 1.45 made
+   it 17px tall. min-height keeps it a 24px row without moving the text. */
+.tt-check{display:flex;align-items:center;gap:9px;min-height:24px;font-size:12px;line-height:1.45;color:var(--t1);cursor:pointer;margin-bottom:6px}
 
 .tt-check input{margin-top:2px;accent-color:var(--brand);cursor:pointer;flex:0 0 auto}
 
@@ -245,7 +247,8 @@
 
 .tt-copy-primary{min-height:38px;padding:8px 14px;font-size:11px;font-weight:650;color:var(--accent-fg);background:var(--accent-strong);border:1px solid var(--accent-strong);border-radius:var(--radius-s);cursor:pointer;transition:background var(--t),border-color var(--t)}
 
-.tt-copy-primary:hover{background:var(--brand-soft);border-color:var(--brand-soft)}
+/* See .tsc-copy-primary:hover in global.css — the same 3.11:1 hover. */
+.tt-copy-primary:hover{background:color-mix(in srgb,var(--accent-strong) 88%,var(--t0));border-color:color-mix(in srgb,var(--accent-strong) 88%,var(--t0))}
 
 .tt-export{max-height:380px;margin:0;padding:18px;font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);overflow:auto}
 
