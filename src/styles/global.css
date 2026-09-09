@@ -1265,6 +1265,14 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .toast-x svg{width:14px;height:14px}
 .toast-x:hover{background:var(--bg-2);color:var(--t0)}
 .toast:not(.show) .toast-x{pointer-events:none}
+
+/* ── SaveRefusal (src/components/SaveRefusal.jsx) ──
+   The free cap's refusal, rendered under the field it refused, on /projects
+   and inside the Palette Builder's save menu. Lifted out of pages/projects.css
+   when the component became shared: that file only ships with the /projects
+   chunk and the homepage renders the palette tool. */
+.uh-quota-link{font-weight:600;color:var(--accent-strong)}
+.uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
 /* Success motion: icon spring-pop + checkmark stroke draw (E3, motion-safe) */
 .toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
 .toast-success.show .toast-ico{animation:toast-pop var(--dur-4) var(--ease-spring) both}

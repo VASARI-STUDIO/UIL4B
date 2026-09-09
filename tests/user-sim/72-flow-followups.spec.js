@@ -87,6 +87,63 @@ const hitWithin = (loc, selector) => loc.evaluate((el, sel) => {
 }, selector)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 3 — the Palette Builder refuses the cap in place
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('3 — the palette save menu refuses the cap under the field, not in a green toast', () => {
+  for (const size of [PHONE, DESK]) {
+    test(`${size[0]}px: the ${CAP + 1}th save is refused in ProjectContext's words, with a way forward, and stays`, async ({ browser }) => {
+      const { context, page } = await open(browser, size)
+      watch(page, `a free account at the cap saving a palette (${size[0]}px)`)
+      const account = await signIn(page, { plan: 'free', projects: CAP })
+      await go(page, '/create/palette')
+      await page.locator('button[aria-label="Save / export"]').click()
+      const menu = page.locator('.plb-savemenu')
+      const field = menu.getByLabel('Project name')
+      await field.fill('One Too Many')
+      await page.keyboard.press('Enter')
+
+      const refusal = page.getByTestId('palette-save-refusal')
+      await expect(refusal).toBeVisible()
+      await expect(refusal).toContainText(`Free plan saves up to ${CAP} projects`)
+      await expect(refusal.getByRole('link', { name: 'See what Pro adds' })).toHaveAttribute('href', '/plans')
+      // Not a success. The tick must not be drawn over a refusal.
+      await expect(page.locator('.toast-success.show')).toHaveCount(0)
+      await expect(menu, 'the menu stays open over its own refusal').toBeVisible()
+      await expect(field).toHaveValue('One Too Many')
+      // And it STAYS — the toast it replaced was gone in 1.8 seconds.
+      await page.waitForTimeout(TOAST_MIN_MS + 700)
+      await expect(refusal, 'the refusal must outlive a toast').toBeVisible()
+
+      const stored = await page.evaluate(
+        (email) => JSON.parse(localStorage.getItem('vs-projects') || '{}')[email]?.length ?? -1,
+        account.email,
+      )
+      expect(stored, 'nothing may be written once the cap is reached').toBe(CAP)
+
+      // Closing the menu clears it, so a stale refusal cannot greet the next attempt.
+      await page.keyboard.press('Escape')
+      await expect(menu).toHaveCount(0)
+      await page.locator('button[aria-label="Save / export"]').click()
+      await expect(page.getByTestId('palette-save-refusal')).toHaveCount(0)
+      await context.close()
+    })
+  }
+
+  test('one under the cap saves and says so — the control', async ({ browser }) => {
+    const { context, page } = await open(browser, DESK)
+    watch(page, 'a free account with a slot to spare saving a palette')
+    await signIn(page, { plan: 'free', projects: CAP - 1 })
+    await go(page, '/create/palette')
+    await page.locator('button[aria-label="Save / export"]').click()
+    await page.locator('.plb-savemenu').getByLabel('Project name').fill('Room To Spare')
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId('palette-save-refusal')).toHaveCount(0)
+    await expect(page.locator('.toast-success.show')).toContainText('Project saved')
+    await context.close()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 4 — toasts: the clock follows the message, and an error can be sent away
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('4 — an error toast stays until it is read or dismissed; a success stays short', () => {
