@@ -8089,8 +8089,12 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-ctx-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;font-size:12.5px;font-weight:600;color:var(--t1);text-align:left;background:none;border:none;border-radius:8px;cursor:pointer;transition:all var(--t);white-space:nowrap}
 .plb-ctx-item:hover{background:var(--bg-2);color:var(--t0)}
 .plb-ctx-item svg{flex-shrink:0;opacity:.8}
-.plb-ctx-item--danger{color:#D64545}
-.plb-ctx-item--danger:hover{background:color-mix(in srgb,#D64545 10%,transparent);color:#D64545}
+/* #D64545 on the menu card was 4.38:1 light / 3.97:1 dark at 12.5px
+   (2026-09-09). --err-strong is the text companion of the state token
+   (tests/unit/state-token-contrast): 7.8:1 light, 6.7:1 dark. The hover
+   tint stays on the base token, which is what fills are for. */
+.plb-ctx-item--danger{color:var(--err-strong)}
+.plb-ctx-item--danger:hover{background:color-mix(in srgb,var(--err) 10%,transparent);color:var(--err-strong)}
 .plb-ctx-sep{height:1px;margin:5px 4px;background:var(--border)}
 .plb-ctx-item--muted{color:var(--t3);cursor:default}
 .plb-ctx-item--muted:hover{background:none;color:var(--t3)}
