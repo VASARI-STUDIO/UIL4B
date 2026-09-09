@@ -68,6 +68,28 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
     }
   }
 
+  // Enter saves and Escape cancels, the way every other inline rename in the
+  // app already behaves (the project card, the Save Current form). Rendered on
+  // 2026-09-09: typing a new display name and pressing Enter did nothing at
+  // all — the field stayed open, no toast, no error — and the only way to
+  // commit was to reach for the Save button. A single-field edit that ignores
+  // Enter reads as broken, not as cautious.
+  //
+  // The suggestion list keeps first claim on the keys it uses: ArrowUp/Down
+  // move the highlight, Enter with a highlighted row picks it, and Escape with
+  // the list open closes the list rather than the edit. Only a key the list
+  // did not consume reaches the save/cancel branch.
+  const onFieldKey = (e) => {
+    if (options) {
+      const listOpen = suggestOpen && matches.length > 0
+      onSuggestKey(e)
+      if (e.defaultPrevented) return
+      if (e.key === 'Escape' && listOpen) return
+    }
+    if (e.key === 'Enter') { e.preventDefault(); handleSave() }
+    else if (e.key === 'Escape') { setEditing(false); setError('') }
+  }
+
   if (!editing) {
     return (
       <div className="settings-row">
@@ -89,7 +111,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
             type={type}
             value={val}
             onChange={e => { setVal(e.target.value); setSuggestOpen(true); setHi(-1) }}
-            onKeyDown={options ? onSuggestKey : undefined}
+            onKeyDown={onFieldKey}
             onBlur={options ? () => { setSuggestOpen(false); setHi(-1) } : undefined}
             placeholder={placeholder}
             autoFocus
@@ -361,6 +383,28 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const panelRef = useRef(null)
+
+  // Opening the confirmation unmounts the "Delete account" button that was
+  // just pressed, and a keyboard user's focus went with it — measured on
+  // 2026-09-09: document.activeElement was <body> the moment the panel
+  // appeared, so the next Tab started from the top of the page and a screen
+  // reader announced nothing about the list of what is destroyed. Focus lands
+  // on the password field where there is one (it is the next thing to do),
+  // and on the panel itself for a Google-only account, so the itemised list is
+  // read before the destructive button is reached. Never on the button: Enter
+  // on a freshly focused "Permanently delete" would be a one-keystroke
+  // deletion.
+  useEffect(() => {
+    if (!open) return
+    const input = panelRef.current?.querySelector('#del-confirm-pw')
+    ;(input || panelRef.current)?.focus()
+  }, [open])
+
+  // A password account cannot delete with an empty password — Firebase refuses
+  // the re-authentication — so the button waits for one. The label directly
+  // above the field says what it is waiting for.
+  const needsPassword = !googleOnly && !password
 
   const handleDelete = async () => {
     setBusy(true)
@@ -384,7 +428,7 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
   }
 
   return (
-    <div className="danger-confirm">
+    <div className="danger-confirm" ref={panelRef} tabIndex={-1}>
       <ul className="danger-confirm-list">
         {isPro && <li>Your subscription is cancelled immediately — you will not be billed again.</li>}
         <li>Your profile, saved projects, icons and synced designs are deleted.</li>
@@ -415,7 +459,7 @@ function DeleteAccount({ onDelete, googleOnly, isPro }) {
       )}
 
       <div className="danger-confirm-actions">
-        <button className="btn danger-confirm-go" onClick={handleDelete} disabled={busy}>
+        <button className="btn danger-confirm-go" onClick={handleDelete} disabled={busy || needsPassword}>
           {busy ? 'Deleting…' : 'Permanently delete'}
         </button>
         <button className="btn btn-s" onClick={() => { setOpen(false); setError(''); setPassword('') }} disabled={busy}>
