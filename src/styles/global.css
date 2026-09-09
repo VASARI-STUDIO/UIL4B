@@ -12064,27 +12064,24 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .ui-login-aside .ui-login-why-h{color:var(--t2)}
 /* margin-top:auto pushes this to the foot of the column at width. In the
    band layout the pane is not stretched, so it simply follows the list. */
-/* SHOWN AT EVERY WIDTH. This was display:none in the band layout: the line
-   exists to resolve the foot of a stretched column, and on a phone its ~48px
-   pushed "Already have an account? Sign in" below the fold on the signup
-   variant. The flow audit (#436) measured the other side of that trade: at
-   390px the sign-in gate had no visible way out — a corner ✕ and a scrim, and
-   nothing that says what closing does. A gate whose only exit is unlabelled is
-   the shape of a dark pattern whatever the intent, so the sentence stays and
-   the band layout pays for it in spacing, not in a control: a tighter margin
-   and rule here, and the aside's own padding and list gap below 781px (see the
-   max-width:780px block). Measured at 390×844 after: the gate's dialog runs
-   y=44–800 with this line ending at y=271 (the aside sits above the form on
-   the band layout), and on the signup variant "Already have an account? Sign
-   in" ends at y=826 inside a modal box ending at y=828 — nothing that was on
-   screen has left it. Held by tests/user-sim/72-flow-followups.spec.js. */
-.ui-login-aside-foot{display:block;margin:8px 0 0;padding-top:6px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--t2);text-wrap:pretty}
-/* The room the way-out line costs on a phone, paid back by the aside's own
-   spacing rather than by hiding a sentence: 8px of padding, 2px of list
-   margin and 3px per list gap. */
+/* Hidden in the band layout BY DEFAULT. This line exists to resolve the FOOT
+   of a stretched column; a phone has no stretched column, and the ~48px it
+   costs there pushed a real control ("Already have an account? Sign in") below
+   the fold on the sign-up pane — 09-auth-modal-accessibility pins that pane to
+   "nothing below the fold at 390", and with this line it overflows by 21px.
+   THE INTERRUPT GATE IS THE EXCEPTION, below. The flow audit (#436) measured
+   that at 390px the sign-in gate had no visible way out — a corner ✕ and a
+   scrim, and nothing that says what closing does. A gate whose only exit is
+   unlabelled is the shape of a dark pattern whatever the intent, so when this
+   dialog interrupts an action (.ui-login--interrupt: LoginPopup carries a
+   reason) the sentence shows at every width, in compact spacing. Measured at
+   390×844 after: the gate runs y=36–808 of 844 with this line ending at y=275
+   and zero overflow; the sign-up pane is byte-identical to before (y=22–822,
+   zero overflow, its switch control ending at y=799).
+   Held by tests/user-sim/72-flow-followups.spec.js. */
+.ui-login-aside-foot{display:none;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--t2);text-wrap:pretty}
 @media(max-width:780px){
-  .ui-login-aside{padding:12px 22px}
-  .ui-login-gets{margin-top:12px;gap:5px}
+  .ui-login--interrupt .ui-login-aside-foot{display:block;margin:8px 0 0;padding-top:6px}
 }
 
 /* The close button leaves .ui-modal-head, because at width the head is no

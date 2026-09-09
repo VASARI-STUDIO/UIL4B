@@ -24,7 +24,10 @@
 //   6  The gate's "Not now? Closing this changes nothing" line:
 //      display:none at 390 on both the gate and the signup variant. The gate
 //      ended at y=785 of 844; the signup dialog at 822 with "Already have an
-//      account? Sign in" ending at 800.
+//      account? Sign in" ending at 800 — and with the line, that pane
+//      overflowed its fold by 21px, which 09-auth-modal pins at zero. So the
+//      line shows at every width on the INTERRUPT gate (a reason is set); the
+//      sign-up pane, which nobody was interrupted into, stays as it was.
 //   7  /onboarding for an onboarded account: stayed at /onboarding, the
 //      first-win screen rendered.
 //   8  useModalDialog restored focus synchronously in its cleanup — the trace
@@ -42,7 +45,7 @@
 //   M3  PaletteBuilder  setSaveError(err.message) → toast?.(err.message)     3 red, 2 of 3
 //   M4  useToast.js     toastDuration(msg, kind) → 1800                      4 red, 3 of 4
 //   M5  Settings.jsx    rememberedSection() || 'account' → 'support'         5 red, 2 of 3
-//   M6  global.css      .ui-login-aside-foot display:block → none            6 red, 3 of 3
+//   M6  global.css      .ui-login--interrupt .ui-login-aside-foot → none   6 red, 3 of 3
 //   M7  Onboarding.jsx  settled !== '/onboarding' → false                    7 red, 2 of 2
 //   M8  useModalDialog  requestAnimationFrame(fn) → fn() (synchronous)       8 red, 2 of 2; modal-contract.test.js red
 //   M9  projects.css    .uh-card:has(.uh-menu){z-index:2} removed            4 red, 1 of 4 (the 390 case)
@@ -386,20 +389,30 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
     })
   }
 
-  test('390px: on the signup variant "Already have an account? Sign in" is still on screen — the line paid for itself in spacing', async ({ browser }) => {
+  test('390px: the gate leaves nothing below its fold, and the sign-up pane is untouched', async ({ browser }) => {
+    // The line costs ~48px. On the sign-up pane that is 21px past the fold at
+    // 390×844 (09-auth-modal-accessibility pins that pane to zero overflow),
+    // and that pane is not an interruption — the person chose it. So the
+    // exception is the interrupt gate only, and it must fit.
     const { context, page } = await open(browser, PHONE)
-    watch(page, 'a first-time visitor creating an account on a phone')
+    watch(page, 'a first-time visitor on a phone: the gate, then the sign-up pane')
     await go(page, '/create/palette')
+    await page.locator('button[aria-label="Save / export"]').click()
+    const gate = page.getByRole('dialog', { name: /Log in to continue/i })
+    await expect(gate).toBeVisible()
+    await expect(gate).toHaveClass(/ui-login--interrupt/)
+    await expect.poll(() => gate.evaluate((el) => el.scrollHeight - el.clientHeight), 'the gate must not scroll to show its own way out').toBe(0)
+    await page.keyboard.press('Escape')
+    await expect(gate).toHaveCount(0)
+
     await page.locator('.pnav-mobile').click()
     await page.getByRole('button', { name: 'Start for Free' }).click()
-    const dialog = page.locator('.ui-login')
-    await expect(dialog).toBeVisible()
-    await expect(dialog.locator('.ui-login-aside-foot')).toBeVisible()
-    const sw = dialog.getByRole('button', { name: /Already have an account/ })
-    await expect(sw).toBeVisible()
-    const [swBox, dialogBox] = await Promise.all([sw.boundingBox(), dialog.boundingBox()])
-    expect(swBox.y + swBox.height, 'the switch control must not be pushed below the modal\'s visible box').toBeLessThanOrEqual(dialogBox.y + dialogBox.height + 1)
-    expect(swBox.y + swBox.height).toBeLessThanOrEqual(PHONE[1])
+    const signup = page.getByRole('dialog', { name: /Create your free account/i })
+    await expect(signup).toBeVisible()
+    await expect(signup).not.toHaveClass(/ui-login--interrupt/)
+    await expect(signup.locator('.ui-login-aside-foot')).toBeHidden()
+    await expect.poll(() => signup.evaluate((el) => el.scrollHeight - el.clientHeight), 'nothing on the sign-up pane may sit below the fold').toBe(0)
+    await expect(signup.getByRole('button', { name: /Already have an account/ })).toBeVisible()
     await context.close()
   })
 })

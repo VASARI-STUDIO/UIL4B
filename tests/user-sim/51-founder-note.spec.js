@@ -134,6 +134,10 @@ test.describe('keyboard and screen reader', () => {
 
     await page.keyboard.press('Escape')
     await expect(page.locator('.fnote')).toHaveCount(0)
+    // useModalDialog hands focus back a frame AFTER the close (so the key that
+    // closed the dialog cannot land on the restored trigger — #436 follow-up
+    // 8); the probe reads activeElement, so give it that frame.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))
     const after = await probe(page)
     expect(after.focusIsTrigger, 'Escape must hand focus back to the trigger').toBe(true)
     expect(after.expanded).toBe('false')
