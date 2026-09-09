@@ -87,6 +87,40 @@ const hitWithin = (loc, selector) => loc.evaluate((el, sel) => {
 }, selector)
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 5 — /settings opens on Account
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('5 — settings opens on Account, and remembers the section you chose', () => {
+  for (const size of [PHONE, DESK]) {
+    test(`${size[0]}px: Account first; Subscription is remembered across a reload`, async ({ browser }) => {
+      const { context, page } = await open(browser, size)
+      watch(page, `a free account opening its settings (${size[0]}px)`)
+      await signIn(page, { plan: 'free', projects: 1 })
+      await go(page, '/settings')
+      const selected = page.locator('.settings-nav [role="tab"][aria-selected="true"]')
+      await expect(selected).toHaveText(/Account/)
+      await expect(page.locator('#set-account')).toBeVisible()
+      await expect(page.locator('#set-support')).toBeHidden()
+
+      await page.getByRole('tab', { name: 'Subscription' }).click()
+      await expect(page.locator('#set-support')).toBeVisible()
+      await go(page, '/settings')
+      await expect(selected, 'the section chosen last time is where the page opens').toHaveText(/Subscription/)
+      await context.close()
+    })
+  }
+
+  test('signed out there is no Account section, so the page still opens on one that exists', async ({ browser }) => {
+    const { context, page } = await open(browser, DESK)
+    watch(page, 'a signed-out visitor at /settings')
+    await go(page, '/settings')
+    const selected = page.locator('.settings-nav [role="tab"][aria-selected="true"]')
+    await expect(selected).toHaveCount(1)
+    await expect(page.locator('.settings-section:not([hidden])')).toHaveCount(1)
+    await context.close()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 6 — the gate's way out is visible on a phone
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390', () => {
