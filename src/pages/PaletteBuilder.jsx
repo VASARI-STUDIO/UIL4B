@@ -26,6 +26,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getOwnerHandle, PUBLIC_OWNER_ID } from '../utils/constants'
 import UIKitGuide from '../components/UIKitGuide'
+import SaveRefusal from '../components/SaveRefusal'
 import { appendCommunitySubmission } from '../utils/communitySubmissions'
 import { buildQueueRecord } from '../utils/communityQueue'
 import { publishToQueue } from '../utils/communityQueueApi'
@@ -1024,6 +1025,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Toolbar popovers + board popovers (one open at a time, dismiss on
   // outside pointerdown or Escape — handled by the shared effect below).
   const [saveOpen, setSaveOpen] = useState(false)  // merged Save & share menu
+  const [saveError, setSaveError] = useState('')   // the cap's refusal, held under the field — see doSave
   const [harmOpen, setHarmOpen] = useState(false)
   const [visionOpen, setVisionOpen] = useState(false)
   const [toolsOpen, setToolsOpen] = useState(false)  // the collapsed Tools panel
@@ -1360,7 +1362,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Close every toolbar menu in one call — used by the dismiss layer and by each
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
-    setSaveOpen(false); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false); setToolsOpen(false)
+    setSaveOpen(false); setSaveError(''); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false); setToolsOpen(false)
   }, [])
 
   /* ── Does the action rail fit? (palette-toolbar-rendering) ────────────────
@@ -2298,10 +2300,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     if (!name) return
     try {
       saveProject(name)
-      setSaveName(''); setSaveOpen(false)
+      setSaveName(''); setSaveError(''); setSaveOpen(false)
       toast?.('Project saved')
     } catch (err) {
-      toast?.(err?.message || 'Couldn’t save')
+      // The cap's refusal went out as the SUCCESS toast — green tick, 1.8
+      // seconds, "go Pro" with nothing to press (#436, flow 2). It stays under
+      // the field it refused, in ProjectContext's words, with the way forward
+      // as a link — the treatment /projects already gives the same refusal.
+      setSaveError(err?.message || 'Couldn’t save')
     }
   }
 
@@ -2728,6 +2734,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   />
                   <button type="button" className="btn btn-s btn-accent" onClick={doSave}>Save</button>
                 </div>
+                {saveError && <SaveRefusal message={saveError} testId="palette-save-refusal" />}
                 {projects.length > 0 && (
                   <>
                     <div className="plb-menu-sub">Overwrite existing</div>
@@ -2739,7 +2746,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                           className="plb-menu-item"
                           onClick={() => {
                             try { overwriteProject(p.id); setSaveOpen(false); toast?.('Updated: ' + p.name) }
-                            catch (err) { toast?.(err?.message || 'Couldn’t save') }
+                            catch (err) { toast?.(err?.message || 'Couldn’t save', 'error') }
                           }}
                         >
                           {p.name}

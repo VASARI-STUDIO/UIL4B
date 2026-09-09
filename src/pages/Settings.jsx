@@ -485,6 +485,19 @@ function NavIcon({ id }) {
   }
 }
 
+// Which section /settings opens on. It opened on Subscription, so a free
+// account's first sight of its own settings was the upgrade pitch (#436, flow
+// 5). Account is the default for a signed-in person; the last section they
+// chose is remembered in this browser so the page opens where they left it.
+// A deep link (Plans → state.section) still wins — see the effect below.
+const SECTION_KEY = 'vs-settings-section'
+function rememberedSection() {
+  try { return localStorage.getItem(SECTION_KEY) || '' } catch { return '' }
+}
+function rememberSection(id) {
+  try { localStorage.setItem(SECTION_KEY, id) } catch { /* private mode: nothing to remember with */ }
+}
+
 export default function Settings({ toast }) {
   const { user, userProfile, logout, updateProfile, updateEmail, updatePassword, deleteAccount, isGoogleOnlyAccount, profileSyncError, dismissProfileSyncError } = useAuth()
   const { reducedMotion, setReducedMotion } = useAppearance()
@@ -496,7 +509,12 @@ export default function Settings({ toast }) {
   // and nobody noticed. Turning the sections into panels turned it into a blank
   // page. The id stays 'support' because Plans.jsx deep-links to it via
   // `state={{ section: 'support' }}`.
-  const [active, setActive] = useState('support')
+  const [chosen, setActive] = useState(() => rememberedSection() || 'account')
+  // 'account' is the one section that only exists signed in. Signed out — and
+  // for the instant before auth resolves — it falls back to the first section
+  // rather than to a blank page, which is what an id matching no panel gives.
+  const active = chosen === 'account' && !user ? 'support' : chosen
+  const pickSection = (id) => { setActive(id); rememberSection(id) }
   const [confirmClear, setConfirmClear] = useState(false)
   const [exporting, setExporting] = useState(false)
   // Counted from storage, not from the length of a hand-written list. The old
@@ -644,7 +662,7 @@ export default function Settings({ toast }) {
   // authoring pattern for a vertical tablist.
   const selectTab = (index) => {
     const next = sections[(index + sections.length) % sections.length]
-    setActive(next.id)
+    pickSection(next.id)
     tabRefs.current[(index + sections.length) % sections.length]?.focus()
   }
   const onTabKeyDown = (event, index) => {
@@ -682,7 +700,7 @@ export default function Settings({ toast }) {
               tabIndex={active === s.id ? 0 : -1}
               ref={(node) => { tabRefs.current[i] = node }}
               className={`settings-nav-item${active === s.id ? ' active' : ''}`}
-              onClick={() => setActive(s.id)}
+              onClick={() => pickSection(s.id)}
               onKeyDown={(event) => onTabKeyDown(event, i)}
             >
               <NavIcon id={s.id} />

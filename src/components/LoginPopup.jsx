@@ -202,7 +202,7 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
     <div className="ui-modal-overlay" onMouseDown={() => { if (!loading) onDismiss() }}>
       <div
         ref={dialogRef}
-        className={'ui-modal ui-login' + (showAside ? ' ui-login--split' : '')}
+        className={'ui-modal ui-login' + (showAside ? ' ui-login--split' : '') + (showIntent ? ' ui-login--interrupt' : '')}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ui-login-title"

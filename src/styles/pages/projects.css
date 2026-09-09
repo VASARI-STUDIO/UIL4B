@@ -109,11 +109,12 @@
 .uh-stats li + li{padding-left:var(--s-4);border-left:1px solid var(--border)}
 .uh-stats strong{font-weight:700;font-size:var(--fs-caption);color:var(--t0)}
 .uh-quota{margin-top:var(--s-3);max-width:58ch;font-size:var(--fs-caption);line-height:1.65;color:var(--t2)}
-.uh-quota-link{font-weight:600;color:var(--accent-strong)}
+/* .uh-quota-link and .uh-save-refusal live in global.css: SaveRefusal is a
+   shared component now (PaletteBuilder renders it on the homepage), and this
+   file only ships with the /projects chunk. */
 /* The cap's refusal, held in the form it refused (SaveRefusal in Projects.jsx).
    Error ink on a plain line, no card and no icon: it sits inside a card
    already, and a box inside a box would out-shout the form it explains. */
-.uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
 
 /* ── The band: NEXT | TIP ─────────────────────────────────────────── */
 /* Two hairlines and a gap. No fill, no radius, no shadow — see the note above.
@@ -187,6 +188,14 @@
 .uh-danger:disabled{opacity:.5;cursor:not-allowed}
 
 .uh-actions{position:relative;flex:0 0 auto}
+/* A card with its Actions menu open outranks its neighbours. .card:hover lifts
+   the card with a transform, and a transform is a stacking context — so the
+   menu's z-index:130 was boxed inside the hovered card, and in the one-column
+   grid at 390 the NEXT card's .uh-card-art painted over Duplicate and
+   everything below it. Measured 2026-09-10: elementFromPoint on Duplicate
+   returned the next card's art; the tap did nothing. Scoped to an open menu
+   so an ordinary hover changes nothing. */
+.uh-card:has(.uh-menu){z-index:2}
 
 .uh-actions-trigger{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid transparent;border-radius:var(--radius-pill);background:none;color:var(--t3);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 
