@@ -5801,10 +5801,12 @@ html.lenis{scroll-behavior:auto!important}
    the element rule on class count — the same fix `.snapv--grad` already uses
    two hundred lines below. The gradient goes on the ELEMENT and the runnable
    track is made transparent and full-height, so the strip is the control. */
-.cpk-instrument .cpk-hue{-webkit-appearance:none;appearance:none;display:block;width:100%;height:22px;margin:0;padding:0;border:0;border-top:1px solid var(--border);border-radius:0;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);outline:none;cursor:pointer}
-.cpk-instrument .cpk-hue::-webkit-slider-runnable-track{height:22px;border-radius:0;background:transparent}
-.cpk-instrument .cpk-hue::-moz-range-track{height:22px;border-radius:0;background:transparent}
-.cpk-instrument .cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:3px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab;position:relative;z-index:2}
+/* 24px, not 22: WCAG 2.5.8's floor, and the one control in the picker that a
+   phone user drags. Measured 22px on all four tools that mount it. */
+.cpk-instrument .cpk-hue{-webkit-appearance:none;appearance:none;display:block;width:100%;height:24px;margin:0;padding:0;border:0;border-top:1px solid var(--border);border-radius:0;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);outline:none;cursor:pointer}
+.cpk-instrument .cpk-hue::-webkit-slider-runnable-track{height:24px;border-radius:0;background:transparent}
+.cpk-instrument .cpk-hue::-moz-range-track{height:24px;border-radius:0;background:transparent}
+.cpk-instrument .cpk-hue::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:5px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab;position:relative;z-index:2}
 .cpk-instrument .cpk-hue::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:1px solid rgba(0,0,0,.35);box-shadow:0 1px 3px rgba(0,0,0,.35);cursor:grab}
 .cpk-instrument .cpk-hue:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .cpk-row{display:flex;align-items:center;gap:var(--s-1)}
@@ -7739,7 +7741,10 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .plb-visopt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
 .plb-visopt--on>svg{color:var(--brand)}
 .plb-visopt-l{flex:1}
-.plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#16A34A;background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
+/* 9px bold on a 15% green tint: #16A34A measured 2.69:1 in light and 4.07:1
+   in dark (2026-09-09). --ok-strong is the text companion of the state token
+   (tests/unit/state-token-contrast): 6.1:1 on the light tint, 7.7:1 on dark. */
+.plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
 .plb-scrolllist{display:flex;flex-direction:column;gap:2px;max-height:min(50vh,380px);overflow-y:auto;overscroll-behavior:contain}
 .plb-varrow{display:flex;align-items:center;gap:8px;width:100%;padding:0;background:none;border:none;border-radius:var(--radius-s);text-align:left}
 button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
@@ -7832,6 +7837,13 @@ button.plb-varrow:hover{background:var(--bg-2)}
      the row; a hairline says so without adding a fourth kind of button. */
   .plb-toolbar-group.rail-overflow>.plb-savewrap{position:relative}
   .plb-toolbar-group.rail-overflow>.plb-savewrap::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:1px;height:20px;background:var(--border)}
+  /* Save / export is the LAST control on the row, hard against the right
+     edge, and its menu carries .plb-menu--left (left:0) like every other
+     toolbar dropdown. Measured 2026-09-09 at 1440, signed in: the 264px menu
+     ran 109px past the viewport — "Copy link to this pale", "Submit to the
+     comm" — for every signed-in desktop user. Hang it from the right edge
+     here, where the row is a row; the ≤960 sheet below ignores both. */
+  .plb-toolbar-group.rail-overflow>.plb-savewrap .plb-menu{left:auto;right:0}
 }
 .plb-imgstage{position:relative;width:100%;aspect-ratio:var(--plb-img-ar,1.6);max-width:calc(min(48vh,420px) * var(--plb-img-ar,1.6));margin-inline:auto;overflow:hidden;border-radius:var(--radius-s);background:var(--bg-2);touch-action:none;user-select:none}
 .plb-imgstage-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
@@ -8040,8 +8052,16 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-pop-x:hover{color:var(--t0);background:var(--bg-2)}
 
 /* Tints panel + per-column HCT picker (anchored inside the column) */
-.plb-tintpop,.plb-picker{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:45;width:206px;padding:10px}
-.plb-picker{width:248px}
+/* Centred on the column, but never past the board's edge: on the FIRST column
+   a centred 206px panel sat at x=-10 at 1024px and x=-2 at 1097px (measured
+   2026-09-09), cutting the T95/T90 labels. clamp() keeps 8px inside the column
+   on either side; a column narrower than the panel resolves to the left bound,
+   which is the edge a person can actually see past (the Add rail is to the
+   right). Mobbin: Runway and Magnific shift an anchored colour panel inward
+   rather than let it leave the canvas. <=768 replaces this with a full-width
+   sheet below. */
+.plb-tintpop,.plb-picker{position:absolute;bottom:96px;left:clamp(8px,calc(50% - 103px),calc(100% - 214px));z-index:45;width:206px;padding:10px}
+.plb-picker{width:248px;left:clamp(8px,calc(50% - 124px),calc(100% - 256px))}
 .plb-tint-list{display:flex;flex-direction:column;gap:2px;max-height:min(46vh,330px);overflow-y:auto;overscroll-behavior:contain}
 .plb-tint-row{display:flex;align-items:center;gap:8px;width:100%;padding:5px 6px;background:none;border:none;border-radius:7px;cursor:pointer;transition:background var(--t)}
 .plb-tint-row:hover{background:var(--bg-2)}
@@ -8071,8 +8091,12 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-ctx-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;font-size:12.5px;font-weight:600;color:var(--t1);text-align:left;background:none;border:none;border-radius:8px;cursor:pointer;transition:all var(--t);white-space:nowrap}
 .plb-ctx-item:hover{background:var(--bg-2);color:var(--t0)}
 .plb-ctx-item svg{flex-shrink:0;opacity:.8}
-.plb-ctx-item--danger{color:#D64545}
-.plb-ctx-item--danger:hover{background:color-mix(in srgb,#D64545 10%,transparent);color:#D64545}
+/* #D64545 on the menu card was 4.38:1 light / 3.97:1 dark at 12.5px
+   (2026-09-09). --err-strong is the text companion of the state token
+   (tests/unit/state-token-contrast): 7.8:1 light, 6.7:1 dark. The hover
+   tint stays on the base token, which is what fills are for. */
+.plb-ctx-item--danger{color:var(--err-strong)}
+.plb-ctx-item--danger:hover{background:color-mix(in srgb,var(--err) 10%,transparent);color:var(--err-strong)}
 .plb-ctx-sep{height:1px;margin:5px 4px;background:var(--border)}
 .plb-ctx-item--muted{color:var(--t3);cursor:default}
 .plb-ctx-item--muted:hover{background:none;color:var(--t3)}
@@ -8268,7 +8292,12 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 /* Thin separator between a menu's stacked sections (Save vs. Share & export). */
 .plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
 /* Merged Save & share menu — a touch wider to fit the export action list. */
-.plb-savemenu{min-width:264px}
+/* A fixed width, not a minimum: an absolutely positioned box is shrink-to-fit,
+   and .plb-menu-item is nowrap, so a saved project called "Quarterly rebrand
+   exploration for the northern hemisphere retail launch, revision fourteen"
+   made the menu 552px wide (measured 2026-09-09) — ellipsis never engaged
+   because the box grew instead. */
+.plb-savemenu{width:280px}
 
 /* Colour-gallery popup — one large tabbed panel that hosts the community grid,
    the variations list and the brand palettes. Overrides the base .plb-menu
@@ -8288,6 +8317,12 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-galpopup-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font-size:12px;font-weight:600;color:var(--t2)}
 .plb-galpopup-body .pgal-grid{grid-template-columns:repeat(2,1fr);gap:14px 12px}
 .plb-galpopup-body .pgal-stripes{height:110px}
+/* At 110px the five stripes are ~20px each, under the 24px floor; they all do
+   the same thing as "Use →", so the card's whole face is one target and the
+   labelled control is the one that has to clear the floor. It measured
+   285x20 (2026-09-09). Scoped to the popup: Discover's own card is its own
+   surface. */
+.plb-galpopup-body .pgal-use{min-height:24px;padding-top:2px;padding-bottom:2px}
 .plb-galpopup-body .plb-menu-sub a{color:var(--accent-strong);text-decoration:none}
 .plb-galpopup-body .plb-menu-sub a:hover{text-decoration:underline}
 /* Palette-history menu — plb-varrow rows with a mini strip + relative time */
@@ -9345,10 +9380,15 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 .ggn-angle-deg{font-family:var(--mono);font-size:12px;color:var(--ggn-t2)}
 /* CSS output */
 .ggn-copy{font-family:var(--font);font-size:11.5px;font-weight:600;color:var(--ggn-accent-text);background:transparent;border:none;cursor:pointer;padding:0;transition:opacity var(--t)}
-.ggn-copy:hover{opacity:.75}
+/* opacity:.75 took an 11.5px link from 5.8:1 to 3.64:1 (light) and 3.71:1
+   (dark) on hover — the moment it is being read (2026-09-09). */
+.ggn-copy:hover{text-decoration:underline;text-underline-offset:2px}
 .ggn-css{display:block;width:100%;text-align:left;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);padding:12px 14px;cursor:pointer;transition:border-color var(--t)}
 .ggn-css:hover{border-color:var(--ggn-line-2)}
-.ggn-css code{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ggn-t1);word-break:break-all;white-space:pre-wrap}
+/* break-all split "#7C3AED" across two lines in the 1024–1136 two-column band
+   and at 390 (2026-09-09): a hex value read as two values. `anywhere` wraps
+   at spaces first and only enters a token that cannot fit a line alone. */
+.ggn-css code{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ggn-t1);word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
 .ggn-fmt{display:inline-flex;gap:3px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);padding:3px;margin-bottom:9px}
 .ggn-fmt-btn{font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--ggn-t2);background:transparent;border:none;border-radius:var(--radius-xs);padding:5px 12px;cursor:pointer;transition:all var(--t)}
 .ggn-fmt-btn:hover{color:var(--ggn-t0)}
@@ -9440,7 +9480,11 @@ input.ggn-stop-hex{font-family:var(--mono);padding:0}
   .ggn-imports{grid-template-columns:1fr}
 }
 /* Generator: import-colours block (palette / saved projects) */
-.ggn-imports{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+/* 240, not 220: a 220px card leaves the text column 118px beside the 64px
+   stripes, and "Saved project · 3 colours" is 123px at 11px — every saved
+   project's meta line ended in an ellipsis at 1280, 1440 and 1920
+   (measured 2026-09-09). 240 gives the column 138px. */
+.ggn-imports{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
 .ggn-import{display:flex;align-items:center;gap:12px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius);padding:10px 12px;cursor:pointer;font-family:var(--font);text-align:left;transition:border-color var(--t),transform var(--t)}
 .ggn-import:hover{border-color:var(--ggn-accent);transform:translateY(-1px)}
 .ggn-import-stripes{display:flex;flex-shrink:0;width:64px;height:36px;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--ggn-line)}
@@ -10342,7 +10386,10 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .tsc-copy-all{min-height:34px;padding:7px 11px;font-size:10.5px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
 .tsc-copy-all:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .tsc-copy-primary{min-height:38px;padding:8px 14px;font-size:11px;font-weight:650;color:var(--accent-fg);background:var(--accent-strong);border:1px solid var(--accent-strong);border-radius:var(--radius-s);cursor:pointer;transition:background var(--t),border-color var(--t)}
-.tsc-copy-primary:hover{background:var(--brand-soft);border-color:var(--brand-soft)}
+/* Hover DARKENS a filled primary. The old --brand-soft hover put white on
+   #4D90FF at 3.11:1 for 11px text (2026-09-09); an 88/12 mix towards the
+   theme's ink is 6.9:1 light and 6.5:1 dark. */
+.tsc-copy-primary:hover{background:color-mix(in srgb,var(--accent-strong) 88%,var(--t0));border-color:color-mix(in srgb,var(--accent-strong) 88%,var(--t0))}
 .tsc-export{max-height:420px;margin:0;padding:18px;font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);overflow:auto}
 .tsc-export:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .tsc-select{width:100%;height:42px;padding:0 12px;font-family:var(--font);font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;margin-bottom:14px;transition:border-color var(--t),box-shadow var(--t)}
@@ -11747,18 +11794,15 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 /* Edge flipping, driven by data attributes that usePopover writes after
    measuring the TRIGGER (never the positioned panel — that oscillates). */
 .pop[data-pop-align="start"]{right:auto;left:0}
-.pop[data-pop-align="clamp"]{right:auto;left:50%;transform:translateX(-50%)}
+/* Neither edge fits: pin the panel EDGE_PAD from the viewport's left. The
+   offset is written by placePopover; centring on the trigger (the old rule)
+   sent a panel off the far edge whenever the trigger was near one. */
+.pop[data-pop-align="clamp"]{right:auto;left:var(--pop-x,0px)}
 .pop[data-pop-side="top"]{top:auto;bottom:calc(100% + var(--s-2))}
 .pop[data-pop-side="top"]{animation-name:pop-in-up}
 @keyframes pop-in-up{
   from{opacity:0;transform:translateY(6px) scale(.985)}
   to{opacity:1;transform:translateY(0) scale(1)}
-}
-.pop[data-pop-align="clamp"][data-pop-side="top"],
-.pop[data-pop-align="clamp"]{animation-name:pop-in-centre}
-@keyframes pop-in-centre{
-  from{opacity:0;transform:translate(-50%,-6px) scale(.985)}
-  to{opacity:1;transform:translate(-50%,0) scale(1)}
 }
 .pop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -12376,7 +12420,13 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .fpr-keep,.tsc-keep{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .fpr-keep-note,.tsc-keep-note{flex:1;min-width:200px;margin:0;font-size:11.5px;line-height:1.5;color:var(--t2)}
 @media (max-width:560px){
-  .svt-menu{width:min(320px,calc(100vw - 24px))}
+  /* The menu opens UPWARD from a button that sits mid-screen, and at the
+     project cap the wall makes it 419px tall: at 390px the wall's heading was
+     24px above the viewport (2026-09-09), the first thing it says cut off.
+     Same bottom-sheet idiom .plb-menu already uses below 961px. Still a child
+     of .svt-wrap, so the outside-press dismissal is unchanged. */
+  .svt-menu{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;max-height:min(76dvh,560px);padding:14px 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.28);z-index:70}
+  .svt-menu::before{content:'';display:block;width:36px;height:4px;margin:0 auto 12px;border-radius:999px;background:var(--border)}
   .svt-wrap{width:100%}
   .svt-trigger{width:100%;justify-content:center}
   .fpr-keep,.tsc-keep{gap:10px}

@@ -78,6 +78,21 @@ export function placePopover(trigger, panel) {
   else if (!endFits && !startFits) align = 'clamp'
   setIfChanged(panel, 'data-pop-align', align)
 
+  // 'clamp' used to centre the panel on the trigger, which is not a clamp: a
+  // trigger near either edge put the panel off screen on the other side.
+  // Measured 2026-09-09 on /create/palette at 320px: the seed picker (268px)
+  // centred on a chip 79px from the left rendered from x=-24, so "PICK SEED
+  // COLOUR" read "ICK SEED COLOUR" and the first preset column was gone.
+  // The panel is at most `100vw - 2*EDGE_PAD` wide (global.css .pop), so
+  // pinning its left edge EDGE_PAD from the viewport always fits. The offset
+  // is written relative to the panel's containing block because `left` is;
+  // the trigger is the fallback for a panel that has none.
+  if (align === 'clamp') {
+    const parent = panel.offsetParent?.getBoundingClientRect() || anchor
+    const x = `${Math.round(EDGE_PAD - parent.left)}px`
+    if (panel.style.getPropertyValue('--pop-x') !== x) panel.style.setProperty('--pop-x', x)
+  }
+
   // Vertical: open upward only when the panel genuinely does not fit below AND
   // there is more room above. Flipping into an equally short gap helps nobody.
   const roomBelow = vh - anchor.bottom
