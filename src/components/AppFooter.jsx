@@ -63,9 +63,16 @@ export default function AppFooter({ compact = false }) {
       <div className="app-footer-inner">
         <div className="app-footer-brand">
           <span className="app-footer-mark">UIL4B</span>
-          <p className="app-footer-tagline">
-            The operating workspace for building, validating and exporting interface foundations.
-          </p>
+          {/* THE TAGLINE IS GONE — anti-slop audit, 2026-09-09. Under the
+              wordmark sat "The operating workspace for building, validating
+              and exporting interface foundations." on every page of the site:
+              a tagline (the founder's word for the "UI system toolkit" line he
+              retired as "a huge AI Slop feature"), and a value claim typed by
+              an agent rather than read from positioning.js, which is exactly
+              what positioning-truth.test.js exists to stop. Nothing replaces
+              it — the four founder lines each already have a surface, and a
+              footer that repeats one of them under every page would be the
+              "all over the place" he named. The wordmark and the way in stay. */}
           <Link className="app-footer-start" to="/create/color">
             Start with colour <span aria-hidden="true">&rarr;</span>
           </Link>

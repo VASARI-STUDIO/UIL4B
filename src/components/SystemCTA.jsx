@@ -38,7 +38,11 @@ export default function SystemCTA({
       </div>
       <div className="system-cta-grid" aria-hidden="true" />
       <div className="system-cta-inner" data-reveal>
-        <span className="home-eyebrow">{eyebrow}</span>
+        {/* Optional since the 2026-09-09 anti-slop audit: a caller passing
+            `eyebrow={null}` gets no label above the heading. An eyebrow that
+            only restates the button under it ("Start on Free" over "Start
+            building free") is the retired eyebrow motif (#382, #391, #398). */}
+        {eyebrow && <span className="home-eyebrow">{eyebrow}</span>}
         <h2 className="system-cta-title" id="system-cta-title">{title}</h2>
         {description && <p className="system-cta-lede">{description}</p>}
         <div className="system-cta-actions">

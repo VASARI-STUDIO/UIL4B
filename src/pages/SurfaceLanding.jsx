@@ -155,13 +155,31 @@ const DISCOVER_LIVE = DISCOVER_GROUPS.filter((g) => !g.soon).length
 const DISCOVER_SOON = DISCOVER_GROUPS.length - DISCOVER_LIVE
 
 const SURFACES = {
+  // ── Discover, after the anti-slop audit of 2026-09-09 ──────────────────
+  //
+  // THE HEADLINE WAS A SENTENCE THE FOUNDER HAD ALREADY THROWN OUT. It read
+  // "Find systems worth stealing." — and "Systems worth stealing." is one of
+  // the four homepage headings 56-founder-rejected-headlines.spec.js keeps off
+  // the page, on his verdict: '"Systems worth stealing." is bad copy'. Adding
+  // "Find" to a rejected line does not un-reject it. The lede under it
+  // ("…the outside tools that earn a tab — most of them one click from the
+  // tool that uses them.") was agent copy built on "earn a tab", an idiom
+  // that had spread to the nav promo, the Curated Resources hero and two grid
+  // headings — a motif by repetition, not a UIL4B signature.
+  //
+  // Neither is replaced with a new sentence, because there is no founder line
+  // about Discover to derive from (see the PR: "sentences the founder needs to
+  // write"). The h1 is the surface's own name, which is how every library
+  // under it is already headed ("Palette Library", "Gradient Library"), and
+  // the eyebrow that repeated that name above it is gone — the founder marked
+  // the taxonomy-label-above-an-h1 motif "AI" on the gallery mastheads and
+  // asked for the change to reach every header that matches
+  // (DiscoverGalleryHero.jsx). The derived hint under the button still says
+  // what is open. Learn is untouched: #431 just reworked it.
   discover: {
-    eyebrow: 'Discover',
-    title: 'Find systems worth stealing.',
-    // Names what is in the libraries rather than what browsing them feels like.
-    // The old lede opened on "Browse community UI systems", which is Inspiration
-    // — still `soon: true`, still unbuilt.
-    lede: 'Palettes, gradients, fonts, icons, prompts and the outside tools that earn a tab — most of them one click from the tool that uses them.',
+    eyebrow: null,
+    title: 'Discover',
+    lede: null,
     hue: 'imagery',
     groups: DISCOVER_GROUPS,
     primaryLabel: 'Browse palettes',
@@ -216,9 +234,9 @@ export default function SurfaceLanding({ surface }) {
           just arrived at, competing with the grid of that surface's own
           destinations a screen below. */}
       <header className="home-hero home-hero--surface">
-        <span className="home-eyebrow">{s.eyebrow}</span>
+        {s.eyebrow && <span className="home-eyebrow">{s.eyebrow}</span>}
         <h1 className="home-hero-h1">{s.title}</h1>
-        <p className="home-hero-sub">{s.lede}</p>
+        {s.lede && <p className="home-hero-sub">{s.lede}</p>}
         <div className="home-hero-cta">
           <Link className="ui-pill ui-pill-ink ui-pill-lg" to={s.primaryTo}>
             {s.primaryLabel}

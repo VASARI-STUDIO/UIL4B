@@ -8,7 +8,6 @@ import TryItMark from '../components/TryItMark'
 // The ?hero=a|b|c exploration that used to wrap this hero is GONE — founder,
 // 2026-09-07: "Retire it, V2 hero decides." See the note above the <h1>.
 import NavIcon from '../components/NavIcon'
-import SystemCTA from '../components/SystemCTA'
 import { useHomeMotion } from '../hooks/useHomeMotion'
 import { CREATE_GROUPS, HOME_SATELLITES, HOME_WORKBENCH_TABS, categoryDestination, toolRoute } from '../data/toolTree'
 import { GALLERY_GRADIENTS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
@@ -16,6 +15,9 @@ import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 import { paletteBuilderUrl } from '../data/paletteGallery'
 import { HERO_HEADLINE, SURFACE_LINE, line } from '../data/positioning'
 import { APPROVED_CURRENCY, cheapestPerMonth, purchasablePlans, resolvePlanLadder, savingsVsMonthly } from '../config/planLadder'
+import { AI_LIMITS } from '../config/plans'
+import { COLOUR_SYSTEMS } from '../config/colourSystems'
+import { proOnlyFormats } from '../config/exportFormats'
 
 // ── The V2 homepage ──────────────────────────────────────────────────────────
 //
@@ -35,33 +37,20 @@ import { APPROVED_CURRENCY, cheapestPerMonth, purchasablePlans, resolvePlanLadde
 // The command bar searches the real tool registry through the same
 // `queryCommandIndex` the ⌘K palette uses. There is no second index.
 
-/* ── Catalogue figures — every number derived, none invented ──────────────── */
-
-// Counted from the tool tree at module load, so the claim can never drift from
-// the product. The mock's "40+ TOOLS" was invented; this is what is live.
-const LIVE_TOOL_COUNT = CREATE_GROUPS
-  .flatMap((g) => g.tools)
-  .filter((t) => !t.soon).length
-
-// 200k icons: the Iconify catalogue behind /create/icons, already claimed in
-// toolTree.js and in the workbench's Icon panel.
-// 1,500+ fonts: the Google Fonts catalogue behind /create/font-gallery, as
-// described in discoverResources.js. Both are the real libraries the tools read.
-//
-// THESE USED TO SIT ABOVE THE HEADLINE, as a centred `48 LIVE TOOLS · 200K
-// ICONS · 1,500+ FONTS · ONE ACCOUNT` strip. The numbers were honest; the
-// COMPONENT was the problem. A stat bar over a hero headline is the single most
-// recognisable piece of generic SaaS furniture, and a visitor reads the shape
-// before they read the figures — which is exactly the "this is an AI-generated
-// website" reaction the founder relayed from a real user.
-//
-// They now sit beside the toolset grid, where each number describes something
-// the reader can see on screen rather than announcing itself as proof.
-const CATALOGUE_FACTS = [
-  { value: String(LIVE_TOOL_COUNT), label: 'tools live today' },
-  { value: '200k', label: 'icons, via Iconify' },
-  { value: '1,500+', label: 'families, via Google Fonts' },
-]
+/* ── The figure strip is gone — anti-slop audit, 2026-09-09 ────────────────
+ *
+ * It sat above the hero as `48 LIVE TOOLS · 200K ICONS · 1,500+ FONTS · ONE
+ * ACCOUNT`, was moved beside the tools grid when the founder relayed the
+ * "AI-generated website" reaction, and survived there as a three-up `<dl>` of
+ * figure + caption (`.htools-facts`, counted off CREATE_GROUPS). The numbers
+ * were honest both times. The COMPONENT is the problem both times: the founder
+ * marked the three-up figure strip on the Font Gallery masthead as "AI" and
+ * asked for the change to reach every header that matches
+ * (DiscoverGalleryHero.jsx), and a figure strip under a section heading
+ * matches. Nothing replaces it — the tool count is the grid the reader is
+ * looking at, and the icon and font catalogue sizes are on the cards that hold
+ * them. 04-premium-home.spec.js asserts the strip stays absent.
+ */
 
 /* ── The sticky scroll narrative ──────────────────────────────────────────── */
 
@@ -188,11 +177,32 @@ function ladderNote(plan) {
   return bits.join(' · ')
 }
 
+// WHAT PRO ADDS, DERIVED — anti-slop audit, 2026-09-09.
+//
+// This list was four typed lines, and three of the four were wrong against
+// the config that decides them:
+//   · "Every colour, type, icon and image tool" — Free has every tool too, so
+//     listing it under Pro sold the free tier as a Pro benefit.
+//   · "Saved projects and full system exports" — Free saves projects (capped
+//     at FREE_SAVE_LIMITS.projects), and "full system exports" is the phrase
+//     that once sold a JSON export the product cannot make (exportFormats.js).
+//   · "Community submissions and the full prompt library" — submissions need
+//     a sign-in, not Pro (utils/submitIntent.js gates on nothing else).
+// The lede above it, "Free covers the complete core toolkit with no trial
+// clock…", was a reassurance clause in the slot the retired "No card." line
+// used to sit in, and it is gone rather than reworded.
+//
+// Every line below is /plans's own wording for the same delta, read from the
+// same modules /plans reads, so the front page and the pricing page cannot
+// describe Pro two ways. tests/user-sim/70-anti-slop-marketing.spec.js
+// asserts the rendered figures against these modules.
+const PRO_EXPORTS = proOnlyFormats()
 const PRO_INCLUDES = [
-  'Every colour, type, icon and image tool',
-  'Saved projects and full system exports',
-  'Higher AI generation limits',
-  'Community submissions and the full prompt library',
+  `${AI_LIMITS.pro.daily} AI generations a day · ${AI_LIMITS.pro.monthly} a month`,
+  'Unlimited saved projects and custom icons',
+  `All ${COLOUR_SYSTEMS.length} colour systems, plus HCT editing`,
+  PRO_EXPORTS.map((f) => f.name).join(', '),
+  'Style guides with no “Made with UIL4B” line',
 ]
 
 /* ── Starting points ──────────────────────────────────────────────────────────────────────
@@ -666,22 +676,18 @@ export default function Home() {
                   used to ride in the hero sub-copy; the V2 hero is about search,
                   so the claim moves here — beside the card that carries the Soon
                   badge, which is where it is actually useful. */}
-              <p className="hlede">
-                Every tool reads and writes the same system, so a colour decision in one place
-                is the same colour decision everywhere else. Component tooling is coming next.
-              </p>
-              {/* The figures the hero used to announce. Down here each one
-                  describes something on screen — the grid the reader is
-                  looking at — instead of arriving as proof before there is
-                  anything to prove. */}
-              <dl className="htools-facts">
-                {CATALOGUE_FACTS.map((fact) => (
-                  <div key={fact.label}>
-                    <dt>{fact.value}</dt>
-                    <dd>{fact.label}</dd>
-                  </div>
-                ))}
-              </dl>
+              {/* ONE SENTENCE, NOT TWO — anti-slop audit, 2026-09-09. The
+                  first sentence here was "Every tool reads and writes the same
+                  system, so a colour decision in one place is the same colour
+                  decision everywhere else." — a balanced clause on a "so"
+                  hinge describing the product instead of showing it, which is
+                  the shape [hero-copy-still-reads-ai] names, and the same
+                  claim the sticky workbench above has just demonstrated. What
+                  survives is the canonical status line: component tooling
+                  must be NAMED as coming next, beside the card that carries
+                  the Soon badge. The figure strip that followed it is gone;
+                  see the note above LIVE_TOOL_COUNT. */}
+              <p className="hlede">Component tooling is coming next.</p>
             </div>
 
             <ul className="htools-grid" data-reveal-group>
@@ -742,7 +748,7 @@ export default function Home() {
             page of the real brand-guidelines deck from them, so the section
             demonstrates the export rather than describing it. Formats come out of
             exportFormats.js; nothing unbuilt appears. See HomeExportKit. */}
-        <HomeExportKit system={system} />
+        <HomeExportKit system={system} heading={line(SURFACE_LINE.homeExportHeading)} />
 
         {/* ── Starting points ── */}
         <section className="hcomm" aria-labelledby="hcomm-title">
@@ -753,11 +759,18 @@ export default function Home() {
               </div>
             </div>
 
-            {/* The only numbers on this strip are ones the page can count. */}
+            {/* The only numbers on this strip are ones the page can count.
+
+                The sentence that followed the count — "Open one and it arrives
+                in the tool with its values already loaded — nothing to copy
+                across, nothing to sign up for." — is gone (anti-slop audit,
+                2026-09-09). Its "nothing to X, nothing to Y" pair is the
+                anaphoric tic the founder called "MEGA AI generated" on the
+                tools heading, and its second half is a sign-up reassurance in
+                the class he retired. What it described is on every card
+                below, in the foot that says which tool the card opens. */}
             <p className="hcomm-note">
-              {STARTER_TOTALS.gradients} gradients and {STARTER_TOTALS.palettes} palettes ship with the
-              app. Open one and it arrives in the tool with its values already loaded — nothing
-              to copy across, nothing to sign up for.
+              {STARTER_TOTALS.gradients} gradients and {STARTER_TOTALS.palettes} palettes ship with the app.
             </p>
 
             <ul className="hcomm-grid" data-reveal-group>
@@ -814,10 +827,9 @@ export default function Home() {
                 <h2 className="hh2 hprice-title" id="hprice-title">
                   Pro from <span className="hprice-hi">{CHEAPEST.perMonthLabel}/month</span>.
                 </h2>
-                <p className="hprice-lede">
-                  Free covers the complete core toolkit with no trial clock. Pro
-                  raises the AI limits and unlocks saved projects, exports and submissions.
-                </p>
+                {/* /plans's own label for the same list, so the two surfaces
+                    introduce the Pro delta with one phrase. See PRO_INCLUDES. */}
+                <p className="hprice-lede">Everything in Free, plus:</p>
                 <ul className="hprice-includes">
                   {PRO_INCLUDES.map((item) => (
                     <li key={item}>
@@ -861,13 +873,30 @@ export default function Home() {
           </div>
         </section>
 
-        <SystemCTA
-          title="From first decision to clean handoff."
-          description="Build a coherent UI system in one place, then take it straight into production."
-          secondaryLabel="See our plans"
-          secondaryTo="/plans"
-          hint="Upgrade only when you're ready"
-        />
+        {/* THE CLOSING BAND IS GONE — anti-slop audit, 2026-09-09.
+
+            It was a <SystemCTA>: a "Start free" eyebrow, "From first decision
+            to clean handoff." over "Build a coherent UI system in one place,
+            then take it straight into production.", two buttons, an "Upgrade
+            only when you're ready" hint, light beams and a grid background.
+            Every part of that is on the bar by name — an eyebrow above a
+            heading, generic aspirational copy that could close any SaaS page,
+            a reassurance micro-line in the slot the retired "No credit card
+            required" line sat in, and glow used as a premium signal. The
+            founder had it deleted from /discover, /learn and /create/color for
+            being "a second, larger copy of the CTA the hero has already made"
+            (52-compressed-landings.spec.js), and this was the same object one
+            scroll after the pricing panel, which already ends in "See plans
+            and start free".
+
+            So the page now ends where the argument ends: the price panel is
+            the close. Whereby, Babbel and Rocket Money end their sales pages on
+            the plan card and its button with no banner after it —
+            https://mobbin.com/screens/4be482c3-dac0-466c-abc5-81673cd41800
+            https://mobbin.com/screens/3fb4481a-8315-459c-9b51-afd3436364cf
+            The sign-up CTA a visitor who scrolled this far still has is the
+            hero's "Start building free" and the pill nav's "Start for Free",
+            which travels with them. */}
       </main>
     </div>
   )

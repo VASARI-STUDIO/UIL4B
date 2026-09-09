@@ -59,6 +59,26 @@ const RETIRED = [
   'credit card required',
   'no card',
   'ui system toolkit',
+  // ── Retired by the 2026-09-09 anti-slop audit (70-anti-slop-marketing) ──
+  // Each of these was on a surface the founder had ruled on the shape of; the
+  // walk keeps them off every route rather than the one they were found on.
+  // "Systems worth stealing." — his verdict: "bad copy" — was back on
+  // /discover as "Find systems worth stealing."
+  'worth stealing',
+  // The footer tagline, on every page. A tagline is the thing he retired.
+  'operating workspace',
+  // Payment reassurance, the retired "no card" class: the homepage price lede
+  // and the /plans closing hint both said it.
+  'no trial clock',
+  // The homepage closing banner's hint and headline.
+  'upgrade only when',
+  'first decision to clean handoff',
+  // The negation over the Curated Resources grid heading. (The gallery
+  // masthead sentences — "…with a point of view…" — are NOT swept: they were
+  // deleted and restored in the same audit because three contracts pin a
+  // masthead with a description and the 390px masthead is a hole without one;
+  // they wait on the founder's rewrite.)
+  'hand-picked, not scraped',
 ]
 
 // ── The positive control is the suite's own, not a floor I picked ───────────
