@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
@@ -9,6 +9,7 @@ import { projectQuota } from '../utils/projectQuota'
 import { nextToolSuggestion, homeStats } from '../utils/userHome'
 import { readSessionHint } from '../utils/sessionHint'
 import { buildCSSVars } from '../utils/exportBuilder'
+import useModalDialog from '../hooks/useModalDialog'
 import DailyBand from '../components/userhome/DailyBand'
 import StarterRow from '../components/userhome/StarterRow'
 import ProjectCard from '../components/userhome/ProjectCard'
@@ -69,12 +70,12 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey) }
-  }, [onClose])
+  // The app's shared modal contract — focus moves in, Tab is trapped, Escape
+  // closes, scroll is locked, and focus goes BACK to the card that opened it.
+  // This dialog used to hand-roll only Escape and the scroll lock, so a
+  // keyboard user who closed it was dropped on <body> and had to Tab down the
+  // whole page to find the card they had just been looking at.
+  const dialogRef = useModalDialog(onClose)
 
   const d = project.design || {}
   const colors = d.palette?.colors || []
@@ -88,7 +89,15 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
 
   return (
     <div className="fg-detail-overlay" onClick={onClose}>
-      <div className="il-detail proj-detail" onClick={e => e.stopPropagation()}>
+      <div
+        className="il-detail proj-detail"
+        role="dialog"
+        aria-modal="true"
+        aria-label={project.name}
+        ref={dialogRef}
+        tabIndex={-1}
+        onClick={e => e.stopPropagation()}
+      >
         <button className="fg-detail-close" onClick={onClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -215,17 +224,22 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
 }
 
 // Modal for starting a new project: capture name, folder, and starting point.
-function NewProjectModal({ folders, onClose, onCreate }) {
+//
+// `error` is the refusal the page got back from saveProject() — the free cap,
+// in ProjectContext's own words. It is shown HERE, under the form that was
+// refused, rather than as a toast: rendered on 2026-09-09, the cap answered
+// "Create project" with a green-tick toast that read "Free plan saves up to 3
+// projects — go Pro for unlimited." for 1.8 seconds and then vanished, leaving
+// the form open and the name still typed as though nothing had been decided.
+function NewProjectModal({ folders, onClose, onCreate, error }) {
   const [name, setName] = useState('')
   const [folder, setFolder] = useState('')
   const [start, setStart] = useState('blank')
 
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', onKey) }
-  }, [onClose])
+  // Shared modal contract (see ProjectDetail above). `initialFocus` keeps the
+  // landing spot this form already had — the name field — without a second
+  // autoFocus fighting the hook for it.
+  const dialogRef = useModalDialog(onClose, { initialFocus: '#proj-new-name' })
 
   const submit = () => {
     const trimmed = name.trim()
@@ -237,7 +251,15 @@ function NewProjectModal({ folders, onClose, onCreate }) {
 
   return (
     <div className="fg-detail-overlay" onClick={onClose}>
-      <div className="il-detail proj-detail proj-new-modal" onClick={e => e.stopPropagation()}>
+      <div
+        className="il-detail proj-detail proj-new-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="proj-new-title"
+        ref={dialogRef}
+        tabIndex={-1}
+        onClick={e => e.stopPropagation()}
+      >
         <button className="fg-detail-close" onClick={onClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -245,20 +267,26 @@ function NewProjectModal({ folders, onClose, onCreate }) {
         </button>
 
         <div className="fg-detail-section" style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' }}>New project</h2>
+          <h2 id="proj-new-title" style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' }}>New project</h2>
           <p style={{ fontSize: 13, color: 'var(--t2)', marginTop: 4 }}>
             Give it a name and choose where to begin.
           </p>
         </div>
 
         <div className="fg-detail-section">
-          <div className="fg-detail-label">Project name</div>
+          <label className="fg-detail-label" htmlFor="proj-new-name">Project name</label>
           <input
+            id="proj-new-name"
             value={name}
             onChange={e => setName(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') submit() }}
+            // preventDefault is load-bearing. submit() closes the dialog, and
+            // useModalDialog hands focus back to the New Project button in the
+            // same tick — so without it the SAME Enter's keypress reaches that
+            // button, Chromium activates it, and the dialog reopens over the
+            // project it just created. Seen in a keydown/keypress/click trace on
+            // 2026-09-09: keydown@input → click@button[New Project].
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
             placeholder="e.g. Brand v1, Marketing site, Mobile app"
-            autoFocus
             style={{ width: '100%', fontSize: 15, fontWeight: 600 }}
           />
         </div>
@@ -309,12 +337,32 @@ function NewProjectModal({ folders, onClose, onCreate }) {
           </div>
         </div>
 
+        {error && <SaveRefusal message={error} testId="project-create-refusal" />}
+
         <div className="fg-detail-actions">
           <button className="btn btn-accent" onClick={submit} disabled={!name.trim()}>Create project</button>
           <button className="btn" onClick={onClose}>Cancel</button>
         </div>
       </div>
     </div>
+  )
+}
+
+// The cap, refused in place.
+//
+// `message` is whatever saveProject() threw — never re-worded here, because
+// ProjectContext is the one place that knows the rule and its sentence already
+// names the limit and the way forward. What this adds is the two things a
+// vanishing toast could not carry: it stays until the person acts, and the
+// "go Pro" it mentions is a link they can follow. The link text is the one the
+// type-scale save menu already uses for the same edge, so the two surfaces say
+// one thing.
+function SaveRefusal({ message, testId }) {
+  return (
+    <p className="uh-save-refusal" role="alert" data-testid={testId}>
+      <span>{message}</span>{' '}
+      <NavLink to="/plans" className="uh-quota-link">See what Pro adds</NavLink>
+    </p>
   )
 }
 
@@ -346,6 +394,9 @@ export default function Projects({ toast }) {
   const signedOut = !canSaveProjects && !resolving
   const [newName, setNewName] = useState('')
   const [showSaveForm, setShowSaveForm] = useState(false)
+  // The cap's refusal, held until the person acts on it — see SaveRefusal.
+  const [saveError, setSaveError] = useState('')
+  const [createError, setCreateError] = useState('')
   const [loadedId, setLoadedId] = useState(null)
   const [showArchived, setShowArchived] = useState(false)
   const [search, setSearch] = useState('')
@@ -444,6 +495,15 @@ export default function Projects({ toast }) {
     )
   }
 
+  // A refusal is not a success. Both of these used to answer the free cap with
+  // `toast(e.message)`, which is the SUCCESS toast — green tick, 1.8 seconds,
+  // no link — carrying "Free plan saves up to 3 projects — go Pro for
+  // unlimited." Rendered on 2026-09-09 at 390 and 1280: the tick was drawn,
+  // the sentence was gone before it could be read twice, and the form stayed
+  // open with the name still in it, so the person was left to guess whether
+  // the save had happened. The refusal now stays in the form it refused
+  // (SaveRefusal), in ProjectContext's own words, with the way forward as a
+  // link. Nothing about the rule changed; only where the answer lives.
   const handleSave = () => {
     if (!newName.trim()) { toast('Enter a project name'); return }
     try {
@@ -451,9 +511,10 @@ export default function Projects({ toast }) {
       toast(`Saved "${newName.trim()}"`)
       setLoadedId(id)
       setNewName('')
+      setSaveError('')
       setShowSaveForm(false)
     } catch (e) {
-      toast(e.message || 'Failed to save')
+      setSaveError(e.message || 'Failed to save')
     }
   }
 
@@ -463,10 +524,11 @@ export default function Projects({ toast }) {
       if (folder) setProjectFolder(id, folder)
       if (blank) resetDesign()
       setLoadedId(id)
+      setCreateError('')
       setShowNewModal(false)
       toast(`Created "${name}"`)
     } catch (e) {
-      toast(e.message || 'Failed to create project')
+      setCreateError(e.message || 'Failed to create project')
     }
   }
 
@@ -497,8 +559,11 @@ export default function Projects({ toast }) {
     } catch (e) {
       // The cap message from ProjectContext, shown rather than swallowed — a
       // duplicate button that silently does nothing at the cap is the silent
-      // refusal the account-lifecycle audit filed as B6.
-      toast(e.message || 'Could not duplicate that project')
+      // refusal the account-lifecycle audit filed as B6. There is no form to
+      // hold this one (it comes from a card's overflow menu), so it stays a
+      // toast — but an ERROR toast: the default kind draws the success tick
+      // over a refusal.
+      toast(e.message || 'Could not duplicate that project', 'error')
       return null
     }
   }
@@ -654,11 +719,12 @@ export default function Projects({ toast }) {
               style={{ flex: 1 }}
             />
             <button className="btn btn-accent" onClick={handleSave}>Save</button>
-            <button className="btn" onClick={() => { setShowSaveForm(false); setNewName('') }}>Cancel</button>
+            <button className="btn" onClick={() => { setShowSaveForm(false); setNewName(''); setSaveError('') }}>Cancel</button>
           </div>
           <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 10 }}>
             Captures: palette, tints, state colours, gradient, fonts, type scale.
           </div>
+          {saveError && <SaveRefusal message={saveError} testId="project-save-refusal" />}
         </div>
       )}
 
@@ -850,8 +916,9 @@ export default function Projects({ toast }) {
       {showNewModal && (
         <NewProjectModal
           folders={FOLDERS}
-          onClose={() => setShowNewModal(false)}
+          onClose={() => { setShowNewModal(false); setCreateError('') }}
           onCreate={handleCreateNew}
+          error={createError}
         />
       )}
 
