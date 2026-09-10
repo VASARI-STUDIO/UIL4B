@@ -44,10 +44,17 @@ regression.
 
 - **39 routes are prerendered**, so a search engine or an AI crawler sees real
   HTML rather than an empty shell.
-- **Learn is live** — five published guides, not a coming-soon page.
+- **Learn is live** — seven published guides, not a coming-soon page. The
+  count is `LEARN_ARTICLES` in `src/data/learnIndex.js`; three more topics are
+  waiting on a decision (`OWNER-ACTIONS.md` §2.6).
 - **Discover is live** — six of its eight groups.
-- **The moderator role is built** and works everywhere except the two files in
-  [§1.3](OWNER-ACTIONS.md).
+- **The moderator role is built, and it is in two halves that are not both
+  ready.** `npm run apply:gated` ([§1.3](OWNER-ACTIONS.md)) makes the rules
+  honour a `moderator` claim. **Nothing mints one**: that is
+  `api/verify-admin.js`, whose change exists as prose rather than as an
+  applicable diff, and the command deliberately does not carry it. So after
+  the command the rules understand a moderator and there is still no way to
+  appoint one.
 - **The API is at 12 of 12 Vercel functions.** Not a problem today; it means the
   next endpoint has to replace one. `tests/unit/account-deletion.test.js` fails
   the build if it is exceeded, so this cannot be missed.
@@ -108,11 +115,18 @@ regression.
 Ordered by how much each unblocks. All of it is dashboard work; none of it is
 code.
 
+**Six decisions are open too, and none of them blocks a release** — the
+palette contrast trade, the sentences only he can write, the export
+entitlement two documents and three pages disagree on, the condition banners
+over the Palette Builder toolbar, four small design calls, and whether three
+topics belong in Learn. They are `OWNER-ACTIONS.md` §2 and are not repeated
+here.
+
 | | What | Where | Time | If you do nothing |
 |---|---|---|---|---|
 | **1** | **Nothing is live.** Vercel has not deployed since 2 September | [§1.1](OWNER-ACTIONS.md) | minutes | Every fix since 2 September stays invisible. Nothing else on this page matters until this clears |
 | **2** | **No tests are running.** GitHub Actions is blocked on billing | [§1.2](OWNER-ACTIONS.md) | minutes | Every pull request reads `UNSTABLE`, which looks like broken code and means the gate never started |
-| **3** | **The moderator role is switched off.** One setting turns it on | [§1.3](OWNER-ACTIONS.md) | 1 min | You stay the only person who can approve a community submission |
+| **3** | **Four approved changes are switched off.** One command applies all four — see item 11, which is the same command | [§1.3](OWNER-ACTIONS.md) | 2 min | Your feedback queue stays open to anyone on the internet, and you stay the only person who can approve a community submission |
 | **4** | **Stripe charges a different price from the one on screen** | [§4.1](OWNER-ACTIONS.md) | 15–30 min | The only item with a legal edge. **Do not release with this open** |
 | **5** | **Stripe is not sending the events we handle** | [§4.2](OWNER-ACTIONS.md) | 20 min | Refunds and chargebacks never arrive |
 | **6** | **Firebase Storage is off** | [§4.3](OWNER-ACTIONS.md) | 10 min | Nothing that uploads a file can work |
@@ -160,7 +174,7 @@ that none of it is mistaken for engineering work that has been forgotten.
 | **Vercel** | Every deploy | Either an upgrade off Hobby or the monthly quota reset. Our half is done (#406): the 32 MB ffmpeg core loads from jsDelivr and the deploy shrank from 35 MB to 5.6 MB |
 | **Stripe** | The price ladder, the webhook events, the retention offer | Dashboard configuration only. The code for all three is written and waiting |
 | **A sending domain** | Every email the product would send to a customer | SPF, DKIM and a return path on a real domain. Until then the only mail we send is inbound to you, from a shared sandbox address that is not deliverable in production |
-| **JDK 21** | `npm run test:rules` | **Not a blocker today.** A Zulu 21 JRE is installed on the founder's machine and the rules suite ran green on it (37 pass). The machine's *default* `java` is still 1.8, so the command needs the `PATH` prefix that `build-and-verify.md` records. CI does not care — it pins Temurin 21 itself |
+| **JDK 21** | `npm run test:rules` | **Not a blocker today.** A Zulu 21 JRE is installed on the founder's machine and the rules suite ran green on it — the figure is in §1, and this row carried a stale one (37) until 2026-09-10. The machine's *default* `java` is still 1.8, so the command needs the `PATH` prefix that `build-and-verify.md` records. `npm run apply:gated` looks for a 21 itself and stops rather than guessing if it cannot find one. CI does not care — it pins Temurin 21 itself |
 
 ---
 
