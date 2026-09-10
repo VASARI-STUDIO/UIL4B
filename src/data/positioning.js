@@ -72,7 +72,7 @@ export function line(id) {
 
 // ── The hero headline ───────────────────────────────────────────────────────
 //
-// ⚠️ ASSEMBLED, NOT WRITTEN — AND NOT YET APPROVED.
+// ASSEMBLED, NOT WRITTEN — AND APPROVED BY THE FOUNDER ON 2026-09-10.
 //
 // The founder chose "build one from my words only" over an agent draft, so this
 // headline is a splice of two of the lines above and contains no word that is
@@ -86,9 +86,17 @@ export function line(id) {
 // The comma between them is punctuation, not a word. Nothing else was added,
 // and no synonym was substituted.
 //
-// IT IS FLAGGED FOR HIS YES OR NO BEFORE IT SHIPS. The PR body sets the line
-// beside the two phrases it was cut from. If the answer is no, the fix is
-// another splice of these same lines, not an agent sentence.
+// HE READ IT AND SAID SHIP IT, 2026-09-10. It was put to him beside the two
+// phrases it was cut from, and the answer was yes. So this is no longer an
+// agent's proposal waiting on him — it is his line, and it is the first
+// sentence a visitor reads.
+//
+// DO NOT REWORD IT WITHOUT HIM. Not a tightening, not a synonym, not a comma.
+// The only replacement that would not need asking him again is another splice
+// of these same founder lines, and even that changes a sentence he has
+// personally approved. `tests/unit/positioning-truth.test.js` pins the exact
+// string, so an edit here fails the build until somebody moves the pin — which
+// is the moment to go and ask.
 //
 // The marked run is the highlight the page paints (`<mark class="home-mark">`)
 // and the one `--hi` element in the hero viewport — design-language-v2.md
