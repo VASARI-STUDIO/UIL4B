@@ -14,8 +14,10 @@ import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/me
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS, isAdminEmail } from '../utils/constants'
 import { MODULE_BOARD } from '../data/moduleBoard'
-// src/data/pipeline.js is NOT imported here. It is loaded by PipelineBoard with
-// a dynamic import() — see the note above that component for the measurement.
+// src/data/pipeline.js is NOT imported here, statically OR dynamically. It is
+// not a client module at all any more: PipelineBoard fetches it from
+// GET /api/ai?backlog=1 behind the verified-admin gate. See the note above that
+// component for what an anonymous visitor used to be able to fetch.
 import { resolvePromptProfileLink } from '../utils/promptSubmission'
 import { toCsv } from '../utils/csv'
 
@@ -618,44 +620,61 @@ const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', par
 // from src/data/pipeline.js (no backend). Complements the Board tab, which
 // tracks each feature module.
 //
-// ── WHY THE DATA ARRIVES BY import() AND NOT BY import ──────────────────────
+// ── WHY THE DATA ARRIVES OVER THE WIRE AND NOT AS A MODULE ─────────────────
 //
 // src/data/pipeline.js is the engineering log: every note every agent has left,
-// as prose, inside the row objects this board renders. It is 672 KB of source
-// and it grows by a few KB every time anybody records what they did. A static
-// import put all of it in Admin-*.js, which was 776,482 bytes raw / 287,073
-// gzip — by a wide margin the largest chunk this app ships — and 84% of that
-// was this one file. The admin downloaded the project's whole engineering
-// history as JavaScript, and parsed it, in order to draw a table of it. Filed
-// twice, by #405 and #406, which is itself a sign of how visible it was.
+// as prose, inside the row objects this board renders. #405 and #406 filed it
+// as a WEIGHT problem — a static import put all of it in Admin-*.js, 776,482
+// bytes raw / 287,073 gzip — and #420 answered that with `import('../data/
+// pipeline')`, which moved the bytes into their own chunk fetched only when
+// this tab opens.
 //
-// The dynamic import moves it into its own chunk. `{tab === 'pipeline' && ...}`
-// in the tab switch below means this component is not mounted until the Pipeline
-// tab is opened, so the effect — and therefore the request — does not fire on
-// any other tab. MEASURED, clean build either side: Admin-*.js 776,482 →
-// 113,900 bytes raw (-85%), 287,073 → 29,755 gzip (-90%), and the notes become
-// pipeline-*.js at 663,549 / 258,382 — paid for only by an admin who opens this
-// one tab, and by nobody else on any other admin screen.
+// THAT FIXED THE TIMING AND LEFT THE EXPOSURE UNTOUCHED. A dynamically imported
+// module is still a client module: rolldown emits it, Vercel serves it from
+// /assets, and nothing anywhere asks who is asking. MEASURED on a real
+// `npm run build`, anonymous, no login, no cookie, no Authorization header:
 //
-// A DYNAMIC IMPORT RATHER THAN A BUILD-TIME JSON, deliberately. Emitting the
-// notes as a JSON asset would take them out of the JavaScript graph entirely
-// and cache them separately, which is a real advantage — but it needs a
-// generator, and a generator can go stale. An agent who edits pipeline.js and
-// does not re-run it would leave the founder's own board showing yesterday's
-// backlog while every check stayed green, which is precisely the class of
-// silent-wrong this repository keeps paying for. import() cannot go stale: it
-// resolves the same module by the same path, and the bundler regenerates the
-// chunk on every build.
+//   GET /admin                    200      the HTML names the entry chunk
+//   GET /assets/index-*.js        200      names Admin-rjGyizH8.js
+//   GET /assets/Admin-*.js        200      names pipeline-DUbq1XL3.js
+//   GET /assets/pipeline-*.js     200      824,007 bytes / 319,711 gzip
+//
+// The last one carried the literal string `allow create: if true` — the exact
+// unfixed Firestore rule docs/OWNER-ACTIONS.md is still asking the founder to
+// close — 23 mentions of firestore.rules, 3 permission-denied diagnostics, and
+// 246 of "founder". It was also the largest asset in the deploy by a wide
+// margin: 319,711 gzip against 140,310 for the app entry chunk.
+//
+// So the module is gone from the client graph entirely. The board now reads
+// GET /api/ai?backlog=1, which is gated on a VERIFIED ADMINISTRATOR by the same
+// requireAdmin() in api/_lib/admin.js that /api/ai?diag=1 uses — see the long
+// note above serveBacklog() in api/ai.js for why that route and not a new one
+// (api/ holds twelve functions and Vercel allows twelve) and not
+// api/verify-admin.js (founder-gated, so it could not ship today).
+//
+// MEASURED after: pipeline-*.js is not emitted at all. The deploy loses 824,007
+// raw / 319,711 gzip, and the largest asset is the entry chunk again.
+//
+// A ROUTE RATHER THAN A BUILD-TIME STRIP, deliberately. Emitting ids, titles and
+// statuses without the notes would keep the board's shape and lose its record —
+// and the titles are the disclosure too ("firestore.rules lets anyone create
+// feedback documents directly" is a title, not a note). A generated JSON was
+// rejected for the reason this file already gave: a generator can go stale, and
+// an agent who edits pipeline.js without re-running it would leave the founder's
+// own board showing yesterday's backlog with every check green.
 //
 // pipeline.js DOES NOT MOVE. Every agent's composition scripts and several
 // tests/unit/*.test.js files import it by that exact path, and
-// pipeline-board-renderable.test.js imports the same three exports this
+// pipeline-board-renderable.test.js imports the same four exports this
 // component renders — so the board and its guard still read one source.
 //
 // GUARDED AT BUILD LEVEL by tests/unit/admin-chunk-carries-no-backlog.test.js,
-// which runs a real production build and fails if the backlog is back in the
-// Admin chunk. A comment asking the next agent not to re-add the static import
-// would not survive a refactor; that test will.
+// which runs a real production build and reads EVERY emitted file for note text
+// sampled out of pipeline.js itself. Its previous form walked the chunk graph
+// and asserted the backlog was reachable only by a dynamic edge — it passed all
+// the way through the disclosure above, because a dynamic edge was never the
+// question. A comment asking the next agent not to re-import this would not
+// survive a refactor; that test will.
 function PipelineBoard() {
   const [todoFilter, setTodoFilter] = useState('all')
   const [board, setBoard] = useState(null)
@@ -664,17 +683,28 @@ function PipelineBoard() {
 
   useEffect(() => {
     let alive = true
-    import('../data/pipeline').then(
-      (mod) => { if (alive) setBoard(mod) },
-      // Named in words rather than swallowed. A chunk request can fail on a
-      // stale deploy, and a board that silently rendered zero rows would read
-      // as "the backlog is empty", which is the most misleading thing this
-      // surface could say.
-      (err) => {
-        console.error('[admin] the pipeline backlog chunk failed to load:', err?.message || err)
+    ;(async () => {
+      try {
+        // firebase is itself deferred, so this import is how every other authed
+        // fetch on this page reaches the current user's token.
+        const { auth: fbAuth } = await import('../utils/firebase')
+        const token = await fbAuth.currentUser?.getIdToken()
+        if (!token) throw new Error('not signed in')
+        const res = await fetch('/api/ai?backlog=1', { headers: { Authorization: `Bearer ${token}` } })
+        const data = await res.json().catch(() => ({}))
+        // 404 is what requireAdmin answers a caller who is not the
+        // administrator — deliberately, so a prober learns nothing — so it is
+        // reported here as the refusal it is rather than as a missing page.
+        if (!res.ok) throw new Error(data.error || `the backlog endpoint answered ${res.status}`)
+        if (alive) setBoard(data)
+      } catch (err) {
+        // Named in words rather than swallowed. A board that silently rendered
+        // zero rows would read as "the backlog is empty", which is the most
+        // misleading thing this surface could say.
+        console.error('[admin] the pipeline backlog could not be loaded:', err?.message || err)
         if (alive) setLoadError(err?.message || String(err))
-      },
-    )
+      }
+    })()
     return () => { alive = false }
   }, [])
 
@@ -683,9 +713,11 @@ function PipelineBoard() {
       <div className="adm-section">
         <div className="adm-card">
           <div className="adm-empty">
-            Could not load the backlog ({loadError}). This board reads
-            src/data/pipeline.js as a separate chunk; a failed request here is
-            usually a stale tab after a deploy. Reload the page.
+            Could not load the backlog ({loadError}). The notes are no longer
+            shipped to the browser — they were readable by anyone — so this board
+            reads GET /api/ai?backlog=1, which only a verified administrator may
+            call. Check you are signed in as the founder; `vite preview` and
+            `vite dev` serve no functions, so it cannot answer there.
           </div>
         </div>
       </div>
@@ -699,7 +731,10 @@ function PipelineBoard() {
     )
   }
 
-  const { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } = board
+  // Defaulted, because this arrives as a JSON body rather than a module whose
+  // exports the bundler proved exist. A response missing a block renders an
+  // empty column instead of throwing the whole dashboard away.
+  const { APP_CONDITION = [], PIPELINE_STAGES = [], PIPELINE_PROCESSES = [], NEXT_TODO = [] } = board
   const visibleTodos = NEXT_TODO.filter(t => todoFilter === 'all' || t.status === todoFilter)
 
   return (
