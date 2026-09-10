@@ -11,20 +11,21 @@ Engineering work is not here — it is in `src/data/pipeline.js`. Ideas waiting 
 your verdict are in [`PROPOSALS.md`](PROPOSALS.md). Decisions you have already
 made are in [`CHANGELOG.md`](../CHANGELOG.md).
 
-_Last reviewed: 2026-09-06 (documentation review — every item re-checked against
-the code, two rewritten, one found impossible)._
+_Last reviewed: 2026-09-10 — every item re-checked against the code._
 
-**Engineering is stopped on five of these.** The queue records these as waiting
-on you and nothing can move on them: the deploy block (§1.1), the GitHub bill
-(§1.2), **four approved changes waiting on one command (§1.3)**, the Stripe
-retention setup (§4.6), and a verified sending domain (§4.10). A live Stripe
-checkout test (§6) also needs you but blocks nothing today.
+**What changed in this review.** §2.1 asked you to pick a hero shape by
+opening `?hero=a|b|c`. You retired that exploration on 2026-09-07 and the
+code is gone, so the item was both answered and impossible; it has moved to
+§3. §1.1 said our half of the deploy fix was still in flight — it landed.
+§4.6 asked for less than the job needs. And six decisions that came out of
+the last two weeks of audits had never been written down anywhere you would
+find them; they are now §2.3 to §2.6.
 
-**One item changed shape today and you should know why.** §4.5 asked you to open
-the AI Image Prompt Generator and generate a prompt. **You cannot** — that tool
-is not reachable by anyone, so the check was impossible. It is rewritten below
-as a decision instead of a task, and it is the only place in this file where you
-may be paying for something no visitor can use.
+**Engineering is stopped on these, and nothing moves until you act:** the
+deploy block (§1.1), the GitHub bill (§1.2), the four approved changes
+waiting on one command (§1.3), the Stripe retention setup (§4.6) and a
+verified sending domain (§4.10). A live Stripe checkout test (§6) also needs
+you but blocks nothing today.
 
 **Are we ready to release?** [`RELEASE-READINESS.md`](RELEASE-READINESS.md) —
 one page, what is done, what is on you, what is on someone else.
@@ -57,10 +58,11 @@ of traffic, and — because the file gets a new name on every deploy — every
 region has to fetch all 32 MB again after each one. **About 300 visitors is the
 entire month's allowance, from one file.**
 
-**This half is ours, and it is nearly done.** We are moving that engine to a free
-public CDN (jsDelivr, pinned to one exact version), which takes 91% of the weight
-off your bill permanently. It is in flight on the `perf/ffmpeg-core-off-origin`
-branch and is not waiting on you.
+**Our half is done and is not waiting on you.** That 32 MB engine now loads
+from a free public CDN (jsDelivr, pinned to one exact version), which takes
+91% of the weight off your bill permanently. It shipped on 2026-09-06 and
+the deploy went from 35 MB to **5.6 MB**. It cannot reach the live site
+until the block below clears, which is the whole point of this item.
 
 **So your part is only the dashboard.** Check the Usage page and decide upgrade
 versus wait. **We have not seen your Vercel usage numbers — only you can.**
@@ -113,14 +115,9 @@ That doc says "ask Dylan first"; the classifier refuses **after** you have said
 yes. It blocked the agent and it blocked the coordinator, so your approval alone
 never lifted it.
 
-The old version of this item asked you to paste a permissions block into
-`.claude/settings.json` and hope. That was never verified to work, and it left
-four separate diffs for you to find in four pull requests and paste by hand into
-two files — in an order nobody had written down, where the wrong order silently
-produces a rules file that does not compile. **This command is that job, done
-properly.** It applies them in the order that composes, refuses to touch
-anything if any one of them no longer fits, skips whatever is already in, and
-then runs the three suites so you find out here rather than in production.
+The command applies them in the order that composes, refuses to touch anything
+if any one of them no longer fits, skips whatever is already in, and then runs
+the three suites so you find out here rather than in production.
 
 **The four, and what each one gives you:**
 
@@ -148,10 +145,16 @@ table is complete.
    prints exactly what it would have overwritten.
 3. Skips anything already applied. Running it twice is safe: the second run
    reports all four as already in and changes nothing.
-4. Runs `npm run test:rules` (the Firestore emulator — it needs Java 21, and the
-   command finds one for you rather than failing with a Java error), then
+4. Runs `npm run test:rules` (the Firestore emulator), then
    `npm run test:unit`, then the deferred production build. It stops at the
    first failure and tells you which change caused it.
+
+   **The emulator needs Java 21 and this machine’s default `java` is 8.**
+   The command checks the version first and looks for a Java 21 elsewhere on
+   the machine; if it cannot find one it stops and prints the path it
+   looked in, rather than failing with a Java stack trace. The four changes
+   are already written to your files by then, so the undo below is what you
+   want if that happens — tell us and we will point it at your JDK.
 5. **Commits nothing and pushes nothing.** It prints the one command that undoes
    everything: `git checkout -- firestore.rules src/contexts/AuthContext.jsx
    src/contexts/SubscriptionContext.jsx src/utils/projectSync.js`.
@@ -264,72 +267,41 @@ and no permission. All it does is stop two files fetching the sign-in code
 before the page has drawn anything.
 ---
 
-# 2 · Still needs you — three things
+# 2 · Still needs you
 
-Everything else you were asked has been answered and is recorded in §3. These
-three are all that is left.
+Six decisions. None of them is a task — there is nothing to install and
+nothing to configure. Each one is a choice only you can make, with what we
+recommend and what it costs to leave it.
 
-## 2.1 · Which shape should the homepage's top section be — A, B or C?
-
-**The question.** Pick a shape: **A**, **B** or **C**.
-
-**How to look.** Open the site and add `?hero=a`, `?hero=b` or `?hero=c` to the
-address. Remove it to see the current one. Nothing is shipped; these are three
-sketches sitting beside the live page.
-
-- **A** — the search bar opens the page; the headline gets smaller.
-- **B** — the whole block moves off the centre line.
-- **C** — almost everything removed, down to one sentence.
-
-**Read this before you judge C.** Its headline is deliberately **faded to 45%**
-and its words are a placeholder. **Judge the shape, not the paleness.** If you
-pick C, the deliverable is **one sentence in your own words** — we will not write
-it, because an agent writing it is exactly the "sounds AI-generated" problem you
-have now reported three times.
-
-**Why we are asking again.** #290 already rewrote the *words* inside the current
-shape and you said it still read as AI. So the words are not the variable — the
-shape is.
-
-**If you do nothing.** The current hero stays, and it is the one you have
-objected to three times.
-
-**Your answer:** _______________
-
-**Full working:** [`PROPOSALS.md` P-006](PROPOSALS.md).
-
-**Related, and it needs no decision from you:** the three parked homepage pull
-requests are now closed out. **#269 and #270 have both been salvaged** — #397 and
-#401 took everything in them that still worked, and found that most of it had
-already been fixed elsewhere. **#264 cannot be rebased** (a file it edits no
-longer exists; its good parts are re-filed as separate jobs). The only piece of
-#270 still held back is its specimen band, and that one *is* waiting on your
-shape pick above.
-
-## 2.2 · Quieter text now looks like normal text on some palettes. Keep it?
+## 2.1 · Quieter text now looks like normal text on some palettes. Keep it?
 
 **The question.** Keep the change, or reverse it?
 
-**Plainly.** In the palette previews there are two levels of text: normal, and a
-quieter second level. The quiet one used to be **too faint to read** on most
+**Plainly.** In the palette previews there are two levels of text: normal, and
+a quieter second level. The quiet one used to be **too faint to read** on most
 colours. We darkened it until it passes the readability floor. The side effect:
 on **19.1% of palettes** the quiet text now looks nearly the same as the normal
 text — it used to be 3.02%.
 
 That trade is real and it cannot be tuned away. On a strongly coloured
-background, all the available contrast is spent just making the text readable at
-all; there is nothing left to make a *second*, quieter level out of.
+background, all the available contrast is spent just making the text readable
+at all; there is nothing left to make a *second*, quieter level out of.
 
 | | Option | One-line case |
 |---|---|---|
 | **A** | **Keep it** (this is what shipped) | Everything is readable everywhere. On the 19% we carry the hierarchy with size and weight instead of colour. |
 | B | Reverse it | The two levels look different again — and the quiet one goes back to being unreadable on most palettes. |
-| C | Keep it and say so on screen | Print "contrast has been adjusted" beside the preview, the way Linear does. Extra work; extra words on screen. |
+| C | Keep it and say so on screen | Print “contrast has been adjusted” beside the preview, the way Linear does. Extra work; extra words on screen. |
 
-**We recommend A**, and it is already live. We checked eight comparable products:
-where the background is a colour the user picked, Polywork and Squarespace both
-use the **same** ink for both levels and separate them by size and weight. Not one
-of the eight paints a faint tint on a saturated ground.
+**We recommend A**, and it is already live. We checked eight comparable
+products: where the background is a colour the user picked, Polywork and
+Squarespace both use the **same** ink for both levels and separate them by size
+and weight. Not one of the eight paints a faint tint on a saturated ground.
+
+**Re-measured 2026-09-10 and the figures still stand.** Two later changes
+touched contrast elsewhere and neither moved this: the search that kept walking
+one direction was replaced without reaching these previews at all, and the FREE
+badge and Remove fixes are in the tool’s menus, not the preview.
 
 **If you do nothing.** A stays.
 
@@ -337,17 +309,20 @@ of the eight paints a faint tint on a saturated ground.
 
 **Full working:** [`PROPOSALS.md` P-023](PROPOSALS.md).
 
-## 2.3 · Four sentences only you can write
+## 2.2 · The sentences only you can write
 
 **This is not a question — it is the one piece of writing we will not do for
-you.** You decided the founder note is opt-in rather than a popup (§3.10). The
-design, the trigger and the panel are ours. **The words are yours**, for the same
-reason we will not write hero direction C: a welcome from the founder, written by
-an agent, is not a welcome from the founder.
+you.** Two separate groups have built up, and they were on two separate lists
+until today.
 
-**Do.** Fill in the four lines below. One sentence each. **Write them badly** —
-typos, no punctuation, half a thought. We will not rewrite them, and that is the
-point.
+**Write them badly** — typos, no punctuation, half a thought. We will not
+rewrite them, and that is the point.
+
+### A · The founder note — four lines, and nothing can ship without them
+
+You decided the note is opt-in rather than a popup (§3.10). The design, the
+trigger and the panel are ours. **The words are yours**: a welcome from the
+founder, written by an agent, is not a welcome from the founder.
 
 **1. Who you are.**
 
@@ -367,16 +342,144 @@ point.
 
 **Time.** Five minutes, and you have already said most of it in conversation.
 
-**If you do nothing.** The panel cannot ship. It is the only part of the feature
-that is blocked, and everything around it is ready to build.
+**If you do nothing.** The panel cannot ship. It is the only part of the
+feature that is blocked, and everything around it is ready to build.
+
+### B · Six slots on live pages that hold an agent’s sentence
+
+The anti-slop pass of 2026-09-09 deleted every line that read as generated and
+replaced it with one of yours wherever one existed. These six are the ones
+where no sentence of yours fits, so what stands there today is either an
+agent’s or a gap. **Each row says the exact file, so nothing has to be hunted
+for.** Every page below is live now.
+
+| | Slot | File | What stands there today |
+|---|---|---|---|
+| 1 | The line under the **Discover** heading | `src/pages/SurfaceLanding.jsx` | **Nothing.** The heading is the word “Discover” and the line under it is empty, because nothing you have written is about Discover |
+| 2 | The **`/help`** heading | `src/pages/HelpCentre.jsx` | “Open any tool. It starts with **something** in it.” — kept because it is true and the strip under it proves it, but it is ours, not yours |
+| 3 | The **Create** nav card | `src/data/toolTree.js` | “Build your brand kit, step by step” |
+| 4 | The **Discover** nav card | `src/data/toolTree.js` | “Inspiration worth the tab” / “Community UI systems, font pairings and prompts — curated, never scraped.” **This one is also false:** Inspiration is badged Soon, so the card advertises something nobody can open |
+| 5 | The **Learn** nav card | `src/data/toolTree.js` | “Understand the why” |
+| 6 | The **Palette Library** and **Gradient Library** headings | `src/pages/PaletteGallery.jsx`, `src/pages/GradientGallery.jsx` | One sentence with the nouns swapped: “…with a point of view … make it yours.” We deleted these once; the pages measured 183px of empty space without them and they went back. A hole is worse than a templated line, so they stay until you replace them |
+
+**One of these has a yes/no answer instead of a sentence.** The homepage’s
+export section is headed by your own line, *“Build and export UI and brand
+design kits and content for website building.”* — and the hero directly above
+it now opens *“Build and export UI and brand design kits, in one unified
+location.”*, which you approved on 2026-09-10. **Same five words, twice on one
+screen.** Either that reuse is fine and we leave it, or the export section
+needs a heading of its own.
+
+**Your answer on the reuse:** _______________
+
+**If you do nothing.** Four of the six keep an agent’s words on a live page,
+the Discover heading keeps standing alone, and the Discover nav card keeps
+advertising a section that is not open.
+
+## 2.3 · Are the two Pro documents free with a credit, or not?
+
+**The question.** Two of our documents say one thing about exports and three of
+our pages say another. Which is true?
+
+**What the pages do.** `src/config/exportFormats.js` marks the **design system
+book** and the **brand guidelines** as Pro. `/plans` prints them in the Pro
+column as “Not included” for Free, and the homepage price panel lists them
+under “Everything in Free, plus:”. The other four formats — HTML, Markdown, PNG
+and JPEG — are free with a “Made with UIL4B” line, which Pro removes.
+
+**What the documents say.** `README.md` and `docs/reference/positioning.md`
+both say **every** format is free with a visible footer credit and that Pro
+removes the credit. That sentence carries a note recording that **you approved
+it on 2026-08-20**, and that any surface implying exports are Pro-only was the
+thing that was wrong.
+
+So this is not a typo in a document — it is a decision that was made one way
+and shipped the other, and we have left both standing rather than pick for you.
+
+| | Option | What it costs |
+|---|---|---|
+| **A** | **The pages are right.** The two Pro documents stay Pro | Two lines change in two documents. Nothing on a page moves |
+| B | **The 2026-08-20 decision is right.** Every format goes free with a credit | Pro loses two of the five things `/plans` sells it on, and the price panel needs re-deriving |
+
+**We recommend A**, because it is what three live surfaces already do and
+because those two documents are the only two things that say otherwise — but
+this is a decision about what Pro sells, so it is yours.
+
+**If you do nothing.** A customer who reads the README and then opens `/plans`
+is told two different things about what their money buys.
+
+**Your answer:** _______________
+
+## 2.4 · A notice covers the Palette Builder’s toolbar until it is dismissed
+
+**The question.** Move the two condition notices into the page, or leave them?
+
+**What happens.** The “sync is failing” notice and the “you look offline”
+banner are pinned to the top-centre of the screen. Since they started appearing
+on the Create tools, they sit **on top of** the Palette Builder’s toolbar until
+someone dismisses them. Measured: at 320px they fully cover SYSTEM, Randomise,
+Pick seed colour, Seed colour hex, Undo and Reset; at 390px those plus
+Save/export; at 1280px Image, Explore, Preview, Vision type and Gradient.
+
+**Why it is a decision and not a fix.** Moving them into the page’s flow is a
+change to the shell that every full-screen tool shares, not a tweak to one
+page. It is a day’s careful work across every Create tool, and it changes where
+those notices appear everywhere else too.
+
+**We recommend moving them**, because the moment those notices appear is
+exactly the moment somebody is trying to save.
+
+**If you do nothing.** Anyone whose sync is failing, or who is offline, must
+dismiss a banner before they can reach the toolbar — on the tool where losing
+work matters most.
+
+**Your answer:** _______________
+
+## 2.5 · Four small design calls we will not make for you
+
+Each of these was found by a rendered audit, each is a few lines of work, and
+each changes how something **looks or feels** rather than whether it works. We
+have left all four alone.
+
+| | The call | Where | Our recommendation |
+|---|---|---|---|
+| 1 | The **gradient stop handle** is 20×20. The accessibility floor we hold everywhere else is 24×24 | `.ggn-handle`, `src/styles/global.css` | **Leave it.** Growing it changes how the stop bar is dragged, and dragging is the whole interaction |
+| 2 | The **emoji tab** says “Live library connected”. The emoji library is built in, so the pill describes a connection that is not doing anything | `src/pages/IconEmojiLibrary.jsx` | **Change it**, but no existing sentence fits and we would not invent one. One phrase from you and it is a one-line fix |
+| 3 | The five **buttons inside the semantic-colour illustrations** look like buttons and do nothing — they are a picture of an interface | `.stc-sc-ghost` / `.stc-sc-link`, `src/pages/ColorStudio.jsx` | **Stop making them buttons.** They are 14–21px tall, below the floor, and enlarging them would blow up the miniature they are drawn in |
+| 4 | The **SOON tag** on the file converter is 8px — the smallest type anywhere in the product | `.fc-soon`, `src/styles/global.css` | **Grow it to 10px**, which is what the lines beside it use. We fixed its colour and left its size |
+
+**If you do nothing.** Nothing breaks. Items 2 and 3 are the two that tell a
+visitor something untrue about the product.
+
+## 2.6 · Do SEO, Marketing and AI assistants belong in Learn?
+
+**The question.** Three topics are queued for Learn and we have stopped before
+writing them, because they may not be Learn at all.
+
+**Why we are asking.** You decided Learn is **proper design education** — real
+articles on colour theory, typography and accessibility, not how-to guides for
+our tools and not product documentation (§3.6). Seven guides are live and all
+seven sit inside that. **SEO, Marketing and AI assistants** are useful to the
+same reader and are not design education, so writing them would either widen
+what Learn is or quietly break the rule you set.
+
+**We recommend leaving them out** and keeping Learn narrow — but you set the
+rule, so widening it is yours to do.
+
+**Time.** One minute to answer. Neither answer creates work for you.
+
+**If you do nothing.** Two guides being written now will land and the three
+stay unwritten, which is the safe outcome — but nobody will raise it again.
+
+**Your answer:** _______________
 
 ---
 
 # 3 · Decided — recorded so nobody asks you twice
 
-**Ten decisions you made on 2026-09-05.** They are here so that no agent, and no
-future version of this file, asks you again. The full record is in
-[`CHANGELOG.md`](../CHANGELOG.md).
+**Twelve decisions you have already made** — ten on 2026-09-05, two since.
+They are here so that no agent, and no future version of this file, asks you
+again. The full record is in [`CHANGELOG.md`](../CHANGELOG.md).
 
 ## 3.1 · The word "tokens" → we say **"Styles"**
 
@@ -404,11 +507,6 @@ today's brand.
 *(We had recommended leaving it paid; you chose free, knowing the free tier
 already had six palettes.)*
 
-**Keep the history, because it is the useful part.** The row named `google` was
-never Google — it was holding **Material 3's** default purple. #354 split them
-into `material` (Material 3 Baseline) and a correct `google` row. The split was a
-data correction; which side of the paywall Google lands on was never chosen by
-anyone until now, and now it is.
 
 ## 3.4 · `/community` tile lettering → **yes, pick the ink per tile**
 
@@ -435,7 +533,7 @@ guides for our tools, and **not** product documentation.
 No first person. You chose this deliberately so the content can be written at
 scale and you only have to fact-check it.
 
-**Note the contrast with §2.3, and it is not a contradiction.** Educational
+**Note the contrast with §2.2, and it is not a contradiction.** Educational
 articles are not yours to sign; a welcome from the founder is nothing but yours.
 
 ## 3.8 · Discover ends as a **community gallery, built in stages**
@@ -458,7 +556,32 @@ what state its in also asking for feedback support as im a solo developr"*.
 **Opt-in only.** It never auto-opens. No timer, no scroll trigger, no
 first-visit trigger. A visitor reaches it by clicking something.
 
-**Blocked on §2.3** — your four sentences.
+**Blocked on §2.2** — your four sentences.
+
+## 3.11 · The hero shape → **retired the exploration; the V2 hero decides**
+
+*(2026-09-07. Your words: “Retire it, V2 hero decides.”)*
+
+This page asked you three times to compare hero shapes A, B and C by opening
+`?hero=a`, `?hero=b` or `?hero=c`. You ended it instead. **The three sketches
+and the switch that showed them are deleted from the code**, so that question
+no longer has anything to look at — and this file went on asking it for three
+days after you had answered. That is what this review found and removed.
+
+## 3.12 · The hero headline → **ship it**
+
+*(2026-09-10.)* It reads:
+
+> **Build and export UI and brand design kits, in one unified location.**
+
+**Every word of it is yours.** It was assembled, not written — the first half
+is the opening of one sentence you wrote, the marked half is the end of
+another, and the comma between them is punctuation. You chose that over an
+agent draft, read it beside the two lines it was cut from, and said ship it.
+
+A test now pins the exact sentence, so it cannot be reworded by an agent
+tidying punctuation. **One thing it leaves open:** the export section further
+down the same page is headed by the full version of the first line. See §2.2.
 
 ---
 
@@ -466,6 +589,11 @@ first-visit trigger. A visitor reaches it by clicking something.
 
 Still open, all of it needs your dashboard access. Ordered by what breaks
 without it.
+
+**Every item here has a code side and a dashboard side.** The code side is
+stated on each one and every code side below is **done** — there is no item
+on this list waiting on us. We cannot see your dashboards, so we cannot tick
+any of these for you; that is why none of them has moved to §5.
 
 ## 4.1 · P0 — Stripe prices do not match the prices on screen
 
@@ -482,8 +610,9 @@ happens to existing yearly subscribers before you publish it.
 Quarterly cannot be sold until four small code changes ship alongside it; that
 part is our job, not yours, and it is in the queue.
 
-**Done when.** `/api/get-prices` reports `source: "live"` for monthly and yearly
-at the ladder amounts.
+**Code side: done.** The site reads every amount from `src/config/planLadder.js`.
+Quarterly is the exception and it is ours, not yours: it has no Stripe price and
+no checkout entry, so it cannot be sold yet.
 
 **If you do nothing.** The site advertises one price and charges another. That is
 the only item on this page with a legal edge to it.
@@ -501,6 +630,9 @@ for each and confirm HTTP 200.
 **Why.** Our code handles all of these; Stripe is not sending them. Refunds and
 chargebacks in particular are handled in code and never arrive.
 
+**Code side: done.** Every event listed above has a handler in
+`api/stripe-webhook.js`.
+
 **If you do nothing.** Do not create a lifetime price. A one-off payment we never
 hear about is a customer who paid and got nothing.
 
@@ -514,6 +646,9 @@ Check that a signed-in user can write only under `community-media/{uid}/`.
 **Why.** The community architecture you approved needs it. Nothing that uploads a
 file can work until it exists — including the community gallery in §3.8.
 
+**Code side: done.** `storage.rules` is written and the emulator suite covers
+it; it just has nowhere to be published to until Storage exists.
+
 **If you do nothing.** Community media stays unbuildable.
 
 ## 4.4 · P1 — Admin → Feedback: confirm it now loads
@@ -522,22 +657,16 @@ file can work until it exists — including the community gallery in §3.8.
 
 **Time.** 2 minutes.
 
-**Why — this item has changed, and the old version of it was wrong.** It used to
-say "no code anywhere sets that flag". That stopped being true in #241:
-`api/verify-admin.js` mints `admin` from your verified email. The real fault was
-narrower and quieter — nothing in the browser ever *refreshed* your token after
-the flag was minted, so your session went on using a token that did not carry
-it, and the panel absorbed the refusal in an empty `catch` and rendered **"No
-submissions yet"**. A refused read and an empty inbox looked identical.
+**Why.** The panel used to render "No submissions yet" whether the queue was
+empty **or** the read had been refused — the two looked identical. It now
+refreshes your token and says which it is.
 
-Both halves shipped in #390. The panel now forces the token refresh, and it says
-which it is: either `N from the server · M from this browser`, or a red **"The
-server's copy could not be read"** with the actual reason.
+**What you should see.** A count line: `N from the server · M from this
+browser`. If instead you see a red **"The server's copy could not be read"**,
+copy the reason underneath it and send it to us — that is a real fault and we
+will fix it.
 
-So this is no longer a decision — it is a two-minute confirmation.
-
-**What you should see.** The count line. If you instead see the red box, copy the
-reason underneath it and send it to us; that is a real fault and we will fix it.
+**Code side: done** (#390).
 
 **If you do nothing.** Feedback submitted through the site may still be
 unreviewed, and you will not know which.
@@ -550,18 +679,12 @@ you run the two-minute check. **B** — you cancel or pause OpenRouter until we 
 **We recommend A**, because the tool is written and only the last wire is
 missing. But B costs you nothing to choose and saves the subscription.
 
-**This item used to be a task and it was impossible.** It said: sign in, open the
-AI Image Prompt Generator, generate one prompt, read the badge. **You cannot open
-that tool.** `/create/ai-prompt` is badged *Soon* and shows the "still in the
-workshop" page. The page component exists but no route reaches it, so there is no
-button anywhere on the site that runs it.
-
-**Why that matters more than a broken to-do.** OpenRouter is used by **exactly
-one thing** — the prompt generator. The Alt Text tool, which *is* live, runs on
-Gemini. So **no visitor to uil4b.com can cause an OpenRouter request at all**,
-and Admin → Overview → AI provider health will keep saying "no generations to
-judge by" forever. That is not a fault in the panel; there is genuinely nothing
-to count.
+**Why.** OpenRouter is used by **exactly one thing** — the AI Image Prompt
+Generator. The Alt Text tool, which *is* live, runs on Gemini. And
+`/create/ai-prompt` is badged *Soon*: the page exists but no route reaches it,
+so there is no button anywhere on the site that runs it. **No visitor can
+cause an OpenRouter request at all**, which is why Admin → Overview → AI
+provider health says "no generations to judge by" and always will.
 
 **Time.** One minute to answer. Two minutes for the check itself, *after* we ship
 A.
@@ -586,14 +709,25 @@ nothing to report.
 
 ## 4.6 · P1 — Stripe Customer Portal has no retention offer
 
-**Do.** Stripe → Settings → Customer Portal. Create the **`RETAIN50`** coupon (50%
-for 3 months), enable cancellation, and select the retention offer.
+**Do.** Two halves, and the item is not finished without both.
 
-**Time.** 15 minutes.
+1. Stripe → Settings → Customer Portal. Create a 50%-for-3-months coupon,
+   enable cancellation, and select the retention offer.
+2. Vercel → Environment Variables → set **`STRIPE_RETENTION_COUPON`** to that
+   coupon’s id, and redeploy.
 
-**Why.** The cancellation flow is built and is waiting on this.
+**Time.** 15 minutes, plus the redeploy.
 
-**If you do nothing.** Every cancellation is final, with nothing offered.
+**Why.** `api/create-portal.js` asks Stripe for its cancellation flow and
+attaches the retention offer **only when that variable is set** — the name
+`RETAIN50` appears in our notes but nowhere in the code, so the coupon has to
+be named to us, not just created.
+
+**If you do nothing — and this is worse than it used to say here.** It is not
+that a cancelling customer is offered nothing. **A Pro subscriber has no way
+to cancel at all**, because the portal has no cancellation flow to show them.
+That is why “Cancel any time” had to be taken off `/plans`: we could not
+honour it. Everything on the code side is written and defensive already.
 
 ## 4.7 · P1 — Check the legacy customers can still be matched to accounts
 
@@ -667,6 +801,8 @@ to the UIL4B and preview referrers, and to the Web Fonts API only.
 
 **Time.** 5 minutes.
 
+**Code side: n/a** — this one is entirely a console setting.
+
 **If you do nothing.** The key is in the browser bundle and anyone can spend our
 quota with it.
 
@@ -685,6 +821,14 @@ quota with it.
   system book (PDF) and the brand guidelines presentation."*
 
 **Time.** 2 minutes either way.
+
+**Code side: done** (#417) **— and this is the whole of what is left for you.**
+The sentence is no longer typed anywhere. `api/_lib/plans.js` derives it from
+the same limits the server enforces, a test fails the build if the two drift,
+and the setup route now *updates* a product whose description is stale instead
+of only ever creating one. **But nothing runs that update until somebody
+triggers it**, because Stripe products are not rewritten by a deploy. Saving
+the Stripe setup panel once is the trigger.
 
 **Why.** The description said *"1,000 AI actions per day … and full design JSON
 export."* The server allows **30** a day, and the JSON export has never been
@@ -710,9 +854,18 @@ it is in writing, from us.
   2026-08-07: *"openrouter key is updated and redeployed"*. This records the
   **key**, not that the route works — that is §4.5 above and it is still open.
 
-That is the whole list of confirmations. It does **not** cover Storage, the admin
-flag, analytics accuracy, a working AI generation, or any live payment or login
-flow. All of those are open above.
+- **The hero headline.** Approved 2026-09-10 and pinned by a test — §3.12.
+- **The hero shape exploration.** Retired 2026-09-07 — §3.11. The `?hero=`
+  sketches are deleted; there is nothing to go back and look at.
+
+That is the whole list of confirmations. It does **not** cover Storage, the
+admin flag, analytics accuracy, a working AI generation, or any live payment or
+login flow. All of those are open above.
+
+**Nothing in §4 has moved here, and that is deliberate.** Every one of those
+items is finished on our side and finished nowhere else, and we have no way to
+see a Stripe or Firebase dashboard. Ticking one off on your word is how §4.4
+came to say something false for weeks.
 
 ---
 
