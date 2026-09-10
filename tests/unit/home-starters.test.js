@@ -26,6 +26,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
 import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
+import { paletteBuilderUrl } from '../../src/data/paletteGallery.js'
 import { arrayBlock, assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
 const HOME = 'src/pages/Home.jsx'
@@ -113,4 +114,68 @@ test('the hand-off URLs are the galleries own, not a second encoding', () => {
   assert.match(src, /paletteBuilderUrl\(/, 'the homepage no longer uses the palette hand-off')
   assert.ok(!/\?gs=/.test(src), 'the homepage hand-builds a gradient hand-off URL')
   assert.ok(!/\?c=/.test(src), 'the homepage hand-builds a palette hand-off URL')
+})
+
+/* ── The Pro gate, salvaged from PR #264's C11 ─────────────────────────────────
+ *
+ * #264 wrote this rule against a homepage gallery of 170 items that never
+ * reached main. The section that DID land draws six artefacts out of
+ * HOME_STARTER_SPEC — but it resolves palette ids against LIBRARY_PALETTES,
+ * and that array is CURATED_LIBRARY_PALETTES plus BRAND_LIBRARY_PALETTES: 101
+ * entries, 30 of them Pro-gated. So the pool the front page picks from
+ * contains the paid set, and nothing stops a future edit naming one.
+ *
+ * The harm is not "a locked card appears". It is that the card would not be
+ * locked. `paletteBuilderUrl()` puts every hex on the query string, and
+ * /create/palette loads `?c=` with no entitlement check at all — the gate is
+ * `pickBrand`, and `?c=` does not go through it. One id in the spec above
+ * would publish a paid brand system's colours to anonymous visitors on the
+ * page with the most traffic, and every existing assertion in this file would
+ * stay green: the artefact IS real, the link IS inward, it names no colour and
+ * no URL. That is exactly the shape of gap this suite keeps finding.
+ */
+
+test('the Palette Builder still gates brand systems, so the rule below has a reason', () => {
+  // Asserted rather than assumed. If the gate is ever deliberately removed,
+  // this fails first and the rule under it should be re-argued, not deleted.
+  const builder = stripComments(read('src/pages/PaletteBuilder.jsx'))
+  assert.match(
+    builder, /const pickBrand = \(b\) => \{\s*if \(!b\.free && !isPro\)/,
+    'PaletteBuilder no longer refuses a Pro brand system to a free account',
+  )
+  assert.ok(
+    LIBRARY_PALETTES.some((p) => p.pro),
+    'no palette in the pool is Pro-gated any more — this rule has nothing to protect',
+  )
+})
+
+test('the front page never hands a Pro-gated palette to the builder', () => {
+  const gated = new Set(LIBRARY_PALETTES.filter((p) => p.pro).map((p) => p.id))
+  assert.ok(gated.size > 0, 'the pool carries no gated entries, so this test is toothless')
+
+  for (const { kind, id } of starterSpec()) {
+    if (kind !== 'palette') continue
+    const palette = LIBRARY_PALETTES.find((p) => p.id === id)
+    assert.ok(palette, `the homepage advertises palette "${id}", which no longer exists`)
+    assert.ok(
+      !gated.has(id),
+      `HOME_STARTER_SPEC names "${id}", which is Pro-gated. The card links `
+      + `paletteBuilderUrl(colors), so its whole system arrives on ?c= with no gate in the way — `
+      + `pickBrand never runs on that path. Use a curated palette instead.`,
+    )
+  }
+})
+
+test('the hand-off really does carry the colours, which is why the rule above matters', () => {
+  // The premise, checked rather than described: if paletteBuilderUrl ever
+  // stopped putting hexes on the query, the leak would be gone and the rule
+  // above would be guarding nothing.
+  const sample = LIBRARY_PALETTES.find((p) => p.pro)
+  const url = paletteBuilderUrl(sample.colors)
+  for (const hex of sample.colors) {
+    assert.ok(
+      url.includes(hex.replace('#', '')),
+      `${hex} does not reach the hand-off URL — re-check what this rule is protecting`,
+    )
+  }
 })
