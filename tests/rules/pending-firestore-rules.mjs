@@ -277,11 +277,33 @@ export const PENDING_PATCHES = [
 ]
 
 /**
+ * Is this patch already in the text? Asked of the RESULT, not of whether the
+ * anchor still matches — a patch that has landed has no anchor left to find,
+ * and "the anchor is gone" and "the file moved" are the two answers this has to
+ * tell apart. Every marker below is a line the patch itself adds.
+ */
+export const PENDING_MARKERS = {
+  'feedback-create-closed': (t) =>
+    /match \/feedback\/\{feedbackId\}\s*\{[\s\S]*?allow create: if false;/.test(t),
+  'community-prompts-bounded-create': (t) => t.includes('function promptShapeOk()'),
+  'community-submissions-bounded-create': (t) => t.includes('function submissionShapeOk()'),
+  'analytics-daily-day-id-and-field-cap': (t) =>
+    t.includes("day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')"),
+}
+
+/**
  * The published rules with the pending diff applied — in memory, never on disk.
  *
- * Throws unless every anchor matched EXACTLY once. A patch that silently
- * half-applies is worse than no patch: the tests would go green against rules
- * the founder is not being handed.
+ * Throws unless every anchor matched EXACTLY once, OR the patch is already in
+ * the file. A patch that silently half-applies is worse than no patch: the
+ * tests would go green against rules the founder is not being handed.
+ *
+ * THE DAY IT IS APPLIED IS NOT A FAILURE. `npm run apply:gated` writes this
+ * diff into firestore.rules for real, and from then on the anchors are gone. A
+ * function that only knew how to apply would turn the successful day red, so
+ * each patch is skipped when the file already carries what it grants — and the
+ * text returned is the same text either way, which is what keeps every
+ * assertion downstream honest.
  */
 export async function pendingRulesText(rulesPath = RULES_PATH) {
   // The working tree is CRLF and the patch anchors below are written LF, so an
@@ -290,11 +312,14 @@ export async function pendingRulesText(rulesPath = RULES_PATH) {
   // line endings, and neither does the diff the founder applies.
   const original = (await readFile(rulesPath, 'utf8')).replace(/\r\n/g, '\n')
   let text = original
+  let applied = 0
   for (const patch of PENDING_PATCHES) {
+    if (PENDING_MARKERS[patch.id](text)) continue
     const occurrences = text.split(patch.find).length - 1
     if (occurrences !== 1) {
       throw new Error(
-        `pending firestore.rules patch "${patch.id}" matched ${occurrences} times, expected exactly 1. ` +
+        `pending firestore.rules patch "${patch.id}" matched ${occurrences} times, expected exactly 1, ` +
+        'and the rule it grants is not in the file either. ' +
         'firestore.rules has moved underneath this patch — re-derive the diff before trusting any test that uses it.',
       )
     }
@@ -304,7 +329,17 @@ export async function pendingRulesText(rulesPath = RULES_PATH) {
     // into the middle of a rule and produced something that only failed at
     // compile time.
     text = text.replace(patch.find, () => patch.replace)
+    applied += 1
   }
-  if (text === original) throw new Error('the pending patch changed nothing')
+  // The whole point is that the returned text carries the patch. Whether this
+  // run put it there or the founder already had is not the question.
+  for (const patch of PENDING_PATCHES) {
+    if (!PENDING_MARKERS[patch.id](text)) {
+      throw new Error(`the pending patch "${patch.id}" applied and granted nothing`)
+    }
+  }
+  if (applied === 0 && text === original && !PENDING_MARKERS['feedback-create-closed'](original)) {
+    throw new Error('the pending patch changed nothing')
+  }
   return text
 }

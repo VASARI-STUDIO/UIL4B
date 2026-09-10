@@ -46,10 +46,16 @@ test('the rules refuse a client document that claims anything but pending', () =
     'a client may only create its own submission')
 })
 
-test('only an admin may approve, and the owner may only withdraw', () => {
+test('only a reviewer may approve, and the owner may only withdraw', () => {
   const rules = read('firestore.rules')
   const block = /match \/community-submissions\/\{submissionId\}[\s\S]*?\n {4}\}/.exec(rules)?.[0] || ''
-  assert.match(block, /allow update: if isAdmin\(\)/)
+  // `isAdmin()` before the moderator role lands, `isReviewer()` after — the two
+  // states `npm run apply:gated` moves between. What must never change is that
+  // the update gate is a PREDICATE about who is reviewing, rather than
+  // something a client can satisfy about itself: the alternation below would
+  // not accept `isOwner()`, `isSignedIn()`, or a bare `true`.
+  assert.match(block, /allow update: if is(?:Admin|Reviewer)\(\)/,
+    'the approve gate is no longer a reviewer check')
   assert.match(block, /status == 'withdrawn'/,
     "the owner's only post-creation write may not promote their own submission")
 })
