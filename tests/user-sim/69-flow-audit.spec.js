@@ -120,14 +120,18 @@ test.describe('flow 1 — keeping it: the first project, by keyboard', () => {
       await signIn(page, { plan: 'free', projects: 0 })
       await go(page, '/projects')
 
-      // WHAT A NEW ACCOUNT ACTUALLY SEES. Not the "No projects yet" state this
-      // page renders for zero projects — ProjectContext seeds a "Default
-      // Project" into any account that has none, so that state is unreachable
-      // signed in, and the seed already occupies one of the free plan's
-      // slots. Asserted here so the fact is on record; the decision about it
-      // is the founder's and is in the PR, because the context is gated.
-      await expect(page.locator('.uh-grid .proj-card', { hasText: 'Default Project' })).toHaveCount(1)
-      await expect(page.getByRole('button', { name: 'Create your first project' })).toHaveCount(0)
+      // WHAT A NEW ACCOUNT ACTUALLY SEES — AND IT IS NOT WHAT IT WAS.
+      //
+      // This assertion used to read the other way round: ProjectContext seeded
+      // a "Default Project" into any account that had none, so the empty state
+      // was unreachable signed in and the seed had already spent one of the
+      // three free slots. It was recorded here as a fact and put to the founder
+      // in #436's PR, because the decision was his. He answered on 2026-09-10:
+      // drop the seed. So a new account starts genuinely empty, the empty state
+      // is the first thing it sees, and no card exists that nobody made.
+      // tests/user-sim/73-founder-calls-0910.spec.js holds the whole of it.
+      await expect(page.locator('.uh-grid .proj-card', { hasText: 'Default Project' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Create your first project' })).toHaveCount(1)
 
       const opener = page.getByRole('button', { name: 'New Project' })
       await opener.focus()

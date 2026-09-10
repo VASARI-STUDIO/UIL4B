@@ -801,13 +801,40 @@ export default function Projects({ toast }) {
           <p>Opening your projects…</p>
         </div>
       ) : projects.length === 0 ? (
+        /* THIS PANEL IS NOW REACHABLE, AND UNTIL 2026-09-10 IT WAS NOT.
+           ProjectContext seeded a "Default Project" into any account that had
+           none, so signed in, `projects.length` was never 0 and nothing below
+           had ever been on a real screen — while Onboarding's "Not now — take
+           me to my projects" and first-run-destination.test.js's "the projects
+           empty state still teaches" both described it as the landing. The
+           founder dropped the seed (see the note where it used to be in
+           src/contexts/ProjectContext.jsx), so it renders for every new
+           account now and was read as new surface.
+
+           TWO THINGS WERE WRONG WITH IT, both structural; not a word of the
+           copy changed, because the sentence already names the two tools that
+           make a project and the control already says what it does.
+
+           · The heading was an <h3> directly under the page's <h1>, and BEFORE
+             the "Starters, rotating daily" <h2> in the DOM. So the outline a
+             screen-reader user heard went 1 → 3 → 2: a level-3 with nothing
+             above it, and then a level-2 after it, which is not an outline at
+             all (WCAG 1.3.1). Same defect and the same fix the legal pages'
+             section headings got — the tag changed, the size deliberately did
+             not, and the universal `*{margin:0}` reset means the two tags
+             compute identically here.
+           · The folder mark was an unlabelled <svg> exposed to the
+             accessibility tree as a graphics object between the heading and
+             the sentence. It is decoration for a panel whose heading already
+             says what it means, so it is hidden rather than given a name it
+             does not need. */
         <div className="card" style={{ padding: 48, textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
               <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
             </svg>
           </div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No projects yet</h3>
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No projects yet</h2>
           <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16, maxWidth: 360, margin: '0 auto 16px' }}>
             Build a palette in <NavLink to="/create/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/create/font-pair">Font Pair Finder</NavLink>, then save your design as a project.
           </p>
