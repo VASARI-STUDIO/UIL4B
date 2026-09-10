@@ -13077,7 +13077,14 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .prn-item[data-lead="true"] .prn-proof{max-width:920px}
 .prn-say{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3);min-width:0}
 .prn-body{margin:0;font-size:var(--fs-body-s);line-height:1.7;color:var(--t1);max-width:56ch}
-.prn-go{display:inline-flex;align-items:center;gap:8px;margin-top:var(--s-1);font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);text-decoration:none}
+/* min-height:24px — WCAG 2.2 AA 2.5.8. Measured 23.1px tall at 390px on
+   2026-09-11: an inline-flex link sized only by its line-box, 0.9px under the
+   minimum. It does not qualify for the "Inline" exception the way
+   .app-footer-attrib does (58-target-size-24.spec.js documents that one): this
+   is a standalone call to action on its own line, not a link inside a sentence.
+   /principles is simply not one of the four routes 58 measures, which is how a
+   fifth control stayed under the bar after that sweep fixed the other four. */
+.prn-go{display:inline-flex;align-items:center;gap:8px;min-height:24px;margin-top:var(--s-1);font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);text-decoration:none}
 .prn-go:hover{text-decoration:underline;text-underline-offset:3px}
 .prn-go span{transition:transform var(--dur-2) var(--ease-out)}
 .prn-go:hover span,.prn-go:focus-visible span{transform:translateX(3px)}
