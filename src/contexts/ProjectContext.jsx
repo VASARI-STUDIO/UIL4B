@@ -344,25 +344,39 @@ export function ProjectProvider({ children }) {
     })
   }, [userKey])
 
-  // Auto-create a default project on first sign-in if user has none
-  useEffect(() => {
-    if (!userKey) return
-    const list = allProjects[userKey]
-    if (list && list.length > 0) return
-    const id = newId()
-    const project = {
-      id,
-      name: 'Default Project',
-      design: JSON.parse(JSON.stringify(design)),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    setAllProjects(prev => {
-      const next = { ...prev, [userKey]: [project] }
-      saveAllProjects(next)
-      return next
-    })
-  }, [userKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  // ── NOTHING IS SEEDED. A NEW ACCOUNT STARTS EMPTY. ──────────────────────
+  //
+  // An effect here used to create a project called "Default Project" in any
+  // account that had none, on first sign-in. It is gone, on the founder's call
+  // of 2026-09-10, and the two things it cost are the reason:
+  //
+  //   · IT SPENT A SLOT NOBODY ASKED FOR. The free plan saves three projects,
+  //     the cap counts this array, and the seed was already in it — so a brand
+  //     new free account had two slots, not three, and the first thing it had
+  //     ever "saved" was an untouched copy of DEFAULT_DESIGN. Nobody built it
+  //     and nobody could tell what it was for.
+  //   · IT MADE THE EMPTY STATE UNREACHABLE. `/projects` renders a "No projects
+  //     yet" panel that names the two tools to start with and offers the first
+  //     save, and Onboarding's "Not now — take me to my projects" sends people
+  //     straight at it. Signed in, the list was never empty, so that panel had
+  //     never once been on a real screen. The 2026-09-10 flow audit (#436)
+  //     measured both and put the choice to him; he chose to drop the seed so
+  //     the empty state does the teaching and the cap means three.
+  //
+  // REMOVING THIS TAKES NOTHING AWAY FROM ANYONE. The effect only ever WROTE,
+  // and only into an account whose list was empty; no code path deleted or
+  // rewrote a project, here or anywhere. An existing account that already holds
+  // a "Default Project" — whether it is untouched or has a year of work in it —
+  // still holds it: the record lives in `vs-projects` under that account's key
+  // and in the account's sync document, and both are read exactly as before.
+  // What stops is the WRITE into an empty account, and only that.
+  //
+  // Do not put it back "so the tools have something to open". Every Create tool
+  // works on the live working design (`vs-current-design`) and needs no saved
+  // project at all; every surface that lists projects — the palette save menu,
+  // SaveTypeSystem's overwrite list, ColorStudio's Load row, the icon save
+  // picker — is already guarded by `projects.length > 0` and renders its create
+  // path instead. tests/user-sim/73-founder-calls-0910.spec.js holds all of it.
 
   // ── Cross-device sync ───────────────────────────────────────────────────
   //
