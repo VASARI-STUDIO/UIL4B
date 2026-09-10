@@ -1,7 +1,7 @@
 # Release readiness
 
 **One page. What is finished, what needs you, what needs somebody outside this
-project.** Everything here was measured on `ca1e735d` on 2026-09-10, not
+project.** Everything here was measured on `5edbfc36` on 2026-09-10, not
 remembered. Where a figure would go stale, this page names the command instead.
 
 Your to-do list is [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). This page is the
@@ -30,9 +30,9 @@ Measured on this branch. Each row is a command you or anyone can re-run.
 |---|---|---|
 | Lint | `npm run lint` | **0 errors, 25 warnings** — under the ceiling, which came down from 31 |
 | Build | `npm run build` | passes, and printed `prerender: wrote 39 route shells + a noindex 404 shell (27 on a section share card, 16 with a BreadcrumbList)`. The deploy is **5.6 MB** (was 35 MB before the ffmpeg core moved off origin) |
-| Unit | `npm run test:unit` | **1757 pass, 0 fail, 0 skipped** |
+| Unit | `npm run test:unit` | **1786 pass, 0 fail, 0 skipped** |
 | Firestore and Storage rules | `npm run test:rules` | **105 pass, 0 fail, 0 skipped** — the emulator now runs Storage too |
-| Browser acceptance | `npm run test:users` | **961 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
+| Browser acceptance | `npm run test:users` | **976 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
 
 What the gate *requires* — as opposed to what it happened to report today —
 lives in [`reference/build-and-verify.md`](reference/build-and-verify.md) and
@@ -89,6 +89,13 @@ regression.
   user flows walked end to end (7 fixes) and their follow-ups (9 fixes,
   including Export being unreachable on phones, refusals shown as green success
   toasts, and `/settings` opening on the upgrade pitch).
+- **Your four answers of 2026-09-10 are shipped (#439–#441).** The hero headline is
+  approved and pinned by a test, so it cannot be reworded by accident. New accounts
+  no longer get a seeded "Default Project", which was quietly taking one of the
+  three free slots and hiding the real empty state. The three parked homepage pull
+  requests were salvaged (three missing guards recovered, the rest already landed or
+  rejected) and closed, with their branches intact. And `npm run apply:gated` now
+  exists — item 11 below.
 - **Every route now loads only its own stylesheet (#424).** Eleven page sheets
   left `global.css` (687 → 588 kB), a computed-style snapshot over 25 routes
   proves nothing painted differently, and the one-directional contrast walk
@@ -113,7 +120,7 @@ code.
 | **8** | **OpenRouter has no reachable tool** — keep paying, or stop? | [§4.5](OWNER-ACTIONS.md) | 1 min to answer | You keep paying for a route no visitor can use |
 | **9** | **The homepage price now comes from the plan ladder in code** (`src/config/planLadder.js`), not typed copy — but that ladder is still not read from Stripe | `src/config/planLadder.js` | 10 min to decide | Item 4 already means checkout can differ from `/plans`; keep the ladder and Stripe in step by hand until then |
 | **10** | ~~**The hero headline needs your yes or no.**~~ — **closed 2026-09-10: you said ship it.** It reads *"Build and export UI and brand design kits, in one unified location."*, assembled only from words you wrote. The pending-approval flag is off `src/data/positioning.js`, `docs/reference/positioning.md` and the two tests that named it, and `tests/unit/positioning-truth.test.js` now pins the exact sentence so it cannot be reworded without coming back to you | `src/data/positioning.js` | done | — |
-| **11** | **Three `firestore.rules` diffs wait unapplied**: the moderator role (#390), feedback `create` closed to strangers plus size bounds on signed-in writes (#418), and the per-project sync collection (#419). Each is written out in its pull request; none could be staged from here | [§1.3](OWNER-ACTIONS.md) | 10 min | Anyone can still write to the feedback queue; sync stays on the 1 MiB single document; you remain the only moderator |
+| **11** | **Four changes are written and waiting on one command from you.** Three `firestore.rules` diffs — the moderator role (#390), feedback `create` closed to strangers with size bounds on signed-in writes (#418), the per-project sync collection (#419) — plus the Firebase deferral (#427, measured at 624 ms off the homepage). No agent is allowed to save those files, so #441 built you `npm run apply:gated`: it applies all four, runs the rules emulator, the unit suite and a deferred build, and prints what each one changed. `-- --dry-run` shows every line first and touches nothing | [§1.3](OWNER-ACTIONS.md) | 2 min, then publish the rules in the Firebase console | Anyone can still write to the feedback queue; sync stays on the 1 MiB single document; you remain the only moderator; the homepage stays 624 ms slower |
 
 **On item 9**, found by walking the first-visit flow on 2026-09-07 and narrowed
 on 2026-09-08 (#415). The homepage price panel now derives its figure from
