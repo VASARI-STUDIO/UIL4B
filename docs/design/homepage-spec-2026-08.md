@@ -1,5 +1,31 @@
 # Homepage design specification — August 2026
 
+> ## Status, 2026-09-10 — **SUPERSEDED RECORD. Kept for its reasoning.**
+>
+> **Do not build from this file.** It specifies C1–C13 of the 2026-08-20
+> founder batch against a homepage that has been rebuilt underneath it.
+>
+> **Where its items went.** Most landed by another route — the step-swap
+> thresholds, the two-zone preview panel, the self-demonstrating search bar,
+> the derived step rail and the export section are all on `main` and now have
+> unit tests holding them (`tests/unit/workbench-zones.test.js`,
+> `tests/unit/home-starters.test.js`, `tests/unit/focus-reveal-layers.test.js`,
+> added by #439 precisely because the behaviour was live with nothing
+> enforcing it). The copy items were agent-written and were rejected.
+>
+> **The consumer list in the note below is out of date and is left as written**
+> — #262 merged, and #270, #269 and #264 were all closed by the founder on
+> 2026-09-10 (`PROPOSALS.md` P-012). The hero-shape pick that this file was
+> being held for was answered on 2026-09-07: he retired the exploration
+> (`OWNER-ACTIONS.md` §3.11).
+>
+> **Why it is not deleted.** It is the cited evidence for **P-011**, still open
+> in `PROPOSALS.md`. Delete it in the same commit that closes P-011.
+>
+> **What is authoritative instead:** `src/pages/Home.jsx` and the components it
+> mounts, for what the homepage is; `src/data/positioning.js` for every
+> sentence on it.
+
 > Buildable specification for the V2 homepage rework (founder batch 2026-08-20,
 > Group C: C1–C13). **Design authority only — no code in this file.**
 >

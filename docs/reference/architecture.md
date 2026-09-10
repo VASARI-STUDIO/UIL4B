@@ -175,13 +175,12 @@ stripe-webhook.js   support.js           verify-admin.js      delete-account.js
 `scan-photo.js`, and `generate-prompt.js` routes. `share.js` serves social/OG
 previews (+ palette-card PNG) for `/p/:code` short links (vercel.json rewrite).
 
-Shared server helpers (NOT counted as functions) live in `api/_lib/`:
-`accountDeletion.js`, `admin.js`, `billing.js`, `env.js`, `firebase-admin.js`,
-`geminiFinish.js`, `http.js`, `moderators.js`, `origins.js`, `plans.js`,
-`pricing.js`, `rateLimit.js`, `stripe.js`. Read the directory rather than this
-list — helpers are uncapped, so they get added without anything forcing a doc
-update, and `moderators.js` is the proof: it arrived in #390 and this line did
-not notice for a week.
+Shared server helpers (NOT counted as functions) live in `api/_lib/`.
+**`ls api/_lib` is the list.** There was a typed one here and it went stale
+twice in five weeks — `moderators.js` arrived in #390 and it took a week to
+notice, and `aiGeneration.js` arrived after that and was still missing on
+2026-09-10. Helpers are uncapped, so nothing fails when the list falls behind,
+which is exactly the case for not keeping one.
 
 **Before adding an API route:** you are likely at or near the cap. Prefer
 extending an existing route (e.g. action-switch on `req.body`) or moving logic

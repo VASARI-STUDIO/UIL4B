@@ -1,5 +1,21 @@
 # Homepage Patterns — Mobbin Research, August 2026
 
+> ## Status, 2026-09-10 — **SUPERSEDED RECORD. Kept for its reasoning.**
+>
+> 95 Mobbin captures from 2026-08-20, gathered for the V2 homepage rework and
+> the pricing-page redesign. **The captures are still real and the reasoning is
+> still good**; what has dated is the homepage it was gathered for.
+>
+> **It has exactly two consumers, and both are themselves superseded records:**
+> it is the cited Inputs line of `docs/design/homepage-spec-2026-08.md` and the
+> Sources line of `docs/design/anti-slop-and-hero-2026-08.md`. Deleting it
+> while either stands would leave a live citation pointing at nothing, so it
+> goes in the same commit as the last of them and not before.
+>
+> **Before citing a capture from here, open it.** Mobbin links go stale, and a
+> capture nobody has looked at since August is evidence of what a page looked
+> like in August.
+
 > Research deliverable for the V2 homepage rework and the pricing-page redesign.
 > **Advisory only.** No code, copy or design in this file — the `design` agent
 > builds from it.

@@ -1,5 +1,16 @@
 # Motion and style reference — founder-supplied, 2026-08-23
 
+> ## Status, 2026-09-10 — **LIVE REFERENCE. Not superseded.**
+>
+> This is the only document here the founder supplied himself, and it records
+> taste rather than a plan, so nothing in the product can date it. Use it as
+> design input.
+>
+> Two things to know before you reach for it: the motion that has actually
+> shipped is governed by `src/hooks/useHomeMotion.js` and the reduced-motion
+> rules in `src/styles/global.css`, not by this file; and the frames are
+> deliberately not committed, for the reason stated below.
+
 The founder supplied a reference and said: *"i like alot of these micro
 animations, i like the design style i also like some of ther other larger
 animations and styles for the discover sales page."*

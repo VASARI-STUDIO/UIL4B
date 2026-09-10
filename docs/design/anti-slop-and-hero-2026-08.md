@@ -1,5 +1,36 @@
 # Anti-slop diagnosis and hero redesign — August 2026
 
+> ## Status, 2026-09-10 — **SUPERSEDED RECORD. Kept for its reasoning.**
+>
+> **Do not build from this file.** Read it to find out *why* something was
+> decided, never to find out what the homepage is.
+>
+> **Its subject never shipped.** This file critiques the homepage "as it will
+> be once PR #262 and PR #264 land". #262 merged; **#264 never did and never
+> will** — the founder closed it on 2026-09-10 (`PROPOSALS.md` P-012). So the
+> page it describes has never existed, and `src/data/homeGallery.js`, which it
+> names as a shipped data layer, is not on `main`.
+>
+> **Its hero recommendation was not taken.** §2.4 recommends *"A UI system that
+> survives the handoff."* as Option A. That line was never approved by anyone
+> and is now one of the rejected headlines
+> `tests/user-sim/56-founder-rejected-headlines.spec.js` walks across every
+> route. The headline that shipped on 2026-09-10 is assembled from the
+> founder's own two sentences and is pinned by
+> `tests/unit/positioning-truth.test.js`.
+>
+> **Why it is not deleted.** §2.12 is the cited evidence line for **P-008,
+> P-009 and P-010**, three founder verdicts still open in `PROPOSALS.md`.
+> Deleting this file would leave three proposals citing nothing. Delete it in
+> the same commit that closes the last of them — and `docs/research/
+> homepage-patterns-2026-08.md` goes with it, as its only remaining consumer.
+>
+> **What is authoritative instead:** the live copy is `src/data/positioning.js`
+> and the surfaces that read it; the vocabulary is
+> `.claude/skills/uil4b-brand-design/references/anti-slop-quality-bar.md`; the
+> anti-slop work that actually shipped is the 2026-09-09 pass recorded in
+> `src/data/pipeline.js` under `anti-slop-audit-2026-09-09`.
+
 > **The brief.** The founder was told of the live site: *"it instantly looks
 > like AI built it."* This file names what produces that reaction, line by line,
 > and specifies a hero that would not.
