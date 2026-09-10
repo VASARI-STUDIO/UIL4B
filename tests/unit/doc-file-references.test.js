@@ -27,6 +27,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 const ROOT = process.cwd()
 
@@ -117,19 +118,41 @@ const TOMBSTONES = new Map(Object.entries({
     'deleted deliberately in #208, same section',
   'docs/reference/doc-authority-map.md::docs/google-sheets-setup.md':
     'deleted; named as the dead link the stranded branch had fixed',
-  // Written by a test run, gitignored, absent on a clean checkout.
-  'docs/reference/build-and-verify.md::tests/user-sim/report/':
-    'created by `npm run test:users`; not committed',
 }))
 
+// A path git IGNORES is a run-time artefact, not a claim about the tree --
+// `tests/user-sim/report/` is written by the browser suite and is absent on a
+// clean checkout. Naming one in a document is legitimate, and whether it
+// happens to be on disk depends on what has been run, so it must not decide a
+// test. Asked once, in a batch, because `git check-ignore` exits 1 when it
+// matches nothing and that is not an error here.
+function ignoredByGit(paths) {
+  if (!paths.length) return new Set()
+  try {
+    const out = execFileSync('git', ['check-ignore', '--stdin'],
+      { cwd: ROOT, input: paths.join('\n'), encoding: 'utf8' })
+    return new Set(out.split(/\r?\n/).filter(Boolean).map((p) => p.replace(/\\/g, '/')))
+  } catch (e) {
+    // status 1 means "none of them are ignored"; anything else is a real fault.
+    if (e.status === 1) return new Set()
+    if (e.stdout) {
+      return new Set(String(e.stdout).split(/\r?\n/).filter(Boolean).map((p) => p.replace(/\\/g, '/')))
+    }
+    throw e
+  }
+}
+
 test('every repo path a document names in backticks exists', () => {
-  const missing = []
+  const absent = []
   for (const r of referencedPaths()) {
     const key = `${r.doc}::${r.ref}`
     if (TOMBSTONES.has(key)) continue
-    const abs = path.join(ROOT, r.ref)
-    if (!fs.existsSync(abs)) missing.push(`${r.doc}:${r.line} names \`${r.ref}\``)
+    if (!fs.existsSync(path.join(ROOT, r.ref))) absent.push(r)
   }
+  const ignored = ignoredByGit(absent.map((r) => r.ref))
+  const missing = absent
+    .filter((r) => !ignored.has(r.ref.replace(/\/$/, '')) && !ignored.has(r.ref))
+    .map((r) => `${r.doc}:${r.line} names \`${r.ref}\``)
   assert.deepEqual(missing, [],
     'a document names a path that is not on disk. Either the path moved and the '
     + 'document must be corrected, or the file was deleted deliberately and the '

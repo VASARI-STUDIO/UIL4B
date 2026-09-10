@@ -1,7 +1,7 @@
 # Release readiness
 
 **One page. What is finished, what needs you, what needs somebody outside this
-project.** Everything here was measured on `5edbfc36` on 2026-09-10, not
+project.** Everything here was measured on `5cd10117` on 2026-09-10, not
 remembered. Where a figure would go stale, this page names the command instead.
 
 Your to-do list is [`OWNER-ACTIONS.md`](OWNER-ACTIONS.md). This page is the
@@ -30,9 +30,9 @@ Measured on this branch. Each row is a command you or anyone can re-run.
 |---|---|---|
 | Lint | `npm run lint` | **0 errors, 25 warnings** — under the ceiling, which came down from 31 |
 | Build | `npm run build` | passes, and printed `prerender: wrote 39 route shells + a noindex 404 shell (27 on a section share card, 16 with a BreadcrumbList)`. The deploy is **5.6 MB** (was 35 MB before the ffmpeg core moved off origin) |
-| Unit | `npm run test:unit` | **1786 pass, 0 fail, 0 skipped** |
-| Firestore and Storage rules | `npm run test:rules` | **105 pass, 0 fail, 0 skipped** — the emulator now runs Storage too |
-| Browser acceptance | `npm run test:users` | **976 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
+| Unit | `npm run test:unit` | **1850 pass, 0 fail, 0 skipped** |
+| Firestore and Storage rules | `npm run test:rules` | **117 pass, 0 fail, 0 skipped** — the emulator runs Storage too, and #443 added twelve moderator tests. This is the one row on this page **not** re-measured on the commit above: it needs a Java 21 emulator, and the figure is #443's. Re-run the command rather than trusting it |
+| Browser acceptance | `npm run test:users` | **988 passed, 13 skipped** — every skip is `12-ui-system-builder.spec.js`, see §4 |
 
 What the gate *requires* — as opposed to what it happened to report today —
 lives in [`reference/build-and-verify.md`](reference/build-and-verify.md) and
@@ -48,13 +48,15 @@ regression.
   count is `LEARN_ARTICLES` in `src/data/learnIndex.js`; three more topics are
   waiting on a decision (`OWNER-ACTIONS.md` §2.6).
 - **Discover is live** — six of its eight groups.
-- **The moderator role is built, and it is in two halves that are not both
-  ready.** `npm run apply:gated` ([§1.3](OWNER-ACTIONS.md)) makes the rules
-  honour a `moderator` claim. **Nothing mints one**: that is
-  `api/verify-admin.js`, whose change exists as prose rather than as an
-  applicable diff, and the command deliberately does not carry it. So after
-  the command the rules understand a moderator and there is still no way to
-  appoint one.
+- **The moderator role is whole, and both halves are in one command** (#443,
+  2026-09-10). `npm run apply:gated` ([§1.3](OWNER-ACTIONS.md)) makes the rules
+  honour a `moderator` claim **and** applies `api/verify-admin.js`, the route
+  that mints it. Until 2026-09-10 that second half existed only as prose on an
+  abandoned branch and this page said so; it is now a real diff the command
+  applies. After you run it **and the site deploys**, Admin → Users carries a
+  Moderator column you can appoint and remove from. Only the founder can
+  appoint — `canAssignModerators()` in `src/utils/moderation.js` is
+  `role === 'founder'`.
 - **The API is at 12 of 12 Vercel functions.** Not a problem today; it means the
   next endpoint has to replace one. `tests/unit/account-deletion.test.js` fails
   the build if it is exceeded, so this cannot be missed.
@@ -134,7 +136,7 @@ here.
 | **8** | **OpenRouter has no reachable tool** — keep paying, or stop? | [§4.5](OWNER-ACTIONS.md) | 1 min to answer | You keep paying for a route no visitor can use |
 | **9** | **The homepage price now comes from the plan ladder in code** (`src/config/planLadder.js`), not typed copy — but that ladder is still not read from Stripe | `src/config/planLadder.js` | 10 min to decide | Item 4 already means checkout can differ from `/plans`; keep the ladder and Stripe in step by hand until then |
 | **10** | ~~**The hero headline needs your yes or no.**~~ — **closed 2026-09-10: you said ship it.** It reads *"Build and export UI and brand design kits, in one unified location."*, assembled only from words you wrote. The pending-approval flag is off `src/data/positioning.js`, `docs/reference/positioning.md` and the two tests that named it, and `tests/unit/positioning-truth.test.js` now pins the exact sentence so it cannot be reworded without coming back to you | `src/data/positioning.js` | done | — |
-| **11** | **Four changes are written and waiting on one command from you.** Three `firestore.rules` diffs — the moderator role (#390), feedback `create` closed to strangers with size bounds on signed-in writes (#418), the per-project sync collection (#419) — plus the Firebase deferral (#427, measured at 624 ms off the homepage). No agent is allowed to save those files, so #441 built you `npm run apply:gated`: it applies all four, runs the rules emulator, the unit suite and a deferred build, and prints what each one changed. `-- --dry-run` shows every line first and touches nothing | [§1.3](OWNER-ACTIONS.md) | 2 min, then publish the rules in the Firebase console | Anyone can still write to the feedback queue; sync stays on the 1 MiB single document; you remain the only moderator; the homepage stays 624 ms slower |
+| **11** | **Four changes are written and waiting on one command from you.** The moderator role, now **both** halves — the `firestore.rules` diff (#390) and `api/verify-admin.js`, the route that grants the claim (#443) — plus feedback `create` closed to strangers with size bounds on signed-in writes (#418), the per-project sync collection (#419), and the Firebase deferral (#427, measured at 624 ms off the homepage). No agent is allowed to save those files, so #441 built you `npm run apply:gated`: it applies all four, runs the rules emulator, the unit suite and a deferred build, and prints what each one changed. `-- --dry-run` shows every line first and touches nothing | [§1.3](OWNER-ACTIONS.md) | 2 min, then publish the rules in the Firebase console **and deploy the site** — `api/verify-admin.js` is a serverless function and does nothing until it ships | Anyone can still write to the feedback queue; sync stays on the 1 MiB single document; you remain the only moderator; the homepage stays 624 ms slower |
 
 **On item 9**, found by walking the first-visit flow on 2026-09-07 and narrowed
 on 2026-09-08 (#415). The homepage price panel now derives its figure from

@@ -124,18 +124,20 @@ the three suites so you find out here rather than in production.
 | | What it changes | What you get |
 |---|---|---|
 | 1 | `firestore.rules` + `src/utils/projectSync.js` | **Project sync stops dying.** Every saved project gets its own record instead of all of them sharing one, so sync no longer stops working forever — silently — once you have about thirty projects with logos in them. |
-| 2 | `firestore.rules` | **A moderator can clear the queues.** The rules start honouring a `moderator` role on feedback, community prompts and community submissions. Accounts, billing and analytics are untouched. |
+| 2 | `firestore.rules` + `api/verify-admin.js` | **You can appoint a moderator, and they can clear the queues.** The rules start honouring a `moderator` role on feedback, community prompts and community submissions, and the sign-in handshake grants that role from a roster only you can write to. Accounts, billing and analytics are untouched. |
 | 3 | `firestore.rules` | **Strangers stop being able to write to your feedback queue.** It was open to anyone on the internet. Every signed-in write is also now held to the shape and size the site actually sends, instead of anything up to 1 MB. |
 | 4 | `src/contexts/AuthContext.jsx` + `src/contexts/SubscriptionContext.jsx` | **The homepage paints sooner.** Measured: 360 ms faster to first paint, 624 ms faster to the headline, and 21.8% fewer bytes in the first request. |
 
-**One half of the moderator role is NOT in this command, and you should know
-which.** `api/verify-admin.js` is the piece that *mints* the moderator role onto
-a person's account. Its change was written as prose with a partial diff rather
-than as something a machine can apply, so applying it would mean shipping a
-version of a security route that no review has seen. The command says so on
-every run. **After you run this, the rules will honour a moderator; appointing
-one still needs that route, and that is a separate job.** Everything else in the
-table is complete.
+**The moderator role is now whole, and this used to say it was not.** Until
+2026-09-10 this item told you that `api/verify-admin.js` — the piece that
+*mints* the moderator role onto a person’s account — was not applied by this
+command, because its change was written as prose with a partial diff rather
+than as something a machine can apply. The change was not missing; it was
+written, reviewed and tested weeks ago and left uncommitted on a branch nobody
+picked back up. It is now a real diff, generated against the file as it stands
+today, and this command applies it. **After you run this and deploy, open
+Admin → Users: every person has a Moderator column, and you can appoint or
+remove one from their own row.** Everything in the table is complete.
 
 **What the command does, step by step.**
 
@@ -156,12 +158,17 @@ table is complete.
    are already written to your files by then, so the undo below is what you
    want if that happens — tell us and we will point it at your JDK.
 5. **Commits nothing and pushes nothing.** It prints the one command that undoes
-   everything: `git checkout -- firestore.rules src/contexts/AuthContext.jsx
-   src/contexts/SubscriptionContext.jsx src/utils/projectSync.js`.
+   everything: `git checkout -- api/verify-admin.js firestore.rules
+   src/contexts/AuthContext.jsx src/contexts/SubscriptionContext.jsx
+   src/utils/projectSync.js`.
 
-**One step afterwards that only you can do.** The new rules are then in the
-repository, not in front of your users. Publish them from the Firebase console,
-or run `firebase deploy --only firestore:rules`.
+**Two steps afterwards that only you can do.** First, the new rules are then in
+the repository and not in front of your users: publish them from the Firebase
+console, or run `firebase deploy --only firestore:rules`. Second, commit and
+deploy the site — `api/verify-admin.js` is a serverless function, so until it
+is deployed the moderator role cannot be granted from a file that only exists
+on your laptop. Until the deploy block in §1.1 is cleared, that second step is
+waiting on Vercel.
 
 **If it stops and says a change no longer fits.** Tell us. It means the file
 moved after the change was reviewed, and it needs an engineer to regenerate the
@@ -188,7 +195,7 @@ these exact files rather than a retyped copy of them:
 | | Where the diff lives | Reviewed in |
 |---|---|---|
 | 1 | `docs/design/per-project-sync-rules.patch` | the per-project sync design |
-| 2 | `docs/design/moderator-role-rules.patch` | [#390](https://github.com/VASARI-STUDIO/UIL4B/pull/390) |
+| 2 | `docs/design/moderator-role-rules.patch` + `docs/design/moderator-verify-admin.patch` | [#390](https://github.com/VASARI-STUDIO/UIL4B/pull/390), the second half recovered and corrected in this PR |
 | 3 | `tests/rules/pending-firestore-rules.mjs` | [#418](https://github.com/VASARI-STUDIO/UIL4B/pull/418) |
 | 4 | `docs/design/firebase-deferral-gated.patch` | [#427](https://github.com/VASARI-STUDIO/UIL4B/pull/427) |
 
@@ -229,6 +236,12 @@ have put on the roster, and the three review collections start accepting them:
 `users/{uid}` is not touched — it stays owner-only and still refuses every
 billing field. `analytics-daily` is deliberately not widened: reviewing
 submissions is not a reason to hand a volunteer your site-wide usage numbers.
+
+**2b · The half that grants it.** `api/verify-admin.js` already proves who you
+are from a verified email against a server-side allowlist. It now also keeps a
+`moderator` claim in step with a roster no browser can read, and lets you — and
+only you — put somebody on it or take them off. A moderator cannot appoint
+another moderator; nothing else about the route changes.
 
 **3 · The feedback queue closed**, which is the one on this page a stranger can
 exploit today:
