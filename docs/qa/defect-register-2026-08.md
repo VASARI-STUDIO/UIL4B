@@ -1,5 +1,17 @@
 # Defect register — the two August 2026 QA audits
 
+> ## Status, 2026-09-10 — **LIVE INDEX. Do not delete.**
+>
+> Re-checked this pass: this file is a lookup table, not an audit, and the
+> citations it exists to resolve are still in the tree — CSS comments, three
+> Playwright specs, a page component and `.gitignore` all name defects by
+> number (`S14`, `N4`). Deleting it would strand every one of them.
+>
+> It names two audit files that no longer exist. **That is deliberate** and
+> those two references are the point of the file, not broken links —
+> `tests/unit/doc-file-references.test.js` carries them as tombstones with
+> that reason.
+
 **What this is.** Two diagnosis-only audits ran in August 2026 and produced 25
 numbered defects between them. Roughly twenty places in this repository — CSS
 comments, three Playwright specs, a page component, `.gitignore` — cite those
