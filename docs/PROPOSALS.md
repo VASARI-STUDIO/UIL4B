@@ -14,24 +14,28 @@ which.
 the record — no other confirmation is needed, and no agent may claim a verdict
 that is not written here.
 
-_Last reviewed: 2026-09-06._
+_Last reviewed: 2026-09-10._
 
 ## What is waiting on you, shortest first
 
 | | Question | The answer we would give |
 |---|---|---|
 | **P-023** | Quieter text is now readable everywhere but looks like body text on 19% of palettes. Keep it? | Keep — it shipped, and the alternative is unreadable text |
-| **P-006** | Which hero shape — A, B or C? Look at `/?hero=a`, `?hero=b`, `?hero=c` | No recommendation. Direction C is shown at 45% opacity **on purpose** — judge the shape, not the paleness |
-| P-005, P-008 … P-018 | Ten older questions. None blocks anything today. | See each entry |
+| P-005, P-008 … P-018 | Nine older questions. None blocks anything today. | See each entry |
 
 **Answered 2026-09-05 and now closed:** P-016 (typography pricing), P-019 (the
 token vocabulary), P-020 (`pepsi`), P-021 (`google`), P-022 (`/community` ink).
-Their verdicts are on each entry and in the Resolved table at the foot of this
-file. **Do not re-ask them.**
 
-The two still open are restated as a to-do list, each with a cost of delay, in
-[`OWNER-ACTIONS.md` §2](OWNER-ACTIONS.md), alongside the one piece of writing
-only the founder can do. **Answering in either file counts.**
+**Answered since, and closed on 2026-09-10:** P-006 (the hero) and P-012 (the
+parked homepage PRs). Both had sat on `PENDING` after the founder had already
+answered them — see each entry.
+
+Their verdicts are on each entry and in the Resolved table at the foot of this
+file. **Do not re-ask any of them.**
+
+What is still open is restated as a to-do list, each with a cost of delay, in
+[`OWNER-ACTIONS.md` §2](OWNER-ACTIONS.md), alongside the writing only the
+founder can do. **Answering in either file counts.**
 ## How to read an entry
 
 Every proposal carries an **evidence class**, stated honestly:
@@ -232,14 +236,36 @@ who does not already know the vocabulary.
 The anti-slop pass recommends **A**. This is one call and it sets the tone of the
 whole page, which is why it is here rather than decided.
 
-> **Read the hero-shape question first.** #290 rewrote the words inside the
-> current hero against the anti-slop bar and the founder’s complaint survived it,
-> so the words are not the variable — the shape is. Three shapes are live at
-> `/?hero=a|b|c` ([`OWNER-ACTIONS.md` §2.1](OWNER-ACTIONS.md)). **If direction C
-> wins, this proposal is moot**: C’s deliverable is one sentence in the founder’s
-> own words, which is not ours to choose between.
+> **Superseded — and direction C is what happened.** #290 rewrote the words
+> inside the current hero and the founder’s complaint survived it, so three
+> shapes were put behind `/?hero=a|b|c`. **He retired the exploration instead**
+> — 2026-09-07, *“Retire it, V2 hero decides.”* The three sketches and the
+> switch that served them are deleted from `src/`, so that link answers nothing
+> now.
 
-**Verdict:** _(PENDING)_
+**Verdict: RESOLVED 2026-09-10 — and neither option A nor option B was taken.**
+
+C’s deliverable was *one sentence in the founder’s own words*, and that is what
+shipped. The headline is:
+
+> **Build and export UI and brand design kits, in one unified location.**
+
+It was **assembled from two sentences he had already written** rather than
+chosen from a draft — the lead is the verbatim opening of his `build-and-export`
+line, the marked run the verbatim tail of `one-unified-location`, the comma
+between them punctuation. He read it beside both and approved it on 2026-09-10
+(#440). `tests/unit/positioning-truth.test.js` now pins the exact sentence and
+its three pieces, so it cannot be reworded by an agent tidying punctuation.
+
+**Option A — “A UI system that survives the handoff.” — is dead and should not
+come back.** It was an agent’s recommendation that no founder verdict ever
+endorsed, and `56-founder-rejected-headlines.spec.js` walks the rejected lines
+across every route.
+
+**One thing this leaves open, and it is not a headline choice:** the homepage’s
+export section is headed by the full `build-and-export` sentence, directly under
+a hero that opens with the same five words. Whether that reuse reads as
+repetition is `OWNER-ACTIONS.md` §2.2.
 
 ---
 
@@ -329,6 +355,19 @@ visitor meets the argument in.
 ---
 
 ## P-012 · When the four parked homepage PRs resume
+
+> **RESOLVED 2026-09-10. The founder’s answer was to close them.** #262 had
+> already merged. On 2026-09-10 he decided to close #270, #269 and #264, and
+> #439 salvaged everything in them that was still true first: three contracts
+> that were live on `main` with nothing enforcing them are now guarded
+> (`tests/unit/focus-reveal-layers.test.js`,
+> `tests/unit/workbench-zones.test.js`, and three tests appended to
+> `tests/unit/home-starters.test.js`). Everything else in the three branches
+> was either already on `main` by another route or was agent-written homepage
+> copy he had rejected, and none of that comes back. **Nothing in that salvage
+> changed a rendered byte.** The specimen band that #270 was built around is
+> not blocked any more either — see P-006. **Everything below is the record of
+> how the question was worked, kept for its reasoning.**
 
 > **ANSWERED 2026-09-03 by #328.** A triage re-measured all four in Chromium
 > against a fresh build of `main` — not read off the PR bodies — and returned a
@@ -833,7 +872,9 @@ paints a low-contrast tint of the ink on a saturated ground.**
 | 2026-08-14 | P-002 · Give users somewhere to tell us something is wrong | APPROVED — every report now carries its route, tool and state; no API change needed |
 | 2026-08-14 | P-003 · Decide what the free tier is for | ANSWERED — "a foot in the door". Silent system collapse now names the paid edge; remaining gates still to audit |
 | 2026-08-14 | P-004 · Make Auto the default colour system app-wide | APPROVED — shipped |
-| 2026-09-03 | P-012 · When the four parked homepage PRs resume | ANSWERED by #328 and corrected by #365 — a verdict and a cost per PR, re-measured by rebasing rather than estimating. Open only for the founder’s hero pick |
+| 2026-09-03 | P-012 · When the four parked homepage PRs resume | ANSWERED by #328 and corrected by #365 — a verdict and a cost per PR, re-measured by rebasing rather than estimating |
+| 2026-09-10 | P-006 · Which hero headline | RESOLVED — neither option. The founder retired the shape exploration on 2026-09-07 and approved a headline assembled from two sentences he had already written on 2026-09-10; a unit test pins it |
+| 2026-09-10 | P-012 · When the four parked homepage PRs resume | CLOSED — his answer was to close #270, #269 and #264. #439 salvaged three unguarded contracts into unit tests first; nothing else in them survived and no rendered byte changed |
 | 2026-09-04 | P-007 · Whether to delete the hero stat line | RESOLVED by the Director on `main`, by a third option neither side proposed — the strip is deleted, the numbers kept and attributed |
 | 2026-09-05 | P-016 · What does Pro mean for the typography tools | ANSWERED — browsing is free, saving is Pro. Matches how the colour tools already gate |
 | 2026-09-05 | P-019 · What we call design tokens on the site | DECIDED — **“Styles”** (option C), over our recommendation of “Foundations”. `token` survives past the export boundary only |
