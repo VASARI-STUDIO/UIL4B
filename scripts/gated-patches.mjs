@@ -407,6 +407,40 @@ export async function planGatedPatches(opts = {}) {
 }
 
 /**
+ * One target file as it stands with everything up to and INCLUDING the named
+ * patch applied — in memory, never on disk.
+ *
+ * The emulator suite needs this: firestore.rules is founder-gated, so the rules
+ * a moderator test is about do not exist in the tree until the founder runs the
+ * command, and a test that only passed afterwards would prove nothing today and
+ * break tomorrow. Running against the planned text makes the SAME assertions
+ * hold on both sides of `npm run apply:gated`, because a patch that is already
+ * in is skipped and the text comes back the same either way.
+ *
+ * Through the registry rather than around it, for the reason the registry
+ * exists: the order is load-bearing, two of the rules patches are unified diffs
+ * whose context the others move, and a helper that applied one of them alone
+ * would be verifying something other than what the founder will run.
+ *
+ * LF, unconditionally. The emulator does not care and every caller compares.
+ */
+export async function fileTextThrough(id, file = 'firestore.rules') {
+  const index = GATED_PATCHES.findIndex((p) => p.id === id)
+  if (index === -1) throw new Error(`there is no gated patch called "${id}"`)
+  const plan = await planGatedPatches({ upTo: index + 1 })
+  if (plan.failed) {
+    const bad = plan.steps.find((s) => s.status === 'failed')
+    throw new Error(
+      `the gated patches no longer apply as far as "${id}", so the tests that prove what it `
+      + `grants cannot run: ${bad?.error?.message || 'unknown failure'}`,
+    )
+  }
+  const text = plan.after.get(file)
+  if (text === undefined) throw new Error(`"${file}" is not a file any gated patch touches`)
+  return lf(text)
+}
+
+/**
  * A unified diff of one file's before/after, headed with the repository-relative
  * path rather than the scratch one, so the founder reads a path that exists.
  */

@@ -18,26 +18,60 @@ import {
   assertFails,
 } from '@firebase/rules-unit-testing'
 import { doc, getDoc, setDoc, deleteDoc, deleteField } from 'firebase/firestore'
+import { fileTextThrough } from '../../scripts/gated-patches.mjs'
 
 const RULES_PATH = fileURLToPath(new URL('../../firestore.rules', import.meta.url))
 const ALICE = 'alice-uid'
 const BOB = 'bob-uid'
 
 let testEnv
+// ── The SECOND environment, and why this file needs one ─────────────────────
+//
+// Everything above section (d) runs against `firestore.rules` AS PUBLISHED, and
+// keeping that is the point: it is the only emulator coverage the file the
+// founder is actually serving has.
+//
+// The moderator role is not in that file. It is founder-gated — the auto-mode
+// classifier refuses to stage firestore.rules whether or not permission has
+// been granted — so it lives as a committed, unapplied patch that
+// `npm run apply:gated` puts in. A test written against the published rules
+// could therefore only pass AFTER the founder runs the command, and would be
+// red every day until then.
+//
+// So section (d) gets its own environment, loaded from the PATCHED text the way
+// tests/rules/per-project-sync.test.js does. The patch is the single source of
+// truth: a test here cannot pass against a rule the patch does not contain, and
+// because an already-applied patch is skipped and returns the same text, every
+// assertion below holds identically on both sides of the command.
+//
+// Its OWN projectId, because initializeTestEnvironment loads rules into the
+// emulator PER PROJECT ID — two rule sets under one id race, which is exactly
+// how the per-project suite lost to this file's live rules on 2026-09-09.
+let reviewerEnv
 
 before(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: process.env.GCLOUD_PROJECT || 'demo-uil4b',
     firestore: { rules: await readFile(RULES_PATH, 'utf8') },
   })
+
+  const patched = await fileTextThrough('moderator-role')
+  assert.match(patched, /function isReviewer\(\)/,
+    'the patch must actually contain the predicate section (d) is about')
+  reviewerEnv = await initializeTestEnvironment({
+    projectId: 'demo-uil4b-moderator',
+    firestore: { rules: patched },
+  })
 })
 
 after(async () => {
   await testEnv?.cleanup()
+  await reviewerEnv?.cleanup()
 })
 
 beforeEach(async () => {
   await testEnv.clearFirestore()
+  await reviewerEnv.clearFirestore()
 })
 
 const aliceDb = () => testEnv.authenticatedContext(ALICE).firestore()
@@ -264,6 +298,231 @@ test('a reviewer with the admin claim can approve', async () => {
   await assertSucceeds(
     setDoc(submissionDoc(adminDb, 'mine'), submission({ status: 'approved' })),
   )
+})
+
+// ── (e) The moderator role — AGAINST THE PATCHED RULES ──────────────────────
+//
+// Everything from here down runs on `reviewerEnv`, not `testEnv`. See the note
+// beside its declaration: the moderator role is a founder-gated patch, so these
+// exercise the rules the founder is being asked to publish rather than the ones
+// already published, and they pass identically once he has published them.
+//
+// The founder's [community-backend] decision is that nothing publishes until it
+// is approved, chosen on liability grounds because he is a solo developer. That
+// is only affordable if approving is not a one-person job. `isReviewer()` is
+// what makes the second person possible, and these tests are the whole
+// difference between a role that works and a role that is decoration.
+//
+// EVERY "cannot" below is paired with a "can" on the SAME seeded document. A
+// refused read and a document that was never written look identical from the
+// client, so a denial asserted on its own proves nothing — it would pass just
+// as happily against a broken fixture, which is the exact class of bug this
+// whole item exists to fix.
+
+const MOD = 'mod-uid'
+const modDb = () => reviewerEnv.authenticatedContext(MOD, { moderator: true, email_verified: true }).firestore()
+const founderDb = () => reviewerEnv.authenticatedContext('founder-uid', { admin: true, email_verified: true }).firestore()
+const revAliceDb = () => reviewerEnv.authenticatedContext(ALICE).firestore()
+const revBobDb = () => reviewerEnv.authenticatedContext(BOB).firestore()
+const revAnonDb = () => reviewerEnv.unauthenticatedContext().firestore()
+
+/** Seed past the rules, the way the Admin SDK does. */
+async function seedReviewer(segments, data) {
+  await reviewerEnv.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), ...segments), data)
+  })
+}
+
+const FEEDBACK = 'feedback'
+const feedbackDoc = (db, id) => doc(db, FEEDBACK, id)
+
+function report(overrides = {}) {
+  return {
+    type: 'bug',
+    subject: 'The export button does nothing',
+    message: 'Clicked export on a palette and no file arrived.',
+    email: 'reporter@example.com',
+    status: 'new',
+    createdAt: '2026-09-01T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
+const PROMPTS = 'community-prompts'
+const promptDoc = (db, id) => doc(db, PROMPTS, id)
+
+function prompt(overrides = {}) {
+  return {
+    authorUid: ALICE,
+    title: 'A brief for a dashboard',
+    text: 'Design a dense admin table.',
+    tags: 'ui, dashboard',
+    authorName: 'Alice',
+    profileLink: null,
+    status: 'pending',
+    createdAt: '2026-09-01T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
+const revSubmissionDoc = (db, id) => doc(db, QUEUE, id)
+
+// ── feedback ────────────────────────────────────────────────────────────────
+
+test('a moderator can read a feedback report, and a plain user cannot', async () => {
+  await seedReviewer([FEEDBACK, 'r1'], report())
+  // POSITIVE CONTROL FIRST. If this fails, the document is not there and the
+  // denial below would be meaningless.
+  const seen = await assertSucceeds(getDoc(feedbackDoc(modDb(), 'r1')))
+  assert.equal(seen.exists(), true, 'the control read returned no document')
+  assert.equal(seen.data().subject, 'The export button does nothing')
+
+  await assertFails(getDoc(feedbackDoc(revAliceDb(), 'r1')))
+  await assertFails(getDoc(feedbackDoc(revAnonDb(), 'r1')))
+})
+
+test('a moderator can triage a report, and a plain user cannot', async () => {
+  await seedReviewer([FEEDBACK, 'r2'], report())
+  await assertSucceeds(
+    setDoc(feedbackDoc(modDb(), 'r2'), { status: 'done', reviewedBy: MOD }, { merge: true }),
+  )
+  // The write landed — proving the "succeeds" above was a real write and not a
+  // no-op the emulator waved through.
+  await reviewerEnv.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await getDoc(doc(ctx.firestore(), FEEDBACK, 'r2'))
+    assert.equal(snap.data().status, 'done')
+    assert.equal(snap.data().reviewedBy, MOD)
+  })
+
+  await assertFails(
+    setDoc(feedbackDoc(revAliceDb(), 'r2'), { status: 'new' }, { merge: true }),
+  )
+})
+
+test('a moderator can delete a report, and a plain user cannot', async () => {
+  await seedReviewer([FEEDBACK, 'r3'], report())
+  await assertFails(deleteDoc(feedbackDoc(revAliceDb(), 'r3')))
+  // Control: the document survived the refused delete and is still deletable by
+  // somebody who is allowed to. Without this, a delete that failed for any
+  // other reason would read as "the rule worked".
+  await assertSucceeds(deleteDoc(feedbackDoc(modDb(), 'r3')))
+})
+
+// ── community prompts ───────────────────────────────────────────────────────
+
+test('a moderator can approve and delete a community prompt, a plain user cannot', async () => {
+  await seedReviewer([PROMPTS, 'p1'], prompt())
+  await assertFails(setDoc(promptDoc(revBobDb(), 'p1'), prompt({ status: 'approved' })))
+  await assertSucceeds(setDoc(promptDoc(modDb(), 'p1'), prompt({ status: 'approved' })))
+
+  await seedReviewer([PROMPTS, 'p2'], prompt())
+  await assertFails(deleteDoc(promptDoc(revBobDb(), 'p2')))
+  await assertSucceeds(deleteDoc(promptDoc(modDb(), 'p2')))
+})
+
+// ── community submissions ───────────────────────────────────────────────────
+
+test('a moderator can approve a submission, and a stranger still cannot', async () => {
+  await seedReviewer([QUEUE, 'm1'], submission())
+  await assertFails(setDoc(revSubmissionDoc(revBobDb(), 'm1'), submission({ status: 'approved' })))
+  await assertSucceeds(setDoc(revSubmissionDoc(modDb(), 'm1'), submission({ status: 'approved' })))
+  await reviewerEnv.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await getDoc(doc(ctx.firestore(), QUEUE, 'm1'))
+    assert.equal(snap.data().status, 'approved', 'the approval did not actually land')
+  })
+})
+
+test('a moderator can delete a submission, and a stranger still cannot', async () => {
+  await seedReviewer([QUEUE, 'm2'], submission())
+  await assertFails(deleteDoc(revSubmissionDoc(revBobDb(), 'm2')))
+  await assertSucceeds(deleteDoc(revSubmissionDoc(modDb(), 'm2')))
+})
+
+test('the founder keeps every permission the moderator just gained', async () => {
+  // isReviewer() replaced isAdmin(). If the admin arm of that OR were dropped,
+  // every test above would still pass and the founder would be locked out of
+  // his own queue.
+  await seedReviewer([FEEDBACK, 'f1'], report())
+  await assertSucceeds(getDoc(feedbackDoc(founderDb(), 'f1')))
+  await assertSucceeds(setDoc(feedbackDoc(founderDb(), 'f1'), { status: 'done' }, { merge: true }))
+  await seedReviewer([QUEUE, 'f2'], submission())
+  await assertSucceeds(setDoc(revSubmissionDoc(founderDb(), 'f2'), submission({ status: 'approved' })))
+  await assertSucceeds(deleteDoc(revSubmissionDoc(founderDb(), 'f2')))
+})
+
+// ── The role cannot spread, and does not leak sideways ──────────────────────
+
+test('NOBODY can reach the moderator roster from a browser — not even a moderator', async () => {
+  // The roster has no rules block at all, and that is the security property
+  // rather than an omission: Firestore denies by default, so the list of people
+  // worth phishing is unreadable, and no client can write itself onto it.
+  // Only the Admin SDK touches it, and the Admin SDK bypasses rules entirely.
+  await seedReviewer(['moderators', MOD], { uid: MOD, grantedByUid: 'founder-uid' })
+  // Control: the document really is there — so these are refusals, not misses.
+  await reviewerEnv.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await getDoc(doc(ctx.firestore(), 'moderators', MOD))
+    assert.equal(snap.exists(), true, 'the roster fixture was never written')
+  })
+
+  for (const [who, db] of [['a moderator', modDb()], ['the founder', founderDb()], ['a plain user', revAliceDb()]]) {
+    await assertFails(getDoc(doc(db, 'moderators', MOD)), `${who} could read the roster`)
+    await assertFails(setDoc(doc(db, 'moderators', 'self-appointed'), { uid: 'x' }), `${who} could write the roster`)
+  }
+})
+
+test('a moderator CANNOT appoint another moderator by writing a claim-shaped doc', async () => {
+  // The self-replication guard, at the data layer. canAssignModerators() is
+  // founder-only in src/utils/moderation.js and api/verify-admin.js refuses the
+  // action with a 403 — this pins the third and last way it could be attempted.
+  await assertFails(setDoc(doc(modDb(), 'moderators', BOB), { uid: BOB, moderator: true }))
+})
+
+test('being a moderator does not widen anything outside the review queues', async () => {
+  // isReviewer() was added for three collections. A moderator is still an
+  // ordinary user everywhere else, and this is what catches a future edit that
+  // reaches for the convenient helper in the wrong match block.
+  await seedReviewer(['users', ALICE], PROFILE)
+  await assertFails(getDoc(doc(modDb(), 'users', ALICE)))
+  await assertFails(setDoc(doc(modDb(), 'users', ALICE), { bio: 'edited' }, { merge: true }))
+  // Control: the owner can still read it, so the refusals above are about the
+  // rule and not about a document that is missing.
+  await assertSucceeds(getDoc(doc(revAliceDb(), 'users', ALICE)))
+
+  await seedReviewer(['analytics-daily', '2026-09-06'], { day: '2026-09-06', views: 3 })
+  await assertFails(getDoc(doc(modDb(), 'analytics-daily', '2026-09-06')))
+})
+
+test('a moderator still cannot grant themselves Pro', async () => {
+  // The reason tests/rules exists at all. The moderator claim must not become a
+  // side door into the entitlement fields the server reads to hand out Pro.
+  const ref = doc(modDb(), 'users', MOD)
+  await assertFails(setDoc(ref, { ...PROFILE, lifetimeEntitlement: PAID }))
+  await assertFails(setDoc(ref, { ...PROFILE, subscription: { status: 'active' } }))
+  // Control: an ordinary profile write by the same account still works, so the
+  // failures above are the locked fields and not a blanket denial.
+  await assertSucceeds(setDoc(ref, PROFILE))
+})
+
+test('the rules honour the claim without asking whether the email is verified', async () => {
+  // NOT A COMPLAINT ABOUT THE RULE — a statement of where the verified-email
+  // requirement actually has to live.
+  //
+  // roleFromClaims() refuses any role above `user` on an unverified account, in
+  // BOTH copies (src/utils/moderation.js and api/_lib/moderators.js). A Firestore
+  // rule has no such notion and this one does not try: `isReviewer()` reads the
+  // raw claim. So a `moderator` claim minted onto an unverified account would
+  // produce the worst possible split — every JavaScript surface calls them a
+  // plain user while Firestore lets them empty the queue.
+  //
+  // The only place that can close that is the mint site, which is why
+  // api/verify-admin.js refuses to grant the role to an unverified account, and
+  // why tests/unit/moderation-role.test.js pins that refusal. This test is the
+  // other half of that argument: it proves the rules really do not check.
+  const unverified = reviewerEnv.authenticatedContext('unverified-uid', {
+    moderator: true, email_verified: false,
+  }).firestore()
+  await seedReviewer([QUEUE, 'u1'], submission())
+  await assertSucceeds(setDoc(revSubmissionDoc(unverified, 'u1'), submission({ status: 'approved' })))
 })
 
 // ── provider-health: the server's own counter, unreachable from every client ──
