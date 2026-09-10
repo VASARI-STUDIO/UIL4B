@@ -14,10 +14,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { clientIp, hashKey, consume } from '../../api/_lib/rateLimit.js'
 import { ADMIN_EMAILS } from '../../api/_lib/admin.js'
+import { stripJs } from '../helpers/strip-comments.js'
 
 const API = path.join(process.cwd(), 'api')
 const read = f => fs.readFileSync(path.join(API, f), 'utf8')
-const stripJs = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 // ── The committed password ───────────────────────────────────────────────────
 

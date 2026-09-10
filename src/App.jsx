@@ -24,7 +24,7 @@ import { LoginPromptProvider, useLoginPrompt } from './contexts/LoginPromptConte
 import { ProModalProvider } from './contexts/ProModalContext'
 import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
-import { createRoutes } from './data/toolTree'
+import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES } from './data/legacyRoutes'
 
 // Static imports — small or always-visited pages (instant load)
@@ -74,8 +74,11 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 // /learn — render full-screen with their own PillNav (CreateTool / SurfaceLanding
 // mount it themselves). Every other route renders inside the shared PillNav
 // app-shell below; the old Sidebar + TopBar chrome is retired.
-const CREATE_PATHS = createRoutes()
-const CHROMELESS_PATHS = new Set([...CREATE_PATHS, '/discover', '/learn'])
+// Same membership it always had (the Create routes plus /discover and /learn),
+// now read from the ONE exported list rather than rebuilt here, so this early
+// return and the app-wide feedback mount at the bottom of the file cannot drift
+// apart when a tool is added. tests/unit/feedback-reach.test.js fails if they do.
+const CHROMELESS_PATHS = new Set(chromelessRoutes())
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -465,7 +468,6 @@ function AppInner() {
 
       <AppFooter />
       <Toast message={message} visible={visible} type={type} onDismiss={dismiss} />
-      <FeedbackButton />
       <GoogleOneTap />
     </div>
   )
@@ -506,6 +508,22 @@ export default function App() {
             /create/font-pair, /create/contrast, /create/tint and
             /create/auto-builder. See tests/user-sim/65-new-surfaces-breakpoints.spec.js. */}
         <SyncNotice />
+        {/* And the feedback entry points, for the same reason a fourth time —
+            except that this one is about the RIGHT-CLICK menu rather than a
+            banner. Mounted inside AppInner's shell it was absent from every
+            chromeless route, which is most of the product and all of the
+            Create tools: measured 2026-09-10, a right-click offered to report
+            the element on /projects, /settings and /feedback and did nothing
+            at all on /create/palette, /create/type-scale, /create/contrast,
+            /discover, /learn and /home — the pages where a tool misbehaving is
+            the thing someone actually wants to report.
+            The floating button's own reach is deliberately UNCHANGED: the
+            component hides it on exactly the routes this mount newly reaches,
+            so no Create tool gains a fixed bottom-right button. That corner has
+            documented collisions (see the .global-feedback-btn notes in
+            global.css), and widening the button was never the ask.
+            See tests/user-sim/74-right-click-feedback-reach.spec.js. */}
+        <FeedbackButton />
       </ProModalProvider>
     </LoginPromptProvider>
   )

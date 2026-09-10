@@ -57,6 +57,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import vm from 'node:vm'
+import { stripJs } from '../helpers/strip-comments.js'
 
 const SRC = path.join(process.cwd(), 'src')
 const HOOK_PATH = 'src/hooks/useModalDialog.js'
@@ -83,7 +84,6 @@ const TRAPS_FOCUS = /useModalDialog|key !== 'Tab'|key === 'Tab'/
 // READ, not a declaration, and must not be counted as one.
 const DECLARES_MODAL = /(?<!\[)aria-modal=(?:"true"|\{true\})/
 
-const stripJs = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 // ── A DOM small enough to hold a focus model ────────────────────────────────
 //

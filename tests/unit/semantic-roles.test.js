@@ -17,6 +17,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { stripJs as strip } from '../helpers/strip-comments.js'
 
 const studio = readFileSync(new URL('../../src/pages/ColorStudio.jsx', import.meta.url), 'utf8')
 const css = readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8')
@@ -24,7 +25,6 @@ const css = readFileSync(new URL('../../src/styles/global.css', import.meta.url)
 // Comments are stripped before any assertion about source text: a recent agent
 // was fooled by a comment above the code it was checking, and this file talks
 // about --pending at length in prose.
-const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 const studioCode = strip(studio)
 const cssCode = strip(css)
 

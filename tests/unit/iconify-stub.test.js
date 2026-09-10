@@ -13,10 +13,10 @@ import path from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { answerIconify, fixturePacks, ICONIFY_HOSTS } from '../user-sim/iconify-stub.js'
+import { stripJs as strip } from '../helpers/strip-comments.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
-const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 const HOST = 'https://api.iconify.design'
 const json = (a) => JSON.parse(a.body)
 

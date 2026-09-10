@@ -17,13 +17,13 @@ import {
   PREVIEW_CHARS_PER_SECOND, PREVIEW_MAX_SECONDS, PREVIEW_MIN_SECONDS, previewDuration,
 } from '../../src/utils/promptPreview.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { stripJs as stripComments } from '../helpers/strip-comments.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 // Comments are stripped before matching. global.css and the components are full
 // of prose describing these rules, and a rule could otherwise be "proved"
 // present by the paragraph explaining it — the failure a previous mutation run
 // found in tests/unit/input-specificity.test.js.
-const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, '')
 
 test('one pass is clamped at both ends, and junk input cannot produce NaN', () => {
   // A NaN reaching the custom property invalidates the whole `animation`
