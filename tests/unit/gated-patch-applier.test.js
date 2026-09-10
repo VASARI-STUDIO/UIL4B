@@ -80,10 +80,40 @@ test('the applier reaches every file the four are meant to change', () => {
   // exists. If one falls out of the registry, the command still reports four
   // successes and the founder still cannot make the change.
   assert.ok(TARGET_FILES.includes('firestore.rules'))
+  assert.ok(TARGET_FILES.includes('api/verify-admin.js'))
   assert.ok(TARGET_FILES.includes('src/contexts/AuthContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/contexts/SubscriptionContext.jsx'))
   assert.ok(TARGET_FILES.includes('src/utils/projectSync.js'))
-  assert.equal(TARGET_FILES.length, 4, 'the applier has grown a target nobody reviewed')
+  assert.equal(TARGET_FILES.length, 5, 'the applier has grown a target nobody reviewed')
+})
+
+test('nothing in the registry still claims a piece of this is uncovered', () => {
+  // The moderator role shipped half-applied for weeks: the rules patch was in
+  // the command and the route that MINTS the claim was not, so `notCovered`
+  // printed "appointing one is a separate job" on every run. Both halves are in
+  // now. The field is kept — a future patch may genuinely have a gap — but a
+  // patch that declares one has to declare it truthfully, and this fails the
+  // day one is left behind after the gap is closed.
+  for (const patch of GATED_PATCHES) {
+    assert.equal(patch.notCovered, undefined,
+      `${patch.id} still tells the founder something is not applied: ${patch.notCovered}`)
+  }
+  const applier = read('scripts/apply-gated-patches.mjs')
+  assert.ok(!/is NOT applied here/.test(applier),
+    'the command still says one of the changes is not applied by it')
+})
+
+test('the moderator role covers BOTH halves — the rules and the route that mints', () => {
+  // The whole point of this change. A rules file that honours a `moderator`
+  // claim and a handshake that never grants one is a role nobody holds, which
+  // is exactly the state this row sat in from #390 to #441.
+  const moderator = GATED_PATCHES.find((p) => p.id === 'moderator-role')
+  assert.deepEqual(moderator.files.slice().sort(), ['api/verify-admin.js', 'firestore.rules'])
+  const parts = moderator.parts.map((p) => p.file)
+  assert.ok(parts.includes('firestore.rules'), 'the rules half is gone')
+  assert.ok(parts.includes('api/verify-admin.js'), 'the half that mints the claim is gone again')
+  assert.ok(fs.existsSync(path.join(ROOT, 'docs/design/moderator-verify-admin.patch')),
+    'the route diff is not committed, so the command has nothing to apply')
 })
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -119,6 +149,7 @@ test('each patch actually grants its rule — applying cleanly is not enough', a
   const plan = await planGatedPatches()
   assert.equal(plan.failed, false, plan.steps.find((s) => s.error)?.error?.message)
   const rules = lf(plan.after.get('firestore.rules'))
+  const route = lf(plan.after.get('api/verify-admin.js'))
   const sync = lf(plan.after.get('src/utils/projectSync.js'))
   const auth = lf(plan.after.get('src/contexts/AuthContext.jsx'))
   const subs = lf(plan.after.get('src/contexts/SubscriptionContext.jsx'))
@@ -135,6 +166,18 @@ test('each patch actually grants its rule — applying cleanly is not enough', a
   assert.match(rules, /allow read, update, delete: if isReviewer\(\);/, 'feedback')
   assert.match(rules, /allow update, delete: if isReviewer\(\);/, 'community-prompts')
   assert.match(rules, /allow delete: if isReviewer\(\) \|\| isOwner\(\);/, 'community-submissions')
+
+  // 2b · ...and the route that MINTS that claim, which is the half #441 could
+  //      not cover and the reason the role stayed inert after the rules landed.
+  //      A claim nothing grants is a rule nobody satisfies.
+  assert.match(route, /from '\.\/_lib\/moderators\.js'/,
+    'the handshake no longer imports the roster module')
+  assert.match(route, /await reconcileModeratorClaim\(decoded\)/,
+    'the roster is imported and never consulted, so no claim is ever minted or dropped')
+  assert.match(route, /req\.body\?\.moderatorAction/,
+    'the founder-only grant/revoke action is gone — the role cannot be handed out')
+  assert.match(route, /setCustomUserClaims\(decoded\.uid, \{ \.\.\.existing, admin: true \}\)/,
+    'the admin claim is written blind again, which deletes every other claim on the account')
 
   // 3 · feedback create closed, signed-in writes bounded.
   assert.match(rules, /match \/feedback\/\{feedbackId\}[\s\S]*?allow create: if false;/)
@@ -191,7 +234,8 @@ test('the owner document names the command and still shows the diffs', () => {
   assert.match(doc, /isReviewer\(\)/,
     'the moderator diff is no longer shown in the document — the reader who wants to see it cannot')
   assert.match(doc, /api\/verify-admin\.js/,
-    'the document must still say which half of the moderator role the command does NOT apply')
+    'the document no longer names the route that mints the moderator claim — it is one of '
+    + 'the files the command writes, and the reader who wants to see that diff cannot find it')
 })
 
 test('the undo is one command, and it names every file the applier writes', () => {
