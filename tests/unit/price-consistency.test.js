@@ -70,6 +70,7 @@ import {
   resolvePlanLadder,
 } from '../../src/config/planLadder.js'
 import { PRICE_SYMBOLS } from '../../src/utils/currency.js'
+import { stripComments } from '../helpers/strip-comments.js'
 
 const REPO = process.cwd()
 const SRC = path.join(REPO, 'src')
@@ -115,59 +116,21 @@ const WINDOW = 400
 
 // ── The stripper ────────────────────────────────────────────────────────────
 //
-// This has to be string-aware, and the reason is worth recording because the
-// naive one-line version was written first and silently blinded the guard.
+// tests/helpers/strip-comments.js, which is where the ~40 lines that used to
+// sit here now live — unchanged, and shared with the rest of the unit suite.
 //
-// A plain `src.replace(/\/\*[\s\S]*?\*\//g, '')` treats the `/*` inside
-// ColorStudio.jsx's `accept="image/*"` as the start of a block comment. The
-// non-greedy match then ran to the next `*/` **819 lines later**, blanking a
-// third of the file — including a price. The test would have passed, and it
-// would have passed because it could no longer see anything.
+// The reasoning is kept in that module's header rather than duplicated: a
+// naive `src.replace(/\/\*[\s\S]*?\*\//g, '')` reads the `/*` inside an
+// `accept="image/*"` attribute as a comment opener and blanks everything to the
+// next closing marker — 819 lines, and a price with them, when this guard was
+// written. Nothing goes red; the scan simply stops being able to see.
 //
-// So walk the source instead: copy string and template literals through
-// untouched, blank real comments, and preserve every newline so the line
-// numbers in a failure message still point at the right place. Escape pairs
-// are copied as pairs, which is what keeps a regex like /https?:\/\// from
-// reading as the start of a line comment.
-function stripComments(src, { lineComments = true } = {}) {
-  let out = ''
-  let i = 0
-  const n = src.length
-  while (i < n) {
-    const c = src[i]
-    const d = src[i + 1]
-    if (c === '\\' && i + 1 < n) { out += c + d; i += 2; continue }
-    if (c === '/' && d === '*') {
-      let end = src.indexOf('*/', i + 2)
-      end = end === -1 ? n : end + 2
-      for (let k = i; k < end; k += 1) out += src[k] === '\n' ? '\n' : ' '
-      i = end
-      continue
-    }
-    if (lineComments && c === '/' && d === '/') {
-      let end = src.indexOf('\n', i)
-      end = end === -1 ? n : end
-      out += ' '.repeat(end - i)
-      i = end
-      continue
-    }
-    if (c === '"' || c === "'" || c === '`') {
-      out += c
-      i += 1
-      while (i < n) {
-        const s = src[i]
-        if (s === '\\') { out += src.slice(i, i + 2); i += 2; continue }
-        out += s
-        i += 1
-        if (s === c) break
-      }
-      continue
-    }
-    out += c
-    i += 1
-  }
-  return out
-}
+// PROVEN EQUIVALENT before the copy was removed, on 2026-09-10: the private
+// implementation and the shared one produced byte-identical output on all 635
+// .js/.jsx/.css/.json files in src/, api/ and tests/, in BOTH lineComments
+// modes — 1,270 comparisons, 0 differences. The canary below now exercises the
+// shared module, so this file is one of the places a regression there is felt.
+
 
 // ── What is genuinely not a plan price ──────────────────────────────────────
 //

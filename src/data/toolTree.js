@@ -656,6 +656,21 @@ export function createRoutes() {
   return out
 }
 
+// Every route that renders FULL-SCREEN with its own PillNav, outside the app
+// shell — the Create tools plus the two surface landings. App.jsx matches on
+// this to take its chromeless early return, and anything mounted app-wide has
+// to consult the same list to know whether it is above or below that return.
+//
+// It lives here, in the data module, because the two callers cannot share it
+// any other way: App.jsx imports the components, so a component importing the
+// list back out of App.jsx would be a cycle. A second hand-written copy was the
+// alternative, and a second copy of a route list is a drift bug waiting for the
+// next tool to be added — see tests/unit/feedback-reach.test.js, which fails if
+// these two ever disagree.
+export function chromelessRoutes() {
+  return [...createRoutes(), '/discover', '/learn']
+}
+
 // Which Create group owns a pathname (its category home or any tool route).
 export function findCreateGroup(pathname) {
   const path = normalise(pathname)

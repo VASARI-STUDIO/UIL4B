@@ -21,8 +21,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { stripCss } from '../helpers/strip-comments.js'
 
-const stripCss = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
 const css = stripCss(fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8'))
 
 const num = (re, where) => {

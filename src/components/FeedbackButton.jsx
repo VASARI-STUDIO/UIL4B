@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import FeedbackModal from './FeedbackModal'
 import FeedbackContextMenu from './FeedbackContextMenu'
+import { chromelessRoutes } from '../data/toolTree'
 
 // Persistent, low-profile way to reach the feedback form from anywhere in the app.
 // Clicking it opens a modal (rather than navigating) so the user keeps their place.
@@ -15,6 +16,27 @@ import FeedbackContextMenu from './FeedbackContextMenu'
 // Here the gesture only decides two things — which type is preselected and
 // whether an element name is offered — and everything after that is one path,
 // one payload shape, one `source: 'inline'`, one store.
+
+// WHERE THE FLOATING BUTTON DOES NOT GO.
+//
+// This component is mounted app-wide (App.jsx, beside the billing and offline
+// banners) so the RIGHT-CLICK MENU reaches every route. The button is a
+// different question: it is fixed in the bottom-right corner, and that corner
+// is contended — global.css documents it colliding with the footer attribution
+// on short pages and with the /seo device toggle, and the Create tools own
+// their own full-screen layout.
+//
+// So the button keeps exactly the reach it had when it was mounted inside
+// AppInner's shell, and this list is that shell's complement: every route that
+// returns BEFORE it. Chromeless routes come from the same exported list App.jsx
+// matches on, so adding a Create tool cannot put a button somewhere nobody
+// designed for one; the rest are App.jsx's named early returns, plus /feedback
+// where the page already IS the form.
+const NO_BUTTON = new Set([
+  ...chromelessRoutes(),
+  '/', '/home', '/welcome', '/onboarding', '/feedback',
+])
+
 export default function FeedbackButton() {
   const location = useLocation()
   const [open, setOpen] = useState(false)
@@ -27,9 +49,17 @@ export default function FeedbackButton() {
   const openFromMenu = useCallback((next) => { setSeed(next); setOpen(true) }, [])
   const close = useCallback(() => setOpen(false), [])
 
+  // Normalised the same way App.jsx normalises before its chromeless check, so
+  // a trailing slash or a capital cannot leak a chromeless route past this and
+  // paint a button on a Create tool.
+  const showButton = useMemo(
+    () => !NO_BUTTON.has(location.pathname.toLowerCase().replace(/\/+$/, '') || '/'),
+    [location.pathname],
+  )
+
   return (
     <>
-      {location.pathname !== '/feedback' && (
+      {showButton && (
         <button
           type="button"
           className="global-feedback-btn"
@@ -44,9 +74,11 @@ export default function FeedbackButton() {
           <span>Feedback</span>
         </button>
       )}
-      {/* The menu stays live on /feedback even though the button does not: the
-          button would be redundant next to the form, but "right-click the thing
-          that is wrong" is still the fastest way to file about that page. It is
+      {/* The menu stays live everywhere the button does not — on /feedback,
+          where the button would be redundant next to the form, and on every
+          chromeless Create tool, where there is no button by design. "Right-click
+          the thing that is wrong" is the fastest way to file about a page, and
+          the tools are where there is most to file about. It is
           suppressed while the dialog is open so a right-click inside the form
           reaches the browser's own menu, where Paste lives. */}
       <FeedbackContextMenu onReport={openFromMenu} suppressed={open} />

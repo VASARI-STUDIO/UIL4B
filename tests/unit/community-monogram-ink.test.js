@@ -22,9 +22,9 @@ import path from 'node:path'
 
 import { contrastRatio, inkOnGradient, mixHex } from '../../src/utils/colors.js'
 import { COMMUNITY_DESIGNS } from '../../src/data/communityDesigns.js'
+import { stripJs as stripComments } from '../helpers/strip-comments.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
-const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 // 30px/700 is large text under WCAG 1.4.3 (18.66px bold and up), so 3:1.
 const FLOOR = 3

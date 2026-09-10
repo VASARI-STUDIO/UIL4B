@@ -44,6 +44,7 @@ import {
   refundQuotaUnit,
   runMeteredTask,
 } from '../../api/_lib/aiGeneration.js'
+import { stripJs as stripComments } from '../helpers/strip-comments.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The fake store
@@ -364,7 +365,6 @@ test('a Firestore failure is reported as a store error, not as a quota refusal',
 // while the product was broken. These assertions are about api/ai.js.
 
 const aiSrc = () => fs.readFileSync(path.join(process.cwd(), 'api', 'ai.js'), 'utf8')
-const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 test('WIRING: both metered paths in api/ai.js go through runMeteredTask', async () => {
   const src = stripComments(aiSrc())
