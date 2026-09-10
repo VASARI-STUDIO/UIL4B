@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/prerender.mjs",
     "lint": "eslint .",
+    "apply:gated": "node scripts/apply-gated-patches.mjs",
     "preview": "vite preview",
     "setup:stripe": "node scripts/setup-stripe.js",
     "test:unit": "node --test \"tests/unit/**/*.test.js\"",
