@@ -8,11 +8,11 @@ import { listFeedback, setFeedbackStatus, setFeedbackNotes, deleteFeedbackDoc } 
 import { useModerationRole } from '../hooks/useModerationRole'
 import {
   FEEDBACK_STATUSES, FEEDBACK_STATUS_LABELS, nextFeedbackStatus,
-  canReview, canSeeReporterEmail,
+  canReview, canSeeReporterEmail, canAssignModerators,
 } from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
-import { ADMIN_EMAILS } from '../utils/constants'
+import { ADMIN_EMAILS, isAdminEmail } from '../utils/constants'
 import { MODULE_BOARD } from '../data/moduleBoard'
 // src/data/pipeline.js is NOT imported here. It is loaded by PipelineBoard with
 // a dynamic import() — see the note above that component for the measurement.
@@ -1043,6 +1043,11 @@ function countryFromLocation(location) {
 const flagEmoji = (iso2) => iso2.replace(/./g, ch => String.fromCodePoint(0x1F1A5 + ch.charCodeAt(0)))
 const countryName = (iso2) => { try { return regionNames?.of(iso2) || iso2 } catch { return iso2 } }
 
+// The founder's own row. He is a founder by verified email against a
+// server-side allowlist, which outranks any claim, so offering to "make" him a
+// moderator would be offering him less than he has.
+const isFounderRow = (u) => isAdminEmail(u?.email)
+
 function EyeIcon({ off }) {
   return off ? (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1083,10 +1088,33 @@ const USER_SORTS = {
   lastLoginAt: (u) => (u.lastLoginAt ? new Date(u.lastLoginAt).getTime() : 0),
 }
 
-function UsersPanel({ localUsers, toast }) {
+function UsersPanel({ localUsers, toast, role }) {
   const [users, setUsers] = useState(null) // null = loading
   const [source, setSource] = useState('server')
   const [error, setError] = useState('')
+  // The moderator roster, as a Set of uids. null = NOT READ YET, and it renders
+  // as "checking" rather than as "nobody holds the role" — the same distinction
+  // the feedback panel was fixed for, in the one place where getting it wrong
+  // would have the founder appointing somebody who is already appointed.
+  const [roster, setRoster] = useState(null)
+  const [rosterError, setRosterError] = useState('')
+  // ── Whether the deployed route can grant the role at all ──────────────────
+  // null = not asked yet · true = the roster half of /api/verify-admin is live
+  // · false = it is not.
+  //
+  // THREE STATES, NOT TWO, AND THIS IS THE WHOLE POINT. api/verify-admin.js is
+  // founder-gated: it ships only once `npm run apply:gated` has been run and
+  // the site redeployed. The UNPATCHED route does not reject `moderatorAction`
+  // — it has never heard of it — so it falls through to its ordinary 200 and a
+  // button wired to `res.ok` would report a grant that never happened, on the
+  // one screen in this product where a false success is a security statement.
+  //
+  // So the probe is a POSITIVE signal rather than the absence of an error: the
+  // patched route returns `role` as a string on every one of its exits and the
+  // unpatched one returns it on none of them.
+  const [roleEnabled, setRoleEnabled] = useState(null)
+  const [busyUid, setBusyUid] = useState(null)
+  const [confirmRevoke, setConfirmRevoke] = useState(null)
   const [revealed, setRevealed] = useState(() => new Set())
   const [search, setSearch] = useState('')
   const [planFilter, setPlanFilter] = useState('all')
@@ -1125,6 +1153,84 @@ function UsersPanel({ localUsers, toast }) {
     })()
     return () => { cancelled = true }
   }, [localUsers])
+
+  // ── The roster ────────────────────────────────────────────────────────────
+  // Read separately from the user list because the route answers one question
+  // per call: `moderatorAction` returns early, before `includeUsers` is read.
+  // Founder-only, so a moderator who somehow reached this tab does not even
+  // request the list of who else holds the role.
+  const loadRoster = useCallback(async () => {
+    if (!canAssignModerators(role)) return
+    try {
+      const { auth: fbAuth } = await import('../utils/firebase')
+      const token = await fbAuth.currentUser?.getIdToken()
+      if (!token) throw new Error('Not authenticated')
+      const res = await fetch('/api/verify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ moderatorAction: 'list' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      // The probe. An unpatched route answers this call with its ordinary
+      // handshake — 200, no `role`, no roster array — which is not an error and
+      // must not be reported as one.
+      if (res.ok && typeof data.role !== 'string') {
+        setRoleEnabled(false)
+        setRoster(null)
+        setRosterError('')
+        return
+      }
+      setRoleEnabled(true)
+      if (!res.ok || !Array.isArray(data.moderators)) {
+        throw new Error(data.error || `Server returned ${res.status}`)
+      }
+      setRoster(new Set(data.moderators.map(m => m.uid)))
+      setRosterError('')
+    } catch (err) {
+      // null, not an empty Set. "Nobody is a moderator" and "we could not find
+      // out" are different sentences and must not render as the same one.
+      setRoster(null)
+      setRosterError(String(err?.message || err || 'Unknown error').slice(0, 200))
+    }
+  }, [role])
+
+  useEffect(() => { loadRoster() }, [loadRoster])
+
+  const setModerator = async (u, grant) => {
+    setBusyUid(u.uid)
+    setConfirmRevoke(null)
+    try {
+      const { auth: fbAuth } = await import('../utils/firebase')
+      const token = await fbAuth.currentUser?.getIdToken()
+      if (!token) throw new Error('Not authenticated')
+      const res = await fetch('/api/verify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ moderatorAction: grant ? 'grant' : 'revoke', targetUid: u.uid }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`)
+      // The same probe again, and it is not belt-and-braces: this control is
+      // only rendered when roleEnabled is true, but the deploy can change under
+      // an open tab. A 200 from a route that has never heard of
+      // `moderatorAction` is a 200 that did nothing.
+      if (typeof data.role !== 'string') {
+        setRoleEnabled(false)
+        throw new Error('The moderator role is not switched on yet, so nothing was changed')
+      }
+      // Re-read rather than patching the Set locally: the server is the record
+      // of who holds the role, and a local guess is how the two drift apart.
+      await loadRoster()
+      toast(grant
+        ? `${u.displayName || u.email || 'That account'} can now review submissions and feedback`
+        : data.note || 'Removed from the roster')
+    } catch (err) {
+      setRosterError(String(err?.message || err || 'Unknown error').slice(0, 200))
+      toast(grant ? 'Could not grant the role — the server refused' : 'Could not revoke the role — the server refused')
+    } finally {
+      setBusyUid(null)
+    }
+  }
 
   const rows = useMemo(() => (users || []).map(u => {
     const status = u.subscription?.status
@@ -1273,6 +1379,41 @@ function UsersPanel({ localUsers, toast }) {
             <button className="btn btn-s" onClick={exportUsersCSV}>Export CSV</button>
           </div>
 
+          {/* WHAT THE ROLE ACTUALLY GRANTS, stated where it is handed out — and
+              when it cannot be handed out, why.
+              Mobbin: Teachable's User Roles table gives each role an access
+              description and a live count of who holds it, and says "1 of 1
+              admin seats" rather than leaving the reader to count
+              (https://mobbin.com/screens/8990ea9c-0399-45f0-ab10-2b4d3bd0004c).
+              Wix states the limit in the same breath as the grant — "can edit,
+              publish and manage… but can't delete or transfer the site". Both
+              sentences below are the prose form of predicates in
+              utils/moderation.js, so a change there makes this wrong loudly
+              rather than quietly. */}
+          {canAssignModerators(role) && (
+            <div className="adm-cat-desc" style={{ marginBottom: 12, lineHeight: 1.7 }}>
+              {roleEnabled === false
+                ? <>
+                    <strong style={{ color: 'var(--t1)' }}>The moderator role is not switched on yet.</strong>
+                    {' '}The rules understand a moderator and nothing grants one: api/verify-admin.js is
+                    {' '}the piece that mints the role onto a person&rsquo;s account, and this deployment
+                    {' '}does not have it. Run npm run apply:gated in the repository, commit, and deploy
+                    {' '}&mdash; docs/OWNER-ACTIONS.md &sect;1.3. Nothing on this screen can appoint anybody
+                    {' '}until then, so nothing on this screen offers to.
+                  </>
+                : roster === null
+                  ? (rosterError
+                      ? <span style={{ color: 'var(--err)' }}>The moderator roster could not be read &mdash; {rosterError}. The column below cannot be trusted until it can.</span>
+                      : 'Reading the moderator roster…')
+                  : <>
+                      <strong style={{ color: 'var(--t1)' }}>{roster.size === 0 ? 'Nobody' : roster.size} {roster.size === 1 ? 'person holds' : 'hold'} the moderator role.</strong>
+                      {' '}They can read, triage and delete feedback, and approve, reject or delete community submissions and prompts.
+                      {' '}They cannot see a reporter&apos;s email address, appoint another moderator, reach anyone&apos;s account or billing record, or read site analytics.
+                      {' '}Removing somebody takes effect on their next sign-in &mdash; an ID token already issued stays valid for up to an hour.
+                    </>}
+            </div>
+          )}
+
           <div className="adm-card">
             <div className="adm-table-wrap">
               <table className="adm-table adm-users-table">
@@ -1286,6 +1427,7 @@ function UsersPanel({ localUsers, toast }) {
                     <SortTh k="country">Country</SortTh>
                     <SortTh k="createdAt">Joined</SortTh>
                     <SortTh k="lastLoginAt">Last Login</SortTh>
+                    {canAssignModerators(role) && <th>Moderator</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -1315,10 +1457,47 @@ function UsersPanel({ localUsers, toast }) {
                       </td>
                       <td style={{ whiteSpace: 'nowrap' }}>{u.createdAt ? fmtDate(u.createdAt) : '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>{u.lastLoginAt ? fmtDate(u.lastLoginAt) : '—'}</td>
+                      {/* The assignment lives on the PERSON'S OWN ROW rather than
+                          in a roster screen of its own. Mobbin: Wix's Change Role
+                          opens on the person — avatar, handle, address — and puts
+                          the role beside them, because "who am I about to give
+                          this to" is the question being answered
+                          (https://mobbin.com/screens/31f52d2e-ef17-4cf2-a5c6-3402dcfa3760).
+                          A separate roster page would have restated the user list
+                          to answer it.
+
+                          THE DEGRADED STATE COMES FIRST. With the route
+                          unapplied there is no control here at all — only the
+                          word for what is true — because a button that cannot
+                          do the thing it names is worse than a missing column,
+                          and the paragraph above the table says why. */}
+                      {canAssignModerators(role) && (
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {roleEnabled === false
+                            ? <span style={{ color: 'var(--t3)' }}>not switched on</span>
+                            : roster === null
+                              ? <span style={{ color: 'var(--t3)' }}>{rosterError ? 'unknown' : 'checking…'}</span>
+                              : isFounderRow(u)
+                                ? <span style={{ color: 'var(--t3)' }} title="The founder already has every permission a moderator has">founder</span>
+                                : roster.has(u.uid)
+                                  ? (confirmRevoke === u.uid
+                                      ? <>
+                                          <button className="btn btn-s" disabled={busyUid === u.uid} onClick={() => setModerator(u, false)} style={{ fontSize: 10, color: 'var(--err)' }}>Remove</button>
+                                          <button className="btn btn-s" onClick={() => setConfirmRevoke(null)} style={{ fontSize: 10, marginLeft: 4 }}>Keep</button>
+                                        </>
+                                      : <button className="btn btn-s" disabled={busyUid === u.uid} onClick={() => setConfirmRevoke(u.uid)} style={{ fontSize: 10, color: 'var(--ok)' }}>Moderator ✓</button>)
+                                  : <button className="btn btn-s" disabled={busyUid === u.uid} onClick={() => setModerator(u, true)} style={{ fontSize: 10 }}>
+                                      {busyUid === u.uid ? 'Saving…' : 'Make moderator'}
+                                    </button>}
+                        </td>
+                      )}
                     </tr>
                   ))}
                   {filtered.length === 0 && (
-                    <tr><td colSpan={7}><div className="adm-empty">{rows.length === 0 ? 'No users yet' : 'No users match the current filters'}</div></td></tr>
+                    // Eight columns today, nine with the Moderator one. It said
+                    // seven, which was already one short of the header before
+                    // this change added anything.
+                    <tr><td colSpan={canAssignModerators(role) ? 9 : 8}><div className="adm-empty">{rows.length === 0 ? 'No users yet' : 'No users match the current filters'}</div></td></tr>
                   )}
                 </tbody>
               </table>
@@ -2625,7 +2804,11 @@ export default function Admin({ toast }) {
       )}
 
       {/* ═══════ USERS TAB ═══════ */}
-      {tab === 'users' && <UsersPanel localUsers={data.users} toast={toast} />}
+      {/* `role` is the SERVER-VERIFIED role from the ID token, not the bundled
+          email check. Only a founder is offered the assignment controls, and the
+          route refuses the action with a 403 regardless — the UI hides what the
+          server would refuse rather than being the thing that decides it. */}
+      {tab === 'users' && <UsersPanel localUsers={data.users} toast={toast} role={role} />}
 
       {/* ═══════ PIPELINE TAB ═══════ */}
       {tab === 'pipeline' && <PipelineBoard />}
