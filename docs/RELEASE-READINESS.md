@@ -32,7 +32,7 @@ Measured on this branch. Each row is a command you or anyone can re-run.
 | Build | `npm run build` | passes, and printed `prerender: wrote 39 route shells + a noindex 404 shell (27 on a section share card, 16 with a BreadcrumbList)`. The deploy is **5.6 MB** (was 35 MB before the ffmpeg core moved off origin) |
 | Unit | `npm run test:unit` | **1850 pass, 0 fail, 0 skipped** |
 | Firestore and Storage rules | `npm run test:rules` | **117 pass, 0 fail, 0 skipped** — the emulator runs Storage too, and #443 added twelve moderator tests. This is the one row on this page **not** re-measured on the commit above: it needs a Java 21 emulator, and the figure is #443's. Re-run the command rather than trusting it |
-| Browser acceptance | `npm run test:users` | **988 passed, 13 skipped** — every skip is `12-ui-system-builder.spec.js`, see §4 |
+| Browser acceptance | `npm run test:users` | **989 passed, 13 skipped, 0 failed** — every skip is `12-ui-system-builder.spec.js`, see §4 |
 
 What the gate *requires* — as opposed to what it happened to report today —
 lives in [`reference/build-and-verify.md`](reference/build-and-verify.md) and
