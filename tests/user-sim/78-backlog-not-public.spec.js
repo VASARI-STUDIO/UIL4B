@@ -1,0 +1,229 @@
+// THE ENGINEERING BACKLOG: VISIBLE TO THE FOUNDER, UNREACHABLE BY ANYONE ELSE.
+//
+// src/data/pipeline.js is the internal backlog — 184 queued items and 23
+// processes whose note, title and summary fields are candid prose written for
+// us. It was a client module, so `vite build` emitted it and the deploy served
+// it from /assets. Walked anonymously against a real build, no login, no
+// cookie, no Authorization header:
+//
+//   GET /admin                  200   the HTML names the entry chunk
+//   GET /assets/index-*.js      200   names Admin-rjGyizH8.js
+//   GET /assets/Admin-*.js      200   names pipeline-DUbq1XL3.js
+//   GET /assets/pipeline-*.js   200   824,007 bytes / 319,711 gzip
+//
+// It carried the literal string `allow create: if true` — the unfixed Firestore
+// rule docs/OWNER-ACTIONS.md is still asking the founder to close — 23 mentions
+// of firestore.rules and 3 permission-denied diagnostics. #420 put it behind a
+// dynamic import, which changed WHEN a browser fetched it and nothing about WHO
+// could. The board now reads GET /api/ai?backlog=1 behind requireAdmin().
+//
+// ── WHAT EACH HALF IS FOR ──────────────────────────────────────────────────
+//
+// tests/unit/admin-chunk-carries-no-backlog.test.js proves the ABSENCE, over a
+// real production build, by reading every emitted file for row text. It cannot
+// prove the founder can still read the board — a fix that deleted the Pipeline
+// tab would pass it perfectly.
+//
+// This file drives the browser for both halves:
+//   · the founder opens the tab and gets rows, notes and statuses;
+//   · the board says so out loud when the endpoint refuses it;
+//   · a SIGNED-OUT visitor walks the real chunk graph over the real preview
+//     server and reaches no note text anywhere.
+//
+// ── WHY THE ENDPOINT IS STUBBED ────────────────────────────────────────────
+//
+// `vite preview` serves dist/ as static files and runs no Vercel functions, so
+// every request under /api answers 404 in this suite — helpers.js says so where it
+// that as expected noise, and 57-brand-starter.spec.js stubs /api/ai for the
+// same reason. The stub answers with the REAL exports of src/data/pipeline.js,
+// read here in Node, so what the board renders is the founder's actual backlog
+// and not a fixture that could drift away from it. What the stub cannot prove —
+// that the server refuses a non-admin — is proved by
+// tests/unit/admin-chunk-carries-no-backlog.test.js reading requireAdmin() into
+// serveBacklog(), and by the Authorization assertion in
+// 57-signed-in-session.spec.js.
+import { test, expect } from './base.js'
+import { go, watch, signIn } from './helpers.js'
+import { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../../src/data/pipeline.js'
+
+const BOARD = { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO }
+
+// The endpoint, matched on the URL object rather than a glob: a glob has to
+// spell the query string, and `?` is a wildcard in Playwright's matcher, so
+// a query-string glob would silently also claim /api/aiXbacklog=1.
+const isBacklogEndpoint = (url) => url.pathname === '/api/ai' && url.searchParams.has('backlog')
+
+// Long printable-ASCII runs out of the real rows, used as needles for the
+// anonymous walk. Quotes, backticks, backslashes and dollars are excluded
+// because those are escaped inside a JavaScript string literal, so a needle
+// spanning one would miss a leak that is plainly there — the unit guard's
+// control caught exactly that.
+const ASCII_RUN = /[\x20-\x21\x23\x25-\x26\x28-\x5B\x5D-\x5F\x61-\x7E]{48,}/
+const needles = []
+for (const row of [...NEXT_TODO, ...PIPELINE_PROCESSES]) {
+  for (const field of ['note', 'title', 'summary', 'name']) {
+    const m = typeof row[field] === 'string' ? ASCII_RUN.exec(row[field]) : null
+    if (m) needles.push({ id: row.id, field, text: m[0].slice(0, 64) })
+  }
+}
+
+// One row, chosen deterministically, whose note is long enough to be
+// unmistakable on screen. Used by the render test below and by nothing else.
+const SAMPLE = NEXT_TODO.find((t) => typeof t.note === 'string' && t.note.length > 120)
+
+test('the founder opens the Pipeline tab and gets the whole board — rows, notes and statuses', async ({ page }) => {
+  watch(page, 'the founder reading the backlog')
+
+  let sawAuthorization = null
+  await page.route(isBacklogEndpoint, (route) => {
+    sawAuthorization = route.request().headers()['authorization'] || null
+    return route.fulfill({ json: BOARD })
+  })
+
+  await signIn(page, { admin: true })
+  await go(page, '/admin')
+  // CONTROL: this session must really be the founder, or everything below is
+  // measuring a page that was never admitted.
+  await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Pipeline' }).click()
+
+  // The three bands the board is made of.
+  await expect(page.getByText('App condition')).toBeVisible()
+  await expect(page.getByText(`Pipeline (${PIPELINE_PROCESSES.length} processes)`)).toBeVisible()
+  await expect(page.getByText(`Next to do (${NEXT_TODO.length})`)).toBeVisible()
+
+  // Every queued item is on screen — not "some rows rendered", which is also
+  // true of a board that dropped nine tenths of the backlog on the way through
+  // JSON.
+  await expect(page.locator('.adm-pipe-todo').first()).toBeVisible()
+  expect(
+    await page.locator('.adm-pipe-todo').count(),
+    'the queue rendered a different number of rows than the endpoint returned, so something is being '
+    + 'lost between the route and the board',
+  ).toBe(NEXT_TODO.length)
+
+  // THE NOTES, which are the whole reason this board is worth keeping. A row
+  // with ids and a status and no note would pass every count above.
+  const sampleRow = page.locator('.adm-pipe-todo').filter({ hasText: SAMPLE.title }).first()
+  await expect(sampleRow).toBeVisible()
+  expect(
+    (await sampleRow.innerText()).replace(/\s+/g, ' '),
+    `the row for ${SAMPLE.id} is on the board without its note, so the founder has a list of titles `
+    + 'rather than the record — which is what stripping the notes at build time would have given them',
+  ).toContain(SAMPLE.note.replace(/\s+/g, ' ').slice(0, 80))
+
+  // THE STATUSES, read back as the labels the board prints rather than the raw
+  // values, because an unmapped status renders as its own lowercase string and
+  // that is the defect pipeline-board-renderable.test.js exists for.
+  const labels = new Set(await page.locator('.adm-pipe-status').allInnerTexts())
+  expect(
+    [...labels].sort(),
+    'the board is printing one status for everything, so the statuses did not survive the trip',
+  ).toContain('Done')
+  expect(labels.size, 'only one distinct status label rendered across the whole queue').toBeGreaterThan(2)
+
+  // And it asked as somebody — a request without this is refused in production.
+  expect(
+    sawAuthorization,
+    'the board fetched the backlog with no Authorization header, so the real endpoint would answer it 404',
+  ).toMatch(/^Bearer .+/)
+})
+
+test('when the endpoint refuses, the board says so instead of showing an empty backlog', async ({ page }) => {
+  // A board that silently rendered zero rows would read as "there is nothing in
+  // the backlog", which is the most misleading thing this surface could say —
+  // and 404 is exactly what requireAdmin answers a caller it does not recognise,
+  // so this is the state a session with a stale token actually lands in.
+  watch(page, 'the founder whose session no longer proves it')
+
+  await page.route(isBacklogEndpoint, (route) => route.fulfill({ status: 404, json: { error: 'Not found' } }))
+
+  await signIn(page, { admin: true })
+  await go(page, '/admin')
+  await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Pipeline' }).click()
+
+  await expect(page.getByText(/Could not load the backlog/i)).toBeVisible()
+  expect(
+    await page.locator('.adm-pipe-todo').count(),
+    'the board rendered rows on a refused request, so this failure state is not the one that ships',
+  ).toBe(0)
+})
+
+test('a signed-out visitor walking the real chunk graph reaches no backlog text at all', async ({ page }) => {
+  // THE ACCEPTANCE TEST, in a browser, against the real preview server: the
+  // same walk that found 824,007 bytes of notes before this change. Nothing is
+  // signed in and page.request carries no credentials, so these are the exact
+  // requests a stranger with the URL can make.
+  watch(page, 'a stranger reading /admin')
+
+  const fetched = []
+  async function grab(path) {
+    const res = await page.request.get(path)
+    const body = await res.text()
+    fetched.push({ path, status: res.status(), bytes: body.length })
+    return { status: res.status(), body }
+  }
+
+  const html = await grab('/admin')
+  expect(html.status, 'the preview server did not serve /admin, so this walk proves nothing').toBe(200)
+
+  const entry = [...new Set([...html.body.matchAll(/\/assets\/index-[A-Za-z0-9_-]+\.js/g)].map((m) => m[0]))]
+  expect(entry.length, 'the /admin shell names no entry chunk, so the walk stops before it starts').toBeGreaterThan(0)
+
+  const adminNames = new Set()
+  for (const src of entry) {
+    const chunk = await grab(src)
+    expect(chunk.status, `the entry chunk ${src} did not serve`).toBe(200)
+    for (const m of chunk.body.matchAll(/Admin-[A-Za-z0-9_-]+\.js/g)) adminNames.add(m[0])
+  }
+  // CONTROL: the walk has to actually arrive at the Admin route's code. "No
+  // notes" is also what a walk that never got past the entry chunk looks like.
+  expect(
+    [...adminNames],
+    'the entry chunk names no Admin-*.js, so this walk never reached the admin code and every '
+    + 'assertion below passes for free',
+  ).not.toHaveLength(0)
+
+  let sawTheDashboard = false
+  for (const name of adminNames) {
+    const chunk = await grab('/assets/' + name)
+    expect(chunk.status, `the Admin chunk ${name} did not serve`).toBe(200)
+    if (chunk.body.includes('uil4b-dev-2026')) sawTheDashboard = true
+    // Anything the Admin chunk names is fetched too — this is the edge that
+    // used to lead straight to pipeline-*.js.
+    for (const m of chunk.body.matchAll(/[A-Za-z][A-Za-z0-9_-]*-[A-Za-z0-9_-]{8}\.js/g)) {
+      if (!fetched.some((f) => f.path.endsWith(m[0]))) await grab('/assets/' + m[0])
+    }
+  }
+  expect(
+    sawTheDashboard,
+    'no fetched Admin chunk contained the dashboard marker, so the walk did not reach the real thing',
+  ).toBe(true)
+
+  // CONTROL: real bytes were really read.
+  expect(needles.length, 'no needles were extracted from the backlog, so nothing was searched for').toBeGreaterThan(100)
+  const total = fetched.reduce((a, f) => a + f.bytes, 0)
+  expect(total, `only ${total} bytes were fetched across ${fetched.length} requests — this is not a real walk`).toBeGreaterThan(200_000)
+
+  const leaks = []
+  for (const { path: p } of fetched) {
+    const res = await page.request.get(p)
+    const body = await res.text()
+    const hit = needles.find((n) => body.includes(n.text))
+    if (hit) leaks.push(`${p} carries ${hit.id}.${hit.field}`)
+  }
+  expect(
+    leaks,
+    'a file an anonymous visitor can fetch contains text from the engineering backlog — notes, '
+    + 'titles or process summaries. src/data/pipeline.js holds permission-denied diagnostics, '
+    + 'unshipped plans, security findings and founder decisions, including the literal text of an '
+    + 'unfixed Firestore rule.',
+  ).toEqual([])
+
+  // And the chunk that used to hold them is not on disk under any name.
+  const anyPipelineChunk = fetched.filter((f) => /pipeline-[A-Za-z0-9_-]+\.js/.test(f.path) && f.status === 200)
+  expect(anyPipelineChunk.map((f) => f.path), 'a pipeline-*.js asset is still being served').toEqual([])
+})

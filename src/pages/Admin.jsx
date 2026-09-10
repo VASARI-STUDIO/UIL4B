@@ -698,10 +698,12 @@ function PipelineBoard() {
         if (!res.ok) throw new Error(data.error || `the backlog endpoint answered ${res.status}`)
         if (alive) setBoard(data)
       } catch (err) {
-        // Named in words rather than swallowed. A board that silently rendered
-        // zero rows would read as "the backlog is empty", which is the most
-        // misleading thing this surface could say.
-        console.error('[admin] the pipeline backlog could not be loaded:', err?.message || err)
+        // Named in words rather than swallowed, and the ENDPOINT is named too.
+        // A board that silently rendered zero rows would read as "the backlog
+        // is empty", which is the most misleading thing this surface could say;
+        // an error that does not say what it was talking to sends the next
+        // reader to the wrong half of the system.
+        console.error('[admin] /api/ai?backlog=1 did not return the pipeline backlog:', err?.message || err)
         if (alive) setLoadError(err?.message || String(err))
       }
     })()
