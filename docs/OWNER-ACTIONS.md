@@ -16,9 +16,9 @@ the code, two rewritten, one found impossible)._
 
 **Engineering is stopped on five of these.** The queue records these as waiting
 on you and nothing can move on them: the deploy block (§1.1), the GitHub bill
-(§1.2), **the moderator role permission (§1.3)**, the Stripe retention setup
-(§4.6), and a verified sending domain (§4.10). A live Stripe checkout test (§6)
-also needs you but blocks nothing today.
+(§1.2), **four approved changes waiting on one command (§1.3)**, the Stripe
+retention setup (§4.6), and a verified sending domain (§4.10). A live Stripe
+checkout test (§6) also needs you but blocks nothing today.
 
 **One item changed shape today and you should know why.** §4.5 asked you to open
 the AI Image Prompt Generator and generate a prompt. **You cannot** — that tool
@@ -31,7 +31,7 @@ one page, what is done, what is on you, what is on someone else.
 
 ---
 
-# 1 · Stopped right now — a deploy block, a bill and a permission
+# 1 · Stopped right now — a deploy block, a bill and one command
 
 These three are not engineering problems and no amount of waiting fixes any of
 them. **They are in order of how much each one unblocks.**
@@ -92,66 +92,176 @@ new change keeps looking broken, and the only proof anything works is an agent
 running the tests on their own machine and pasting the output into the pull
 request.
 
-## 1.3 · The moderator role is built and switched off. One setting turns it on.
+## 1.3 · Four approved changes are written and not switched on. One command applies all four.
 
-**Do.** Open `.claude/settings.json` in this repository and paste this in:
+**Do.** Open a terminal in this repository and run:
 
-```json
-{
-  "autoCompactEnabled": true,
-  "autoCompactWindow": 150000,
-  "permissions": {
-    "allow": [
-      "Edit(firestore.rules)",
-      "Edit(api/verify-admin.js)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)"
-    ]
-  }
-}
+```
+npm run apply:gated
 ```
 
-Then tell us it is in. Nothing else — you do not need to read the code.
+It tells you what it is about to do and waits for you to type **y**. Nothing
+else — you do not need to read any of the code.
 
-**Time.** One minute.
+**Time.** About two minutes, most of it the command running its own checks.
 
-**Why.** You approved both changes on 6 September. We could not make them. Two
-files are refused by the **Claude Code auto-mode classifier** — a guardrail in
-the tool itself, which is *separate from and stricter than*
-`docs/reference/human-validation-zones.md`. That doc says "ask Dylan first"; the
-classifier refuses **after** you have said yes. It blocked the agent and it
-blocked the coordinator, so your approval alone does not lift it. Only this
-setting does.
+**Why.** You approved these changes. We could not make them. `firestore.rules`,
+`api/verify-admin.js` and `src/contexts/AuthContext.jsx` are refused by the
+**Claude Code auto-mode classifier** — a guardrail inside the tool itself,
+*separate from and stricter than* `docs/reference/human-validation-zones.md`.
+That doc says "ask Dylan first"; the classifier refuses **after** you have said
+yes. It blocked the agent and it blocked the coordinator, so your approval alone
+never lifted it.
 
-The two blocked files:
+The old version of this item asked you to paste a permissions block into
+`.claude/settings.json` and hope. That was never verified to work, and it left
+four separate diffs for you to find in four pull requests and paste by hand into
+two files — in an order nobody had written down, where the wrong order silently
+produces a rules file that does not compile. **This command is that job, done
+properly.** It applies them in the order that composes, refuses to touch
+anything if any one of them no longer fits, skips whatever is already in, and
+then runs the three suites so you find out here rather than in production.
 
-| File | What the held change does |
-|---|---|
-| `firestore.rules` | Lets a `moderator` claim through on feedback, community prompts and community submissions. Nothing else widens — accounts, billing and analytics are untouched. |
-| `api/verify-admin.js` | Mints the moderator claim from the roster, and gives you grant / revoke / list so you can actually assign someone. |
+**The four, and what each one gives you:**
 
-Both diffs are written out in full in the body of **pull request #390**
-(`https://github.com/VASARI-STUDIO/UIL4B/pull/390`), under the heading
-**FOUNDER APPROVAL NEEDED** — the sections numbered *1. `firestore.rules`* and
-*2. `api/verify-admin.js`*. The working copies, refined and tested since, are
-held uncommitted in the `feat/moderator-role-enable` worktree and described in
-the pull request that carries this page.
+| | What it changes | What you get |
+|---|---|---|
+| 1 | `firestore.rules` + `src/utils/projectSync.js` | **Project sync stops dying.** Every saved project gets its own record instead of all of them sharing one, so sync no longer stops working forever — silently — once you have about thirty projects with logos in them. |
+| 2 | `firestore.rules` | **A moderator can clear the queues.** The rules start honouring a `moderator` role on feedback, community prompts and community submissions. Accounts, billing and analytics are untouched. |
+| 3 | `firestore.rules` | **Strangers stop being able to write to your feedback queue.** It was open to anyone on the internet. Every signed-in write is also now held to the shape and size the site actually sends, instead of anything up to 1 MB. |
+| 4 | `src/contexts/AuthContext.jsx` + `src/contexts/SubscriptionContext.jsx` | **The homepage paints sooner.** Measured: 360 ms faster to first paint, 624 ms faster to the headline, and 21.8% fewer bytes in the first request. |
 
-**What happens once it is in.** The two diffs apply, `npm run test:rules` runs
-against them, and the role goes live: you can promote someone from Admin →
-Users, and they can clear the approval queue you chose in §3.9 without seeing
-anyone's email address or being able to appoint anyone else.
+**One half of the moderator role is NOT in this command, and you should know
+which.** `api/verify-admin.js` is the piece that *mints* the moderator role onto
+a person's account. Its change was written as prose with a partial diff rather
+than as something a machine can apply, so applying it would mean shipping a
+version of a security route that no review has seen. The command says so on
+every run. **After you run this, the rules will honour a moderator; appointing
+one still needs that route, and that is a separate job.** Everything else in the
+table is complete.
 
-**If the paste does not work.** Tell us and we will hand you the two diffs as a
-single patch file to apply yourself. We have verified the block exists but not
-that this exact rule clears it — the tool's own refusal message names a Bash
-permission rule as the remedy, which is what the block above is.
+**What the command does, step by step.**
 
-**If you do nothing.** The role stays built and inert. **You remain the only
-person on earth who can approve a community submission or clear a feedback
-report**, which is the bottleneck the role exists to remove — and the reason you
-asked for it.
+1. Prints the four and waits for **y**. `npm run apply:gated -- --dry-run` shows
+   you every line it would change and touches nothing.
+2. Refuses to run at all if those files have unsaved edits it did not make, and
+   prints exactly what it would have overwritten.
+3. Skips anything already applied. Running it twice is safe: the second run
+   reports all four as already in and changes nothing.
+4. Runs `npm run test:rules` (the Firestore emulator — it needs Java 21, and the
+   command finds one for you rather than failing with a Java error), then
+   `npm run test:unit`, then the deferred production build. It stops at the
+   first failure and tells you which change caused it.
+5. **Commits nothing and pushes nothing.** It prints the one command that undoes
+   everything: `git checkout -- firestore.rules src/contexts/AuthContext.jsx
+   src/contexts/SubscriptionContext.jsx src/utils/projectSync.js`.
 
+**One step afterwards that only you can do.** The new rules are then in the
+repository, not in front of your users. Publish them from the Firebase console,
+or run `firebase deploy --only firestore:rules`.
+
+**If it stops and says a change no longer fits.** Tell us. It means the file
+moved after the change was reviewed, and it needs an engineer to regenerate the
+diff. Do not hand-edit around it.
+
+**If you do nothing.** All four stay written and switched off. Your feedback
+queue stays open to anyone on the internet, project sync stays one bad day away
+from stopping silently, the homepage stays 624 ms slower than it needs to be,
+and **you remain the only person on earth who can approve a community submission
+or clear a feedback report** — the bottleneck the moderator role exists to
+remove, and the reason you asked for it.
+
+---
+
+### The diffs, for the reader who wants to see them
+
+You do not need this section to run the command. It is here because these are
+security rules and somebody should always be able to read what changed without
+running anything.
+
+Every one of these is committed in this repository, and the command applies
+these exact files rather than a retyped copy of them:
+
+| | Where the diff lives | Reviewed in |
+|---|---|---|
+| 1 | `docs/design/per-project-sync-rules.patch` | the per-project sync design |
+| 2 | `docs/design/moderator-role-rules.patch` | [#390](https://github.com/VASARI-STUDIO/UIL4B/pull/390) |
+| 3 | `tests/rules/pending-firestore-rules.mjs` | [#418](https://github.com/VASARI-STUDIO/UIL4B/pull/418) |
+| 4 | `docs/design/firebase-deferral-gated.patch` | [#427](https://github.com/VASARI-STUDIO/UIL4B/pull/427) |
+
+**2 · The moderator role**, the heart of it — a reviewer is you, or somebody you
+have put on the roster, and the three review collections start accepting them:
+
+```diff
++    function isReviewer() {
++      return request.auth != null
++        && (request.auth.token.admin == true
++            || request.auth.token.moderator == true);
++    }
++
+     match /feedback/{feedbackId} {
+       allow create: if true;
+-      allow read, update, delete: if request.auth != null
+-        && request.auth.token.admin == true;
++      allow read, update, delete: if isReviewer();
+     }
+
+     match /community-prompts/{promptId} {
+-      allow update, delete: if request.auth != null
+-        && request.auth.token.admin == true;
++      allow update, delete: if isReviewer();
+     }
+
+     match /community-submissions/{submissionId} {
+-      function isAdmin() { return isSignedIn() && request.auth.token.admin == true; }
+-      allow update: if isAdmin()
++      allow update: if isReviewer()
+         || (isOwner() && request.resource.data.status == 'withdrawn'
+             && request.resource.data.authorUid == resource.data.authorUid);
+-      allow delete: if isAdmin() || isOwner();
++      allow delete: if isReviewer() || isOwner();
+     }
+```
+
+`users/{uid}` is not touched — it stays owner-only and still refuses every
+billing field. `analytics-daily` is deliberately not widened: reviewing
+submissions is not a reason to hand a volunteer your site-wide usage numbers.
+
+**3 · The feedback queue closed**, which is the one on this page a stranger can
+exploit today:
+
+```diff
+     match /feedback/{feedbackId} {
+-      allow create: if true;
++      allow create: if false;
+```
+
+Nothing in the site has ever written there — every report goes through
+`/api/support`, which writes as the server and bypasses these rules entirely. So
+that line never guarded a real write; it only granted one, to anyone. Reading,
+updating and deleting are unchanged, so the admin queue works exactly as before.
+The same change bounds what a signed-in account may write to
+`community-prompts`, `community-submissions` and `analytics-daily` — an exact
+list of allowed fields, a length cap on every string, and a document id that has
+to be a date. The full text is in `tests/rules/pending-firestore-rules.mjs`,
+which is also what the emulator tests run against.
+
+**1 · Per-project sync** adds one rule inside your own user record, granting
+exactly what the record beside it already grants:
+
+```diff
+       match /sync/{docId} {
+         allow read, write: if isOwner();
+       }
++      match /projects/{projectId} {
++        allow read, write: if isOwner();
++      }
+```
+
+**4 · The homepage deferral** is 373 lines of JavaScript and is not reproduced
+here; it is `docs/design/firebase-deferral-gated.patch`, and it changes no rule
+and no permission. All it does is stop two files fetching the sign-in code
+before the page has drawn anything.
 ---
 
 # 2 · Still needs you — three things

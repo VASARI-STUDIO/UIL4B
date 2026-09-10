@@ -132,6 +132,20 @@ test('forced password switching and prompt re-entrancy are guarded', async () =>
   assert.ok(pillNav.includes('finally'))
   assert.ok(auth.includes("prompt: 'select_account'"))
   assert.ok(auth.includes('++authEpochRef.current'))
-  assert.ok(auth.includes('isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)'))
+  // The identity guard, and it has two spellings for one meaning. The Firebase
+  // deferral (docs/design/firebase-deferral-gated.patch, applied by
+  // `npm run apply:gated`) replaces the static `firebaseAuth` with `authNow()`,
+  // a synchronous peek that answers null until the SDK lands — which every one
+  // of these guards already treats as "not the current session", the same
+  // answer they give today when auth has not resolved yet.
+  //
+  // Both are pinned rather than loosened to `isCurrentAuthSession(`: the
+  // FOURTH argument is the whole point of the call, and a version that passed
+  // something else would still match a looser pattern.
+  assert.ok(
+    auth.includes('isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)')
+    || auth.includes('isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)'),
+    'the auth-epoch guard no longer compares against the live current user',
+  )
   assert.ok(pillNav.includes('requestAnimationFrame(() => accountBtnRef.current?.focus())'))
 })

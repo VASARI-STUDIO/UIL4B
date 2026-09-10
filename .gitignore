@@ -106,3 +106,11 @@ mi-tmp.mjs
 src/**/*.trial.jsx
 vite.config.trial.mjs
 .firebase-deferral-trial.patch
+
+# Scratch directories the gated-patch appliers use. Both copy the founder-gated
+# files somewhere writable, apply a diff there, and delete the directory in a
+# `finally` — these lines exist so a crashed run cannot leave a half-patched
+# copy of firestore.rules sitting in `git status` looking like reviewed code.
+.tmp-rules-patch-*/
+.tmp-gated-patch-*/
+.tmp-gated-diff-*/

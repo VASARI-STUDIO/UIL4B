@@ -35,9 +35,9 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdtemp, readFile, writeFile, rm, mkdir } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { RULE_MATCHER } from './gated-patches.mjs'
 
 const execFileAsync = promisify(execFile)
 
@@ -45,21 +45,40 @@ export const ROOT = fileURLToPath(new URL('../', import.meta.url))
 export const RULES_PATH = path.join(ROOT, 'firestore.rules')
 export const PATCH_PATH = path.join(ROOT, 'docs/design/per-project-sync-rules.patch')
 
-/** The rule the patch is for. Both test files assert against this one string. */
-export const RULE_MATCHER = /match \/projects\/\{projectId\}\s*\{\s*allow read, write: if isOwner\(\);\s*\}/
+/**
+ * The rule the patch is for. Both test files assert against this one string.
+ *
+ * It now LIVES in scripts/gated-patches.mjs, which is the single registry the
+ * applier and its guard test both read, and is re-exported here so every
+ * existing caller keeps working. One definition, because two would drift and
+ * the day they drifted is the day the founder applied the wrong thing.
+ */
+export { RULE_MATCHER }
 
 /**
  * firestore.rules with the patch applied, as a string.
  *
+ * ALREADY APPLIED IS NOT A FAILURE. Once the founder has run
+ * `npm run apply:gated`, the rule is in the file and `git apply` refuses — so a
+ * helper that only knew how to apply would turn the successful day into a red
+ * suite. When the rule is already there the file is returned as it stands, with
+ * `alreadyApplied: true`, and every caller's assertion about the RESULT still
+ * holds because the result is the same either way.
+ *
  * @param {object} [opts]
  * @param {boolean} [opts.keepDir] leave the scratch directory for debugging
- * @returns {Promise<{ patched: string, original: string }>}
- * @throws if the patch no longer applies — which is the whole point of running
- *         it on every unit test: a design that has gone stale against the tree
- *         it was written for becomes unappliable exactly when it is approved.
+ * @returns {Promise<{ patched: string, original: string, alreadyApplied: boolean }>}
+ * @throws if the patch no longer applies AND is not already in — which is the
+ *         whole point of running it on every unit test: a design that has gone
+ *         stale against the tree it was written for becomes unappliable exactly
+ *         when it is approved.
  */
 export async function applyRulesPatchToCopy(opts = {}) {
   const original = await readFile(RULES_PATH, 'utf8')
+
+  if (RULE_MATCHER.test(original)) {
+    return { patched: original, original, alreadyApplied: true }
+  }
 
   // Inside the repo, because `git apply --directory` resolves relative to the
   // repository root and refuses to escape it. Uniquely named, because every
@@ -89,7 +108,7 @@ export async function applyRulesPatchToCopy(opts = {}) {
     if (after !== original) {
       throw new Error('the gated firestore.rules was modified; it must only ever be read')
     }
-    return { patched, original }
+    return { patched, original, alreadyApplied: false }
   } finally {
     if (!opts.keepDir) await rm(scratch, { recursive: true, force: true })
   }
