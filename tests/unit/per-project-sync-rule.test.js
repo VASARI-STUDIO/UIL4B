@@ -41,8 +41,19 @@ const readRules = () => fs.readFileSync(RULES_PATH, 'utf8')
 test('the gated rules patch still applies to firestore.rules', async () => {
   // Guard 1. If this fails, the design is unappliable — regenerate the patch
   // against the current file rather than editing the error away.
-  const { patched, original } = await applyRulesPatchToCopy()
-  assert.notEqual(patched, original, 'applying the patch must actually change something')
+  //
+  // ONCE `npm run apply:gated` HAS RUN, the rule is in the file and there is
+  // nothing left to apply. That is the design succeeding, not the guard
+  // failing, so the assertion below is the one that survives both states: the
+  // patch either changes the file, or is already the reason the file needs no
+  // change. What it may never be is "applies cleanly and grants nothing" —
+  // that is the next test.
+  const { patched, original, alreadyApplied } = await applyRulesPatchToCopy()
+  if (alreadyApplied) {
+    assert.equal(patched, original, 'an applied patch must return the file untouched')
+  } else {
+    assert.notEqual(patched, original, 'applying the patch must actually change something')
+  }
 })
 
 test('applying it never writes the founder-gated file', async () => {

@@ -25,6 +25,7 @@
 // same call, one input changed, must produce the other answer.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs2 from 'node:fs'
 import {
   newerSide, mergeProjects, mergeTombstones, pruneTombstones, projectListsEqual,
   normaliseTombstones, payloadBytes, syncFailureMessage, classifyError,
@@ -33,6 +34,9 @@ import {
   SYNC_SCHEMA_VERSION_SINGLE, SYNC_SCHEMA_VERSION_PER_PROJECT,
   PER_PROJECT_SYNC_ENABLED, shouldApplyRemote,
 } from '../../src/utils/projectSync.js'
+import { RULE_MATCHER, RULES_PATH } from '../../scripts/per-project-rules-patch.mjs'
+
+const readRulesFile = () => fs2.readFileSync(RULES_PATH, 'utf8')
 
 const UID = 'uid-alice'
 const LEGACY = `users/${UID}/sync/projects`
@@ -525,24 +529,39 @@ test('a migration refused halfway reports the refusal and how far it got', async
    8. THE GATE
    ═══════════════════════════════════════════════════════════════════════════ */
 
-test('per-project sync is OFF until users/{uid}/projects/{id} has a rule', () => {
-  // This is not a preference. Writing to that collection today is refused by
-  // firestore.rules, and a refusal is precisely what this change exists to stop
-  // hiding. The rule is in the PR body under FOUNDER APPROVAL NEEDED; when it
-  // lands, this constant flips and the assertion below is what has to change
-  // with it.
-  assert.equal(PER_PROJECT_SYNC_ENABLED, false)
+test('the flag and the rule agree — neither can move without the other', () => {
+  // This is not a preference. Writing to that collection without a rule is
+  // refused by firestore.rules, and a refusal is precisely what this change
+  // exists to stop hiding. So the flag is pinned to the RULE rather than to a
+  // constant: `npm run apply:gated` lands both together, and this fails if
+  // either half ever moves alone.
+  //
+  // tests/unit/per-project-sync-rule.test.js says the same thing from the
+  // rules side and explains all four ways the pair can drift apart.
+  const ruleIsLive = RULE_MATCHER.test(readRulesFile())
+  assert.equal(PER_PROJECT_SYNC_ENABLED, ruleIsLive,
+    ruleIsLive
+      ? 'users/{uid}/projects/{id} has its rule now — PER_PROJECT_SYNC_ENABLED must be true with it'
+      : 'users/{uid}/projects/{id} has no rule yet, so every client write there would be refused')
 })
 
-test('the live path defaults to the single document, rule or no rule', async () => {
+test('the live path follows the flag, and nothing else', async () => {
   // The wiring, not the helper: ProjectContext calls these with no `perProject`
-  // option at all, so what the default resolves to is what ships.
+  // option at all, so what the default resolves to is what ships. Whichever way
+  // the flag is set, the default must be THAT and not a second opinion hidden
+  // in the writer.
   const { fs, docs } = fakeFirestore()
   await writeRemoteProjects(fs, UID, { list: [project('a', T.mid)] })
-  assert.ok(docs.get(LEGACY), 'the default write target is users/{uid}/sync/projects')
-  assert.equal(docs.get(LEGACY).v, SYNC_SCHEMA_VERSION_SINGLE)
-  assert.equal([...docs.keys()].some((k) => k.startsWith(`${PER}/`)), false,
-    'and nothing is written to the ungoverned collection')
+  const index = docs.get(LEGACY)
+  assert.ok(index, 'users/{uid}/sync/projects is written on both paths — as the list, or as the index')
+  if (PER_PROJECT_SYNC_ENABLED) {
+    assert.equal(index.v, SYNC_SCHEMA_VERSION_PER_PROJECT)
+    assert.ok(docs.get(`${PER}/a`), 'the default write target is users/{uid}/projects/{id}')
+  } else {
+    assert.equal(index.v, SYNC_SCHEMA_VERSION_SINGLE)
+    assert.equal([...docs.keys()].some((k) => k.startsWith(`${PER}/`)), false,
+      'and nothing is written to the ungoverned collection')
+  }
 })
 
 /* ═══════════════════════════════════════════════════════════════════════════

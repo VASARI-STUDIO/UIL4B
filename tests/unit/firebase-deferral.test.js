@@ -97,6 +97,19 @@ test('every import of a deferral seam is written in the form the build alias mat
 // 2. What still reaches Firebase statically
 // ─────────────────────────────────────────────────────────────────────────────
 
+// HAS THE FOUNDER APPLIED IT YET? Everything below has two correct answers, one
+// for each side of that, and getting the wrong one is not a matter of taste: an
+// inventory of static Firebase importers that still names the two contexts
+// after they have been converted is a lie about the codebase, and one that
+// omits them before is a guard that has stopped guarding.
+//
+// Read off the RESULT — the broker import the patch adds — rather than off
+// `git apply --check`, because the two questions differ the moment the file has
+// been touched at all, and this is the one that decides what the tree contains.
+const PATCH_IS_APPLIED = fs
+  .readFileSync(path.join(ROOT, 'src/contexts/AuthContext.jsx'), 'utf8')
+  .includes("from '../utils/firebaseAccess'")
+
 // The complete inventory of modules that import the Firebase SDK — or the
 // module that constructs it — with a STATIC import. Every one of these is a
 // reason the chunk can end up in the first wave, so the list is written down
@@ -108,9 +121,10 @@ test('every import of a deferral seam is written in the form the build alias mat
 // is meant to import the SDK; GoogleOneTap is reached only through the
 // oneTapMount seam, so its own import is held back with it.
 const EXPECTED_STATIC_FIREBASE_IMPORTERS = [
-  // Founder-gated. The first two are closed by docs/design/firebase-deferral-gated.patch.
-  'src/contexts/AuthContext.jsx',
-  'src/contexts/SubscriptionContext.jsx',
+  // Founder-gated. The first two are closed by docs/design/firebase-deferral-gated.patch,
+  // which `npm run apply:gated` applies — so on the day the founder runs it they
+  // drop off this list, and PATCH_IS_APPLIED below is what takes them off.
+  ...(PATCH_IS_APPLIED ? [] : ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx']),
   'src/components/GoogleOneTap.jsx',
   'src/utils/firebase.js',
   // The eager broker. Being the one static importer is its entire job.
@@ -247,6 +261,19 @@ test('the founder-gated patch still applies to the tree it describes', () => {
   // When this fails, AuthContext.jsx or SubscriptionContext.jsx has moved and
   // the patch needs regenerating — not deleting.
   assert.ok(fs.existsSync(path.join(ROOT, PATCH)), `${PATCH} is missing — the design has no diff to approve`)
+  if (PATCH_IS_APPLIED) {
+    // `npm run apply:gated` has run. There is nothing left to apply, and
+    // `git apply --check` would refuse for the one reason that is good news.
+    // The property that still has to hold is that BOTH files were converted —
+    // half a deferral leaves the SDK in the first wave AND splits it across two
+    // preloaded chunks, which vite.config.js measures as worse than not doing it.
+    assert.match(
+      read('src/contexts/SubscriptionContext.jsx'),
+      /import \{ loadFirestore, loadAuthSdk \} from '\.\.\/utils\/firebaseAccess'/,
+      'AuthContext was converted and SubscriptionContext was not — half a deferral is worse than none',
+    )
+    return
+  }
   execFileSync('git', ['apply', '--check', PATCH], { cwd: ROOT, stdio: 'pipe' })
 })
 
