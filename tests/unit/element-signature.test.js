@@ -20,7 +20,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
-import { elementSignature, isStableToken, nativeMenuWins, safeSignature } from '../../src/utils/elementSignature.js'
+import {
+  elementSignature, invokedByPointer, isStableToken, nativeMenuWins, safeSignature,
+} from '../../src/utils/elementSignature.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -226,4 +228,46 @@ test('a local menu that already handled the event is not overridden', () => {
 
 test('our own surfaces are excluded, so the menu cannot be opened on itself', () => {
   assert.equal(nativeMenuWins([{ tag: 'DIV', feedbackSurface: true }], {}), true)
+})
+
+test('a touch-only device keeps its long-press', () => {
+  // Browsers fire `contextmenu` from a long-press. That gesture is how people
+  // select text, copy, save an image and reach the callout menu on a phone,
+  // and there is no Shift+long-press to escape with — so claiming it would be
+  // the same harm the rest of this function exists to prevent, on the one
+  // platform with no way out. Measured 2026-09-10 in a Pixel 7 context: the
+  // long-press contextmenu came back defaultPrevented, i.e. we were swallowing
+  // the native callout on every phone. On touch the affordance is the Feedback
+  // button instead.
+  assert.equal(nativeMenuWins(plain, { touchOnly: true }), true)
+  // A tablet with a mouse attached is not touch-only and keeps the gesture —
+  // which is why the component asks `(any-pointer: fine)` as well as
+  // `(pointer: coarse)`.
+  assert.equal(nativeMenuWins(plain, { touchOnly: false }), false)
+})
+
+// ── Pointer or keyboard ─────────────────────────────────────────────────────
+
+test('a real right-click is a pointer even though its detail is 0', () => {
+  // MEASURED in Chromium, 2026-09-10, against this app's own build: a genuine
+  // mouse right-click reports exactly this. `detail: 0` is the trap — the
+  // common "detail === 0 means keyboard" heuristic is wrong on EVERY mouse
+  // right-click in Chrome, and using it anchored the menu to
+  // document.activeElement (<body>), so a click at (200, 200) opened the menu
+  // at (8, 919). Caught in a real browser, not in this file; pinned here so it
+  // cannot come back silently.
+  assert.equal(invokedByPointer({ button: 2, detail: 0, clientX: 200, clientY: 200 }), true)
+})
+
+test('Shift+F10 and the Menu key are keyboard, wherever they claim to be', () => {
+  // Both report button 0. Getting this wrong in the other direction is worse
+  // than a misplaced menu: `shiftKey` would then fire the native-menu escape
+  // hatch on Shift+F10 and silently remove the only keyboard route into the
+  // feature — so button 0 is answered before the coordinate tiebreak, even
+  // when the event carries coordinates.
+  assert.equal(invokedByPointer({ button: 0, detail: 0, clientX: 0, clientY: 0 }), false)
+  assert.equal(invokedByPointer({ button: 0, detail: 0, clientX: 120, clientY: 40 }), false)
+  // An event reporting no button at all falls back to the coordinates.
+  assert.equal(invokedByPointer({}), false)
+  assert.equal(invokedByPointer({ clientX: 0, clientY: 0 }), false)
 })

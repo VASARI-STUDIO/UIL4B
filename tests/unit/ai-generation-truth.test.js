@@ -72,9 +72,9 @@ import {
 
 import { FALLBACK_FONTS } from '../../src/data/fallbackFonts.js'
 import { liveToolRoutes, createTools } from '../../src/data/toolTree.js'
+import { stripJs } from '../helpers/strip-comments.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
-const stripJs = (s) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')
 
 const AI_SRC = read('api/ai.js')
 const AI_CODE = stripJs(AI_SRC)

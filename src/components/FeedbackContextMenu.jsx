@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import usePopover from '../hooks/usePopover'
-import { chainFrom, elementSignature, nativeMenuWins } from '../utils/elementSignature'
+import { chainFrom, elementSignature, invokedByPointer, nativeMenuWins } from '../utils/elementSignature'
 
 // Right-click anywhere → report THIS, with the context already filled in.
 //
@@ -38,24 +38,41 @@ import { chainFrom, elementSignature, nativeMenuWins } from '../utils/elementSig
 const MENU_W = 260
 const EDGE = 8
 
+// A device whose ONLY pointer is a finger. `contextmenu` still fires there —
+// from a long-press — so this has to be asked of the device rather than read
+// off the event, which looks the same either way. `any-pointer: fine` keeps
+// the gesture on a tablet with a mouse or trackpad attached.
+function touchOnlyDevice() {
+  if (typeof window === 'undefined' || !window.matchMedia) return false
+  return window.matchMedia('(pointer: coarse)').matches
+    && !window.matchMedia('(any-pointer: fine)').matches
+}
+
 export default function FeedbackContextMenu({ onReport, suppressed = false }) {
   const [at, setAt] = useState(null) // { x, y, signature }
 
-  const close = useCallback(() => setAt(null), [])
-  const { triggerRef, popRef } = usePopover(!!at, close, { arrowNav: true })
-
   // Where focus was when the gesture happened. usePopover returns focus to the
-  // trigger, but our "trigger" is a zero-height anchor floating at the pointer
-  // — handing focus to that would strand a keyboard user in an invisible box.
-  // For a keyboard invocation the right answer is the control they were on.
+  // trigger on Escape, but our "trigger" is a zero-height anchor floating at
+  // the pointer — handing focus to that, and then unmounting it in the same
+  // commit, drops a keyboard user on <body>. Measured 2026-09-10: focus was on
+  // `.pop-item` inside the menu, and Escape left it on BODY. For a keyboard
+  // invocation the right answer is the control they were on when they pressed
+  // Shift+F10 or the Menu key.
   const openerRef = useRef(null)
 
   const dismiss = useCallback(() => {
     const opener = openerRef.current
     openerRef.current = null
     setAt(null)
+    // On a click outside, the browser focuses whatever was clicked after this
+    // runs, so that wins. This only decides where focus lands when nothing else
+    // claims it — which is the Escape case, the one that was broken.
     if (opener?.isConnected && typeof opener.focus === 'function') opener.focus()
   }, [])
+
+  // dismiss, NOT a bare setAt(null): usePopover owns the Escape key, so passing
+  // it a closer that does not restore focus is what made Escape lose it.
+  const { triggerRef, popRef } = usePopover(!!at, dismiss, { arrowNav: true })
 
   const openAt = useCallback((x, y, signature) => {
     // Clamp so the menu cannot hang off either edge. The anchor is MENU_W wide
@@ -72,8 +89,12 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
     if (suppressed) return undefined
 
     const onContextMenu = (e) => {
-      // A keyboard-triggered contextmenu carries no usable pointer position.
-      const synthetic = (e.clientX === 0 && e.clientY === 0) || e.detail === 0
+      // A keyboard-triggered contextmenu carries no usable pointer position —
+      // but see invokedByPointer(): `detail` is 0 for a REAL right-click in
+      // Chromium, so `button` is what actually separates the two. The old
+      // `detail === 0` test made every mouse click look synthetic and anchored
+      // the menu to <body>.
+      const fromPointer = invokedByPointer(e)
       const selection = typeof window !== 'undefined' ? window.getSelection?.() : null
       const hasSelection = !!selection && !selection.isCollapsed && !!String(selection).trim()
 
@@ -86,17 +107,18 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
         // treating its shiftKey as "they want the native menu" would disable
         // the keyboard path entirely — the exact exclusion this feature is
         // supposed to avoid.
-        shiftKey: !synthetic && e.shiftKey,
+        shiftKey: fromPointer && e.shiftKey,
+        touchOnly: touchOnlyDevice(),
       })) return
 
       e.preventDefault()
       openerRef.current = document.activeElement
       const signature = elementSignature(chain)
-      if (synthetic) {
+      if (fromPointer) {
+        openAt(e.clientX, e.clientY, signature)
+      } else {
         const r = document.activeElement?.getBoundingClientRect?.()
         openAt(r ? r.left : EDGE, r ? r.bottom : EDGE, signature)
-      } else {
-        openAt(e.clientX, e.clientY, signature)
       }
     }
 
@@ -106,7 +128,7 @@ export default function FeedbackContextMenu({ onReport, suppressed = false }) {
       if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return
       const target = document.activeElement
       const chain = chainFrom(target)
-      if (nativeMenuWins(chain, { defaultPrevented: e.defaultPrevented })) return
+      if (nativeMenuWins(chain, { defaultPrevented: e.defaultPrevented, touchOnly: touchOnlyDevice() })) return
       e.preventDefault()
       openerRef.current = target
       const r = target?.getBoundingClientRect?.()

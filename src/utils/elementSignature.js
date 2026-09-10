@@ -184,7 +184,26 @@ const NATIVE_TAGS = new Set([
  * Every `true` here is a case where the native menu is worth more to the user
  * than ours. We are a guest on this gesture.
  */
-export function nativeMenuWins(chain, { hasSelection = false, defaultPrevented = false, shiftKey = false } = {}) {
+export function nativeMenuWins(chain, {
+  hasSelection = false, defaultPrevented = false, shiftKey = false, touchOnly = false,
+} = {}) {
+  // A TOUCH-ONLY DEVICE HAS NO RIGHT-CLICK. What it has is a long-press, and
+  // browsers fire `contextmenu` from one — so without this check the gesture
+  // people use to select text, copy, save an image and open the callout menu
+  // arrives here indistinguishable from a mouse's secondary button, and we
+  // claim it. Measured 2026-09-10 on a Pixel 7 context: a long-press
+  // contextmenu on a plain surface came back defaultPrevented, i.e. the native
+  // callout was already being swallowed on every phone.
+  //
+  // This veto goes FIRST because there is no way back on touch: Shift+long-press
+  // does not exist, so the escape hatch every other branch here relies on is
+  // absent on exactly this platform. The affordance on touch is the Feedback
+  // button, which carries the same disclosure and the same context minus the
+  // element name.
+  //
+  // `any-pointer: fine` is what keeps a tablet with a mouse or trackpad
+  // attached on the gesture — coarse alone would take it away from a hybrid.
+  if (touchOnly) return true
   // Shift+right-click is the long-standing escape hatch for a page that
   // overrides the menu (Firefox honours it natively). Someone who wants the
   // browser menu must always be able to get it — otherwise "we do not swallow
@@ -207,6 +226,34 @@ export function nativeMenuWins(chain, { hasSelection = false, defaultPrevented =
     if (tag === 'a') return !!node?.href
     return NATIVE_TAGS.has(tag)
   })
+}
+
+/**
+ * Was this `contextmenu` event produced by a POINTER, or by the keyboard?
+ *
+ * MEASURED IN CHROMIUM, 2026-09-10, against this app's own build: a genuine
+ * mouse right-click reports `{ button: 2, detail: 0, clientX: 200, clientY: 200 }`.
+ * **`detail` is 0 for a real right-click.** The widespread
+ * "detail === 0 means keyboard" heuristic is therefore wrong on every mouse
+ * right-click in Chrome, and FeedbackContextMenu used it to decide where to
+ * anchor: every click was read as keyboard-invoked and anchored to
+ * `document.activeElement`, which is `<body>`. Right-clicking at (200, 200)
+ * opened the menu at (8, 919) — the bottom-left of the page — on /projects, and
+ * at (8, 580) on /settings.
+ *
+ * `button` is the reliable discriminator: 2 for the secondary mouse button,
+ * 0 for Shift+F10 and the Menu key. Coordinates are only the tiebreak for an
+ * event reporting neither, since a keyboard event has no pointer position.
+ *
+ * Getting this wrong in the other direction is worse than a misplaced menu: if
+ * Shift+F10 were read as a pointer, `shiftKey` would trigger the native-menu
+ * escape hatch and silently remove the only keyboard route into the feature.
+ * Hence `button === 0` returning false before the coordinate tiebreak runs.
+ */
+export function invokedByPointer({ button, clientX, clientY } = {}) {
+  if (button === 2) return true
+  if (button === 0 || button == null) return false
+  return !(clientX === 0 && clientY === 0)
 }
 
 /**
