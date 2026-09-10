@@ -291,10 +291,25 @@ test('the patch closes both remaining static edges and touches nothing else', ()
   assert.match(patch, /^\+import \{ whenAuthSdk, loadAuthSdk, loadFirestore, authNow \} from '\.\.\/utils\/firebaseAccess'/m)
 })
 
-test('the founder-gated files are unmodified on this branch', () => {
+test('the founder-gated files are unmodified on this branch', (t) => {
   // The whole premise of the design is that these were not touched. A patch in
   // docs/ plus a quiet edit to the file it describes would be worse than either.
+  //
+  // Once the patch is IN, that premise has been retired on purpose — the
+  // founder ran `npm run apply:gated` and the files are meant to differ — so
+  // this stops being a rule and would only be a trap that fires the moment he
+  // commits what he was told to apply.
+  if (PATCH_IS_APPLIED) return t.skip('the gated patch has been applied; these files are meant to differ')
   const gated = ['src/contexts/AuthContext.jsx', 'src/contexts/SubscriptionContext.jsx', 'src/utils/firebase.js', 'src/components/GoogleOneTap.jsx']
-  const changed = execFileSync('git', ['diff', '--name-only', 'origin/main...HEAD', '--', ...gated], { cwd: ROOT, encoding: 'utf8' }).trim()
+  let changed
+  try {
+    changed = execFileSync('git', ['diff', '--name-only', 'origin/main...HEAD', '--', ...gated], { cwd: ROOT, encoding: 'utf8' }).trim()
+  } catch {
+    // A shallow clone has no merge base with origin/main, and a checkout with
+    // no origin at all has no ref. Neither is a founder-gated file being
+    // edited, and reporting it as one would make the suite unrunnable
+    // wherever it is not a full clone.
+    return t.skip('origin/main is not reachable from here, so this branch cannot be compared to it')
+  }
   assert.equal(changed, '', `founder-gated files changed on this branch: ${changed}`)
 })

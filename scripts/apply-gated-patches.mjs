@@ -193,11 +193,17 @@ function runStep(label, command, args, { env = {}, mustPrint = null } = {}) {
   rule()
   out(`VERIFYING · ${label}`)
   rule()
-  const res = spawnSync(command, args, {
+  // ONE STRING, not a command plus an args array. `npm` on Windows is a `.cmd`
+  // shim, which Node refuses to spawn without a shell — and passing an args
+  // ARRAY alongside `shell: true` prints Node's DEP0190 warning about
+  // concatenation in the middle of the output the founder is meant to be
+  // reading. Every argument below is a literal written here, so there is
+  // nothing to escape.
+  const res = spawnSync([command, ...args].join(' '), {
     cwd: ROOT,
     env: { ...process.env, ...env },
     encoding: 'utf8',
-    shell: process.platform === 'win32',
+    shell: true,
     maxBuffer: 64 * 1024 * 1024,
   })
   const text = `${res.stdout || ''}${res.stderr || ''}`

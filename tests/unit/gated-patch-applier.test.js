@@ -220,6 +220,32 @@ test('planning the run leaves every gated file byte-identical', async () => {
     'planning the gated patches modified a file it is only ever allowed to read')
 })
 
+test('line endings cannot make a live patch look like a stale one', async () => {
+  // FOUND BY RUNNING IT, not by reading it. `git apply` compares context bytes,
+  // so a CRLF patch against an LF file fails with "patch does not apply" —
+  // indistinguishable from a patch that has genuinely gone stale, and it is the
+  // refusal the founder would have hit on his SECOND run: the dirty-tree check
+  // reconstructs the committed file with `git show`, which is always LF, while
+  // this repository checks the same file out as CRLF on Windows.
+  //
+  // Both spellings of the same tree must plan identically.
+  const asLf = (f) => lf(read(f))
+  const asCrlf = (f) => lf(read(f)).replace(/\n/g, '\r\n')
+
+  const fromLf = await planGatedPatches({ seed: asLf })
+  const fromCrlf = await planGatedPatches({ seed: asCrlf })
+  assert.equal(fromLf.failed, false, `an all-LF checkout cannot apply the patches: ${fromLf.steps.find((s) => s.error)?.error?.message}`)
+  assert.equal(fromCrlf.failed, false, `an all-CRLF checkout cannot apply the patches: ${fromCrlf.steps.find((s) => s.error)?.error?.message}`)
+  for (const file of TARGET_FILES) {
+    assert.equal(lf(fromLf.after.get(file)), lf(fromCrlf.after.get(file)),
+      `${file} comes out differently depending on the line endings it went in with`)
+    // ...and each keeps the endings it arrived with, so the founder's diff is
+    // the change and not a whole-file rewrite.
+    assert.ok(!/\r\n/.test(fromLf.after.get(file)), `${file}: an LF file came back with CRLF in it`)
+    assert.ok(!/(?<!\r)\n/.test(fromCrlf.after.get(file)), `${file}: a CRLF file came back with bare LF in it`)
+  }
+})
+
 test('the plan is deterministic — two runs produce the same bytes', async () => {
   // Idempotence at the level the founder experiences it: running the command
   // twice must leave the tree exactly where the first run left it. Proved here
