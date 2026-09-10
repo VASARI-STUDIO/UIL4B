@@ -21,12 +21,27 @@ import path from 'node:path'
 import {
   buildQueueRecord, mergeSubmissions, QUEUE_KINDS, QUEUE_STATUSES, CLIENT_WRITABLE_STATUS,
 } from '../../src/utils/communityQueue.js'
+import { fileTextThrough } from '../../scripts/gated-patches.mjs'
 
 // Line endings are normalised: git checks this repo out with CRLF on Windows,
 // and a pattern that happens to span a newline must not pass on one machine
 // and fail on another.
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8').replace(/\r\n/g, '\n')
 const user = { uid: 'u1', displayName: 'Dylan', email: 'd@example.com' }
+
+// ── The rules, as the moderator role leaves them ────────────────────────────
+//
+// firestore.rules is founder-gated, so `isReviewer()` is not in the file on
+// disk until `npm run apply:gated` has been run. Asserting it against the file
+// would be red every day until then and green afterwards; asserting the
+// unpatched shape would be the reverse. Both are a test that measures the
+// calendar rather than the code.
+//
+// So the reviewer assertions below read the PLANNED text — the same registry
+// the applier reads, with the patch applied to a copy in memory. An
+// already-applied patch is skipped and the text comes back the same, so every
+// assertion holds identically on both sides of the command.
+const reviewerRules = await fileTextThrough('moderator-role')
 
 // ── Nothing can publish itself ──────────────────────────────────────────────
 
@@ -58,6 +73,72 @@ test('only a reviewer may approve, and the owner may only withdraw', () => {
     'the approve gate is no longer a reviewer check')
   assert.match(block, /status == 'withdrawn'/,
     "the owner's only post-creation write may not promote their own submission")
+})
+
+// ── What the moderator role leaves behind ───────────────────────────────────
+//
+// Against the PLANNED rules, not the file — see the note at the top. These are
+// the properties the role must not cost, asserted where they can be asserted
+// today rather than on the day the founder runs the command.
+
+test('a reviewer is the founder OR a moderator, and nothing else', () => {
+  // The predicate the whole role rests on. Both arms are asserted, because
+  // dropping either one is silent: without the admin arm the founder loses his
+  // own queue, and without the moderator arm the role is decoration.
+  const fn = /function isReviewer\(\) \{[\s\S]*?\n {4}\}/.exec(reviewerRules)?.[0] || ''
+  assert.ok(fn, 'isReviewer() is gone')
+  assert.match(fn, /request\.auth != null/, 'a signed-out client must not be a reviewer')
+  assert.match(fn, /request\.auth\.token\.admin == true/, 'the founder arm is gone')
+  assert.match(fn, /request\.auth\.token\.moderator == true/, 'the moderator arm is gone')
+})
+
+test('one name for "who may review", not two', () => {
+  // isAdmin() became isReviewer(). Two names for the same question is how they
+  // drift into meaning different things.
+  assert.ok(!/isAdmin\(\)/.test(reviewerRules),
+    'isAdmin() is back alongside isReviewer()')
+  const block = /match \/community-submissions\/\{submissionId\}[\s\S]*?\n {4}\}/.exec(reviewerRules)?.[0] || ''
+  assert.match(block, /allow update: if isReviewer\(\)/)
+  assert.match(block, /allow delete: if isReviewer\(\) \|\| isOwner\(\)/)
+  assert.match(block, /status == 'withdrawn'/,
+    "the owner's only post-creation write may not promote their own submission")
+})
+
+test('the moderator roster has no rules block, which is what keeps it unreachable', () => {
+  // Firestore denies by default. A `match /moderators/...` block appearing here
+  // would be the moment the list of people worth phishing became readable, or
+  // worse, writable by somebody appointing themselves.
+  assert.ok(!/match \/moderators\b/.test(reviewerRules),
+    'the roster gained a rules block — it is Admin-SDK-only on purpose')
+  // ...and in the published file too, where it also is not.
+  assert.ok(!/match \/moderators\b/.test(read('firestore.rules')))
+})
+
+test('the moderator claim does not widen billing or analytics', () => {
+  // isReviewer() exists for three collections. If it turns up in the users or
+  // analytics-daily block, a volunteer reviewer has become an account with
+  // reach over entitlements or site-wide usage.
+  const users = /match \/users\/\{userId\}[\s\S]*?\n {4}\}/.exec(reviewerRules)?.[0] || ''
+  assert.ok(users, 'the users block is gone')
+  assert.ok(!/isReviewer\(\)/.test(users), 'a reviewer can now reach user documents')
+  const analytics = /match \/analytics-daily\/\{day\}[\s\S]*?\n {4}\}/.exec(reviewerRules)?.[0] || ''
+  assert.ok(analytics, 'the analytics block is gone')
+  assert.ok(!/isReviewer\(\)/.test(analytics), 'a reviewer can now read site-wide analytics')
+})
+
+test('widening who may REVIEW does not change who may FILE', () => {
+  // The moderator role touches read, update and delete on feedback. `create` is
+  // a separate decision with its own history — it was open to the whole
+  // internet and the feedback-bounds patch closes it — and this role must not
+  // be what moved it in either direction. Asserted as a DIFFERENCE between the
+  // two texts rather than as a value, so it stays true whichever side of
+  // `npm run apply:gated` the tree is on.
+  const createLine = (text) =>
+    /match \/feedback\/\{feedbackId\} \{[\s\S]*?(allow create: if [^;]+;)/.exec(text)?.[1] || ''
+  const before = createLine(read('firestore.rules'))
+  assert.ok(before, 'the feedback create rule is gone')
+  assert.equal(createLine(reviewerRules), before,
+    'the moderator role changed who may file a feedback report')
 })
 
 // ── The record ──────────────────────────────────────────────────────────────

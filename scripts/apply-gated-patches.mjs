@@ -23,14 +23,21 @@
 // commit, and prints the one command that undoes everything it did.
 //
 // ═══════════════════════════════════════════════════════════════════════════
-// WHAT IT DELIBERATELY DOES NOT DO
+// THE MODERATOR ROLE IS NOW WHOLE, AND THIS PARAGRAPH USED TO SAY IT WAS NOT
 // ═══════════════════════════════════════════════════════════════════════════
-// `api/verify-admin.js` — the half of the moderator role that MINTS the claim
-// from the roster — is NOT applied here. Its diff in #390 is written as prose
-// plus a partial hunk ("the two `includeUsers` returns take the same three
-// extra fields"), which is an instruction to a reader rather than something a
-// machine can apply, and re-deriving it would mean shipping a version of a
-// security route no review has seen. The command says so on every run.
+// Until 2026-09-10 this file said `api/verify-admin.js` — the half that MINTS
+// the moderator claim from the roster — was NOT applied here, because #390's
+// diff for it was prose plus a partial hunk rather than something a machine
+// could apply, and re-deriving a security route no review had seen was the
+// wrong call. It said so on every run.
+//
+// The work was not missing, it was STRANDED: written, reviewed and tested weeks
+// earlier, sitting uncommitted in an abandoned worktree. It is now
+// docs/design/moderator-verify-admin.patch, generated as a real `git diff`
+// against the api/verify-admin.js on main rather than retyped, and registered
+// as the second part of the moderator role. So the command covers the COMPLETE
+// role: after it runs, the rules understand a moderator AND the handshake can
+// grant one.
 import { execFileSync, spawnSync } from 'node:child_process'
 import { writeFile, readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
@@ -264,9 +271,9 @@ function summarise(steps, verifications, { dryRun = false } = {}) {
       + 'no signed-in account can write a document bigger or stranger than the app sends')
   }
   if (done.has('moderator-role')) {
-    truths.push('the rules now let a moderator clear the review queues — the one '
-      + 'remaining step to actually appoint one is api/verify-admin.js, which this '
-      + 'command does not apply (docs/OWNER-ACTIONS.md §1.3)')
+    truths.push('you can appoint a moderator, and one can clear your review queues — '
+      + 'the rules honour the role and the admin handshake grants it, so open the '
+      + 'Users tab of your dashboard and use the Moderator column')
   }
   if (done.has('per-project-sync')) {
     truths.push('project sync is live one-document-per-project, so it no longer stops '
@@ -281,9 +288,11 @@ function summarise(steps, verifications, { dryRun = false } = {}) {
   out('  Or throw them away:')
   out(`     ${undoCommand()}`)
   out()
-  out('  One more step nobody but you can do: publish the rules from the Firebase')
-  out('  console, or `firebase deploy --only firestore:rules`. Until then the new')
-  out('  rules are in your repository and not in front of your users.')
+  out('  Two more steps nobody but you can do. Publish the rules from the Firebase')
+  out('  console, or `firebase deploy --only firestore:rules` — until then the new')
+  out('  rules are in your repository and not in front of your users. And commit')
+  out('  and deploy the site, because api/verify-admin.js is a serverless function:')
+  out('  the moderator role cannot be granted from a file that is only on your disk.')
   out()
 }
 
