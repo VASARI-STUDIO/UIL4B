@@ -91,6 +91,90 @@ test('the headline splice check can fail', () => {
   )
 })
 
+// ── The approved sentence, pinned word for word ─────────────────────────────
+//
+// THE SPLICE CHECK ABOVE IS NOT ENOUGH ON ITS OWN, and the reason is worth
+// writing down because it is why this block exists. That check asks whether
+// every fragment of the headline is a verbatim run of a founder line. It would
+// pass just as happily for a DIFFERENT splice of the same lines — drop the full
+// stop, move the comma, cut the lead one word shorter, mark a different run —
+// because each of those is still made only of his words. So a headline could be
+// rewritten in place, on a Tuesday, by an agent tidying punctuation, and every
+// test in this file would stay green.
+//
+// It is not an agent's proposal any more. The founder read this exact sentence
+// on 2026-09-10, beside the two phrases it was cut from, and said ship it. What
+// he approved is a STRING, not a recipe — so the string is what gets pinned,
+// here, a second time, exactly the way the four founder lines above are pinned
+// in FOUNDER. Changing the headline is then a deliberate two-file edit with a
+// reason, and the reason has to be that he said so again.
+const APPROVED_HEADLINE = 'Build and export UI and brand design kits, in one unified location.'
+const APPROVED_PARTS = Object.freeze({
+  lead: 'Build and export UI and brand design kits,',
+  mark: 'in one unified location',
+  tail: '.',
+})
+
+test('the hero headline is the exact sentence the founder approved on 2026-09-10', () => {
+  assert.equal(
+    heroHeadlineText(), APPROVED_HEADLINE,
+    'the hero headline has been changed. The founder approved this sentence word for word on '
+    + '2026-09-10 — it is the first sentence a visitor reads and it is his, not the repo\'s. '
+    + 'Do not move this pin to match an edit: go and ask him first, and if he says yes, change '
+    + 'src/data/positioning.js and this pin together.',
+  )
+
+  // The three pieces separately, because heroHeadlineText() joins them and a
+  // join can hide a swap: moving a word from the lead into the mark leaves the
+  // sentence identical and changes WHICH RUN THE PAGE HIGHLIGHTS, which is a
+  // visible change to the hero and to the share card.
+  for (const [key, value] of Object.entries(APPROVED_PARTS)) {
+    assert.equal(
+      HERO_HEADLINE[key], value,
+      `HERO_HEADLINE.${key} has been edited. The sentence may still read the same, but the `
+      + 'highlighted run is part of what the founder approved — the page paints it as the '
+      + 'hero\'s one <mark> and scripts/og-cards.mjs paints the same run on the share card.',
+    )
+  }
+})
+
+test('the approved headline is still made only of the founder lines pinned above', () => {
+  // The two pins tied together, so they cannot drift apart in the one direction
+  // that would leave both individually true and the pair of them a lie: a
+  // founder line edited (with the FOUNDER pin moved to match) while the
+  // headline pin stays put, leaving the hero quoting a sentence he no longer
+  // has anywhere. Read off the FOUNDER constants rather than off the module,
+  // so this fails on the TEST FILE's own record rather than on the source it
+  // is meant to be checking.
+  const lead = APPROVED_PARTS.lead.replace(/,$/, '')
+  assert.ok(
+    FOUNDER['build-and-export'].includes(lead),
+    `the approved headline's lead "${lead}" is no longer a run of the founder line `
+    + '"build-and-export". One of the two pins moved without the other.',
+  )
+  assert.ok(
+    FOUNDER['one-unified-location'].includes(APPROVED_PARTS.mark),
+    `the approved headline's highlighted run "${APPROVED_PARTS.mark}" is no longer a run of `
+    + 'the founder line "one-unified-location". One of the two pins moved without the other.',
+  )
+  // And the module agrees about WHICH lines it was cut from — otherwise the two
+  // assertions above are checking a trace nothing else believes.
+  assert.deepEqual(
+    [...HERO_HEADLINE.cutFrom].sort(), ['build-and-export', 'one-unified-location'],
+    'HERO_HEADLINE.cutFrom no longer names the two lines the approved headline was spliced from',
+  )
+})
+
+test('the headline pin can fail', () => {
+  // Positive control, the same shape as the splice check's. Without it, an
+  // equality assertion against a constant defined in this file could be made
+  // vacuous by a future refactor that derives the constant from the module.
+  assert.notEqual(
+    APPROVED_HEADLINE, `${APPROVED_PARTS.lead} in one place${APPROVED_PARTS.tail}`,
+    'the pin would accept a reworded headline — it proves nothing',
+  )
+})
+
 // ── The surfaces derive rather than restate ────────────────────────────────
 
 test('the homepage renders its headline and sub from the module, not from typed strings', () => {

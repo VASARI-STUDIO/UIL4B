@@ -43,16 +43,22 @@ screenshot.") and the `/plans` closing band's heading is `one-unified-location`
 (it replaced "Build first. Upgrade when your workflow asks for it."). The
 mapping is `SURFACE_LINE` in `src/data/positioning.js`.
 
-### The hero headline is assembled from two of them, and is NOT yet approved
+### The hero headline is assembled from two of them, and he approved it on 2026-09-10
 
 > **Build and export UI and brand design kits, _in one unified location_.**
 
 Every word traces to a line above: the lead is the verbatim head of
 `build-and-export`, the marked run is the verbatim tail of
 `one-unified-location`. The comma is punctuation. The founder chose "build one
-from my words only" over an agent draft; the line is **pending his yes or no**
-and is flagged as such in the PR that introduced it. If the answer is no, the
-replacement is another splice of these same sentences — not an agent sentence.
+from my words only" over an agent draft, and on **2026-09-10 he read the
+assembled line beside the two phrases it was cut from and said ship it**.
+
+So it is settled, and it is his: **do not reword it without him** — not a
+tightening, not a synonym, not the comma. If it ever does have to change, the
+replacement is another splice of these same sentences and not an agent
+sentence, and it still needs him. `tests/unit/positioning-truth.test.js` pins
+the exact string, so an edit to the headline fails the build until somebody
+moves the pin, which is the point at which to go and ask.
 
 ### Relationship to the canonical one-liner above
 

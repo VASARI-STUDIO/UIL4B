@@ -406,7 +406,10 @@ export default function Home() {
                 [hero-copy-still-reads-ai] owns it and is blocked on the
                 founder's pick of direction A, B or C. This slice changes one
                 word and deliberately does not touch the structure. */}
-            {/* ⚠️ ASSEMBLED FROM THE FOUNDER'S OWN WORDS, AND PENDING HIS YES.
+            {/* ASSEMBLED FROM THE FOUNDER'S OWN WORDS, AND APPROVED BY HIM ON
+                2026-09-10. He read it beside the two phrases it was cut from
+                and said ship it, so it is his sentence now — do not reword it
+                without him.
 
                 He was offered an agent draft and chose "build one from my words
                 only", so every word below is cut from a sentence he wrote on

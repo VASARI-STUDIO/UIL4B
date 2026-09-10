@@ -364,8 +364,9 @@ test.describe('homepage: eleven tools, five ways of working', () => {
     // quietly rewriting the hero in place.
     expect(headline,
       'the hero headline no longer matches the assembled line in '
-      + 'src/data/positioning.js. That line is the founder’s own words and is pending his '
-      + 'yes/no — it must not be edited in the page.',
+      + 'src/data/positioning.js. That line is assembled from the founder’s own words and '
+      + 'he approved it on 2026-09-10 — it must not be edited in the page, or anywhere '
+      + 'else, without him.',
     ).toBe(heroHeadlineText())
 
     // ── "token" is off this page ────────────────────────────────────────────

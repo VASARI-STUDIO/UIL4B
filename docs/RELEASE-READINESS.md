@@ -112,7 +112,7 @@ code.
 | **7** | **We cannot email a customer at all** | [§4.10](OWNER-ACTIONS.md) | 20 min + DNS | No welcome, no failed-payment notice, no way to reach anyone who is not currently looking at the app |
 | **8** | **OpenRouter has no reachable tool** — keep paying, or stop? | [§4.5](OWNER-ACTIONS.md) | 1 min to answer | You keep paying for a route no visitor can use |
 | **9** | **The homepage price now comes from the plan ladder in code** (`src/config/planLadder.js`), not typed copy — but that ladder is still not read from Stripe | `src/config/planLadder.js` | 10 min to decide | Item 4 already means checkout can differ from `/plans`; keep the ladder and Stripe in step by hand until then |
-| **10** | **The hero headline needs your yes or no.** It reads *"Build and export UI and brand design kits, in one unified location."* — assembled only from words you wrote, never seen by you | `src/data/positioning.js` | 1 min | It ships as written. If it is not how you would say it, the first sentence on the site is not yours |
+| **10** | ~~**The hero headline needs your yes or no.**~~ — **closed 2026-09-10: you said ship it.** It reads *"Build and export UI and brand design kits, in one unified location."*, assembled only from words you wrote. The pending-approval flag is off `src/data/positioning.js`, `docs/reference/positioning.md` and the two tests that named it, and `tests/unit/positioning-truth.test.js` now pins the exact sentence so it cannot be reworded without coming back to you | `src/data/positioning.js` | done | — |
 | **11** | **Three `firestore.rules` diffs wait unapplied**: the moderator role (#390), feedback `create` closed to strangers plus size bounds on signed-in writes (#418), and the per-project sync collection (#419). Each is written out in its pull request; none could be staged from here | [§1.3](OWNER-ACTIONS.md) | 10 min | Anyone can still write to the feedback queue; sync stays on the 1 MiB single document; you remain the only moderator |
 
 **On item 9**, found by walking the first-visit flow on 2026-09-07 and narrowed
@@ -135,9 +135,10 @@ which is where it earns its keep. **If you do nothing:** item 4 already means th
 checkout can charge a different figure from the one on screen; this adds a third
 figure, on the page a stranger sees first.
 
-**The release-blocking subset is 1, 4 and 10.** Item 10 costs one word and is the first sentence a visitor reads. Before this round it was 1 and 4. Everything else can follow a launch;
-those two cannot. Item 1 stops anything reaching users at all, and item 4 means
-advertising one price and charging another.
+**The release-blocking subset is 1 and 4.** It was 1, 4 and 10; item 10 closed on
+2026-09-10 when you approved the hero headline. Everything else can follow a
+launch; those two cannot. Item 1 stops anything reaching users at all, and item 4
+means advertising one price and charging another.
 
 ---
 
