@@ -10,7 +10,7 @@
 // which refuses AFTER the founder has said yes. So each change ships as a diff
 // that is committed, tested and unapplied, and somebody has to type it in.
 //
-// Four hand-applied diffs across two files is four chances to paste one into
+// Five hand-applied diffs across three files is five chances to paste one into
 // the wrong place. This module is the single description of all four — what
 // each one is, how to tell whether it is already in, how to put it in, and what
 // it grants in a sentence a non-engineer can act on. Two things read it:
@@ -53,6 +53,12 @@
 //     feedback bounds insert forty lines between the two. So the moderator role
 //     before the feedback bounds — which is also the order #418 verified
 //     against #390's working copy on the emulator.
+//
+// The moderator role's SECOND part is the only one that edits a file no other
+// patch touches (api/verify-admin.js), so it is order-independent — but it is
+// kept inside the same entry rather than made a fifth, because a rules file
+// that understands a moderator and a route that never mints one is precisely
+// the half-shipped state this row spent weeks in.
 //
 // The founder never sees this ordering problem, which is the point of the
 // command existing.
@@ -118,6 +124,7 @@ async function gitApplyInto(patchAbs, ws, { check = false } = {}) {
 
 const PER_PROJECT_PATCH = 'docs/design/per-project-sync-rules.patch'
 const MODERATOR_PATCH = 'docs/design/moderator-role-rules.patch'
+const MODERATOR_ROUTE_PATCH = 'docs/design/moderator-verify-admin.patch'
 const FIREBASE_PATCH = 'docs/design/firebase-deferral-gated.patch'
 
 /** The flag the client half of per-project sync is held behind. */
@@ -190,14 +197,15 @@ export const GATED_PATCHES = [
   {
     id: 'moderator-role',
     title: 'Moderator role',
-    source: 'docs/design/moderator-role-rules.patch (PR #390)',
+    source:
+      'docs/design/moderator-role-rules.patch (PR #390) '
+      + '+ docs/design/moderator-verify-admin.patch',
     grants:
       'the rules now honour a `moderator` claim on feedback, community prompts and '
-      + 'community submissions, so clearing the queue stops being founder-only',
-    files: ['firestore.rules'],
-    notCovered:
-      'api/verify-admin.js — the half that MINTS the moderator claim — is not applied by '
-      + 'this command. See docs/OWNER-ACTIONS.md §1.3.',
+      + 'community submissions, AND the admin handshake mints that claim from the '
+      + 'roster, so the founder can actually appoint somebody and stop being the '
+      + 'only person who can clear the queue',
+    files: ['firestore.rules', 'api/verify-admin.js'],
     parts: [
       {
         name: 'isReviewer() on the three review collections',
@@ -206,6 +214,30 @@ export const GATED_PATCHES = [
           && /allow read, update, delete: if isReviewer\(\);/.test(text),
         apply: async (ctx) => { await gitApplyInto(abs(MODERATOR_PATCH), ctx) },
         check: async (ctx) => { await gitApplyInto(abs(MODERATOR_PATCH), ctx, { check: true }) },
+      },
+      {
+        // The half #441 could not cover. Its diff in #390 was prose plus a
+        // partial hunk, so the applier said on every run that minting the claim
+        // was still a separate job; the work itself was stranded, uncommitted,
+        // in a worktree. This patch is a real `git diff` of that work against
+        // the api/verify-admin.js that is on main today — nothing re-derived
+        // and nothing hand-written — so a rules file that understands a
+        // moderator and a route that grants one now land in the same command.
+        //
+        // A SEPARATE PART RATHER THAN A SECOND HUNK IN THE RULES PATCH, because
+        // the two edit different files and `git apply` takes one diff per call.
+        // Splitting them also means a tree where one half is already in can be
+        // COMPLETED rather than refused — the same reason per-project sync is
+        // split into its rule and its flag.
+        name: 'the roster half of the handshake in api/verify-admin.js',
+        file: 'api/verify-admin.js',
+        // Asked of the RESULT, not of whether the patch still applies: the two
+        // calls that make the role real are the reconciliation (which mints and
+        // un-mints the claim from the roster) and the founder-only assignment.
+        detect: (text) => /reconcileModeratorClaim\(decoded\)/.test(lf(text))
+          && /req\.body\?\.moderatorAction/.test(lf(text)),
+        apply: async (ctx) => { await gitApplyInto(abs(MODERATOR_ROUTE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(MODERATOR_ROUTE_PATCH), ctx, { check: true }) },
       },
     ],
   },
