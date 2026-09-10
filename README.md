@@ -62,6 +62,16 @@ The whole group carries `soon: true` in `src/data/toolTree.js`: it is badged
 - **Dark / Light Theme** — System-aware with manual toggle, CSS custom property theming
 - **Internationalisation** — 10 locales with browser auto-detection: English (AU), English (US), Deutsch, Español, Français, Italiano, Português, 日本語, 中文, 한국어
 - **Design System Export** — Export palette + tint scale + state colours as a styled HTML page, CSS custom properties file, or copy to clipboard; every format is available on the free tier with a visible footer credit; Pro removes the credit
+
+  > ⚠️ **This sentence and the code disagree, and the disagreement is the
+  > founder's to settle — flagged 2026-09-10, not decided here.** It is
+  > accurate for HTML, Markdown, PNG and JPEG. But `src/config/exportFormats.js`
+  > marks the **design system book** and the **brand guidelines** `pro: true`,
+  > `proOnlyFormats()` returns both, and `/plans` and the homepage price panel
+  > both print them as what Pro adds. The claim here was founder-approved on
+  > 2026-08-20 (see `docs/reference/positioning.md`); the two Pro documents
+  > shipped afterwards. Three live surfaces now describe the entitlement one
+  > way and two documents the other. `docs/OWNER-ACTIONS.md` §2.3.
 - **Accounts** — Firebase auth with Google One Tap, profile management, cross-device Firestore sync
 - **Admin Dashboard** — Analytics, feedback triage, community prompt review with inline editing, design analytics (most copied fonts / picked colours), server-verified admin access
 - **Admin Style Guide** — Internal design system reference at `/style-guide` (tokens, type scale, components, patterns). Admin-only: it was behind sign-in alone, so every account on the site could read it

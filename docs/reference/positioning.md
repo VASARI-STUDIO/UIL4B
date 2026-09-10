@@ -105,6 +105,11 @@ Where you build interface foundations. Five sub-areas:
 - **Accessibility** — alt text, contrast, non-text contrast, colour-blind previews.
 - **Tokens & Themes** — token editor, mode/theme manager, DTCG validation.
 - **Export & Handoff** — CSS vars, Tailwind theme vars, Style Dictionary export, snippets.
+  *(Intent, not inventory — checked 2026-09-10: `css` and `tailwind` are*
+  *`live: false` in `src/config/exportFormats.js`, and nothing named*
+  *"Style Dictionary" is built. What ships today is HTML, Markdown, PNG and*
+  *JPEG, plus the two Pro documents. Read `src/config/exportFormats.js` for*
+  *what exists.)*
 
 ### 2. Discover — community & external resource hub
 
@@ -197,3 +202,21 @@ sits in which sub-area is read from `tool-tree.md`.
 > export is the better expression of the approved "foot in the door" free tier
 > (P-003). Any surface currently implying exports are Pro-only is now the thing
 > that is wrong.
+>
+> **⚠️ The code stopped agreeing with this, and the claim above is KEPT rather
+> than quietly corrected — flagged 2026-09-10, not decided here.** The
+> watermark model is still exactly right for the four formats it was written
+> about: `html`, `md`, `png` and `jpeg` are all `pro: false` in
+> `src/config/exportFormats.js` and still pass `watermark: !isPro`. Two
+> formats shipped **after** this decision and are gated by name instead:
+> `book` (the design system book) and `guidelines` (the brand guidelines
+> presentation) are `pro: true`, `proOnlyFormats()` returns both, `/plans`
+> prints them as "Not included" for Free, and `Home.jsx`'s `PRO_INCLUDES`
+> lists them under "Everything in Free, plus:" — beside a separate line for
+> the credit removal, so the homepage sells both models at once.
+>
+> So "export in every format with a visible footer credit" is a
+> founder-approved sentence that three shipped surfaces contradict. Which one
+> moves is a decision about what Pro sells, and it is the founder's:
+> `docs/OWNER-ACTIONS.md` §2.3. **Until he answers, neither this line nor
+> `exportFormats.js` should be edited to match the other.**
