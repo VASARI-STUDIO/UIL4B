@@ -105,6 +105,18 @@ const TOMBSTONES = new Map(Object.entries({
   'docs/design/anti-slop-and-hero-2026-08.md::src/data/homeGallery.js':
     '#264 never landed; the header marks this document a superseded record',
 
+  // The map’s "stranded documentation branch" section is entirely about files
+  // that main deleted on purpose. Naming them is the whole content of it.
+  'docs/reference/doc-authority-map.md::docs/consolidation':
+    'a git BRANCH name, not a path — it only looks like one',
+  'docs/reference/doc-authority-map.md::docs/audit/':
+    'deleted before 2026-09-06; named as one of the branch’s already-done deletions',
+  'docs/reference/doc-authority-map.md::docs/BUILD-PLAN.md':
+    'deleted deliberately in #208; the section says not to recreate it',
+  'docs/reference/doc-authority-map.md::docs/DECISIONS-NEEDED.md':
+    'deleted deliberately in #208, same section',
+  'docs/reference/doc-authority-map.md::docs/google-sheets-setup.md':
+    'deleted; named as the dead link the stranded branch had fixed',
   // Written by a test run, gitignored, absent on a clean checkout.
   'docs/reference/build-and-verify.md::tests/user-sim/report/':
     'created by `npm run test:users`; not committed',
