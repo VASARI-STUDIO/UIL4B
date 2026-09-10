@@ -95,11 +95,22 @@ export const RULE_MATCHER =
  * applier is a patch verified against something other than what the founder
  * will run. `--directory` makes every byte git writes land inside the scratch
  * directory, so the gated originals are read and never written.
+ *
+ * LINE ENDINGS ARE REMOVED FROM THE QUESTION FIRST. `git apply` compares
+ * context lines byte for byte, so a CRLF patch against an LF file fails with
+ * "patch does not apply" — which reads exactly like a patch that has gone
+ * stale, and is not. This repository checks out CRLF on Windows and LF
+ * everywhere else, and the two mix the moment anything reads a committed blob
+ * (`git show HEAD:...` is always LF) and compares it with the working tree.
+ * So the scratch copy is LF, the patch is copied to LF beside it, and
+ * planGatedPatches puts the file's own line endings back at the end.
  */
-async function gitApplyInto(patchAbs, scratchRel, { check = false } = {}) {
-  const args = ['apply', '--unsafe-paths', `--directory=${scratchRel}`]
+async function gitApplyInto(patchAbs, ws, { check = false } = {}) {
+  const flat = path.join(ws.dir, `${path.basename(patchAbs)}.lf`)
+  await writeFile(flat, lf(await readFile(patchAbs, 'utf8')), 'utf8')
+  const args = ['apply', '--unsafe-paths', `--directory=${ws.scratchRel}`]
   if (check) args.push('--check')
-  args.push(patchAbs)
+  args.push(flat)
   await execFileAsync('git', args, { cwd: ROOT })
 }
 
@@ -158,8 +169,8 @@ export const GATED_PATCHES = [
         name: 'the rule',
         file: 'firestore.rules',
         detect: (text) => RULE_MATCHER.test(text),
-        apply: async (ctx) => { await gitApplyInto(abs(PER_PROJECT_PATCH), ctx.scratchRel) },
-        check: async (ctx) => { await gitApplyInto(abs(PER_PROJECT_PATCH), ctx.scratchRel, { check: true }) },
+        apply: async (ctx) => { await gitApplyInto(abs(PER_PROJECT_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(PER_PROJECT_PATCH), ctx, { check: true }) },
       },
       {
         name: 'the client flag',
@@ -193,8 +204,8 @@ export const GATED_PATCHES = [
         file: 'firestore.rules',
         detect: (text) => /function isReviewer\(\)/.test(text)
           && /allow read, update, delete: if isReviewer\(\);/.test(text),
-        apply: async (ctx) => { await gitApplyInto(abs(MODERATOR_PATCH), ctx.scratchRel) },
-        check: async (ctx) => { await gitApplyInto(abs(MODERATOR_PATCH), ctx.scratchRel, { check: true }) },
+        apply: async (ctx) => { await gitApplyInto(abs(MODERATOR_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(MODERATOR_PATCH), ctx, { check: true }) },
       },
     ],
   },
@@ -236,8 +247,8 @@ export const GATED_PATCHES = [
         detect: (text) => lf(text).includes(
           "import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'",
         ),
-        apply: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx.scratchRel) },
-        check: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx.scratchRel, { check: true }) },
+        apply: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx) },
+        check: async (ctx) => { await gitApplyInto(abs(FIREBASE_PATCH), ctx, { check: true }) },
       },
     ],
   },
@@ -259,7 +270,8 @@ export async function openWorkspace(seed) {
   const rel = path.basename(dir)
   const cache = new Map()
   for (const file of TARGET_FILES) {
-    const text = seed ? seed(file) : await readFile(abs(file), 'utf8')
+    // LF inside the workspace, unconditionally — see gitApplyInto.
+    const text = lf(seed ? seed(file) : await readFile(abs(file), 'utf8'))
     const dest = path.join(dir, file)
     await mkdir(path.dirname(dest), { recursive: true })
     await writeFile(dest, text, 'utf8')
