@@ -66,9 +66,9 @@ import vm from 'node:vm'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 
 import { cleanKey } from '../../api/_lib/env.js'
+import { stripJs } from '../helpers/strip-comments.js'
 
 const AI_PATH = 'api/ai.js'
-const stripJs = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 // ── Loading api/ai.js ───────────────────────────────────────────────────────
 

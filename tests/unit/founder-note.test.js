@@ -33,9 +33,9 @@ import {
   noteIsWritten,
   noteParagraphs,
 } from '../../src/data/founderNote.js'
+import { stripJs } from '../helpers/strip-comments.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
-const stripJs = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 const COMPONENT = stripJs(read('src/components/FounderNote.jsx'))
 const DATA = stripJs(read('src/data/founderNote.js'))

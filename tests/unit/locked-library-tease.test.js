@@ -29,9 +29,9 @@ import { splitLockedLibrary, LOCKED_TEASE } from '../../src/utils/lockedPreview.
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
 import { FREE_PROMPT_LIMIT } from '../../src/data/promptCategories.js'
+import { stripJs as stripComments } from '../helpers/strip-comments.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
-const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 const PAID = BRAND_PALETTES.filter((b) => b.free !== true)
 const FREE = BRAND_PALETTES.filter((b) => b.free === true)

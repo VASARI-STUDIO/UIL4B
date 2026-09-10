@@ -19,9 +19,9 @@ import path from 'node:path'
 import {
   REAL_WORLD_USES, REQUIRED_USE_FIELDS, isShowable, usesFor,
 } from '../../src/data/fontRealWorldUses.js'
+import { stripJs as stripComments } from '../helpers/strip-comments.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
-const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, '')
 
 const COMPLETE = {
   image: '/font-uses/example.jpg',

@@ -25,6 +25,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { stripCss, stripJs } from '../helpers/strip-comments.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -32,9 +33,7 @@ const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 // files necessarily quote the very strings under test (`filter: blur(12px)`,
 // `fonts.googleapis.com`), so matching raw source would pass on prose and fail
 // to notice the real thing coming back. Strip first, always.
-const stripCss = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
 const stripHtml = (s) => s.replace(/<!--[\s\S]*?-->/g, '')
-const stripJs = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 
 const css = stripCss(read('src/styles/global.css'))
 const html = stripHtml(read('index.html'))

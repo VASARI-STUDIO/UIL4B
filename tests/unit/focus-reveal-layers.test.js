@@ -49,6 +49,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { ALL_CSS } from './appStylesheets.js'
+import { stripCss } from '../helpers/strip-comments.js'
 
 // Comments are stripped FIRST. This file's subject is a declaration that must
 // NOT appear, and the sheet's own prose quotes it — the block above
@@ -56,7 +57,6 @@ import { ALL_CSS } from './appStylesheets.js'
 // `visibility 0s linear var(--dur-1)` idiom is named there as the thing
 // deliberately not used. Matching raw source would pass on the explanation and
 // miss the declaration coming back.
-const stripCss = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '')
 
 const CSS = stripCss(ALL_CSS)
 

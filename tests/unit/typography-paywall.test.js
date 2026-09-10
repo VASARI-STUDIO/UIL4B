@@ -72,6 +72,7 @@ import vm from 'node:vm'
 import { transformWithOxc } from 'vite'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
+import { stripCss } from '../helpers/strip-comments.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -99,7 +100,6 @@ const TOOLS = [
 // .svt-row{display:none}`") so that a later reader knows why it is absent, and
 // a scanner that reads comments would report that sentence as the very defect
 // it warns against. Strip them first.
-const stripCss = (src) => src.replace(/\/\*[\s\S]*?\*\//g, ' ')
 
 // The two arms of the at-cap ternary in SaveTypeSystemMenu, read whole.
 //

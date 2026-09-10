@@ -37,6 +37,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { contrastRatio, derivePreviewRoles, hslToHex, mixHex } from '../../src/utils/colors.js'
+import { stripJs as stripSourceComments } from '../helpers/strip-comments.js'
 
 const AA = 4.5
 
@@ -369,7 +370,6 @@ function lumOf(hex) {
 // itself now quotes the old declarations in prose, and a wiring assertion that
 // matches its own documentation is not a wiring assertion.
 const readSource = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
-const stripSourceComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
 function ruleFor(css, selector) {
   const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const m = css.match(new RegExp('(?:^|[\\r\\n,}])' + esc + '\\{([^}]*)\\}'))
