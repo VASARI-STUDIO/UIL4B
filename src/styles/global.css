@@ -4985,16 +4985,71 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 .smap-cat-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.5;margin:0 0 14px}
 .smap-links{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
 .smap-link{margin:0}
-.smap-link-a{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:8px 12px;padding:8px 10px;margin:0 -10px;border-radius:calc(var(--radius) - 4px);text-decoration:none;transition:background var(--dur-2) var(--ease-out)}
+/* THE ROUTE YIELDS, IT DOES NOT PUSH.
+
+   This row was `grid-template-columns:1fr auto` with a nowrap route in the auto
+   column. Grid will not size an auto column below its min-content, and
+   `white-space:nowrap` makes a route's min-content its FULL width — so
+   `/create/component-designer` (172px) claimed 172px of a card whose inner
+   width is 227px, leaving 43px for a label whose own min-content is ~90px. The
+   row could not fit, and grid resolved that by overflowing.
+
+   MEASURED 2026-09-11, rendered at every rubric width from 1024 to 1920: the
+   route painted 75px OUTSIDE the card's right border at EVERY one of them
+   (.smap-cat is overflow:visible, so the monospace text is drawn over the card
+   edge and truncated mid-word by nothing at all), and at 1136 through 1320 it
+   pushed the PAGE into a horizontal scrollbar — 1136 -> scrollWidth 1191. It
+   also failed WCAG 1.4.10 Reflow: at 200% zoom (640 CSS px) the page scrolled
+   sideways to 665px.
+
+   NO MEDIA QUERY COULD HAVE CAUGHT THIS, which is why the breakpoint sweeps
+   missed it for as long as they did. The defect is on the CARD's axis, not the
+   viewport's: .smap-grid is `auto-fill minmax(260px,1fr)`, so a card is
+   227-652px wide at every viewport, and 1920 is one of the worst cases (more
+   columns fit, so each card is narrower). The `@media(max-width:520px)` rule
+   that used to sit below was aimed at the wrong axis entirely.
+
+   Flex with wrap solves it per ROW, which is the axis the defect is on. A row
+   whose label and route fit keeps them on one line — label left, route right,
+   visually identical to the grid it replaces. A row that cannot fit drops the
+   route onto its own line, where `justify-content:space-between` leaves a lone
+   item at the start. The longest route in the map is 172px and the narrowest
+   card inner width is 227px, so a wrapped route always fits its own line whole,
+   with no truncation and no ellipsis.
+
+   THE ROUTE STAYS. Not one sitemap in the Mobbin reference set prints a URL
+   path beside the page name — Webflow, Dropbox, MasterClass, FARFETCH, Stripe
+   and Loom all show names only:
+   https://mobbin.com/sites/sections/87b7733a-9aa4-45db-b9d7-397aad19b9de
+   https://mobbin.com/sites/sections/68019cd6-0ab7-4d43-8470-f864a0e80d86
+   But this is a design tool's sitemap, the routes are the thing a developer
+   came to it for, and 65-new-surfaces-breakpoints walks this column by
+   data-route. Deleting the route would be an identity change dressed up as a
+   fix — [principle-context-led-design-refinement], "solve the observed weakness
+   rather than maximising novelty". The weakness is that it pushed. */
+.smap-link-a{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;column-gap:12px;row-gap:2px;padding:8px 10px;margin:0 -10px;border-radius:calc(var(--radius) - 4px);text-decoration:none;transition:background var(--dur-2) var(--ease-out)}
 .smap-link-a:hover{background:var(--hvr)}
 .smap-link-a--soon{cursor:default}
 .smap-link-a--soon:hover{background:transparent}
 .smap-link-a.active .smap-link-label{color:var(--hue-strong,var(--accent-strong))}
-.smap-link-label{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:500;color:var(--t0)}
+/* Shrinks and wraps its own text; the route does not shrink, so when the pair
+   cannot share a line it is the ROUTE that moves down. min-width:0 lets the
+   label go below its automatic flex minimum rather than forcing the overflow
+   back on. */
+.smap-link-label{display:inline-flex;align-items:center;gap:8px;flex:0 1 auto;min-width:0;font-size:var(--fs-body-s);font-weight:500;color:var(--t0)}
 .smap-link-a:hover .smap-link-label{color:var(--hue-strong,var(--accent-strong))}
 .smap-link-a--soon:hover .smap-link-label{color:var(--t0)}
-.smap-link-route{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);text-align:right;white-space:nowrap}
-.smap-link-note{grid-column:1/-1;font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
+/* flex:0 0 auto — it never shrinks, so a row that will not fit wraps instead of
+   overflowing. text-align is gone with the grid: the box now shrink-wraps its
+   text, so alignment is decided by justify-content on the row. */
+.smap-link-route{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);flex:0 0 auto;max-width:100%;white-space:nowrap}
+/* margin-top:6px on top of the row's 2px row-gap = the 8px this note sat at
+   under the old grid, which used a single `gap:8px 12px` for both jobs. The
+   row gap had to come down to 2px so a route that wraps sits tight under its
+   own label rather than floating 8px below it; the note is a different
+   relationship and keeps its original separation. Measured at 390: 2px before
+   this line, 8px after — the same figure the grid produced. */
+.smap-link-note{flex:0 0 100%;margin-top:6px;font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
 /* THIS PILL PAINTS ITS INK ON A TINT OF THE SAME COLOUR, which is the shape of
    defect [accent-tint-grounds-unmeasured] was filed for. Two things were wrong.
 
@@ -5033,10 +5088,14 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 .smap-soon{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--hue-strong,var(--accent-strong));background:color-mix(in srgb,var(--hue,var(--accent)) 7%,transparent);border:1px solid color-mix(in srgb,var(--hue,var(--accent)) 28%,transparent);border-radius:999px;padding:1px 6px;line-height:1;flex:0 0 auto}
 .smap-soon--inline{vertical-align:middle;margin:0 1px}
 .smap-stage{display:inline-flex;align-items:center;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 10%,transparent);border-radius:999px;padding:2px 7px;line-height:1;flex:0 0 auto}
-@media(max-width:520px){
-  .smap-link-a{grid-template-columns:1fr}
-  .smap-link-route{text-align:left}
-}
+/* The `@media(max-width:520px)` block that used to sit here is GONE, not
+   ported. It set `grid-template-columns:1fr` and `text-align:left` to stack the
+   route under the label on phones — both are inert against the flex row above
+   (there is no grid template to override, and a shrink-wrapped box ignores
+   text-align), so keeping them would have been dead code carried for the look
+   of it. The behaviour it wanted is now unconditional and automatic: a row
+   stacks exactly when its two halves cannot share a line, at 320px and at
+   1920px alike. */
 
 /* ── Motion utilities (fx-) ── */
 .fx-dot{width:8px;height:8px;border-radius:50%;background:var(--hue,var(--accent));display:inline-block;flex:0 0 auto;transition:transform var(--dur-2) var(--ease-spring)}
@@ -13018,7 +13077,14 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .prn-item[data-lead="true"] .prn-proof{max-width:920px}
 .prn-say{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3);min-width:0}
 .prn-body{margin:0;font-size:var(--fs-body-s);line-height:1.7;color:var(--t1);max-width:56ch}
-.prn-go{display:inline-flex;align-items:center;gap:8px;margin-top:var(--s-1);font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);text-decoration:none}
+/* min-height:24px — WCAG 2.2 AA 2.5.8. Measured 23.1px tall at 390px on
+   2026-09-11: an inline-flex link sized only by its line-box, 0.9px under the
+   minimum. It does not qualify for the "Inline" exception the way
+   .app-footer-attrib does (58-target-size-24.spec.js documents that one): this
+   is a standalone call to action on its own line, not a link inside a sentence.
+   /principles is simply not one of the four routes 58 measures, which is how a
+   fifth control stayed under the bar after that sweep fixed the other four. */
+.prn-go{display:inline-flex;align-items:center;gap:8px;min-height:24px;margin-top:var(--s-1);font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);text-decoration:none}
 .prn-go:hover{text-decoration:underline;text-underline-offset:3px}
 .prn-go span{transition:transform var(--dur-2) var(--ease-out)}
 .prn-go:hover span,.prn-go:focus-visible span{transform:translateX(3px)}
