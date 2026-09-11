@@ -458,7 +458,24 @@ export default function AltTextGenerator({ toast }) {
                   small radius, a red hairline) landed on the whole card: a refused
                   generation turned the card into a padded red box with its preview
                   inset. Rendered 2026-09-09 at 320 through 1920, both themes. */}
-              {it.status === 'error' && <div className="alt-card-error-msg">{it.error}</div>}
+              {/* AND IT IS A STATUS MESSAGE, which it was not.
+                  #435 gave this message its own class and stopped the green
+                  "Generated 1 alt text" toast from landing over a card that
+                  had failed — both of which fixed what a SIGHTED user saw. A
+                  screen-reader user still got nothing: rendered 2026-09-11
+                  signed in free with /api/ai answering 500, the card read "The
+                  generator is unavailable right now." and the page's only live
+                  region was the app toast, deliberately empty. Press Generate,
+                  hear silence, and the failure is indistinguishable from a
+                  press that did not register. WCAG 4.1.3.
+
+                  status, not alert, for two reasons: a batch can fail card by
+                  card and three assertive interruptions for one press is worse
+                  than three queued sentences; and `.alt-card-warn` eight lines
+                  below is the same card announcing the same kind of outcome
+                  politely already. No new sentence — `it.error` is the string
+                  that was on screen and unannounced. */}
+              {it.status === 'error' && <div className="alt-card-error-msg" role="status" aria-live="polite">{it.error}</div>}
               {it.altText && (
                 <>
                   {it.truncated && (

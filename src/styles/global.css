@@ -1155,7 +1155,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    mounting those rows at all. */
 .emoji-virt{position:relative}
 .emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
-.emoji-vhead h3{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
+.emoji-vhead h2{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
 .emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
 /* --t2, not --t3: at 10px on the --bg-3 chip this measured 4.07:1 in light
    (#6c6c66 on #e4e2da) at every width, under AA. --t2 takes it to 4.95:1;
