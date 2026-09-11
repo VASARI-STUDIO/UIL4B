@@ -8891,16 +8891,29 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
    (principle-website-engagement: "whitespace is a content element; it
    organises attention"), and the title had been given the least of it.
 
-   20px, because that is the dialog's own largest interval — the one either side
-   of the divider — and a title should not be grouped more tightly than the
-   sections beneath it. Nothing moves but the gap: no type size, weight or
-   colour changes, and the copy is untouched. */
-.ui-login .ui-modal-body{padding-top:20px}
+   18px, and the number is bounded at both ends by something measured rather
+   than chosen:
+
+     · It must EXCEED 16px, the gap between two adjacent form fields, or the
+       heading is still grouped no more loosely than the things it heads.
+     · It cannot exceed 18px, because this dialog fits every portrait viewport
+       in the matrix without scrolling and must keep doing so. Measured on the
+       rendered dialog by stepping the value: at 360x560 — the shortest portrait
+       phone 24-mobile-overhaul.spec.js S7 holds — `scrollHeight - clientHeight`
+       is 0 at 8, 12, 14, 16 and 18, and 1 at 20. The same step at 390x844 puts
+       the SIGN-UP dialog, which carries a whole aside column, at 0 through 18
+       and 1 at 20.
+
+   So 18 is simply the most the title can be given before something else on the
+   surface has to pay for it, and it clears the rhythm it has to clear. Nothing
+   moves but the gap: no type size, weight or colour changes, and the copy is
+   untouched. */
+.ui-login .ui-modal-body{padding-top:18px}
 /* …except on a landscape phone. The `@media(max-height:460px)` block above
    spends vertical rhythm to claw back the 133px that were hidden below the fold
    at 844x390, and it cannot reach this: `.ui-login .ui-modal-body` is (0,2,0),
    `.ui-modal-body` is (0,1,0), and a media query adds no specificity — so the
-   20px would have won there too and given 12px of it straight back. Restated
+   18px would have won there too and given 10px of it straight back. Restated
    here, AFTER the rule it has to beat, because at equal specificity the later
    declaration is the one that applies. */
 @media(max-height:460px){

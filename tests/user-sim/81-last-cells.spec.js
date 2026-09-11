@@ -439,7 +439,7 @@ test.describe('the login route paints only what is true', () => {
   }
 
   // MUTATION: in src/styles/global.css change
-  //   .ui-login .ui-modal-body{padding-top:20px}
+  //   .ui-login .ui-modal-body{padding-top:18px}
   // back to `padding-top:8px`. Every width below goes red.
   for (const width of WIDTHS) {
     test(`the dialog title has more space beneath it than its fields do at ${width}`, async ({ browser }) => {
@@ -477,10 +477,10 @@ test.describe('the login route paints only what is true', () => {
   // The short-viewport exemption, which is the half a naive spacing change
   // would have broken. `@media(max-height:460px)` exists because at 844x390
   // this dialog hid 133px below the fold, including the submit button; the
-  // 20px above is deliberately NOT spent there.
+  // 18px above is deliberately NOT spent there.
   //
   // MUTATION: delete the `@media(max-height:460px){.ui-login .ui-modal-body
-  // {padding-top:8px}}` block that follows the 20px rule. The gap becomes 20
+  // {padding-top:8px}}` block that follows the 18px rule. The gap becomes 18
   // and this goes red — as does the budget assertion, by 12px.
   test('a landscape phone keeps the tighter rhythm and the submit button', async ({ browser }) => {
     const ctx = await browser.newContext({
@@ -493,7 +493,7 @@ test.describe('the login route paints only what is true', () => {
     await settled(page)
 
     // Measured twice on the same rendered dialog: as the stylesheet leaves it,
-    // and again with the 20px forced back on. The difference is what the
+    // and again with the 18px forced back on. The difference is what the
     // exemption is WORTH here, which is a stronger thing to assert than any
     // absolute pixel count — the dialog's content has changed several times
     // since the height query was written and will change again.
@@ -509,7 +509,7 @@ test.describe('the login route paints only what is true', () => {
         hidden: hidden(),
         scrolls: dialog.scrollHeight > dialog.clientHeight,
       }
-      body.style.paddingTop = '20px'
+      body.style.paddingTop = '18px'
       void dialog.offsetHeight
       const cost = hidden() - exempt.hidden
       body.style.paddingTop = ''
@@ -517,9 +517,9 @@ test.describe('the login route paints only what is true', () => {
     })
     expect(m.padTop, 'the landscape exemption stopped applying').toBe('8px')
     expect(m.gap, 'the title is taking the tall-viewport gap on a landscape phone').toBeLessThan(12)
-    // The whole 12px, not some of it — anything less means the two rules are
+    // The whole 10px, not some of it — anything less means the two rules are
     // fighting rather than the later one winning outright.
-    expect(m.cost, 'spending the title gap here would cost nothing, so the exemption is dead code').toBe(12)
+    expect(m.cost, 'spending the title gap here would cost nothing, so the exemption is dead code').toBe(10)
     // And what IS below the fold stays reachable: .ui-modal scrolls, with the
     // pure-CSS scroll shadow that tells the reader there is more.
     expect(m.scrolls, 'the dialog does not scroll, so anything below the fold is lost').toBe(true)
