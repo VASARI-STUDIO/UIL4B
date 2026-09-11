@@ -12,6 +12,7 @@ import { LockedPromptCard, LockedTeaseCta } from '../components/library/LockedTe
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
+import LibraryEmpty from '../components/library/LibraryEmpty'
 import PromptCard from '../components/prompt/PromptCard'
 import PromptModal from '../components/prompt/PromptModal'
 import AddPromptPanel from '../components/prompt/AddPromptPanel'
@@ -111,6 +112,12 @@ export default function PromptLibrary({ onCopy, toast }) {
   }, [onCopy])
 
   const switchTab = (next) => { setTab(next); setActiveCategory(null); setSearch('') }
+
+  // The one way out of a filtered-to-nothing grid. Named rather than inlined
+  // because the empty state and any future toolbar reset must clear the SAME
+  // pair of controls — a reset that clears the search but leaves the category
+  // set is the half-escape that sends a user back round the loop.
+  const clearFilters = useCallback(() => { setSearch(''); setActiveCategory(null) }, [])
 
   // Community submission gate. The panel is only ever mounted for a signed-in
   // user, so a signed-out visitor is asked to sign in first instead of typing a
@@ -374,23 +381,27 @@ export default function PromptLibrary({ onCopy, toast }) {
           ))}
         </div>
       ) : (
-        <div className="pl-empty">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-            {isCommunity ? (
-              <>
-                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </>
-            ) : (
-              <>
-                <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
-              </>
-            )}
-          </svg>
-          <p>{isCommunity ? 'No prompts match your search' : t('promptLibrary.noPrompts')}</p>
-          {!isCommunity && (
+        isCommunity ? (
+          /* The shared Library empty state, as used by the Palette, Gradient,
+             Font and Curated Resources galleries. This page was the last one
+             still rendering its own: a <p> with no control and no role, so the
+             grid emptying was announced to nobody and the only way back was to
+             work out by hand which of the search, sort and category controls
+             was still set. Both halves are LibraryEmpty's stated job. */
+          <LibraryEmpty
+            className="pl-empty"
+            title="No prompts match your search"
+            onClear={clearFilters}
+          />
+        ) : (
+          <div className="pl-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+            </svg>
+            <p>{t('promptLibrary.noPrompts')}</p>
             <button className="btn btn-accent" onClick={() => setAddOpen(true)}>{t('promptLibrary.addPrompt')}</button>
-          )}
-        </div>
+          </div>
+        )
       )}
 
       {/* The teased tail of the community library: three placeholders, then one
@@ -409,7 +420,11 @@ export default function PromptLibrary({ onCopy, toast }) {
               cards after the free ones and needs to know why they differ. The
               placeholder SHAPES are hidden inside the card; nothing announced
               here is invented, because the card holds nothing to invent. */}
-          <h3 className="sr-only" id="pl-locked-community">Community prompts included with Pro</h3>
+          {/* h2, not h3: this labels a top-level region of the page, and the
+              only other landmark heading here (the closing CTA) is an h2. As an
+              h3 it made the page read h1 -> h3 -> h2 to anyone navigating by
+              heading level. */}
+          <h2 className="sr-only" id="pl-locked-community">Community prompts included with Pro</h2>
           <div className="pl-gallery pl-gallery--continues" role="group" aria-labelledby="pl-locked-community">
             {lockedPrompts.map((preview) => <LockedPromptCard key={preview.id} preview={preview} />)}
           </div>
