@@ -8880,7 +8880,45 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
        back. --- */
 
 /* --- Single-click login popup (reuses .auth-* form styles) --- */
-.ui-login .ui-modal-body{padding-top:8px}
+/* THE TITLE'S OWN SPACE. This was `padding-top:8px`, and 8px was the smallest
+   gap anywhere in the dialog bar the 6px between a label and its input. The
+   measured rhythm of everything below it: label→input 6, field→field 16,
+   button→divider 20, divider→form 20, form→links 14. So the dialog's <h2> was
+   separated from the content it heads by LESS than any two form fields are
+   separated from each other, and rendered at 320-1920 in both themes it reads
+   as a caption sitting on the accent-filled Google button rather than as the
+   title of the surface. Whitespace is what assigns rank here
+   (principle-website-engagement: "whitespace is a content element; it
+   organises attention"), and the title had been given the least of it.
+
+   18px, and the number is bounded at both ends by something measured rather
+   than chosen:
+
+     · It must EXCEED 16px, the gap between two adjacent form fields, or the
+       heading is still grouped no more loosely than the things it heads.
+     · It cannot exceed 18px, because this dialog fits every portrait viewport
+       in the matrix without scrolling and must keep doing so. Measured on the
+       rendered dialog by stepping the value: at 360x560 — the shortest portrait
+       phone 24-mobile-overhaul.spec.js S7 holds — `scrollHeight - clientHeight`
+       is 0 at 8, 12, 14, 16 and 18, and 1 at 20. The same step at 390x844 puts
+       the SIGN-UP dialog, which carries a whole aside column, at 0 through 18
+       and 1 at 20.
+
+   So 18 is simply the most the title can be given before something else on the
+   surface has to pay for it, and it clears the rhythm it has to clear. Nothing
+   moves but the gap: no type size, weight or colour changes, and the copy is
+   untouched. */
+.ui-login .ui-modal-body{padding-top:18px}
+/* …except on a landscape phone. The `@media(max-height:460px)` block above
+   spends vertical rhythm to claw back the 133px that were hidden below the fold
+   at 844x390, and it cannot reach this: `.ui-login .ui-modal-body` is (0,2,0),
+   `.ui-modal-body` is (0,1,0), and a media query adds no specificity — so the
+   18px would have won there too and given 10px of it straight back. Restated
+   here, AFTER the rule it has to beat, because at equal specificity the later
+   declaration is the one that applies. */
+@media(max-height:460px){
+  .ui-login .ui-modal-body{padding-top:8px}
+}
 .ui-login-note{display:flex;gap:9px;align-items:flex-start;margin:0 0 16px;padding:11px 13px;background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 26%,transparent);border-radius:var(--radius);font-size:12.5px;line-height:1.45;color:var(--t1)}
 .ui-login-note svg{flex:none;margin-top:1px;color:var(--brand)}
 .ui-login-err{margin:0 0 12px;padding:9px 12px;background:color-mix(in srgb,var(--err) 12%,transparent);border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius);font-size:12.5px;color:var(--err-strong)}
@@ -9572,7 +9610,62 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    Mobbin before the change (Gamma, Framer, Jitter, Synthesia, Canva) put the
    stop's hex in a field with a real control height; none of them renders it as
    a bare text line. */
-input.ggn-stop-hex{font-family:var(--mono);padding:0;min-height:24px}
+/* ── The FIELD, 2026-09-11. The note above left this input with a control's
+   HEIGHT and none of its appearance: measured across 22 width/theme cells it
+   reported `border-width: 0px`, `background-color: rgba(0,0,0,0)` and
+   `padding: 0px` at every one of them, so the only editable-looking thing in
+   the row was its neighbour. Rendered at 1440 the row reads
+   `1 · [swatch] · #7C3AED · ( 0 )% · lock · ×` — two values, one drawn as a
+   field and one as a caption, and the caption is the one carrying the colour.
+   That is the defect: not that the hex cannot be typed in, but that nothing
+   says it can.
+
+   It now takes the SAME four declarations its sibling `.ggn-stop-pos input`
+   has always had — same ground, same line, same radius, same 6px of inline
+   padding — because the two are the same kind of thing and the row had been
+   answering that question two ways. Read on Mobbin first: Gamma, Later, Zoho
+   CRM, Runway and MagicPath all box the hex, and Later does it inside a 200px
+   sidebar while Zoho does it in a 130px popover, so "there is not room at
+   this width" was never what the reference set says.
+
+   ── THE 12.8px ────────────────────────────────────────────────────────────
+   The note above records that at 320 the value needs 67.2px of an 80.0px box,
+   which is 12.8px of slack and less than the 14px a border and this padding
+   cost. That measurement is right and the conclusion drawn from it was wrong,
+   because the 80px is not what the row has to give. At ≤480 `.ggn-stop` is a
+   FIVE-column grid and the hex sits on row 1 in column 3; `.ggn-stop-pos` is
+   pinned to `grid-column:3/4`, so it cannot share that row and drops to row 2,
+   taking the lock and the × with it. Columns 4 and 5 of row 1 are therefore
+   EMPTY — 26 + 6 + 26 = 58px of it — at every width below 481. Spanning the
+   field to the end of the row spends that emptiness instead of the value's
+   slack: 80px → 144px, of which 14px goes to the box and 62.8px is left over.
+   Measured after, at 320 in both themes: scrollWidth equals clientWidth, and
+   the row's height does not move.
+
+   Nothing is needed above 480: the narrowest the field ever gets there is
+   112.2px at 481 against a 69.5px value, and by 768 it is 399px. */
+input.ggn-stop-hex{font-family:var(--mono);padding:5px 6px;min-height:24px;background:var(--ggn-bg);border:1px solid var(--ggn-line);border-radius:var(--radius-xs)}
+input.ggn-stop-hex:focus{border-color:var(--ggn-accent)}
+/* A hex is seven characters and never more. `.ggn-stop-hex-field` keeps its
+   `flex:1` so the row's leftover width still collects BEFORE the position
+   field — which is what holds the lock and the × against the right edge — but
+   the box itself stops at a size its content can fill. Without this the field
+   painted 328px wide at 1440 for a 56.4px value: an affordance, but a stretched
+   one, and "let content determine the structure" is the rule this app follows
+   everywhere else (principle-adaptive-layout). 132px is the widest draft a
+   person can type before it scrolls — 14 mono characters at 13px, 11 at the
+   16px the ≤640 form rule imposes — so a pasted `rgb(124, 58, 237)` is still
+   legible while it is being corrected.
+   Not applied below 481: there the field spans the row's empty tail and 144px
+   IS the content width. */
+@media(min-width:481px){
+  input.ggn-stop-hex{max-width:132px}
+}
+/* An invalid draft already reddened the glyphs; now that there is a box around
+   them, it reddens that too — the same pairing every other refused field in
+   this app uses, and the `.ggn-field-error` bubble below still says what to do
+   about it. */
+input.ggn-stop-hex[aria-invalid="true"]{border-color:color-mix(in srgb,var(--err) 55%,var(--ggn-line))}
 .ggn-stop-pos{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .ggn-stop-pos input{width:46px;font-family:var(--mono);font-size:13px;color:var(--ggn-t1);background:var(--ggn-bg);border:1px solid var(--ggn-line);border-radius:var(--radius-xs);padding:5px 6px;outline:none;text-align:right;-moz-appearance:textfield}
 .ggn-stop-pos input::-webkit-outer-spin-button,.ggn-stop-pos input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -9794,6 +9887,12 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
   .ggn-block-actions{width:100%;flex-wrap:wrap}
   .ggn-block-actions .ggn-btn{flex:1}
   .ggn-stop{display:grid;grid-template-columns:20px 32px minmax(0,1fr) auto auto}
+  /* Row 1 columns 4 and 5 are empty here — the position field is pinned to
+     column 3 below, which pushes it and its two buttons onto row 2 — so the
+     hex field takes the whole rest of its row rather than stopping at the 1fr
+     track and leaving 58px of nothing beside it. This is what pays for the box
+     the field now draws; see the long note at `input.ggn-stop-hex`. */
+  .ggn-stop-hex-field{grid-column:3/-1}
   .ggn-stop-pos{grid-column:3/4}
   .ggn-stop-lock{grid-column:4}
   .ggn-stop-x{grid-column:5}
@@ -11722,11 +11821,27 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .fb-input,.fb-textarea{width:100%}
 .fb-textarea{min-height:120px;resize:vertical}
 .fb-error{margin:0;font-size:12.5px;line-height:1.5;color:var(--err-strong)}
+/* The return-address hint, and the signed-in equivalent of it. Both sit 6px
+   under their field at the same size and ink as `.fb-error`, so the field's
+   helper line and its error line occupy the same slot and swapping one for the
+   other never moves the submit button.
+
+   `.fb-sending-as` is the class FeedbackModal.jsx already uses for this exact
+   sentence. It is REUSED rather than renamed — one fact, one name — and only
+   its size is restated, because the modal's 11px belongs to a dense dialog and
+   this page's helper scale is 12.5px. */
+.fb-form .fb-hint,.fb-form .fb-sending-as{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--t2)}
+.fb-form .fb-error{margin-top:6px}
 .fb-submit{align-self:flex-start}
 .fb-done{padding:40px 20px;text-align:center}
 .fb-done-mark{width:48px;height:48px;border-radius:50%;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
 .fb-done-title{font-size:18px;font-weight:700;margin-bottom:6px}
 .fb-done-sub{font-size:13px;color:var(--t2)}
+/* Whether a reply can come back. Same size as the line above it, one ink step
+   darker, because it is the part of the confirmation a reader has not seen
+   before. */
+.fb-done-reply{margin:8px 0 0;font-size:13px;line-height:1.55;color:var(--t1)}
+.fb-done-reply strong{font-weight:650;color:var(--t0)}
 .fb-again{margin-top:16px}
 
 /* ── Focus rings on controls that sit ON a user-chosen colour ───────────────

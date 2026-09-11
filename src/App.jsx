@@ -199,6 +199,26 @@ function LoginRoute() {
     })
   }, [loading, user, from, wantsSignup, navigate, openLogin])
 
+  // ── The spinner belongs to the ONE state that is still resolving ──────────
+  //
+  // This route painted a turning `.fg-loader` unconditionally, so it kept
+  // turning for as long as the dialog was open — which is until the visitor
+  // acts, i.e. indefinitely. Rendered at 320 through 1920 in both themes, it
+  // sits 146px from the top of the viewport, behind a 6px backdrop blur, as a
+  // grey smudge above the dialog: a loading indicator for a page that has
+  // finished loading, and the one thing on screen behind the sign-in form.
+  // `principle-ai-slop-diagnostic` names this exactly — "loading effects imply
+  // intelligence without explaining system state" — and it is the only motif on
+  // this route that carries no meaning.
+  //
+  // While `loading` is true there IS something to wait for: AuthContext has not
+  // yet said whether there is a session, and the popup has not been raised. The
+  // spinner is honest there and is kept, unchanged. After that, this route has
+  // no work left — it either navigates away or the dialog IS the page — so it
+  // draws nothing. `renderState()` in tests/user-sim/helpers.js already counts
+  // an open `[role="dialog"]` as the route's own content, which is why an empty
+  // `main` here is a rendered page rather than a blank one.
+  if (!loading) return null
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
       <div className="fg-loader" />

@@ -50,15 +50,29 @@ const FIELDS = [
     want: { padding: '0px 12px', borderRadius: '10px' },
     wasWrongly: { padding: '9px 14px', borderRadius: '12px' },
   },
+  {
+    // MOVED OUT OF `BARE_FIELDS` ON 2026-09-11, and the move is the point.
+    // This field used to declare `background:transparent;border:none` and was
+    // listed below as one the reset must not box. That was never a statement
+    // that a hex should look unrehearsed — it was a statement about the
+    // CASCADE, made while the field happened to have no chrome of its own.
+    // The quality pass then rated /create/gradient's interaction dimension a 7
+    // for exactly that lack of chrome: the one control in the row carrying the
+    // colour was the one drawn as a caption. The field now asks for a box, so
+    // what this spec must prove about it is unchanged in kind — that the class
+    // wins over `input[type="text"]` — and changed in value.
+    route: '/create/gradient', sel: '.ggn-stop-hex', name: 'gradient stop hex field',
+    want: { fontFamily: MONO, padding: '5px 6px', borderRadius: '6px' },
+    wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px', borderRadius: '12px' },
+  },
 ]
 
-// The two the reset was drawing a whole second box around. Both sit inside a
+// The one the reset was drawing a whole second box around. It sits inside a
 // control that already carries its own border and ground, which is why the
 // component asks for neither — and why getting one looked like a bug in the
 // layout rather than a bug in the cascade.
 const BARE_FIELDS = [
   { route: '/create/gradient', sel: '.ggn-angle-input', name: 'gradient angle input' },
-  { route: '/create/gradient', sel: '.ggn-stop-hex', name: 'gradient stop hex field' },
 ]
 
 test.describe('component input classes outrank the type reset', () => {
