@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -1420,8 +1419,7 @@ async function getCollectionNames(pack) {
 
 const PAGE_SIZE = 120
 
-export default function IconLibrary({ onCopy, embedded, onCatalogue }) {
-  const { t } = useI18n()
+export default function IconLibrary({ onCopy, onCatalogue }) {
   const { isPro, plan } = useSubscription()
   // Free-tier custom-icon allowance (Pro → Infinity). Single source: the plan.
   const customIconLimit = plan?.limits?.['custom-icons'] ?? Infinity
@@ -1935,13 +1933,20 @@ export default function IconLibrary({ onCopy, embedded, onCatalogue }) {
 
   return (
     <div className="sec">
-      {!embedded && (
-        <div className="sec-h">
-          <div className="sec-h-eyebrow">{t('iconLibrary.eyebrow')}</div>
-          <h1>{t('iconLibrary.heading')}</h1>
-          <p>{t('iconLibrary.subtitle')}</p>
-        </div>
-      )}
+      {/* NO STANDALONE MASTHEAD. Both libraries used to carry one behind
+          `{!embedded && ...}` — an eyebrow, an h1 and the subtitle — for a
+          route that has not existed since the two were merged: the ONLY import
+          of this module is IconEmojiLibrary.jsx, which mounts it inside the
+          shared `DiscoverGalleryHero` and passed `embedded` unconditionally.
+          Verify with
+            grep -rn "from './IconLibrary'" src
+            grep -rn "from './EmojiLibrary'" src
+          Unreachable, and not inert: the block kept a second copy of the h1 and
+          subtitle that the wrapper owns, which is a drift bug waiting for the
+          next copy change, and the eyebrow was `sec-h-eyebrow` — the exact
+          element the founder marked "AI" and #382 deleted from every tool
+          masthead it reached. A retired motif that cannot be rendered still
+          reads as live code to the next person to open the file. */}
 
       {recents.length > 0 && !isMyIcons && (
         <div className="ig-rail">
@@ -2139,9 +2144,29 @@ export default function IconLibrary({ onCopy, embedded, onCatalogue }) {
               <p className="ig-status">Loading more…</p>
             )}
 
+            {/* THE GRID EMPTYING IS A STATUS MESSAGE, and it was silent.
+                Type a query that matches nothing and the grid drops from 120
+                cells to 0; this block appears, saying so and saying how to get
+                back. Nothing announced it — measured 2026-09-11 at 1280/light
+                and 390/dark, where the only live region on the page was the
+                app toast, empty. So a screen-reader user searching for a word
+                the catalogue does not carry heard nothing at all and had no
+                signal that the search, rather than the page, had failed.
+
+                The EMOJI tab of this same surface — the same masthead, one
+                click away — has announced its result count since it shipped
+                (`#emoji-search-status`, role=status, "0 emojis for …"), and
+                the Font Gallery announces `.fg-count`. Two libraries on one
+                page answering the same question two ways is the thing the
+                shared toolbar work was for.
+
+                role=status, not alert: this is the outcome of the user's own
+                keystroke, not an error to interrupt for. No new sentence — the
+                two below are the ones already on screen. The icon is decorated
+                and now says so; the emoji copy of this block already did. */}
             {searchEmpty && (
-              <div className="pl-empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <div className="pl-empty" role="status" aria-live="polite">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
                 <p>{query.trim()

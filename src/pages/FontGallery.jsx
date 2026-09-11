@@ -95,22 +95,37 @@ function varsRef(vars) {
 // painted in the 400 cut is exactly the fallback-masquerading-as-the-family
 // problem this hook exists to prevent.
 function useFontReady(font, weight, { defer = true, extraWeights } = {}) {
-  const [ready, setReady] = useState(false)
   const ref = useRef(null)
   // A new array identity on every render would restart the effect on every
   // render, so the weights travel as a stable string and are parsed back inside.
   const extraKey = extraWeights ? extraWeights.join(',') : ''
 
+  // WHAT IS READY IS A REQUEST, NOT A BOOLEAN.
+  // This was `useState(false)` plus `setReady(false)` as the first statement of
+  // the effect — a setState synchronous with an effect body, which is one of
+  // the three `react-hooks/set-state-in-effect` warnings this file carried, and
+  // a cascading render on every specimen the grid mounts. Recording WHICH
+  // request succeeded instead means a changed family is not-ready by
+  // derivation, in the same render that changed it, with no second commit.
+  //
+  // It is also a frame more honest than the reset was: the old shape kept the
+  // previous family's `true` for one commit after `font` changed, so the
+  // specimen painted the OUTGOING family in the incoming family's row before
+  // the placeholder came back. That is the precise failure the hook's own
+  // comment calls "the fallback masquerading as the family".
+  const key = font ? `${font.family}|${weight}|${defer ? 1 : 0}|${extraKey}` : ''
+  const [readyKey, setReadyKey] = useState(null)
+  const ready = !!key && readyKey === key
+
   useEffect(() => {
     if (!font) return undefined
     let cancelled = false
-    setReady(false)
 
     const start = () => {
       const extra = extraKey ? extraKey.split(',').map(Number) : []
       loadFont(font.family, [weight, bodyWeight(font), ...extra])
       verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
-        if (!cancelled && status === 'ok') setReady(true)
+        if (!cancelled && status === 'ok') setReadyKey(key)
       })
     }
 
@@ -126,7 +141,7 @@ function useFontReady(font, weight, { defer = true, extraWeights } = {}) {
     }, { rootMargin: '200px' })
     obs.observe(el)
     return () => { cancelled = true; obs.disconnect() }
-  }, [font, weight, defer, extraKey])
+  }, [font, weight, defer, extraKey, key])
 
   return [ready, ref]
 }
@@ -467,7 +482,13 @@ function CompareDialog({ fonts, onClose, onRemove, onOpen, onCopy }) {
 // sentence for exactly the reason the Ag tiles failed to.
 function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare, onSendToPair, onSendToScale }) {
   const ref = useModal(onClose)
-  const [loadState, setLoadState] = useState('checking')
+  // Same shape as useFontReady above, and for the same warning: this was
+  // `useState('checking')` with `setLoadState('checking')` as the first
+  // statement of the effect below. The result is recorded against the font it
+  // describes, so a font this dialog has not resolved yet reads 'checking' by
+  // derivation rather than by a second render.
+  const [loaded, setLoaded] = useState(null)
+  const loadState = loaded && loaded.font === font ? loaded.status : 'checking'
   // Seeded from the gallery's own preview field. Opening a specimen used to
   // throw away the words you had just typed into the toolbar and hand you a
   // stock pangram instead — the one moment in the flow where your words matter
@@ -485,10 +506,9 @@ function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare
 
   useEffect(() => {
     let cancelled = false
-    setLoadState('checking')
     loadFont(font.family, font.variants)
     verifyFontLoaded(font.family, bodyWeight(font)).then(status => {
-      if (!cancelled) setLoadState(status)
+      if (!cancelled) setLoaded({ font, status })
     })
     return () => { cancelled = true }
   }, [font])
@@ -504,9 +524,11 @@ function DetailDialog({ font, previewText, onClose, onCopy, onCompare, inCompare
   }, [font])
 
   const retryFont = () => {
-    setLoadState('checking')
+    // Dropping the record is what puts the dialog back to 'checking' — the
+    // derivation above reads a null result as exactly that.
+    setLoaded(null)
     reloadFont(font.family).then(() =>
-      verifyFontLoaded(font.family, bodyWeight(font)).then(setLoadState),
+      verifyFontLoaded(font.family, bodyWeight(font)).then(status => setLoaded({ font, status })),
     )
   }
 
@@ -752,6 +774,20 @@ export default function FontGallery({ onCopy, toast }) {
   // columns that caused it.
   const [previewSize, setPreviewSize] = useState(52)
   const [page, setPage] = useState(1)
+  // THE PAGE RESET, ADJUSTED DURING RENDER RATHER THAN IN AN EFFECT.
+  // `useEffect(() => { setPage(1) }, [query, category, sort])` was the third
+  // `react-hooks/set-state-in-effect` warning in this file, and the effect shape
+  // also meant one committed render of page 3 of the OLD filter's length under
+  // the new filter before the reset landed. React's documented answer for
+  // "adjust some state when a prop changes" is this: compare, set, and let React
+  // re-run the render before it commits anything. IconEmojiLibrary.jsx uses the
+  // same pattern for its keep-alive tab set, with the same reasoning.
+  const filterKey = `${query}|${category}|${sort}`
+  const [pageKey, setPageKey] = useState(filterKey)
+  if (pageKey !== filterKey) {
+    setPageKey(filterKey)
+    setPage(1)
+  }
   const [selected, setSelected] = useState(null)
   const [compare, setCompare] = useState([])
   const [showCompare, setShowCompare] = useState(false)
@@ -781,8 +817,6 @@ export default function FontGallery({ onCopy, toast }) {
 
   const paged = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page])
   const hasMore = paged.length < filtered.length
-
-  useEffect(() => { setPage(1) }, [query, category, sort])
 
   // Infinite scroll, with an explicit button underneath as the keyboard route —
   // an observer alone strands anyone who never scrolls with a pointer.
