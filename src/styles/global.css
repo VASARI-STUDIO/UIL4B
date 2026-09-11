@@ -9551,7 +9551,27 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    the shared Forms / inputs block and exists to stop iOS zooming the page on
    focus; mono at 16px with no padding fits the box (78px of 78px), so the
    protection is kept rather than traded away for the designed 13px. */
-input.ggn-stop-hex{font-family:var(--mono);padding:0}
+/* `min-height` is the 2026-09-11 half, and it is a TARGET SIZE fix, not a
+   type-size one. Rendered at 320, 390, 430, 768, 1024, 1097, 1120, 1136, 1280,
+   1440 and 1920 in both themes: this field measured 17.0px tall at every width
+   above 640 and 21.0px at every width below it, against WCAG 2.5.8 (Target
+   Size, Minimum) 24px. Neither of the criterion's exceptions reaches it — it is
+   an <input>, so the Inline exception (a link inside a sentence) does not
+   apply, and its two neighbours in the row are the swatch trigger and the
+   position field, both immediately adjacent, so Spacing does not either.
+
+   It costs NO horizontal width, which is the constraint the note above records:
+   the widest the value ever needs is 67.2px in a box of 80.0px at 320 — 12.8px
+   of slack — so a border or inline padding would clip the hex again, and the
+   row it sits in is already 93px tall at ≤640 and 58px above. An <input>
+   centres its value in its own box, so the glyphs do not move.
+
+   The sibling `.ggn-stop-pos input` has always been ~31px; this brings the two
+   editable values in one row to the same floor. Five gradient editors read on
+   Mobbin before the change (Gamma, Framer, Jitter, Synthesia, Canva) put the
+   stop's hex in a field with a real control height; none of them renders it as
+   a bare text line. */
+input.ggn-stop-hex{font-family:var(--mono);padding:0;min-height:24px}
 .ggn-stop-pos{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .ggn-stop-pos input{width:46px;font-family:var(--mono);font-size:13px;color:var(--ggn-t1);background:var(--ggn-bg);border:1px solid var(--ggn-line);border-radius:var(--radius-xs);padding:5px 6px;outline:none;text-align:right;-moz-appearance:textfield}
 .ggn-stop-pos input::-webkit-outer-spin-button,.ggn-stop-pos input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
