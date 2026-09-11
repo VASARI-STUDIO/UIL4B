@@ -7,6 +7,15 @@
  * which is why a rule a later global rule overrides was left behind rather
  * than moved. See the note in the splitter, and 23-responsive-mid-band. */
 
+/* --lart-measure is REGISTERED, and it has to be. An unregistered custom
+   property holding a relative unit is substituted as its token text and then
+   re-resolved against the element that uses it, so `56ch` was 580.72px on
+   .lart-prose (17px Manrope) and 369.6px on .lart-crumb (11px JetBrains Mono)
+   — one token, two widths, which is why the header block below could not share
+   an edge with the prose. Registered as a <length> it computes once, here,
+   against the 17px this rule declares, and inherits as that px value. */
+@property --lart-measure{syntax:'<length>';inherits:true;initial-value:0px}
+
 .lart{--lart-measure:56ch;--lart-rail:200px;--lart-gap:var(--s-8);font-size:17px;max-width:1180px}
 
 .lart-crumb{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--t3);margin-bottom:var(--s-4)}
@@ -32,7 +41,13 @@
   .lart-layout{grid-template-columns:var(--lart-rail) minmax(0,var(--lart-measure));justify-content:center;gap:var(--lart-gap);align-items:start}
   /* Same centred block as the layout below, with the rail's width as padding —
      so the crumb, the h1 and the first paragraph share one left edge. */
-  .lart-crumb,.lart-head{width:min(100%,calc(var(--lart-rail) + var(--lart-gap) + var(--lart-measure)));margin-inline:auto;padding-left:calc(var(--lart-rail) + var(--lart-gap))}
+  /* max-width:none is load-bearing. .lart-head carries max-width:56ch from the
+     narrow layout, which clamped this 845px block back to 581px; the padding
+     below then consumed 264px of it and left the h1 a 317px column, indented
+     132px PAST the prose it introduces. Measured at 1440 before: crumb 667.2,
+     h1 693.6, first paragraph 561.6 — three edges where this comment promises
+     one. */
+  .lart-crumb,.lart-head{width:min(100%,calc(var(--lart-rail) + var(--lart-gap) + var(--lart-measure)));max-width:none;margin-inline:auto;padding-left:calc(var(--lart-rail) + var(--lart-gap))}
 }
 
 /* ── Contents ── */
@@ -74,7 +89,7 @@
 /* ── Aside: a clarification to one side of the sentence above it. No icon, no
       label, no tint — it is not more important than the paragraph, it is next
       to it. The rule is the only marker. ── */
-.lart-aside{margin:var(--s-5) 0;padding-left:var(--s-4);border-left:1px solid var(--border);font-size:14.5px;line-height:1.65;color:var(--t3)}
+.lart-aside{max-width:60ch;margin:var(--s-5) 0;padding-left:var(--s-4);border-left:1px solid var(--border);font-size:14.5px;line-height:1.65;color:var(--t3)}
 .lart-aside code{font-size:.9em}
 
 /* ── Spec: a requirement in the standard's own words, attributed. ── */
@@ -146,10 +161,16 @@
 .lart-sources h2{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:var(--s-3)}
 .lart-sources ul{list-style:none;margin:0;display:flex;flex-direction:column;gap:var(--s-2)}
 .lart-sources li{padding-left:0;font-size:14px;line-height:1.5}
+/* WCAG 2.2 SC 2.5.8: one link per <li>, so the Inline exception does not apply
+   and 19.0px was a genuine miss on all seven articles at every width. Same for
+   .lart-spec-cite's link at 19.7px. The type size is unchanged; only the box
+   grows. */
+.lart-sources li a{display:inline-flex;align-items:center;min-height:24px}
+.lart-spec-cite a{display:inline-flex;align-items:center;min-height:24px}
 
 .lart-next{margin-top:var(--s-6);padding-top:var(--s-5);border-top:1px solid var(--border);display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4)}
 
-.lart-next-lede{font-size:15px;line-height:1.6;color:var(--t1);margin:0}
+.lart-next-lede{max-width:60ch;font-size:15px;line-height:1.6;color:var(--t1);margin:0}
 
 .lart-onward{margin-top:var(--s-6)}
 .lart-onward-label{display:block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:var(--s-3)}
