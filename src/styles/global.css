@@ -12656,6 +12656,12 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
    the control actually has — a radius introduced by :focus-visible changes the
    geometry at the moment the ring appears. */
 .cur-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+/* SC 2.5.8: the lead title holds only this link, so the Inline exception does
+   not apply to it (the row title's does — it also carries a PriceTag). At the
+   16px this title takes below 640px the inline box measured 23.0px, one pixel
+   under, at 320 and 390. inline-block gives it a height of its own and still
+   wraps internally; inline-flex would not have. */
+.cur-lead-title .cur-link{display:inline-block;min-height:24px}
 /* Resting, not hover-only: founder direction 2026-09-02 rules out hover-only
    affordances on touch, and this arrow is how an outbound link says it leaves. */
 .cur-ext{display:inline-block;margin-left:3px;font-size:.82em;color:var(--t3);vertical-align:baseline}

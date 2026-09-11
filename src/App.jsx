@@ -266,12 +266,24 @@ function AppInner() {
     // so a 404 was indistinguishable from the homepage everywhere except the
     // page body. The strings match scripts/prerender.mjs's 404 shell.
     const missing = isUnknownRoute(location.pathname)
+    // THE LOOKUP KEY IS NORMALISED, and it has to be, because the other two
+    // readers of this same pathname already are: canonicalUrl() strips a
+    // trailing slash (routeMeta.js) and so does isUnknownRoute() one line
+    // above. PAGE_TITLES did not, so "/learn/" missed the map and fell through
+    // to the homepage default — measured on the built preview, every route:
+    // /learn/, /discover/, /discover/palettes/, /community/ and
+    // /learn/colour-contrast/ all rendered "UI L4B | Design Toolkit" and the
+    // homepage's description, while their canonical tag correctly pointed at
+    // the unslashed URL. Both spellings are served 200 (vercel.json sets no
+    // trailingSlash), so this reached a real visitor's tab, bookmark and any
+    // crawler that runs JS.
+    const metaPath = location.pathname.replace(/\/+$/, '') || '/'
     const title = missing
       ? 'UI L4B | Page not found'
-      : PAGE_TITLES[location.pathname] || 'UI L4B | Design Toolkit'
+      : PAGE_TITLES[metaPath] || 'UI L4B | Design Toolkit'
     const description = missing
       ? 'That page does not exist. Browse the tools, or head back to the homepage.'
-      : PAGE_DESCRIPTIONS[location.pathname] || DEFAULT_DESCRIPTION
+      : PAGE_DESCRIPTIONS[metaPath] || DEFAULT_DESCRIPTION
     document.title = title
     const metaDesc = document.querySelector('meta[name="description"]')
     if (metaDesc) {
