@@ -13,11 +13,12 @@ import {
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS, isAdminEmail } from '../utils/constants'
-import { MODULE_BOARD } from '../data/moduleBoard'
-// src/data/pipeline.js is NOT imported here, statically OR dynamically. It is
-// not a client module at all any more: PipelineBoard fetches it from
-// GET /api/ai?backlog=1 behind the verified-admin gate. See the note above that
-// component for what an anonymous visitor used to be able to fetch.
+// NEITHER src/data/pipeline.js NOR src/data/moduleBoard.js is imported here,
+// statically or dynamically. They are not client modules at all any more: both
+// arrive from GET /api/ai?backlog=1 behind the verified-admin gate, through
+// useInternalBoards() below. See the note above that hook for what an anonymous
+// visitor used to be able to fetch, and why moduleBoard.js was the worse of the
+// two to have missed.
 import { resolvePromptProfileLink } from '../utils/promptSubmission'
 import { toCsv } from '../utils/csv'
 
@@ -506,6 +507,135 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
   )
 }
 
+// ── THE TWO INTERNAL BOARDS, FETCHED RATHER THAN BUNDLED ───────────────────
+//
+// src/data/pipeline.js and src/data/moduleBoard.js describe the PROJECT, not
+// the product. Both used to ship to the browser, and both were readable by
+// anyone who loaded /admin — which needs no account, because the gate that
+// hides the dashboard is a React branch, not a server.
+//
+// THE BACKLOG, src/data/pipeline.js. #405 and #406 filed it as a WEIGHT
+// problem: a static import put 672 KB of engineering notes in Admin-*.js. #420
+// answered with `import('../data/pipeline')`, moving the bytes to their own
+// chunk fetched only when the Pipeline tab opens. That fixed the timing and
+// left the exposure untouched — a dynamically imported module is still a client
+// module. MEASURED on a real `npm run build`, anonymous, no login, no cookie,
+// no Authorization header:
+//
+//   GET /admin                    200      the HTML names the entry chunk
+//   GET /assets/index-*.js        200      names Admin-rjGyizH8.js
+//   GET /assets/Admin-*.js        200      names pipeline-DUbq1XL3.js
+//   GET /assets/pipeline-*.js     200      824,007 bytes / 319,711 gzip
+//
+// It carried the literal string `allow create: if true` — the unfixed Firestore
+// rule docs/OWNER-ACTIONS.md is still asking the founder to close — 23 mentions
+// of firestore.rules, 3 permission-denied diagnostics and 246 of "founder".
+//
+// THE MODULE BOARD, src/data/moduleBoard.js, WAS MISSED BY THE FIRST PASS, and
+// that is the more instructive half. It was a plain STATIC import here, so its
+// 20,332 bytes were inlined into Admin-*.js rather than given a chunk of their
+// own — and a guard written to look for the BACKLOG could not see it. Verbatim
+// from dist/assets/Admin-*.js on a build where the backlog was already gone:
+//
+//   nextSteps: ["Owner: verify aggregate analytics and Feedback reads after the
+//   published Firestore rules", "Do not assume the admin custom claim exists;
+//   resolve any permission-denied result explicitly", ...]
+//
+// Instructions addressed to the owner, per-module health, and a list of what is
+// known to be unfinished. It is a twentieth of the size, so the weight argument
+// barely applies; the trust argument applies in full.
+//
+// ── ONE REQUEST, BOTH BOARDS ───────────────────────────────────────────────
+//
+// They are one question — what is the state of this project — behind one gate,
+// so they are one payload. Two endpoints would be two things to keep in step,
+// and the Pipeline and Board tabs would each pay their own round trip.
+//
+// The promise is cached at MODULE scope rather than in a hook, because the two
+// boards are separate components on separate tabs: a per-component cache would
+// fetch 800 KB again every time the founder moved between them. A failure
+// clears the cache so the next tab switch is a real retry rather than a
+// replayed rejection.
+//
+// A ROUTE RATHER THAN A BUILD-TIME STRIP, deliberately. Stripping the notes and
+// keeping ids, titles and statuses would keep the board's shape and lose its
+// record — and the titles are the disclosure too ("firestore.rules lets anyone
+// create feedback documents directly" is a title, not a note). A generated JSON
+// was rejected because a generator can go stale, and an agent who edits either
+// module without re-running it would leave the founder's own board showing
+// yesterday's state with every check green.
+//
+// NEITHER MODULE MOVES. Every agent's composition scripts and several
+// tests/unit/*.test.js files import them by those exact paths.
+//
+// GUARDED AT BUILD LEVEL by tests/unit/admin-chunk-carries-no-backlog.test.js,
+// which derives the internal boards from src/data/ BY SHAPE rather than by name
+// and reads every emitted file for their row text — so a third board is covered
+// the day it is written, and an undeclared one fails the build rather than
+// passing quietly. Its previous form walked the chunk graph and asserted the
+// backlog was reachable only by a dynamic edge; it was green through both
+// disclosures above, because the edge kind was never the question.
+let internalBoardsPromise = null
+function loadInternalBoards() {
+  if (!internalBoardsPromise) {
+    internalBoardsPromise = (async () => {
+      // firebase is itself deferred, so this import is how every other authed
+      // fetch on this page reaches the current user's token.
+      const { auth: fbAuth } = await import('../utils/firebase')
+      const token = await fbAuth.currentUser?.getIdToken()
+      if (!token) throw new Error('not signed in')
+      const res = await fetch('/api/ai?backlog=1', { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json().catch(() => ({}))
+      // 404 is what requireAdmin answers a caller who is not the administrator
+      // — deliberately, so a prober learns nothing — so it is reported here as
+      // the refusal it is rather than as a missing page.
+      if (!res.ok) throw new Error(data.error || `the backlog endpoint answered ${res.status}`)
+      return data
+    })().catch((err) => { internalBoardsPromise = null; throw err })
+  }
+  return internalBoardsPromise
+}
+
+function useInternalBoards() {
+  const [boards, setBoards] = useState(null)
+  const [loadError, setLoadError] = useState('')
+  useEffect(() => {
+    let alive = true
+    loadInternalBoards().then(
+      (data) => { if (alive) setBoards(data) },
+      (err) => {
+        // Named in words rather than swallowed, and the ENDPOINT is named too.
+        // A board that silently rendered zero rows would read as "there is
+        // nothing here", which is the most misleading thing these surfaces
+        // could say; an error that does not say what it was talking to sends
+        // the next reader to the wrong half of the system.
+        console.error('[admin] /api/ai?backlog=1 did not return the internal boards:', err?.message || err)
+        if (alive) setLoadError(err?.message || String(err))
+      },
+    )
+    return () => { alive = false }
+  }, [])
+  return { boards, loadError }
+}
+
+/** Shared waiting / refusal states, so the two boards cannot drift apart. */
+function BoardGate({ loadError, what }) {
+  return (
+    <div className="adm-section">
+      <div className="adm-card">
+        <div className="adm-empty">
+          {loadError
+            ? <>Could not load {what} ({loadError}). This data is no longer shipped to the
+                browser — it was readable by anyone — so it reads GET /api/ai?backlog=1, which
+                only a verified administrator may call. Check you are signed in as the founder;
+                `vite preview` and `vite dev` serve no functions, so it cannot answer there.</>
+            : <>Loading {what}…</>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const BOARD_COLUMNS = [
   { id: 'live', label: 'Live', color: 'var(--ok)' },
   { id: 'in-progress', label: 'In Progress', color: 'var(--brand)' },
@@ -517,14 +647,22 @@ const HEALTH_COLOR = { good: 'var(--ok)', watch: 'var(--warn)', blocked: 'var(--
 function ModuleBoard() {
   const [area, setArea] = useState('all')
   const [search, setSearch] = useState('')
+  const { boards, loadError } = useInternalBoards()
 
-  const areas = ['all', ...Array.from(new Set(MODULE_BOARD.map(m => m.area)))]
+  // Defaulted, because this arrives as a JSON body rather than a module whose
+  // exports the bundler proved exist.
+  const modules = boards?.MODULE_BOARD || []
+  const areas = ['all', ...Array.from(new Set(modules.map(m => m.area)))]
   const q = search.trim().toLowerCase()
-  const filtered = MODULE_BOARD.filter(m => {
+  const filtered = modules.filter(m => {
     if (area !== 'all' && m.area !== area) return false
     if (q && !(`${m.name} ${m.summary} ${m.area}`.toLowerCase().includes(q))) return false
     return true
   })
+
+  // After the hooks, never before them — an early return above useState would
+  // change the hook order between renders.
+  if (!boards || loadError) return <BoardGate loadError={loadError} what="the module board" />
 
   return (
     <div className="adm-section">
@@ -616,127 +754,26 @@ const TODO_STATUS_COLOR = { todo: 'var(--t3)', doing: 'var(--brand)', review: 'v
 const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', partial: 'Partial', blocked: 'Blocked', deferred: 'Deferred', done: 'Done' }
 
 // Pipeline — the owner's ops view: current app condition, the workstreams
-// moving through the pipeline, and the prioritised next-to-do queue. Renders
-// from src/data/pipeline.js (no backend). Complements the Board tab, which
-// tracks each feature module.
+// moving through the pipeline, and the prioritised next-to-do queue.
+// Complements the Board tab above, which tracks each feature module.
 //
-// ── WHY THE DATA ARRIVES OVER THE WIRE AND NOT AS A MODULE ─────────────────
+// The data does NOT come from src/data/pipeline.js as a module. See the note
+// above useInternalBoards() for what an anonymous visitor could fetch while it
+// did, and why both internal boards are now one admin-gated request.
 //
-// src/data/pipeline.js is the engineering log: every note every agent has left,
-// as prose, inside the row objects this board renders. #405 and #406 filed it
-// as a WEIGHT problem — a static import put all of it in Admin-*.js, 776,482
-// bytes raw / 287,073 gzip — and #420 answered that with `import('../data/
-// pipeline')`, which moved the bytes into their own chunk fetched only when
-// this tab opens.
-//
-// THAT FIXED THE TIMING AND LEFT THE EXPOSURE UNTOUCHED. A dynamically imported
-// module is still a client module: rolldown emits it, Vercel serves it from
-// /assets, and nothing anywhere asks who is asking. MEASURED on a real
-// `npm run build`, anonymous, no login, no cookie, no Authorization header:
-//
-//   GET /admin                    200      the HTML names the entry chunk
-//   GET /assets/index-*.js        200      names Admin-rjGyizH8.js
-//   GET /assets/Admin-*.js        200      names pipeline-DUbq1XL3.js
-//   GET /assets/pipeline-*.js     200      824,007 bytes / 319,711 gzip
-//
-// The last one carried the literal string `allow create: if true` — the exact
-// unfixed Firestore rule docs/OWNER-ACTIONS.md is still asking the founder to
-// close — 23 mentions of firestore.rules, 3 permission-denied diagnostics, and
-// 246 of "founder". It was also the largest asset in the deploy by a wide
-// margin: 319,711 gzip against 140,310 for the app entry chunk.
-//
-// So the module is gone from the client graph entirely. The board now reads
-// GET /api/ai?backlog=1, which is gated on a VERIFIED ADMINISTRATOR by the same
-// requireAdmin() in api/_lib/admin.js that /api/ai?diag=1 uses — see the long
-// note above serveBacklog() in api/ai.js for why that route and not a new one
-// (api/ holds twelve functions and Vercel allows twelve) and not
-// api/verify-admin.js (founder-gated, so it could not ship today).
-//
-// MEASURED after: pipeline-*.js is not emitted at all. The deploy loses 824,007
-// raw / 319,711 gzip, and the largest asset is the entry chunk again.
-//
-// A ROUTE RATHER THAN A BUILD-TIME STRIP, deliberately. Emitting ids, titles and
-// statuses without the notes would keep the board's shape and lose its record —
-// and the titles are the disclosure too ("firestore.rules lets anyone create
-// feedback documents directly" is a title, not a note). A generated JSON was
-// rejected for the reason this file already gave: a generator can go stale, and
-// an agent who edits pipeline.js without re-running it would leave the founder's
-// own board showing yesterday's backlog with every check green.
-//
-// pipeline.js DOES NOT MOVE. Every agent's composition scripts and several
-// tests/unit/*.test.js files import it by that exact path, and
 // pipeline-board-renderable.test.js imports the same four exports this
-// component renders — so the board and its guard still read one source.
-//
-// GUARDED AT BUILD LEVEL by tests/unit/admin-chunk-carries-no-backlog.test.js,
-// which runs a real production build and reads EVERY emitted file for note text
-// sampled out of pipeline.js itself. Its previous form walked the chunk graph
-// and asserted the backlog was reachable only by a dynamic edge — it passed all
-// the way through the disclosure above, because a dynamic edge was never the
-// question. A comment asking the next agent not to re-import this would not
-// survive a refactor; that test will.
+// component renders, so the board and its guard still read one source.
 function PipelineBoard() {
   const [todoFilter, setTodoFilter] = useState('all')
-  const [board, setBoard] = useState(null)
-  const [loadError, setLoadError] = useState('')
+  const { boards, loadError } = useInternalBoards()
   const todoFilters = ['all', 'doing', 'todo', 'review', 'partial', 'blocked', 'deferred', 'done']
 
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      try {
-        // firebase is itself deferred, so this import is how every other authed
-        // fetch on this page reaches the current user's token.
-        const { auth: fbAuth } = await import('../utils/firebase')
-        const token = await fbAuth.currentUser?.getIdToken()
-        if (!token) throw new Error('not signed in')
-        const res = await fetch('/api/ai?backlog=1', { headers: { Authorization: `Bearer ${token}` } })
-        const data = await res.json().catch(() => ({}))
-        // 404 is what requireAdmin answers a caller who is not the
-        // administrator — deliberately, so a prober learns nothing — so it is
-        // reported here as the refusal it is rather than as a missing page.
-        if (!res.ok) throw new Error(data.error || `the backlog endpoint answered ${res.status}`)
-        if (alive) setBoard(data)
-      } catch (err) {
-        // Named in words rather than swallowed, and the ENDPOINT is named too.
-        // A board that silently rendered zero rows would read as "the backlog
-        // is empty", which is the most misleading thing this surface could say;
-        // an error that does not say what it was talking to sends the next
-        // reader to the wrong half of the system.
-        console.error('[admin] /api/ai?backlog=1 did not return the pipeline backlog:', err?.message || err)
-        if (alive) setLoadError(err?.message || String(err))
-      }
-    })()
-    return () => { alive = false }
-  }, [])
-
-  if (loadError) {
-    return (
-      <div className="adm-section">
-        <div className="adm-card">
-          <div className="adm-empty">
-            Could not load the backlog ({loadError}). The notes are no longer
-            shipped to the browser — they were readable by anyone — so this board
-            reads GET /api/ai?backlog=1, which only a verified administrator may
-            call. Check you are signed in as the founder; `vite preview` and
-            `vite dev` serve no functions, so it cannot answer there.
-          </div>
-        </div>
-      </div>
-    )
-  }
-  if (!board) {
-    return (
-      <div className="adm-section">
-        <div className="adm-card"><div className="adm-empty">Loading the backlog…</div></div>
-      </div>
-    )
-  }
+  if (!boards || loadError) return <BoardGate loadError={loadError} what="the backlog" />
 
   // Defaulted, because this arrives as a JSON body rather than a module whose
   // exports the bundler proved exist. A response missing a block renders an
   // empty column instead of throwing the whole dashboard away.
-  const { APP_CONDITION = [], PIPELINE_STAGES = [], PIPELINE_PROCESSES = [], NEXT_TODO = [] } = board
+  const { APP_CONDITION = [], PIPELINE_STAGES = [], PIPELINE_PROCESSES = [], NEXT_TODO = [] } = boards
   const visibleTodos = NEXT_TODO.filter(t => todoFilter === 'all' || t.status === todoFilter)
 
   return (

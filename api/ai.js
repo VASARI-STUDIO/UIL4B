@@ -1004,13 +1004,23 @@ function timingSafeEqual(a, b) {
   return nodeTimingSafeEqual(av, bv)
 }
 
-// ── The founder's Pipeline board, served rather than shipped ────────────────
+// ── The founder's internal boards, served rather than shipped ───────────────
 //
-// src/data/pipeline.js is the engineering backlog: 185 rows whose `note` fields
-// are long, candid and written for us. It used to reach the Admin dashboard by
-// `import('../data/pipeline')`, which made it a CLIENT MODULE — so rolldown
-// emitted it as dist/assets/pipeline-*.js and Vercel served it as a public
-// static asset. MEASURED against a real `npm run build`, anonymous, no login:
+// TWO data modules describe the PROJECT rather than the product, and both used
+// to ship to the browser. This one endpoint returns both, because they are one
+// question ("what is the state of this project") behind one gate, and because
+// two requests would be two things to keep in step.
+//
+//   src/data/pipeline.js    the engineering backlog — 185 rows whose `note`
+//                           fields are long, candid and written for us.
+//   src/data/moduleBoard.js the module status board — 20 entries carrying
+//                           `summary`, `recentChanges`, `nextSteps`, `health`
+//                           and dated owner actions per module.
+//
+// THE FIRST ONE reached the Admin dashboard by `import('../data/pipeline')`,
+// which made it a CLIENT MODULE — so rolldown emitted it as
+// dist/assets/pipeline-*.js and Vercel served it as a public static asset.
+// MEASURED against a real `npm run build`, anonymous, no login:
 //
 //   GET /admin                    200   the HTML names the entry chunk
 //   GET /assets/index-*.js        200   names Admin-rjGyizH8.js
@@ -1023,10 +1033,23 @@ function timingSafeEqual(a, b) {
 // 246 mentions of the founder. #420 moved it behind a dynamic import, which
 // fixed WHEN it was fetched and did nothing at all about WHO could fetch it.
 //
-// So the board's data now arrives from here, behind the same verified-admin
-// check /api/ai?diag=1 already uses, and the module never enters the client
-// graph. tests/unit/admin-chunk-carries-no-backlog.test.js reads every emitted
-// file and fails the build if a single note string is back in the output.
+// THE SECOND ONE was a plain STATIC import in Admin.jsx, so its 20,332 bytes
+// were inlined straight into the Admin chunk and fetched by anyone who loaded
+// /admin. Measured on the same build, in dist/assets/Admin-*.js verbatim:
+//
+//   nextSteps: ["Owner: verify aggregate analytics and Feedback reads after
+//   the published Firestore rules", "Do not assume the admin custom claim
+//   exists; resolve any permission-denied result explicitly", ...]
+//
+// Instructions addressed to the owner, plus per-module health and what is known
+// to be unfinished. Much smaller, so the weight argument barely applies — the
+// trust argument applies in full, and it is the same class of disclosure.
+//
+// So both boards now arrive from here, behind the same verified-admin check
+// /api/ai?diag=1 already uses, and neither module enters the client graph.
+// tests/unit/admin-chunk-carries-no-backlog.test.js DERIVES the internal boards
+// from src/data/ by shape and fails the build if a row of any of them is back
+// in the output — so a third one is covered the day it is written.
 //
 // ── WHY THIS ROUTE AND NOT A NEW ONE ───────────────────────────────────────
 // api/ holds exactly twelve deployed functions and Vercel allows twelve on this
@@ -1058,21 +1081,25 @@ async function serveBacklog(req, res) {
   if (!admin.ok) return res.status(admin.status === 401 ? 404 : admin.status).json({ error: 'Not found' })
 
   try {
-    const mod = await import('../src/data/pipeline.js')
-    // Named explicitly rather than spread, so a future export in that module
+    const [pipeline, modules] = await Promise.all([
+      import('../src/data/pipeline.js'),
+      import('../src/data/moduleBoard.js'),
+    ])
+    // Named explicitly rather than spread, so a future export in either module
     // cannot be published by accident just because it was added to the file.
     return res.status(200).json({
-      APP_CONDITION: mod.APP_CONDITION,
-      PIPELINE_STAGES: mod.PIPELINE_STAGES,
-      PIPELINE_PROCESSES: mod.PIPELINE_PROCESSES,
-      NEXT_TODO: mod.NEXT_TODO,
+      APP_CONDITION: pipeline.APP_CONDITION,
+      PIPELINE_STAGES: pipeline.PIPELINE_STAGES,
+      PIPELINE_PROCESSES: pipeline.PIPELINE_PROCESSES,
+      NEXT_TODO: pipeline.NEXT_TODO,
+      MODULE_BOARD: modules.MODULE_BOARD,
     })
   } catch (err) {
     // Named in words rather than swallowed. A board that silently rendered zero
     // rows would read as "the backlog is empty", which is the most misleading
     // thing this surface could say.
-    console.error('ai: could not load the pipeline backlog', { error: err?.message })
-    return res.status(500).json({ error: `Could not load the backlog: ${err?.message || 'unknown error'}` })
+    console.error('ai: could not load the internal boards', { error: err?.message })
+    return res.status(500).json({ error: `Could not load the boards: ${err?.message || 'unknown error'}` })
   }
 }
 

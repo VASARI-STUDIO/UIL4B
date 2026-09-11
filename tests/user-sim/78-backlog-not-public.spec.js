@@ -45,31 +45,45 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../../src/data/pipeline.js'
+import { MODULE_BOARD } from '../../src/data/moduleBoard.js'
 
-const BOARD = { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO }
+// Exactly the payload api/ai.js builds in serveBacklog(). BOTH internal boards:
+// the module board was the one the first pass missed, because it was a plain
+// static import that landed inside Admin-*.js rather than a chunk of its own.
+const BOARD = { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO, MODULE_BOARD }
 
 // The endpoint, matched on the URL object rather than a glob: a glob has to
 // spell the query string, and `?` is a wildcard in Playwright's matcher, so
 // a query-string glob would silently also claim /api/aiXbacklog=1.
 const isBacklogEndpoint = (url) => url.pathname === '/api/ai' && url.searchParams.has('backlog')
 
-// Long printable-ASCII runs out of the real rows, used as needles for the
-// anonymous walk. Quotes, backticks, backslashes and dollars are excluded
-// because those are escaped inside a JavaScript string literal, so a needle
-// spanning one would miss a leak that is plainly there — the unit guard's
-// control caught exactly that.
+// Long printable-ASCII runs out of the real rows of BOTH boards, used as
+// needles for the anonymous walk. Quotes, backticks, backslashes and dollars
+// are excluded because those are escaped inside a JavaScript string literal, so
+// a needle spanning one would miss a leak that is plainly there — the unit
+// guard's control caught exactly that. `nextSteps` and `recentChanges` are
+// arrays of strings, and they are where the module board's owner instructions
+// live, so they are read element by element rather than skipped.
 const ASCII_RUN = /[\x20-\x21\x23\x25-\x26\x28-\x5B\x5D-\x5F\x61-\x7E]{48,}/
 const needles = []
-for (const row of [...NEXT_TODO, ...PIPELINE_PROCESSES]) {
-  for (const field of ['note', 'title', 'summary', 'name']) {
-    const m = typeof row[field] === 'string' ? ASCII_RUN.exec(row[field]) : null
-    if (m) needles.push({ id: row.id, field, text: m[0].slice(0, 64) })
+for (const [board, rows] of [['pipeline', [...NEXT_TODO, ...PIPELINE_PROCESSES]], ['moduleBoard', MODULE_BOARD]]) {
+  for (const row of rows) {
+    for (const field of ['note', 'title', 'summary', 'name', 'nextSteps', 'recentChanges']) {
+      const value = row[field]
+      const texts = typeof value === 'string' ? [value]
+        : Array.isArray(value) ? value.filter((v) => typeof v === 'string') : []
+      for (const text of texts) {
+        const m = ASCII_RUN.exec(text)
+        if (m) needles.push({ board, id: row.id, field, text: m[0].slice(0, 64) })
+      }
+    }
   }
 }
 
-// One row, chosen deterministically, whose note is long enough to be
-// unmistakable on screen. Used by the render test below and by nothing else.
+// One row of each board, chosen deterministically, whose prose is long enough
+// to be unmistakable on screen. Used by the render tests and nothing else.
 const SAMPLE = NEXT_TODO.find((t) => typeof t.note === 'string' && t.note.length > 120)
+const SAMPLE_MODULE = MODULE_BOARD.find((m) => m.nextSteps?.some((s) => s.length > 48))
 
 test('the founder opens the Pipeline tab and gets the whole board — rows, notes and statuses', async ({ page }) => {
   watch(page, 'the founder reading the backlog')
@@ -130,6 +144,50 @@ test('the founder opens the Pipeline tab and gets the whole board — rows, note
   ).toMatch(/^Bearer .+/)
 })
 
+test('the Board tab renders the module board from the same one request', async ({ page }) => {
+  // THE SECOND BOARD, and the one the first pass missed. src/data/moduleBoard.js
+  // was a plain STATIC import in Admin.jsx, so its 20,332 bytes were inlined
+  // into Admin-*.js — no chunk of its own, nothing for a pipeline-shaped guard
+  // to notice — and dist/assets/Admin-*.js carried, fetchable with no auth:
+  //   nextSteps: ["Owner: verify aggregate analytics and Feedback reads after
+  //   the published Firestore rules", ...]
+  //
+  // It now comes from the SAME payload as the backlog, so this also proves the
+  // shared cache: one request serves both tabs.
+  watch(page, 'the founder reading the module board')
+
+  const requests = []
+  await page.route(isBacklogEndpoint, (route) => { requests.push(route.request().url()); return route.fulfill({ json: BOARD }) })
+
+  await signIn(page, { admin: true })
+  await go(page, '/admin')
+  await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Pipeline' }).click()
+  await expect(page.getByText('App condition')).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Board' }).click()
+  await expect(page.getByText(`Module Board (${MODULE_BOARD.length})`)).toBeVisible()
+
+  // The owner-facing prose, on screen, in its own card — the exact class of
+  // string that was public. A card with a name and a status would pass a count.
+  const card = page.locator('.adm-section').filter({ hasText: SAMPLE_MODULE.name }).first()
+  const step = SAMPLE_MODULE.nextSteps.find((s) => s.length > 48)
+  expect(
+    (await card.innerText()).replace(/\s+/g, ' '),
+    `the card for ${SAMPLE_MODULE.id} rendered without its next steps, so the founder has a kanban of `
+    + 'names rather than the board',
+  ).toContain(step.replace(/\s+/g, ' ').slice(0, 60))
+
+  // ONE request for both tabs. Two would mean the cache is per-component and
+  // the founder pays for 800 KB again on every tab switch.
+  expect(
+    requests.length,
+    `the endpoint was called ${requests.length} times for two tabs — the shared cache in `
+    + 'loadInternalBoards() is not shared, so moving between Pipeline and Board refetches everything',
+  ).toBe(1)
+})
+
 test('when the endpoint refuses, the board says so instead of showing an empty backlog', async ({ page }) => {
   // A board that silently rendered zero rows would read as "there is nothing in
   // the backlog", which is the most misleading thing this surface could say —
@@ -150,6 +208,12 @@ test('when the endpoint refuses, the board says so instead of showing an empty b
     await page.locator('.adm-pipe-todo').count(),
     'the board rendered rows on a refused request, so this failure state is not the one that ships',
   ).toBe(0)
+
+  // BOTH tabs degrade, not just the one that was fixed first. The module board
+  // shared the static import and now shares the gate, so it has to share the
+  // honest failure too.
+  await page.getByRole('tab', { name: 'Board' }).click()
+  await expect(page.getByText(/Could not load the module board/i)).toBeVisible()
 })
 
 test('a signed-out visitor walking the real chunk graph reaches no backlog text at all', async ({ page }) => {
