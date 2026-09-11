@@ -62,7 +62,7 @@ export default function CheckoutReturn() {
         {state === 'loading' && (
           <div className="card checkout-return-card">
             <div className="checkout-spinner" />
-            <h2>Confirming your checkout…</h2>
+            <h1>Confirming your checkout…</h1>
             <p>This only takes a moment.</p>
           </div>
         )}
@@ -72,7 +72,7 @@ export default function CheckoutReturn() {
             <div className="checkout-success-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             </div>
-            <h2>{activationPending ? 'Payment received' : 'You’re on UIL4B Pro 🎉'}</h2>
+            <h1>{activationPending ? 'Payment received' : 'You’re on UIL4B Pro 🎉'}</h1>
             <p>
               {email ? <>A confirmation has been sent to <strong>{email}</strong>. </> : null}
               {checkoutMode !== 'payment'
@@ -105,7 +105,7 @@ export default function CheckoutReturn() {
             <div className="checkout-error-icon">
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
             </div>
-            <h2>We couldn’t confirm your checkout</h2>
+            <h1>We couldn’t confirm your checkout</h1>
             <p>If you completed payment, activation may still be processing. Unpaid one-off checkouts never grant Pro access.</p>
             <div className="checkout-return-actions">
               {/* Was "Try again" → /checkout. With no ?plan on it, Checkout
