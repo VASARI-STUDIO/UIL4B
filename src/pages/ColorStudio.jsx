@@ -3,6 +3,15 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { generateHarmony, generateTintScale, textColorForBg, hslToHex, hexToHsl, contrastRatio, hexToRgb, mixHex, describeColor, autoTonalPalette, applyAdjust, roleHueArcs, semanticRamp } from '../utils/colors'
 import { useProject } from '../contexts/ProjectContext'
 import { useExport } from '../contexts/ExportContext'
+// The keyboard + dismissal contract every non-modal popover in this app owes
+// its user (Escape closes and hands focus back, a press outside closes, opening
+// moves focus in, tabbing past either end closes). The Add-to-Project panel
+// below held none of it.
+import usePopover from '../hooks/usePopover'
+// The free-tier cap's refusal, rendered where it was thrown. Shared with the
+// Palette Builder and /projects so one refusal cannot be worded — or styled —
+// two ways on two surfaces.
+import SaveRefusal from '../components/SaveRefusal'
 import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 // The `semantic-color` page stylesheet. Imported here rather than from global.css so
@@ -868,6 +877,45 @@ ${stateVars}
 
   const [saveProjectName, setSaveProjectName] = useState('')
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
+  // THE CAP'S REFUSAL, HELD UNDER THE FIELD IT REFUSED.
+  //
+  // It used to go out through `toast?.(err.message)`, which is the SUCCESS
+  // toast: `class="toast toast-success show"`, on a white ground, carrying
+  // "Free plan saves up to 3 projects — go Pro for unlimited." with nothing to
+  // press. That is the exact fault #436 named and #437 fixed on the Palette
+  // Builder and on /projects; this page still had it. Measured 2026-09-11,
+  // signed in free with three saved projects, 1440x900: the message arrived as
+  // toast-success, the panel stayed open, the typed name stayed in the field,
+  // and no way to Pro was offered anywhere on screen.
+  //
+  // Same treatment as the other two surfaces now: ProjectContext's own words,
+  // under the field, with the way forward as a link — SaveRefusal, so the three
+  // cannot drift apart.
+  const [saveError, setSaveError] = useState('')
+
+  // The project-name field's accessible name IS its placeholder, written once
+  // so the two cannot disagree. A placeholder is not a name: measured on this
+  // page the input reported no accessible name at all, so a screen reader read
+  // "edit text, blank" for the only field in the panel.
+  const SAVE_NAME_LABEL = 'Project name'
+
+  const closeSaveMenu = useCallback(() => { setSaveMenuOpen(false); setSaveError('') }, [])
+  const { triggerRef: saveTriggerRef, popRef: savePopRef } = usePopover(saveMenuOpen, closeSaveMenu)
+
+  // One commit path for the panel's two ways to save (Enter in the field, and
+  // the Save button), so a refusal cannot be handled one way by one and another
+  // way by the other — which is how the toast survived on one of them before.
+  const commitSaveProject = useCallback(() => {
+    const name = saveProjectName.trim()
+    if (!name) return
+    try {
+      saveProject(name)
+      setSaveProjectName(''); setSaveError(''); setSaveMenuOpen(false)
+      toast?.('Project saved')
+    } catch (err) {
+      setSaveError(err?.message || 'Couldn’t save')
+    }
+  }, [saveProjectName, saveProject, toast])
 
 
 
@@ -978,42 +1026,79 @@ ${stateVars}
         <div className="stc-hero-actions">
           <button type="button" className="stc-copy-btn" onClick={copyStateTokens}>Copy all CSS variables</button>
         </div>
+        {/* SAVE / LOAD — THIRTY-ONE INLINE STYLE OBJECTS UNTIL 2026-09-11.
+            ------------------------------------------------------------------
+            Every value in this block used to be typed at the call site:
+            `fontSize: 10`, `padding: '3px 10px'`, `letterSpacing: '.08em'`,
+            `width: 280`. That is the failure principle-design-tokens names —
+            "page-level code should rarely depend directly on primitives" — and
+            it is not only a tidiness question. `padding:'3px 10px', fontSize:10`
+            beat `.btn-s`, so the Load chips measured 99.3x22.0 and 101.1x22.0
+            (1440x900, signed in free with two projects) against a 24px minimum,
+            and the panel was the only region on the page that did not look like
+            the rest of it.
+
+            The classes are in src/styles/pages/semantic-color.css, off the same
+            tokens every other block here uses, and every control clears 24px. */}
         {canSaveProjects && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center', position: 'sticky', bottom: 16, zIndex: 20, background: 'var(--card)', padding: '10px 14px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--warm-shadow-lg)' }}>
-            <button className="btn btn-accent btn-s" onClick={() => setSaveMenuOpen(!saveMenuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="stc-save">
+            <button
+              type="button"
+              ref={saveTriggerRef}
+              className="btn btn-accent btn-s stc-save-trigger"
+              aria-expanded={saveMenuOpen}
+              aria-haspopup="dialog"
+              aria-controls="stc-save-panel"
+              onClick={() => (saveMenuOpen ? closeSaveMenu() : setSaveMenuOpen(true))}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
               </svg>
               Add to Project
             </button>
             {projects.length > 0 && (
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600 }}>Load:</span>
+              <div className="stc-save-load">
+                <span className="stc-save-load-label">Load:</span>
                 {projects.slice(-5).map(p => (
-                  <button key={p.id} className="btn btn-s" onClick={() => { loadProject(p.id); toast?.('Loaded: ' + p.name) }}
-                    style={{ padding: '3px 10px', fontSize: 10 }}
+                  <button key={p.id} type="button" className="btn btn-s stc-save-chip"
+                    onClick={() => { loadProject(p.id); toast?.('Loaded: ' + p.name) }}
                   >{p.name}</button>
                 ))}
               </div>
             )}
             {saveMenuOpen && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--warm-shadow-lg)', padding: 14, marginTop: 4, width: 280 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 8 }}>Add current design to project</div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input type="text" value={saveProjectName} onChange={e => setSaveProjectName(e.target.value)}
-                    placeholder="Project name..." style={{ flex: 1, fontSize: 12 }}
-                    onKeyDown={e => { if (e.key === 'Enter' && saveProjectName.trim()) { try { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); toast?.('Project saved') } catch (err) { toast?.(err.message || 'Couldn’t save') } } }}
+              <div
+                id="stc-save-panel"
+                ref={savePopRef}
+                className="stc-save-panel"
+                role="dialog"
+                aria-label="Add current design to project"
+                tabIndex={-1}
+              >
+                <div className="stc-save-title">Add current design to project</div>
+                <div className="stc-save-row">
+                  <input type="text" className="stc-save-input" value={saveProjectName}
+                    onChange={e => { setSaveProjectName(e.target.value); if (saveError) setSaveError('') }}
+                    placeholder={`${SAVE_NAME_LABEL}...`} aria-label={SAVE_NAME_LABEL}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitSaveProject() } }}
                   />
-                  <button className="btn btn-accent btn-s" onClick={() => { if (saveProjectName.trim()) { try { saveProject(saveProjectName); setSaveProjectName(''); setSaveMenuOpen(false); toast?.('Project saved') } catch (err) { toast?.(err.message || 'Couldn’t save') } } }}
-                    style={{ padding: '4px 12px', fontSize: 11 }}>Save</button>
+                  <button type="button" className="btn btn-accent btn-s stc-save-go" onClick={commitSaveProject}>Save</button>
                 </div>
+                {saveError && <SaveRefusal message={saveError} testId="semantic-save-refusal" />}
                 {projects.length > 0 && (
                   <>
-                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t3)', marginTop: 12, marginBottom: 6 }}>Overwrite existing</div>
+                    <div className="stc-save-sub">Overwrite existing</div>
                     {projects.slice(-5).map(p => (
-                      <button key={p.id} onClick={() => { overwriteProject(p.id); setSaveMenuOpen(false); toast?.('Updated: ' + p.name) }}
-                        style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '6px 0', fontSize: 11, color: 'var(--t1)', cursor: 'pointer', fontFamily: 'var(--font)', borderBottom: '1px solid var(--border)' }}
-                      >{p.name} <span style={{ fontSize: 9, color: 'var(--t3)' }}>{new Date(p.updatedAt).toLocaleDateString()}</span></button>
+                      <button key={p.id} type="button" className="stc-save-item"
+                        onClick={() => {
+                          // An overwrite replaces a record that already exists,
+                          // so the cap cannot refuse it — but ProjectContext
+                          // still throws on a missing record, and a failure has
+                          // never been a success. Error toast, not the green one.
+                          try { overwriteProject(p.id); closeSaveMenu(); toast?.('Updated: ' + p.name) }
+                          catch (err) { toast?.(err?.message || 'Couldn’t save', 'error') }
+                        }}
+                      >{p.name} <span className="stc-save-item-date">{new Date(p.updatedAt).toLocaleDateString()}</span></button>
                     ))}
                   </>
                 )}
@@ -1169,7 +1254,49 @@ ${stateVars}
                   <strong>{themeLabel}</strong>
                   <span>{activeStateBundle?.name || 'Custom mix'} bundle</span>
                 </div>
-                <div className="stc-scene-list">
+                {/* THE SCENES ARE A PICTURE OF AN INTERFACE, NOT AN INTERFACE.
+                    ----------------------------------------------------------
+                    Each stack renders a real <input>, a real switch and three
+                    real <button>s so the roles can be seen doing their job on
+                    the components they actually govern. They do nothing, and
+                    the list is rendered TWICE (light and dark), so a screen
+                    reader user met eight operable controls that go nowhere —
+                    "Project slug, edit text, aurora-design-system", "Use
+                    anyway, button", "Update card, button", "Learn more,
+                    button" — and heard the whole set a second time.
+                    `tabIndex={-1}` had taken them out of the tab order only.
+
+                    They were also counted as targets, and they fail: measured
+                    2026-09-11 at every width from 320 to 1920 in both themes,
+                    `.stc-sc-ghost` is 71.7x21.0 and `.stc-sc-link` 54.3x14.0
+                    against WCAG 2.5.8's 24px minimum. A control that cannot be
+                    operated is not a control to enlarge; it is a control that
+                    should not have claimed to be one.
+
+                    `inert` takes the whole depiction out of the accessibility
+                    tree and out of pointer reach in one attribute, the way
+                    Toast.jsx already uses it for a hidden toast. Nothing is
+                    lost to a non-visual reader: the section's own paragraph 40
+                    lines above says what the scenes demonstrate ("One component
+                    per role, on the same surfaces you ship on … Each carries a
+                    symbol and a message, so meaning never depends on colour
+                    alone"), and that sentence is unchanged and still read.
+
+                    This is the treatment the Contrast Checker already gives the
+                    same problem — its preview's buttons are `<span
+                    class="cc-spec-btn">`, never <button> — so the two colour
+                    surfaces now answer "how do I draw a control?" the same way.
+                    Mobbin, read before the change: Salesforce Experience
+                    Builder, Outseta Embeds and Ferndesk all render the live
+                    preview as a depiction rather than an operable form.
+
+                    `tabIndex={-1}` stays on the scene controls underneath as
+                    the fallback for a browser without `inert`.
+
+                    NOTHING PAINTED MOVES: there is no [inert] rule in any
+                    stylesheet in this repo, so 64-computed-style-snapshot's
+                    frozen `.stc-sc-*` entries for this route are unaffected. */}
+                <div className="stc-scene-list" inert>
                   {SEMANTIC_SCENES.map(({ role, render }) => (
                     <div className="stc-scene" key={role} ref={semanticSceneRef(statePreview[role])}>
                       {render()}
