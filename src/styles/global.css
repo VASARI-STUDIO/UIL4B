@@ -2012,6 +2012,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .checkout-plan-amount{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--t0);line-height:1;display:block}
 .checkout-plan-per{font-size:11px;color:var(--t2)}
 .checkout-plan-note{font-size:11px;color:var(--accent-strong);font-weight:600;margin-top:14px}
+.checkout-price-retry{align-self:flex-start;margin-top:10px}
 .checkout-trial{display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;border-radius:var(--radius);background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok-strong);font-size:12px;font-weight:600}
 .checkout-features{display:flex;flex-direction:column;gap:10px;margin:18px 0 0;padding:18px 0 0;border-top:1px solid var(--border);list-style:none}
 .checkout-features li{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--t1);line-height:1.45}
@@ -2026,7 +2027,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 /* Return / confirmation page */
 .checkout-return{display:flex;justify-content:center;padding:24px 0}
 .checkout-return-card{max-width:460px;width:100%;padding:40px 32px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
-.checkout-return-card h2{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--t0);margin-top:8px}
+.checkout-return-card h1{font-size:22px;font-weight:700;letter-spacing:-.02em;color:var(--t0);margin-top:8px}
 .checkout-return-card p{font-size:14px;color:var(--t2);line-height:1.6;max-width:380px}
 .checkout-return-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}
 .checkout-return-ref{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);max-width:100%}
