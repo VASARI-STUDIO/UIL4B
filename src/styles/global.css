@@ -11722,11 +11722,27 @@ html[data-reduced-motion="true"] .quota-fill{transition:none}
 .fb-input,.fb-textarea{width:100%}
 .fb-textarea{min-height:120px;resize:vertical}
 .fb-error{margin:0;font-size:12.5px;line-height:1.5;color:var(--err-strong)}
+/* The return-address hint, and the signed-in equivalent of it. Both sit 6px
+   under their field at the same size and ink as `.fb-error`, so the field's
+   helper line and its error line occupy the same slot and swapping one for the
+   other never moves the submit button.
+
+   `.fb-sending-as` is the class FeedbackModal.jsx already uses for this exact
+   sentence. It is REUSED rather than renamed — one fact, one name — and only
+   its size is restated, because the modal's 11px belongs to a dense dialog and
+   this page's helper scale is 12.5px. */
+.fb-form .fb-hint,.fb-form .fb-sending-as{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--t2)}
+.fb-form .fb-error{margin-top:6px}
 .fb-submit{align-self:flex-start}
 .fb-done{padding:40px 20px;text-align:center}
 .fb-done-mark{width:48px;height:48px;border-radius:50%;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
 .fb-done-title{font-size:18px;font-weight:700;margin-bottom:6px}
 .fb-done-sub{font-size:13px;color:var(--t2)}
+/* Whether a reply can come back. Same size as the line above it, one ink step
+   darker, because it is the part of the confirmation a reader has not seen
+   before. */
+.fb-done-reply{margin:8px 0 0;font-size:13px;line-height:1.55;color:var(--t1)}
+.fb-done-reply strong{font-weight:650;color:var(--t0)}
 .fb-again{margin-top:16px}
 
 /* ── Focus rings on controls that sit ON a user-chosen colour ───────────────
