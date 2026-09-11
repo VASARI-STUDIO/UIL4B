@@ -143,14 +143,80 @@ function RatioThumb({ w, h, big }) {
 
 // Custom dropdown: a native <select> can't render the aspect-ratio thumbnails,
 // so this is a minimal listbox — click/Escape/outside-click, nothing exotic.
+//
+// IT KEEPS THE KEYBOARD CONTRACT ITS ROLES PROMISE.
+// The popup is `role="listbox"` and every row is `role="option"`, which is what
+// a screen reader announces ("listbox, 14 items, option 1 of 14") and therefore
+// what it tells the reader to press: the arrow keys. Rendered 2026-09-11 at
+// 1280 in light, ArrowDown on the open panel moved nothing — the rows are
+// <button>s, so Tab reached them one at a time and nothing else did. That is
+// operable but it is not the widget the page said it was, and the Devices list
+// is fourteen Tab presses deep.
+//
+// So the arrow keys now do the moving, Home and End reach the ends, and the
+// trigger opens on ArrowDown/ArrowUp with focus landing on the first or last
+// row. Escape and outside-press are unchanged — both already closed the panel
+// and returned focus to the trigger, which is the half that was right. Focus is
+// moved rather than tracked with aria-activedescendant because each row is a
+// real focusable button: moving the real focus is what its focus ring, its
+// scroll-into-view and its Enter/Space already respond to.
 function PresetSelect({ value, placeholder, options, onPick }) {
   const [openSel, setOpenSel] = useState(false)
   const wrap = useRef(null)
+  const pop = useRef(null)
+  const trigger = useRef(null)
+
+  // Move focus among the rows. `to` is an index, clamped rather than wrapped:
+  // a list of fourteen devices is a list, and running off the end of a list
+  // back to its start is how someone loses their place in it.
+  const focusRow = (to) => {
+    const rows = pop.current ? [...pop.current.querySelectorAll('[role=option]')] : []
+    if (!rows.length) return
+    rows[Math.max(0, Math.min(rows.length - 1, to))]?.focus()
+  }
+  const rowIndex = () => {
+    const rows = pop.current ? [...pop.current.querySelectorAll('[role=option]')] : []
+    return rows.indexOf(document.activeElement)
+  }
+
+  const onTriggerKeyDown = (event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    event.preventDefault()
+    const last = event.key === 'ArrowUp'
+    if (!openSel) setOpenSel(true)
+    // One frame, so the panel this is about to reach into exists.
+    requestAnimationFrame(() => focusRow(last ? options.length - 1 : 0))
+  }
+
+  const onListKeyDown = (event) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const i = rowIndex()
+    if (event.key === 'Home') return focusRow(0)
+    if (event.key === 'End') return focusRow(options.length - 1)
+    return focusRow(event.key === 'ArrowDown' ? i + 1 : i - 1)
+  }
 
   useEffect(() => {
     if (!openSel) return undefined
     const onDoc = (e) => { if (wrap.current && !wrap.current.contains(e.target)) setOpenSel(false) }
-    const onKey = (e) => { if (e.key === 'Escape') setOpenSel(false) }
+    // ESCAPE PUTS FOCUS BACK ON THE TRIGGER, and it has to now that the arrow
+    // keys move focus INTO the panel. Closing a subtree that holds the focused
+    // element sends focus to <body>, which is the end of the keyboard road: the
+    // next Tab restarts from the top of the document, and Enter on the control
+    // you were just using does nothing. It was invisible before only because
+    // focus never left the trigger. Same contract usePopover gives every other
+    // popover in this app, and #435 gave the emoji skin-tone panel.
+    //
+    // Only when the focus is ours: this is a document listener, so an Escape
+    // pressed with focus somewhere else on the page must close the panel
+    // without dragging the user back to it.
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      const ours = wrap.current?.contains(document.activeElement)
+      setOpenSel(false)
+      if (ours) trigger.current?.focus()
+    }
     document.addEventListener('pointerdown', onDoc)
     document.addEventListener('keydown', onKey)
     return () => {
@@ -163,9 +229,11 @@ function PresetSelect({ value, placeholder, options, onPick }) {
   return (
     <div className="arc-select" ref={wrap}>
       <button
+        ref={trigger}
         type="button" className="arc-select-btn"
         aria-haspopup="listbox" aria-expanded={openSel}
         onClick={() => setOpenSel(v => !v)}
+        onKeyDown={onTriggerKeyDown}
       >
         {sel
           ? (
@@ -181,12 +249,15 @@ function PresetSelect({ value, placeholder, options, onPick }) {
         <svg className="arc-select-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
       </button>
       {openSel && (
-        <div className="arc-select-pop" role="listbox" aria-label={placeholder}>
+        <div className="arc-select-pop" role="listbox" aria-label={placeholder} ref={pop} onKeyDown={onListKeyDown}>
           {options.map(o => (
             <button
               key={o.name} type="button" role="option" aria-selected={o.name === value}
               className={`arc-opt${o.name === value ? ' on' : ''}`}
-              onClick={() => { onPick(o); setOpenSel(false) }}
+              /* Picking a row closes the panel the row lives in, so the same
+                 focus-to-body problem applies to a keyboard Enter as to
+                 Escape. The trigger is where the choice is now shown. */
+              onClick={() => { onPick(o); setOpenSel(false); trigger.current?.focus() }}
             >
               <span className="arc-opt-row">
                 <RatioThumb w={o.w} h={o.h} />
