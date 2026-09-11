@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
-import { useSubscription } from '../contexts/SubscriptionContext'
 import { useAuth } from '../contexts/AuthContext'
 import { useClipboard } from '../hooks/useClipboard'
 import { isSvg } from '../utils/imageProcessing'
@@ -352,7 +351,6 @@ function NewProjectModal({ folders, onClose, onCreate, error }) {
 
 export default function Projects({ toast }) {
   const navigate = useNavigate()
-  const { isPro } = useSubscription()
   const { loading: authLoading } = useAuth()
   const copy = useClipboard(toast)
   const {
@@ -390,7 +388,6 @@ export default function Projects({ toast }) {
   const [showNewModal, setShowNewModal] = useState(false)
   const [view, setView] = useState('mine')
   const FOLDERS = ['all', 'brand', 'app', 'marketing', 'personal']
-  const folderLimit = isPro ? 10 : 3
   const [folderMap, setFolderMap] = useState(() => {
     try { return JSON.parse(localStorage.getItem('vs-project-folders') || '{}') } catch { return {} }
   })
@@ -758,13 +755,29 @@ export default function Projects({ toast }) {
                 {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
-            <span className="proj-folder-note">
-              {isPro ? (
-                <>{folderLimit} folders</>
-              ) : (
-                <>{folderLimit} folders · <NavLink to="/plans">Upgrade for 10</NavLink></>
-              )}
-            </span>
+            {/* WAS "3 folders · Upgrade for 10" (Pro: "10 folders"), removed
+                2026-09-11 because every part of it was false.
+
+                FOLDERS on line 392 is a FIXED array — all, brand, app,
+                marketing, personal. There is no folder-creation control
+                anywhere in the repository (grep: no addFolder, no
+                createFolder, no newFolder), so the set is the same four for
+                every account that has ever existed. The `folderLimit` that fed
+                this sentence was read by nothing else in the codebase.
+
+                So a free user read "3 folders" while looking at four folder
+                chips one line to the left, and "Upgrade for 10" offered ten of
+                something Pro does not get either: paying changed this string to
+                "10 folders" and changed nothing else on the page. An invented
+                quota, sold, on the surface where a user's own work lives.
+
+                Nothing replaces it. The chips say what the folders are, and the
+                one quota this page states — "3 of 3 projects" in the header —
+                is real, enforced by ProjectContext, and stays. Mobbin's corpus
+                agrees that a counter beside filter chips is not a pattern:
+                Canva's Projects, Todoist and Airtable all carry bare chips, and
+                Toggl Track's one counter ("0 of 10,000 USD") tracks a budget
+                the product actually enforces. */}
           </div>
           <div className="proj-toolbar">
             <div className="proj-search">
