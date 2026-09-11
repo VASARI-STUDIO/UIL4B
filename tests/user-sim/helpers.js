@@ -489,9 +489,12 @@ const READY_BACKSTOP_MS = 20000
  * `own` is the route's OWN content — `main` plus any open modal — with the
  * shared chrome excluded, which is the measurement `expectRendered` used to get
  * wrong. The modal half is not a special case for one route: /login (and every
- * RequireAuth redirect into it) is a launcher for the app-wide login popup and
- * renders a spinner in `main` on purpose, so its content genuinely lives in a
- * `[role="dialog"]` outside the shell.
+ * RequireAuth redirect into it) is a launcher for the app-wide login popup, so
+ * its content genuinely lives in a `[role="dialog"]` outside the shell and its
+ * `main` is EMPTY once the dialog is up. (It used to hold a spinner that never
+ * stopped; App.jsx now renders that only while AuthContext is still resolving —
+ * 2026-09-11. The modal half of this measurement is what made that safe, and it
+ * is why it must stay.)
  *
  * `crashed` is App.jsx's ErrorBoundary card. It is reported because a crashed
  * route LOOKS rendered by every other measure here — the fallback is gone and
