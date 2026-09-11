@@ -594,11 +594,15 @@ test('14 . the empty and junk fallbacks carry the new roles too', () => {
 test('15 . the engine is WIRED to the page: the hand-off and the five rules', () => {
   // Correct-but-orphaned arithmetic is a failure this repo has shipped twice.
   // Reverting any one of these three call sites has to turn this red.
-  const jsx = stripSourceComments(readSource('src/pages/PaletteBuilder.jsx'))
+  // `pvRef` lived in src/pages/PaletteBuilder.jsx until 2026-09-11 and now lives
+  // beside its only caller in the preview module. The assertion is unchanged in
+  // kind — the arithmetic must still be handed to the element — and this test is
+  // how we know the hand-off came with the move rather than being left behind.
+  const jsx = stripSourceComments(readSource('src/components/palette/PalettePreview.jsx'))
   assert.match(jsx, /setProperty\('--pv-accent-ink', roles\.accentInk\)/,
-    'PaletteBuilder no longer hands accentInk to the scene')
+    'PalettePreview no longer hands accentInk to the scene')
   assert.match(jsx, /setProperty\('--pv-primary-ink', roles\.primaryInk\)/,
-    'PaletteBuilder no longer hands primaryInk to the scene')
+    'PalettePreview no longer hands primaryInk to the scene')
 
   const css = stripSourceComments(readSource('src/styles/global.css'))
   const TEXT_RULES = [
