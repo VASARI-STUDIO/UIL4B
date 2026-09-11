@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
-import { useI18n } from '../contexts/I18nContext'
 import usePopover from '../hooks/usePopover'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
@@ -105,8 +104,7 @@ const EmojiCell = memo(function EmojiCell({ emoji, shown, isCopied, onCopy }) {
   )
 })
 
-export default function EmojiLibrary({ onCopy, embedded }) {
-  const { t } = useI18n()
+export default function EmojiLibrary({ onCopy }) {
   const [search, setSearch] = useState('')
   const [activeCat, setActiveCat] = useState(null)
   const [copied, setCopied] = useState(null)
@@ -251,13 +249,20 @@ export default function EmojiLibrary({ onCopy, embedded }) {
 
   return (
     <div className="sec">
-      {!embedded && (
-        <div className="sec-h">
-          <div className="sec-h-eyebrow">{t('emojiLibrary.eyebrow')}</div>
-          <h1>{t('emojiLibrary.heading')}</h1>
-          <p>{t('emojiLibrary.subtitle')}</p>
-        </div>
-      )}
+      {/* NO STANDALONE MASTHEAD. Both libraries used to carry one behind
+          `{!embedded && ...}` — an eyebrow, an h1 and the subtitle — for a
+          route that has not existed since the two were merged: the ONLY import
+          of this module is IconEmojiLibrary.jsx, which mounts it inside the
+          shared `DiscoverGalleryHero` and passed `embedded` unconditionally.
+          Verify with
+            grep -rn "from './IconLibrary'" src
+            grep -rn "from './EmojiLibrary'" src
+          Unreachable, and not inert: the block kept a second copy of the h1 and
+          subtitle that the wrapper owns, which is a drift bug waiting for the
+          next copy change, and the eyebrow was `sec-h-eyebrow` — the exact
+          element the founder marked "AI" and #382 deleted from every tool
+          masthead it reached. A retired motif that cannot be rendered still
+          reads as live code to the next person to open the file. */}
 
       {/* THE SHARED BROWSE LANGUAGE. This was the fourth implementation of a
           Library toolbar — `.pl-toolbar` with `.pl-search-wrap` (borrowed from
@@ -337,10 +342,24 @@ export default function EmojiLibrary({ onCopy, embedded }) {
         ref={virtRef}
         style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
       >
+        {/* THE CATEGORY HEADINGS ARE h2, AND THEY WERE h3.
+            They are the only section headings under this page's h1, so every
+            rendered cell of this surface stepped h1 to h3 with no h2 between
+            it — measured 2026-09-11 at 320/390/430/768/1024/1097/1120/1136/
+            1280/1440/1920 in both themes and with reduced motion on and off:
+            30 of 30 cells reported the jump. A screen reader's heading list is
+            the fastest way through a 1,655-cell grid of unlabelled buttons,
+            and a skipped level tells that reader a level exists which they
+            have somehow missed. WCAG 1.3.1.
+
+            Paint is unchanged: `.emoji-vhead h3` in global.css set the size,
+            weight and tracking explicitly and moves to h2 with the tag, and
+            the universal reset at the top of that file already zeroes the UA
+            margin either tag would otherwise carry. */}
         {layout.rows.slice(range.start, range.end).map(row =>
           row.type === 'head' ? (
             <div key={row.key} className="emoji-vhead" style={{ top: row.top, height: row.h }}>
-              <h3>{row.cat}</h3>
+              <h2>{row.cat}</h2>
               <span className="emoji-section-count">{row.count}</span>
             </div>
           ) : (

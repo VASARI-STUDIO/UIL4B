@@ -189,10 +189,30 @@ test.describe('public UI quality release', () => {
     await expect.poll(() => new URL(page.url()).pathname).toBe('/create/emoji')
     await expect(page.getByRole('tab', { name: /Emoji/ })).toBeFocused()
 
+    // AND BACK, which is new here and is not padding: the status pill's ONLINE
+    // reading belongs to the icon catalogue, and only to it.
+    //
+    // This test used to run the whole offline sequence from /create/emoji,
+    // asserting "Live library connected" there first as a readiness signal and
+    // again as the recovery signal. That sentence was never true on this tab —
+    // the 1,655 emoji are a module compiled into the bundle, and the panel asks
+    // the network for nothing — which is why it also rendered instantly rather
+    // than after the catalogue probe the old comment credited. The pill now
+    // says nothing on the emoji tab while online (see IconEmojiLibrary.jsx), so
+    // the readings move to the tab that has a catalogue to report on, and the
+    // return trip gets the ArrowLeft coverage the test never had.
+    //
+    // The OFFLINE half is unchanged and still shared: the line is true of both
+    // libraries, because both are built in.
+    const emojiTab = page.getByRole('tab', { name: /Emoji/ })
+    await emojiTab.press('ArrowLeft')
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/icons')
+    await expect(page.getByRole('tab', { name: /Icons/ })).toBeFocused()
+
     // The scenario is "already using the page, then the connection drops", so the
-    // page must be settled first. On a cold CI runner the /create/emoji panel's lazy
-    // chunk can still be in flight, and cutting the network mid-fetch tests
-    // chunk loading rather than the offline banner.
+    // page must be settled first. On a cold CI runner a panel's lazy chunk can
+    // still be in flight, and cutting the network mid-fetch tests chunk loading
+    // rather than the offline banner.
     //
     // BOUNDED AND NON-FATAL, deliberately. This spec reaches the Iconify API,
     // and an unbounded `networkidle` waits on THAT too — so a slow third party
