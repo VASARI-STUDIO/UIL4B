@@ -1004,7 +1004,111 @@ function timingSafeEqual(a, b) {
   return nodeTimingSafeEqual(av, bv)
 }
 
+// ── The founder's internal boards, served rather than shipped ───────────────
+//
+// TWO data modules describe the PROJECT rather than the product, and both used
+// to ship to the browser. This one endpoint returns both, because they are one
+// question ("what is the state of this project") behind one gate, and because
+// two requests would be two things to keep in step.
+//
+//   src/data/pipeline.js    the engineering backlog — 185 rows whose `note`
+//                           fields are long, candid and written for us.
+//   src/data/moduleBoard.js the module status board — 20 entries carrying
+//                           `summary`, `recentChanges`, `nextSteps`, `health`
+//                           and dated owner actions per module.
+//
+// THE FIRST ONE reached the Admin dashboard by `import('../data/pipeline')`,
+// which made it a CLIENT MODULE — so rolldown emitted it as
+// dist/assets/pipeline-*.js and Vercel served it as a public static asset.
+// MEASURED against a real `npm run build`, anonymous, no login:
+//
+//   GET /admin                    200   the HTML names the entry chunk
+//   GET /assets/index-*.js        200   names Admin-rjGyizH8.js
+//   GET /assets/Admin-*.js        200   names pipeline-DUbq1XL3.js
+//   GET /assets/pipeline-*.js     200   824,007 bytes, 319,711 gzip, no auth
+//
+// That file contained the literal string `allow create: if true` — the exact
+// unfixed Firestore rule docs/OWNER-ACTIONS.md is still asking the founder to
+// close — 23 mentions of firestore.rules, 3 permission-denied diagnostics and
+// 246 mentions of the founder. #420 moved it behind a dynamic import, which
+// fixed WHEN it was fetched and did nothing at all about WHO could fetch it.
+//
+// THE SECOND ONE was a plain STATIC import in Admin.jsx, so its 20,332 bytes
+// were inlined straight into the Admin chunk and fetched by anyone who loaded
+// /admin. Measured on the same build, in dist/assets/Admin-*.js verbatim:
+//
+//   nextSteps: ["Owner: verify aggregate analytics and Feedback reads after
+//   the published Firestore rules", "Do not assume the admin custom claim
+//   exists; resolve any permission-denied result explicitly", ...]
+//
+// Instructions addressed to the owner, plus per-module health and what is known
+// to be unfinished. Much smaller, so the weight argument barely applies — the
+// trust argument applies in full, and it is the same class of disclosure.
+//
+// So both boards now arrive from here, behind the same verified-admin check
+// /api/ai?diag=1 already uses, and neither module enters the client graph.
+// tests/unit/admin-chunk-carries-no-backlog.test.js DERIVES the internal boards
+// from src/data/ by shape and fails the build if a row of any of them is back
+// in the output — so a third one is covered the day it is written.
+//
+// ── WHY THIS ROUTE AND NOT A NEW ONE ───────────────────────────────────────
+// api/ holds exactly twelve deployed functions and Vercel allows twelve on this
+// plan; three unit tests fail the build on a thirteenth. api/verify-admin.js is
+// the established place to fold an admin-only payload (`includeUsers` says so
+// in its own comment) — but docs/reference/human-validation-zones.md gates that
+// file to the founder, so a change there could not ship today and the board
+// would have to stay broken until somebody typed a patch in. THIS route is not
+// gated, already imports requireAdmin from _lib/admin.js, and already answers
+// an admin-only GET. Folding in here costs nothing against the budget and ships
+// now, which is the difference between a hole closed and a hole documented.
+//
+// ── WHY import() AND NOT A GENERATED JSON ──────────────────────────────────
+// The same reason the client's comment gave before it: a generator can go
+// stale. An agent who edits pipeline.js and forgets to re-run it would leave
+// the founder's board showing yesterday's backlog with every check green.
+// import() of a literal path cannot go stale — and @vercel/nft traces literal
+// dynamic imports into the function bundle, with vercel.json's includeFiles as
+// belt-and-braces. It is INSIDE this branch rather than at module scope so the
+// hot POST path never parses 832 KB of prose on a cold start.
+//
+// pipeline.js DOES NOT MOVE. Every agent's composition scripts and several
+// tests/unit/*.test.js files import it by that exact path.
+async function serveBacklog(req, res) {
+  const admin = await requireAdmin(req)
+  // 404, not 403 — see requireAdmin. A caller who is not the administrator
+  // learns nothing about whether this surface exists, which matters more here
+  // than on the diagnostic: the thing behind it is the whole engineering log.
+  if (!admin.ok) return res.status(admin.status === 401 ? 404 : admin.status).json({ error: 'Not found' })
+
+  try {
+    const [pipeline, modules] = await Promise.all([
+      import('../src/data/pipeline.js'),
+      import('../src/data/moduleBoard.js'),
+    ])
+    // Named explicitly rather than spread, so a future export in either module
+    // cannot be published by accident just because it was added to the file.
+    return res.status(200).json({
+      APP_CONDITION: pipeline.APP_CONDITION,
+      PIPELINE_STAGES: pipeline.PIPELINE_STAGES,
+      PIPELINE_PROCESSES: pipeline.PIPELINE_PROCESSES,
+      NEXT_TODO: pipeline.NEXT_TODO,
+      MODULE_BOARD: modules.MODULE_BOARD,
+    })
+  } catch (err) {
+    // Named in words rather than swallowed. A board that silently rendered zero
+    // rows would read as "the backlog is empty", which is the most misleading
+    // thing this surface could say.
+    console.error('ai: could not load the internal boards', { error: err?.message })
+    return res.status(500).json({ error: `Could not load the boards: ${err?.message || 'unknown error'}` })
+  }
+}
+
 export default async function handler(req, res) {
+  // ── The founder's Pipeline board ──────────────────────────────────────────
+  // GET /api/ai?backlog=1. Ahead of the diagnostic because it is a different
+  // question with the same gate; see serveBacklog above for why it lives here.
+  if (req.method === 'GET' && 'backlog' in (req.query || {})) return serveBacklog(req, res)
+
   // ── Config health check ───────────────────────────────────────────────────
   // GET /api/ai?diag=1 reports whether the AI keys and the Firebase credential
   // are present and valid — presence and length only, never a value.
