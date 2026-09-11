@@ -265,3 +265,44 @@
   .stc-sc-link{margin-left:0}
   .stc-handoff{padding:16px}
 }
+
+/* ── Save / load to a project ───────────────────────────────────────────────
+   The block this replaces was thirty-one inline style objects in
+   ColorStudio.jsx — `fontSize: 10`, `padding: '3px 10px'`,
+   `letterSpacing: '.08em'`, `width: 280` — and the two that mattered beat
+   `.btn-s`: measured 2026-09-11 at 1440x900 signed in free with two saved
+   projects, the Load chips were 99.3x22.0 and 101.1x22.0 against WCAG 2.5.8's
+   24px minimum, and the panel was the only region on this page that did not
+   look like the rest of it (principle-design-tokens: page-level code should
+   rarely depend directly on primitives).
+
+   Nothing about the block's POSITION changes: it is the same sticky bar in the
+   same corner of the hero. What changes is that every value is a token and
+   every control clears 24px. */
+.stc-save{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s-2);position:sticky;bottom:var(--s-4);z-index:20;margin-top:var(--s-3);padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+.stc-save-trigger{display:flex;align-items:center;gap:6px}
+.stc-save-load{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s-1)}
+.stc-save-load-label{font-size:var(--fs-micro);font-weight:600;color:var(--t3)}
+/* 24px floor, not 22: the padding that produced the old height is gone and the
+   chip takes `.btn-s`'s metrics, with a min-height so a one-character project
+   name cannot shrink back under the minimum. */
+.stc-save-chip{min-height:24px;font-size:var(--fs-micro);max-width:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stc-save-panel{position:absolute;top:100%;left:0;z-index:10;width:280px;max-width:calc(100vw - 2 * var(--s-4));margin-top:var(--s-1);padding:var(--s-4);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+.stc-save-panel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stc-save-title{margin-bottom:var(--s-2);font-size:var(--fs-caption);font-weight:600;color:var(--t0)}
+.stc-save-row{display:flex;gap:6px}
+.stc-save-input{flex:1;min-width:0;min-height:32px;font-size:var(--fs-caption)}
+.stc-save-go{min-height:32px}
+.stc-save-sub{margin:var(--s-3) 0 6px;font-size:var(--fs-micro);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+/* An overwrite row is a control, so it is sized like one. It was 6px of
+   vertical padding on an 11px line — a 25px row only because the line-height
+   rounded up — and it carried no hover or focus ground at all. */
+.stc-save-item{display:flex;align-items:center;justify-content:space-between;gap:var(--s-2);width:100%;min-height:32px;padding:6px var(--s-2);font-family:var(--font);font-size:var(--fs-caption);text-align:left;color:var(--t1);background:none;border:0;border-bottom:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.stc-save-item:hover{background:var(--hvr);color:var(--t0)}
+.stc-save-item-date{flex-shrink:0;font-size:var(--fs-micro);color:var(--t3)}
+/* The refusal SaveRefusal renders is a paragraph with its own max-width for a
+   page-width column; inside a 280px panel it needs to wrap to the panel. */
+.stc-save-panel .uh-save-refusal{max-width:none}
+@media(max-width:640px){
+  .stc-save-panel{width:min(280px,calc(100vw - 2 * var(--s-4)))}
+}
