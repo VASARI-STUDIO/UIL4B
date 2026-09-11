@@ -2129,7 +2129,7 @@ export default function Admin({ toast }) {
                   A quiet grey caption under a four-figure "Page views" is read
                   as a footnote, not as the scope of the figure. */}
               <span className="adm-cat-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ padding: '2px 7px', borderRadius: 999, background: 'color-mix(in srgb,var(--warn) 16%,transparent)', color: '#854d0e', fontWeight: 700, fontSize: 10, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                <span style={{ padding: '2px 7px', borderRadius: 999, background: 'color-mix(in srgb,var(--warn) 16%,transparent)', color: 'var(--warn-strong)', fontWeight: 700, fontSize: 10, letterSpacing: '.04em', textTransform: 'uppercase' }}>
                   This device only
                 </span>
                 not site-wide · from this browser&apos;s localStorage

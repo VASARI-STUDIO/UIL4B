@@ -4,7 +4,7 @@ import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe
 import { useAuth } from '../contexts/AuthContext'
 import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
-import { useProPrice } from '../hooks/usePrices'
+import { refreshPrices, useProPrice } from '../hooks/usePrices'
 
 const PLANS = {
   monthly: {
@@ -68,10 +68,35 @@ export default function Checkout() {
   const amount = planKey === 'yearly' ? proPrice.yearlyTotal
     : planKey === 'lifetime' ? proPrice.lifetime
       : proPrice.monthly
-  const note = planKey === 'yearly'
-    ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · save ${proPrice.savingsPct}%` : ''}`
-    : planKey === 'lifetime' ? `${proPrice.currencyLabel} · one-off purchase · no renewal`
-      : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
+  // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and until
+  // 2026-09-11 it rendered it as a lie. `useProPrice` returns `loaded: true`
+  // the moment the fetch SETTLES — including when it settled by failing — and
+  // null for every amount it could not confirm. So with /api/get-prices down:
+  //
+  //   amount slot   `{proPrice.loaded ? amount : '—'}` → loaded was true and
+  //                 amount was null, so React rendered NOTHING. Measured on the
+  //                 built preview: `.checkout-plan-amount` textContent "" above
+  //                 "per year". A blank where a price goes reads as free.
+  //   note          the yearly branch interpolated `proPrice.yearlyPerMonth`
+  //                 unconditionally, so the page printed the string
+  //                 "USD · null/mo", in accent colour, on the screen where
+  //                 money changes hands.
+  //
+  // Lifetime escaped both because CANONICAL_LIFETIME in usePrices.js gives it a
+  // fallback the recurring intervals do not have.
+  //
+  // src/pages/Plans.jsx — the step immediately before this one — already
+  // answers this exact outage, and these are ITS sentences, not new ones. Two
+  // steps of one funnel must not describe one outage two ways.
+  const priceServiceDown = proPrice.loaded && !proPrice.serviceAvailable
+  const note = priceServiceDown
+    ? (amount
+      ? `Live pricing is unreachable · showing the canonical ${proPrice.currencyLabel} amount`
+      : 'Live pricing is unreachable · no price can be shown right now')
+    : planKey === 'yearly'
+      ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · save ${proPrice.savingsPct}%` : ''}`
+      : planKey === 'lifetime' ? `${proPrice.currencyLabel} · one-off purchase · no renewal`
+        : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
   const [error, setError] = useState('')
 
   const stripePromise = useMemo(() => getStripe(), [])
@@ -101,7 +126,7 @@ export default function Checkout() {
         <div className="checkout-return">
           <div className="card checkout-return-card">
             <div className="checkout-error-icon" aria-hidden="true">!</div>
-            <h2>Invalid checkout selection</h2>
+            <h1>Invalid checkout selection</h1>
             <p>Choose Monthly or Yearly from Plans. No payment session was created.</p>
             <NavLink to="/plans" className="btn btn-accent">Back to Plans</NavLink>
           </div>
@@ -128,12 +153,23 @@ export default function Checkout() {
                 <div className="checkout-plan-cadence">{plan.cadence} plan</div>
               </div>
               <div className="checkout-plan-price">
-                <span className="checkout-plan-amount">{proPrice.loaded ? amount : '—'}</span>
+                {/* `amount || 'Unavailable'` is Plans.jsx's line 306, for the
+                    reason given above: `loaded` means settled, not known. */}
+                <span className="checkout-plan-amount">{!proPrice.loaded ? '—' : amount || 'Unavailable'}</span>
                 <span className="checkout-plan-per">{plan.per}</span>
               </div>
             </div>
 
             <div className="checkout-plan-note">{note}</div>
+
+            {/* usePrices caches the failure for the life of the module, so
+                without this the summary stays on "Unavailable" until a full
+                reload. Same control and same label as Plans.jsx. */}
+            {priceServiceDown && (
+              <button type="button" className="btn btn-s checkout-price-retry" onClick={() => refreshPrices()}>
+                Retry live pricing
+              </button>
+            )}
 
             {plan.trial && (
               <div className="checkout-trial">
