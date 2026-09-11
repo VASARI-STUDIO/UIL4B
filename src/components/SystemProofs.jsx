@@ -249,20 +249,44 @@ export function ExportProof() {
   const pro = proOnlyFormats()
   const unbuilt = unbuiltFormats()
 
+  // THESE THREE LABELS ARE NOT HEADINGS, and used to be <h4>.
+  //
+  // Rendered at 1280 in both themes on 2026-09-11, /principles walked its
+  // headings as H1, H2, H2, H2, **H4, H4, H4**, H2, H2 — a two-level skip
+  // (WCAG 1.3.1), and the only such skip on any marketing surface.
+  //
+  // Promoting them to <h3> would have silenced the skip and left something
+  // worse behind. .prn-proof is rendered BEFORE .prn-say in every .prn-item, so
+  // a proof's own sub-headings come earlier in the DOM than the <h2> rule they
+  // belong to: as <h3> they would have nested under "A type scale is
+  // arithmetic." — the PRECEDING principle — and told a screen-reader user the
+  // export columns were part of the type-scale rule. A heading that is
+  // structurally valid and semantically wrong is not a fix.
+  //
+  // They are column labels inside a <figure> that already carries a
+  // <figcaption>, which is what every sibling proof in this file uses for the
+  // same job — TypeLadderProof labels its rows with plain <span>s and explains
+  // itself in the figcaption, and ContrastProof, ThemeValueProof and SoonProof
+  // carry no heading at all. ExportProof was the one exception, so this also
+  // puts it back in step with the other four.
+  //
+  // aria-labelledby keeps the grouping a heading was doing the useful half of:
+  // each list still announces which column it is, without claiming a level in
+  // the document outline it does not own.
   return (
     <figure className="prn-ex">
       <div className="prn-ex-cols">
         <div className="prn-ex-col">
-          <h4 className="prn-ex-h">Built, free</h4>
-          <ul>{free.map((f) => <li key={f.id}>{f.name}</li>)}</ul>
+          <p className="prn-ex-h" id="prn-ex-free">Built, free</p>
+          <ul aria-labelledby="prn-ex-free">{free.map((f) => <li key={f.id}>{f.name}</li>)}</ul>
         </div>
         <div className="prn-ex-col">
-          <h4 className="prn-ex-h">Built, Pro</h4>
-          <ul>{pro.map((f) => <li key={f.id}>{f.name}</li>)}</ul>
+          <p className="prn-ex-h" id="prn-ex-pro">Built, Pro</p>
+          <ul aria-labelledby="prn-ex-pro">{pro.map((f) => <li key={f.id}>{f.name}</li>)}</ul>
         </div>
         <div className="prn-ex-col" data-unbuilt="true">
-          <h4 className="prn-ex-h">Not built</h4>
-          <ul>
+          <p className="prn-ex-h" id="prn-ex-unbuilt">Not built</p>
+          <ul aria-labelledby="prn-ex-unbuilt">
             {unbuilt.map((f) => (
               <li key={f.id}>{f.name} <span className="soon-badge">Soon</span></li>
             ))}
