@@ -8880,7 +8880,32 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
        back. --- */
 
 /* --- Single-click login popup (reuses .auth-* form styles) --- */
-.ui-login .ui-modal-body{padding-top:8px}
+/* THE TITLE'S OWN SPACE. This was `padding-top:8px`, and 8px was the smallest
+   gap anywhere in the dialog bar the 6px between a label and its input. The
+   measured rhythm of everything below it: label→input 6, field→field 16,
+   button→divider 20, divider→form 20, form→links 14. So the dialog's <h2> was
+   separated from the content it heads by LESS than any two form fields are
+   separated from each other, and rendered at 320-1920 in both themes it reads
+   as a caption sitting on the accent-filled Google button rather than as the
+   title of the surface. Whitespace is what assigns rank here
+   (principle-website-engagement: "whitespace is a content element; it
+   organises attention"), and the title had been given the least of it.
+
+   20px, because that is the dialog's own largest interval — the one either side
+   of the divider — and a title should not be grouped more tightly than the
+   sections beneath it. Nothing moves but the gap: no type size, weight or
+   colour changes, and the copy is untouched. */
+.ui-login .ui-modal-body{padding-top:20px}
+/* …except on a landscape phone. The `@media(max-height:460px)` block above
+   spends vertical rhythm to claw back the 133px that were hidden below the fold
+   at 844x390, and it cannot reach this: `.ui-login .ui-modal-body` is (0,2,0),
+   `.ui-modal-body` is (0,1,0), and a media query adds no specificity — so the
+   20px would have won there too and given 12px of it straight back. Restated
+   here, AFTER the rule it has to beat, because at equal specificity the later
+   declaration is the one that applies. */
+@media(max-height:460px){
+  .ui-login .ui-modal-body{padding-top:8px}
+}
 .ui-login-note{display:flex;gap:9px;align-items:flex-start;margin:0 0 16px;padding:11px 13px;background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 26%,transparent);border-radius:var(--radius);font-size:12.5px;line-height:1.45;color:var(--t1)}
 .ui-login-note svg{flex:none;margin-top:1px;color:var(--brand)}
 .ui-login-err{margin:0 0 12px;padding:9px 12px;background:color-mix(in srgb,var(--err) 12%,transparent);border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius);font-size:12.5px;color:var(--err-strong)}
