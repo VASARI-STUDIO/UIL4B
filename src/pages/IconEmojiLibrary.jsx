@@ -10,8 +10,11 @@ const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
 // Merged Icon + Emoji surface. Both /create/icons and /create/emoji mount THIS component, so the
 // mega-menu deep-links stay valid; the active tab is derived from the path and the
 // large segmented pill (styled as the page title) flips between the two libraries.
-// Each child renders `embedded` so it drops its own <h1> — this wrapper owns the
-// title — while copy actions still bubble up through onCopy unchanged.
+// Neither child renders a masthead of its own — this wrapper owns the title —
+// while copy actions still bubble up through onCopy unchanged. Both used to
+// carry one behind an `embedded` prop this file always passed, so the prop
+// selected between one live branch and one unreachable one; it is gone with the
+// branch, and each child's own file says why.
 //
 // PERF — keep-alive tabs: the two libraries are DIFFERENT component types, so the
 // old `tab === 'icon' ? <IconLibrary/> : <EmojiLibrary/>` unmounted one and mounted
@@ -130,11 +133,32 @@ export default function IconEmojiLibrary({ onCopy }) {
             <div className="lib-head-status">
               {/* Three readings, one truth each. "Built-in icons" is the grid's own
                   status line for this state (IconLibrary's `mode`), reused rather
-                  than a new sentence; the notice above the grid says why. */}
-              <span className={!online ? 'lib-net is-offline' : iconFallback ? 'lib-net is-fallback' : 'lib-net is-online'}>
-                <i aria-hidden="true" />
-                {!online ? 'Offline · built-in assets remain available' : iconFallback ? 'Built-in icons' : 'Live library connected'}
-              </span>
+                  than a new sentence; the notice above the grid says why.
+
+                  AND IT IS NOT SHOWN ON THE EMOJI TAB WHILE ONLINE, because
+                  there is no library to be connected to. #435 fixed the icon
+                  half of this reading — the pill said "Live library connected"
+                  in green above the notice saying the icon service could not be
+                  reached — and left the emoji half standing, with the reason
+                  recorded: no existing sentence fits an emoji set that is
+                  compiled into the bundle, and none was invented. Measured
+                  again 2026-09-11 at 1280: `.lib-net is-online "Live library
+                  connected"` on /create/emoji, whose 1,655 emoji are a local
+                  module and which asks the network for nothing.
+
+                  Omitting the claim needs no sentence, and that is the whole
+                  reason it is the fix: a status that cannot be stated truthfully
+                  from the words this product already owns should not be stated.
+                  The OFFLINE reading stays on both tabs and is true on both —
+                  the emoji set is exactly the "built-in assets" it promises
+                  remain available. A truthful online reading for the emoji tab
+                  is the founder's sentence to write. */}
+              {(!online || tab === 'icon') && (
+                <span className={!online ? 'lib-net is-offline' : iconFallback ? 'lib-net is-fallback' : 'lib-net is-online'}>
+                  <i aria-hidden="true" />
+                  {!online ? 'Offline · built-in assets remain available' : iconFallback ? 'Built-in icons' : 'Live library connected'}
+                </span>
+              )}
               <span className="lib-keyhint">Use ← → to switch</span>
             </div>
           </>
@@ -150,7 +174,7 @@ export default function IconEmojiLibrary({ onCopy }) {
       >
         {mounted.has('icon') && (
           <Suspense fallback={fallback}>
-            <IconLibrary embedded onCopy={onCopy} onCatalogue={onCatalogue} />
+            <IconLibrary onCopy={onCopy} onCatalogue={onCatalogue} />
           </Suspense>
         )}
       </div>
@@ -163,7 +187,7 @@ export default function IconEmojiLibrary({ onCopy }) {
       >
         {mounted.has('emoji') && (
           <Suspense fallback={fallback}>
-            <EmojiLibrary embedded onCopy={onCopy} />
+            <EmojiLibrary onCopy={onCopy} />
           </Suspense>
         )}
       </div>
