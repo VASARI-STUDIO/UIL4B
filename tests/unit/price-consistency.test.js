@@ -151,7 +151,13 @@ const NOT_A_PLAN_PRICE = [
       + 'and a notebook, not tiers of UIL4B.',
   },
   {
-    file: 'src/pages/PaletteBuilder.jsx',
+    // Was src/pages/PaletteBuilder.jsx until 2026-09-11, when the preview block
+    // moved to its own module. The entry follows the code rather than being
+    // widened to cover both files — "no allowlist entry outlives the thing it
+    // excuses" below is what forced the choice, and it is the right one: an
+    // allowlist naming a file that no longer renders fake money is an excuse
+    // with nothing behind it.
+    file: 'src/components/palette/PalettePreview.jsx',
     context: /plb-pv-checkout|plb-pv-finance|Order summary|Canvas field bag|Studio notebook|Available balance|Recent transactions/,
     why: 'The palette preview scenes — "Commerce checkout" and "Finance overview" — '
       + 'are mock-ups a palette is judged against. Same fake order as UiSystemLab, '

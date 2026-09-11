@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
+import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 
 // The feedback form. Four surfaces across the app point here as THE way to
 // report a problem — including, now, the 404 page — so this is the last place
@@ -29,6 +30,35 @@ import { saveFeedback } from '../utils/analytics'
 // /api/support was a 404 there. The server path validates correctly; the client
 // already refuses to claim success on a failed request, which is the important
 // half and is kept.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// WHAT WAS WRONG (2026-09-11 quality pass, purpose & content scored 6)
+// ─────────────────────────────────────────────────────────────────────────────
+// A SIGNED-OUT SUBMISSION COULD NOT BE ANSWERED, AND NOTHING ON THE PAGE SAID
+// SO. The payload was built from `user?.email`, the form had no contact field,
+// and the confirmation read "Your submission has been received and will be
+// reviewed." Rendered signed out and captured off the real request, the body
+// was:
+//
+//   {"type":"feature","subject":"[feature] Submission","message":"…",
+//    "email":"","source":"feedback-form"}
+//
+// Nothing in those five fields identifies the sender. So a person who picked
+// the form's own "Help Request" type — a category that only makes sense if an
+// answer can come back — wrote a question into a channel that had no return
+// path, and was thanked as though a conversation had started.
+//
+// THE API ALREADY TOOK THE FIELD. `api/support.js` has validated `email`,
+// capped it at 254 and rendered it as the notification's `From:` line since it
+// was written; only the form never offered anywhere to type one. Nothing about
+// the request contract changes here — the same five keys go up, and one of them
+// can now be non-empty when the sender is signed out.
+//
+// Both branches are now stated rather than implied: the field says what a blank
+// costs BEFORE you submit, and the confirmation says which of the two happened
+// AFTER. A signed-in submitter gets "Sending as <email>", which is the sentence
+// FeedbackModal.jsx already shows in the same situation — one vocabulary for
+// one fact, rather than a second way of saying it.
 
 const TYPES = [
   { id: 'feature', labelKey: 'feedback.featureRequest' },
@@ -41,13 +71,24 @@ export default function Feedback({ toast }) {
   const [type, setType] = useState('feature')
   const [message, setMessage] = useState('')
   const [subject, setSubject] = useState('')
+  const [contact, setContact] = useState('')
+  const [contactError, setContactError] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  // The address the LAST successful submission actually carried, so the
+  // confirmation reports what was sent rather than what is currently typed in a
+  // field that has since been cleared.
+  const [sentTo, setSentTo] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const messageRef = useRef(null)
+  const contactRef = useRef(null)
   const typeRefs = useRef({})
   const { t } = useI18n()
   const { user } = useAuth()
+
+  // Signed in, the account's address goes up and always has. Signed out, the
+  // field below is the only way one can.
+  const accountEmail = user?.email || ''
 
   // Arrow-key navigation across the type choices, as a radiogroup requires:
   // one tab stop for the group, arrows to move within it.
@@ -77,14 +118,26 @@ export default function Feedback({ toast }) {
       return
     }
 
+    // Checked HERE rather than left to the server, because the server's 400 for
+    // a bad address arrives through the same branch as a dropped connection and
+    // would be reported as one. Same shape, same cap — see utils/contactEmail.js
+    // and the unit test that holds the two together.
+    if (!accountEmail && !isContactEmail(contact)) {
+      setContactError('That email address does not look right. Correct it, or clear the field to send without one.')
+      contactRef.current?.focus()
+      return
+    }
+
     setError('')
+    setContactError('')
     setBusy(true)
 
+    const email = accountEmail || contact.trim()
     const payload = {
       type,
       subject: subject.trim() || `[${type}] Submission`,
       message: message.trim(),
-      email: user?.email || '',
+      email,
       source: 'feedback-form',
     }
 
@@ -118,6 +171,7 @@ export default function Feedback({ toast }) {
     toast(t('feedback.thankYou'))
     setMessage('')
     setSubject('')
+    setSentTo(email)
     setSubmitted(true)
   }
 
@@ -137,6 +191,15 @@ export default function Feedback({ toast }) {
             </div>
             <h2 className="fb-done-title">{t('feedback.thankYou')}</h2>
             <p className="fb-done-sub">Your submission has been received and will be reviewed.</p>
+            {/* Which of the two things just happened. Neither line promises a
+                reply — whether one is written is a person's decision, not the
+                code's — they state whether one is POSSIBLE, which is a fact
+                about the five fields that were sent. */}
+            <p className="fb-done-reply">
+              {sentTo
+                ? <>A reply can reach you at <strong>{sentTo}</strong>.</>
+                : 'No email address went with it, so this one is one-way.'}
+            </p>
             {/* Was on a 4s timer that swapped the form back underneath you.
                 Leaving it up until dismissed means the confirmation is still
                 there when you look back at the screen. */}
@@ -182,6 +245,35 @@ export default function Feedback({ toast }) {
                 placeholder="Brief summary (optional)"
               />
             </div>
+
+            {/* The return address. Rendered only when there is not already one
+                — signed in, the account's address is what goes up, and offering
+                a second box to type a different one is a different feature.
+                `(optional)` sits in the placeholder because that is where the
+                Subject field above already puts it. */}
+            {accountEmail ? (
+              <p className="fb-sending-as">Sending as {accountEmail}</p>
+            ) : (
+              <div>
+                <label className="seg-label" htmlFor="fb-email">Email</label>
+                <input
+                  id="fb-email"
+                  ref={contactRef}
+                  type="email"
+                  className="fb-input"
+                  value={contact}
+                  onChange={e => { setContact(e.target.value); if (contactError) setContactError('') }}
+                  placeholder="you@example.com (optional)"
+                  autoComplete="email"
+                  maxLength={CONTACT_EMAIL_MAX}
+                  aria-invalid={!!contactError}
+                  aria-describedby={contactError ? 'fb-email-error' : 'fb-email-hint'}
+                />
+                {contactError
+                  ? <p className="fb-error" id="fb-email-error" role="alert">{contactError}</p>
+                  : <p className="fb-hint" id="fb-email-hint">Optional — but without it there is no way to reply to you.</p>}
+              </div>
+            )}
 
             <div>
               <label className="seg-label" htmlFor="fb-message">{t('common.message')}</label>
