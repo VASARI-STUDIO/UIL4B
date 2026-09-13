@@ -2064,7 +2064,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       <header className="plb-toolbar">
         <div className="plb-toolbar-group">
           <div className="plb-mode-switch">
-            <h1 className="plb-title">Palette</h1>
+            <h1 className="plb-title" id="plb-page-title">Palette</h1>
           </div>
           <div className="plb-seedpick">
             <ColorPickerPop
@@ -2526,7 +2526,50 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      <div className="plb-board">
+      {/* THE BOARD IS THE PAGE, SO IT CARRIES A NAME AND THE COLUMNS DO NOT.
+          ------------------------------------------------------------------
+          Measured on the built preview at 1440x900, signed out and signed in,
+          off Chrome's own accessibility tree rather than off the markup: this
+          route's landmark list was
+
+            navigation(Primary) | main | contentinfo
+            | region("PRIMARY #664BB7") | region("SECONDARY #CE70B4")
+            | region("ACCENT #B39CFF") | region("SUBTLE #E6E0EC")
+            | region("DEEP #352565") | navigation(Footer)
+
+          Five of the nine landmarks on the page were colour swatches, named
+          with raw hex, and the count GREW with the palette — a sixth colour
+          made a sixth landmark, up to PRO_MAX. The board itself, which is the
+          thing the page exists to produce, was anonymous, and the only
+          heading in the document was the 15px toolbar h1 above.
+
+          The cause was one element choice: each column was a <section> with
+          an accessible name, and a named <section> IS role=region. The five
+          sibling colour tools use that element for exactly the opposite job —
+          /create/tint, /create/gradient and /create/semantic-color each wrap a
+          major page section in one and point aria-labelledby at that section's
+          own h2, so their landmark lists read "Choose source colours", "Tune
+          the system", "Shape the gradient". Same element, two meanings, which
+          is the failure principle-ai-slop-diagnostic names under system
+          coherence: similar treatment without a semantic reason.
+
+          The correction is the one this repo had already written for the OTHER
+          renderer of this board. HomeWorkbench.jsx paints .plb-board with a
+          grouping role and a name, and .plb-badges below has grouped its two
+          contrast readings the same way since launch. So the set is the named
+          unit and a swatch is an item inside it — which is also what every
+          colour surface read on Mobbin does (Mural, Discord, V7 and Canva all
+          put one heading over the whole set; Arcade, Gamma and Squarespace
+          name the palette and leave the swatches carrying a name and a value).
+
+          The name is borrowed from the h1 rather than typed, so there is no
+          second string that can drift from the page's own title.
+
+          NOTHING PAINTED MOVES. A role attribute has no rule in any stylesheet
+          here, and <section> and <div> are both display:block before .plb-col
+          sets its own — 64-computed-style-snapshot passes all 25 routes
+          unregenerated. */}
+      <div className="plb-board" role="group" aria-labelledby="plb-page-title">
         {adjusted.map((c, i) => {
           // Vision type split: TOP half paints the real palette colour, BOTTOM
           // half simulates it through the selected colour-vision deficiency.
@@ -2556,7 +2599,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
             overIdx === i && dragFrom.current != null && 'plb-col--over',
           ].filter(Boolean).join(' ')
           return (
-            <section
+            <div
+              role="group"
               key={i}
               className={colClass}
               ref={colRef(c, ink, sim)}
@@ -2816,7 +2860,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
                   <span className="plb-gap-dot"><IcoPlus size={13} /></span>
                 </button>
               )}
-            </section>
+            </div>
           )
         })}
         <button type="button" className="plb-add" onClick={addCol} aria-label="Add a colour">
@@ -3200,7 +3244,13 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       )}
 
       {/* ── Global adjust ── */}
-      <footer className="plb-adjust" aria-label="Global palette adjustments">
+      {/* The grouping role is what DELIVERS the name on the line below. A
+          <footer> that is a descendant of <main> maps to the generic role, and
+          a generic element takes no accessible name — so "Global palette
+          adjustments" was written here, and Chrome's accessibility tree
+          reported this strip nameless at every width and in both themes. The
+          string is unchanged; it simply reaches a reader now. */}
+      <footer className="plb-adjust" role="group" aria-label="Global palette adjustments">
         {/* One grid for all four fields, with each field as display:contents, so
             the LABEL columns size to their own text while the TRACK columns are
             equal `1fr` siblings of one grid. That is what makes every track the
