@@ -5844,8 +5844,47 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
      use the second line. */
   .plb-col{flex-wrap:wrap;row-gap:8px}
   .plb-name{margin-bottom:0;padding:0;min-width:12ch;font-size:12px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .plb-role{display:none}
-  .plb-badge{margin-top:0}}
+  .plb-badge{margin-top:0}
+
+  /* ── Seven unlabelled icons per row become two and a menu ──────────────
+     The founder's report, 2026-09-13, from a screenshot at ~660px: "alot of
+     basic UI problems that can be replaced with better UI design such as
+     replacing some buttons with a drop down".
+
+     Measured before, at 320 / 360 / 390 / 430 / 660 / 768: SEVEN `.plb-tool`
+     children visible on every one of the five rows — grip, lock, HCT, contrast,
+     swap, copy, remove — so 35 icon targets on one screen, none of them
+     carrying a visible label. The block above pins them open at this width
+     (`.plb-tool{opacity:1}`) because there is no hover here to reveal them
+     with, which is right; it just never decided WHICH of them to pin.
+
+     This is the SAME collapse the `(min-width:769px) and (hover:none)` block
+     already performs, and deliberately so — the two bands had the identical
+     problem (no hover, a full icon column pinned open) and a second answer to
+     one problem is how two surfaces start disagreeing. Lock and Copy stay
+     inline because they are the two a person repeats; everything else moves
+     behind `.plb-tool--more`, which opens the EXISTING "Colour actions" menu.
+     Nothing is lost and nothing new is built: that menu already carries Copy
+     hex, Use as seed, Edit in HCT, View tints, Lock, Show contrast, Swap
+     left/right, Insert left/right and Remove, each as a labelled row.
+
+     The grip is a drag affordance for a pointer that can drag; HTML5 dnd does
+     not fire from a touch, so at this width it was decoration taking a slot.
+
+     Measured after: 3 visible tools per row, 15 on the screen instead of 35,
+     and every hidden action reachable by name. */
+  .plb-col-tools>*{display:none}
+  .plb-col-tools>.plb-tool--key,.plb-col-tools>.plb-tool--more{display:flex}
+
+  /* The role is the SLOT — PRIMARY, ACCENT — and it is what the exports, the
+     tint scales and the UI preview key off. It was `display:none` here, so
+     from 320 to 768 the board could not tell you which swatch was the primary
+     one; the name above it describes the colour, not the job. It was hidden
+     because the seven-icon row left it nowhere to go. Three icons give it 128px
+     back, so it comes with the hex rather than under it — the row is already a
+     row, and a second line for four uppercase letters is not worth 16px of
+     every swatch. */
+  .plb-role{font-size:9.5px;letter-spacing:.12em;opacity:.72;flex:0 0 auto}}
 
 @media(max-width:768px){
   .plb-gap{display:none}
