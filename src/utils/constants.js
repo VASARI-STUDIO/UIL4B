@@ -143,11 +143,37 @@ export const ADMIN_EMAIL_DIGESTS = [FOUNDER_DIGEST]
  *
  * Six call sites had this expression inlined and one of them lower-cased
  * differently, so it lives here now. Four of them were STILL inlining
- * `ADMIN_EMAILS.includes(...)` against the plaintext list; they call this.
+ * `ADMIN_EMAILS.includes(...)` against the plaintext list; three now call this,
+ * and the fourth cannot be touched — see ADMIN_EMAILS below.
  */
 export function isAdminEmail(email) {
   return !!email && ADMIN_EMAIL_DIGESTS.includes(ownerEmailDigest(email))
 }
+
+/**
+ * The allowlist as a MEMBERSHIP TEST, not as a list of addresses.
+ *
+ * This exists for exactly one caller. src/contexts/SubscriptionContext.jsx
+ * writes `ADMIN_EMAILS.includes(user.email.toLowerCase())`, and it is
+ * FOUNDER-GATED: tests/unit/firebase-deferral.test.js fails if this branch
+ * modifies it, because docs/design/firebase-deferral-gated.patch is waiting on
+ * approval to land in that exact file and a quiet edit here would invalidate
+ * it. The three other call sites that inlined the same expression were not
+ * gated and call isAdminEmail() directly now.
+ *
+ * So the SHAPE had to survive even though the contents could not, and keeping
+ * the contents was never an option: that array WAS the leak. It is deliberately
+ * not a list — there is nothing in it to index, iterate, spread or print, which
+ * is the whole point. Returning digests under this name would be worse than
+ * either: `.includes(anAddress)` would quietly answer false and the founder
+ * would lose his Pro entitlement on a green build.
+ *
+ * When the gate lifts, replace that one call with isAdminEmail(user?.email) and
+ * delete this.
+ */
+export const ADMIN_EMAILS = Object.freeze({
+  includes: (email) => isAdminEmail(email),
+})
 export const PUBLIC_OWNER_ID = 'uil4b-founder'
 
 // Site owner(s). Keyed by ownerEmailDigest(email) — it used to be keyed by the

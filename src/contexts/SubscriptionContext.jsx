@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import { auth as firebaseAuth } from '../utils/firebase'
-import { isAdminEmail } from '../utils/constants'
+import { ADMIN_EMAILS } from '../utils/constants'
 import { detectCurrency } from '../utils/currency'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans'
 import { billingAlert, isWithinPastDueGrace } from '../utils/billingState'
@@ -106,7 +106,7 @@ export function SubscriptionProvider({ children }) {
   // email here comes from Firebase Auth, and every paid API call re-verifies
   // it server-side from the ID token — flipping this flag in devtools unlocks
   // nothing that the server doesn't independently grant.
-  const isAdmin = isAdminEmail(user?.email)
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
   const plan = isAdmin ? PRO_PLAN : planForSubscription(subscription, lifetimeEntitlement)
   const isPro = plan.id === 'pro'
 
