@@ -899,8 +899,51 @@ export default function Projects({ toast }) {
           <button className="btn btn-accent" onClick={() => setShowNewModal(true)}>Create your first project</button>
         </div>
       ) : activeProjects.length === 0 && archivedProjects.length === 0 ? (
-        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-          <p style={{ fontSize: 13, color: 'var(--t2)' }}>No projects match “{search}”.</p>
+        /* THE OTHER EMPTY STATE ON THIS PAGE, and it had the same shape of
+           defect as the one above — found by sweeping the class rather than by
+           reading the file.
+
+           TWO filters can empty this list: the search box and the folder chips
+           (matchesFolder, two lines above matchesSearch). The sentence named
+           only the search. So tapping "Marketing" on an account with no
+           marketing projects printed, measured at 390 and at 1280 on
+           2026-09-13, exactly this:
+
+               No projects match “”.
+
+           — an empty pair of curly quotes, in a panel with zero controls in it.
+           One tap from a chip row, and the reader is told nothing matched a
+           search they never ran.
+
+           Both halves are fixed the way LibraryEmpty already states the rule
+           for every Library browse surface: say which filter is responsible,
+           and carry the reset INSIDE the panel rather than leaving the reader
+           to work out which of two controls they set. LibraryEmpty itself is
+           not reused here — it belongs to styles/deferred/library.css, which
+           #456 deliberately keeps out of this route's chunk — so the rule is
+           borrowed and its label ("Clear filters") with it.
+
+           role="status" for the same reason LibraryEmpty gives: the grid
+           emptying is otherwise silent, and at 390 this panel opens at y=815
+           in an 844px viewport, directly under the controls that caused it. */
+        <div className="card uh-filtered" role="status">
+          <p className="uh-filtered-text">
+            {search.trim() ? (
+              <>
+                No projects match “{search.trim()}”
+                {activeFolder !== 'all' && <> in {activeFolder.charAt(0).toUpperCase() + activeFolder.slice(1)}</>}.
+              </>
+            ) : (
+              <>No projects in {activeFolder.charAt(0).toUpperCase() + activeFolder.slice(1)}.</>
+            )}
+          </p>
+          <button
+            type="button"
+            className="btn btn-s"
+            onClick={() => { setSearch(''); setActiveFolder('all') }}
+          >
+            Clear filters
+          </button>
         </div>
       ) : (
         <>

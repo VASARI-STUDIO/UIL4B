@@ -235,8 +235,16 @@
 .uh-empty-mark{display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin:0 auto 16px;border-radius:50%;background:var(--accent-bg)}
 .uh-empty-title{margin-bottom:6px;font-size:16px;font-weight:700}
 .uh-empty-text{margin:0 auto 16px;max-width:360px;font-size:13px;color:var(--t2)}
+/* "Nothing matched your filters", which is a different sentence and a different
+   panel from "you have nothing yet" above. Same treatment, one size down,
+   because it answers an action the reader just took rather than greeting them.
+   The reset sits in the panel — see the note at the call site. */
+.uh-filtered{display:flex;flex-direction:column;align-items:center;gap:var(--s-3);padding:40px;text-align:center}
+.uh-filtered-text{font-size:13px;color:var(--t2)}
+
 @media(max-width:640px){
   .uh-empty{padding:24px}
+  .uh-filtered{padding:24px}
 }
 
 /* ── Daily starters ────────────────────────────────────────────── */

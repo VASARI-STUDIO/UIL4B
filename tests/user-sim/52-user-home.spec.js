@@ -12,7 +12,7 @@
 //   THE SIGNED-IN PAGE is covered through the mounted fixture, the same way
 //   12-ui-system-builder and the type-save flow are.
 import { test, expect } from './base.js'
-import { go, watch, expectRendered } from './helpers.js'
+import { go, watch, expectRendered, signIn } from './helpers.js'
 
 const SESSION_HINT = 'vs-session'
 const FIXTURE = '/tests/user-sim/fixtures/user-home.html'
@@ -265,5 +265,90 @@ test.describe('quick actions', () => {
 
     await card.getByRole('textbox', { name: /Type the project name/ }).fill('Default Project')
     await expect(confirm).toBeEnabled()
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTERED TO NOTHING — the page's OTHER empty state
+// ─────────────────────────────────────────────────────────────────────────────
+// Found on 2026-09-13 by sweeping the class of the 390px empty-state defect
+// rather than by reading the file, which is the only reason it was found at
+// all: it is one tap from a chip row and it had been shipping.
+//
+// TWO filters can empty this list — the search box and the folder chips — and
+// the sentence named only the search. Measured at 390 and at 1280, tapping
+// "Marketing" on an account with no marketing projects rendered:
+//
+//     No projects match “”.
+//
+// An empty pair of curly quotes, in a panel that held no control at all. The
+// reader was told nothing matched a search they had not run, and left to work
+// out for themselves which of two controls they had set — the dead end
+// LibraryEmpty's own comment says every Library surface exists to forbid.
+//
+// These run against the REAL route with a real session rather than the fixture
+// page, because the filters, the sentence and the reset are the page's own and
+// the fixture does not have them.
+test.describe('a filter that matches nothing says which filter, and undoes itself', () => {
+  const open = async (page) => {
+    await signIn(page, { plan: 'free', projects: 2 })
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-grid .proj-card')).toHaveCount(2)
+  }
+
+  test('a folder with nothing in it names the FOLDER, not an empty search', async ({ page }) => {
+    watch(page, 'somebody tapping a folder chip that holds none of their work')
+    await open(page)
+
+    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
+    const panel = page.locator('.uh-filtered')
+    await expect(panel).toBeVisible()
+
+    // The regression, stated as the thing it must never say again.
+    await expect(panel, 'the panel quotes a search the reader never typed').not.toContainText('“”')
+    await expect(panel).toContainText('No projects in Marketing.')
+    // Announced: the grid emptying is silent otherwise, and at 390 this panel
+    // opens at y=815 in an 844px viewport.
+    await expect(panel).toHaveAttribute('role', 'status')
+  })
+
+  test('a search that matches nothing still quotes the search', async ({ page }) => {
+    watch(page, 'somebody searching their projects for something that is not there')
+    await open(page)
+
+    await page.locator('.proj-search input').fill('zzqqxx')
+    await expect(page.locator('.uh-filtered')).toContainText('No projects match “zzqqxx”.')
+  })
+
+  test('both filters at once name both', async ({ page }) => {
+    watch(page, 'somebody who set a folder and then searched inside it')
+    await open(page)
+
+    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
+    await page.locator('.proj-search input').fill('zzqqxx')
+    await expect(page.locator('.uh-filtered')).toContainText('No projects match “zzqqxx” in Marketing.')
+  })
+
+  test('the way out is IN the panel, and it clears both filters', async ({ page }) => {
+    // The escape has to be in the panel rather than only back up at the
+    // controls: the panel is what the reader is looking at, and at 390 the
+    // chips and the search box are 200px above it.
+    watch(page, 'somebody getting back to their work after filtering it away')
+    await open(page)
+
+    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
+    await page.locator('.proj-search input').fill('zzqqxx')
+
+    const reset = page.locator('.uh-filtered').getByRole('button', { name: 'Clear filters' })
+    await expect(reset).toBeVisible()
+    const box = await reset.boundingBox()
+    expect(box.height, 'the way out must be reachable by thumb').toBeGreaterThanOrEqual(24)
+
+    await reset.click()
+    await expect(page.locator('.uh-filtered')).toHaveCount(0)
+    await expect(page.locator('.uh-grid .proj-card'), 'both projects must come back').toHaveCount(2)
+    await expect(page.locator('.proj-search input')).toHaveValue('')
+    await expect(page.locator('.proj-folder-chip.active')).toHaveText('All')
   })
 })
