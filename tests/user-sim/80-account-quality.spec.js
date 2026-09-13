@@ -162,21 +162,26 @@ test.describe('projects states only quotas the product enforces', () => {
   // handled when that decision landed. What both tests were really protecting,
   // that this page quotes no allowance it does not enforce, is now asserted
   // over the whole surface instead of over one row of it.
-  test('no folder mechanism survives, on free or on Pro', async ({ page }) => {
-    watch(page, 'free and pro users looking for the folders that used to be here')
-    for (const plan of ['free', 'pro']) {
+  // ONE TEST PER PLAN. `signIn` seeds localStorage ONCE PER TAB (the
+  // `__uil4b_test_seeded` guard in helpers.js exists so the app's own writes
+  // survive a navigation), so a loop that signs in twice inside one test
+  // measures the FIRST account twice. Written as a loop this passed on `free`
+  // and then reported 0 project cards for `pro`.
+  for (const plan of ['free', 'pro']) {
+    test(`no folder mechanism survives, on ${plan}`, async ({ page }) => {
+      watch(page, `a ${plan} user looking for the folders that used to be here`)
       await signIn(page, { plan, projects: 2 })
       await go(page, '/projects')
       await expect(page.locator('.uh-grid .proj-card')).toHaveCount(2)
 
-      await expect(page.locator('.proj-folders'), `${plan}: the chip row is gone`).toHaveCount(0)
-      await expect(page.locator('.proj-folder-chip'), `${plan}: no chip survives`).toHaveCount(0)
-      await expect(page.locator('.uh-card-folder'), `${plan}: no per-card filer`).toHaveCount(0)
+      await expect(page.locator('.proj-folders'), 'the chip row is gone').toHaveCount(0)
+      await expect(page.locator('.proj-folder-chip'), 'no chip survives').toHaveCount(0)
+      await expect(page.locator('.uh-card-folder'), 'no per-card filer').toHaveCount(0)
       // The word itself, anywhere a reader could see it on this surface.
-      await expect(page.locator('main'), `${plan}: the surface still says "folder"`)
+      await expect(page.locator('.sec.uh'), 'the surface still says "folder"')
         .not.toContainText(/folder/i)
-    }
-  })
+    })
+  }
 
   test('the surface quotes no allowance the product does not enforce', async ({ page }) => {
     watch(page, 'free user with saved projects')
