@@ -204,7 +204,17 @@ test('dist/llms.txt advertises the apex and nothing else', { skip }, () => {
   // The served copy and the committed copy are written by the same function, so
   // a stale commit cannot ship — but a divergence here means one of them was
   // hand-edited.
-  assert.equal(served, fs.readFileSync(path.join(REPO, 'public', 'llms.txt'), 'utf8'),
+  //
+  // COMPARE THE TEXT, NOT THE LINE ENDINGS. `public/llms.txt` is tracked, and
+  // git hands it to a Windows checkout as CRLF, while the generator writes LF
+  // straight into `dist/`. Those two facts made this assertion fail on `main`
+  // over a byte difference that is not a difference in what the file says. It
+  // passed in the branch worktree it was written in, which is exactly how it
+  // reached main — a guard is only proven on the checkout it will run on.
+  // `llms-txt-truth.test.js` has normalised here since it was written; this is
+  // the same `eol` for the same reason.
+  const eol = (t) => t.replace(/\r\n/g, '\n')
+  assert.equal(eol(served), eol(fs.readFileSync(path.join(REPO, 'public', 'llms.txt'), 'utf8')),
     'dist/llms.txt and public/llms.txt disagree — run `npm run sync:llms`')
 })
 
