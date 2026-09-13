@@ -131,7 +131,10 @@ test.describe('Brand kit walkthrough', () => {
     // ColorLanding, whose H1 is "One colour system, start to finish." — a page
     // of links. Step one has to be the tool.
     await expect(page).toHaveURL(/\/create\/palette$/)
-    await expect(page.getByRole('heading', { name: 'Palette', exact: true })).toBeVisible()
+    // The h1 was a 15px "Palette" in the toolbar, at the same size and weight as
+    // `.plb-hex`. It is a heading area now and reads the route's own name from
+    // routeMetaMap.js.
+    await expect(page.getByRole('heading', { name: 'Palette Generator', exact: true })).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Seed colour hex' })).toBeVisible()
 
     // And the flow is actually running on it.

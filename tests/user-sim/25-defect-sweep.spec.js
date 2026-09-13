@@ -1098,7 +1098,12 @@ test('M1 · every Palette Builder swatch control is tappable on a short phone', 
     })
     await ctx.close()
     expect(r.cols, `${w}x${h}: expected the five palette columns`).toBe(5)
-    expect(r.controls, `${w}x${h}: expected the per-swatch controls to be rendered`).toBeGreaterThan(20)
+    // The floor moved with the row. Each column paints its hex plus Lock, Copy
+    // and More — four buttons — so five columns give 20. It was eight per column
+    // before the <=768 collapse, which is where `> 20` came from. This is a
+    // positive control, not the assertion: it exists so that `r.misses` being
+    // empty cannot mean "nothing rendered to miss".
+    expect(r.controls, `${w}x${h}: expected the per-swatch controls to be rendered`).toBeGreaterThanOrEqual(20)
     if (r.misses.length) {
       damage.push(`${w}x${h}: ${r.misses.length} of ${r.controls} swatch controls are covered (row is ${r.rowH}px tall) — ${r.misses.slice(0, 3).join('; ')}`)
     }

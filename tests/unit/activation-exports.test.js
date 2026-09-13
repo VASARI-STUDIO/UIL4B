@@ -158,7 +158,12 @@ test('the palette routes both of its CSS buttons through the single hook', () =>
   const pb = stripComments(read('src/pages/PaletteBuilder.jsx'))
   assert.match(pb, /const copyCssExport = \(\) => onExport\?\.\(cssExport\)/)
   assert.match(pb, /copyCssExport\(\); setSaveOpen\(false\)/, 'the save menu must use it')
-  assert.match(pb, /onClick=\{copyCssExport\}>Copy CSS</, 'the footer button must use it')
+  // The optional glyph is the <IcoCopy /> the footer button gained so it stops
+  // reading as a text field — it and `.plb-hexfield` shared a white ground and
+  // the identical border. What this line defends is the ONCLICK, not the label:
+  // the anchor on "Copy CSS" is only what tells the footer button apart from the
+  // save-menu row, whose handler is a closure.
+  assert.match(pb, /onClick=\{copyCssExport\}>(<Ico\w+ \/> )?Copy CSS</, 'the footer button must use it')
   assert.equal((pb.match(/onCopy\?\.\(cssExport\)/g) || []).length, 0, 'no CSS export may bypass the hook')
 })
 

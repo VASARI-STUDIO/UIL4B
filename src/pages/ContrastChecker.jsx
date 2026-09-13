@@ -412,7 +412,7 @@ export default function ContrastChecker({ onCopy }) {
 
           {fixes.length > 0 && (
             <>
-              <label className="seg-label">Make it pass</label>
+              <h2 className="seg-label">Make it pass</h2>
               <div className="cc-fixes">
                 {fixes.map(fix => (
                   <div key={fix.key} className="cc-fix">
@@ -438,21 +438,40 @@ export default function ContrastChecker({ onCopy }) {
 
         {/* ── Live preview ── */}
         <div className="card cc-panel">
-          <label className="seg-label">Live preview</label>
+          <h2 className="seg-label">Live preview</h2>
           <p className="cc-lede">
             The pair on a real surface. Each chip is that element&rsquo;s own
             threshold at {level.label}, not the page&rsquo;s — which is why one
             pair can carry a heading and still fail the caption underneath it.
           </p>
+          {/* SPECIMEN TEXT, AND IT HAS TO READ AS SPECIMEN TEXT.
+              Founder decision, 2026-09-13. The small-print row read "Free while
+              in beta. Terms apply." — filler, but claim-shaped, and untrue of
+              UIL4B: a visitor reading this page can take it for a real pricing
+              statement. The 24px row was a tagline ("Ship a palette you can
+              defend") and the 16px row described the product. Half a mockup and
+              half product copy is how a mockup gets read as the page.
+
+              Every line is now a pangram, which is what a type specimen has
+              used for two centuries precisely BECAUSE it asserts nothing. They
+              still do the job the rows exist for — 24px, 16px and 12px of the
+              chosen pair, each against its own threshold.
+
+              The 24px row is no longer an <h2>. It was the page's ONLY h2, so
+              the whole heading outline a screen-reader user heard was "Colour
+              Contrast Checker" followed by a tagline from inside a preview.
+              A specimen is not a section of this document. `.cc-spec-h` carries
+              the size and weight, and `p` is already margin-zero here — same
+              pixels, no heading. */}
           <div className="cc-preview" ref={pairRef(fg, bg)}>
             <div className="cc-spec-row">
-              <h2 className="cc-spec-h">Ship a palette you can defend</h2>
+              <p className="cc-spec-h">The quick brown fox jumps over the lazy dog</p>
               <Verdict ratio={ratio} min={level.large} what="a 24px heading" />
             </div>
             <div className="cc-spec-row">
               <p className="cc-spec-body">
-                Every colour is checked against what sits behind it, at the size
-                it is really used. That is the whole job.
+                Pack my box with five dozen liquor jugs. How vexingly quick daft
+                zebras jump.
               </p>
               <Verdict ratio={ratio} min={level.normal} what="16px body text" />
             </div>
@@ -465,7 +484,8 @@ export default function ContrastChecker({ onCopy }) {
             </div>
             <div className="cc-spec-row">
               <p className="cc-spec-small">
-                Free while in beta. <span className="cc-spec-link">Terms apply</span>.
+                Sphinx of black quartz, judge my vow &mdash; and a{' '}
+                <span className="cc-spec-link">sample link</span>.
               </p>
               <Verdict ratio={ratio} min={level.normal} what="12px small print" />
             </div>
