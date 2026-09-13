@@ -185,7 +185,13 @@ test('assertHomeShellApplied fails on a shell whose headline went missing', () =
   // Anti-vacuity for the build-time check: it has to be able to go red.
   assert.throws(() => assertHomeShellApplied('<div id="root"></div>', 'a test'),
     /without .*the h1/)
-  assert.doesNotThrow(() => assertHomeShellApplied(homeShellRoot(), 'a test'))
+  // It also fails on a body that carries the headline but whose <html> lost the
+  // attribute — which is the half that keeps the hydrated hero from re-entering,
+  // and is not visible anywhere in the markup this function is usually shown.
+  assert.throws(() => assertHomeShellApplied(homeShellRoot(), 'a test'),
+    /data-hero-prepainted/)
+  // The whole applied document is what prerender writes, and it must pass.
+  assert.doesNotThrow(() => assertHomeShellApplied(applyHomeShell(read('index.html')), 'a test'))
 })
 
 test('applying it to the REAL index.html keeps the head and swaps only #root', () => {

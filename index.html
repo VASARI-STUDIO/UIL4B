@@ -106,7 +106,17 @@ html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[dat
    top padding is the only thing above the h1; and the skeleton strip sits after
    the hero in flow, where it cannot move it. Nothing here styles the headline —
    that is global.css's `.home-hero-h1` block and there is only one of it. */
-.boot-shell-home{padding:0}
+/* `font-family:inherit` is the load-bearing half of this line. `.boot-shell`
+   above declares its own Manrope stack, and a class on a nearer ancestor beats
+   `body{font-family:var(--font)}` for everything inside it — so the pre-painted
+   headline would inherit a DIFFERENT stack from the one the hydrated headline
+   inherits. Both start with Manrope, so both render the same face while the
+   self-hosted file loads; they diverge only if it ever fails, which is exactly
+   the case where a fallback difference would show as a re-wrap. Inheriting from
+   <body> means the two headlines take their family from one declaration rather
+   than from two that happen to agree. Measured identical at 360, 390, 480, 768,
+   1024, 1280, 1440 and 1920. */
+.boot-shell-home{padding:0;font-family:inherit}
 .boot-shell-home .boot-nav{position:fixed;top:0;left:0;right:0;z-index:1;max-width:none;height:var(--nav-h,60px);margin:0;border-width:0 0 1px;border-radius:0;padding:0 clamp(18px,4vw,48px)}
 .boot-shell-home .boot-below{padding:0 clamp(18px,4vw,48px)}
 @media(max-width:640px){.boot-nav-lines{display:none}.boot-main{padding-top:88px}.boot-cards{grid-template-columns:1fr}.boot-card:nth-child(n+2){display:none}}
