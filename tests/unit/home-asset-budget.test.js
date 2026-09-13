@@ -90,3 +90,142 @@ test('every declared face is served from /fonts, never from a catalogue', () => 
 
   assert.doesNotMatch(css, /@import[^;]*(googleapis|gstatic)/, 'no remote font-catalogue import')
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// THE RENDER-BLOCKING STYLESHEET
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// The other byte budget that regresses silently, and the one that was costing
+// the homepage the most. `src/styles/global.css` compiled to a single
+// 593,650-byte stylesheet in the <head> of every route, of which the homepage
+// used 38,739 bytes — 6.5%. It was split on 2026-09-13 into a critical sheet
+// plus src/styles/deferred/*.css, each imported by the lazy chunks that can
+// reach it, and the emitted critical sheet went to 281,262 raw / 48,719 gzip.
+//
+// Two ways that comes back, and this guards both:
+//
+//   1. RULES GROW BACK INTO global.css. A budget on the emitted file catches
+//      it whatever the source looks like.
+//   2. A DEFERRED SHEET IS IMPORTED FROM THE ENTRY GRAPH. One
+//      `import './styles/deferred/colour.css'` in an eagerly reached module
+//      puts 80 KB back in the first request wave, and the file it came from
+//      still looks split. So the static import graph from src/main.jsx is
+//      walked and must not reach src/styles/deferred at all.
+//
+// IT MEASURES A REAL BUILD, not the source. The emitted size is what the
+// browser pays for, and it is not a function anyone can compute by reading CSS
+// — minification, deduplication and the chunk graph all sit in between.
+//
+// WHERE IT BUILDS: the OS temp directory, process-unique, removed afterwards —
+// for the reasons tests/unit/admin-chunk-carries-no-backlog.test.js and
+// tests/unit/test-session-not-in-production.test.js record at length. Never
+// dist/ (a concurrent `npm run test:users` is being served from it) and never
+// anywhere inside the checkout (a build left in tmp/ once turned `npm run lint`
+// from 0 errors into 538).
+//
+// MUTATION-VERIFIED at the call site: `import './styles/deferred/colour.css'`
+// added to src/main.jsx — the emitted critical sheet went 281,262 -> 362,148
+// raw and 48,719 -> 61,979 gzip, both over budget, and the entry-graph test
+// named the import. Restored byte-exact; green again.
+import os from 'node:os'
+import zlib from 'node:zlib'
+
+// Headroom over the measured 281,262 / 48,719, enough for ordinary work on the
+// shell and not enough for a family to come back.
+const CRITICAL_CSS_RAW_BUDGET = 300_000
+const CRITICAL_CSS_GZIP_BUDGET = 52_000
+
+const outDir = path.join(os.tmpdir(), `uil4b-critical-css-${process.pid}-${Date.now()}`)
+let built = null
+
+async function buildOnce() {
+  if (built) return built
+  const { build: viteBuild } = await import('vite')
+  await viteBuild({ root: ROOT, logLevel: 'silent', build: { outDir, emptyOutDir: true } })
+  const assets = path.join(outDir, 'assets')
+  const files = fs.readdirSync(assets)
+  built = { assets, files }
+  return built
+}
+
+test('the render-blocking stylesheet stays inside its byte budget', async (t) => {
+  t.after(() => fs.rmSync(outDir, { recursive: true, force: true }))
+  const { assets, files } = await buildOnce()
+
+  // Positive controls first. Every assertion below is satisfied for free by a
+  // build that emitted nothing, or by a stylesheet that is not the one under
+  // test.
+  assert.ok(files.filter((f) => f.endsWith('.js')).length > 10, `a real build emits many chunks, found ${files.length} assets`)
+  const entrySheets = files.filter((f) => /^index-[\w-]+\.css$/.test(f))
+  assert.equal(entrySheets.length, 1, `expected exactly one entry stylesheet, found: ${entrySheets.join(', ')}`)
+
+  const css = fs.readFileSync(path.join(assets, entrySheets[0]), 'utf8')
+  // It is the app's sheet: the design tokens and the homepage hero are in it.
+  assert.match(css, /--bg-0:/, 'the entry stylesheet carries no design tokens — is this the right file?')
+  assert.match(css, /\.home-hero-h1/, 'the entry stylesheet does not style the homepage headline')
+
+  const raw = Buffer.byteLength(css)
+  const gzip = zlib.gzipSync(Buffer.from(css), { level: 9 }).length
+  assert.ok(
+    raw <= CRITICAL_CSS_RAW_BUDGET,
+    `the render-blocking stylesheet is ${raw} bytes, over the ${CRITICAL_CSS_RAW_BUDGET}-byte budget. `
+    + 'Rules that only one route can reach belong in src/styles/deferred/, imported by that route.',
+  )
+  assert.ok(
+    gzip <= CRITICAL_CSS_GZIP_BUDGET,
+    `the render-blocking stylesheet is ${gzip} bytes gzipped, over the ${CRITICAL_CSS_GZIP_BUDGET}-byte budget.`,
+  )
+})
+
+test('no eagerly loaded module imports a deferred stylesheet', () => {
+  // The budget above is a number; this is the shape that keeps it true. A
+  // deferred sheet reached by a STATIC import from the entry is in the first
+  // request wave no matter which file it is stored in.
+  const seen = new Set()
+  const offenders = []
+  const resolve = (from, spec) => {
+    if (!spec.startsWith('.')) return null
+    const base = path.posix.join(path.posix.dirname(from), spec)
+    for (const cand of [base, `${base}.jsx`, `${base}.js`, `${base}/index.jsx`, `${base}/index.js`]) {
+      if (fs.existsSync(path.join(ROOT, cand))) return cand
+    }
+    return null
+  }
+  const queue = ['src/main.jsx']
+  while (queue.length) {
+    const file = queue.shift()
+    if (!file || seen.has(file)) continue
+    seen.add(file)
+    if (!/\.(jsx?)$/.test(file)) continue
+    const src = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    for (const m of src.matchAll(/^\s*import\s+(?:[\s\S]*?\sfrom\s+)?['"]([^'"]+)['"]/gm)) {
+      if (/styles\/deferred\//.test(m[1])) offenders.push(`${file} imports ${m[1]}`)
+      const next = resolve(file, m[1])
+      if (next) queue.push(next)
+    }
+  }
+  // Positive control: the walk reached the app, not just its entry point.
+  assert.ok(seen.size > 50, `the import walk only reached ${seen.size} modules — it is not seeing the app`)
+  assert.ok(seen.has('src/pages/Home.jsx'), 'the import walk never reached the homepage')
+  assert.deepEqual(offenders, [], 'a deferred stylesheet is reachable from the entry chunk by static import')
+})
+
+test('the deferred stylesheets exist, are substantial, and are imported by lazy routes', () => {
+  const dir = path.join(ROOT, 'src', 'styles', 'deferred')
+  const sheets = fs.readdirSync(dir).filter((f) => f.endsWith('.css'))
+  assert.ok(sheets.length >= 5, `expected the deferred families, found ${sheets.length}`)
+  const pages = fs.readdirSync(path.join(ROOT, 'src', 'pages')).filter((f) => f.endsWith('.jsx'))
+  const components = fs.readdirSync(path.join(ROOT, 'src', 'components')).filter((f) => f.endsWith('.jsx'))
+  const importers = [
+    ...pages.map((f) => read(path.join('src', 'pages', f))),
+    ...components.map((f) => read(path.join('src', 'components', f))),
+  ].join('\n')
+  for (const sheet of sheets) {
+    const bytes = fs.statSync(path.join(dir, sheet)).size
+    assert.ok(bytes > 5000, `src/styles/deferred/${sheet} is ${bytes} bytes — has it been emptied back into global.css?`)
+    assert.ok(
+      importers.includes(`styles/deferred/${sheet}`),
+      `src/styles/deferred/${sheet} is imported by no page or component, so it ships to nobody`,
+    )
+  }
+})
