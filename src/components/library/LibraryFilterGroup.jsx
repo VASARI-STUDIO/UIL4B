@@ -334,7 +334,29 @@ export default function LibraryFilterGroup({
       aria-pressed={isOn(value, option.id)}
       title={multiSelect && hint ? hint : undefined}
       onClick={(event) => {
-        if (!multiSelect) { onChange(option.id); return }
+        if (!multiSelect) {
+          onChange(option.id)
+          // A SINGLE-SELECT MENU CLOSES ON CHOICE. That is the whole difference
+          // between a disclosure and the tray it stands in for: the question
+          // has been answered, so the answer sheet goes away and focus comes
+          // back to the control that states it.
+          //
+          // MEASURED 2026-09-13 on /create/emoji at 390, light: picking a
+          // category left `aria-expanded="true"` and a 492px menu sitting over
+          // the grid it had just filtered — the user's own result hidden behind
+          // the control that produced it, on the width where the menu is
+          // tallest relative to the screen.
+          //
+          // MULTI-SELECT DELIBERATELY STAYS OPEN: picking several is the whole
+          // gesture there, and closing after the first would make the second
+          // pick cost a reopen. That is why this is inside the branch and not
+          // after it.
+          if (collapsed) {
+            setOpen(false)
+            requestAnimationFrame(() => triggerRef.current?.focus())
+          }
+          return
+        }
         const additive = event.shiftKey || event.metaKey || event.ctrlKey
         onChange(additive
           ? toggleSelection(value, option.id, { options, resetId })

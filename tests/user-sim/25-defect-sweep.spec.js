@@ -317,9 +317,28 @@ const FILTER_TRAYS = [
   // tab switch, on one page, which is what the founder reported. It now
   // collapses to its trigger wherever it does not fit, so at 1180px there is no
   // expanded tray to measure and the surface is asserted in the collapsed test
-  // below instead. Below 641 it is a full-width column stack and the chips are
-  // all there, which is what 320 and 390 check.
-  ['/create/emoji', '.lbry-filters', '.lbry-filter', 1, 12, [320, 390]],
+  // below instead.
+  //
+  // AND SINCE 2026-09-13 THERE IS NO EXPANDED TRAY AT ANY WIDTH, which is why
+  // this row now names zero rows, zero chips and no widths at all. "Below 641
+  // it is a full-width column stack and the chips are all there" is what this
+  // row used to check at 320 and 390, and that turned out to be the defect
+  // rather than the baseline: twelve chips wrapped to SEVEN rows at 320 and six
+  // at 390, took the toolbar to 414px — 49% of an 844px phone — and put ZERO
+  // emoji on the first screen at 320, 360, 390 and 430. An emoji library
+  // showing no emoji.
+  //
+  // So this surface took the same decision `/discover/palettes` took for mood
+  // nine rows above, for the same reason and with a larger facet: twelve values
+  // is a labelled menu at EVERY width. It contributes a trigger and no chip
+  // row, so the expanded measurement has nothing to measure and the collapsed
+  // test below owns the surface — `collapsedTriggers` is stated explicitly
+  // because it can no longer default to the (now zero) group count.
+  //
+  // Coverage did not shrink: 87-tools-breakpoints asserts this trigger, its
+  // `aria-haspopup`/`aria-expanded` contract and the absence of the tray at all
+  // ten breakpoints in both themes, and hit-tests every option in the open menu.
+  ['/create/emoji', '.lbry-filters', '.lbry-filter', 0, 0, [], 1],
   ['/create/icons', '.lbry-filters', '.lbry-filter', 1, 7],
   // #323 moved the Prompt Library onto the shared toolbar. It mounts TWO trays
   // — sort (2 options) and category (All + 5) — which is why the totals column

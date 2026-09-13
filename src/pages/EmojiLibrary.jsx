@@ -331,12 +331,41 @@ export default function EmojiLibrary({ onCopy }) {
           </>
         )}
       >
+        {/* A MENU, at every width — the same call the Palette Library's mood
+            facet already makes, and for the same measured reason. Twelve
+            categories, each carrying a glyph, a label and a count, is the
+            largest tray in the app: its intrinsic width is 1478px, so the
+            `overflows` path below 981px collapses it on every desktop already.
+            But that path is switched off under 641px by design (#298), and
+            THAT is where it was costing the most.
+
+            MEASURED at 844px tall, light, before this prop: the tray alone was
+            290px in SEVEN rows at 320 and 249px in six rows at 390, taking the
+            toolbar to 414px — 49% of a small phone's viewport — and pushing the
+            first emoji cell to y=969 at 320 and y=912 at 390. ZERO emoji were
+            on the first screen at 320, 360, 390 or 430. An emoji library that
+            shows no emoji until you scroll past six rows of chips has stopped
+            doing its job on the device most likely to want it.
+
+            The precedent is exact: `alwaysCollapsed` exists because nine moods
+            took the Palette Library's toolbar to 314px at 320 and 273px at 390,
+            and the rule it settled was that a facet with nine or more values is
+            a labelled control that opens a list rather than a row of chips that
+            is a row of chips at some widths. Twelve is past that line.
+
+            This also REMOVES a shape change rather than adding one: at 768 and
+            above the group was already collapsed by the measured path, so the
+            phone now matches every other width instead of disagreeing with it.
+            The menu renders the SAME option buttons, so the glyph and the count
+            on each category survive, and the trigger states the current choice
+            ("Category · Smileys"), so nothing is hidden. */}
         <LibraryFilterGroup
           label="Filter by category"
           triggerLabel="Category"
           value={activeCat ?? 'all'}
           onChange={(id) => setActiveCat(id === 'all' ? null : id)}
           options={CATEGORY_OPTIONS}
+          alwaysCollapsed
         />
       </LibraryToolbar>
 
