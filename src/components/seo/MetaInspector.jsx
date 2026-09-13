@@ -174,7 +174,7 @@ export default function MetaInspector({ onCopy, toast }) {
 
           <label className="seo-field">
             <span className="seo-field-label">Page URL</span>
-            <input type="text" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.uil4b.com/create/aspect-ratio" />
+            <input type="text" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://uil4b.com/create/aspect-ratio" />
           </label>
 
           <label className="seo-field">

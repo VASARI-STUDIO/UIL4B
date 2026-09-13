@@ -8,4 +8,4 @@ Disallow: /dashboard
 Disallow: /projects
 Disallow: /style-guide
 
-Sitemap: https://www.uil4b.com/sitemap.xml
+Sitemap: https://uil4b.com/sitemap.xml

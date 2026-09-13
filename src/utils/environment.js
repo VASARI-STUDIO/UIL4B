@@ -27,11 +27,20 @@
 // notice because the failure mode is a plausible-looking number.
 //
 // DOM-free so it can be tested directly.
+import { SITE_ORIGIN } from './routeMeta.js'
 
-// The only hosts that are the real site. Both are served by the same
-// deployment; `www` is canonical (see utils/routeMeta.js) and the apex is kept
-// because it resolves.
-export const PRODUCTION_HOSTS = Object.freeze(['www.uil4b.com', 'uil4b.com'])
+// The only hosts that are the real site, CANONICAL FIRST.
+//
+// The apex is the canonical host and the only one Vercel actually serves
+// (measured 2026-09-13 — see SITE_ORIGIN in utils/routeMeta.js), so it is
+// derived from that constant rather than spelled a second time here. `www`
+// is KEPT as an accepted arrival host: this allowlist answers "is this
+// visitor on the real site", not "what do we advertise", and if the www
+// record is ever pointed at the deployment a visitor could legitimately
+// arrive on it. Recognising a host we do not advertise costs nothing;
+// failing to recognise one would silently drop real production analytics.
+export const CANONICAL_HOST = new URL(SITE_ORIGIN).host
+export const PRODUCTION_HOSTS = Object.freeze([CANONICAL_HOST, 'www.uil4b.com'])
 
 /**
  * True only for a host we positively recognise as production.

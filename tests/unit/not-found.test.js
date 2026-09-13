@@ -126,7 +126,7 @@ test('the 404 shell does not wear the homepage title', { skip: !built && 'run `n
 
 test('a real route still gets its own canonical and stays indexable', { skip: !built && 'run `npm run build` first' }, () => {
   const html = read('dist/create/type-scale/index.html')
-  assert.match(html, /<link rel="canonical" href="https:\/\/www\.uil4b\.com\/create\/type-scale"/)
+  assert.match(html, /<link rel="canonical" href="https:\/\/uil4b\.com\/create\/type-scale"/)
   assert.match(html, /<meta\s+name="robots"\s+content="index,follow"/)
 })
 
@@ -230,8 +230,8 @@ test('the client and the prerendered shell agree on the 404 copy', () => {
 })
 
 test('canonicalUrl is unchanged for real routes', () => {
-  assert.equal(canonicalUrl('/create/type-scale'), 'https://www.uil4b.com/create/type-scale')
-  assert.equal(canonicalUrl('/'), 'https://www.uil4b.com/')
+  assert.equal(canonicalUrl('/create/type-scale'), 'https://uil4b.com/create/type-scale')
+  assert.equal(canonicalUrl('/'), 'https://uil4b.com/')
 })
 
 // ── Duplicate URLs ──────────────────────────────────────────────────────────
@@ -241,8 +241,8 @@ test('/home canonicals to / rather than competing with it', () => {
   // to on every page — so it is the most-linked URL on the site. Left
   // self-canonicalising, the internal link graph pointed at the copy rather
   // than at the homepage.
-  assert.equal(canonicalUrl('/home'), 'https://www.uil4b.com/')
-  assert.equal(canonicalUrl('/home/'), 'https://www.uil4b.com/')
+  assert.equal(canonicalUrl('/home'), 'https://uil4b.com/')
+  assert.equal(canonicalUrl('/home/'), 'https://uil4b.com/')
 })
 
 test('/home is real, indexable content — the alias is about canonical, not noindex', () => {
@@ -253,8 +253,8 @@ test('/home is real, indexable content — the alias is about canonical, not noi
 })
 
 test('the alias does not leak into other routes', () => {
-  assert.equal(canonicalUrl('/homepage'), 'https://www.uil4b.com/homepage')
-  assert.equal(canonicalUrl('/create/type-scale'), 'https://www.uil4b.com/create/type-scale')
+  assert.equal(canonicalUrl('/homepage'), 'https://uil4b.com/homepage')
+  assert.equal(canonicalUrl('/create/type-scale'), 'https://uil4b.com/create/type-scale')
 })
 
 test('/home is not advertised in the sitemap, but IS prerendered', async () => {

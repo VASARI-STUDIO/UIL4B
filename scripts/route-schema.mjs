@@ -81,6 +81,7 @@
 import { CREATE_GROUPS } from '../src/data/toolTree.js'
 import { PAGE_TITLES } from '../src/data/routeMetaMap.js'
 import { CREATE_HOMES_THAT_RENDER } from './route-matrix.mjs'
+import { SITE_ORIGIN } from '../src/utils/routeMeta.js'
 
 const norm = (p) => {
   const s = String(p || '/').split('?')[0].split('#')[0].toLowerCase()
@@ -152,6 +153,6 @@ export function breadcrumbJsonLd(pathname, origin) {
 }
 
 /** Every route that gets a breadcrumb — for the tests, and for the build log. */
-export function breadcrumbRoutes(routes, origin = 'https://www.uil4b.com') {
+export function breadcrumbRoutes(routes, origin = SITE_ORIGIN) {
   return routes.filter((r) => breadcrumbFor(r, origin))
 }

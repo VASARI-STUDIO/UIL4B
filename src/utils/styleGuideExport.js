@@ -16,6 +16,8 @@
 // Pure functions over a plain design object — no React, no DOM — so the whole
 // document is unit-testable as a string.
 
+import { SITE_ORIGIN } from './routeMeta.js'
+
 /** WCAG relative luminance for an #rrggbb string. */
 function luminance(hex) {
   const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -297,6 +299,6 @@ export function buildStyleGuideMarkdown(design, { projectName = 'Design System',
       return `| \`${hex}\` on white | ${r}:1 | ${grade(r)} |`
     }),
   )
-  if (watermark) lines.push('', '---', '', 'Made with [UIL4B](https://www.uil4b.com)')
+  if (watermark) lines.push('', '---', '', `Made with [UIL4B](${SITE_ORIGIN})`)
   return `${lines.join('\n')}\n`
 }
