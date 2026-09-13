@@ -1949,11 +1949,6 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 /* ─── UI Builder: Code tabs ─── */
 
-/* ─── Projects: Folder chips ─── */
-.proj-folder-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
-
-/* ─── Projects: Tabs ─── */
-.proj-tab.active{color:var(--accent-strong);border-bottom-color:var(--accent)}
 
 
 /* New project modal */
