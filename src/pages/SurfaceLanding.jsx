@@ -7,7 +7,7 @@ import { DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
 import LearnGuideIndex from '../components/LearnGuideIndex'
 import { LEARN_ARTICLES } from '../data/learnIndex'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
-import { GALLERY_PALETTES } from '../data/paletteGallery'
+import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 
@@ -29,11 +29,23 @@ import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 // this is presentation. The array in toolTree.js stays exactly as it is, which
 // also keeps this clear of [handkept-tool-lists-remaining].
 const PREVIEWS = {
+  // COUNTED OFF THE LIBRARY, NOT OFF THE CURATED SET. This read
+  // GALLERY_PALETTES.length and said "64 palettes", while /discover/palettes —
+  // the page this very card links to — announces "71 palettes" to a signed-out
+  // visitor and holds 101. GALLERY_PALETTES is only the curated half;
+  // LIBRARY_PALETTES is that set plus the 37 brand systems, and it is what
+  // PaletteGallery renders and what that page's own Pro modal counts against.
+  // The card was under-counting the library by 37 while its description sold
+  // the brand systems as the reason to open it.
+  //
+  // The swatch preview is drawn from the SAME array as the count, so the card
+  // cannot show one library and count another — which is the failure the
+  // comment at the top of this block already claimed was impossible.
   'palette-library': () => ({
-    meta: `${GALLERY_PALETTES.length} palettes`,
+    meta: `${LIBRARY_PALETTES.length} palettes`,
     node: (
       <div className="scp-stack">
-        {GALLERY_PALETTES.slice(0, 3).map((p) => (
+        {LIBRARY_PALETTES.slice(0, 3).map((p) => (
           <div className="scp-row" key={p.id}>
             {p.colors.map((c, i) => <span className="scp-chip" key={i} style={{ background: c }} />)}
           </div>
@@ -251,10 +263,10 @@ export default function SurfaceLanding({ surface }) {
           they can open before they meet a roadmap; the previous version led
           with eight Soon cards and had nothing behind any of them. */}
       {surface === 'learn' && (
-        <section className="home-section">
+        <section className="home-section" aria-labelledby="surface-guides-heading">
           <div className="home-container">
             <div className="home-head home-head-center" data-reveal>
-              <h2 className="home-h2">Reference, not opinion.</h2>
+              <h2 className="home-h2" id="surface-guides-heading">Reference, not opinion.</h2>
             </div>
             {/* Grouped by the topic each guide declares, behind a search over
                 their full text. See src/components/LearnGuideIndex.jsx. */}
@@ -263,11 +275,22 @@ export default function SurfaceLanding({ surface }) {
         </section>
       )}
 
-      {/* ── The destinations. This grid IS the page. ── */}
-      <section className="home-section">
+      {/* ── The destinations. This grid IS the page. ──
+          NAMED, so that it is a landmark. Measured on the built preview at
+          eleven widths in both themes, /discover offered exactly four
+          landmarks — navigation("Primary") | main | contentinfo |
+          navigation("Footer") — and not one of them said anything about
+          libraries. A <section> with no accessible name computes to `generic`,
+          so the grid this comment calls "the page" was absent from the
+          landmark list, which is how a non-visual reader answers "what is
+          this page made of" on arrival. Both galleries beneath this surface
+          already name their results region; the index above them did not, so
+          it was the only page in the set whose subject could not be reached
+          that way. The name is the h2 that is already here — no new sentence. */}
+      <section className="home-section" aria-labelledby="surface-grid-heading">
         <div className="home-container">
           <div className="home-head home-head-center" data-reveal>
-            <h2 className="home-h2">{s.gridTitle}</h2>
+            <h2 className="home-h2" id="surface-grid-heading">{s.gridTitle}</h2>
             {s.gridLede && <p className="home-lede">{s.gridLede}</p>}
           </div>
 
