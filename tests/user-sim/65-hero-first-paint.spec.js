@@ -218,10 +218,22 @@ test('the headline is the LCP element of a homepage load, recorded at its full s
 /** Land on a PillNav route, then reach the homepage the way a visitor does. */
 async function arriveFromAnotherRoute(page) {
   await go(page, '/create/contrast')
+  // A non-homepage URL must not end up pre-painted, and this is checked at the
+  // URL rather than at the file, because the two can disagree: vercel.json
+  // rewrites each prerendered URL to its own shell, but `vite preview` — which
+  // this suite runs against — has no such table and hands dist/index.html to
+  // EVERY path. The head script in index.html is what makes the answer depend
+  // on where the visitor actually is instead of on which file arrived, so this
+  // assertion covers the gate as well as the routing.
   expect(
     await page.evaluate(() => document.documentElement.hasAttribute('data-hero-prepainted')),
-    'a non-homepage shell was served with data-hero-prepainted — the attribute belongs to the '
-    + 'two shells that actually carry a pre-painted headline, and nowhere else',
+    'a non-homepage URL is marked data-hero-prepainted. That attribute turns the hero '
+    + 'entrance off, and it belongs only to a document that actually painted the headline '
+    + 'before React ran.',
+  ).toBe(false)
+  expect(
+    await page.evaluate(() => !!document.querySelector('#boot-shell')),
+    'the boot shell is still on screen after ready() — this reads the wrong page',
   ).toBe(false)
   await page.getByLabel('UIL4B home').click()
   await ready(page, '/home')

@@ -107,15 +107,29 @@ test.describe('premium homepage', () => {
         await page.waitForSelector('#boot-shell .home-hero-line-in')
         // The render-blocking sheet, then the fonts. Nothing paints before the
         // first and a late second is the classic cause of a re-wrap.
-        await page.waitForFunction(
-          () => [...document.styleSheets].some((s) => (s.href || '').includes('/assets/index-')),
-        )
+        //
+        // ASKED OF THE LINK ELEMENT, NOT OF A FILENAME. The first version of
+        // this waited for a stylesheet whose href contained `/assets/index-`,
+        // which is what `vite build` emits — but `vite build --mode test`, which
+        // is what this suite runs against, adds four fixture HTML inputs and the
+        // entry sheet becomes `global-<hash>.css`. The wait could never resolve
+        // and both widths failed on the timeout with nothing wrong with the page.
+        await page.waitForFunction(() => {
+          const links = [...document.querySelectorAll('link[rel="stylesheet"]')]
+          return links.length > 0 && links.every((l) => {
+            try { return !!l.sheet && l.sheet.cssRules.length > 0 } catch { return false }
+          })
+        })
         await page.waitForFunction(() => document.fonts.status === 'loaded')
         shell = await page.evaluate(HERO_GEOMETRY)
-        // Positive control on the read itself: unstyled, this reports the UA's
-        // 32px bold h1 and the comparison below would be meaningless.
+        // Positive control on the read itself. Before the stylesheet applies
+        // this reports the UA's own h1 — 32px, bold, `letter-spacing: normal` —
+        // and the comparison below would pass on a state nothing ever paints.
+        // Asserted as "not the UA default" rather than against global.css's
+        // actual value, so it stays a control instead of becoming a second place
+        // the hero's tracking is written down.
         expect(shell.length, 'the served `/` shell carries no headline — prerender did not write one').toBe(2)
-        expect(shell[0].fontWeight, 'the shell headline was read before global.css applied').toBe('800')
+        expect(shell[0].letterSpacing, 'the shell headline was read before the stylesheet applied').not.toBe('normal')
       } finally {
         release()
       }

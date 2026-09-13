@@ -41,6 +41,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { stripJs } from '../helpers/strip-comments.js'
 import { HERO_HEADLINE, heroHeadlineText } from '../../src/data/positioning.js'
+import { SESSION_HINT_KEY } from '../../src/utils/sessionHint.js'
 import {
   HOME_SHELL_ROUTES,
   applyHomeShell,
@@ -210,6 +211,44 @@ test('applying it to the REAL index.html keeps the head and swaps only #root', (
   // it. What must be gone is the empty grey box standing in for this headline.
   assert.ok(!applied.includes('<i class="boot-copy boot-title">'),
     'the generic skeleton title is still in the homepage shell alongside the real headline')
+})
+
+// ── The gate in index.html's head ───────────────────────────────────────────
+//
+// Two visitors must not see the pre-painted headline: a returning signed-in one
+// (App.jsx redirects them off `/` and 57-signed-in-session.spec.js requires the
+// sales page never paints on the way), and anyone handed the wrong shell — which
+// is not hypothetical, because `vite preview` serves dist/index.html for every
+// path. The head script answers both. These pin the two values it reads against
+// the modules that own them, so a rename fails the build instead of silently
+// turning the gate off and leaving the headline on screen for a signed-in user.
+
+test("the gate reads the session hint by sessionHint.js's own key", () => {
+  const html = read('index.html')
+  const gate = /<script>\s*\/\/ THE GATE ON THE PRE-PAINTED HEADLINE[\s\S]*?<\/script>/.exec(html)
+  assert.ok(gate, 'index.html no longer carries the pre-painted-headline gate in its head')
+  const code = gate[0].replace(/^\s*\/\/.*$/gm, '')
+  assert.ok(code.includes(`'${SESSION_HINT_KEY}'`),
+    `the gate does not read '${SESSION_HINT_KEY}'. src/utils/sessionHint.js owns that key; if it `
+    + 'moved, the gate is now reading nothing and a returning signed-in visitor sees the sales '
+    + 'headline before being redirected off it.')
+  assert.ok(code.includes('data-hero-prepainted'),
+    'the gate no longer checks the attribute, so it runs its whole body on all 39 shells')
+})
+
+test('the gate keeps the headline on exactly the URLs the shell is written for', () => {
+  // Read out of HOME_SHELL_ROUTES rather than restated: the set that decides
+  // which shells CARRY the headline must be the set that decides which URLs may
+  // SHOW it, or one of them is wrong and nothing says which.
+  const html = read('index.html')
+  const gate = /<script>\s*\/\/ THE GATE ON THE PRE-PAINTED HEADLINE[\s\S]*?<\/script>/.exec(html)
+  assert.ok(gate, 'index.html no longer carries the pre-painted-headline gate in its head')
+  const code = gate[0].replace(/^\s*\/\/.*$/gm, '')
+  const compared = [...code.matchAll(/p===('[^']*')/g)].map((m) => m[1].slice(1, -1))
+  assert.deepEqual(compared.sort(), [...HOME_SHELL_ROUTES].sort(),
+    `the gate allows ${compared.join(', ')} but scripts/home-shell.mjs writes the headline into `
+    + `${[...HOME_SHELL_ROUTES].join(', ')}. A URL in one list and not the other either shows a `
+    + 'headline it should not, or throws away the paint it was given.')
 })
 
 test('only the sales-page URLs get it', () => {
