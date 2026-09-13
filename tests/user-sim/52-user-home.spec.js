@@ -352,3 +352,75 @@ test.describe('a filter that matches nothing says which filter, and undoes itsel
     await expect(page.locator('.proj-folder-chip.active')).toHaveText('All')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE FIRST SCREEN OF THE PRODUCT, ON THE NARROWEST PHONE WE TEST
+// ─────────────────────────────────────────────────────────────────────────────
+// Since the founder stopped seeding a "Default Project" (73-founder-calls-0910
+// § 2), the projects empty state is what every new signup sees first. On
+// 2026-09-13 its only control was below the fold on every phone width in this
+// suite, measured on pristine main:
+//
+//     390 x 844   button y=829..873, centre 851 — 29px of it past the edge
+//     360 x 800   button y=842..886 — the whole control past the edge
+//     320 x 844   button y=886..930 — 42px clear of the bottom
+//     320 x 720   button y=886..930 — 166px clear of the bottom
+//
+// 73-founder-calls-0910 catches the 390 case, because `elementFromPoint`
+// returns null outside the viewport. It cannot catch 320 or 360: it only runs
+// at 390 and 1280. THIS is the test for the class, and it is why the fix has
+// two halves — the card's padding stopped being a fixed 48 below 640 (which is
+// what clears 390 on its own) and the NEXT|TIP band moved below the empty state
+// (which is what clears 320 and 360, where the padding alone leaves the control
+// 16px past the edge).
+//
+// WITHOUT SCROLLING. A page that scrolls is fine; a page whose ONLY control is
+// off the first screen, on the first screen a new account ever sees, with
+// nothing saying to scroll, is not.
+//
+// 320x568 IS HERE ON PURPOSE, and it is the tightest of the four. The suite's
+// shortest viewport elsewhere is 320x720; 568 is the shortest phone screen
+// still in real use, and after the fix the control clears it by 19px. That
+// margin is the reason the card's padding is part of the fix and not a tidy-up:
+// put the fixed 48 back and the control goes 29px past the edge here, while
+// every taller screen stays green. If a future edit lengthens this panel, this
+// is the width that says so first, and it prints the numbers when it does.
+test.describe('the projects empty state puts its control on the first screen', () => {
+  for (const [w, h] of [[320, 568], [320, 720], [360, 800], [390, 844]]) {
+    test(`${w}x${h}: "Create your first project" is above the fold and hit-testable`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width: w, height: h } })
+      const page = await context.newPage()
+      watch(page, `a new account opening their projects on a ${w}px phone`)
+      await signIn(page, { plan: 'free', projects: 0 })
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+
+      const cta = page.getByRole('button', { name: 'Create your first project' })
+      await expect(cta).toBeVisible()
+
+      // Measured off the page rather than off boundingBox(), so the numbers in
+      // the failure are the ones a person on that phone would be looking at.
+      const m = await cta.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+        return {
+          top: Math.round(r.top),
+          bottom: Math.round(r.bottom),
+          vh: window.innerHeight,
+          scrolled: Math.round(window.scrollY),
+          hit: at === el || el.contains(at),
+        }
+      })
+
+      expect(m.scrolled, 'the measurement must be of the FIRST screen').toBe(0)
+      expect(m.bottom,
+        `the empty state's only control runs y=${m.top}..${m.bottom} in a ${m.vh}px viewport — `
+        + `${m.bottom - m.vh}px of it is below the fold. This is the first screen a new account `
+        + 'sees, and nothing on it says to scroll.',
+      ).toBeLessThanOrEqual(m.vh)
+      expect(m.hit, 'the control is on the first screen but something paints over it').toBe(true)
+
+      await context.close()
+    })
+  }
+})
