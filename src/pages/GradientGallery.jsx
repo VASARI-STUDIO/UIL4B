@@ -187,29 +187,51 @@ export default function GradientGallery({ toast }) {
         />
       </LibraryToolbar>
 
-      <DiscoverResultHead
-        eyebrow="Curated collection"
-        title="Gradients worth building with"
-        count={visible.length}
-        noun="gradient"
-        id="grg-grid-heading"
-      />
+      {/* THE RESULTS REGION IS THE SAME REGION IN EVERY STATE.
 
-      {visible.length > 0 ? (
-        <section aria-labelledby="grg-grid-heading">
-          <GradientGalleryGrid toast={toast} gradients={visible} />
-        </section>
-      ) : (
-        // The reset is unconditional now. It used to render only when the page
-        // could prove a filter was set, which hid it in precisely the case
-        // where working out what to undo by hand was hardest.
-        <LibraryEmpty
-          className="grg-empty"
-          title={`No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
-          detail="Try a broader search, or reset the mood and type filters to see all of them again."
-          onClear={clearAll}
+          It used to wrap only the populated arm, so filtering to nothing
+          DELETED it. Measured on the built preview at 1440x900: on arrival
+          the landmark list carried region("Colours worth building with");
+          after a search that matched nothing it read
+
+            navigation("Primary") | main
+            | region("Can’t find what you’re looking for?")
+            | contentinfo | navigation("Footer")
+
+          — the results landmark gone, and the closing CTA left as the only
+          landmark on the page describing content. A reader who filters to
+          zero and then navigates by landmark to get back to the results
+          cannot: the heading naming them is still rendered, and there is no
+          longer any region for it to name.
+
+          The head moves INSIDE the region it labels for the same reason. A
+          section may legally be labelled by an element outside it, but the
+          effect was that the one heading answering "what am I looking at"
+          sat in no landmark at all. Nothing here is new copy — the same
+          head, the same empty state, one element moved. */}
+      <section aria-labelledby="grg-grid-heading">
+        <DiscoverResultHead
+          eyebrow="Curated collection"
+          title="Gradients worth building with"
+          count={visible.length}
+          noun="gradient"
+          id="grg-grid-heading"
         />
-      )}
+
+        {visible.length > 0 ? (
+          <GradientGalleryGrid toast={toast} gradients={visible} />
+        ) : (
+          // The reset is unconditional now. It used to render only when the page
+          // could prove a filter was set, which hid it in precisely the case
+          // where working out what to undo by hand was hardest.
+          <LibraryEmpty
+            className="grg-empty"
+            title={`No gradients match ${query ? `“${rawQuery.trim()}”` : 'those filters'}.`}
+            detail="Try a broader search, or reset the mood and type filters to see all of them again."
+            onClear={clearAll}
+          />
+        )}
+      </section>
 
       {/* The closing line, last child of the page. Same reasoning as the Palette
           Library: the Gradient Generator is where a gradient gets made and where
