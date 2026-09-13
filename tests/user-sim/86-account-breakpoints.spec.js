@@ -86,6 +86,10 @@ import { signIn, go, watch, expectRendered } from './helpers.js'
 const WIDTHS = [320, 360, 390, 430, 768, 834, 1024, 1280, 1440, 1920]
 const PHONE = { width: 390, height: 844 }
 
+// Kept as an ARRAY rather than a comma string, so every probe below is forced
+// to scope each item. See the note in axControls.
+const FOCUSABLE = ['a[href]', 'button', 'input', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])', 'summary']
+
 // The account states that only exist for a real session. `signIn` writes the
 // same localStorage key ProjectContext saves to, under the account's own email,
 // so the cap counts these the way it counts real ones.
@@ -113,15 +117,20 @@ async function boxOf(page, selector) {
  * would actually be handed rather than what the JSX says.
  */
 async function axControls(page, context) {
-  const count = await page.evaluate(() => {
-    const sel = 'a[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"]),summary'
-    const els = [...document.querySelectorAll('main ' + sel)].filter((el) => {
+  const count = await page.evaluate((parts) => {
+    // SCOPE EVERY ITEM OF THE LIST. `'main ' + 'a,button,…'` scopes only the
+    // FIRST item and leaves the rest global — CSS selector-list precedence —
+    // so the primary nav and the footer came back inside what was supposed to
+    // be the page's own controls. Found by a mutation that should have failed
+    // this file and did not.
+    const sel = parts.map((part) => '.sec.uh ' + part).join(',')
+    const els = [...document.querySelectorAll(sel)].filter((el) => {
       const r = el.getBoundingClientRect()
       return r.width > 0 && r.height > 0
     })
     els.forEach((el, i) => el.setAttribute('data-axprobe', String(i)))
     return els.length
-  })
+  }, FOCUSABLE)
   const cdp = await context.newCDPSession(page)
   await cdp.send('Accessibility.enable')
   await cdp.send('DOM.enable')
@@ -207,13 +216,57 @@ test.describe('/projects offers no folder it cannot keep', () => {
       // The word, anywhere a reader could see it on this surface. It covers the
       // chip row, the per-card select, the modal field and the sentence about
       // an allowance, without naming any of their classes.
-      await expect(page.locator('main'), 'the surface still says "folder"')
+      await expect(page.locator('.sec.uh'), 'the surface still says "folder"')
         .not.toContainText(/folder/i)
+
+      // AN ALLOWLIST, NOT A DENYLIST, and the reason is a mutation that got
+      // through. The first version of this asserted that the five category
+      // labels were absent. Re-adding the chip row with LOWERCASE labels
+      // ('brand', 'app', 'marketing') passed it, and so would any rebuild of
+      // the same idea under any other words — which is the whole failure mode
+      // the anti-slop bar calls “the same control, renamed”.
+      //
+      // So this names what SHOULD be between the masthead and the grid, and
+      // fails on anything else. Four controls: the two the masthead has always
+      // carried, and the two that filter the list.
+      const ALLOWED_ABOVE_THE_GRID = ['Save Current', 'New Project', 'Search projects…', 'SORT']
+      const above = await page.evaluate((parts) => {
+        const grid = document.querySelector('.uh-grid')
+        const gridTop = grid.getBoundingClientRect().top + window.scrollY
+        // Operable controls only — buttons, fields and menus. Links inside the
+        // quota sentence ("Pro lifts the cap") are prose, they come and go with
+        // the allowance, and they are not what a filter row is made of.
+        const sel = parts.map((part) => '.sec.uh ' + part).join(',')
+        return [...document.querySelectorAll(sel)]
+          .filter((el) => {
+            const r = el.getBoundingClientRect()
+            return r.width > 0 && r.height > 0 && r.top + window.scrollY < gridTop
+          })
+          .map((el) => {
+            // A <select> is named by its LABEL, not by the text of its
+            // options. el.innerText on the sort menu returns all three option
+            // labels run together, which is the menu's contents rather than
+            // what the control is called.
+            // .proj-sort wraps BOTH its caption and the menu, so the label's
+            // full text is the caption followed by every option. The caption is
+            // its first element child.
+            const label = el.labels && el.labels[0]
+            const labelled = label ? (label.firstElementChild || label).innerText : ''
+            const name = el.getAttribute('aria-label') || labelled || el.placeholder || el.innerText || el.tagName
+            return name.trim()
+          })
+      }, ['button', 'input', 'select', 'textarea'])
+      for (const name of above) {
+        expect(ALLOWED_ABOVE_THE_GRID, `${plan}: an unexpected control "${name}" sits above the work`)
+          .toContain(name)
+      }
+      expect(above.length, `${plan}: the probe found no controls above the grid at all`)
+        .toBe(ALLOWED_ABOVE_THE_GRID.length)
 
       // Paying must not bring it back, which is what #452's "a Pro account sees
       // the same folder row, which is the point" was really pinning.
       const controls = await axControls(page, page.context())
-      for (const chip of ['Brand', 'App', 'Marketing', 'Personal']) {
+      for (const chip of ['All', 'Brand', 'App', 'Marketing', 'Personal']) {
         expect(controls.map((c) => c.name), `${plan}: the "${chip}" filter is back`).not.toContain(chip)
       }
     })
@@ -419,7 +472,11 @@ test('the probe can see what it is looking for', async ({ page }) => {
   expect(before, 'the text probe cannot see the page it is on').toContain('Projects')
 
   await page.evaluate(() => {
-    const main = document.querySelector('main')
+    // Planted into the PAGE's own container, because that is what the probes
+    // above are scoped to. When the scope tightened from <main> to .sec.uh this
+    // test went red and the four absence tests stayed green — which is the
+    // entire reason it is here.
+    const main = document.querySelector('.sec.uh')
     const planted = document.createElement('div')
     planted.id = 'axprobe-control'
     planted.innerHTML = `
