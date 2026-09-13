@@ -32,7 +32,7 @@
 - [Choosing a brand colour](https://uil4b.com/learn/brand-colour): A brand colour has to be text, a fill and a border in two themes. Why no ramp stop clears 4.5:1 on both grounds, and how far a neutral can be tinted.
 
 ## Browse
-- [Discover](https://uil4b.com/discover): The best external design resources — gradients, palettes, fonts and inspiration — with a one-tap hand-off into the UI L4B tools that use them.
+- [Discover](https://uil4b.com/discover): The UI L4B palette, gradient, font, icon and prompt libraries, plus a page of external resources. Inspiration and Collections are marked Soon.
 - [Palette Library](https://uil4b.com/discover/palettes): Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.
 - [Gradient Library](https://uil4b.com/discover/gradients): A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.
 - [Prompt Library](https://uil4b.com/discover/prompts): A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.

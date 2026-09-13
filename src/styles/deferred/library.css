@@ -720,6 +720,20 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    under, at 320 and 390. inline-block gives it a height of its own and still
    wraps internally; inline-flex would not have. */
 .cur-lead-title .cur-link{display:inline-block;min-height:24px}
+/* ...AND SO DOES THE ROW TITLE'S (2026-09-13). The comment above used to end
+   "the row title's does - it also carries a PriceTag", and that reading of the
+   Inline exception is wrong. SC 2.5.8 exempts a target that is "in a sentence
+   or whose size is otherwise constrained by the line-height of non-target
+   text". .cur-row-title is a flex container holding exactly two items, a link
+   and a tag; the link is not inside a run of text and nothing else sets its
+   line box. Measured on the shipped build it was 19.8px tall at EVERY width -
+   19 of them, the whole outbound half of the page, and the smallest thing to
+   hit on a phone. Same technique, same type size. */
+.cur-row-title .cur-link{display:inline-flex;align-items:center;min-height:24px}
+/* The in-product hand-off is the clearer half of the same failure: .cur-go is
+   alone in .cur-row-aside with no text around it at all, so no reading of the
+   Inline exception reaches it. 5 links, 19.8px at every width. */
+.cur-go{display:inline-flex;align-items:center;min-height:24px}
 /* Resting, not hover-only: founder direction 2026-09-02 rules out hover-only
    affordances on touch, and this arrow is how an outbound link says it leaves. */
 .cur-ext{display:inline-block;margin-left:3px;font-size:.82em;color:var(--t3);vertical-align:baseline}
