@@ -307,61 +307,85 @@ export default function PaletteGallery({ toast }) {
         />
       </LibraryToolbar>
 
-      <DiscoverResultHead
-        eyebrow={eyebrow}
-        title={group === 'brand' ? 'Identities you already know' : 'Colours worth building with'}
-        count={visible.length}
-        noun="palette"
-        id="pgl-grid-heading"
-      />
+      {/* THE RESULTS REGION IS THE SAME REGION IN EVERY STATE.
 
-      {visible.length ? (
-        <section aria-labelledby="pgl-grid-heading">
-          {browsing ? (
-            grouped.map((section) => (
-              <div className="pgl-section" key={section.id}>
-                {/* Sticky, so the category you are inside stays legible while
-                    you scroll a hundred cards — which is the whole point of
-                    sectioning a list this long rather than filtering it. */}
-                <div className="pgl-section-head">
-                  <h3 id={`pgl-section-${section.id}`}>{section.label}</h3>
-                  <span className="pgl-section-count">{section.palettes.length}</span>
-                  <p className="pgl-section-blurb">{section.blurb}</p>
-                </div>
-                <PaletteGalleryGrid
-                  toast={toast}
-                  palettes={section.palettes}
-                  labelledBy={`pgl-section-${section.id}`}
-                />
-                {section.id === 'brand' && lockedBlock}
-              </div>
-            ))
-          ) : (
-            <>
-              {brandCount > 0 && group !== 'brand' && (
-                <p className="pgl-note">
-                  {brandCount} of these {brandCount === 1 ? 'is a' : 'are'} published brand
-                  {brandCount === 1 ? ' system' : ' systems'}, badged <strong>Brand</strong> on the card.
-                </p>
-              )}
-              <PaletteGalleryGrid toast={toast} palettes={visible} />
-              {/* `mood === 'all'` is now written out. It used to be implied — one
-                  tray meant picking Dark cleared Brand — and with two trays
-                  the rule two comments above ("under a search or a mood filter
-                  the user has asked a narrower question") has to be stated or
-                  it silently stops being true. */}
-              {group === 'brand' && mood === 'all' && !query.trim() && lockedBlock}
-            </>
-          )}
-        </section>
-      ) : (
-        <LibraryEmpty
-          className="pgl-empty"
-          title="No palettes match that combination."
-          detail="Try a broader search, or reset the mood and collection filters."
-          onClear={clear}
+          It used to wrap only the populated arm, so filtering to nothing
+          DELETED it. Measured on the built preview at 1440x900: on arrival
+          the landmark list carried region("Colours worth building with");
+          after a search that matched nothing it read
+
+            navigation("Primary") | main
+            | region("Can’t find what you’re looking for?")
+            | contentinfo | navigation("Footer")
+
+          — the results landmark gone, and the closing CTA left as the only
+          landmark on the page describing content. A reader who filters to
+          zero and then navigates by landmark to get back to the results
+          cannot: the heading naming them is still rendered, and there is no
+          longer any region for it to name.
+
+          The head moves INSIDE the region it labels for the same reason. A
+          section may legally be labelled by an element outside it, but the
+          effect was that the one heading answering "what am I looking at"
+          sat in no landmark at all. Nothing here is new copy — the same
+          head, the same empty state, one element moved. */}
+      <section aria-labelledby="pgl-grid-heading">
+        <DiscoverResultHead
+          eyebrow={eyebrow}
+          title={group === 'brand' ? 'Identities you already know' : 'Colours worth building with'}
+          count={visible.length}
+          noun="palette"
+          id="pgl-grid-heading"
         />
-      )}
+
+        {visible.length ? (
+          <>
+            {browsing ? (
+              grouped.map((section) => (
+                <div className="pgl-section" key={section.id}>
+                  {/* Sticky, so the category you are inside stays legible while
+                      you scroll a hundred cards — which is the whole point of
+                      sectioning a list this long rather than filtering it. */}
+                  <div className="pgl-section-head">
+                    <h3 id={`pgl-section-${section.id}`}>{section.label}</h3>
+                    <span className="pgl-section-count">{section.palettes.length}</span>
+                    <p className="pgl-section-blurb">{section.blurb}</p>
+                  </div>
+                  <PaletteGalleryGrid
+                    toast={toast}
+                    palettes={section.palettes}
+                    labelledBy={`pgl-section-${section.id}`}
+                  />
+                  {section.id === 'brand' && lockedBlock}
+                </div>
+              ))
+            ) : (
+              <>
+                {brandCount > 0 && group !== 'brand' && (
+                  <p className="pgl-note">
+                    {brandCount} of these {brandCount === 1 ? 'is a' : 'are'} published brand
+                    {brandCount === 1 ? ' system' : ' systems'}, badged <strong>Brand</strong> on the card.
+                  </p>
+                )}
+                <PaletteGalleryGrid toast={toast} palettes={visible} />
+                {/* `mood === 'all'` is now written out. It used to be implied — one
+                    tray meant picking Dark cleared Brand — and with two trays
+                    the rule two comments above ("under a search or a mood filter
+                    the user has asked a narrower question") has to be stated or
+                    it silently stops being true. */}
+                {group === 'brand' && mood === 'all' && !query.trim() && lockedBlock}
+              </>
+            )}
+          </>
+        ) : (
+          <LibraryEmpty
+            className="pgl-empty"
+            title="No palettes match that combination."
+            detail="Try a broader search, or reset the mood and collection filters."
+            onClear={clear}
+          />
+        )}
+      </section>
 
       {/* AFTER the grid, the locked tease and the empty state alike — last child
           of the page, which is what "at the very bottom" has to mean if it is to
