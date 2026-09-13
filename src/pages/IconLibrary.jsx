@@ -1864,7 +1864,29 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const shown = icons.slice(0, visible)
   const hasMore = visible < icons.length
   const isMyIcons = source === 'custom'
-  const searchEmpty = !isMyIcons && !loading && icons.length === 0 && !loadError
+  // `!loadError` WAS TOO STRONG, AND IT PUT BACK THE SILENCE THE EMPTY STATE
+  // BELOW WAS ADDED TO END.
+  //
+  // The guard is right for one case: the catalogue could not be fetched and
+  // there is nothing to search, where "No icons match" would blame the user's
+  // word for the network's failure. But a load error does not mean an empty
+  // page here — the surface falls back to 120 built-in icons and says so in the
+  // notice above the grid. Searching those is an ordinary thing to do, and when
+  // the word matches none of them the grid empties on the SEARCH's account, not
+  // the service's.
+  //
+  // MEASURED 2026-09-13 at 1280 and 390, light, with the icon service
+  // unreachable: `.ig` held 120 cells, typing "zzzqqqxyz" took it to 0, the
+  // grid became `display:none`, and the ONLY live region left on the page was
+  // the stale "Couldn't reach the icon service" notice. No empty state, no
+  // count, nothing announced — a blank page under a banner about a different
+  // problem. Typing "arrow" brought back 10, so the search was working fine.
+  //
+  // So the suppression now applies only while the user has not searched. With a
+  // query the block below explains which of the two things went wrong, in the
+  // sentence it already carries.
+  const searchEmpty = !isMyIcons && !loading && icons.length === 0
+    && (!loadError || query.trim().length > 0)
 
   // Shared glyph renderer — one code path for custom (saved), CDN and embedded
   // icons, reused by the main grid and both My Icons sections.
