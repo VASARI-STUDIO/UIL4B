@@ -3494,7 +3494,7 @@ html.lenis{scroll-behavior:auto!important}
    nth-child(8): eight delay rules and 168ms of staircase. It ran AGAIN every
    time the pointer crossed from one section trigger to the next, because the
    rows are keyed by tool id and React replaces the whole set. MEASURED on
-   /color/palette at 1440 before it was removed: 19 animations on a single
+   /create/palette at 1440 before it was removed: 19 animations on a single
    open, the last one finishing 306ms after the click, on rows the visitor is
    already reaching for.
 

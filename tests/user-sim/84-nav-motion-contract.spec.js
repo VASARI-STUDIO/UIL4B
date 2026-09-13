@@ -73,7 +73,7 @@ import { go, watch } from './helpers.js'
 // An app route, not a sales one: `.pnav--sales` sets `display:none` on the
 // search field, and an element that is not rendered cannot be shown to still
 // carry the expansion the founder asked for.
-const ROUTE = '/color/palette'
+const ROUTE = '/create/palette'
 
 // The properties whose animation forces a layout pass. `all` is on the list
 // because it is a superset of every one of them: a rule that says
