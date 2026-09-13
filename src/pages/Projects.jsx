@@ -23,13 +23,31 @@ import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
 
-// Read-only sample design systems shown under the "Community" tab.
-const COMMUNITY_PROJECTS = [
-  { id: 'c-sunset', name: 'Sunset Brand', author: 'Maya R.', colors: ['#FF6B35', '#F7931E', '#FFD23F', '#C1121F', '#6A040F'] },
-  { id: 'c-fintech', name: 'Fintech Blue', author: 'Devon K.', colors: ['#0051FF', '#0A2540', '#3B82F6', '#60A5FA', '#1E3A8A'] },
-  { id: 'c-forest', name: 'Forest Co.', author: 'Sam T.', colors: ['#2D6A4F', '#40916C', '#74C69D', '#1B4332', '#95D5B2'] },
-  { id: 'c-mono', name: 'Mono Minimal', author: 'Alex P.', colors: ['#111111', '#3D3D3D', '#7A7A7A', '#B5B5B5', '#EDEDED'] },
-]
+// THE "COMMUNITY" TAB IS GONE, AND IT WAS THE SAME FABRICATION THIS REPOSITORY
+// ALREADY DELETED ONCE.
+//
+// It rendered four hard-coded design systems — "Sunset Brand by Maya R.",
+// "Fintech Blue by Devon K.", "Forest Co. by Sam T.", "Mono Minimal by
+// Alex P." — under the sentence "Explore design systems shared by the
+// community." Not one of those four people exists, not one of those systems was
+// shared by anybody, and nothing on the card said so.
+//
+// "Maya R." is the SAME invented designer the 2026-08-11 site audit deleted from
+// the real Community surface. Read the header of src/data/communityDesigns.js:
+// twelve invented designs by invented people, "Aurora Analytics by Maya R., 342
+// saves", rendered by the same card as real submissions with nothing marking
+// them apart. That audit's conclusion — a save count is a claim about what other
+// people did, and shipping fabricated ones to real users is not fixable later —
+// is held by tests/unit/community-seed.test.js, which asserts no seeded item is
+// credited to a person.
+//
+// That test reads COMMUNITY_DESIGNS. It never read this file, so the same four
+// invented designers went on shipping here for another month, on the page where
+// a person's OWN work lives, one tab away from it. The guard now covers both
+// (see tests/unit/community-seed.test.js, "no surface invents a designer").
+//
+// Nothing replaces it. /community is a real route with real curated links
+// credited to the platform they open; this page is for the projects you made.
 
 // Validate + read a project icon file (SVG or small PNG) as a data URL.
 function readIconFile(file) {
@@ -56,17 +74,6 @@ function readIconFile(file) {
     }
     reader.readAsDataURL(file)
   })
-}
-
-function ColorRow({ colors, height = 24 }) {
-  if (!colors?.length) return null
-  return (
-    <div style={{ display: 'flex', height, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)' }}>
-      {colors.slice(0, 6).map((c, i) => (
-        <div key={i} style={{ flex: 1, background: c, transition: 'flex .2s' }} title={c} />
-      ))}
-    </div>
-  )
 }
 
 function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename, onOverwrite, onArchive, icon, onIconChange, onIconRemove }) {
@@ -228,7 +235,7 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
   )
 }
 
-// Modal for starting a new project: capture name, folder, and starting point.
+// Modal for starting a new project: capture a name and a starting point.
 //
 // `error` is the refusal the page got back from saveProject() — the free cap,
 // in ProjectContext's own words. It is shown HERE, under the form that was
@@ -236,9 +243,8 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
 // "Create project" with a green-tick toast that read "Free plan saves up to 3
 // projects — go Pro for unlimited." for 1.8 seconds and then vanished, leaving
 // the form open and the name still typed as though nothing had been decided.
-function NewProjectModal({ folders, onClose, onCreate, error }) {
+function NewProjectModal({ onClose, onCreate, error }) {
   const [name, setName] = useState('')
-  const [folder, setFolder] = useState('')
   const [start, setStart] = useState('blank')
 
   // Shared modal contract (see ProjectDetail above). `initialFocus` keeps the
@@ -249,10 +255,8 @@ function NewProjectModal({ folders, onClose, onCreate, error }) {
   const submit = () => {
     const trimmed = name.trim()
     if (!trimmed) return
-    onCreate({ name: trimmed, folder, blank: start === 'blank' })
+    onCreate({ name: trimmed, blank: start === 'blank' })
   }
-
-  const pickFolders = folders.filter(f => f !== 'all')
 
   return (
     <div className="fg-detail-overlay" onClick={onClose}>
@@ -297,30 +301,6 @@ function NewProjectModal({ folders, onClose, onCreate, error }) {
         </div>
 
         <div className="fg-detail-section">
-          <div className="fg-detail-label">Folder</div>
-          <div className="proj-new-folders">
-            <button
-              type="button"
-              className={`pl-chip${folder === '' ? ' active' : ''}`}
-              onClick={() => setFolder('')}
-            >
-              None
-            </button>
-            {pickFolders.map(f => (
-              <button
-                key={f}
-                type="button"
-                className={`pl-chip${folder === f ? ' active' : ''}`}
-                onClick={() => setFolder(f)}
-                style={{ textTransform: 'capitalize' }}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="fg-detail-section">
           <div className="fg-detail-label">Start from</div>
           <div className="proj-new-start">
             <button
@@ -361,7 +341,7 @@ export default function Projects({ toast }) {
   const {
     projects, canSaveProjects, projectLimit,
     saveProject, loadProject, deleteProject, renameProject, overwriteProject,
-    archiveProject, resetDesign, setPalette, duplicateProject,
+    archiveProject, resetDesign, duplicateProject,
   } = useProject()
 
   // ── THREE STATES, NOT TWO ────────────────────────────────────────
@@ -388,19 +368,8 @@ export default function Projects({ toast }) {
   const [showArchived, setShowArchived] = useState(false)
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('recent')
-  const [activeFolder, setActiveFolder] = useState('all')
   const [detailProject, setDetailProject] = useState(null)
   const [showNewModal, setShowNewModal] = useState(false)
-  const [view, setView] = useState('mine')
-  const FOLDERS = ['all', 'brand', 'app', 'marketing', 'personal']
-  const [folderMap, setFolderMap] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('vs-project-folders') || '{}') } catch { return {} }
-  })
-  const setProjectFolder = (projectId, folder) => {
-    const next = { ...folderMap, [projectId]: folder }
-    setFolderMap(next)
-    try { localStorage.setItem('vs-project-folders', JSON.stringify(next)) } catch {}
-  }
   const [iconMap, setIconMap] = useState(() => {
     try { return JSON.parse(localStorage.getItem('vs-project-icons') || '{}') } catch { return {} }
   })
@@ -424,19 +393,13 @@ export default function Projects({ toast }) {
       toast(e.message || 'Could not set icon')
     }
   }
-  const handleUseCommunityPalette = (cp) => {
-    setPalette({ colors: cp.colors, activeIdx: 0, base: cp.colors[0] })
-    toast(`Loaded palette from "${cp.name}"`)
-  }
-
   const sortFn = (a, b) => {
     if (sortBy === 'name') return a.name.localeCompare(b.name)
     if (sortBy === 'created') return new Date(b.createdAt) - new Date(a.createdAt)
     return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
   }
   const matchesSearch = (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
-  const matchesFolder = (p) => activeFolder === 'all' || (folderMap[p.id] || '').toLowerCase() === activeFolder
-  const activeProjects = projects.filter(p => !p.archived && matchesSearch(p) && matchesFolder(p)).sort(sortFn)
+  const activeProjects = projects.filter(p => !p.archived && matchesSearch(p)).sort(sortFn)
   const archivedProjects = projects.filter(p => p.archived && matchesSearch(p)).sort(sortFn)
 
   // A signed-out visitor gets a real page rather than a bounce to /login.
@@ -504,10 +467,9 @@ export default function Projects({ toast }) {
     }
   }
 
-  const handleCreateNew = ({ name, folder, blank }) => {
+  const handleCreateNew = ({ name, blank }) => {
     try {
       const id = saveProject(name, { blank })
-      if (folder) setProjectFolder(id, folder)
       if (blank) resetDesign()
       setLoadedId(id)
       setCreateError('')
@@ -602,33 +564,35 @@ export default function Projects({ toast }) {
   const stats = homeStats(projects)
   const suggestion = resolving ? null : nextToolSuggestion(projects)
 
-  // WHETHER THIS ACCOUNT HAS ANYTHING YET, and it decides where DailyBand goes.
+  // THE BAND IS BELOW THE WORK NOW, IN EVERY STATE, AND #458 WAS RIGHT ABOUT
+  // THE EMPTY ONE AND HALF-RIGHT ABOUT THE REST.
   //
-  // Measured on a 390x844 phone, signed in, list empty: the masthead ends at
-  // 242, the band runs 258-516, the tabs sit at 548, and the empty state's card
-  // starts at 604 — so "Create your first project" landed at y=829..873, with
-  // its centre at 851 in an 844px viewport. Seven pixels of the centre and 29
-  // of the control were below the fold. At 360x800 the whole button was below
-  // it (top 842), and at 320 the top was 886 — 42px clear of the bottom edge on
-  // an 844-tall screen and 166 on a 720-tall one. Since the founder stopped
-  // seeding a "Default Project" this panel is the FIRST SCREEN of the product
-  // for a new signup, so on every phone we support the one thing it asks them
-  // to do could not be seen or tapped, and nothing said to scroll.
+  // #458 measured the empty account and moved the band under the empty state,
+  // because 258px of stacked phone layout sat between a new signup and the only
+  // control this page offers them. It left the band above the list for an
+  // account that HAS projects, on the reasoning that orientation precedes
+  // inventory. Measured, that reasoning cost the same thing one state over.
   //
-  // The band is 258px of that because it stacks to one column at <=860px —
-  // widest exactly where vertical space is scarcest. And on an empty account
-  // its NEXT column reads "Nothing saved yet. A palette is the fastest…",
-  // which is the empty state's own sentence, one screen earlier, without the
-  // control. So the thing pushing the primary action off the phone was a
-  // duplicate of it.
+  // Rendered 2026-09-13 on the built preview at 390x844, signed in, free plan:
   //
-  // "Orientation before inventory" (the note above DailyBand) is right when
-  // there IS an inventory. With none, the empty state is the orientation, and
-  // the band reads better after it as what to look at next. Nothing is removed
-  // and nothing is width-gated: the order changes with the account's STATE, so
-  // it is the same at 320 and at 1440 and the reading order stays invariant
-  // across breakpoints.
-  const accountIsEmpty = !resolving && projects.length === 0
+  //   1 project   h1 at y=72, first project card at y=781. 709px of page
+  //               between the heading and the user's own work, and the card's
+  //               top edge 63px from the fold.
+  //   3 projects  first project card at y=882 — BELOW THE FOLD ENTIRELY. A
+  //               person at the free cap, on a phone, opening the page that
+  //               holds everything they have made, saw none of it without
+  //               scrolling.
+  //
+  // The band is 258px of that at phone widths (it collapses to one column at
+  // <=860px, so it is widest exactly where vertical space is scarcest). What it
+  // spends those 258px on, above a person's own saved work, is a rotating
+  // typography tip: "Letter-spacing is a function of size, not of taste."
+  //
+  // So the order is now the same one the empty account already uses, which is
+  // also the order the note at the foot of this file gives for StarterRow —
+  // what you have, then what to look at next. It is not width-gated and not
+  // state-gated: one render site, the same at 320 and at 1440, empty or full,
+  // and the reading order is finally invariant across both.
 
   // B6 (2026-08-12 account lifecycle audit): the cap was enforced and never
   // announced. `projects` is the SAME array saveProject() counts — archived
@@ -714,15 +678,6 @@ export default function Projects({ toast }) {
         </div>
       </header>
 
-      {/* Orientation before inventory: what to do next, and one thing worth
-          knowing, above the list of things you already have.
-
-          UNLESS THERE IS NO INVENTORY — see the note on `accountIsEmpty`. An
-          account with nothing in it gets the band below its empty state
-          instead, because up here it was 258px of stacked phone layout between
-          a new signup and the only control the page offers them. */}
-      {!accountIsEmpty && <DailyBand suggestion={suggestion} resolving={resolving} />}
-
       {showSaveForm && (
         <div className="card" style={{ padding: 20, marginBottom: 24, maxWidth: 560 }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 10 }}>
@@ -747,76 +702,43 @@ export default function Projects({ toast }) {
         </div>
       )}
 
-      <div className="proj-tabs">
-        <button className={`proj-tab${view === 'mine' ? ' active' : ''}`} onClick={() => setView('mine')}>My Projects</button>
-        <button className={`proj-tab${view === 'community' ? ' active' : ''}`} onClick={() => setView('community')}>Community</button>
-      </div>
+      {/* FOLDERS ARE GONE. Founder decision, 2026-09-13: drop folders as an
+          entitlement entirely and remove the UI that implies one.
 
-      {view === 'community' ? (
-        <>
-          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16 }}>
-            Explore design systems shared by the community. Load a palette to start from it.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px,100%), 1fr))', gap: 14 }}>
-            {COMMUNITY_PROJECTS.map(cp => (
-              <div key={cp.id} className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '16px 16px 12px', background: `linear-gradient(135deg, ${cp.colors[0]}, ${cp.colors[1] || cp.colors[0]})`, position: 'relative' }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-.02em', textShadow: '0 1px 6px rgba(0,0,0,.25)' }}>
-                    {cp.name}
-                  </div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.7)', marginTop: 2, fontWeight: 500 }}>
-                    by {cp.author}
-                  </div>
-                </div>
-                <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <ColorRow colors={cp.colors} />
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {cp.colors.map((c, i) => (
-                      <span key={i} style={{ fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--t2)', background: 'var(--bg-1)', padding: '2px 6px', borderRadius: 4 }}>{c}</span>
-                    ))}
-                  </div>
-                  <button className="btn btn-s btn-accent" onClick={() => handleUseCommunityPalette(cp)} style={{ fontSize: 11, marginTop: 'auto' }}>
-                    Use this palette
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-      <>
+          #452 had already deleted the sentence "3 folders · Upgrade for 10"
+          and its orphan `folderLimit`, on the finding that both numbers were
+          false and that paying changed the string and nothing else. What it
+          left behind was the mechanism the sentence had been sold on, and
+          rendering that mechanism is what made the rest of the case:
+
+          · THE FIVE CATEGORIES WERE NOT THE USER'S. `FOLDERS` was a fixed
+            array — all, brand, app, marketing, personal — identical for every
+            account that has ever existed, with no creation, rename or delete
+            control anywhere in the repository. A filter bar offering someone
+            four categories they did not choose, above a list that holds at most
+            three items on the free plan, is a taxonomy the product invented for
+            them.
+          · IT CONTRADICTED THE PAGE'S OWN PROMISE. The filing lived in
+            `vs-project-folders` in localStorage and nowhere else (see
+            utils/dataExport.js, which marks it pii:'local'). This page's
+            signed-out subtitle reads "saved together, and yours to open
+            anywhere you sign in" — and the folder a project was filed in did
+            not travel to the next device. A project sorted on a laptop was
+            unsorted on the phone, silently, with nothing said.
+          · IT COST A SEVEN-CONTROL ROW ITS MEANING TO ASSISTIVE TECHNOLOGY.
+            Read off Chrome's own accessibility tree at 1440 on 2026-09-13, the
+            five chips and the two tabs above them ALL reported
+            selected=undefined pressed=undefined current=undefined — plain
+            buttons whose only statement of which filter was active was the
+            `.active` class. Deleting the feature deletes that defect rather
+            than papering over it with aria-pressed on a control nobody asked
+            for.
+
+          Nothing replaces it. Search and Sort remain, they are enough for three
+          projects, and the one quota this page states — "3 of 3 projects" in
+          the header — is real and enforced by ProjectContext. */}
       {projects.length > 0 && (
         <>
-          <div className="proj-folders">
-            {FOLDERS.map(f => (
-              <button key={f} className={`proj-folder-chip${activeFolder === f ? ' active' : ''}`} onClick={() => setActiveFolder(f)}>
-                {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-            {/* WAS "3 folders · Upgrade for 10" (Pro: "10 folders"), removed
-                2026-09-11 because every part of it was false.
-
-                FOLDERS on line 392 is a FIXED array — all, brand, app,
-                marketing, personal. There is no folder-creation control
-                anywhere in the repository (grep: no addFolder, no
-                createFolder, no newFolder), so the set is the same four for
-                every account that has ever existed. The `folderLimit` that fed
-                this sentence was read by nothing else in the codebase.
-
-                So a free user read "3 folders" while looking at four folder
-                chips one line to the left, and "Upgrade for 10" offered ten of
-                something Pro does not get either: paying changed this string to
-                "10 folders" and changed nothing else on the page. An invented
-                quota, sold, on the surface where a user's own work lives.
-
-                Nothing replaces it. The chips say what the folders are, and the
-                one quota this page states — "3 of 3 projects" in the header —
-                is real, enforced by ProjectContext, and stays. Mobbin's corpus
-                agrees that a counter beside filter chips is not a pattern:
-                Canva's Projects, Todoist and Airtable all carry bare chips, and
-                Toggl Track's one counter ("0 of 10,000 USD") tracks a budget
-                the product actually enforces. */}
-          </div>
           <div className="proj-toolbar">
             <div className="proj-search">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -831,7 +753,19 @@ export default function Projects({ toast }) {
                 <option value="name">Name (A–Z)</option>
               </select>
             </label>
-            <span className="proj-count">{activeProjects.length} project{activeProjects.length === 1 ? '' : 's'}</span>
+            {/* THE SAME NUMBER TWICE, 364px APART, is what this was without
+                the condition. Measured at 1440 on 2026-09-13 at the free cap:
+                the masthead printed "3 of 3 projects" at y=203 and this printed
+                "3 projects" at y=567. Two counters of one quantity, and the
+                second one silent about the allowance the first one states.
+
+                A count is only worth printing when it is NOT the count the
+                masthead already gives, which is exactly when a search has
+                narrowed the list. Then it says how many of your projects
+                matched, which nothing else on the page says. */}
+            {search.trim() && (
+              <span className="proj-count">{activeProjects.length} project{activeProjects.length === 1 ? '' : 's'}</span>
+            )}
           </div>
         </>
       )}
@@ -903,44 +837,31 @@ export default function Projects({ toast }) {
            defect as the one above — found by sweeping the class rather than by
            reading the file.
 
-           TWO filters can empty this list: the search box and the folder chips
-           (matchesFolder, two lines above matchesSearch). The sentence named
-           only the search. So tapping "Marketing" on an account with no
-           marketing projects printed, measured at 390 and at 1280 on
-           2026-09-13, exactly this:
+           #458 found it printing `No projects match “”.` — an empty pair of
+           curly quotes — when the FOLDER chips emptied the list, because the
+           sentence named only the search. It fixed that by naming whichever of
+           the two filters was responsible. With the folder chips gone there is
+           one filter left that can empty this list, so the sentence has one
+           thing left to say, and the branch that said the other thing is
+           deleted rather than kept alive for a control that no longer exists.
 
-               No projects match “”.
-
-           — an empty pair of curly quotes, in a panel with zero controls in it.
-           One tap from a chip row, and the reader is told nothing matched a
-           search they never ran.
-
-           Both halves are fixed the way LibraryEmpty already states the rule
-           for every Library browse surface: say which filter is responsible,
-           and carry the reset INSIDE the panel rather than leaving the reader
-           to work out which of two controls they set. LibraryEmpty itself is
-           not reused here — it belongs to styles/deferred/library.css, which
-           #456 deliberately keeps out of this route's chunk — so the rule is
-           borrowed and its label ("Clear filters") with it.
+           The rule it borrowed from LibraryEmpty still holds: carry the reset
+           INSIDE the panel rather than leaving the reader to find the control
+           they set. LibraryEmpty itself is not reused here — it belongs to
+           styles/deferred/library.css, which #456 deliberately keeps out of
+           this route's chunk — so the rule is borrowed and its label with it.
 
            role="status" for the same reason LibraryEmpty gives: the grid
            emptying is otherwise silent, and at 390 this panel opens at y=815
            in an 844px viewport, directly under the controls that caused it. */
         <div className="card uh-filtered" role="status">
           <p className="uh-filtered-text">
-            {search.trim() ? (
-              <>
-                No projects match “{search.trim()}”
-                {activeFolder !== 'all' && <> in {activeFolder.charAt(0).toUpperCase() + activeFolder.slice(1)}</>}.
-              </>
-            ) : (
-              <>No projects in {activeFolder.charAt(0).toUpperCase() + activeFolder.slice(1)}.</>
-            )}
+            No projects match “{search.trim()}”.
           </p>
           <button
             type="button"
             className="btn btn-s"
-            onClick={() => { setSearch(''); setActiveFolder('all') }}
+            onClick={() => setSearch('')}
           >
             Clear filters
           </button>
@@ -958,9 +879,6 @@ export default function Projects({ toast }) {
                 onRename={handleRename}
                 onOverwrite={handleOverwrite}
                 onArchive={handleArchive}
-                folder={folderMap[p.id]}
-                onFolderChange={setProjectFolder}
-                folders={FOLDERS}
                 onOpenDetail={setDetailProject}
                 icon={iconMap[p.id]}
                 onDuplicate={handleDuplicate}
@@ -990,9 +908,6 @@ export default function Projects({ toast }) {
                       onRename={handleRename}
                       onOverwrite={handleOverwrite}
                       onArchive={handleArchive}
-                      folder={folderMap[p.id]}
-                      onFolderChange={setProjectFolder}
-                      folders={FOLDERS}
                       onOpenDetail={setDetailProject}
                       icon={iconMap[p.id]}
                       onDuplicate={handleDuplicate}
@@ -1006,15 +921,10 @@ export default function Projects({ toast }) {
           )}
         </>
       )}
-      </>
-      )}
 
-      {/* The other half of the swap above. Same component, same props, same
-          copy — only later in the document, and only while the account has
-          nothing in it. It still precedes the starters, so the page reads:
-          what you have (nothing, and here is how to change that) → what to do
-          next and one thing worth knowing → four artefacts to open. */}
-      {accountIsEmpty && <DailyBand suggestion={suggestion} resolving={resolving} />}
+      {/* WHAT YOU HAVE, THEN WHAT TO DO NEXT — in that order, in every state.
+          See the note above `suggestion` for the measurement that moved it. */}
+      <DailyBand suggestion={suggestion} resolving={resolving} />
 
       {detailProject && (
         <ProjectDetail
@@ -1034,7 +944,6 @@ export default function Projects({ toast }) {
 
       {showNewModal && (
         <NewProjectModal
-          folders={FOLDERS}
           onClose={() => { setShowNewModal(false); setCreateError('') }}
           onCreate={handleCreateNew}
           error={createError}
