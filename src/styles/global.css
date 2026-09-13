@@ -5646,9 +5646,22 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 .plb-pvb-head{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.02em;color:var(--pv-text)}
 .plb-pvg-title{margin-top:6px;font-size:46px;font-weight:900;line-height:.92;letter-spacing:-.03em;color:var(--pv-text)}
 
-.plb-add{flex:0 0 92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t1);background:var(--card);border:none;border-left:1px dashed var(--border);cursor:pointer;transition:flex-basis var(--dur-3) var(--ease-out),color var(--t),background var(--t)}
-.plb-add:hover{flex-basis:116px;color:var(--t0);background:var(--bg-2)}
-.plb-add-dot{display:flex;align-items:center;justify-content:center;width:40px;height:40px;color:inherit;background:var(--bg-2);border:1px dashed var(--border);border-radius:999px;transition:all var(--t)}
+/* HOVER CHANGES THE COLOUR, NOT THE LAYOUT. This rail used to animate
+   `flex-basis` 92px -> 116px on hover, over 280ms. `.plb-col` is `flex:1 1 0`,
+   so those 24px came out of the board: measured at 1280x900, hovering this
+   button took all five swatches from 238px to 233px and slid every name, hex
+   and tool cluster left underneath the pointer, every time the cursor crossed
+   the rail. Nothing was revealed by the extra width — the dot and the word ADD
+   are the same at both sizes — so it was 24px of reflow spent on decoration.
+   The ink and ground change is what says "this is hoverable", and it composites.
+
+   `.plb-add-dot` transitioned `all`, which on this element resolves to exactly
+   one animatable property: `background`. `border-style` is discrete and does
+   not interpolate. Named, so it cannot silently pick up a layout property the
+   next time a declaration is added to the hover rule. */
+.plb-add{flex:0 0 92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t1);background:var(--card);border:none;border-left:1px dashed var(--border);cursor:pointer;transition:color var(--t),background var(--t)}
+.plb-add:hover{color:var(--t0);background:var(--bg-2)}
+.plb-add-dot{display:flex;align-items:center;justify-content:center;width:40px;height:40px;color:inherit;background:var(--bg-2);border:1px dashed var(--border);border-radius:999px;transition:background var(--t)}
 .plb-add:hover .plb-add-dot{background:var(--card);border-style:solid}
 /* ── Global adjust bar ── */
 .plb-adjust{position:sticky;bottom:0;z-index:30;display:flex;align-items:center;gap:12px clamp(12px,2.5vw,28px);flex-wrap:wrap;padding:12px var(--page-inline);background:var(--bg-0);border-top:1px solid var(--border)}
@@ -5914,7 +5927,6 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
   .plb-gap{display:none}
   .plb-adjust{position:static}
   .plb-add{flex-direction:row;flex-basis:52px;border-left:none;border-top:1px dashed var(--border)}
-  .plb-add:hover{flex-basis:52px}
   .plb-modal-body--split{grid-template-columns:1fr}
   .plb-preview-grid{grid-template-columns:1fr}
   .plb-modal-head{flex-wrap:wrap}

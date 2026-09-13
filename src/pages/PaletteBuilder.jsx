@@ -3339,7 +3339,15 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         >
           Reset
         </button>
-        <button type="button" className="btn btn-s plb-copycss" onClick={copyCssExport}>Copy CSS</button>
+        {/* The icon is not decoration and it is not new: it is the same
+            <IcoCopy /> the save menu puts on "Copy CSS variables", which calls
+            this same copyCssExport(). Measured, this button and `.plb-hexfield`
+            — a real text input two rows above it — shared a white ground and
+            the identical 1px rgb(218,216,207) border, and at <=768 this one
+            stretches to the full width of the viewport (628x29 at 660px). The
+            founder read it off a screenshot as a text field. A leading glyph is
+            what a field never has. */}
+        <button type="button" className="btn btn-s plb-copycss" onClick={copyCssExport}><IcoCopy /> Copy CSS</button>
       </footer>
 
       {/* Step 1 of the brand-kit walkthrough (colours → fonts → type scale →
