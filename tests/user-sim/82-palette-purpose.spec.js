@@ -100,7 +100,7 @@ test.describe('the palette board is a named set, not a list of landmarks', () =>
     // absence below. The board is the page — if this is 0 the route did not
     // arrive and nothing further here means anything.
     await expect(page.locator('.plb-col')).toHaveCount(5)
-    await expect(page.locator('h1.plb-title')).toHaveText('Palette')
+    await expect(page.locator('h1#plb-page-title')).toHaveText('Palette Generator')
 
     const nodes = await axNodes(page)
     const hexNamed = nodes.filter((n) => HEX_NAME.test(n.name))
@@ -123,7 +123,7 @@ test.describe('the palette board is a named set, not a list of landmarks', () =>
     // The board borrows the h1 rather than typing a second string, so this
     // asserts the RESOLVED name — an aria-labelledby pointing at a missing id
     // resolves to nothing and would fail here.
-    const board = nodes.find((n) => n.role === 'group' && n.name === 'Palette')
+    const board = nodes.find((n) => n.role === 'group' && n.name === 'Palette Generator')
     expect(board, 'the board is a group named by the page heading').toBeTruthy()
   })
 

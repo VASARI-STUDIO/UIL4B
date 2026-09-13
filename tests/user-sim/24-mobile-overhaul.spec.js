@@ -993,12 +993,29 @@ test('S11b · the touch band collapses the swatch tool stack instead of pinning 
   expect(damage, damage.join('\n')).toEqual([])
 })
 
-// The collapse is scoped to the band that was broken. 390 lays the same
-// controls out as a short horizontal row under the name and hex, and the audit
-// called that treatment legible and clearly authored — so over-applying the
-// tablet collapse to phones would be a regression in the other direction, and
-// the count assertion above would never notice.
-test('S11b · the phone row keeps its full control set', async ({ browser }) => {
+// REVERSED 2026-09-13, BY THE FOUNDER, AFTER USING THE PAGE. This test used to
+// assert the opposite — that the phone row keeps all seven controls — on the
+// grounds that an audit had called that row "legible and clearly authored" and
+// that adding the overflow control there "would be an eighth icon in a row that
+// already works". The founder looked at /create/palette at ~660px and said:
+//
+//   "im finding alot of basic UI problems that can be replaced with better UI
+//    design such as replacing some buttons with a drop down or other large
+//    issues"
+//
+// The old reasoning is answered by the SHAPE of the change rather than ignored:
+// the overflow control does not join seven icons, it replaces five of them. The
+// row is three — Lock, Copy, More — not eight. Measured across 320/360/390/
+// 430/660/768 before the change: seven painted `.plb-tool` per column on five
+// columns, 35 unlabelled icon targets on one screen. After: 15, each with a
+// visible-to-a-reader name, every hidden action still reachable by name in the
+// "Colour actions" menu, row heights byte-identical (88/88/88/96/111), nothing
+// covered at 390x568, 390x640 or 320x568, and `.plb-role` — which had been
+// `display:none` below 769px — back in the 128px that frees.
+//
+// If this is ever reversed again, reverse it because the founder looked at the
+// rendered page again, not because an audit preferred the older row.
+test('S11b · the phone row collapses to two controls and a named menu', async ({ browser }) => {
   const { ctx, page } = await openTouch(browser, 390, 844, '/create/palette', false, '.plb-col')
 
   const caps = await page.evaluate(() => ({
@@ -1025,8 +1042,8 @@ test('S11b · the phone row keeps its full control set', async ({ browser }) => 
   })
   await ctx.close()
 
-  expect(r.count, 'the phone row lost controls to the tablet collapse; 390 is not the band that was broken')
-    .toBeGreaterThan(3)
-  expect(r.overflow, 'the overflow control belongs to the tablet band only — on 390 it would be an eighth icon in a row that already works')
-    .toBe(0)
+  expect(r.count, 'the phone row is Lock, Copy and the overflow control — no more, and never zero')
+    .toBe(3)
+  expect(r.overflow, 'without the overflow control the five collapsed actions would be unreachable on a phone')
+    .toBe(1)
 })

@@ -74,6 +74,39 @@ export const NAME_MOVEMENTS = ['Bauhaus', 'Atelier', 'Modernist', 'Nordic', 'Stu
 /**
  * The one hue→vocabulary rule, shared by the palette name and the column
  * titles so the two can never disagree about what a colour IS.
+ *
+ * THE BOUNDARIES ARE HCT HUE, AND THAT IS THE WHOLE POINT OF THIS COMMENT.
+ * The cuts below used to be spaced as if `hue` were an sRGB/HSL angle, but
+ * every caller feeds this `hexToHct(hex)[0]`, and the two wheels are rotated
+ * against each other by as much as 45° in the blues. Measured, by walking the
+ * sRGB wheel at s60 l40 through `hexToHct`:
+ *
+ *     sRGB   0 red 23 · 30 orange 61 · 60 yellow 111 · 120 green 143
+ *          160 teal 168 · 180 cyan 197 · 200 sky 237 · 220 azure 269
+ *          240 blue 285 · 260 indigo 300 · 280 violet 318 · 300 magenta 334
+ *
+ * Against the old cuts that put EVERY ordinary blue in the purple vocabulary
+ * and every purple in the pink one — the founder's report was "Bauhaus
+ * Mulberry" sitting on #97ADCD, a pale blue. #97ADCD is HCT hue 256; the old
+ * `h < 255 → ocean` missed it by one degree and it fell through to `cosmic`.
+ * It was not an edge case: azure (269) and blue (285) are both past that cut,
+ * so #3558B9 was "Dusky Iris" and #405C9D was "Smoked Mauve". The second break
+ * was `h < 45 → chroma > 45 ? sunset : nature`, which sent any muted red or
+ * orange-red into the all-green `nature` bank: #904C2A, a burnt orange, was
+ * titled "Deep Thyme".
+ *
+ * The cuts now sit on the measured anchors, and each bank's own vocabulary
+ * spans exactly the range it is given — no word was added, moved or invented:
+ *
+ *     325..15   candy / sunset  magenta → pink → crimson
+ *      15..120  sunset          red → terracotta → ochre → amber
+ *     120..180  nature          yellow-green → green → verdigris
+ *     180..290  ocean           cyan → cerulean → cobalt → indigo
+ *     290..325  cosmic          violet → amethyst → mulberry
+ *
+ * This fixes the FAMILY error — a blue is no longer named as a purple. It does
+ * not order the words WITHIN a bank by hue, so a teal can still draw "Delft".
+ * That is a known, narrower gap: see the pipeline row for this change.
  */
 export function themeForHue(hue, chroma, hasAccent) {
   // A colour we could not read at all is a grey as far as vocabulary goes —
@@ -81,13 +114,11 @@ export function themeForHue(hue, chroma, hasAccent) {
   if (!Number.isFinite(hue) || !Number.isFinite(chroma)) return 'mono'
   if (chroma < 12) return hasAccent ? 'tech' : 'mono'          // mostly greys
   const h = ((hue % 360) + 360) % 360
-  if (h < 15 || h >= 330) return chroma > 55 ? 'candy' : 'sunset' // red / pink
-  if (h < 45) return chroma > 45 ? 'sunset' : 'nature'           // orange
-  if (h < 90) return 'sunset'                                    // yellow-amber
-  if (h < 165) return 'nature'                                   // green
-  if (h < 255) return 'ocean'                                    // cyan-blue
-  if (h < 300) return 'cosmic'                                   // purple
-  return 'candy'                                                 // magenta
+  if (h < 15 || h >= 325) return chroma > 55 ? 'candy' : 'sunset' // magenta → crimson
+  if (h < 120) return 'sunset'                                   // red → amber
+  if (h < 180) return 'nature'                                   // yellow-green → teal
+  if (h < 290) return 'ocean'                                    // cyan → blue
+  return 'cosmic'                                                // indigo → violet
 }
 
 /** Which vocabulary a whole palette belongs to. */

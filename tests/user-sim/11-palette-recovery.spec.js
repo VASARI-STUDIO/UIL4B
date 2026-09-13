@@ -70,11 +70,20 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await go(page, '/create/palette')
     await expect(page.locator('.plb-toolbar')).toBeVisible()
 
+    // WHAT MOVED, AND WHY THIS STILL GUARDS THE SAME THING. The page's h1 used
+    // to be `.plb-title`, a 15px heading inside the toolbar, and this probe read
+    // its left edge to prove the shell's content edge lined up with the nav's.
+    // The h1 is now `.plb-hero h1`, a 64px heading in a heading area ABOVE the
+    // toolbar, so the toolbar is no longer the first thing under the nav — the
+    // heading area is. Both halves of the original guarantee are kept, and the
+    // sticky half is new: the toolbar has to come back flush to the nav once the
+    // heading has scrolled past it, which is the whole point of it being sticky.
     const geometry = await page.evaluate(() => {
       const nav = document.querySelector('.pnav')
       const navInner = document.querySelector('.pnav-inner')
-      const toolbar = document.querySelector('.plb-toolbar')
-      const title = document.querySelector('.plb-title')
+      const hero = document.querySelector('.plb-hero')
+      const title = document.querySelector('.plb-hero h1')
+      const toolbarGroup = document.querySelector('.plb-toolbar-group')
       const controls = [
         document.querySelector('.plb-seedpick .cpk-trigger'),
         document.querySelector('.plb-hexfield'),
@@ -82,14 +91,33 @@ test.describe('Palette Builder recovery and tool continuity', () => {
       ]
       const navLeft = navInner.getBoundingClientRect().left + parseFloat(getComputedStyle(navInner).paddingLeft)
       return {
-        gap: toolbar.getBoundingClientRect().top - nav.getBoundingClientRect().bottom,
+        gap: hero.getBoundingClientRect().top - nav.getBoundingClientRect().bottom,
         leftDelta: title.getBoundingClientRect().left - navLeft,
+        toolbarLeftDelta: toolbarGroup.getBoundingClientRect().left - navLeft,
+        // POSITIVE CONTROL for the two deltas above: a probe that read a
+        // detached or zero-width node would report 0 for both and pass. The h1
+        // has to be a real, painted, non-empty heading first.
+        titleWidth: title.getBoundingClientRect().width,
+        titleText: title.textContent.trim(),
         heights: controls.map(element => element.getBoundingClientRect().height),
       }
     })
+    expect(geometry.titleWidth, 'the h1 is actually painted').toBeGreaterThan(100)
+    expect(geometry.titleText).toBe('Palette Generator')
     expect(Math.abs(geometry.gap)).toBeLessThanOrEqual(1)
     expect(Math.abs(geometry.leftDelta)).toBeLessThanOrEqual(1)
+    expect(Math.abs(geometry.toolbarLeftDelta)).toBeLessThanOrEqual(1)
     expect(new Set(geometry.heights.map(value => Math.round(value))).size).toBe(1)
+
+    // The toolbar is sticky: scroll the heading area away and it must sit flush
+    // under the nav, which is where it used to start.
+    await page.evaluate(() => window.scrollTo(0, 600))
+    await page.waitForFunction(() => {
+      const nav = document.querySelector('.pnav')
+      const toolbar = document.querySelector('.plb-toolbar')
+      return Math.abs(toolbar.getBoundingClientRect().top - nav.getBoundingClientRect().bottom) <= 1
+    })
+    await page.evaluate(() => window.scrollTo(0, 0))
 
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(800)
