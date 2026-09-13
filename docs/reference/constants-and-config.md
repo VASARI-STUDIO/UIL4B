@@ -7,7 +7,8 @@
 
 | Thing | Value | Source |
 |---|---|---|
-| **Admin emails** | `['dylanjacob1100@gmail.com']` | `src/utils/constants.js` (`ADMIN_EMAILS`) |
+| **Admin emails** | server-side only, in plaintext | `api/_lib/admin.js` and `api/_lib/plans.js` (`ADMIN_EMAILS`) |
+| **Admin digests** | SHA-256 of the scoped address; the client never sees the address | `src/utils/constants.js` (`ADMIN_EMAIL_DIGESTS`, `ownerEmailDigest`) |
 | **Admin code** | `'uil4b-dev-2026'` (session-only unlock) | `src/pages/Admin.jsx` (`ADMIN_CODE`) |
 | **Onboarding skip** | `localStorage 'vs-onboarded'` → `'1'` after first login | `src/components/AuthGate.jsx`, `src/App.jsx` |
 

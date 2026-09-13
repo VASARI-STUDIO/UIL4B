@@ -20,7 +20,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { useI18n } from '../contexts/I18nContext'
-import { ADMIN_EMAILS } from '../utils/constants'
+import { isAdminEmail } from '../utils/constants'
 import NavIcon from './NavIcon'
 import ThemeChoice from './ThemeChoice'
 
@@ -530,7 +530,7 @@ export default function PillNav() {
     stateRef.current.sheet = sheet
   }, [open, menu, sheet])
 
-  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  const isAdmin = isAdminEmail(user?.email)
   // All three section menus (Create / Discover / Learn) are visible to everyone.
   // Not-ready tools inside them carry their own "Soon" badge, so nothing here is
   // gated — the desktop bar and the mobile sheet both render the full set.
