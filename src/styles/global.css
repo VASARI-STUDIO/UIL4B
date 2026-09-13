@@ -211,7 +211,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .sidebar-overlay.visible{display:block}
 
 /* Nav Items */
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-s);font-size:13px;font-weight:450;color:var(--t1);text-decoration:none!important;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font);transition:all var(--t);position:relative}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-s);font-size:13px;font-weight:450;color:var(--t1);text-decoration:none!important;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font);transition:background var(--t),color var(--t);position:relative}
 .nav-item:hover{background:var(--hvr);color:var(--t0)}
 .nav-item.active{color:var(--accent-strong);font-weight:600;background:var(--accent-bg);border-radius:var(--radius-s)}
 .nav-icon{width:18px;height:18px;flex-shrink:0;opacity:.45}
@@ -220,10 +220,10 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .nav-item-pinned{font-size:12.5px;padding:8px 14px;cursor:grab}
 .nav-item-pinned.dragging{opacity:.4}
 .nav-item-pinned.drag-over{border-top:2px solid var(--accent);padding-top:6px}
-.nav-cat-toggle{display:flex;align-items:center;justify-content:center;width:32px;height:36px;background:none;border:none;cursor:pointer;color:var(--t2);padding:0;flex-shrink:0;border-radius:var(--radius-s);transition:all var(--t)}
+.nav-cat-toggle{display:flex;align-items:center;justify-content:center;width:32px;height:36px;background:none;border:none;cursor:pointer;color:var(--t2);padding:0;flex-shrink:0;border-radius:var(--radius-s);transition:background var(--t),color var(--t)}
 .nav-cat-toggle:hover{background:var(--hvr);color:var(--t0)}
 .nav-cat-arr.open{transform:rotate(90deg)}
-.nav-cat-link{flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px 8px 4px;border-radius:var(--radius-s);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t1);text-decoration:none!important;transition:all var(--t);min-width:0}
+.nav-cat-link{flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px 8px 4px;border-radius:var(--radius-s);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t1);text-decoration:none!important;transition:background var(--t),color var(--t);min-width:0}
 .nav-cat-link:hover{background:var(--hvr);color:var(--t0)}
 .nav-cat-link.active{color:var(--accent-strong);background:var(--accent-bg)}
 .nav-cat-link .nav-icon{width:16px;height:16px;opacity:.55;flex-shrink:0}
@@ -3090,7 +3090,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
 .pnav-word{font-size:var(--fs-h5);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
-.pnav-items{display:flex;align-items:center;gap:2px;transition:gap var(--dur-3) var(--ease-inout)}
+.pnav-items{display:flex;align-items:center;gap:2px}
 .pnav-trigger{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border:none;background:none;font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 /* The open state is a real state and paints on every device. The HOVER half is
    scoped to pointers that can actually hover: on a phone or tablet a tap leaves
@@ -3121,7 +3121,7 @@ html.lenis{scroll-behavior:auto!important}
    exceeds max-content, so this changes nothing there; below it, the lead track
    yields instead — the right victim, and .pnav-lead keeps min-width:0 so the logo
    can still compress if a future label makes the whole bar genuinely too wide. */
-.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end;min-width:max-content;transition:gap var(--dur-3) var(--ease-inout)}
+.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end;min-width:max-content}
 /* Sales-page "Start for Free" pill — hidden until the visitor scrolls to
    section 2 (#create); PillNav toggles .is-waiting from the scroll listener.
    While waiting the pill also collapses its width (the 0fr grid track below,
@@ -3312,8 +3312,8 @@ html.lenis{scroll-behavior:auto!important}
    breathing gap) and the COLUMNS scroll inside it, not the whole panel — the
    footer stays put, which is what makes it legible that there is more above.
    `svh` so a mobile browser's collapsing toolbar cannot shrink it mid-open. */
-.pnav-menu{position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;display:flex;flex-direction:column;width:1040px;max-width:calc(100vw - 32px);max-height:calc(100svh - var(--nav-top) - var(--nav-h) - 24px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;transition:width var(--dur-4) var(--ease-inout);animation:pnav-menu-in var(--dur-4) var(--ease-entrance)}
-@keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-10px) scale(.975)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+.pnav-menu{position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;display:flex;flex-direction:column;width:1040px;max-width:calc(100vw - 32px);max-height:calc(100svh - var(--nav-top) - var(--nav-h) - 24px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;animation:pnav-menu-in var(--dur-4) var(--ease-entrance)}
+@keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
 .pnav-menu[data-menu="create"]{width:1260px}
 /* 940 held two columns. Discover has three groups and now gets three columns,
    so the panel widens to carry them at a readable measure.
@@ -3338,7 +3338,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-menu[data-menu="learn"]{width:960px}
 /* min-height:0 is what lets this flex child actually shrink and scroll instead
    of forcing the panel past its max-height. */
-.pnav-menu-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:32px 40px;animation:fx-fade var(--dur-2) var(--ease-entrance)}
+.pnav-menu-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:32px 40px}
 /* Menu body splits into the editorial card (left) + the group grid (right).
    `align-items:start`, NOT stretch: stretched, the 260px card was pulled to the
    full height of the tallest column and its "Explore …" link — margin-top:auto —
@@ -3355,8 +3355,8 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-editorial-blurb{margin-top:10px;font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
 /* margin-top:auto is gone with the stretch — it was the mechanism that opened
    the void, not a layout the card needed. */
-.pnav-editorial-link{display:inline-flex;align-items:center;gap:8px;margin-top:20px;font-size:var(--fs-body-s);font-weight:650;color:var(--t0);text-decoration:none;transition:gap var(--t)}
-.pnav-editorial-link:hover{gap:12px;color:var(--accent-strong);text-decoration:none}
+.pnav-editorial-link{display:inline-flex;align-items:center;gap:8px;margin-top:20px;font-size:var(--fs-body-s);font-weight:650;color:var(--t0);text-decoration:none}
+.pnav-editorial-link:hover{color:var(--accent-strong);text-decoration:none}
 
 /* ── The editorial card's real contents ─────────────────────────────────────
    Replaces the abstract PromoMock SVG. Every value here is a token, so both
@@ -3445,9 +3445,21 @@ html.lenis{scroll-behavior:auto!important}
    The icon tile takes its colour from the row's data-hue (falls back to accent). */
 .pnav-toollist{list-style:none;display:flex;flex-direction:column;gap:1px;margin:0;padding:0}
 .pnav-tool{display:flex;align-items:center;gap:11px;min-height:44px;padding:7px 8px;border-radius:var(--radius-s);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+/* A ROW HOVER IS BACKGROUND, COLOUR AND THE HUE RAIL BELOW. NOTHING MOVES.
+
+   The icon used to lift on hover — .pnav-tool:hover .pnav-tool-ico took
+   transform:translateY(-1px), with a second rule putting it back to none for
+   soon-flagged rows. One pixel is below the threshold at which a reader can
+   tell what moved, and above the threshold at which they can tell something
+   did; it reported no state the background and the rail were not already
+   reporting, on a row whose only question is "am I pointing at this one".
+
+   The rail kept its job and lost its performance: it used to fade in AND grow
+   from scaleY(.4), so the marker for "this row" arrived by unfolding out of
+   its own middle. It now just appears. Opacity is the whole transition, which
+   is also the only part the compositor could run without a layout pass. */
 .pnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
-.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;color:var(--hue,var(--accent-strong));transition:transform var(--dur-2) var(--ease-out)}
-.pnav-tool:hover .pnav-tool-ico{transform:translateY(-1px)}
+.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;color:var(--hue,var(--accent-strong))}
 .pnav-tool-ico svg{width:16px;height:16px}
 .pnav-tool-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
 /* Label and its badge on one line, wrapping together if the column is narrow. */
@@ -3475,19 +3487,22 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-tool[data-soon] .pnav-tool-ico{opacity:.6;filter:grayscale(1)}
 .pnav-tool[data-soon]:hover{opacity:.75}
 .pnav-tool[data-soon]:hover .pnav-tool-label{color:var(--t2)}
-.pnav-tool[data-soon]:hover .pnav-tool-ico{transform:none}
 .pnav-tool:focus-visible{outline-offset:-2px}
-/* Subtle staggered reveal on menu open (row-by-row). Reduced-motion is handled
-   globally (animation-duration clamped), so no per-rule guard is needed. */
-@keyframes pnav-tool-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.pnav-tool{animation:pnav-tool-in var(--dur-2) var(--ease-entrance) backwards}
-.pnav-toollist li:nth-child(2) .pnav-tool{animation-delay:24ms}
-.pnav-toollist li:nth-child(3) .pnav-tool{animation-delay:48ms}
-.pnav-toollist li:nth-child(4) .pnav-tool{animation-delay:72ms}
-.pnav-toollist li:nth-child(5) .pnav-tool{animation-delay:96ms}
-.pnav-toollist li:nth-child(6) .pnav-tool{animation-delay:120ms}
-.pnav-toollist li:nth-child(7) .pnav-tool{animation-delay:144ms}
-.pnav-toollist li:nth-child(8) .pnav-tool{animation-delay:168ms}
+/* NO PER-ROW ENTRANCE, ON PURPOSE.
+
+   The rows used to each play a 200ms rise, delayed 24ms apart through
+   nth-child(8): eight delay rules and 168ms of staircase. It ran AGAIN every
+   time the pointer crossed from one section trigger to the next, because the
+   rows are keyed by tool id and React replaces the whole set. MEASURED on
+   /create/palette at 1440 before it was removed: 19 animations on a single
+   open, the last one finishing 306ms after the click, on rows the visitor is
+   already reaching for.
+
+   It also told the eye nothing. Every column ran its own cascade from its own
+   first child, so three staircases descended side by side and the order they
+   implied was not a reading order, an importance order or a load order — the
+   rows are all present in the same frame. The panel entrance already reports
+   that a panel arrived; its contents are not nine further events. */
 
 /* "View all … tools →" — spans the full column grid at the foot of the menu. */
 
@@ -7405,16 +7420,23 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 /* Motion: the panel is opened by HOVER, so its entrance has to keep up with the
    pointer. --dur-4 (420ms) is the scroll-reveal step and read as lag here;
-   --dur-3 is the named step for "reveals with travel - small panels". The width
-   morph between sections keeps --dur-4: that one covers real distance. */
+   --dur-3 is the named step for "reveals with travel - small panels".
+
+   THERE IS NO WIDTH MORPH BETWEEN SECTIONS ANY MORE. The panel carried a
+   transition on width, so moving the pointer from Create to Learn interpolated
+   1260px down to 960px. MEASURED at 1440: 25 distinct widths painted across 37
+   frames, and the first tool row travelled 150px sideways while it ran, under
+   a pointer that was on its way to click something. The per-section widths
+   below are still exact and still apply; they just apply in one frame, because
+   which section is open is a state and not a distance. */
 .pnav-menu{animation-duration:var(--dur-3)}
 
 /* Hierarchy: the mega menu is a list of destinations, so the eye needs a spine.
    A hue-tinted rail appears on the hovered/focused row - one motif, doing one
    job (which category am I in), rather than a second background wash. */
 .pnav-tool{position:relative;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.pnav-tool::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:var(--radius-pill);background:var(--hue,var(--accent));opacity:0;transform:scaleY(.4);transform-origin:center;transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.pnav-tool:hover::before,.pnav-tool:focus-visible::before{opacity:1;transform:scaleY(1)}
+.pnav-tool::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;border-radius:var(--radius-pill);background:var(--hue,var(--accent));opacity:0;transition:opacity var(--dur-1) var(--ease-standard)}
+.pnav-tool:hover::before,.pnav-tool:focus-visible::before{opacity:1}
 .pnav-tool[data-soon]::before{display:none}
 /* Keyboard parity: hovering and focusing a row must look the same, or the
    arrow-key path through the menu is invisible. */
