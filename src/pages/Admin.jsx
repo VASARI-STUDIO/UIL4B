@@ -12,7 +12,7 @@ import {
 } from '../utils/moderation'
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
-import { ADMIN_EMAILS, isAdminEmail } from '../utils/constants'
+import { isAdminEmail } from '../utils/constants'
 // NEITHER src/data/pipeline.js NOR src/data/moduleBoard.js is imported here,
 // statically or dynamically. They are not client modules at all any more: both
 // arrive from GET /api/ai?backlog=1 behind the verified-admin gate, through
@@ -1592,9 +1592,9 @@ function UsersPanel({ localUsers, toast, role }) {
 
 export default function Admin({ toast }) {
   const { user } = useAuth()
-  const isAdminUser = !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase())
+  const isAdminUser = isAdminEmail(user?.email)
   // The SERVER-VERIFIED role, from the ID token's custom claims. isAdminUser
-  // above compares an email against a list that ships in the browser bundle —
+  // above compares a digest against a list that ships in the browser bundle —
   // fine for deciding what to render, worthless as a fact. This hook is also
   // what finally reads /api/verify-admin's `claimUpdated` and forces the token
   // refresh that makes a freshly minted claim usable in the same session.

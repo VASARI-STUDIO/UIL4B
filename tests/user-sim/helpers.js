@@ -29,7 +29,12 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { expect } from '@playwright/test'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
-import { ADMIN_EMAILS } from '../../src/utils/constants.js'
+// The founder's address, from the SERVER-side allowlist. src/utils/constants.js
+// used to export it and no longer can: it ships in the browser bundle, so it
+// holds a digest now. api/_lib/plans.js is never bundled and keeps the
+// plaintext, and reading it here means an admin fixture and the real server
+// gate cannot drift apart without this suite noticing.
+import { ADMIN_EMAILS } from '../../api/_lib/plans.js'
 import { resolveReportDir } from './report-dir.js'
 
 // Keyed on PLAYWRIGHT_PORT, the same way playwright.config.js keys its
@@ -222,7 +227,7 @@ function seedProject(i, design) {
  *              SubscriptionContext reads over a snapshot — NOT by setting a
  *              flag. So `planForSubscription()` is the code being exercised,
  *              and a change to it changes what these tests see.
- *   admin      true to use the founder's address from utils/constants.js.
+ *   admin      true to use the founder's address from api/_lib/plans.js.
  *              Separate from `plan` on purpose: admin implies Pro through a
  *              DIFFERENT branch (the email allowlist), and conflating the two
  *              would make an admin-only failure look like a Pro failure.
