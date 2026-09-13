@@ -113,9 +113,13 @@ export default function GradientGallery({ toast }) {
 
   return (
     <div className="sec grg-wrap">
+      {/* NO `description` (founder decision, 2026-09-13): the sentence here ran
+          the same template as the Palette Library’s — "…with a point of view …
+          make it yours." — which is what held both pages at 7 on
+          purpose-and-content. Deleted, not rewritten. The masthead is sized by
+          its content now, so losing a line costs nothing above the headline. */}
       <DiscoverGalleryHero
         title="Gradient Library"
-        description="Production-ready CSS gradients with a point of view. Copy the rule in one tap, save a favourite, or open any of them in the Gradient Generator and make it yours."
         action={(
           <Link className="btn" to="/create/gradient">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>

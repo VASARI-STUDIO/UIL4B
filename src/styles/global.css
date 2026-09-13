@@ -6624,7 +6624,27 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    src/components/discover/DiscoverGalleryHero.jsx and DiscoverResultHead.jsx —
    the Palette Library and Gradient Library both consume them, so this block is
    the single home for the pattern. Page-specific chrome stays in pgl-/grg-. */
-.dgh-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,7vw,110px);align-items:end;min-height:300px;margin:-4px 0 24px;padding:clamp(28px,5vw,64px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 28px 80px rgba(6,6,10,.18)}
+/* THE HEIGHT IS THE CONTENT'S, NOT A FLOOR (founder decision, 2026-09-13).
+   This rule carried `min-height:300px` (280 below 720px) together with
+   `align-items:end`, and those two declarations together are what made a
+   SHORTER masthead a worse one: the floor holds the box open and the end
+   alignment drops the copy to the bottom of it, so everything the floor adds
+   is painted black ABOVE the headline. Measured on the shipped build before
+   this change, with both template sentences still in place: 70px at 768 and
+   59px at 834 on /discover/palettes, 50px at 768 on /discover/prompts, 43px
+   at 320. Deleting the Palette Library sentence against that floor took it to
+   189px past the padding - 217px from the top border to the top of the h1 in
+   a 280px box at 320px, which is 68% of the masthead.
+   So the floor is gone and the box is sized by what is in it. `align-items`
+   is now `start`, which is also what stops the two-column --controls variant
+   doing the same thing on a row where the ASIDE is the taller column:
+   /create/emoji measured 94px of black above its h1 at 768 and 82px at 834
+   for exactly that reason. .dgh-aside takes `align-self:end` so the controls
+   still sit on the slab's baseline wherever the copy is the taller column,
+   which is the only part of the old end-alignment doing visible work.
+   Pinned at every width in tests/user-sim/40-gallery-hero.spec.js and
+   tests/user-sim/88-marketing-breakpoints.spec.js. */
+.dgh-hero{position:relative;display:grid;grid-template-columns:minmax(0,1fr);gap:clamp(32px,7vw,110px);align-items:start;margin:-4px 0 24px;padding:clamp(28px,5vw,64px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 28px 80px rgba(6,6,10,.18)}
 /* RETIRED (#surface-headers-read-as-ai): .dgh-eyebrow. A taxonomy path in
    mono caps restating the h1 underneath it. */
 .dgh-hero h1{max-width:720px;margin:0;font-family:var(--display);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.88;letter-spacing:-.065em;overflow-wrap:break-word}
@@ -7136,7 +7156,11 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .legal-card{max-width:72ch;margin-inline:auto;line-height:1.8}
 .legal-h{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.015em;margin-bottom:12px}
 .legal-h--tight{margin-bottom:8px}
-.legal-h--sm{font-family:var(--font);font-size:16px;font-weight:700;letter-spacing:normal}
+/* RETIRED (founder decision, 2026-09-13): .legal-h--sm, the 16px body-font
+   variant. /terms was its only caller and it is the reason the two legal pages
+   set the same kind of heading two different ways; /terms now uses .legal-h
+   like /privacy. Deleted rather than left behind - an unused modifier is the
+   next page's excuse to diverge again. */
 .plb-collapsed-cta{flex-shrink:0;border-color:var(--brand);color:var(--accent-strong)}
 
 /* ============================================================

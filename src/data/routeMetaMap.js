@@ -85,7 +85,18 @@ export const PAGE_DESCRIPTIONS = {
   '/create/icons': 'Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
   '/create/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
   '/create/icons-emoji': 'Search 200,000+ icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
-  '/discover': 'The best external design resources — gradients, palettes, fonts and inspiration — with a one-tap hand-off into the UI L4B tools that use them.',
+  // AWAITING THE FOUNDER'S WORD (proposed 2026-09-13, shipped so the false one
+  // is not live while he reads it). The sentence this replaces said "The best
+  // external design resources - gradients, palettes, fonts and inspiration -
+  // with a one-tap hand-off into the UI L4B tools that use them", and three
+  // parts of it were false. Seven of the EIGHT groups DISCOVER_SPEC renders are
+  // UI L4B's own libraries, not external resources - only Curated Resources is
+  // external. `inspiration` carries soon:true and the page badges it Soon, as
+  // does `collections`, so neither is a resource anyone can reach. And this is
+  // the sentence Google prints under the result and every share card shows.
+  // The replacement names the eight and claims nothing: no "best", no adjective
+  // of quality, no urgency. 142 chars, inside what Google renders.
+  '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, plus a page of external resources. Inspiration and Collections are marked Soon.',
   '/discover/gradients': 'A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.',
   '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
   '/learn': 'Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.',
