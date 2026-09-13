@@ -156,9 +156,20 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
   // MUTATION: restore `left:50%;transform:translateX(-50%)` on
   // `.pop[data-pop-align="clamp"]` in global.css — both routes report the
   // panel 24px past the left edge.
-  for (const [route, trigger, what] of [
-    ['/create/palette', '.plb-seedpick .cpk-trigger', 'the seed colour'],
-    ['/create/gradient', '.ggn-stop-swatch .cpk-trigger', 'a gradient stop'],
+  // WHICH ROUTE STILL REPRODUCES THE CLAMP. The guarantee both routes carry is
+  // the last two assertions: the panel is on screen at 320. Only the gradient
+  // stop still forces the 'clamp' branch to get there.
+  //
+  // /create/palette's seed trigger used to sit 79px from the left, behind the
+  // 15px `h1.plb-title` in the toolbar. That h1 moved into a heading area above
+  // the toolbar (2026-09-13), so the trigger is now the first thing in the row
+  // and starts at the 12px gutter. Measured at 320x844 after: trigger 12..52,
+  // panel 12..256 of 320, "PICK SEED COLOUR" complete. usePopover picks 'start'
+  // because start now fits — which is the better outcome, not a regression, and
+  // asserting 'clamp' there would be asserting that the trigger stays crowded.
+  for (const [route, trigger, what, align] of [
+    ['/create/palette', '.plb-seedpick .cpk-trigger', 'the seed colour', 'start'],
+    ['/create/gradient', '.ggn-stop-swatch .cpk-trigger', 'a gradient stop', 'clamp'],
   ]) {
     test(`${route} · the picker for ${what} at 320`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 320)
@@ -173,7 +184,7 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
         return { left: Math.round(r.left), right: Math.round(r.right), align: el.getAttribute('data-pop-align'), width: Math.round(r.width) }
       })
       await ctx.close()
-      expect(m.align, 'the case under test is the one where neither edge fits').toBe('clamp')
+      expect(m.align, `${route} aligns its picker`).toBe(align)
       expect(m.left, `the picker starts ${-m.left}px off the left of the screen`).toBeGreaterThanOrEqual(0)
       expect(m.right, 'and does not leave by the other side').toBeLessThanOrEqual(320)
     })
