@@ -270,10 +270,16 @@ export default function PaletteGallery({ toast }) {
 
   return (
     <div className="sec pgl-page">
-      <DiscoverGalleryHero
-        title="Palette Library"
-        description="Colour systems with a point of view — ours, plus the published brand palettes behind the interfaces you already know. Copy a swatch, save a favourite, or open the complete palette in the builder and make it yours."
-      />
+      {/* NO `description` (founder decision, 2026-09-13). The sentence that sat
+          here — "Colour systems with a point of view … make it yours." — was the
+          same template line the Gradient Library ran, word for word in its second
+          half, and it is why both pages scored 7 on purpose-and-content: a
+          sentence written to fit any catalogue describes none of them. It is
+          deleted rather than replaced; the founder owns the replacement if one is
+          wanted, and the /discover card already says what this library holds.
+          The masthead no longer opens a hole when the copy is short — see the
+          height note above .dgh-hero in global.css. */}
+      <DiscoverGalleryHero title="Palette Library" />
 
       <LibraryToolbar
         className="pgl-toolbar"

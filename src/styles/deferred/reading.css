@@ -48,10 +48,15 @@
 .ic-intro{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:var(--radius-l)}
 .ic-intro-emoji{font-size:20px;line-height:1.4;flex-shrink:0}
 .ic-intro-body{font-size:13px;color:var(--t1);line-height:1.55;flex:1}
-.ic-intro-close{flex-shrink:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--radius-s);transition:all var(--t)}
+/* transition:all -> the two properties that actually change (2026-09-13).
+   `all` transitions LAYOUT too, so any rule that later touches width, padding
+   or a grid track starts animating it for free and nobody edits this line. The
+   /info surface owns both of these rules and nothing else uses them, which is
+   why they could be narrowed here without a site-wide change. */
+.ic-intro-close{flex-shrink:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:var(--radius-s);transition:color var(--t),background var(--t)}
 .ic-intro-close:hover{background:var(--hvr);color:var(--t0)}
 .ic-toc{display:flex;flex-wrap:wrap;gap:6px;padding:14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l)}
-.ic-toc-link{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--t1);background:var(--card);border:1px solid var(--border);text-decoration:none!important;transition:all var(--t)}
+.ic-toc-link{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;color:var(--t1);background:var(--card);border:1px solid var(--border);text-decoration:none!important;transition:color var(--t),background var(--t),border-color var(--t)}
 .ic-toc-link:hover{border-color:var(--accent);color:var(--accent-strong)}
 .ic-sections{display:flex;flex-direction:column;gap:10px}
 .ic-acc{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);scroll-margin-top:72px}

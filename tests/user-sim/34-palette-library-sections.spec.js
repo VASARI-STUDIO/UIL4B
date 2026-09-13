@@ -159,21 +159,35 @@ test.describe('palette library sections', () => {
     await expect(eyebrow).not.toHaveText(/curated collection|brand systems/i)
   })
 
-  test('the section blurbs tell the two groups apart instead of restating the hero', async ({ page }) => {
-    const hero = (await page.locator('.dgh-hero p').first().innerText()).trim()
+  // THE HERO DESCRIPTION THIS COMPARED AGAINST IS GONE (founder decision,
+  // 2026-09-13). It was "Colour systems with a point of view - ours, plus the
+  // published brand palettes behind the interfaces you already know...", the
+  // same template the Gradient Library ran, and this test existed because the
+  // first section blurb had opened on those same words 200px below it.
+  //
+  // The half of the test that still has something to compare is kept and it is
+  // the half that was always the real claim: the two blurbs must tell the two
+  // GROUPS apart. What is added is the guard the deletion makes possible - the
+  // template sentence must not reappear in either place. So this can no longer
+  // pass by the hero and the blurb agreeing, and it cannot pass by the blurbs
+  // quietly inheriting the sentence the masthead lost.
+  test('the section blurbs tell the two groups apart, and neither repeats the retired hero line', async ({ page }) => {
     const blurbs = await page.locator('.pgl-section-blurb').allInnerTexts()
+    const heroCopy = (await page.locator('.dgh-copy').first().innerText()).trim()
 
-    // Positive controls: there really are two blurbs and a hero to compare.
+    // Positive controls: there really are two blurbs, and the masthead really
+    // did render (an empty read would satisfy every assertion below it).
     expect(blurbs).toHaveLength(2)
-    expect(hero.length).toBeGreaterThan(40)
+    expect(heroCopy.length, 'read no masthead copy at all').toBeGreaterThan(8)
+
+    // The masthead is the h1 and nothing else now.
+    expect(heroCopy, 'the template masthead sentence is back').not.toMatch(/point of view|make it yours/i)
+    for (const blurb of blurbs) {
+      expect(blurb, 'a section blurb has inherited the retired masthead sentence')
+        .not.toMatch(/point of view|make it yours/i)
+    }
 
     const opener = (s) => s.toLowerCase().replace(/[^a-z ]+/g, ' ').split(/\s+/).filter(Boolean).slice(0, 5).join(' ')
-    for (const blurb of blurbs) {
-      expect(
-        opener(blurb),
-        'a section blurb opening on the same words as the hero description ~200px above it',
-      ).not.toBe(opener(hero))
-    }
     expect(opener(blurbs[0]), 'the two blurbs say the same thing').not.toBe(opener(blurbs[1]))
   })
 
