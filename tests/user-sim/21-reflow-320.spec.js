@@ -139,7 +139,11 @@ test.describe('reflow at 320px', () => {
     await page.setViewportSize(NARROW)
     watch(page, 'a designer editing a palette on a phone')
     await go(page, '/create/palette')
-    await expect(page.locator('.plb-tool').first()).toBeVisible()
+    // `.first()` used to resolve to `.plb-tool--grip`, and the grip is
+    // `display:none` below 769px now — HTML5 drag does not fire from a touch, so
+    // at this width it was a slot spent on a gesture that cannot happen. Wait on
+    // the first tool that is actually painted instead of on a fixed index.
+    await expect(page.locator('.plb-tool:visible').first()).toBeVisible()
 
     // RENDERED tools only. `.plb-tool--more` is the touch-band overflow control
     // [palette-swatch-actions-tablet]: it is in the markup at every width but
@@ -159,7 +163,11 @@ test.describe('reflow at 320px', () => {
     // A floor the filter cannot sneak under: five columns each render a row of
     // tools at this width, so a result that collapsed to a handful would mean
     // the filter ate the population rather than that everything passed.
+    // Five columns x three painted tools (Lock, Copy, More) = 15. It was seven
+    // per column before the <=768 collapse; the floor moves with the row, and it
+    // is still well above the "the filter ate the population" case it guards.
     expect(tools.length, 'the per-colour tools render').toBeGreaterThan(6)
+    expect(tools.length, 'every column contributes its row').toBe(15)
     const vw = await page.evaluate(() => document.documentElement.clientWidth)
     for (const t of tools) {
       expect(t.right, 'every tool is on screen').toBeLessThanOrEqual(vw + 1)
