@@ -421,7 +421,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 :where(input[type="range"])::-moz-range-track{height:4px;border-radius:2px;background:var(--bg-4)}
 :where(input[type="range"])::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15);margin-top:-8px;position:relative;z-index:2}
 :where(input[type="range"])::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)}
-.seg-label{font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin-bottom:6px}
+/* `margin` in full, not `margin-bottom`. Two of these are <h2> on
+   /create/contrast — a card's title is a section heading, not a <label>
+   with nothing to label — and a heading arrives carrying the user agent's
+   0.83em top margin. Every other consumer is a <label>, <span> or <div>,
+   whose UA margin is already 0, so the computed box is unchanged for all
+   of them. */
+.seg-label{font-size:8.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:0 0 6px}
 
 /* ─── Code ─── */
 .code{background:var(--cbg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--t0);overflow-x:auto;white-space:pre;cursor:pointer}
