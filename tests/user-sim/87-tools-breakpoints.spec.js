@@ -291,10 +291,19 @@ test.describe('the filter menu opens somewhere a finger can reach it', () => {
     // The trigger states the selection, so the collapsed group hides nothing.
     await expect(trigger).toContainText('Smileys')
 
-    const focusIsTrigger = await page.evaluate(
-      () => document.activeElement?.classList.contains('lbry-filtertrig') ?? false,
-    )
-    expect(focusIsTrigger, 'focus was dropped instead of returning to the trigger').toBe(true)
+    // POLLED, not read once. The focus hand-back is deliberately a frame late —
+    // the menu unmounts first and the trigger is focused on the next
+    // `requestAnimationFrame`, so a single read taken immediately after
+    // `aria-expanded` flips is racing a frame that has not happened yet. This
+    // assertion failed exactly that way once under full-suite load while
+    // passing in isolation three times, which is the signature of a test
+    // asserting a synchronous answer to an asynchronous question.
+    await expect
+      .poll(
+        () => page.evaluate(() => document.activeElement?.classList.contains('lbry-filtertrig') ?? false),
+        { message: 'focus was dropped instead of returning to the trigger', timeout: 5_000 },
+      )
+      .toBe(true)
   })
 })
 
