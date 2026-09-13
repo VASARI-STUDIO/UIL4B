@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeWorkbench from '../components/HomeWorkbench'
@@ -340,6 +340,27 @@ export default function Home() {
   }, [])
 
   useHomeMotion(rootRef, { onStepChange })
+
+  // ── The hero entrance, on the one path where it is still an entrance ──────
+  //
+  // scripts/prerender.mjs writes this page's headline into the served `/` and
+  // `/home` shells so the largest paint happens with the stylesheet instead of
+  // ~1.8s later with the entry chunk, and marks those two documents with
+  // `data-hero-prepainted` on <html>. global.css reads that attribute and turns
+  // the clip-up off — the headline was on screen before React existed, so
+  // re-running the entrance would be a second arrival of something that never
+  // left. (It would also move LCP back to hydration; the reasoning is in
+  // scripts/home-shell.mjs.)
+  //
+  // CLEARED ON UNMOUNT, NOT ON MOUNT. Removing it while this page is mounted
+  // would START the animation on a headline that is already settled — the exact
+  // dive-and-rise the attribute exists to prevent. Removing it as this page
+  // leaves means the NEXT arrival at `/`, from another route, mounts a hero into
+  // a page that is already there, which is a real arrival, and it animates
+  // exactly as it always has.
+  useEffect(() => () => {
+    document.documentElement.removeAttribute('data-hero-prepainted')
+  }, [])
 
   const activeStep = STEPS.findIndex((s) => s.tab === mode)
 
