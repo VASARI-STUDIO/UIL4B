@@ -153,34 +153,40 @@ test.describe('every account surface starts at heading 1', () => {
 })
 
 test.describe('projects states only quotas the product enforces', () => {
-  test('the folder row sells nothing, because there is nothing to sell', async ({ page }) => {
+  // #452 DELETED THE FOLDER SENTENCE AND KEPT THE FOLDERS. These two tests
+  // pinned that halfway state: no invented allowance, but five chips of a fixed
+  // taxonomy still on screen, and a Pro account seeing the same five "which is
+  // the point". The founder's call on 2026-09-13 finished it — folders are not
+  // an entitlement and the mechanism is gone — so the pin is inverted rather
+  // than deleted, which is how 69-flow-audit's seeded-project assertion was
+  // handled when that decision landed. What both tests were really protecting,
+  // that this page quotes no allowance it does not enforce, is now asserted
+  // over the whole surface instead of over one row of it.
+  test('no folder mechanism survives, on free or on Pro', async ({ page }) => {
+    watch(page, 'free and pro users looking for the folders that used to be here')
+    for (const plan of ['free', 'pro']) {
+      await signIn(page, { plan, projects: 2 })
+      await go(page, '/projects')
+      await expect(page.locator('.uh-grid .proj-card')).toHaveCount(2)
+
+      await expect(page.locator('.proj-folders'), `${plan}: the chip row is gone`).toHaveCount(0)
+      await expect(page.locator('.proj-folder-chip'), `${plan}: no chip survives`).toHaveCount(0)
+      await expect(page.locator('.uh-card-folder'), `${plan}: no per-card filer`).toHaveCount(0)
+      // The word itself, anywhere a reader could see it on this surface.
+      await expect(page.locator('main'), `${plan}: the surface still says "folder"`)
+        .not.toContainText(/folder/i)
+    }
+  })
+
+  test('the surface quotes no allowance the product does not enforce', async ({ page }) => {
     watch(page, 'free user with saved projects')
     await signIn(page, { projects: 2 })
     await go(page, '/projects')
-
-    const row = page.locator('.proj-folders')
-    await expect(row).toBeVisible()
-    const text = await row.innerText()
-    // The chips are the real thing and stay.
-    expect(text).toContain('Brand')
-    expect(text).toContain('Personal')
-    // The invented quota does not.
-    expect(text, 'the folder row must not quote a folder allowance')
-      .not.toMatch(/\d+\s+folders/)
-    expect(text, 'and must not sell an upgrade for one')
-      .not.toContain('Upgrade for 10')
+    const main = page.locator('main')
+    // The invented quota #452 removed, and the upgrade it sold.
+    await expect(main, 'must not quote a folder allowance').not.toContainText(/\d+\s+folders/)
+    await expect(main, 'must not sell an upgrade for one').not.toContainText('Upgrade for 10')
     await expect(page.locator('.proj-folder-note')).toHaveCount(0)
-  })
-
-  test('a Pro account sees the same folder row, which is the point', async ({ page }) => {
-    watch(page, 'pro user with saved projects')
-    await signIn(page, { plan: 'pro', projects: 2 })
-    await go(page, '/projects')
-    const chips = page.locator('.proj-folders .proj-folder-chip')
-    // all, brand, app, marketing, personal — FOLDERS is a fixed array, and
-    // paying has never changed it. The removed sentence claimed it did.
-    await expect(chips).toHaveCount(5)
-    await expect(page.locator('.proj-folders')).not.toContainText('folders')
   })
 
   test('the project cap, which IS enforced, still states itself', async ({ page }) => {

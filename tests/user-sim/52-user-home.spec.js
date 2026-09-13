@@ -297,47 +297,36 @@ test.describe('a filter that matches nothing says which filter, and undoes itsel
     await expect(page.locator('.uh-grid .proj-card')).toHaveCount(2)
   }
 
-  test('a folder with nothing in it names the FOLDER, not an empty search', async ({ page }) => {
-    watch(page, 'somebody tapping a folder chip that holds none of their work')
-    await open(page)
-
-    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
-    const panel = page.locator('.uh-filtered')
-    await expect(panel).toBeVisible()
-
-    // The regression, stated as the thing it must never say again.
-    await expect(panel, 'the panel quotes a search the reader never typed').not.toContainText('“”')
-    await expect(panel).toContainText('No projects in Marketing.')
-    // Announced: the grid emptying is silent otherwise, and at 390 this panel
-    // opens at y=815 in an 844px viewport.
-    await expect(panel).toHaveAttribute('role', 'status')
-  })
-
-  test('a search that matches nothing still quotes the search', async ({ page }) => {
+  // THE FOLDER HALF OF THIS DESCRIBE IS GONE WITH THE FOLDERS. #458 wrote
+  // three tests here: a folder that matches nothing, a search that matches
+  // nothing, and both at once. Folders were dropped as an entitlement on
+  // 2026-09-13 (see the note in Projects.jsx), so two of the three describe a
+  // control that no longer exists and are deleted rather than rewritten to
+  // assert on nothing. The search is now the only filter that can empty this
+  // list, and #458's actual finding — that the sentence must name what emptied
+  // the list, and the way out must be inside the panel — is still held by the
+  // two tests that remain.
+  test('a search that matches nothing quotes the search', async ({ page }) => {
     watch(page, 'somebody searching their projects for something that is not there')
     await open(page)
 
     await page.locator('.proj-search input').fill('zzqqxx')
-    await expect(page.locator('.uh-filtered')).toContainText('No projects match “zzqqxx”.')
+    const panel = page.locator('.uh-filtered')
+    await expect(panel).toContainText('No projects match “zzqqxx”.')
+    // The regression #458 found, stated as the thing it must never say again:
+    // an empty pair of curly quotes, for a search the reader never typed.
+    await expect(panel, 'the panel quotes a search the reader never typed').not.toContainText('“”')
+    // Announced: the grid emptying is otherwise silent.
+    await expect(panel).toHaveAttribute('role', 'status')
   })
 
-  test('both filters at once name both', async ({ page }) => {
-    watch(page, 'somebody who set a folder and then searched inside it')
-    await open(page)
-
-    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
-    await page.locator('.proj-search input').fill('zzqqxx')
-    await expect(page.locator('.uh-filtered')).toContainText('No projects match “zzqqxx” in Marketing.')
-  })
-
-  test('the way out is IN the panel, and it clears both filters', async ({ page }) => {
+  test('the way out is IN the panel, and it clears the search', async ({ page }) => {
     // The escape has to be in the panel rather than only back up at the
-    // controls: the panel is what the reader is looking at, and at 390 the
-    // chips and the search box are 200px above it.
+    // control: the panel is what the reader is looking at, and at 390 the
+    // search box is 200px above it.
     watch(page, 'somebody getting back to their work after filtering it away')
     await open(page)
 
-    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
     await page.locator('.proj-search input').fill('zzqqxx')
 
     const reset = page.locator('.uh-filtered').getByRole('button', { name: 'Clear filters' })
@@ -349,7 +338,6 @@ test.describe('a filter that matches nothing says which filter, and undoes itsel
     await expect(page.locator('.uh-filtered')).toHaveCount(0)
     await expect(page.locator('.uh-grid .proj-card'), 'both projects must come back').toHaveCount(2)
     await expect(page.locator('.proj-search input')).toHaveValue('')
-    await expect(page.locator('.proj-folder-chip.active')).toHaveText('All')
   })
 })
 
