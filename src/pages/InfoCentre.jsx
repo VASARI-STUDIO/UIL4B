@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/reading.css'
 
 // Information Centre — a single, fully indexable knowledge hub. Everything lives
 // on one page (good for search + AI citation), with a sticky table of contents,

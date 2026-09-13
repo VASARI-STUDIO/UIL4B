@@ -11,6 +11,12 @@ import { bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont } from
 import { consumeScaleDraft, readScaleDraft, setPairDraft } from '../utils/typeHandoff'
 import { fitTypePreviewSize, typePreviewNeedsFitting } from '../utils/typeScalePreview'
 import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '../utils/fluidType'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/colour.css'
+import '../styles/deferred/tool-shell.css'
+import '../styles/deferred/type.css'
 
 // Type Scale Generator — the standalone /create/type-scale page. One base size and one
 // ratio generate a whole modular scale, previewed in a real article and handed

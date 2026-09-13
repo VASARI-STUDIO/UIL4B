@@ -27,11 +27,14 @@
 // hand, which is the only place they are checked at all.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import path from 'node:path'
 import { luminance } from '../../src/utils/colors.js'
+// Reads the WHOLE app stylesheet, not global.css alone. The rules this file
+// asserts on were split out of global.css into src/styles/deferred/*.css on
+// 2026-09-13; a test that keeps reading one file after a lift like that does
+// not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
+import { ALL_CSS } from './appStylesheets.js'
 
-const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8')
+const RAW = ALL_CSS
 // Blank out comments first, preserving offsets. This file's own measurement
 // tables in global.css are full of hex literals that would otherwise be read as
 // declarations — the sibling category-hue-contrast.test.js was caught by a

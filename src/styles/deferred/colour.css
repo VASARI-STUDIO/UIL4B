@@ -1,0 +1,1229 @@
+/* ── COLOUR — lifted out of src/styles/global.css ─────────────────
+ *
+ * Every rule below was in the one render-blocking stylesheet, where it cost the
+ * homepage its bytes without ever being used there. It now travels with the
+ * lazy route chunks that can actually reach it:
+ *
+ *   ColorStudio, PaletteBuilder, TintTool, ContrastChecker, GradientGenerator, PaletteGallery, GradientGallery
+ *
+ * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
+ * in global.css, so the cascade between any two of them is the one that was
+ * already shipping. What DID change is that they now cascade after the whole
+ * critical sheet rather than from the middle of it — which is why
+ * tests/user-sim/64-computed-style-snapshot.spec.js, and not a reading of this
+ * file, is the evidence that nothing painted moved.
+ *
+ * Adding a rule here is only correct when no eagerly-loaded module can reach
+ * it. tests/unit/home-asset-budget.test.js holds the byte budget that keeps
+ * the traffic going this way rather than back.
+ */
+
+
+.app-main{display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden;position:relative;z-index:1}
+.topbar-hamburger:hover{background:var(--bg-2);color:var(--t0)}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.topbar-search-wrap{position:relative;flex:1;max-width:380px;margin-left:8px}
+.topbar-search{display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;width:100%;transition:all var(--t)}
+.topbar-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.topbar-search svg{flex-shrink:0;color:var(--t3)}
+.topbar-search input{border:none;background:none;color:var(--t0);font-family:var(--font);font-size:12px;outline:none;width:100%;min-width:0;padding:0}
+.topbar-search input::placeholder{color:var(--t3)}
+.topbar-search input:focus{box-shadow:none}
+.topbar-search-kbd{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--bg-3);padding:2px 6px;border-radius:var(--radius-s);border:1px solid var(--border);flex-shrink:0;line-height:1}
+.topbar-search-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:200;overflow:hidden}
+.search-chips{display:flex;gap:4px;padding:10px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;background:var(--bg-1)}
+.search-results{max-height:360px;overflow-y:auto;display:flex;flex-direction:column}
+.search-result:last-child{border-bottom:none}
+.search-result-icon{width:30px;height:30px;border-radius:var(--radius-s);background:var(--accent-bg);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
+.search-result-icon svg{width:15px;height:15px}
+.search-result-body{flex:1;min-width:0}
+.search-result-label{font-size:13px;font-weight:600;color:var(--t0);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-result-desc{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-result-cat{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);font-family:var(--mono);flex-shrink:0;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-s)}
+.search-empty{padding:24px;text-align:center;font-size:12px;color:var(--t2)}
+.search-footer{display:flex;gap:14px;padding:8px 14px;background:var(--bg-1);border-top:1px solid var(--border);font-size:10px;color:var(--t3)}
+.search-footer kbd{font-family:var(--mono);background:var(--bg-3);padding:1px 5px;border-radius:4px;border:1px solid var(--border);margin-right:4px}
+.topbar-btn-export:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
+.topbar-btn-export-label-i{overflow:hidden;min-width:0;white-space:nowrap}
+.topbar-btn-export:hover .topbar-btn-export-label,.topbar-btn-export:focus-visible .topbar-btn-export-label,.topbar-btn-export[aria-expanded="true"] .topbar-btn-export-label{grid-template-columns:1fr;opacity:1;margin-left:0}
+.topbar-btn-export-chev{margin-left:2px;transition:transform var(--dur-2) var(--ease-standard)}
+.export-dropdown-item:hover{background:var(--hvr)}
+.export-dropdown-item svg{color:var(--brand);flex-shrink:0}
+.export-dropdown-hint{display:block;font-size:10px;color:var(--t2);font-weight:400;margin-left:auto}
+.topbar-preview-btn:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
+.topbar-icon-btn:hover{background:var(--brand-bg);color:var(--brand)}
+.topbar-notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--err)}
+.topbar-avatar:hover{border-color:var(--bh)}
+.topbar-avatar-guest{background:var(--bg-2);color:var(--t2)}
+.topbar-avatar{cursor:pointer}
+.profile-menu-head{display:flex;align-items:center;gap:10px;padding:10px 10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.profile-menu-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
+.profile-menu-avatar img{width:100%;height:100%;object-fit:cover}
+.profile-menu-name{font-size:13px;font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-menu-email{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-menu-guest{padding:10px 12px;font-size:12px;color:var(--t2)}
+.profile-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;color:var(--t0);border-radius:var(--radius-s);transition:background var(--t);text-align:left}
+.profile-menu-item:hover{background:var(--hvr)}
+.profile-menu-item svg{color:var(--t2);flex-shrink:0}
+.profile-menu-danger{color:var(--err-strong)}
+.profile-menu-danger svg{color:var(--err-strong)}
+.profile-menu-sep{height:1px;background:var(--border);margin:4px 0}
+.profile-menu-head{position:relative}
+.profile-menu-probadge{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--accent-fg);background:var(--accent-strong);padding:2px 7px;border-radius:100px;align-self:flex-start;flex-shrink:0}
+/* Primary CTA — the upgrade prompt is intentionally the loudest row in the
+   popup now that the navbar no longer carries an Upgrade button (#9). */
+.profile-menu-upgrade{justify-content:center;font-weight:700;color:var(--accent-fg);background:var(--accent-strong);margin:2px 0 6px;padding:11px 12px;box-shadow:0 4px 14px -6px var(--accent-glow);transition:background var(--t),box-shadow var(--t),transform var(--dur-2) var(--ease-out)}
+.profile-menu-upgrade svg{color:var(--accent-fg)}
+.profile-menu-upgrade:hover{background:var(--accent-strong);box-shadow:0 6px 18px -6px var(--accent-glow);transform:translateY(-1px)}
+.profile-menu-upgrade:active{transform:translateY(0);transition-duration:var(--dur-1)}
+/* Pro members see a quiet, left-aligned "Manage subscription" row instead. */
+.profile-menu-upgrade.is-pro{justify-content:flex-start;font-weight:500;color:var(--t0);background:none;margin:0;padding:9px 12px;box-shadow:none}
+.profile-menu-upgrade.is-pro svg{color:var(--t2)}
+.profile-menu-upgrade.is-pro:hover{background:var(--hvr);box-shadow:none;transform:none}
+
+/* Brand */
+.sidebar-brand{padding:18px 16px 20px;flex-shrink:0;text-decoration:none!important;color:inherit;border-bottom:1px solid var(--border);margin-bottom:12px;display:block;transition:background var(--t)}
+.sidebar-brand:hover{background:var(--hvr)}
+.sidebar-brand-text{min-width:0}
+.sidebar-brand-name{font-family:var(--display);font-size:20px;font-weight:500;letter-spacing:-.02em;display:block;line-height:1.2;color:var(--t0)}
+.sidebar-brand-sub{font-size:9px;font-weight:600;color:var(--t2);letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:3px}
+
+/* Navigation */
+.sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 10px 12px;display:flex;flex-direction:column;gap:3px}
+.nav-more-section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
+.nav-item-sub{padding:7px 12px;font-size:12px}
+.nav-item-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-item-footer{margin-bottom:2px}
+
+/* Pinned quick-access group */
+.nav-pinned{display:flex;flex-direction:column;gap:1px;margin:6px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--border);border-radius:var(--radius-s);transition:background var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.nav-pinned.drop-active{background:var(--hvr);box-shadow:inset 0 0 0 1.5px var(--bh)}
+.nav-pinned-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding:4px 14px 6px}
+.nav-pinned-empty{margin:0 8px 4px;padding:10px 12px;border:1.5px dashed var(--border);border-radius:var(--radius-s);font-size:10.5px;font-weight:500;color:var(--t3);text-align:center;letter-spacing:.02em}
+.nav-pinned.drop-active .nav-pinned-empty{border-color:var(--bh);color:var(--t3)}
+.nav-item-pin{display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:auto;color:var(--accent);opacity:.45;background:none;border:none;cursor:pointer;padding:4px;border-radius:var(--radius-s);transition:all var(--t)}
+.nav-item-pin:hover{opacity:1;background:var(--hvr)}
+.nav-item-pinned:hover .nav-item-pin{opacity:.8}
+
+/* Sidebar Footer */
+.sidebar-footer{margin-top:auto;padding:8px 10px 14px;border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;gap:2px}
+
+/* User Profile */
+.sidebar-user{display:flex;align-items:center;gap:6px;padding:10px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);margin-top:4px}
+.sidebar-user-link{display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none!important;color:inherit;border-radius:var(--radius-s);transition:opacity var(--t)}
+.sidebar-user-link:hover{opacity:.8}
+.sidebar-user-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
+.sidebar-user-avatar img{width:100%;height:100%;object-fit:cover}
+.sidebar-user-info{flex:1;min-width:0}
+.sidebar-user-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.sidebar-user-action:hover{color:var(--t0);background:var(--bg-3)}
+.sidebar-login-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;border-radius:var(--radius-l);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--bg-2);color:var(--t0);transition:all var(--dur-2) var(--ease-standard);text-decoration:none!important;margin-top:8px}
+.sidebar-login-btn:hover{background:var(--bg-3);border-color:var(--bh)}
+.cs-tint-strip>div{transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-standard)}
+.cs-next-step{padding:48px 0 16px;display:flex;justify-content:center}
+.cs-next-link{display:inline-flex;align-items:center;gap:12px;padding:14px 28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t0);text-decoration:none!important;transition:all var(--t)}
+.cs-next-link:hover{border-color:var(--brand);background:var(--brand-bg);text-decoration:none!important}
+.cs-next-link span{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.cs-next-link strong{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.cs-next-link svg{color:var(--brand);flex-shrink:0}
+/* More colour tools — cross-link footer at the bottom of every colour tool */
+.cs-tools-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border)}
+.cs-tools-footer-title{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin:0 0 6px}
+/* The sequencing line inherited from the removed `.stc-next` block. It is the
+   reason this footer is a workflow step and not just a list of siblings. */
+.cs-tools-footer-lead{max-width:620px;margin:0 0 18px;font-size:14px;line-height:1.6;color:var(--t1)}
+.cs-tools-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.cs-tools-footer-link{display:flex;flex-direction:column;gap:2px;text-align:left;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t0);cursor:pointer;text-decoration:none;transition:all var(--t)}
+.cs-tools-footer-link:hover{border-color:var(--brand);background:var(--brand-bg)}
+.cs-tools-footer-link strong{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.cs-tools-footer-link span{font-size:12px;color:var(--t2)}
+@media(max-width:768px){.cs-tools-footer-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.cs-tools-footer-grid{grid-template-columns:1fr}}
+.sub-meta{font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6;max-width:560px}
+.card-i:hover{border-color:var(--bh)}
+/* ── CARD HOVER — the primary hover language across the whole app (V2).
+   border-color → ink AND a 3px lift, together. Both, or it reads as a different
+   interaction. Named on the motion scale, never raw literals.
+   Docs: docs/reference/design-language-v2.md#motion
+   Apply to any raised, bordered, interactive surface; it deliberately sets no
+   background, radius or padding so it composes onto existing card classes. */
+.hover-lift{transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.hover-lift:hover{border-color:var(--t0);transform:translateY(-3px)}
+.tag-pass{background:color-mix(in srgb, var(--ok) 8%, transparent);color:var(--ok-strong)}.tag-fail{background:color-mix(in srgb, var(--err) 8%, transparent);color:var(--err-strong)}
+.cs-hue-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cs-hue-name{font-size:11px;font-weight:600;color:var(--t1)}
+.cs-hue-val{font-family:var(--mono);font-size:10px;color:var(--t3)}
+/* `input.` prefix: must outrank the global input[type="range"] reset above */
+/* The INPUT is the hit area and the TRACK is the paint. The gradient and the
+   hairline used to sit on the input itself at 14px tall, which made the whole
+   control a 14px target (measured 2026-09-09 on every custom-hue row, 320 to
+   1920). The input is now 24px of transparent box and the track pseudo-
+   elements carry the 12px gradient bar the page has always shown, so the
+   paint is unchanged and a thumb press lands 5px either side of it. */
+input.cs-hue-slider{-webkit-appearance:none;appearance:none;width:100%;height:24px;border-radius:var(--radius-pill);background:transparent;outline:none;cursor:pointer;border:0}
+input.cs-hue-slider::-webkit-slider-runnable-track{height:12px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));border:1px solid var(--border)}
+input.cs-hue-slider::-moz-range-track{height:12px;border-radius:var(--radius-pill);background:var(--arc-grad,var(--bg-3));border:1px solid var(--border)}
+input.cs-hue-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;margin-top:-3px;border-radius:50%;background:#fff;border:2px solid var(--t0);box-shadow:var(--shadow-xs)}
+input.cs-hue-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--t0);box-shadow:var(--shadow-xs)}
+input.cs-hue-slider:focus-visible::-webkit-slider-runnable-track{box-shadow:0 0 0 3px var(--accent-bg)}
+input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--accent-bg)}
+.cs-hue-ends{display:flex;justify-content:space-between;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
+.cs-hue-hex{width:96px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-xs);background:var(--bg-0);color:var(--t0);font-family:var(--mono);font-size:11px;text-transform:uppercase}
+.cs-hue-hex::placeholder{color:var(--t3);text-transform:none;letter-spacing:0}
+.cs-hue-hex:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.stc-hue-row .cs-hue-slider{flex:1;width:auto}
+.pal-swatch:hover{transform:translateY(-2px)}
+
+/* ─── Tint swatches ─── */
+.tint-swatch{aspect-ratio:1;border-radius:var(--radius-s);display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px;cursor:pointer;transition:transform var(--dur-2) var(--ease-standard)}
+.tint-swatch:hover{transform:scale(1.05)}
+.tint-swatch .stop-label{font-size:11px;font-family:var(--mono);font-weight:700}
+.tint-info{text-align:center;margin-top:6px}
+.tint-info .lval{font-family:var(--mono);font-size:9px;color:var(--t2)}
+.tint-base-tag{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong)}
+
+/* ─── Contrast ─── */
+.cr-val{font-size:clamp(24px,4vw,36px);font-weight:700;font-family:var(--mono);letter-spacing:-.02em}
+.comp-row .sublabel{font-size:10px;color:var(--t2)}
+.suggest-sw{width:36px;height:36px;border-radius:var(--radius-s);cursor:pointer;border:2px solid transparent;transition:all var(--dur-2) var(--ease-standard)}
+.suggest-sw:hover{border-color:var(--accent);transform:scale(1.1)}
+
+/* ─── Gradient ─── */
+.grad-big{height:clamp(80px,12vw,160px);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:20px;position:relative;overflow:hidden}
+.grad-tags{position:absolute;top:10px;left:10px;display:flex;gap:5px}
+.grad-tag{padding:4px 12px;border-radius:var(--radius-s);font-size:9px;font-weight:700;background:rgba(0,0,0,.35);color:#fff;letter-spacing:.04em;text-transform:uppercase}
+.grad-presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.grad-p{display:flex;flex-direction:column;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:all var(--t)}
+.grad-p:hover{border-color:var(--accent);box-shadow:var(--warm-shadow)}
+.grad-p-preview{height:80px}
+.grad-p-info{padding:10px 12px;background:var(--card)}
+
+/* ─── Tool tile (card grid for dashboard) ─── */
+.tile-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr));gap:12px;margin-bottom:36px}
+.tool-tile{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;text-decoration:none!important;color:inherit;transition:all var(--dur-2) var(--ease-standard);position:relative;min-height:136px;overflow:hidden;box-shadow:var(--warm-shadow)}
+.tool-tile:hover{transform:translateY(-3px);box-shadow:var(--warm-shadow-lg);border-color:var(--bh)}
+.tool-tile-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px}
+.tool-tile-icon{width:34px;height:34px;border-radius:var(--radius-s);background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--t1);transition:all var(--dur-2) var(--ease-standard)}
+.tool-tile:hover .tool-tile-icon{background:var(--accent-bg);border-color:var(--accent-glow);color:var(--accent)}
+.tool-tile-icon svg{width:15px;height:15px}
+.tool-tile-label{font-size:14px;font-weight:600;color:var(--t0);margin-bottom:5px;letter-spacing:-.01em}
+.tool-tile-desc{font-size:12px;color:var(--t2);line-height:1.55;flex:1}
+.tool-tile-cat{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
+@media(max-width:640px){
+
+  /* Privacy storage table → card list. MOVED: the whole stacked-card block now
+     lives immediately after the base `.storage-table` rules, because those
+     appear LATER in this stylesheet and were silently winning `padding` and
+     `border-bottom` at equal specificity. See the note there — and the
+     identical trap already recorded on `.settings-nav`. */
+
+  /* Section headers */
+  .section-h{flex-wrap:wrap}}
+
+@media(max-width:640px){
+
+  /* Hide tab labels in admin filters */
+  .admin-tabs{flex-wrap:wrap}}
+
+@media(max-width:480px){
+  .tint-swatch{padding-bottom:6px}
+  .tint-swatch .stop-label{font-size:10px}}
+
+
+/* ─── State preset responsive show/hide ─── */
+.state-preset-full{display:inline}
+.state-preset-short{display:none}
+@media(max-width:640px){
+  .state-preset-full{display:none}
+  .state-preset-short{display:inline}
+}
+
+/* Undo toast */
+.cs-undo-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.25);animation:ci-fade var(--dur-1) var(--ease-entrance)}
+.cs-undo-toast span{font-size:13px;font-weight:500;color:var(--t0)}
+.cs-undo-toast button{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:700;color:var(--accent-strong);cursor:pointer;padding:4px 10px;border-radius:6px;transition:background var(--dur-1) var(--ease-standard)}
+.cs-undo-toast button:hover{background:var(--bg-2)}
+.cs-undo-dismiss{font-size:16px!important;color:var(--t3)!important;padding:4px 6px!important}
+
+/* Brand palettes horizontal scroll on hover */
+.cs-brand-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;scrollbar-width:thin}
+.cs-brand-scroll::-webkit-scrollbar{height:6px}
+.cs-brand-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* Gradient bento grid */
+.grad-bento{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;grid-auto-flow:dense}
+.grad-bento-card{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:all var(--t);display:flex;flex-direction:column}
+.grad-bento-card:hover{border-color:var(--accent);box-shadow:var(--warm-shadow)}
+.grad-bento-info{padding:10px 12px;background:var(--card);flex:1}
+.grad-bento-name{font-size:12px;font-weight:600;color:var(--t0);margin-bottom:6px}
+.grad-bento-stops{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.grad-bento-stop{display:inline-flex;align-items:center;gap:3px}
+.grad-bento-dot{width:10px;height:10px;border-radius:3px;border:1px solid var(--border);flex-shrink:0}
+.grad-bento-hex{font-family:var(--mono);font-size:8px;font-weight:600;color:var(--t2)}
+.grad-bento-pos{font-family:var(--mono);font-size:7px;color:var(--t3)}
+.grad-bento-arrow{color:var(--t3);font-size:9px}
+@media(max-width:700px){.grad-bento{grid-template-columns:1fr}}
+
+.cs-csys-pt:focus-visible{outline:none}
+.cs-csys-pt-ring{display:block;width:100%;height:100%;border-radius:50%;background:var(--cs-c,#000);box-shadow:0 0 0 1px #000,0 0 0 2px #fff;transition:transform var(--dur-2) var(--ease-entrance)}
+.cs-csys-pt:focus-visible .cs-csys-pt-ring{box-shadow:0 0 0 1px #000,0 0 0 2px #fff,0 0 0 4px var(--brand)}
+
+/* Live readout chip — follows the active handle. */
+.cs-csys-readout{position:absolute;left:var(--cs-x);top:var(--cs-y);transform:translate(-50%,calc(-100% - 26px));display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:var(--radius-s);background:var(--bg-1);border:1px solid var(--border);box-shadow:var(--shadow-m);pointer-events:none;white-space:nowrap;z-index:4}
+.cs-csys-readout-sw{width:14px;height:14px;flex:0 0 auto;border-radius:4px;background:var(--cs-c,#000);box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.cs-csys-readout-hex{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t0)}
+.cs-csys-readout-badge{font-family:var(--mono);font-size:10px;font-weight:600;padding:1px 5px;border-radius:var(--radius-pill)}
+
+/* Magnifier loupe — function, not decoration. */
+.cs-csys-loupe{position:absolute;left:var(--cs-loupe-x,0);top:var(--cs-loupe-y,0);width:var(--cs-loupe-size,96px);height:var(--cs-loupe-size,96px);border-radius:50%;overflow:hidden;border:2px solid var(--bg-1);box-shadow:0 0 0 1px var(--border),var(--shadow-m);pointer-events:none;opacity:0;transition:opacity var(--dur-1) var(--ease-entrance);z-index:5}
+.cs-csys-stage:hover .cs-csys-loupe,.cs-csys-pt:focus-within ~ .cs-csys-loupe,.cs-csys-pt.is-dragging ~ .cs-csys-loupe{opacity:1}
+.cs-csys-loupe-canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+.cs-csys-loupe-cross{position:absolute;inset:0;pointer-events:none}
+.cs-csys-loupe-cross::before,.cs-csys-loupe-cross::after{content:'';position:absolute;background:rgba(255,255,255,.7);box-shadow:0 0 0 .5px rgba(0,0,0,.6)}
+.cs-csys-loupe-cross::before{left:50%;top:0;bottom:0;width:1px;transform:translateX(-.5px)}
+.cs-csys-loupe-cross::after{top:50%;left:0;right:0;height:1px;transform:translateY(-.5px)}
+.cs-csys-brand-name{font-size:13px;font-weight:550;color:var(--t1)}
+.cs-csys-brand-bar{display:flex;height:24px;border-radius:var(--radius-xs);overflow:hidden}
+.cs-csys-brand-sw{flex:1;border:none;padding:0;background:var(--cs-c,var(--bg-3));cursor:pointer;transition:flex var(--t-fast)}
+.cs-csys-brand-sw:hover{flex:1.6}
+.cs-csys-brand-sw:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--brand)}
+
+/* Reduced motion — loupe/readout stay functional, only the fade is removed. */
+[data-reduced-motion] .cs-csys-loupe{transition:none}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COLOUR STUDIO — "SEE IT SHIPPED" PREVIEWS (cs-pv-, Slice 4)
+   Four full vector UI scenes that recolour from the live palette via per-scene
+   --pv-* custom properties (set imperatively on .cs-pv-canvas; never inline).
+   Two free (hero/app) + two Pro-locked (mobile/article). The locked scenes show
+   ONLY a palette-free wireframe — no --pv-* var is ever set on them (§9).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cs-pv{margin-bottom:var(--s-7);scroll-margin-top:100px}
+.cs-pv-header{cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.cs-pv-header.is-collapsed{margin-bottom:0}
+.cs-pv-header h2{font-size:18px;font-weight:700}
+.cs-pv-sublabel{font-size:10px;line-height:1.4;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--t2)}
+.cs-pv-body{max-width:1280px;margin-inline:auto}
+.cs-pv-legend-item{display:inline-flex;align-items:center;gap:7px}
+.cs-pv-legend-dot{width:14px;height:14px;border-radius:var(--radius-pill);border:1px solid var(--bh);flex-shrink:0;
+  transition:transform var(--t-fast)}
+.cs-pv-legend-item:hover .cs-pv-legend-dot{transform:scale(1.15)}
+.cs-pv-legend-dot[data-role="bg"]{background:var(--pv-bg)}
+.cs-pv-legend-dot[data-role="surface"]{background:var(--pv-surface)}
+.cs-pv-legend-dot[data-role="primary"]{background:var(--pv-primary)}
+.cs-pv-legend-dot[data-role="accent"]{background:var(--pv-accent)}
+.cs-pv-legend-dot[data-role="text"]{background:var(--pv-text)}
+.cs-pv-legend-name{font-size:10px;line-height:1;letter-spacing:.04em;text-transform:uppercase;font-weight:700;color:var(--t1)}
+.cs-pv-legend-hex{font-family:var(--mono);font-size:10px;line-height:1;font-weight:500;color:var(--t2)}
+.cs-pv-legend-hint{font-size:10px;color:var(--t2);font-style:italic;margin-left:auto}
+.cs-pv-scene:nth-child(2){animation-delay:.05s}
+.cs-pv-scene:nth-child(3){animation-delay:.1s}
+.cs-pv-scene:nth-child(4){animation-delay:.15s}
+.cs-pv-scene-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:9px 14px;border-bottom:1px solid var(--border)}
+.cs-pv-scene-tag{font-size:10px;line-height:1;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--t2)}
+.cs-pv-scene-mode{font-size:9px;line-height:1;letter-spacing:.06em;text-transform:uppercase;font-weight:600;
+  color:var(--t3);padding:3px 7px;border:1px solid var(--border);border-radius:var(--radius-pill)}
+
+/* ── Recoloured atoms — read ONLY from --pv-* (no inline style) ── */
+.cs-pv-btn{display:inline-flex;align-items:center;justify-content:center;
+  background:var(--pv-primary);color:var(--pv-on-primary);border:1px solid var(--pv-primary-border, transparent);
+  border-radius:var(--radius-pill);font-size:11px;line-height:1;font-weight:650;padding:7px 13px;white-space:nowrap}
+.cs-pv-btn.is-ghost{background:transparent;color:var(--pv-text);border:1px solid var(--pv-border)}
+.cs-pv-tag{display:inline-flex;align-items:center;font-size:10px;line-height:1;font-weight:600;padding:4px 10px;
+  border-radius:var(--radius-pill);color:var(--pv-accent);background:color-mix(in srgb,var(--pv-accent) 12%,transparent)}
+.cs-pv-headline{color:var(--pv-text);font-weight:800;letter-spacing:-.02em;font-size:clamp(22px,4cqi,30px);line-height:1.1;margin:0}
+.cs-pv-sub{color:var(--pv-muted);max-width:60ch;font-size:12px;line-height:1.55;font-weight:450;margin:0}
+.cs-pv-glow{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(60% 50% at 50% 28%,color-mix(in srgb,var(--pv-primary) 18%,transparent),transparent 70%)}
+
+/* Scene A — Marketing Hero (dark) */
+.cs-pv-nav{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:var(--s-5)}
+.cs-pv-wordmark{display:inline-flex;align-items:center;gap:7px;color:var(--pv-text);font-weight:700;font-size:13px}
+.cs-pv-dot{width:14px;height:14px;border-radius:var(--radius-s);background:var(--pv-primary);display:inline-block}
+.cs-pv-nav-links{display:inline-flex;align-items:center;gap:14px}
+.cs-pv-link{color:var(--pv-muted);font-size:11px;font-weight:500}
+.cs-pv-hero{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-3)}
+.cs-pv-cta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.cs-pv-logos{display:flex;gap:16px;margin-top:var(--s-3);opacity:.5}
+.cs-pv-logos span{width:48px;height:9px;border-radius:var(--radius-pill);background:var(--pv-muted)}
+.cs-pv-side-mark{width:22px;height:22px;border-radius:var(--radius-s);background:var(--pv-primary)}
+.cs-pv-app-main{flex:1;min-width:0;padding:14px;display:flex;flex-direction:column;gap:12px}
+.cs-pv-topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cs-pv-topbar-title{color:var(--pv-text);font-weight:700;font-size:15px}
+.cs-pv-kpi{background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:var(--radius-s);
+  padding:10px;display:flex;flex-direction:column;gap:3px}
+.cs-pv-kpi-label{color:var(--pv-muted);font-size:9px;line-height:1.3;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.cs-pv-kpi-num{color:var(--pv-primary);font-size:22px;line-height:1;font-weight:800}
+.cs-pv-kpi-chip{align-self:flex-start;color:var(--pv-accent);font-size:9px;font-weight:700;
+  padding:2px 6px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--pv-accent) 14%,transparent)}
+.cs-pv-chart{flex:1;min-height:0;display:flex;align-items:flex-end;gap:6px;
+  background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:var(--radius-s);padding:12px}
+.cs-pv-bar{flex:1;border-radius:3px 3px 0 0;background:var(--pv-primary);opacity:.45}
+.cs-pv-bar:nth-child(1){height:42%}.cs-pv-bar:nth-child(2){height:68%}.cs-pv-bar:nth-child(3){height:55%}
+.cs-pv-bar:nth-child(4){height:80%}.cs-pv-bar:nth-child(5){height:62%}.cs-pv-bar:nth-child(6){height:95%}
+.cs-pv-bar:nth-child(7){height:58%}.cs-pv-bar:nth-child(8){height:74%}
+.cs-pv-bar.is-peak{background:var(--pv-accent);opacity:1}
+
+/* Scene C — Mobile Feed (light) */
+.cs-pv-mobile{display:flex;align-items:center;justify-content:center;height:100%}
+.cs-pv-phone{width:46cqi;max-width:170px;aspect-ratio:9/16;background:var(--pv-bg);border:3px solid var(--pv-border);
+  border-radius:22px;box-shadow:0 8px 24px rgba(0,0,0,.18);overflow:hidden}
+.cs-pv-screen{position:relative;height:100%;background:var(--pv-surface);padding:10px;display:flex;flex-direction:column;gap:8px}
+.cs-pv-status{display:flex;align-items:center;justify-content:space-between}
+.cs-pv-status>span:first-child{width:26px;height:5px;border-radius:var(--radius-pill);background:var(--pv-muted);opacity:.5}
+.cs-pv-status-dots{display:inline-flex;gap:3px}
+.cs-pv-status-dots i{width:4px;height:4px;border-radius:50%;background:var(--pv-muted);opacity:.5}
+.cs-pv-feed-head{display:flex;align-items:center;gap:8px}
+.cs-pv-avatar{width:26px;height:26px;border-radius:50%;background:var(--pv-accent)}
+.cs-pv-feed-title{color:var(--pv-text);font-weight:700;font-size:13px}
+.cs-pv-feed-card{background:var(--pv-bg);border:1px solid var(--pv-border);border-radius:var(--radius-s);
+  padding:8px;display:flex;flex-direction:column;gap:5px}
+.cs-pv-feed-img{height:34px;border-radius:5px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--pv-primary) 55%,transparent),color-mix(in srgb,var(--pv-accent) 45%,transparent))}
+.cs-pv-feed-actions{display:inline-flex;gap:8px;margin-top:1px}
+.cs-pv-fab{position:absolute;right:12px;bottom:42px;width:30px;height:30px;border-radius:50%;
+  background:var(--pv-primary);color:var(--pv-on-primary);display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:600;line-height:1;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.cs-pv-tabbar{margin-top:auto;display:flex;align-items:center;justify-content:space-around;
+  padding:8px 0 2px;border-top:1px solid var(--pv-border)}
+
+/* Scene D — Editorial Article (light) */
+.cs-pv-article{display:flex;flex-direction:column;gap:var(--s-2);max-width:66ch;margin-inline:auto;height:100%;overflow:hidden}
+.cs-pv-kicker{color:var(--pv-accent);font-size:10px;line-height:1;letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+.cs-pv-art-headline{color:var(--pv-text);font-weight:750;letter-spacing:-.015em;font-size:clamp(18px,5cqi,24px);line-height:1.15;margin:0}
+.cs-pv-byline{color:var(--pv-muted);font-size:11px;font-weight:500}
+.cs-pv-rule{height:2px;border-radius:var(--radius-pill);background:var(--pv-primary);width:42px}
+.cs-pv-cols p{margin:0 0 8px}
+.cs-pv-a{color:var(--pv-accent);text-decoration:underline;text-underline-offset:2px}
+.cs-pv-quote{margin:0;padding:8px 12px;background:var(--pv-surface);border-left:3px solid var(--pv-primary);
+  border-radius:0 var(--radius-s) var(--radius-s) 0;color:var(--pv-text);font-size:14px;line-height:1.4;font-weight:600}
+/* Selected (imported) card: a brand ring on the stripes + a tick badge. */
+.pgal-card.is-selected .pgal-stripes{outline:2px solid var(--brand);outline-offset:2px}
+/* Both of these sit in the shared card's float slot now, which is already
+   absolutely positioned at the top-right of the swatch — so they only need
+   their own shape, not their own placement. */
+.pgal-tick{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--accent-strong);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
+.pgal-stripe{position:relative;flex:1;min-height:0;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end}
+.pgal-stripe:first-child{flex:2.4}
+/* Hairline between stripes so adjacent #FFFFFF (or #000000) bands in a brand
+   palette stay legible as separate colours rather than one solid block. */
+.pgal-stripe+.pgal-stripe{box-shadow:inset 0 1px 0 rgba(128,128,128,.28)}
+.pgal-stripe:hover .pgal-hex,.pgal-stripe:focus-visible .pgal-hex{opacity:1}
+.pgal-stripe:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.pgal-act:hover{background:rgba(10,10,14,.9);border-color:rgba(255,255,255,.34)}
+.pgal-act:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* The action layer sits ON the swatch, so at small card sizes the labels are
+   what has to go — the icons keep every action reachable in a single row. */
+@media (max-width:600px){.pgal-act span{display:none}.pgal-act{padding:6px}}
+.pgal-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.pgal-use.is-selected svg{stroke:var(--brand)}
+.pgal-cmp{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.pgal-cmp:hover{color:var(--brand);border-color:var(--bh)}
+/* Radius declared at REST, not on :focus-visible — see the note on the
+   global :focus-visible rule near the top of this file. This element paints
+   no background and no border of its own, so the radius is visually inert
+   here; it exists so the focus ring traces a shape the element actually
+   has, instead of the ring's own declaration changing the shape to match
+   itself. */
+
+/* Collections */
+.dsc-collections{margin-bottom:8px}
+.dsc-coll-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.dsc-coll-card:hover{transform:translateY(-2px);border-color:var(--bh);box-shadow:var(--warm-shadow)}
+.dsc-coll-preview{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;width:64px;height:64px;flex-shrink:0}
+.dsc-coll-tile{display:flex;align-items:center;justify-content:center;border-radius:var(--radius-xs);font-family:var(--mono);font-size:11px;font-weight:700;color:color-mix(in srgb,var(--dsc-c) 88%,var(--t0));background:linear-gradient(135deg,color-mix(in srgb,var(--dsc-c) 26%,var(--bg-2)),color-mix(in srgb,var(--dsc-c) 8%,var(--bg-2)))}
+.dsc-coll-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dsc-coll-title{font-size:14px;font-weight:700;color:var(--t0);letter-spacing:-.01em}
+.dsc-coll-blurb{font-size:12px;color:var(--t2);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dsc-coll-count{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t3);margin-top:2px}
+
+/* Empty / recovery (never a dead end) */
+.dsc-empty .dsc-empty-recovery{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+.dsc-empty-try{font-size:12px;color:var(--t3);font-weight:600}
+.dsc-empty .dsc-empty-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center}
+
+/* Detail / collection modal — content classes layered on canonical .ui-modal */
+.dsc-modal-top{display:flex;align-items:center;gap:14px}
+.dsc-modal-face{display:flex;align-items:center;justify-content:center;width:64px;height:64px;flex-shrink:0;border-radius:var(--radius);background:linear-gradient(135deg,color-mix(in srgb,var(--dsc-c) 24%,var(--bg-2)),color-mix(in srgb,var(--dsc-c) 8%,var(--bg-2)));color:var(--dsc-c)}
+.dsc-modal-id{display:flex;flex-direction:column;gap:8px;min-width:0}
+.dsc-modal-host{font-family:var(--mono);font-size:12px;color:var(--t2)}
+.dsc-modal-pills{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dsc-modal-section{display:flex;flex-direction:column;gap:8px}
+.dsc-modal-h{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);margin:0}
+.dsc-modal-why{font-size:13.5px;color:var(--t1);line-height:1.65;margin:0}
+.dsc-modal-blurb{font-size:13.5px;color:var(--t1);line-height:1.6;margin:0}
+.dsc-modal-tags{display:flex;gap:6px;flex-wrap:wrap}
+.dsc-modal-tag{font-family:var(--mono);font-size:11px;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);padding:3px 9px;border-radius:var(--radius-pill)}
+.dsc-modal-tools{display:flex;gap:8px;flex-wrap:wrap}
+.dsc-modal-tool{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius);border:1px solid color-mix(in srgb,var(--brand) 40%,var(--border));background:var(--brand-bg);color:var(--accent-strong);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.dsc-modal-tool:hover{background:color-mix(in srgb,var(--brand) 16%,transparent);border-color:var(--brand)}
+.dsc-modal-members{list-style:none;display:flex;flex-direction:column;gap:6px;margin:0;padding:0}
+.dsc-modal-member{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;font-family:var(--font);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.dsc-modal-member:hover{background:var(--hvr);border-color:var(--bh)}
+.dsc-modal-member-face{display:flex;align-items:center;justify-content:center;width:40px;height:40px;flex-shrink:0;border-radius:var(--radius-s);font-family:var(--mono);font-size:14px;font-weight:700;color:color-mix(in srgb,var(--dsc-c) 88%,var(--t0));background:linear-gradient(135deg,color-mix(in srgb,var(--dsc-c) 26%,var(--bg-2)),color-mix(in srgb,var(--dsc-c) 8%,var(--bg-2)))}
+.dsc-modal-member-meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dsc-modal-member-title{font-size:13.5px;font-weight:600;color:var(--t0)}
+.dsc-modal-member-host{font-size:11.5px;color:var(--t2)}
+
+/* Card skeleton — reserves the card height so there's no layout shift */
+.dsc-card-sk{pointer-events:none}
+.dsc-face-sk{height:104px;border-radius:0}
+.dsc-sk-gap{margin-top:10px}
+.tt-grid>*{min-width:0}
+
+
+/* ══════════ Palette Builder (/color/palette) ══════════ */
+/* Full-bleed workbench: the negative margins exactly cancel .rail-content's
+   padding (24px / var(--page-inline) / var(--s-9)) so the board runs
+   edge-to-edge under the pill nav. Column/ramp colours arrive as custom
+   props (--plb-c / --plb-ink / --plb-rc) set via callback refs. */
+.plb{display:flex;flex-direction:column;min-height:calc(100vh - var(--nav-top) - var(--nav-h));margin:calc(-24px - var(--nav-clear) + var(--nav-top) + var(--nav-h)) calc(-1*var(--page-inline)) calc(-1*var(--s-9))}
+.plb-toolbar-sep{width:1px;height:22px;background:var(--border)}
+/* Seed picker: reuses ColorPickerPop; the popover opens left-aligned because the
+   trigger sits at the left edge of the toolbar (default .cpk-pop is right:0). */
+.plb-seedpick{flex:0 0 auto}
+.plb-hexfield{width:96px;padding:0 10px;font-family:var(--mono);font-size:13px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);transition:border-color var(--t)}
+.plb-hexfield:focus{outline:none;border-color:var(--brand)}
+.plb-hexfield--bad{border-color:#D64545}
+/* System + Vision toolbar triggers ride on .btn btn-s; these only add the
+   eyebrow label + no-wrap so every toolbar control shares one button system. */
+.plb-harm{white-space:nowrap}
+.plb-tab-lock{display:inline-flex;opacity:.55}
+.plb-file{display:none}
+.plb-random{white-space:nowrap}
+.plb-kbd{padding:1px 6px;font-family:var(--mono);font-size:10px;font-weight:600;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:4px;opacity:.85}
+.plb-dark{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
+.plb-dark:hover{background:var(--t0);color:var(--bg-0);opacity:.88}
+.plb-menu-title{font-size:12px;font-weight:700;color:var(--t0);margin:2px 2px 10px}
+.plb-menu-row{display:flex;gap:8px}
+.plb-menu-row input{flex:1;min-width:0;padding:8px 10px;font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-menu-row input:focus{outline:none;border-color:var(--brand)}
+.plb-menu-sub{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:12px 2px 6px}
+.plb-menu-item{display:block;width:100%;padding:8px 10px;font-size:13px;font-weight:500;text-align:left;color:var(--t1);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plb-menu-item:hover{background:var(--bg-2);color:var(--t0)}
+.plb-harm-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.plb-harm-opt{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all var(--t);white-space:nowrap}
+.plb-harm-opt:hover{background:var(--bg-2);color:var(--t0)}
+.plb-harm-opt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
+.plb-harm-opt>svg{flex-shrink:0;color:var(--t2)}
+.plb-harm-opt--on>svg{color:var(--brand)}
+.plb-harm-opt-l{flex:1;text-align:left}
+.plb-visopt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;font-size:13px;font-weight:600;text-align:left;color:var(--t1);background:none;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:all var(--t)}
+.plb-visopt>svg{flex-shrink:0;color:var(--t2)}
+.plb-visopt:hover{background:var(--bg-2);color:var(--t0)}
+.plb-visopt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
+.plb-visopt--on>svg{color:var(--brand)}
+.plb-visopt-l{flex:1}
+/* 9px bold on a 15% green tint: #16A34A measured 2.69:1 in light and 4.07:1
+   in dark (2026-09-09). --ok-strong is the text companion of the state token
+   (tests/unit/state-token-contrast): 6.1:1 on the light tint, 7.7:1 on dark. */
+.plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
+button.plb-varrow:hover{background:var(--bg-2)}
+.plb-varrow--locked{opacity:.55}
+.plb-varrow--active{background:var(--brand-weak,var(--bg-2))}
+.plb-varrow-tick{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--brand)}
+.plb-varrow-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:7px 8px;background:none;border:none;border-radius:var(--radius-s);text-align:left;cursor:pointer;transition:background var(--t)}
+.plb-varrow-main:hover{background:var(--bg-2)}
+.plb-varrow-cmp{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;color:var(--t1);background:none;border:none;border-radius:8px;cursor:pointer;transition:all var(--t)}
+.plb-varrow-cmp:hover{color:var(--t0);background:var(--bg-2)}
+.plb-strip{display:inline-flex;gap:2px;flex-shrink:0}
+.plb-score{flex-shrink:0;padding:2px 8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--t1);background:var(--bg-2);border-radius:999px}
+
+/* Image picker (Wave 4) — drag-drop dropzone, nested preview with draggable
+   picker points, a picked-palette strip and a +/- colour count. Free to use. */
+/* The image picker's card. Wide enough that a picker point can be placed
+   deliberately rather than guessed at — the founder's report was that the old
+   300px dropdown was too small to see where the markers were landing. */
+.plb-imgcard{width:min(720px,100%);gap:10px}
+.plb-imgdrop{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px;text-align:center;color:var(--t2);background:var(--bg-1);border:1.5px dashed var(--border);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
+.plb-imgdrop:hover,.plb-imgdrop--over{border-color:var(--brand);background:var(--bg-2);color:var(--t1)}
+.plb-imgdrop>svg{color:var(--t2)}
+.plb-imgdrop-t{font-size:13px;font-weight:600;color:var(--t0)}
+.plb-imgdrop-s{font-size:11px;font-weight:500;color:var(--t2)}
+.plb-imgerr{margin-top:8px;padding:7px 10px;font-size:11.5px;font-weight:600;color:#B91C1C;background:color-mix(in srgb,#EF4444 12%,transparent);border-radius:var(--radius-s)}
+.plb-imgstage{position:relative;width:100%;aspect-ratio:var(--plb-img-ar,1.6);max-width:calc(min(48vh,420px) * var(--plb-img-ar,1.6));margin-inline:auto;overflow:hidden;border-radius:var(--radius-s);background:var(--bg-2);touch-action:none;user-select:none}
+.plb-imgstage-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.plb-imghint{margin:0;font-size:11px;font-weight:500;color:var(--t2);text-align:center}
+.plb-imgpoint{position:absolute;width:26px;height:26px;transform:translate(-50%,-50%);border-radius:999px;border:3px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.4);cursor:grab;padding:0}
+.plb-imgpoint:active{cursor:grabbing}
+/* The active marker reads as the one being worked on — a keyboard user gets
+   this from focus, so the ring is the same cue for both input methods. */
+.plb-imgpoint--on{border-color:var(--brand);box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 0 0 4px color-mix(in srgb,var(--brand) 45%,transparent),0 2px 6px rgba(0,0,0,.4);z-index:3}
+.plb-imgpoint:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+/* ── The eyedropper loupe ──────────────────────────────────────────────────
+   Parked in a stage corner (Mobbin: Alan crop) rather than tracking the
+   pointer, so it never covers the region it magnifies; `data-side` flips it
+   to whichever corner the marker is NOT near. `pointer-events:none` is
+   load-bearing — the loupe sits inside the drag surface, and a drag that
+   carried a marker under it would otherwise stop dead on its own magnifier. */
+.plb-loupe{position:absolute;top:8px;width:104px;pointer-events:none;z-index:4;border-radius:var(--radius-s);overflow:hidden;background:var(--bg-1);border:1px solid color-mix(in srgb,#fff 55%,transparent);box-shadow:0 0 0 1px rgba(0,0,0,.45),0 6px 18px rgba(0,0,0,.35)}
+.plb-loupe[data-side="right"]{right:8px}
+.plb-loupe[data-side="left"]{left:8px}
+.plb-loupe-cv{display:block;width:104px;height:104px;image-rendering:pixelated}
+/* The value rides ON the loupe (Mobbin: beehiiv) — the pixel and its hex are
+   one piece of information, and a readout across the panel is a second look. */
+.plb-loupe-hex{display:block;padding:3px 0 4px;font-size:11px;font-weight:700;letter-spacing:.02em;text-align:center;color:var(--t0);background:var(--bg-1);font-variant-numeric:tabular-nums}
+@media (max-width:560px){.plb-loupe,.plb-loupe-cv{width:84px}.plb-loupe-cv{height:84px}}
+.plb-imgstrip{display:flex;gap:3px;margin-top:8px}
+.plb-imgswatch{flex:1;height:22px;border-radius:5px;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
+.plb-imgcount{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.plb-imgcount-l{font-size:12px;font-weight:600;color:var(--t1)}
+.plb-imgcount-ctl{display:flex;align-items:center;gap:4px}
+.plb-imgcount-btn{display:flex;align-items:center;justify-content:center;width:26px;height:26px;font-size:16px;font-weight:600;line-height:1;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all var(--t)}
+.plb-imgcount-btn:hover:not(:disabled){background:var(--bg-1);color:var(--t0);border-color:var(--t0)}
+.plb-imgcount-btn:disabled{opacity:.4;cursor:not-allowed}
+.plb-imgcount-n{min-width:20px;text-align:center;font-size:13px;font-weight:700;color:var(--t0);font-variant-numeric:tabular-nums}
+.plb-imgactions{display:flex;gap:6px;margin-top:12px}
+.plb-imgclear{display:block;width:100%;margin-top:8px;padding:6px;font-size:11.5px;font-weight:600;color:var(--t2);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
+.plb-imgclear:hover{color:#B91C1C;background:var(--bg-2)}
+.plb-tgl--on{color:var(--brand);border-color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,transparent)}
+/* Vision type split: top half the real palette colour, bottom half the
+   colour-vision simulation. Content sits in the bottom half (justify-end), so
+   --plb-ink is computed against --plb-sim. */
+.plb-col--split{background:linear-gradient(to bottom,var(--plb-c) 0 50%,var(--plb-sim) 50% 100%)}
+.plb-badge--low{outline:1px dashed color-mix(in srgb,var(--plb-ink) 55%,transparent)}
+.plb-badge-ink{display:inline-block;width:8px;height:8px;border-radius:999px;margin-right:5px;border:1px solid color-mix(in srgb,var(--plb-ink) 30%,transparent)}
+.plb-badge-ink--w{background:#fff}
+.plb-badge-ink--b{background:#000}
+.plb-col--in{animation:plb-in var(--dur-4) var(--ease-entrance)}
+.plb-col--out{animation:plb-out var(--dur-3) var(--ease-exit) forwards;pointer-events:none;overflow:hidden}
+html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .plb-col--out{animation:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .plb-col--in,html:not([data-reduced-motion="false"]) .plb-col--out{animation:none}}
+.plb-col--over{box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--plb-ink) 55%,transparent)}
+@media(hover:hover){
+  .plb-gap{top:0;bottom:0;height:auto;transform:none;opacity:0}
+  .plb-gap:hover,.plb-gap:focus-visible{opacity:1}
+}
+.plb-gap-dot{display:flex;align-items:center;justify-content:center;width:26px;height:26px;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:999px;box-shadow:var(--shadow-xs)}
+
+/* Shared popover shell — columns paint color:var(--plb-ink), so reset to tokens */
+.plb-pop{color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);text-align:left;cursor:default}
+.plb-pop-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.plb-pop-title{font-size:12px;font-weight:700;color:var(--t0)}
+.plb-tint-list{display:flex;flex-direction:column;gap:2px;max-height:min(46vh,330px);overflow-y:auto;overscroll-behavior:contain}
+.plb-tint-row{display:flex;align-items:center;gap:8px;width:100%;padding:5px 6px;background:none;border:none;border-radius:7px;cursor:pointer;transition:background var(--t)}
+.plb-tint-row:hover{background:var(--bg-2)}
+.plb-tint-chip{width:24px;height:16px;flex-shrink:0;background:var(--plb-rc);border:1px solid var(--border);border-radius:4px}
+.plb-tint-tone{width:30px;flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--t2)}
+.plb-tint-hex{font-family:var(--mono);font-size:11.5px;font-weight:600;text-transform:uppercase;color:var(--t0)}
+.plb-picker-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.plb-picker-label{width:50px;flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+.plb-picker-hexrow{display:flex;align-items:center;gap:8px;margin-top:8px}
+.plb-picker-chip{width:28px;height:28px;flex-shrink:0;background:var(--plb-rc);border:1px solid var(--border);border-radius:8px}
+.plb-picker-hex{flex:1;min-width:0;padding:7px 9px;font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-picker-hex:focus{outline:none;border-color:var(--brand)}
+.plb-picker-evidence{display:grid;gap:2px;margin:8px 0 2px;font-size:9px;line-height:1.4;color:var(--t2)}
+.plb-picker-evidence strong{font-weight:650;color:#8B5C08}
+.plb-help{position:relative;display:inline-flex;margin-left:auto}
+.plb-help-btn{display:grid;place-items:center;width:24px;height:24px;padding:0;font-family:var(--mono);font-size:11px;font-weight:750;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:50%;cursor:help}
+.plb-help-tip{position:absolute;right:-34px;bottom:calc(100% + 8px);z-index:3;width:218px;padding:9px 10px;font-size:11px;font-weight:500;line-height:1.45;color:var(--t1);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-s);opacity:0;transform:translateY(4px);pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-entrance)}
+.plb-help:hover .plb-help-tip,.plb-help:focus-within .plb-help-tip{opacity:1;transform:none}
+.plb-swapdir{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:32px;padding:6px 9px;font-size:11px;font-weight:650;color:var(--t1);background:transparent;border:0;border-radius:var(--radius-xs);cursor:pointer;white-space:nowrap}
+.plb-swapdir:hover,.plb-swapdir:focus-visible{color:var(--t0);background:var(--bg-2)}
+
+/* Custom right-click menu (fixed, viewport-clamped via --plb-mx/--plb-my) */
+.plb-ctx{position:fixed;left:var(--plb-mx);top:var(--plb-my);z-index:80;min-width:192px;padding:6px}
+.plb-ctx-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;font-size:12.5px;font-weight:600;color:var(--t1);text-align:left;background:none;border:none;border-radius:8px;cursor:pointer;transition:all var(--t);white-space:nowrap}
+.plb-ctx-item:hover{background:var(--bg-2);color:var(--t0)}
+.plb-ctx-item svg{flex-shrink:0;opacity:.8}
+/* #D64545 on the menu card was 4.38:1 light / 3.97:1 dark at 12.5px
+   (2026-09-09). --err-strong is the text companion of the state token
+   (tests/unit/state-token-contrast): 7.8:1 light, 6.7:1 dark. The hover
+   tint stays on the base token, which is what fills are for. */
+.plb-ctx-item--danger{color:var(--err-strong)}
+.plb-ctx-item--danger:hover{background:color-mix(in srgb,var(--err) 10%,transparent);color:var(--err-strong)}
+.plb-ctx-sep{height:1px;margin:5px 4px;background:var(--border)}
+.plb-ctx-item--muted{color:var(--t3);cursor:default}
+.plb-ctx-item--muted:hover{background:none;color:var(--t3)}
+.plb-ctx-pro{margin-left:auto;padding:1px 6px;font-size:9px;font-weight:800;letter-spacing:.04em;color:var(--accent-strong);border:1px solid var(--brand);border-radius:var(--radius-pill)}
+
+/* Preview modal + mini UI scene painted from --pv-* role props */
+.plb-modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px);background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.plb-modal-card{width:min(960px,100%);max-height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:clamp(14px,2.5vw,22px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg)}
+.plb-modal-card--previews{width:min(1180px,100%)}
+.plb-modal-head{display:flex;align-items:center;gap:12px}
+.plb-modal-head .plb-pop-title{font-size:14px;margin-right:auto}
+.plb-modal-modes{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-mode{padding:5px 13px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:6px;cursor:pointer;transition:all var(--t)}
+.plb-mode:hover{color:var(--t0)}
+.plb-mode--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
+.plb-modal-actions{display:flex;justify-content:flex-end}
+.plb-preview-item{position:relative;min-width:0;padding:12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius)}
+.plb-preview-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.plb-preview-label strong{font-size:12px;font-weight:700;color:var(--t0)}
+.plb-preview-label span{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-strong)}
+.plb-preview-grid .plb-pv{min-height:260px}
+.plb-preview-item--locked .plb-pv{opacity:.62}
+.plb-preview-gate{position:absolute;right:22px;bottom:22px;z-index:2;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-s);cursor:pointer}
+.plb-preview-gate:hover{color:var(--accent-strong);border-color:var(--brand)}
+.plb-pv--v1 .plb-pv-side{order:2;border-right:0;border-left:1px solid var(--pv-border)}
+.plb-pv--v2 .plb-pv-cards{grid-template-columns:1fr 1fr}
+.plb-pv--v2 .plb-pv-card:last-child{grid-column:1/-1}
+.plb-pv--v3 .plb-pv-bars{order:-1;margin-top:0}
+.plb-pv--v4 .plb-pv-side{width:78px}
+.plb-pv--v4 .plb-pv-main{padding:22px}
+.plb-pv--v5 .plb-pv-cards{grid-template-columns:1fr}
+.plb-pv--brand.plb-pv--v1 .plb-pvb-hero,.plb-pv--brand.plb-pv--v4 .plb-pvb-hero{align-items:flex-start;text-align:left}
+.plb-pv--brand.plb-pv--v2 .plb-pvb-nav{background:var(--pv-primary)}
+.plb-pv--brand.plb-pv--v3 .plb-pvb-hero{justify-content:flex-end}
+.plb-pv--graphic.plb-pv--v1 .plb-pvg-circle{right:auto;left:-24px}
+.plb-pv--graphic.plb-pv--v2 .plb-pvg-square{right:auto;left:44px;bottom:42px;transform:rotate(45deg)}
+.plb-pv--graphic.plb-pv--v3 .plb-pvg-body{text-align:right}
+.plb-pv--graphic.plb-pv--v4 .plb-pvg-tri{left:auto;right:32px}
+.plb-pv-checkout{display:grid;grid-template-columns:1.1fr .9fr}
+.plb-pv-checkout main,.plb-pv-checkout aside{padding:20px}
+.plb-pv-checkout main{display:grid;align-content:start;gap:10px}
+.plb-pv-checkout aside{background:var(--pv-surface);border-left:1px solid var(--pv-border)}
+.plb-pv-field{display:flex;justify-content:space-between;padding:9px;font-size:8px;color:var(--pv-muted);background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:5px}
+.plb-pv-field b{color:var(--pv-text)}
+.plb-pv-checkout aside>p{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--pv-border)}
+.plb-pv-checkout dl{display:flex;justify-content:space-between;padding:10px 0;font-size:11px;font-weight:750}
+.plb-pv-checkout .plb-pv-cta{width:100%}
+.plb-pv-workspace{padding:18px}
+.plb-pv-workspace header,.plb-pv-finance header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.plb-pv-board-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.plb-pv-board-cols section{padding:8px;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:5px}
+.plb-pv-board-cols strong{font-size:8px}
+.plb-pv-board-cols p{padding:8px 6px;margin-top:6px;color:var(--pv-text);background:var(--pv-raised);border:1px solid var(--pv-border);border-radius:4px}
+.plb-pv-settings nav strong{margin-bottom:10px}
+.plb-pv-settings form{display:grid;align-content:start;gap:8px;padding:18px}
+.plb-pv-settings label{display:flex;justify-content:space-between;padding:8px;font-size:8px;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:4px}
+.plb-pv-settings label i{font-style:normal;color:var(--pv-muted)}
+.plb-pv-toggle b{width:22px;height:12px;background:var(--pv-primary);border-radius:99px}
+.plb-pv-settings .plb-pv-cta{justify-self:end}
+.plb-pv-inbox>aside>p small{font-size:7px}
+.plb-pv-inbox>main{padding:18px}
+.plb-pv-message{max-width:250px;padding:12px;margin-top:16px;color:var(--pv-text)!important;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:5px}
+.plb-pv-reply{display:flex;justify-content:space-between;padding:10px;margin-top:16px;font-size:8px;color:var(--pv-muted);border:1px solid var(--pv-border);border-radius:5px}
+.plb-pv-reply span{font-weight:750;color:var(--pv-primary-ink)}
+.plb-pv-finance{display:grid;grid-template-columns:1fr .75fr;gap:12px;padding:18px}
+.plb-pv-finance header{grid-column:1/-1}
+.plb-pv-finance-chart{display:flex;align-items:flex-end;gap:5px;height:116px;padding:12px;background:var(--pv-surface);border:1px solid var(--pv-border)}
+.plb-pv-finance-chart i{flex:1;height:45%;background:var(--plb-rc);border-radius:3px 3px 0 0}
+.plb-pv-finance-chart i:nth-child(2n){height:70%}.plb-pv-finance-chart i:nth-child(3n){height:92%}
+.plb-pv-finance section{padding:11px;background:var(--pv-surface);border:1px solid var(--pv-border)}
+.plb-pv-finance section>strong{font-size:9px}
+.plb-pv-finance section p{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--pv-border)}
+.plb-pv-finance section b{color:var(--pv-text)}
+.plb-pvb-architecture main{display:grid;grid-template-columns:1fr .9fr;gap:18px;padding:24px}
+.plb-pvb-architecture figure i{display:block;height:130px;background:var(--plb-rc)}
+.plb-pvb-architecture figcaption{padding-top:5px;font-size:7px;color:var(--pv-muted)}
+.plb-pvb-portfolio>div{display:grid;grid-template-columns:1fr 1fr;padding:22px}
+.plb-pvb-portfolio ol{list-style:none}
+.plb-pvb-portfolio li{display:grid;grid-template-columns:24px 1fr auto;padding:11px 0;font-size:9px;border-bottom:1px solid var(--pv-border)}
+.plb-pvb-portfolio li small{color:var(--pv-muted)}
+.plb-pvb-conference main{padding:20px}
+.plb-pvb-schedule{display:flex;gap:8px;margin:14px 0}
+.plb-pvb-schedule span{display:grid;gap:3px;padding:8px;font-size:8px;background:var(--pv-surface);border:1px solid var(--pv-border)}
+.plb-pvb-journal main{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;padding:22px}
+.plb-pvb-journal aside{padding-left:16px;border-left:1px solid var(--pv-border);font-size:9px}
+.plb-pvb-journal aside p{padding:9px 0;border-bottom:1px solid var(--pv-border)}
+.plb-pvb-hospitality main{display:grid;align-content:end;min-height:210px;padding:22px;background:linear-gradient(110deg,var(--pv-canvas),color-mix(in srgb,var(--pv-primary) 22%,var(--pv-canvas)))}
+.plb-pvb-booking{display:flex;align-items:center;gap:16px;padding:8px;margin-top:12px;background:var(--pv-surface);border:1px solid var(--pv-border)}
+.plb-pvb-booking>span{display:grid;gap:2px;font-size:7px;color:var(--pv-muted)}
+.plb-pvb-booking b{font-size:9px;color:var(--pv-text)}
+
+.plb-pvg-album{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center;padding:24px}
+.plb-pvg-disc{display:grid;place-items:center;aspect-ratio:1;background:var(--plb-rc);border-radius:50%;box-shadow:inset 0 0 0 14px color-mix(in srgb,var(--pv-canvas) 22%,transparent)}
+.plb-pvg-disc i{width:26%;aspect-ratio:1;background:var(--pv-canvas);border-radius:50%}
+.plb-pvg-album ol{margin-top:12px;list-style:none;font-size:8px}
+.plb-pvg-album li{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--pv-border)}
+.plb-pvg-campaign footer{padding-top:10px;border-top:1px solid currentColor}
+.plb-pvg-package{display:grid;grid-template-columns:1fr .85fr;padding:22px}
+.plb-pvg-pack-face{display:grid;align-content:space-between;padding:18px;background:var(--pv-primary);border:2px solid var(--pv-text)}
+.plb-pvg-package aside{padding:18px;border:2px solid var(--pv-text);border-left:0;font-size:8px}
+.plb-pvg-package aside strong{display:block;margin-top:12px}
+.plb-pvg-magazine{padding:16px;background:linear-gradient(180deg,var(--pv-raised),var(--pv-canvas))}
+.plb-pvg-magazine header{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:4px solid var(--pv-text)}
+.plb-pvg-magazine aside{display:flex;gap:10px;margin-top:18px}
+.plb-pvg-magazine aside p{flex:1;padding-top:7px;font-size:8px;border-top:1px solid var(--pv-text)}
+.plb-pvg-social{display:grid;grid-template-rows:auto 1fr auto;padding:16px}
+.plb-pvg-social main{display:grid;align-content:center}
+.plb-pvg-social footer{padding-top:9px;border-top:1px solid var(--pv-border)}
+/* Submit-to-community popup (Wave 5) */
+.plb-submitcard{width:min(440px,100%)}
+.plb-submit-strip{display:flex;height:56px;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
+.plb-submit-sw{flex:1;min-width:0}
+.plb-submit-hint{font-size:12px;line-height:1.45;color:var(--t2);margin:-4px 2px 0}
+.plb-submit-err{font-size:12px;font-weight:600;color:var(--danger,#D64545);margin:2px 2px 0}
+.plb-submit-as{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2)}
+.plb-submit-as strong{color:var(--t0);font-weight:700}
+.plb-linkbtn{font-size:12px;font-weight:600;color:var(--accent-strong);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.plb-linkbtn:hover{opacity:.8}
+.plb-dsbcard{width:min(420px,100%)}
+.plb-dsb-body{text-align:center;padding:6px 4px 2px}
+.plb-dsb-emoji{font-size:34px;line-height:1;margin-bottom:12px}
+.plb-dsb-lede{font-size:15px;line-height:1.5;color:var(--t0);margin:0 0 8px}
+.plb-dsb-sub{font-size:13px;line-height:1.5;color:var(--t2);margin:0}
+/* DSB coming-soon popup — quick links into the tools the walkthrough will connect */
+.plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
+.plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.plb-dsb-link:hover{border-color:var(--brand);color:var(--accent-strong);background:color-mix(in srgb,var(--brand) 6%,transparent)}
+.plb-icobtn:hover,.plb-icobtn:focus-visible,.plb-icobtn[aria-expanded="true"]{z-index:4}
+.plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{grid-template-columns:1fr;padding-left:7px;opacity:1}
+
+/* Thin separator between a menu's stacked sections (Save vs. Share & export). */
+.plb-menu-div{height:1px;margin:10px 2px;background:var(--border)}
+.plb-galpopup-head .plb-menu-title{margin:0;margin-right:auto}
+.plb-galtabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-galtab{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:6px;cursor:pointer;transition:all var(--t);white-space:nowrap}
+.plb-galtab>svg{flex-shrink:0;opacity:.75}
+.plb-galtab:hover{color:var(--t0)}
+.plb-galtab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
+.plb-galtab--on>svg{opacity:1;color:var(--brand)}
+.plb-galpopup-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font-size:12px;font-weight:600;color:var(--t2)}
+.plb-galpopup-body .plb-menu-sub a{color:var(--accent-strong);text-decoration:none}
+.plb-galpopup-body .plb-menu-sub a:hover{text-decoration:underline}
+.plb-histclear{margin-top:6px;color:var(--t2);font-size:12px}
+.plb-histclear:hover{color:var(--warn-strong)}
+.plb-pvwrap{display:flex;flex-direction:column;gap:8px;min-width:0}
+.plb-pv-name{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--t1)}
+.plb-pv{display:flex;min-height:300px;background:var(--pv-bg);border:1px solid var(--pv-border);border-radius:14px;overflow:hidden}
+.plb-pv-side{display:flex;flex-direction:column;gap:10px;width:60px;flex-shrink:0;padding:14px 12px;background:var(--pv-surface);border-right:1px solid var(--pv-border)}
+.plb-pv-logo{width:24px;height:24px;border-radius:8px;background:var(--pv-primary);margin-bottom:6px}
+.plb-pv-navline{height:7px;border-radius:999px;background:var(--pv-muted);opacity:.5}
+.plb-pv-navline--on{background:var(--pv-primary);opacity:1}
+.plb-pv-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;padding:18px}
+.plb-pv-h{font-size:16px;font-weight:800;letter-spacing:-.01em;color:var(--pv-text)}
+.plb-pv-p{margin-top:-9px;font-size:11.5px;color:var(--pv-muted)}
+.plb-pv-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.plb-pv-card{display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:var(--pv-surface);border:1px solid var(--pv-border);border-radius:10px}
+.plb-pv-k{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pv-muted)}
+.plb-pv-n{font-size:16px;font-weight:800;color:var(--pv-text)}
+/* THE FIVE RULES THAT SET TEXT IN A FILL ROLE READ THE INK ROLE, NOT THE FILL.
+   #preview-accent-ink-unmeasured. --pv-accent and --pv-primary are chosen by
+   CHROMA and are FILL colours first - they paint the CTA, the chips, the disc
+   and the shapes below, where 1.4.11 asks 3:1 and the palette colour is the
+   point. They were also being read as ink by these five rules, with no
+   guarantee of any kind. Measured on the rendered page across all three
+   preview tabs and both preview themes: 22 of 22 accent- and primary-inked
+   samples below 4.5:1, worst 1.031. None of the five is large text - the KPI
+   number is 16px/700 and AA-large starts at 18.66px bold - so the floor is 4.5
+   for all of them. derivePreviewRoles now emits accentInk/primaryInk,
+   guaranteed on inkGrounds; every fill value below is unchanged. Same split as
+   --accent and --accent-strong, and the -strong split on the category hues.
+   (Spelling that second pair out rather than abbreviating it: the short form
+   contains a star-slash, which ends this comment early and takes the build
+   with it.) */
+.plb-pv-n--accent{color:var(--pv-accent-ink)}
+.plb-pv-bars{display:flex;align-items:flex-end;gap:6px;height:64px;margin-top:auto}
+.plb-pv-bar{flex:1;border-radius:6px 6px 2px 2px;background:var(--plb-rc)}
+.plb-pv-bar--1{height:44%}
+.plb-pv-bar--2{height:70%}
+.plb-pv-bar--3{height:56%}
+.plb-pv-bar--4{height:88%}
+.plb-pv-bar--5{height:34%}
+.plb-pv-cta{align-self:flex-start;padding:8px 16px;font-size:12px;font-weight:700;color:var(--pv-onprimary);background:var(--pv-primary);border:1px solid var(--pv-pborder);border-radius:9px}
+/* Brand + Graphic preview scenes stack vertically rather than the UI split */
+.plb-pv--brand,.plb-pv--graphic{flex-direction:column}
+/* ── Brand scene — a marketing landing hero ── */
+.plb-pvb{display:flex;flex-direction:column;flex:1;min-height:0}
+.plb-pvb-nav{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--pv-border)}
+.plb-pvb-mark{width:26px;height:26px;border-radius:8px;background:var(--pv-primary)}
+.plb-pvb-navlinks{display:flex;gap:10px;margin-right:auto}
+.plb-pvb-navlink{width:36px;height:7px;border-radius:999px;background:var(--pv-muted);opacity:.55}
+.plb-pvb-navcta{padding:6px 13px;font-size:11px;font-weight:700;color:var(--pv-onprimary);background:var(--pv-primary);border:1px solid var(--pv-pborder);border-radius:8px}
+.plb-pvb-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px 22px;text-align:center}
+.plb-pvb-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--pv-accent-ink)}
+.plb-pvb-sub{max-width:340px;font-size:12.5px;line-height:1.5;color:var(--pv-muted)}
+.plb-pvb-btns{display:flex;gap:10px;margin-top:2px}
+.plb-pvb-btn{padding:9px 18px;font-size:12px;font-weight:700;border-radius:var(--radius)}
+.plb-pvb-btn--primary{color:var(--pv-onprimary);background:var(--pv-primary);border:1px solid var(--pv-pborder)}
+.plb-pvb-btn--ghost{color:var(--pv-text);background:transparent;border:1px solid var(--pv-border)}
+.plb-pvb-chips{display:flex;gap:8px;margin-top:8px}
+.plb-pvb-chip{width:26px;height:26px;border-radius:999px;background:var(--plb-rc);border:1px solid var(--pv-border)}
+/* ── Graphic Design scene — an editorial poster ── */
+.plb-pvg{position:relative;flex:1;display:flex;flex-direction:column;justify-content:space-between;gap:16px;padding:22px;overflow:hidden}
+.plb-pvg-shapes{position:absolute;inset:0;pointer-events:none}
+.plb-pvg-circle{position:absolute;top:-26px;right:-20px;width:130px;height:130px;border-radius:999px;background:var(--plb-rc);opacity:.9}
+.plb-pvg-square{position:absolute;bottom:64px;right:34px;width:70px;height:70px;border-radius:12px;background:var(--plb-rc);transform:rotate(12deg)}
+.plb-pvg-tri{position:absolute;top:96px;left:18px;width:0;height:0;border-left:34px solid transparent;border-right:34px solid transparent;border-bottom:58px solid var(--plb-rc);opacity:.85}
+.plb-pvg-body{position:relative;z-index:1;margin-top:auto}
+.plb-pvg-kicker{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--pv-accent-ink)}
+.plb-pvg-lead{margin-top:10px;max-width:280px;font-size:12px;line-height:1.5;color:var(--pv-muted)}
+.plb-pvg-swatches{position:relative;z-index:1;display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--pv-border)}
+.plb-pvg-sw{flex:1;background:var(--plb-rc)}
+/* Preview-context tabs in the modal head (UI / Brand / Graphic Design) */
+.plb-modal-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.plb-modal-tab{padding:5px 12px;font-size:12px;font-weight:600;color:var(--t1);background:none;border:none;border-radius:6px;cursor:pointer;transition:all var(--t);white-space:nowrap}
+.plb-modal-tab:hover{color:var(--t0)}
+.plb-modal-tab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
+/* ── Split-screen colour-vision check (community import) ── */
+.plb-cvd-row{display:flex;flex-direction:column;gap:8px}
+.plb-cvd-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--t1)}
+.plb-cvd-label>svg{opacity:.7}
+.plb-cvd-strip{display:flex;height:72px;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
+.plb-cvd-sw{flex:1;min-width:0;background:var(--plb-rc)}
+.plb-cvd-note{margin:2px 0 0;font-size:12px;line-height:1.5;color:var(--t2)}
+/* EQUAL TRACKS (the "tone and temperature sliders are a different size" bug).
+   The four fields share ONE grid and each field is display:contents, so the
+   grid's real children are label,slider,label,slider… Each label column is
+   `auto` (it takes exactly its own text — "Hue" stays narrow, "Temperature"
+   stays wide) and each slider column is `minmax(0,1fr)`. Free space is split
+   equally between the fr columns, so every TRACK is the same length however
+   long its label is. The old layout gave each field an equal FLEX width and
+   let the label eat into it from the inside, which is why a 24px label left a
+   205px track and an 86px label left a 143px one.
+   minmax(0,…) not 1fr: a bare 1fr floors at the content's min-width, which
+   would let one field's readout make its column wider than its siblings. */
+.plb-adjust-fields{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,auto minmax(0,1fr));align-items:center;gap:12px 10px}
+.plb-adjust-field{display:contents}
+.plb-adjust-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
+/* The label↔track gap is the grid gap; the wider gap BETWEEN pairs is this
+   margin, which lands inside the (auto) label column and so never eats into a
+   track. Only fields that are not first in their ROW get it, hence the
+   per-breakpoint reset — the row length changes with the column count. */
+.plb-adjust-field--edited .plb-adjust-label{color:var(--t0);text-shadow:.35px 0 currentColor,-.35px 0 currentColor}
+.plb-adjust-field:not(:first-child) .plb-adjust-label{margin-left:clamp(8px,1.6vw,20px)}
+/* Two pairs per row, then one, so the tracks never squeeze to a stub. Tracks
+   stay equal across rows — every fr column in the grid gets the same width. */
+@media(max-width:1180px){
+  .plb-adjust-fields{grid-template-columns:repeat(2,auto minmax(0,1fr))}
+  .plb-adjust-field:not(:first-child) .plb-adjust-label{margin-left:0}
+  .plb-adjust-field:nth-child(even) .plb-adjust-label{margin-left:clamp(8px,1.6vw,20px)}
+}
+@media(max-width:560px){
+  .plb-adjust-fields{grid-template-columns:auto minmax(0,1fr)}
+  .plb-adjust-field .plb-adjust-label{margin-left:0}
+}
+.plb-adjust-reset{white-space:nowrap}
+/* Visibility preserves the button's exact row width while keeping the clean
+   state out of both pointer and keyboard interaction. The slider grid no
+   longer changes size during the first drag. */
+.plb-adjust-reset--idle{visibility:hidden;pointer-events:none}
+.ggn{max-width:1120px;margin:0 auto;padding:28px 24px 56px;min-height:100%}
+/* Header */
+.ggn-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:24px}
+.ggn-title-row{display:flex;align-items:center;gap:12px}
+.ggn-title{font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--ggn-t0);line-height:1.1;margin:0}
+.ggn-badge{display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:var(--ggn-accent-text);background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 34%,transparent);padding:3px 11px;border-radius:var(--radius-pill);font-variant-numeric:tabular-nums}
+.ggn-sub{margin:10px 0 0;font-size:14px;line-height:1.55;color:var(--ggn-t2);max-width:520px}
+.ggn-lock-note{display:flex;align-items:flex-start;gap:7px;margin:12px 0 0;padding:9px 13px;font-size:12.5px;line-height:1.5;font-weight:500;color:var(--ggn-accent-text);background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:var(--radius-s);max-width:520px}
+.ggn-lock-note svg{flex-shrink:0;margin-top:2px}
+.ggn-head-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ggn-btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;border-radius:var(--radius-l);padding:9px 18px;transition:all var(--t);white-space:nowrap;border:1px solid transparent}
+/* Fills with --accent-strong, not --ggn-accent. White on #0F6FFF is 4.43:1 and
+   the label is 12.5px; on --accent-strong it is 5.84 (light) / 6.09 (dark).
+   This rule already reached --accent-strong on HOVER, so the RESTING state was
+   the unreadable one — the same shape of bug .ui-pill-accent carried. */
+.ggn-btn-accent{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
+.ggn-btn-accent:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
+.ggn-btn-ghost{background:transparent;border-color:var(--ggn-line-2);color:var(--ggn-t1)}
+.ggn-btn-ghost:hover{border-color:var(--ggn-t2);color:var(--ggn-t0);background:var(--hvr)}
+.ggn-btn-sm{padding:6px 13px;font-size:12px}
+/* Disabled ("From palette" with <2 palette colours): dim, no pointer, and
+   suppress the ghost hover so it reads as inert. Uses [aria-disabled] (not
+   :disabled) so the button stays focusable + announced; the hover reset is
+   scoped to the ghost variant so it can't leak onto other disabled .ggn-btn. */
+.ggn-btn[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+.ggn-btn-ghost[aria-disabled="true"]:hover{background:transparent;border-color:var(--ggn-line-2);color:var(--ggn-t1)}
+/* Grid: preview + panel */
+.ggn-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:20px;align-items:start;margin-bottom:20px}
+.ggn-preview-wrap{position:relative}
+.ggn-preview-hint{margin:9px 2px 0;font-size:12px;line-height:1.4;color:var(--ggn-t2)}
+.ggn-bar-track{position:absolute;inset:0;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.28);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.ggn-handle:active,.ggn-handle.is-dragging{cursor:grabbing}
+.ggn-handle.is-dragging .ggn-handle-val,.ggn-handle:focus-visible .ggn-handle-val{opacity:1;visibility:visible;transition-delay:0s}
+/* Control panel */
+.ggn-panel{background:var(--ggn-panel);border:1px solid var(--ggn-line);border-radius:var(--radius-l);padding:18px}
+/* Segmented type control */
+.ggn-seg{display:flex;gap:4px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius);padding:4px}
+.ggn-angle-val{font-family:var(--mono);font-size:12px;color:var(--ggn-t1);font-variant-numeric:tabular-nums}
+.ggn-fmt{display:inline-flex;gap:3px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius-s);padding:3px;margin-bottom:9px}
+.ggn-fmt-btn:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
+/* Blocks (Stops / Presets) */
+.ggn-block{background:var(--ggn-panel);border:1px solid var(--ggn-line);border-radius:var(--radius-l);padding:18px;margin-top:16px}
+.ggn-block-actions{display:flex;gap:8px}
+.ggn-stop-pos{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.ggn-stop-pos input::-webkit-outer-spin-button,.ggn-stop-pos input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ggn-stop-pos input:focus{border-color:var(--ggn-accent)}
+.ggn-stop-x:disabled{opacity:.3;cursor:not-allowed}
+.ggn-lock:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
+.ggn-stop-lock{width:26px;height:26px}
+/* Presets grid (4×2) */
+.ggn-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.ggn-preset{display:flex;flex-direction:column;gap:8px;background:transparent;border:none;padding:0;cursor:pointer;font-family:var(--font)}
+.ggn-preset-swatch{display:block;width:100%;aspect-ratio:16/10;border-radius:var(--radius);border:1px solid var(--ggn-line);transition:transform var(--t),box-shadow var(--t)}
+.ggn-preset:hover .ggn-preset-swatch{transform:translateY(-2px);box-shadow:var(--shadow-m)}
+.ggn-preset-name{font-size:12px;font-weight:600;color:var(--ggn-t1);text-align:left}
+.ggn-preset:hover .ggn-preset-name{color:var(--ggn-t0)}
+/* Presets derived from the user's own palettes — an accent ring + tinted name
+   set them apart from the built-in starter gradients in the same grid. */
+.ggn-preset--mine .ggn-preset-swatch{border-color:var(--ggn-accent);box-shadow:0 0 0 1px var(--ggn-accent)}
+.ggn-preset--mine .ggn-preset-name{color:var(--ggn-accent-text)}
+@media(max-width:860px){
+  .ggn-grid{grid-template-columns:1fr}
+  .ggn-presets{grid-template-columns:repeat(2,1fr)}
+  .ggn-title{font-size:25px}
+  .ggn-head-actions{width:100%}
+  .ggn-btn{flex:1;justify-content:center}
+}
+@media(max-width:480px){
+  .ggn{padding:20px 14px 44px}
+  /* Three header buttons can't share one row on narrow phones (their nowrap
+     labels overflow below ~380px) — wrap to 2-per-row + a full-width third. */
+  .ggn-head-actions{flex-wrap:wrap}
+  .ggn-btn{flex:1 1 calc(50% - 5px)}}
+
+@media(max-width:480px){
+  .ggn-stop-pos input{width:40px;padding:5px 4px}
+  .ggn-imports{grid-template-columns:1fr}}
+
+/* Generator: import-colours block (palette / saved projects) */
+/* 240, not 220: a 220px card leaves the text column 118px beside the 64px
+   stripes, and "Saved project · 3 colours" is 123px at 11px — every saved
+   project's meta line ended in an ellipsis at 1280, 1440 and 1920
+   (measured 2026-09-09). 240 gives the column 138px. */
+.ggn-imports{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.ggn-import{display:flex;align-items:center;gap:12px;background:var(--ggn-panel-2);border:1px solid var(--ggn-line);border-radius:var(--radius);padding:10px 12px;cursor:pointer;font-family:var(--font);text-align:left;transition:border-color var(--t),transform var(--t)}
+.ggn-import:hover{border-color:var(--ggn-accent);transform:translateY(-1px)}
+.ggn-import-stripes{display:flex;flex-shrink:0;width:64px;height:36px;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--ggn-line)}
+.ggn-import-stripes span{flex:1}
+.ggn-import-id{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ggn-import-name{font-size:12.5px;font-weight:600;color:var(--ggn-t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ggn-import-meta{font-size:11px;color:var(--ggn-t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ggn-import-empty{margin:0;font-size:13px;line-height:1.55;color:var(--ggn-t2)}
+.ggn-import-empty a{color:var(--ggn-accent-text);font-weight:600;text-decoration:none}
+.ggn-import-empty a:hover{text-decoration:underline}
+.ggn-gal-link:hover{opacity:.75}
+
+/* Gradient workbench hierarchy */
+.ggn{max-width:1240px;padding-top:var(--s-7)}
+.ggn-head{align-items:flex-end;margin-bottom:var(--s-5)}
+.ggn-head-id{max-width:680px}
+.ggn-title{font-size:clamp(38px,5vw,64px);font-weight:600;line-height:1.02;letter-spacing:-.04em}
+.ggn-sub{max-width:650px;font-size:15px}
+.ggn-head-actions{flex-wrap:wrap;justify-content:flex-end}
+.ggn-btn{min-height:42px;border-radius:var(--radius-s)}
+.ggn-btn:disabled{opacity:.45;cursor:not-allowed}
+.ggn-grid{grid-template-columns:minmax(0,1.65fr) minmax(330px,.85fr);gap:var(--s-5)}
+.ggn-stage,.ggn-panel,.ggn-block{background:var(--ggn-panel);border:1px solid var(--ggn-line);border-radius:var(--radius-l)}
+.ggn-stage{min-width:0;padding:12px}
+.ggn-stage-head,.ggn-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4);padding:8px 8px var(--s-4)}
+.ggn-stage-head h2,.ggn-panel-head h2,.ggn-block-head h2{margin:3px 0 0;font-size:16px;font-weight:650;letter-spacing:-.015em;color:var(--ggn-t0)}
+.ggn-step{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ggn-accent-text)}
+.ggn-preview-wrap{min-width:0}
+.ggn-bar{position:relative;inset:auto;height:46px;margin:12px 8px 0;padding:10px 0;cursor:copy}
+.ggn-bar-track{inset:10px 0;height:26px}
+.ggn-handle{top:50%}
+.ggn-preview-hint{margin:5px 8px 2px}
+/* Inspector height cap (two-column only). The slot is a normal grid item that
+   stretches to the row height — which the canvas column alone sets, because the
+   panel inside it is out of flow and contributes nothing to that row. The panel
+   then fills the slot exactly, so it can never push the row taller and its body
+   scrolls instead of clipping. Both are unset at 980px / 860px below. */
+.ggn-panel-slot{position:relative;align-self:stretch;min-width:0}
+.ggn-panel{position:absolute;inset:0;display:flex;flex-direction:column;padding:12px 18px 18px}
+.ggn-panel-head{flex-shrink:0;margin:0 -6px var(--s-4);border-bottom:1px solid var(--ggn-line)}
+/* Negative margin lets the scrollbar sit in the panel's right padding while
+   padding-right keeps the fields clear of it. */
+.ggn-panel-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-right:var(--s-1);margin-right:calc(var(--s-1) * -1)}
+.ggn-panel-body:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:2px}
+.ggn-seg-btn,.ggn-fmt-btn{min-height:36px}
+.ggn-block{padding:var(--s-5);margin-top:var(--s-4)}
+.ggn-block-head{align-items:flex-start;gap:var(--s-4)}
+.ggn-block-head p{margin:4px 0 0;font-size:11px;line-height:1.45;color:var(--ggn-t2)}
+.ggn-starting{margin-top:var(--s-5)}
+/* `.ggn-sources` retired (#323): the palette-import block and the curated rail
+   were two cards making the same offer, and the first was numbered as a third
+   step below the canvas. They are one `.ggn-starting` section now, with each
+   source group labelled inside it. */
+.ggn-start-group+.ggn-start-group{margin-top:var(--s-5)}
+.ggn-start-label{display:block;margin-bottom:10px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ggn-t2)}
+.ggn-starting .ggn-import-empty{margin-top:var(--s-4)}
+/* overflow / scrollbar / snap-type / edge fade come from `.rail-overflow`, which
+   is on the element in the markup. */
+.ggn-presets{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(142px,1fr);grid-template-columns:none;padding-bottom:8px}
+.ggn-preset{scroll-snap-align:start}
+.ggn-preset-swatch{aspect-ratio:16/9}
+.ggn-preset:focus-visible{outline:2px solid var(--ggn-accent);outline-offset:3px}
+/* THE PEEK, and the one width where the rail needed one. A fixed 142px tile
+   tiles to a fraction at every measured width — 7.51 tiles at 1440, 4.58 at
+   834, 1.49 at 320 — so the third tile always half-shows and the rail reads as
+   a rail. At ~390px it lands on almost exactly two: the box is 296px and two
+   142px tiles plus their 10px gap are 294px, so the strip filled the card
+   interior to within 2px and 14 of the 16 presets looked like they did not
+   exist. Sizing the column as a FRACTION of the box instead of a fixed width
+   removes the coincidence by construction: 2.4 tiles fit, so the third is
+   always ~46px into view and always cut by the fade. Scoped to the one band
+   that needs it — above 480px the fixed 142px already tiles to a fraction, and
+   it keeps preset tiles a consistent size across the widths where they fit. */
+@media(max-width:480px){
+  /* FLEX, not grid, and that is the whole trick. A percentage in
+     `grid-auto-columns` has no definite inline size to resolve against inside a
+     `grid-auto-flow:column` scroller, so it silently resolves to zero —
+     measured, `minmax(0,calc((100% - 20px)/2.4))` collapsed all sixteen tiles to
+     9px of min-content. A flex item's percentage basis resolves against the
+     flex container's CONTENT BOX, which is the 296px visible box and is
+     definite whatever the scroll width is. So 2.4 tiles fit at any width in
+     this band with no hard-coded gutter arithmetic to go stale. */
+  .ggn-presets{display:flex}
+  .ggn-preset{flex:0 0 calc((100% - 20px) / 2.4)}
+}
+/* THE DESKTOP CASE: WRAP, DO NOT SCROLL.
+   The rail above is right for a phone, where sixteen 142px tiles cannot share a
+   296px box on any terms. It is wrong from 981px up, and it was measured wrong:
+   at 1280 AND at 1440 the strip is 2422px inside a 1142px box, so 1280px of it
+   sits behind a 34px fade with SEVEN of the sixteen visible. The eight a desktop
+   visitor never reaches without a gesture are Sunset, Lagoon, Grape, Citrus,
+   Twilight, Aurora, Bloom and Ocean, and the page was holding ~300px of empty
+   ground under the card while it hid them.
+   The fix vocabulary in the `.rail-overflow` note says to wrap first where the
+   item set is small and discrete, and to keep the three layered affordances for
+   rails where wrapping is genuinely not on the table. Sixteen named presets is
+   small and discrete, and a preset strip is a BROWSE-AND-COMPARE surface: the
+   reader is working out what is on offer, which is the one job scrolling is
+   worst at. Mobbin, web, searched for the opposite pattern and it is not there
+   - Mural, Aave and Discord all lay a named-swatch library out WRAPPED and
+   entire, and none of the four references puts one in a horizontal scroller.
+   `auto-fill` at a 132px minimum lands on eight columns in the 1142px card, so
+   the sixteen become two rows of eight at 1280 and at 1440, and three rows
+   lower in the band - the whole library, no gesture, for one extra row of
+   height that the page already had spare.
+   The rail affordances are switched OFF here rather than on below, because
+   `.rail-overflow` is on the element in the markup: same shape as the
+   `.plb-toolbar-group.rail-overflow` opt-out at >=961px. */
+@media(min-width:981px){
+  .ggn-presets{display:grid;grid-auto-flow:row;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));padding-bottom:0}}
+
+@media(min-width:981px){
+  .ggn-preset{scroll-snap-align:none}}
+
+@media(max-width:980px){
+  .ggn-grid{grid-template-columns:1fr}
+  /* Single column: drop the height cap entirely — the panel flows with the page
+     and must never become a nested scroll area. The two-up field layout moves
+     onto the body, which is now the fields' direct parent. */
+  .ggn-panel-slot{position:static}
+  .ggn-panel{position:static;display:block}
+  .ggn-panel-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 var(--s-5);overflow:visible;padding-right:0;margin-right:0}}
+
+@media(max-width:768px){
+  .ggn{padding-top:var(--s-5)}
+  .ggn-head{align-items:flex-start}
+  .ggn-head-actions{width:100%;justify-content:flex-start}
+  .ggn-panel-body{display:block}}
+
+@media(max-width:480px){
+  .ggn-title{font-size:36px}
+  .ggn-stage{padding:8px}}
+
+@media(max-width:480px){
+  .ggn-bar{margin-inline:6px}
+  .ggn-block{padding:16px}
+  .ggn-block-head{align-items:flex-start;flex-direction:column}
+  .ggn-block-actions{width:100%;flex-wrap:wrap}
+  .ggn-block-actions .ggn-btn{flex:1}}
+
+@media(max-width:480px){
+  .ggn-stop-pos{grid-column:3/4}
+  .ggn-stop-lock{grid-column:4}
+  .ggn-stop-x{grid-column:5}}
+
+
+/* ── Gradient Library (/discover/gradients) ──
+   The masthead and result head are the shared Discover components (dgh-/drh-);
+   only the richer filter toolbar and the gradient cards are local to this page. */
+.grg-wrap{padding-bottom:88px}
+/* Toolbar, grid, card frame, foot and empty state now come from the shared
+   Library language (.lbry-, below). What is left here is what is genuinely
+   specific to a gradient: the swatch, and the three controls that hang off it.
+   The type badge that used to be `.grg-pill` — hover-only — is now the shared
+   `.lbry-card-badge` and is visible at rest.
+
+   THE SWATCH IS LANDSCAPE, and it is `height:196px` rather than a ratio for one
+   reason: that is exactly what `.pgal-stripes` on /discover/palettes is. These
+   two galleries were extracted into one shared browse language (.lbry-) because
+   they had solved the same problem twice and disagreed on every part of it —
+   and then they still disagreed about the only thing a browser actually looks
+   at, the shape of the tile. `aspect-ratio:3/4` was never overridden at any
+   breakpoint, so at 390px one portrait tile was 358x477 — 57% of the screen for
+   a single gradient — and the page ran to 57,839px against the palette
+   gallery's landscape rows. Two sibling galleries sharing one browse language
+   browsed completely differently.
+   A ratio cannot fix it, because a ratio is what caused it: the tile has to
+   stop growing when the column does. A fixed height is also what every colour
+   gallery worth copying does — Adobe Color, Relume's palette library and
+   Semrush's brand kits are all landscape and dense, and none of them uses a
+   portrait swatch. Measured, shipped rule against the old one injected back:
+   57,839px → 29,706px at 390px, and 31,330px → 15,330px at 834px. Half the
+   page, for the same number of gradients. */
+.grg-swatch{display:block;height:196px;border:1px solid var(--border);border-radius:inherit;box-shadow:var(--shadow-s)}
+.grg-swatch:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.grg-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.grg-copy{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.04em;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:6px 11px;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.grg-copy:hover{color:var(--t0);border-color:var(--bh);background:var(--bg-3)}
+.grg-open{display:inline-flex;align-items:center;gap:5px;font-family:var(--font);font-size:var(--fs-micro);font-weight:700;letter-spacing:.02em;color:var(--accent-strong);background:none;border:none;padding:6px 4px;cursor:pointer;text-decoration:none;transition:gap var(--dur-2) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.grg-open:hover{gap:8px;color:var(--brand-soft)}
+.grg-empty{margin-top:8px}
+/* Submissions queue — deliberately styled as a LIST, not as gallery cards, so
+   a pending gradient never reads as one that has been published. */
+.grg-queue{margin-top:32px;padding:16px;border:1px dashed var(--border);border-radius:var(--radius-l);background:var(--bg-1)}
+.grg-queue-note{margin:6px 0 14px;max-width:70ch;font-size:var(--fs-caption);color:var(--t2)}
+.grg-queue-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.grg-queue-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.grg-queue-swatch{flex:0 0 auto;width:56px;height:32px;border-radius:var(--radius-s);border:1px solid var(--border)}
+.grg-queue-id{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
+.grg-queue-id strong{font-size:13px;font-weight:650;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grg-queue-status{flex:0 0 auto;padding:4px 9px;border-radius:var(--radius-pill);background:var(--warn);color:var(--warn-fg);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.03em}
+@media(max-width:640px){
+  .grg-queue-item{flex-wrap:wrap}
+  .grg-queue-id{flex:1 1 100%;order:2}
+  .grg-queue-status{order:1}
+}
+/* Gradient preview at the top of the submit-for-review modal. */
+.ggn-submit-preview{height:88px;margin-bottom:var(--s-4);border-radius:var(--radius);border:1px solid var(--border)}
+@media(max-width:820px){
+  .grg-search{flex:1 1 100%}
+  /* Keeps its own row, but keeps wrapping too — the nowrap scroller this used
+     to impose put 4 of 8 mood filters outside the box at 320px and 3 of 8 at
+     390px, with no affordance. Same fault as S4 on the shared .pl-chips. */
+  .grg-chips{flex:1 1 100%}
+}
+@media(max-width:640px){
+  .grg-foot{flex-direction:column;align-items:stretch;gap:8px}
+  .grg-actions{justify-content:space-between}}
+
+.pgl-build-link:hover{background:var(--brand)}
+.pgl-note{margin:-8px 0 22px;font-size:12.5px;line-height:1.55;color:var(--t2)}
+/* Category sections. The heading STICKS while its own grid scrolls past, so
+   the answer to "what am I looking at" survives a hundred cards — that is what
+   sectioning buys over filtering, and without the stick it buys nothing.
+   `top` clears the fixed nav; `--nav-h` is the same token the nav is sized
+   from, so the two cannot drift. */
+.pgl-section+.pgl-section{margin-top:52px}
+.pgl-section-head{position:sticky;top:calc(var(--nav-h) + 8px);z-index:2;display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;gap:10px;margin-bottom:18px;padding:10px 0;background:linear-gradient(var(--bg-0) 78%,transparent)}
+.pgl-section-head h3{margin:0;font-size:var(--fs-h5,15px);font-weight:700;color:var(--t0);letter-spacing:-.01em}
+.pgl-section-count{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 7px;border-radius:var(--radius-pill);background:var(--bg-2);color:var(--t2);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.pgl-section-blurb{margin:0;font-size:12px;color:var(--t2);line-height:1.5}
+@media(max-width:640px){
+  .pgl-section-head{grid-template-columns:auto auto;row-gap:4px}
+  .pgl-section-blurb{grid-column:1 / -1}
+}
+.pgl-note strong{color:var(--t1);font-weight:700}
+@media(max-width:720px){
+  .pgl-search{grid-column:auto}
+  .pgl-filters{overflow-x:auto}
+  .pgl-filters button{flex:0 0 auto}}
+
+/* PR #298 gave this band a second column here — `--lbry-col-min:360px` across
+   700–980 — because at 834 a 794px grid JUST missed two columns and left a
+   790px row with type in its left ~300px, 77 times over, for a 12,231px page.
+   That fix was right for a grid and is moot for a list: the founder's direction
+   of 2026-09-02 is one specimen per row at every width, so the band has no
+   column count of its own to set and the rule is gone rather than overridden.
+   The emptiness #298 measured is answered above instead, by a row whose three
+   lines each want the full width. Removing the override is deliberate; see the
+   `.fg-grid` block for what replaced it. */
+
+/* The chosen ratio's "where it fits" line. An interval name is a fact about
+   music; this is the bit that answers whether to pick it. */
+
+/* P-003 (free tier = foot in the door): the paid edge announces itself.
+   A free user opening a board saved on a paid system used to get Auto silently
+   — the chip still read "Analogous" while the board rendered something else, so
+   the product looked unreliable rather than paid. */
+.plb-collapsed{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 var(--page-inline) 12px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--brand) 55%,transparent);border-radius:var(--radius-l);background:var(--brand-bg);font-size:12.5px;line-height:1.5;color:var(--t1)}
+.plb-collapsed strong{color:var(--t0);font-weight:650}
+.plb-collapsed-cta:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}

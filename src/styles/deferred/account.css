@@ -1,0 +1,301 @@
+/* ── ACCOUNT — lifted out of src/styles/global.css ─────────────────
+ *
+ * Every rule below was in the one render-blocking stylesheet, where it cost the
+ * homepage its bytes without ever being used there. It now travels with the
+ * lazy route chunks that can actually reach it:
+ *
+ *   Settings, Plans, Checkout, CheckoutReturn, Projects, Community, Feedback, Privacy, Terms
+ *
+ * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
+ * in global.css, so the cascade between any two of them is the one that was
+ * already shipping. What DID change is that they now cascade after the whole
+ * critical sheet rather than from the middle of it — which is why
+ * tests/user-sim/64-computed-style-snapshot.spec.js, and not a reading of this
+ * file, is the evidence that nothing painted moved.
+ *
+ * Adding a rule here is only correct when no eagerly-loaded module can reach
+ * it. tests/unit/home-asset-budget.test.js holds the byte budget that keeps
+ * the traffic going this way rather than back.
+ */
+
+
+
+/* ─── Shared Utilities (used by Settings + Sidebar) ─── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px}
+.avatar-circle{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--accent-bg);color:var(--accent-strong);font-weight:700;font-size:14px;flex-shrink:0}
+.avatar-circle img{width:100%;height:100%;object-fit:cover}
+.il-detail-preview{display:flex;align-items:center;justify-content:center;padding:32px;margin-bottom:20px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);min-height:140px;background-image:radial-gradient(circle,color-mix(in srgb,var(--border) 60%,transparent) .5px,transparent .5px);background-size:12px 12px}
+.il-detail-preview img,.il-detail-preview svg{transition:all var(--dur-2) var(--ease-standard)}
+.il-detail-controls{display:flex;flex-direction:column;gap:14px}
+.il-detail-row{display:flex;align-items:center;gap:10px}
+.il-detail-row>label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);min-width:52px;flex-shrink:0}
+.il-detail-row input[type="range"]{flex:1;accent-color:var(--accent)}
+.il-detail-row input[type="color"]{width:28px;height:28px;border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;padding:1px;background:var(--bg-1);flex-shrink:0}
+.il-detail-value{font-family:var(--mono);font-size:11px;color:var(--t2);min-width:36px;text-align:right;flex-shrink:0}
+.il-detail-color-input{flex:1;font-family:var(--mono);font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t0)}
+.il-detail-reset{width:24px;height:24px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--t)}
+.il-detail-reset:hover{background:var(--bg-2);color:var(--t0)}
+.il-detail-code-tabs{display:flex;gap:2px;margin-bottom:8px}
+.il-detail-code{position:relative;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);padding:14px 14px 14px 14px;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--t1);max-height:120px;overflow:auto;word-break:break-all;white-space:pre-wrap;cursor:pointer;transition:border-color var(--t)}
+.il-detail-code:hover{border-color:var(--accent)}
+.il-detail-code-hint{position:absolute;top:6px;right:8px;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--t)}
+.il-detail-code:hover .il-detail-code-hint{color:var(--accent-strong)}
+.ts-row:last-child{border-bottom:none}
+
+/* ─── Button catalogue ─── */
+.btn-cat{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr));gap:10px}
+.btn-cell{display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+
+/* ─── Layouts ─── */
+.lp{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:14px;min-height:80px}
+.lph{background:var(--bg-3);border:1px dashed var(--bh);border-radius:var(--radius-s)}
+
+/* ── SaveRefusal (src/components/SaveRefusal.jsx) ──
+   The free cap's refusal, rendered under the field it refused, on /projects
+   and inside the Palette Builder's save menu. Lifted out of pages/projects.css
+   when the component became shared: that file only ships with the /projects
+   chunk and the homepage renders the palette tool. */
+.uh-quota-link{font-weight:600;color:var(--accent-strong)}
+@media(max-width:640px){
+  .lang-grid{grid-template-columns:1fr}}
+
+
+/* Subscription — active Pro state */
+.sub-active{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 22px;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow)}
+.sub-active-top{display:flex;align-items:center;gap:14px;min-width:0}
+.sub-active-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--accent-strong);color:var(--accent-fg);font-size:12px;font-weight:700;letter-spacing:.04em;flex-shrink:0}
+.sub-active-title{font-size:15px;font-weight:700;color:var(--t0)}
+.sub-active-meta{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5}
+
+/* Subscription — billing toggle */
+.sub-signin-note{font-size:13px;color:var(--t2);margin-bottom:14px}
+.sub-signin-note a{color:var(--accent-strong);font-weight:600}
+.sub-tier-flag{position:absolute;top:-10px;right:20px;padding:4px 10px;border-radius:999px;background:var(--accent-strong);color:var(--accent-fg);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.sub-tier-top{display:flex;align-items:center;gap:9px}
+.checkout-grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:24px;align-items:start}
+.checkout-summary{display:flex;flex-direction:column;gap:14px;position:sticky;top:24px}
+.checkout-plan-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.checkout-plan-name{font-size:16px;font-weight:700;color:var(--t0)}
+.checkout-plan-cadence{font-size:12px;color:var(--t2);margin-top:2px}
+.checkout-plan-price{text-align:right;white-space:nowrap}
+.checkout-plan-amount{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--t0);line-height:1;display:block}
+.checkout-plan-per{font-size:11px;color:var(--t2)}
+.checkout-plan-note{font-size:11px;color:var(--accent-strong);font-weight:600;margin-top:14px}
+.checkout-price-retry{align-self:flex-start;margin-top:10px}
+.checkout-trial{display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;border-radius:var(--radius);background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok-strong);font-size:12px;font-weight:600}
+.checkout-features{display:flex;flex-direction:column;gap:10px;margin:18px 0 0;padding:18px 0 0;border-top:1px solid var(--border);list-style:none}
+.checkout-features li{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--t1);line-height:1.45}
+.checkout-switch{margin-top:16px}
+.checkout-switch a{font-size:12px;font-weight:600;color:var(--accent-strong);text-decoration:none}
+.checkout-switch a:hover{text-decoration:underline}
+.checkout-back{font-size:13px;color:var(--t2);text-decoration:none;padding:4px 2px}
+.checkout-back:hover{color:var(--t0)}
+.checkout-error{padding:24px;text-align:center;font-size:13px;color:var(--t1);line-height:1.6}
+.checkout-error code{font-family:var(--mono);font-size:12px;background:var(--bg-2);padding:2px 6px;border-radius:6px}
+.checkout-return-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+.checkout-return-ref{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);max-width:100%}
+.checkout-return-ref-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.checkout-return-ref-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--t1);word-break:break-all;line-height:1.4;user-select:all}
+.checkout-success-icon{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.checkout-spinner{width:40px;height:40px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:checkout-spin .8s linear infinite}
+@media(max-width:760px){
+  .checkout-grid{grid-template-columns:1fr}
+  .checkout-summary{position:static}
+}
+
+
+/* Language picker (flags) */
+.lang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(170px,100%),1fr));gap:8px;padding:4px}
+.lang-tile-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+
+/* Danger zone refinement */
+.danger-zone{margin-top:24px;padding:20px;border:1px dashed var(--err);border-radius:var(--radius);background:color-mix(in srgb, var(--err) 3%, transparent)}
+.danger-zone-h::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--err)}
+.danger-confirm{margin-top:12px}
+.danger-confirm-list{margin:0 0 14px;padding-left:18px;display:grid;gap:5px}
+.danger-confirm-list li{font-size:12.5px;line-height:1.55;color:var(--t1)}
+.danger-confirm-note{font-size:12.5px;line-height:1.55;color:var(--t1);margin:0 0 12px}
+.danger-confirm-input{width:100%;margin:6px 0 12px}
+.danger-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
+.danger-confirm-go:hover:not(:disabled){filter:brightness(.92)}
+.danger-confirm-err{font-size:12px;line-height:1.5;color:var(--err-strong);margin-top:8px}
+[data-density="compact"] .nav-icon-sub{display:none}
+
+/* ─── Appearance Settings Controls ─── */
+.theme-pill{display:inline-flex;padding:4px;background:var(--bg-2);border:1px solid var(--border);border-radius:999px;gap:2px}
+.theme-pill-opt svg{width:14px;height:14px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-row-info{display:flex;flex-direction:column;gap:2px}
+.toggle-row-label{font-size:13px;font-weight:500;color:var(--t0)}
+.toggle-row-meta{font-size:11px;color:var(--t2)}
+.toggle-switch:hover{opacity:.85}
+
+/* Community Hub */
+.ch-wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.ch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ch-title{font-size:28px;font-weight:700;letter-spacing:-.02em;color:var(--t0);margin:0 0 6px}
+.ch-sub{font-size:13.5px;color:var(--t2);line-height:1.6;margin:0;max-width:560px}
+.ch-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ch-filters{display:flex;flex-wrap:wrap;gap:6px}
+.ch-sort{display:flex;gap:2px;background:var(--bg-2);border-radius:var(--radius-pill);padding:3px;flex-shrink:0}
+.ch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.ch-card{position:relative;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.ch-card:hover{border-color:var(--bh);transform:translateY(-3px)}
+.ch-thumb{display:flex;align-items:center;justify-content:center;height:150px;text-decoration:none!important;position:relative;background:linear-gradient(135deg,var(--c1,var(--accent)),var(--c2,var(--accent-strong)))}
+/* THE FALLBACK GROUND IS A THEME PAIR, AND IT FLIPS. When a card's stops are
+   not a usable hex pair CommunityCard omits --c1/--c2 and the rule above
+   draws linear-gradient(135deg,var(--accent),var(--accent-strong)) instead -
+   so the ground stops being per-item DATA and becomes a THEME token, which is
+   the one ground per-item ink could not see. Measured over the whole of that
+   ground, sampled across the ramp: the old hard-coded #FFFFFF is 4.43:1 on the
+   light pair and 2.41:1 on the dark one, and 2.23:1 under prefers-contrast:
+   more in dark, both under the 3:1 large-text floor. So the fallback ink is
+   chosen per theme by the same measurement the per-item one uses, from the
+   same near-poles inkOnGrounds walks: #F2F3F5 is 3.99:1 on the light pair
+   (7.36:1 under prefers-contrast) and #0A0B0D is 6.31:1 on the dark pair
+   (8.82:1 under prefers-contrast). An inline --mono-ink always wins over both,
+   so a card WITH usable stops is untouched by this. Pinned in
+   tests/unit/community-monogram-ink.test.js, which reads the accent pair off
+   this sheet rather than repeating it. */
+.ch-thumb{--mono-ink:#F2F3F5;--mono-glow:rgba(0,0,0,.25)}
+[data-theme="dark"] .ch-thumb{--mono-ink:#0A0B0D;--mono-glow:rgba(255,255,255,.38)}
+/* Ink and glow are set PER CARD by CommunityCard.jsx from that card's own
+   gradient — the ground is per-item data, so no fixed ink clears 3:1 on all
+   of them. The colour is OPAQUE now: the old .92 alpha composited toward the
+   ground and cost about 0.1-0.2:1 for nothing. Fallbacks match the rule's own
+   --c1/--c2 accent fallback above. See tests/unit/community-monogram-ink. */
+.ch-thumb-mono{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--mono-ink,#FFFFFF);letter-spacing:.04em;text-shadow:0 1px 8px var(--mono-glow,rgba(0,0,0,.25))}
+/* Visible at rest; the hover reveal is an enhancement for devices that have a
+   hover, exactly as .grg-like does it. It used to hide for everyone and come
+   back on .ch-card:hover or its own :focus-visible — one of which never fires on
+   a phone and the other of which is keyboard-only, so the surface's ONLY
+   engagement action was invisible on every touch device at every width
+   (S14, mobile-audit-2026-08: 12 buttons, one per card, measured opacity 0 with
+   pointer-events:auto at 320x568 through 1180x820). */
+.ch-heart{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--radius-pill);border:none;cursor:pointer;background:rgba(0,0,0,.5);color:#fff;font-family:var(--font);font-size:12px;font-weight:600;transition:opacity var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+@media(hover:hover){
+  .ch-heart{opacity:0;transform:translateY(-2px)}
+  .ch-card:hover .ch-heart,.ch-heart:focus-visible,.ch-heart.is-saved{opacity:1;transform:translateY(0)}
+}
+.ch-heart.is-saved{color:#fb7185}
+.ch-heart:hover{background:rgba(0,0,0,.7)}
+.ch-heart-count{font-variant-numeric:tabular-nums;line-height:1}
+.ch-card-body{padding:12px 14px 14px}
+.ch-card-name{font-size:13.5px;font-weight:650;color:var(--t0);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-card-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--t2)}
+.ch-card-tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-strong);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px;flex-shrink:0}
+.ch-empty{padding:48px 24px;text-align:center;font-size:13.5px;color:var(--t2);border:1.5px dashed var(--border);border-radius:var(--radius-l)}
+/* Two columns are kept — this is a browse grid and one column turns 12 cards
+   into a 12-screen list — but at 390px that makes each card ~171px, and a
+   `white-space:nowrap` title inside ~145px of text width truncated 10 of the 12
+   names mid-word: "Dashboard & analyti…", "Award-winning landi…", "Portfolio &
+   folio desi…". A browse grid where you cannot read what anything is has
+   stopped being a browse grid. The name wraps to two lines instead; two is
+   enough for every name in the set and the reserved `min-height` keeps the meta
+   rows of adjacent cards on the same baseline, which is what the single-line
+   rule was really buying.
+   The tag goes 9px → 11px. 9px is below the smallest type used anywhere else in
+   this stylesheet and it is a mono uppercase label, which is the least legible
+   combination there is at that size. */
+@media(max-width:560px){
+  .ch-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .ch-toolbar{align-items:stretch}
+  .ch-card-name{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em;line-height:1.3}
+  .ch-card-tag{font-size:11px;padding:2px 6px;letter-spacing:.02em}
+  .ch-card-meta{gap:6px}
+}
+.cs-csys-spinner{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--brand);animation:cs-csys-spin .7s linear infinite}
+
+.cs-csys-hint{margin:var(--s-3) 0 0;font-size:12px;line-height:1.45;color:var(--t2)}
+.cs-csys-tray{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-top:var(--s-3)}
+.cs-csys-tray-tile:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
+.cs-csys-tray-x{position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--bg-4);color:var(--t0);font-size:11px;line-height:16px;text-align:center;opacity:0;box-shadow:var(--shadow-xs);transition:opacity var(--t-fast)}
+.cs-csys-tray-tile:hover .cs-csys-tray-x,.cs-csys-tray-tile:focus-visible .cs-csys-tray-x{opacity:1}
+.system-cta-grid{position:absolute;z-index:-2;inset:0;opacity:.5;background-image:linear-gradient(color-mix(in srgb,var(--t0) 5%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--t0) 5%,transparent) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(circle at center,#000,transparent 74%)}
+.system-cta-beams{position:absolute;z-index:-1;inset:0;overflow:hidden}
+.system-cta-beams i{position:absolute;left:50%;bottom:-58%;width:70px;height:130%;border-radius:var(--radius-pill);background:linear-gradient(to top,color-mix(in srgb,var(--accent) 20%,transparent),transparent 68%);transform-origin:50% 100%}
+.system-cta-beams i:nth-child(1){transform:translateX(-50%) rotate(-62deg)}
+.system-cta-beams i:nth-child(2){transform:translateX(-50%) rotate(-42deg)}
+.system-cta-beams i:nth-child(3){transform:translateX(-50%) rotate(-21deg)}
+.system-cta-beams i:nth-child(4){transform:translateX(-50%)}
+.system-cta-beams i:nth-child(5){transform:translateX(-50%) rotate(21deg)}
+.system-cta-beams i:nth-child(6){transform:translateX(-50%) rotate(42deg)}
+.system-cta-beams i:nth-child(7){transform:translateX(-50%) rotate(62deg)}
+.system-cta-inner{max-width:690px;text-align:center}
+.system-cta-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--s-6)}
+.system-cta-hint{margin-top:var(--s-4);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+
+/* Footer — a row of large feature links above the standard column links, so
+   the last thing before the page ends still sells the product, not just
+   navigates it. */
+.home-foot{background:var(--bg-1);border-top:1px solid var(--border);padding:var(--s-9) 0 var(--s-6);margin-top:var(--sec-pad)}
+.home-foot-feat{display:grid;grid-template-columns:repeat(3,1fr);gap:32px 48px}
+.home-foot-feat-link{display:block;text-decoration:none}
+.home-foot-feat-link:hover{text-decoration:none}
+.home-foot-feat-title{display:flex;align-items:center;gap:10px;font-size:var(--fs-h2);font-weight:700;letter-spacing:-.02em;color:var(--t0);transition:color var(--dur-3) var(--ease-out)}
+.home-foot-feat-link:hover .home-foot-feat-title{color:var(--hue,var(--accent-strong))}
+.home-foot-feat-desc{font-size:var(--fs-caption);color:var(--t2);margin-top:6px}
+.home-foot-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:32px;margin-top:var(--s-8)}
+.home-foot-colhead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:12px}
+.home-foot-link{display:flex;align-items:center;gap:8px;min-height:32px;font-size:var(--fs-body-s);color:var(--t1);text-decoration:none}
+.home-foot-link:hover{color:var(--t0);text-decoration:none}
+.home-foot-legal{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:var(--s-8);padding-top:24px;border-top:1px solid var(--border)}
+.home-foot-brand{display:flex;align-items:center;gap:10px}
+.home-foot-copy{font-size:var(--fs-caption);color:var(--t2)}
+@media(max-width:768px){
+  .home-foot-feat{grid-template-columns:repeat(2,1fr)}
+  .home-foot-cols{grid-template-columns:repeat(2,1fr);gap:24px 32px}}
+
+@media(max-width:480px){
+  .home-foot-feat{grid-template-columns:1fr}
+  .home-foot-cols{grid-template-columns:1fr}}
+ /* 4.60 */
+
+/* Flair picker (Settings › Account) --- */
+.flairpick-hint{margin:0 0 10px;font-size:12px;color:var(--t3);line-height:1.5}
+.flairpick-preview{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2)}
+.flairpick-preview-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.flairpick-group-label{margin:12px 0 8px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
+.flairpick-group-label:first-of-type{margin-top:0}
+.flairpick-grid{display:flex;flex-wrap:wrap;gap:7px}
+.flairpick-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ── Feedback form ──────────────────────────────────────────────────────────
+   Replaces a set of inline style={{}} objects (docs/reference/css-conventions.md).
+   The form had ZERO <label> elements — the `.seg-label` divs look like labels
+   and are not, so neither field had an accessible name. */
+.fb-card{max-width:600px}
+.fb-form{display:flex;flex-direction:column;gap:16px}
+.fb-submit{align-self:flex-start}
+.fb-done{padding:40px 20px;text-align:center}
+.fb-done-mark{width:48px;height:48px;border-radius:50%;background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.fb-done-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.fb-done-sub{font-size:13px;color:var(--t2)}
+/* Whether a reply can come back. Same size as the line above it, one ink step
+   darker, because it is the part of the confirmation a reader has not seen
+   before. */
+.fb-done-reply{margin:8px 0 0;font-size:13px;line-height:1.55;color:var(--t1)}
+.fb-done-reply strong{font-weight:650;color:var(--t0)}
+.fb-again{margin-top:16px}
+
+/* Curated inspiration links credit the PLATFORM they open, not a person.
+   Twelve invented designers used to render through the same <UserName> as real
+   members — see the note in src/data/communityDesigns.js. */
+/* `flex-shrink:0` because THIS is the credit. `overflow:hidden` gives the
+   source a min-content contribution of zero, so in the `space-between` row it
+   was the only item that could give, and it gave first: measured at 360px on
+   the narrow two-column card, "Dribbble" needed 42px and was allotted 40 —
+   clipped to "Dribbbl…" to save two pixels, on the one element in the card that
+   says who the work belongs to. The category tag carries the squeeze instead:
+   it has no overflow rule, so it wraps its own text rather than truncating.
+
+   `flex-wrap:wrap` on the row was tried alongside this and REMOVED, not
+   forgotten: either change alone stops the clipping, so keeping both meant
+   reverting either one left the other quietly covering for it and the guard
+   below could not fail. One fix, one call site, one assertion that pins it. */
+.ch-card-source{flex:0 0 auto;font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── Project cards ─────────────────────────────────────────────── */
+.uh-card.is-archived{opacity:.62}
+.uh-card.is-archived:hover,.uh-card.is-archived:focus-within{opacity:1}

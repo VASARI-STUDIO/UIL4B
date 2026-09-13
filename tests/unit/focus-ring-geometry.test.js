@@ -37,33 +37,40 @@
 // mismatched ring is a ring that matches, never no ring.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import path from 'node:path'
+import { ALL_STYLESHEETS } from './appStylesheets.js'
 
-const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8')
-
+// EVERY stylesheet, not global.css alone — and one at a time, so a failure can
+// still name the file and the line. The focus rules were split across
+// src/styles/deferred/*.css on 2026-09-13, and a scan of one file after a lift
+// like that does not go red, it goes vacuous.
+//
 // Comments are stripped FIRST, newlines preserved so line numbers survive.
 // This matters more here than usual: the explanatory comment on the global rule
 // quotes the removed `border-radius:var(--radius-s)` declaration verbatim, and
 // so does the header of this very file. A test that scanned raw CSS would match
 // the prose describing the bug and pass while the bug was present — the exact
 // vacuous-pass shape tests/unit/input-specificity.test.js records.
-const CSS = RAW.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+const SHEETS = ALL_STYLESHEETS.map(({ file, css }) => ({
+  file,
+  css: css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')),
+}))
 
-const lineOf = (index) => CSS.slice(0, index).split('\n').length
+const lineOf = (css, index) => css.slice(0, index).split('\n').length
 
-/** Every rule whose prelude mentions a :focus pseudo-class. */
+/** Every rule whose prelude mentions a :focus pseudo-class, in every sheet. */
 const focusRules = () => {
   const out = []
-  const ruleRe = /(^|[};])([^{};]*:focus[a-z-]*[^{};]*)\{([^}]*)\}/gm
-  let m
-  while ((m = ruleRe.exec(CSS)) !== null) {
-    out.push({ prelude: m[2].trim(), body: m[3], line: lineOf(m.index + m[1].length) })
+  for (const { file, css } of SHEETS) {
+    const ruleRe = /(^|[};])([^{};]*:focus[a-z-]*[^{};]*)\{([^}]*)\}/gm
+    let m
+    while ((m = ruleRe.exec(css)) !== null) {
+      out.push({ file, prelude: m[2].trim(), body: m[3], line: lineOf(css, m.index + m[1].length) })
+    }
   }
   return out
 }
 
-test('no :focus rule anywhere in global.css sets border-radius', () => {
+test('no :focus rule in any of the app stylesheets sets border-radius', () => {
   const rules = focusRules()
   // Guard the guard: if the scan finds nothing at all, the regex has rotted and
   // every assertion below would pass vacuously.
@@ -71,7 +78,7 @@ test('no :focus rule anywhere in global.css sets border-radius', () => {
 
   const offenders = rules
     .filter((r) => /(^|[;{\s])border-radius\s*:/.test(r.body))
-    .map((r) => `global.css:${r.line}  ${r.prelude}`)
+    .map((r) => `${r.file}:${r.line}  ${r.prelude}`)
 
   assert.deepEqual(offenders, [], 'a focus style must not change the element\'s geometry — '
     + 'declare the radius on the element at rest instead, so the outline traces the shape '
@@ -89,12 +96,14 @@ test('the global :focus-visible rule still paints a visible ring (WCAG 2.4.7)', 
     'removing the focus ring is never the fix for a mis-shaped focus ring')
 })
 
+const FIELD_RESET = /:where\(([^)]*\binput\[type="text"\][^)]*)\)\s*\{([^}]*)\}/
+
 test('input[type=search] takes the shared field reset, so its ring has a shape to trace', () => {
   // The field the founder screenshotted was `input[type=search].adm-search`,
   // which set no radius, border or ground of its own and was NOT covered by the
   // element reset — so it rendered as a bare UA box with square corners, and the
   // global rule then drew a 10px-radius ring around it.
-  const reset = CSS.match(/:where\(([^)]*\binput\[type="text"\][^)]*)\)\s*\{([^}]*)\}/)
+  const reset = SHEETS.map(({ css }) => css.match(FIELD_RESET)).find(Boolean)
   assert.ok(reset, 'the :where() field reset is gone')
   assert.ok(reset[1].includes('input[type="search"]'),
     'input[type="search"] must sit in the shared field reset alongside text/email/password')

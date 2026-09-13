@@ -26,8 +26,13 @@ import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { isPrivateRoute, isSoonRoute } from '../../src/utils/routeMeta.js'
 import { contrastRatio, generateTintScale, T_LABELS } from '../../src/utils/colors.js'
 import { stepPx } from '../../src/utils/fluidType.js'
+// Reads the WHOLE app stylesheet, not global.css alone. The rules this file
+// asserts on were split out of global.css into src/styles/deferred/*.css on
+// 2026-09-13; a test that keeps reading one file after a lift like that does
+// not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
+import { ALL_CSS } from './appStylesheets.js'
 
-const CSS = read('src/styles/global.css')
+const CSS = ALL_CSS
 const PROOFS_SRC = stripComments(read('src/components/SystemProofs.jsx'))
 const PRINCIPLES_PAGE = stripComments(read('src/pages/DesignPrinciples.jsx'))
 

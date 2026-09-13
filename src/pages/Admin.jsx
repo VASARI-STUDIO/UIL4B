@@ -21,6 +21,11 @@ import { ADMIN_EMAILS, isAdminEmail } from '../utils/constants'
 // two to have missed.
 import { resolvePromptProfileLink } from '../utils/promptSubmission'
 import { toCsv } from '../utils/csv'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/admin.css'
+import '../styles/deferred/tool-shell.css'
 
 const ADMIN_CODE = 'uil4b-dev-2026'
 // The triage vocabulary now lives in utils/moderation.js, so the moderation
