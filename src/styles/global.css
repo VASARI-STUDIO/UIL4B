@@ -650,7 +650,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .emoji-tone-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .emoji-tone-btn.open{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-strong)}
 .emoji-tone-pop{position:absolute;top:calc(100% + 6px);left:0;display:flex;gap:4px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:40;animation:fg-fade var(--dur-1) var(--ease-entrance)}
-.emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:all var(--dur-2) var(--ease-standard)}
+.emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:background-color var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
 .emoji-skin-btn.active{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
 .emoji-chip-count{font-size:9px;font-weight:700;font-family:var(--mono);background:var(--bg-3);color:var(--t3);padding:1px 6px;border-radius:8px}
@@ -6725,7 +6725,18 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 @media(max-width:640px){
   /* The action stops being a tail and becomes a full-width row: at this width
      `margin-left:auto` was pushing it onto its own line anyway, ragged. */
-  .lbry-toolbar{position:static;gap:8px;padding:8px}
+  /* `relative`, NOT `static`. The point here is to stop the bar STICKING, and
+     relative does that just as well while keeping the `z-index:45` above
+     meaningful — z-index is ignored on a static box. The bar also carries
+     `backdrop-filter`, which opens a stacking context whatever its position,
+     so a static bar trapped its own filter menu in a context that painted at
+     z-index auto. MEASURED 2026-09-13 on /create/emoji, light: with the menu
+     open at 320, 390 and 430, seven of twelve options hit-tested to the hero
+     instead of themselves — `H1`, the hero `<p>` and `.dgh-copy`, which is
+     `position:relative; z-index:1` and so won against a context that had
+     forfeited its 45. Restoring the z-index costs no layout: a relative box
+     with no offsets occupies exactly the space a static one did. */
+  .lbry-toolbar{position:relative;gap:8px;padding:8px}
   .lbry-toolbar-filters{width:100%}
   .lbry-filters{width:100%}
   .lbry-toolbar-action{width:100%;margin-left:0}
