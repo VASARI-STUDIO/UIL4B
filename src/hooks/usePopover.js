@@ -56,6 +56,28 @@ const setIfChanged = (el, name, value) => {
   if (el.getAttribute(name) !== value) el.setAttribute(name, value)
 }
 
+// How far down the viewport is painted over by FIXED top chrome, in px.
+//
+// Read off the element rather than off `--nav-clear`, which is the token the
+// stylesheets use for the same distance (`.lbry-toolbar`, `.rc-vis-panel`,
+// `.lart-toc`). That token is `calc(var(--nav-top) + var(--nav-h) + 8px)`, and
+// an unregistered custom property holding a calc() comes back from
+// `getComputedStyle` as the unevaluated string, not a number — parsing it here
+// would be a second, drifting copy of a sum the layout engine has already done.
+//
+// Guarded three ways, because a popover must still place itself on a surface
+// that has no nav at all: a prerendered shell before hydration, and the
+// standalone checkout and onboarding routes. Anything other than a fixed bar
+// resting against the top of the viewport contributes nothing.
+const topObstruction = () => {
+  const bar = document.querySelector('.pnav')
+  if (!bar) return 0
+  const style = getComputedStyle(bar)
+  if (style.position !== 'fixed' || style.visibility === 'hidden' || style.display === 'none') return 0
+  const box = bar.getBoundingClientRect()
+  return box.top <= 0 && box.bottom > 0 ? box.bottom : 0
+}
+
 // Decide which side the panel hangs off and whether it opens upward, by
 // measuring the TRIGGER and the panel's own size rather than the panel's
 // current position. Measuring the positioned panel would feed its own placement
@@ -95,8 +117,26 @@ export function placePopover(trigger, panel) {
 
   // Vertical: open upward only when the panel genuinely does not fit below AND
   // there is more room above. Flipping into an equally short gap helps nobody.
+  //
+  // THE ROOM ABOVE IS NOT `anchor.top`, AND ASSUMING IT WAS MADE A DEAD END.
+  //
+  // `.pnav` is `position:fixed; top:0; z-index:120` on every app page, so the
+  // top band of the viewport is painted over by the nav at a z-index no popover
+  // reaches. A panel flipped up into that band is fully VISIBLE and completely
+  // unclickable — `document.elementFromPoint` on the option returns the nav.
+  //
+  // MEASURED 2026-09-13 on /create/emoji, light, 844px tall, before this: the
+  // twelve-option category menu flipped up to y=10 at every desktop width, and
+  // its FIRST option — "All", the only way back to the unfiltered library —
+  // hit-tested to `.pnav-inner` at 700, 768, 1024, 1280, 1440 and 1920. Filter
+  // to Flags and the control that undoes it is under the navigation bar.
+  //
+  // So the obstruction is subtracted from both the flip decision and the height
+  // cap. The cap is what actually moves the panel: it is anchored to the
+  // trigger and grows upward, so bounding it to the clear space keeps its top
+  // edge below the nav instead of behind it.
   const roomBelow = vh - anchor.bottom
-  const roomAbove = anchor.top
+  const roomAbove = anchor.top - topObstruction()
   const side = h + EDGE_PAD > roomBelow && roomAbove > roomBelow ? 'top' : 'bottom'
   setIfChanged(panel, 'data-pop-side', side)
 
