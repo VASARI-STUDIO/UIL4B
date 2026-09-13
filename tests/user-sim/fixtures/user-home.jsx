@@ -79,13 +79,10 @@ function complete() {
   }
 }
 
-const FOLDERS = ['all', 'brand', 'app', 'marketing', 'personal']
-
 export function UserHomeFixture() {
   const [projects, setProjects] = useState(() => [complete(), halfBuilt(), untouched()])
   const [loadedId, setLoadedId] = useState('fx-complete')
   const [log, setLog] = useState('')
-  const [folders, setFolders] = useState({ 'fx-complete': 'brand' })
 
   const say = (message) => setLog(message)
 
@@ -110,8 +107,6 @@ export function UserHomeFixture() {
               </div>
             </header>
 
-            <DailyBand suggestion={nextToolSuggestion(projects)} />
-
             <p id="fixture-log" role="status">{log}</p>
 
             <div className="uh-grid">
@@ -131,9 +126,6 @@ export function UserHomeFixture() {
                     setProjects((list) => list.map((x) => (x.id === id ? { ...x, archived: !x.archived } : x)))
                     say(`Archived ${id}`)
                   }}
-                  folder={folders[p.id]}
-                  onFolderChange={(id, folder) => setFolders((f) => ({ ...f, [id]: folder }))}
-                  folders={FOLDERS}
                   onOpenDetail={(project) => say(`Detail ${project.id}`)}
                   onDuplicate={(id) => say(`Duplicated ${id}`)}
                   onExportCss={(id) => say(`Copied CSS for ${id}`)}
@@ -141,6 +133,8 @@ export function UserHomeFixture() {
                 />
               ))}
             </div>
+
+            <DailyBand suggestion={nextToolSuggestion(projects)} />
 
             <StarterRow />
           </div>
