@@ -1474,11 +1474,9 @@ function UsersPanel({ localUsers, toast, role }) {
               {roleEnabled === false
                 ? <>
                     <strong style={{ color: 'var(--t1)' }}>The moderator role is not switched on yet.</strong>
-                    {' '}The rules understand a moderator and nothing grants one: api/verify-admin.js is
-                    {' '}the piece that mints the role onto a person&rsquo;s account, and this deployment
-                    {' '}does not have it. Run npm run apply:gated in the repository, commit, and deploy
-                    {' '}&mdash; docs/OWNER-ACTIONS.md &sect;1.3. Nothing on this screen can appoint anybody
-                    {' '}until then, so nothing on this screen offers to.
+                    {' '}The rules understand a moderator, but this deployment cannot grant one yet, so
+                    {' '}nothing on this screen offers to appoint anybody. Enabling it is an owner
+                    {' '}action &mdash; the steps are in docs/OWNER-ACTIONS.md &sect;1.3.
                   </>
                 : roster === null
                   ? (rosterError
