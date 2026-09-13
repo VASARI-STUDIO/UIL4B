@@ -50,6 +50,29 @@ import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '.
 // random precedence — kept pure so the free-settings default and “a shared link
 // beats the random draw” can be tested exhaustively without a DOM.
 import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
+
+// THE OPENING SENTENCE. Empty on purpose, and the empty string is the
+// deliverable: the founder is writing this line himself (2026-09-13, “Build
+// the slot, then I’ll write the line”). The heading area below renders the
+// paragraph only when there is something in it, so the page has no blank gap
+// while it is empty and needs no second edit when it is filled.
+//
+// The shape to match is the one its three siblings already ship, and
+// `tests/user-sim/58-tool-lede-states-the-model.spec.js` pins each of them
+// verbatim — one sentence naming the MODEL the tool works on, then one saying
+// that everything below is that model. Not the workflow, which the controls
+// already show:
+//
+//   /create/tint       “One base colour and one curve. Every step below is
+//                       that colour at a measured tone.”
+//   /create/gradient    “Colour stops and where each one sits. Everything
+//                       below is those two facts, as CSS, Tailwind or SVG.”
+//   /create/font-pair   “Two families — one for headings, one for body. Every
+//                       preview below is those two, together.”
+//
+// When this is filled in, add /create/palette to that spec's LEDES table so
+// the sentence is pinned the same way the other three are.
+const PALETTE_LEDE = ''
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -2066,12 +2089,31 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     <div className="plb" data-board-source={initial.source} data-board-cols={colors.length}>
       <p className="sr-only" aria-live="polite">{liveMsg}</p>
 
+      {/* ── Page heading ──
+          This page had no heading area. Its only heading was a 15px <h1> in
+          the toolbar reading "Palette", set at the SAME size and weight as
+          `.plb-hex` (both 15px/700) — so the page's own name was typographically
+          identical to a colour value sitting two rows below it, and every one of
+          the five sibling colour tools shipped a 36-64px h1 that this one did
+          not have.
+
+          The name is "Palette Generator" because that is what this route is
+          already called in `src/data/routeMetaMap.js` — the string in the
+          browser tab and in the share card. It is not a new name; the toolbar
+          label was the short one.
+
+          The h1 keeps `id="plb-page-title"`, because `.plb-board` below is
+          `aria-labelledby` it: the board's accessible name is the page's
+          heading, and moving the h1 without moving the id would have silently
+          left the board unnamed. */}
+      <header className="plb-hero">
+        <h1 id="plb-page-title">Palette Generator</h1>
+        {PALETTE_LEDE ? <p className="plb-hero-lede">{PALETTE_LEDE}</p> : null}
+      </header>
+
       {/* ── Toolbar ── */}
       <header className="plb-toolbar">
         <div className="plb-toolbar-group">
-          <div className="plb-mode-switch">
-            <h1 className="plb-title" id="plb-page-title">Palette</h1>
-          </div>
           <div className="plb-seedpick">
             <ColorPickerPop
               value={shownSeed}

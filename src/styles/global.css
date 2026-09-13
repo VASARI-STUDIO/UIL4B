@@ -5276,7 +5276,25 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
    line. On a shared line the auto margin eats the free space first and the
    result is identical, so one rule covers both. */
 .plb-toolbar-group:last-child{flex:0 0 auto;margin-left:auto}
-.plb-title{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--t0);margin:0 6px 0 0}
+/* ── The page heading ──────────────────────────────────────────────────────
+   /create/palette had no heading area at all. Its only heading was
+   `h1.plb-title` in the toolbar, at 15px/700 — the SAME size and weight as
+   `.plb-hex`, the colour value on every swatch — so the page's name was
+   typographically indistinguishable from a hex code. Its five sibling colour
+   tools all open on a 36–64px h1.
+
+   The three declarations below are copied VERBATIM from `.tt-hero h1` /
+   `.tt-hero-copy>p` in `styles/pages/tint.css`, which `.stc-hero` in
+   `semantic-color.css` already restates character-for-character. This page is
+   the third to use them, not a fourth opinion about what a tool heading is.
+
+   `.plb` is full-bleed (it carries negative inline margins so the board can
+   touch both edges), so the heading has to put `--page-inline` back — the same
+   token `.plb-toolbar` and `.pnav-inner` use, which is what lines the h1 up
+   with the toolbar underneath it and the nav above it. */
+.plb-hero{padding:var(--s-6) var(--page-inline) var(--s-5)}
+.plb-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
+.plb-hero-lede{max-width:600px;margin:12px 0 0;font-size:15px;line-height:1.65;color:var(--t1)}
 .plb-seedpick .cpk-pop{left:0;right:auto}
 .plb-toolbar .btn-s,.plb-seedpick .cpk-trigger,.plb-hexfield{height:36px;min-height:36px;border-radius:var(--radius-s)}
 .plb-harm-k{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
@@ -6040,11 +6058,7 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
 /* This is a dense operating surface, not a gallery of six cards. The scale
    matrix stays one contiguous comparison object; containment is reserved for
    evidence, component-state and scene boundaries that are real objects. */
-.plb-mode-switch{display:flex;align-items:center;gap:7px;flex:0 0 auto;white-space:nowrap}
-.plb-mode-switch>span{font-size:12px;color:var(--t3)}
-.plb-mode-switch>button{padding:2px 0;font:inherit;font-size:13px;font-weight:650;color:var(--t2);background:none;border:0;cursor:pointer}
-.plb-mode-switch>button:hover{color:var(--t0)}
-.plb-mode-switch>button>span,.uis-mode-switch button>span,.uis-pro-label{display:inline-flex;align-items:center;margin-left:4px;padding:2px 5px;font-size:8px;font-weight:750;line-height:1;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-strong);background:var(--brand-bg);border-radius:var(--radius-xs)}
+.uis-mode-switch button>span,.uis-pro-label{display:inline-flex;align-items:center;margin-left:4px;padding:2px 5px;font-size:8px;font-weight:750;line-height:1;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-strong);background:var(--brand-bg);border-radius:var(--radius-xs)}
 .uis-back{flex:0 0 auto}
 .uis-scene-tab{flex:0 0 auto;min-height:44px;padding:8px 12px;font-size:10px;font-weight:650;color:var(--t2);background:none;border:1px solid transparent;border-radius:var(--radius-s);cursor:pointer}
 
