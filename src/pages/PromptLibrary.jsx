@@ -18,6 +18,12 @@ import PromptModal from '../components/prompt/PromptModal'
 import AddPromptPanel from '../components/prompt/AddPromptPanel'
 import SubmitPromptPanel from '../components/prompt/SubmitPromptPanel'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/colour.css'
+import '../styles/deferred/library.css'
+import '../styles/deferred/tool-shell.css'
 
 // Community submission surface name for the sign-in gate (utils/submitIntent).
 const SUBMIT_SURFACE = 'prompt'

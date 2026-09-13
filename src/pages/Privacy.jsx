@@ -1,5 +1,9 @@
 import { useI18n } from '../contexts/I18nContext'
 import { KEY_PURPOSES } from '../utils/dataExport'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/tool-shell.css'
 
 // Generated from the single shared table in utils/dataExport.js, which is also
 // what the exporter and "Clear local data" enumerate. It used to be a third

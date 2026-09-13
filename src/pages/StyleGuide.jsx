@@ -1,4 +1,8 @@
 import { useState } from 'react'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/tool-shell.css'
 
 const TOKENS = {
   colours: [

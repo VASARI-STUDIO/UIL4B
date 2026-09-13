@@ -15,6 +15,12 @@ import { consumePairDraft, readPairDraft, setScaleDraft } from '../utils/typeHan
 // The `font-pair` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/colour.css'
+import '../styles/deferred/tool-shell.css'
+import '../styles/deferred/type.css'
 import '../styles/pages/font-pair.css'
 
 // Font Pair — the standalone /create/font-pair page. Two families, one specimen, and a

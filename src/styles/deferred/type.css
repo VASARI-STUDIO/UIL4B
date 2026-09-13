@@ -1,0 +1,1211 @@
+/* ── TYPE — lifted out of src/styles/global.css ─────────────────
+ *
+ * Every rule below was in the one render-blocking stylesheet, where it cost the
+ * homepage its bytes without ever being used there. It now travels with the
+ * lazy route chunks that can actually reach it:
+ *
+ *   FontGallery, FontMatcher, TypeScale, RatioCalculator
+ *
+ * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
+ * in global.css, so the cascade between any two of them is the one that was
+ * already shipping. What DID change is that they now cascade after the whole
+ * critical sheet rather than from the middle of it — which is why
+ * tests/user-sim/64-computed-style-snapshot.spec.js, and not a reading of this
+ * file, is the evidence that nothing painted moved.
+ *
+ * Adding a rule here is only correct when no eagerly-loaded module can reach
+ * it. tests/unit/home-asset-budget.test.js holds the byte budget that keeps
+ * the traffic going this way rather than back.
+ */
+
+
+.fg-count{margin:0 0 14px;font-family:var(--mono);font-size:11px;color:var(--t2);letter-spacing:.02em}
+
+/* Grid. Columns and card geometry are set once in the premium library block
+   near the end of this file; the structural resets stay here. Two competing
+   definitions of the same card is how this component last broke. */
+.fg-grid{margin:0 0 var(--s-5);padding:0;list-style:none}
+/* The two text boxes must not shrink, or a long family name would steal height
+   from the pangram and the "reserved metrics" promise would only half hold.
+   Their heights and the box that holds them are set in the premium block. */
+.fg-card-preview{display:flex;flex-direction:column;gap:10px;overflow:hidden;font-family:var(--fg-ff)}
+.fg-card-preview--pending{font-family:var(--font)}
+.fg-card-skeleton{display:block;flex:0 0 auto;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;animation:fg-shimmer 1.4s linear infinite}
+.fg-card-skeleton--sample{width:76%;height:52px}
+.fg-card-skeleton--body{width:92%;height:38px}
+.fg-card-sample{display:block;flex:0 0 auto;height:52px;font-size:42px;line-height:52px;letter-spacing:-.02em;color:var(--t0);font-weight:var(--fg-fw-h);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fg-card-pangram{display:-webkit-box;flex:0 0 auto;height:38px;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;line-height:19px;font-weight:var(--fg-fw-b);color:var(--t1)}
+/* 28px was below the WCAG 2.5.8 floor once it became a permanently visible
+   control rather than a hover affordance. */
+.fg-card-compare{z-index:2;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-0);border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.fg-card-compare:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fg-card-compare:hover{border-color:var(--bh);color:var(--t0)}
+.fg-card-compare--on{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
+.fg-sentinel{height:1px}
+.fg-more{display:flex;justify-content:center;margin-bottom:var(--s-5)}
+
+/* Compare tray */
+.fg-compare-tray{position:sticky;bottom:14px;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:var(--s-5);padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l)}
+.fg-compare-tray-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.fg-compare-tray-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
+.fg-compare-chip:hover{border-color:var(--brand);color:var(--accent-strong)}
+.fg-compare-chip svg{opacity:.6}
+.fg-compare{max-width:1100px;padding:28px}
+.fg-compare-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.fg-compare-title{margin:4px 0 0;font-size:clamp(20px,2.4vw,26px);font-weight:700;letter-spacing:-.02em;color:var(--t0)}
+.fg-compare-close{position:static}
+.fg-compare-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.fg-compare-input{flex:1;min-width:200px;min-height:38px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font-size:14px;transition:border-color var(--t),box-shadow var(--t)}
+.fg-compare-input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.fg-compare-control{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--t2);font-weight:600}
+.fg-compare-control input[type=range]{width:120px;accent-color:var(--brand)}
+.fg-compare-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.fg-compare-col{display:flex;flex-direction:column;gap:10px;min-width:0;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card)}
+.fg-compare-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fg-compare-col-name{min-width:0;padding:0;font-size:13px;font-weight:700;color:var(--t0);background:none;border:none;cursor:pointer;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color var(--t)}
+.fg-compare-col-name:hover{color:var(--accent-strong)}
+.fg-compare-col-remove{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:color var(--t),border-color var(--t)}
+.fg-compare-col-remove:hover{border-color:var(--err);color:var(--err-strong)}
+.fg-compare-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize}
+.fg-compare-sample{min-height:96px;color:var(--t0);font-family:var(--fg-ff);font-size:var(--fg-size);font-weight:var(--fg-fw-h);line-height:1.25;letter-spacing:-.01em;word-break:break-word;overflow:hidden}
+.fg-compare-charset{padding-top:8px;border-top:1px solid var(--border);color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw-b);font-size:15px;line-height:1.5}
+.fg-compare-copy{margin-top:auto;min-height:34px;padding:7px;font-size:11px;font-weight:600;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);color:var(--t1);cursor:pointer;transition:color var(--t),border-color var(--t)}
+.fg-compare-copy:hover{border-color:var(--brand);color:var(--accent-strong)}
+.fg-detail-id{min-width:0}
+/* 30–52px, down from 40–72. The hero was the tallest thing in a dialog that
+   could not afford height, and the family name is now repeated at every weight
+   in the list below — it does not also have to be a poster. */
+.fg-detail-hero{margin:0 0 12px;color:var(--t0);font-family:var(--fg-ff);font-size:clamp(30px,5vw,52px);font-weight:var(--fg-fw);line-height:1.1;letter-spacing:-.03em;word-break:break-word}
+.fg-detail-facts{display:flex;gap:6px;margin:0;flex-wrap:wrap}
+/* The script list runs long on a Noto face, and it is the one tag whose value
+   is the whole string rather than the first word of it, so it wraps instead of
+   sharing the pill row's `white-space` assumption. */
+.fg-tag--scripts{max-width:100%;text-transform:none;letter-spacing:.03em}
+.fg-detail-field{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.fg-detail-field:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.fg-detail-field>span{flex-shrink:0;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.fg-detail-field input{width:100%;min-width:0;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+.fg-detail-field input::placeholder{color:var(--t3)}
+.fg-tag{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-pill)}
+/* THE WEIGHT LIST — one line per cut, drawn in that cut.
+   Replaces `.fg-weights-grid`, which was six 96px tiles reading "Ag": two
+   letters cannot show what a weight does to a WORD, which is the only question
+   a weight list is asked. It also replaces `.fg-scale-row`, which printed one
+   sentence at six sizes and ellipsised five of them.
+   The rules are the separator, not boxes: six bordered cards down a dialog is
+   six frames competing with the type they contain, and the type is the content.
+   The line clips rather than wraps so every cut occupies exactly one row and
+   the list stays a column you can run your eye down — a wrapping line would
+   make the heavier cuts taller and destroy the comparison. */
+.fg-weight-rows{margin:0;padding:0;list-style:none}
+.fg-weight-row{display:flex;align-items:baseline;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid var(--border)}
+.fg-weight-row:last-child{border-bottom:0}
+.fg-weight-line{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t0);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:25px;line-height:1.3;letter-spacing:-.015em}
+.fg-weight-tag{flex-shrink:0;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);font-variant-numeric:tabular-nums}
+.fg-weight-tag strong{color:var(--t2);font-weight:700}
+.fg-charset{color:var(--t1);font-family:var(--fg-ff);font-weight:var(--fg-fw);font-size:21px;line-height:1.8;letter-spacing:.02em;word-break:break-all}
+.fg-pair-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.fg-pair-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color var(--t)}
+.fg-pair-card:hover{border-color:var(--bh)}
+.fg-pair-preview{display:flex;flex-direction:column;gap:8px;min-height:112px;padding:16px;background:var(--bg-1)}
+.fg-pair-heading{color:var(--t0);font-family:var(--fg-ff);font-weight:var(--fg-fw-h);font-size:24px;line-height:1.1;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis}
+.fg-pair-body{color:var(--t1);font-family:var(--fg-pair-ff);font-weight:var(--fg-pair-fw);font-size:13px;line-height:1.55}
+.fg-pair-reason{margin:0;padding:10px 14px 0;font-size:11.5px;line-height:1.5;color:var(--t2)}
+.fg-pair-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding:10px 14px 12px}
+.fg-pair-name{min-width:0;font-size:12.5px;font-weight:600;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fg-pair-apply{flex-shrink:0;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11.5px;font-weight:600;border-radius:var(--radius-pill);border:1px solid var(--border);background:transparent;color:var(--t1);cursor:pointer;transition:color var(--t),background var(--t),border-color var(--t)}
+.fg-pair-apply:hover{border-color:var(--accent-strong);background:var(--accent-strong);color:var(--accent-fg)}
+.fg-detail-btn{display:inline-flex;align-items:center;min-height:38px;padding:9px 15px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
+.fg-detail-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.fg-detail-btn--primary{color:var(--accent-fg);background:var(--accent-strong);border-color:var(--accent-strong)}
+.fg-detail-btn--primary:hover{background:var(--brand-soft);border-color:var(--brand-soft);color:var(--accent-fg)}
+
+/* Per-font loading note (detail dialog) */
+.fg-loading-note{display:flex;gap:10px;align-items:center;margin:0 0 24px;padding:12px 16px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);font-size:12.5px;color:var(--t1);line-height:1.5}
+.fg-loading-note-spinner{flex-shrink:0;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:fg-spin .7s linear infinite}
+
+/* Cross-links */
+.fg-more-nav{display:flex;align-items:center;justify-content:space-between;gap:var(--s-5);margin-top:var(--s-6);padding:var(--s-5) 0;border-top:1px solid var(--border)}
+.fg-more-nav>div:first-child{display:flex;flex-direction:column;gap:4px;max-width:470px}
+.fg-more-kicker{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.fg-more-nav strong{font-size:13px;font-weight:600;line-height:1.45;color:var(--t0)}
+.fg-more-links{display:flex;justify-content:flex-end;gap:20px;flex-wrap:wrap}
+.fg-more-link{font-size:11px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
+.fg-more-link:hover{color:var(--accent-strong)}
+.fg-more-link:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+@media(max-width:768px){
+  .fg-more-nav{align-items:flex-start;flex-direction:column}
+  .fg-more-links{justify-content:flex-start}
+}
+@media(max-width:560px){
+  .fg-detail-head{padding:18px 18px 14px}
+  .fg-detail-controls{padding:12px 18px}
+  .fg-detail-body{padding:18px 18px 4px}}
+
+@media(max-width:560px){
+  .fg-detail-hero{font-size:30px}
+  .fg-compare{padding:18px}
+  .fg-charset{font-size:16px}
+  /* Stacked: at 390px a 25px line and its numeral cannot share a row without
+     the line losing most of its words to the ellipsis, and the words are the
+     point of the row. The numeral goes above, as the caption Pitch gives it. */
+  .fg-weight-row{align-items:flex-start;flex-direction:column-reverse;gap:2px;padding:10px 0}
+  .fg-weight-line{max-width:100%;font-size:21px}
+  .fg-detail-btn{flex:1 1 46%;justify-content:center}}
+
+@media(max-width:380px){
+  .fg-compare-tray{flex-direction:column;align-items:stretch}}
+
+@media(max-width:380px){
+  .fg-more-links{align-items:flex-start;flex-direction:column;gap:12px}}
+
+
+/* Aspect Ratio Calculator */
+.rc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.rc-panel{padding:20px;overflow:visible}
+/* Preset category tabs — a compact segmented switch above the chip grid. */
+.rc-tabs{display:inline-flex;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);margin-bottom:14px}
+.rc-presets{display:flex;flex-wrap:wrap;gap:6px}
+.rc-field{margin-top:18px}
+.rc-known{display:flex;flex-direction:column;gap:8px}
+.rc-known input{width:100%}
+.rc-ratio-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rc-ratio-row input{width:88px}
+.rc-flip{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
+.rc-flip svg{width:15px;height:15px}
+.rc-flip:hover{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.rc-colon{font-weight:700;color:var(--t2)}
+.rc-simplified{font-family:var(--mono);font-size:13px;color:var(--accent-strong);margin-left:6px}
+.rc-out{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.rc-out-size{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;flex-wrap:wrap}
+.rc-result-dims{display:flex;align-items:center;gap:10px}
+.rc-dim{display:inline-flex;align-items:baseline;gap:3px;font-family:var(--mono);font-size:22px;font-weight:700;color:var(--t0);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:var(--radius-s)}
+.rc-dim:hover{background:var(--accent-bg);color:var(--accent)}
+.rc-dim small{font-size:11px;color:var(--t3);font-weight:500}
+.rc-times{color:var(--t3);font-size:18px}
+.rc-vis-panel{display:flex;flex-direction:column}
+/* The visualiser STICKS while the controls scroll past it. Measured at 834px:
+   the control column is 1225px tall and this panel 343px, so 882px of the right
+   rail was empty — and the thing left behind at the top was the preview of the
+   ratio the controls below it are editing. Sticky turns the dead rail into the
+   reason the two columns exist: you can see the shape change while you change
+   it. `.tt-config` and `.fpr-config` are the same decision on the same shape of
+   page, so this is the house pattern rather than a new one.
+   Only above 760px, where the grid is genuinely two columns — stacked, a sticky
+   panel would cover the controls it is meant to be previewing. */
+@media(min-width:761px){
+  .rc-vis-panel{position:sticky;top:calc(var(--nav-clear) + var(--s-4))}
+}
+.rc-vis-head{display:flex;align-items:center;justify-content:space-between}
+.rc-vis-tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);padding:2px 8px;border-radius:var(--radius-pill)}
+.rc-vis-stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:280px;padding:20px}
+.rc-vis-box{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:2px solid var(--accent);background:var(--accent-bg);border-radius:var(--radius-s);transition:width var(--dur-3) var(--ease-out),height var(--dur-3) var(--ease-out)}
+.rc-vis-diag{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.rc-vis-diag line{stroke:var(--accent);stroke-width:1;stroke-dasharray:4 4;opacity:.45}
+.rc-vis-ratio{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent-strong)}
+.rc-vis-dims{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--accent-strong);opacity:.7}
+.rc-vis-empty{color:var(--t3);font-size:13px}
+
+/* Aspect & Resolution Calculator — preset dropdowns, stats, ratio grid */
+.arc-select{position:relative}
+.arc-select-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:10px 12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);font-family:var(--font);text-align:left;cursor:pointer;transition:border-color var(--t)}
+.arc-select-btn:hover{border-color:var(--accent)}
+.arc-select-ph{font-size:13px;color:var(--t3)}
+.arc-select-chev{width:14px;height:14px;flex-shrink:0;color:var(--t3)}
+.arc-select-pop{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:30;max-height:320px;overflow:auto;padding:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-l)}
+.arc-opt-row{display:flex;align-items:center;gap:10px;min-width:0}
+.arc-opt-text{display:flex;flex-direction:column;gap:1px;min-width:0}
+.arc-opt-name{font-size:13px;font-weight:600;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arc-opt-meta{font-family:var(--mono);font-size:10.5px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arc-thumb{display:inline-flex;align-items:center;justify-content:center;width:26px;height:18px;flex-shrink:0}
+.arc-thumb-big{width:48px;height:34px}
+.arc-thumb-box{border:1.5px solid var(--accent);background:var(--accent-bg);border-radius:2px}
+.arc-note{margin:8px 0 0;font-size:11.5px;color:var(--t3)}
+.arc-ratio-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-top:12px}
+.arc-ratio-card-name{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t0)}
+/* --t2, not --t3: at 10px on the card ground this measured 4.32:1 in dark
+   (#8e8e88 on #232b38), just under AA. --t2 takes it to 5.35:1 and light
+   improves with it. --t3 is the FAINTEST ink and is sized for larger text. */
+.arc-ratio-card-use{font-size:10px;color:var(--t2);text-align:center;line-height:1.3}
+.arc-ppi-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.arc-ppi-field{display:inline-flex;align-items:center;gap:6px}
+.arc-ppi-field input{width:88px}
+.arc-ppi-field span{font-family:var(--mono);font-size:11px;color:var(--t3)}
+.arc-ppi-or{font-size:11.5px;color:var(--t3)}
+.arc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:14px}
+.arc-stat{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 10px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);font-family:var(--font);text-align:left;cursor:pointer;transition:border-color var(--t)}
+.arc-stat:hover{border-color:var(--accent)}
+.arc-stat-k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
+.arc-stat-v{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--t0)}
+.arc-stat-sub{font-family:var(--mono);font-size:10px;color:var(--accent-strong)}
+@media(max-width:760px){.rc-grid{grid-template-columns:1fr}.rc-vis-stage{min-height:200px}.rc-tabs{display:flex;flex-wrap:wrap}}
+
+/* Future Plans — admin roadmap board */
+.fp-wrap{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.fp-head-eyebrow{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:8px}
+.fp-head-title{font-size:30px;font-weight:700;letter-spacing:-.02em;color:var(--t0);margin:0 0 6px}
+.fp-head-sub{font-size:13.5px;color:var(--t2);line-height:1.6;margin:0;max-width:560px}
+.fp-filters{display:flex;flex-wrap:wrap;gap:6px}
+.fp-group{display:flex;flex-direction:column;gap:12px}
+.fp-group-head{display:flex;align-items:center;gap:10px}
+.fp-group-label{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t1);margin:0}
+.fp-group-count{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t3);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:1px 9px}
+.fp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.fp-dot-progress{background:var(--accent)}
+.fp-dot-planned{background:var(--t2)}
+.fp-dot-exploring{background:var(--warn)}
+.fp-dot-shipped{background:var(--ok)}
+.fp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.fp-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:18px;box-shadow:var(--warm-shadow);transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
+.fp-card:hover{border-color:var(--bh);transform:translateY(-2px)}
+.fp-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.fp-card-title{font-size:14px;font-weight:650;color:var(--t0);margin:0;line-height:1.35}
+.fp-card-tag{flex-shrink:0;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong);background:var(--accent-bg);border-radius:var(--radius-s);padding:3px 8px}
+.fp-card-desc{font-size:12.5px;color:var(--t2);line-height:1.6;margin:0}
+@media(max-width:560px){.fp-grid{grid-template-columns:1fr}.fp-head-title{font-size:24px}}
+.hprice-eyebrow{color:var(--bg-0);opacity:.72}
+/* ONE COLUMN, ALWAYS. This row is the mobile base and the mobile ratio, and it
+   only ever renders inside the 340px rail. `1fr minmax(0,190px)` left the base
+   slider about 90px of track once the label, the thumb and the 15px readout had
+   taken their share — a range input you cannot aim. The viewport-width media
+   query below it never fired, because the viewport is 1440 when the rail is
+   340. Stacking costs one row of height in a disclosure that is closed by
+   default. */
+.tsc-bp-row{display:grid;grid-template-columns:1fr;gap:12px;align-items:end}
+.tsc-bp-mode{display:flex;gap:6px;margin:14px 0 0}
+.hw-prop-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
+.hw-rail-label{font-family:var(--font);font-size:var(--fs-caption);font-weight:600;color:var(--t2)}
+
+/* ─── Typography tools — shared chrome (typ-) ───────────────────────────────
+   The Font Gallery, Font Pair and Type Scale tools all read the same Google
+   Fonts catalogue, so they share one set of network-state and font-picking
+   classes rather than each inventing its own. Tool-specific layout stays in
+   the per-tool blocks (fg- / fpr- / tsc-). */
+.typ-loading{display:flex;min-height:320px;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;color:var(--t2);padding:var(--s-5)}
+.typ-loading strong{font-size:var(--fs-body);color:var(--t0)}
+.typ-loading span{max-width:46ch;font-size:var(--fs-caption);line-height:1.55}
+.typ-notice>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+/* Font picker — a specimen you can see, not a name you have to recall.
+   The trigger shows the CURRENT family rendered in itself and opens the browse
+   dialog. It replaced a native <select>, which renders every option in the UI
+   font and so could never show a single one of the faces on offer. */
+.typ-picker{display:flex;flex-direction:column;margin-bottom:14px}
+/* Specimen on its own row, above the name — NOT beside it. Side by side, a
+   104px face box clipped "Handgloves" mid-word, which reads as a broken
+   control rather than a preview. Full width the specimen gets ~290px in the
+   narrowest panel that hosts this, which is enough for a real word. */
+.typ-picker-trigger{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;align-items:center;width:100%;padding:10px 12px 10px 14px;container-type:inline-size;text-align:left;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.typ-picker-trigger:hover:not(:disabled){border-color:var(--bh);background:var(--hvr)}
+.typ-picker-trigger:focus-visible{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.typ-picker-trigger:disabled{opacity:.55;cursor:not-allowed}
+/* Fixed height: the specimen changes family on every pick, and letting it size
+   the row would bounce the whole panel each time you chose something.
+
+   The face now sets the FAMILY NAME (#font-picker-shows-handgloves), so its
+   width varies from 4 to 32 characters where "Handgloves" was always 10. Same
+   derivation as the browse tile, at one line rather than two: --fbd-cap comes
+   from specimenSizeCqw(family, 1). The 0.72 factor is the share of the trigger
+   this cell actually gets - the "Browse" pill and the two gaps take the rest,
+   and cqw resolves against the whole trigger, not this column.
+   The ellipsis IS kept here, unlike .fbd-sample: .typ-picker-name repeats the
+   full name in the UI font on the very next line, so a trimmed specimen costs
+   the reader nothing. */
+.typ-picker-face{grid-column:1;grid-row:1;display:flex;align-items:center;min-width:0;height:34px;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 0.72cqw),26px);line-height:1.05;letter-spacing:-.02em;color:var(--t0);white-space:nowrap;text-overflow:ellipsis}
+.typ-picker-id{grid-column:1;grid-row:2;display:flex;align-items:baseline;gap:7px;min-width:0}
+.typ-picker-name{flex-shrink:0;max-width:60%;font-size:12px;font-weight:650;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.typ-picker-meta{font-family:var(--mono);font-size:10px;color:var(--t2);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.typ-picker-cue{grid-column:2;grid-row:1/span 2;align-self:center;flex-shrink:0;padding:6px 11px;font-size:11px;font-weight:700;color:var(--accent-strong);background:var(--brand-bg);border-radius:var(--radius-pill)}
+/* Kept: Font Pair's "reload the catalogue" recovery button still uses it. */
+.typ-picker-clear{margin-top:6px;min-height:32px;padding:6px 12px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
+.typ-picker-clear:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.typ-picker-clear:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* Browse dialog */
+.fbd-overlay{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:clamp(12px,4vw,40px);background:rgba(8,8,12,.58);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.fbd-dialog{display:flex;flex-direction:column;width:min(1080px,100%);max-height:min(880px,92vh);padding:clamp(18px,3vw,28px);background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:0 40px 120px rgba(6,6,12,.42)}
+.fbd-dialog:focus{outline:none}
+.fbd-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.fbd-head h2{margin:0;font-size:clamp(19px,2.4vw,24px);font-weight:650;letter-spacing:-.02em;color:var(--t0)}
+.fbd-close{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.fbd-close:hover{color:var(--t0);border-color:var(--bh)}
+.fbd-close:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* Not sticky inside the dialog: the dialog's own body is the scroll container,
+   and a sticky bar inside a scrolling flex child pins to the wrong box. */
+.fbd-toolbar{position:static;margin-bottom:12px}
+.fbd-count{margin:0 0 14px;font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--t2)}
+.fbd-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+.fbd-grid{--lbry-col-min:190px}
+.fbd-tile:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* THE SPECIMEN IS THE CONTROL, SO IT MUST NEVER BE TRUNCATED.
+   At 390px this read "Hand...", "Handgl...", "Handg..." - a different amount of
+   a different word per family, so the tiles stopped being comparable at exactly
+   the width where comparing them is hardest.
+
+   `cqw` sizes the specimen off the TILE, so it shrinks with its own box instead
+   of overflowing it, at any column count and any viewport. Note cqw resolves
+   against the container's CONTENT box, so the tile's 14px side padding is
+   already discounted - calibrating against the border box gets this wrong by
+   exactly that much.
+
+   THE MULTIPLIER IS NOW PER-FAMILY (#font-picker-shows-handgloves). The tile
+   sets the family's own NAME, not the fixed word "Handgloves", so the specimen
+   is no longer one width: 1,941 families run from 4 characters to 32. A single
+   constant cannot serve both, so JS supplies --fbd-cap per tile and the
+   derivation lives with it in specimenSizeCqw (src/utils/fontGallery.js).
+   The 15 fallback is the value that shipped for "Handgloves" - a 10-character
+   word - so a tile that somehow renders without the property looks exactly as
+   it did before.
+
+   TWO LINES BUDGETED, THREE CLAMPED, and the height is checked at both: the
+   tile is 104px with 10px of vertical padding, so 84px of content box. Two
+   lines at the 30px ceiling and 1.15 leading is 69px, which fits; three lines
+   at the 13px floor is 45px, which also fits. overflow-wrap:anywhere is the
+   backstop for the longest unbreakable word in the catalogue
+   ("UnifrakturMaguntia", 18 chars); family names otherwise carry spaces and
+   wrap on them.
+
+   WHY THE CLAMP IS THREE AND NOT TWO. specimenSizeCqw solves for a size whose
+   GREEDY wrap fits two lines, and 0 of the 1,946 live families exceed that at
+   their own derived size. The clamp floor above then overrides the size on the
+   longest names: at 190px columns, 13px carries about 20 characters a line, and
+   "Noto Sans Inscriptional Parthian" and "Noto Sans Inscriptional Pahlavi" need
+   22. TWO of 1,946, and the choice for those two is a third line or a trimmed
+   specimen. This file already says which one it wants - "a specimen trimmed to
+   fit is the fault being fixed here, not a fix for it" - so the clamp widens
+   rather than the floor dropping. 11px would fit them on two lines and is the
+   size this note already calls present but not legible.
+
+   Mobbin, and it is evidence rather than taste: Linktree's font chips wrap
+   "Bricolage Grotesque" onto two lines inside the chip rather than trimming it,
+   which is the pattern extended here. Gamma clips to one line at a fixed size
+   instead - "Instrument...", "Libre..." - but it prints the full name in the UI
+   font INSIDE the same card, which is the trade .typ-picker-face makes and this
+   tile deliberately does not.
+   mobbin.com/screens/5e3d1b9f-55bb-4593-aade-10b766825aeb (Linktree)
+   mobbin.com/screens/05db44b6-6347-42df-b903-6bcf6f7ab24a (Gamma)
+
+   The ellipsis is GONE rather than kept as a backstop. It cannot fire now that
+   the size is derived from the character count, and leaving it would mean a
+   long name silently trimmed instead of visibly mis-sized - a specimen trimmed
+   to fit is the fault being fixed here, not a fix for it. */
+.fbd-sample{max-width:100%;overflow:hidden;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,600);font-size:clamp(13px,calc(var(--fbd-cap,15) * 1cqw),30px);line-height:1.15;letter-spacing:-.02em;color:var(--t0);text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3}
+/* A tile whose face has not registered yet shows nothing rather than the
+   fallback: the tile exists to be judged, and a fallback pretending to be the
+   family is the one thing it must never do. */
+.fbd-sample--pending{color:transparent;background:linear-gradient(90deg,var(--bg-2),var(--bg-3),var(--bg-2));background-size:200% 100%;border-radius:var(--radius-xs);animation:fg-shimmer 1.4s linear infinite}
+.fbd-more{display:flex;justify-content:center;padding:18px 0 4px}
+.fbd-empty{margin-bottom:8px}
+
+/* ── The per-family detail view, and the two tabs the founder asked for ──────
+   Three fixed rows and ONE scroller: head, tabs, scrolling panel, pinned
+   action. #305 found the Font Gallery's specimen dialog 1,763px tall in a 900px
+   viewport with every action below the fold, and noted that adding tabs is
+   exactly how that comes back. It does not come back here because the dialog
+   never grows — .fbd-detail is a flex column inside the same capped
+   .fbd-dialog, so a longer panel scrolls the panel, not the dialog. */
+.fbd-info{display:flex;align-items:center;justify-content:center;width:30px;height:30px;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.fbd-info:hover{color:var(--t0);border-color:var(--bh)}
+.fbd-info:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fbd-detail{display:flex;flex-direction:column;flex:1;min-height:0}
+.fbd-detail-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.fbd-back{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 8px;font:inherit;font-size:12px;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.fbd-back:hover{color:var(--t0);border-color:var(--bh)}
+.fbd-back:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* The name is the specimen — it is set in the family it names, which is the
+   same contract the tiles keep. */
+.fbd-detail-name{margin:0;min-width:0;font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,700);font-size:clamp(21px,3.2vw,30px);line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
+.fdx-tabs{display:flex;gap:4px;flex-shrink:0;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.fdx-tab{position:relative;padding:9px 14px;font:inherit;font-size:13px;font-weight:550;color:var(--t2);background:none;border:0;border-radius:var(--radius-s) var(--radius-s) 0 0;cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
+.fdx-tab:hover{color:var(--t0)}
+.fdx-tab:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.fdx-tab--on{color:var(--t0)}
+/* Sits ON the 1px border rather than above it, so the pair reads as one edge
+   and not as a rule with a second rule stacked on it. */
+.fdx-tab--on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:var(--brand);border-radius:2px 2px 0 0}
+.fbd-detail-body{flex:1;min-height:0;overflow-y:auto;padding-right:4px}
+.fbd-detail-actions{flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.fbd-use{width:100%;padding:12px 18px;font:inherit;font-size:14px;font-weight:600;color:#fff;background:var(--brand);border:1px solid var(--brand);border-radius:var(--radius);cursor:pointer}
+.fbd-use:hover{filter:brightness(1.06)}
+.fbd-use:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fbd-cuts{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
+.fbd-cuts li{display:flex;flex-direction:column;gap:3px;padding-bottom:13px;border-bottom:1px solid var(--border)}
+.fbd-cuts li:last-child{border-bottom:0;padding-bottom:0}
+.fbd-cut-line{font-family:var(--fbd-ff,var(--font));font-weight:var(--fbd-fw,400);font-size:clamp(15px,2.4vw,20px);line-height:1.32;color:var(--t0)}
+.fbd-cut-label{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
+/* A definition list, not a card grid. Nine facts in nine equally-weighted
+   rounded boxes is the "every idea in a card" failure — these are rows of a
+   spec, they have a natural label/value shape, and dl says so semantically. */
+.fdx-facts{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:0;margin:0}
+.fdx-fact{display:contents}
+.fdx-fact dt{grid-column:1;padding:9px 20px 9px 0;font-size:12px;font-weight:550;color:var(--t2);white-space:nowrap;border-bottom:1px solid var(--border)}
+.fdx-fact dd{grid-column:2;margin:0;padding:9px 0;font-size:13px;line-height:1.45;color:var(--t0);border-bottom:1px solid var(--border)}
+.fdx-fact:last-child dt,.fdx-fact:last-child dd{border-bottom:0}
+.fdx-note{margin-top:18px;padding:14px 16px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius)}
+.fdx-note h4{margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--t0)}
+.fdx-note p{margin:0;font-size:13px;line-height:1.5;color:var(--t1)}
+.fdx-source{margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--t2)}
+.fdx-source--lead{margin:0 0 16px}
+
+/* Each example is the family doing a job, with the question it answers stated
+   above it. Aave's brand-typography section states a role under each face
+   rather than adjectives; the caption here is that idea turned into a question,
+   because an example a reader cannot interpret teaches nothing.
+
+   THIS IS NOW A LIBRARY, NOT A LAYOUT. The scenes are chosen per family in
+   src/utils/fontScenes.js and any one family renders three or four of the
+   sixteen below, so these rules are grouped by the role that reaches them and
+   several groups never co-occur on screen.
+
+   WHAT IS SPECIMEN AND WHAT IS CHROME, decided once here: type set in
+   the --fdx-ff family is the one under examination and is the thing being
+   judged (written as a bare token name, not as a var() call: design-tokens
+   .test.js scans this stylesheet without stripping comments, so a var() in
+   prose reads to it as a real fallback-less usage and fails the build);
+   the small labels around it (.fdx-ex-kicker, .fdx-ex-runglabel, the gutter
+   numerals) stay in --font or --mono so a reader can always tell which letters
+   are the evidence. The one deliberate exception is .fdx-ex-overline, which is
+   set in the family: on a poster the date line really is part of the
+   composition, and how a display face behaves at 12px is worth seeing.
+
+   THREE WEIGHT CUSTOM PROPERTIES, all snapped upstream to cuts the family
+   really ships: --fdx-bw body, --fdx-mw mid, --fdx-hw bold. On a single-weight
+   family they all resolve to the same number and every scene renders flat,
+   which is the truth about that family. The fallbacks in var() are only for a
+   scene rendered outside the panel. */
+.fdx-examples{display:flex;flex-direction:column;gap:22px}
+.fdx-ex-head h4{margin:0;font-size:12px;font-weight:600;color:var(--t0)}
+.fdx-ex-head p{margin:2px 0 10px;font-size:11.5px;line-height:1.45;color:var(--t2)}
+.fdx-ex-body{padding:18px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--fdx-ff,var(--font));color:var(--t0);overflow-wrap:break-word}
+.fdx-ex-body p,.fdx-ex-body h5,.fdx-ex-body li,.fdx-ex-body td,.fdx-ex-body th,.fdx-ex-body dt,.fdx-ex-body dd,.fdx-ex-body blockquote{font-family:inherit}
+/* Anything that can outgrow the dialog scrolls in its OWN box. A 64-character
+   code line and a four-column table must never make the panel — or the page —
+   scroll sideways, which is the regression #350 fixed on the specimen and this
+   block is wide enough to reintroduce. */
+.fdx-ex-scroll{max-width:100%;overflow-x:auto}
+
+/* Shared chrome. --t2 not --t3 throughout: --t3 measures 4.29:1 on dark, which
+   clears nothing under 24px, and every label here is under 24px. */
+.fdx-ex-kicker{display:block;margin-bottom:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+.fdx-ex-overline{display:block;font-weight:var(--fdx-mw,500);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--t2)}
+/* p.fdx-ex-verdict, not .fdx-ex-verdict. This is the app COMMENTING on the
+   specimen, so it must be in the UI font by the rule stated at the top of
+   this block — but .fdx-ex-body p {font-family:inherit} is more specific than
+   a lone class and was winning, so the sentence explaining that a script is
+   hard to read at length was itself set in the script, at 12px. Caught in a
+   screenshot, not by any structural check: every assertion about fonts here
+   passed while this was wrong. */
+.fdx-ex-body p.fdx-ex-verdict{margin:12px 0 0;padding-top:12px;font-family:var(--font);font-size:12px;line-height:1.5;color:var(--t2);border-top:1px solid var(--border)}
+
+/* ── Display: poster, masthead, title card, and the same face small ───────── */
+.fdx-ex-poster{text-align:center}
+.fdx-ex-postertitle{margin:10px 0;font-weight:var(--fdx-hw,700);font-size:clamp(30px,6.5vw,48px);line-height:.98;letter-spacing:-.02em}
+.fdx-ex-posterfoot{display:block;font-weight:var(--fdx-bw,400);font-size:13px;line-height:1.4;color:var(--t1)}
+.fdx-ex-mastname{margin:0;font-weight:var(--fdx-hw,700);font-size:clamp(26px,5.5vw,38px);line-height:1.05;letter-spacing:-.02em}
+.fdx-ex-mastdeck{margin:8px 0 0;padding-top:10px;font-weight:var(--fdx-bw,400);font-size:14px;line-height:1.45;color:var(--t1);border-top:1px solid var(--border)}
+.fdx-ex-titlecard{text-align:center}
+.fdx-ex-title{margin:10px 0 0;font-weight:var(--fdx-hw,700);font-size:clamp(20px,4vw,30px);line-height:1.2;letter-spacing:.08em;text-transform:uppercase}
+/* 13px is the claim the caption makes, so it is a literal 13px and not a
+   clamp — a scene whose whole argument is a size must actually be that size. */
+.fdx-ex-smalltext{margin:0;font-weight:var(--fdx-bw,400);font-size:13px;line-height:1.55;color:var(--t1)}
+
+/* ── Editorial: article, reading column, pull quote ───────────────────────── */
+.fdx-ex-editorial h5{margin:0 0 8px;font-weight:var(--fdx-hw,700);font-size:clamp(19px,3vw,25px);line-height:1.16;letter-spacing:-.015em}
+.fdx-ex-lede{margin:0 0 10px;font-weight:var(--fdx-bw,400);font-size:15px;line-height:1.5;color:var(--t1)}
+.fdx-ex-editorial p:last-child{margin:0;font-weight:var(--fdx-bw,400);font-size:13.5px;line-height:1.6;color:var(--t1)}
+/* A REAL MEASURE, which is the entire point of this scene: 34em at 14px is
+   roughly 62 characters, inside the 45–75 the copy itself talks about. Without
+   the ch cap the column is however wide the dialog is, and the scene would be
+   asking a question it had just prevented the reader from answering. */
+.fdx-ex-column p{max-width:34em;margin:0 0 11px;font-weight:var(--fdx-bw,400);font-size:14px;line-height:1.62;color:var(--t1)}
+.fdx-ex-column p:last-child{margin-bottom:0}
+.fdx-ex-pullquote blockquote{margin:0;padding-left:14px;border-left:2px solid var(--bh)}
+.fdx-ex-pullquote blockquote p{margin:0;font-weight:var(--fdx-mw,500);font-size:clamp(17px,2.8vw,22px);line-height:1.35;letter-spacing:-.01em}
+.fdx-ex-attrib{display:block;margin-top:10px;padding-left:16px;font-family:var(--font);font-size:11.5px;color:var(--t2)}
+
+/* ── Slab: signage ────────────────────────────────────────────────────────── */
+.fdx-ex-signrow{display:flex;align-items:baseline;gap:14px}
+.fdx-ex-signnum{font-weight:var(--fdx-hw,700);font-size:clamp(34px,7vw,52px);line-height:1}
+.fdx-ex-signname{font-weight:var(--fdx-mw,500);font-size:clamp(19px,3.4vw,26px);letter-spacing:-.01em}
+.fdx-ex-signnote{margin:12px 0 0;padding-top:10px;font-weight:var(--fdx-bw,400);font-size:13px;line-height:1.5;color:var(--t1);border-top:1px solid var(--border)}
+
+/* ── Sans: interface, dense data, a form under load ───────────────────────── */
+.fdx-ex-bar{display:flex;gap:4px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.fdx-ex-tab{padding:5px 10px;font-weight:var(--fdx-bw,400);font-size:13px;color:var(--t2);border-radius:var(--radius-s)}
+.fdx-ex-tab--on{font-weight:var(--fdx-hw,600);color:var(--t0);background:var(--bg-2)}
+.fdx-ex-uinote{margin:0 0 12px;font-weight:var(--fdx-bw,400);font-size:13px;line-height:1.5;color:var(--t1)}
+.fdx-ex-uirow{display:flex;flex-wrap:wrap;gap:8px}
+.fdx-ex-btn{display:block;padding:9px 14px;font-weight:var(--fdx-hw,600);font-size:13px;text-align:center;color:var(--t0);background:var(--bg-2);border:1px solid var(--bh);border-radius:var(--radius-s)}
+.fdx-ex-btn--quiet{font-weight:var(--fdx-bw,400);color:var(--t2);background:none}
+.fdx-ex-table{width:100%;border-collapse:collapse;font-size:13px}
+.fdx-ex-table th{padding:0 0 7px;font-weight:var(--fdx-hw,600);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;color:var(--t2);border-bottom:1px solid var(--border);white-space:nowrap}
+.fdx-ex-table td{padding:8px 0;font-weight:var(--fdx-bw,400);color:var(--t1);border-bottom:1px solid var(--border);white-space:nowrap}
+.fdx-ex-table td:first-child{color:var(--t0)}
+.fdx-ex-table th:not(:first-child),.fdx-ex-table td:not(:first-child){padding-left:18px;text-align:right}
+.fdx-ex-table tr:last-child td{border-bottom:0}
+.fdx-ex-form{display:flex;flex-direction:column;gap:5px}
+.fdx-ex-label{font-weight:var(--fdx-hw,600);font-size:12px;color:var(--t0)}
+.fdx-ex-label--2{margin-top:12px}
+.fdx-ex-input{padding:9px 11px;font-weight:var(--fdx-bw,400);font-size:13px;color:var(--t0);background:var(--bg-2);border:1px solid var(--bh);border-radius:var(--radius-s)}
+.fdx-ex-input--bad{border-color:var(--err-strong)}
+.fdx-ex-hint{font-weight:var(--fdx-bw,400);font-size:11.5px;line-height:1.45;color:var(--t2)}
+.fdx-ex-error{font-weight:var(--fdx-mw,500);font-size:11.5px;line-height:1.45;color:var(--err-strong)}
+
+/* ── Monospace: code, terminal, figures ───────────────────────────────────── */
+/* white-space:pre and NO tab stops, NO text-align — if the columns land, the
+   face did it. That is the only thing these two scenes are asking. */
+.fdx-ex-codelines{counter-reset:fdxln;margin:0;padding:0;list-style:none;font-size:12.5px;line-height:1.7}
+.fdx-ex-codelines li{counter-increment:fdxln;display:flex;gap:14px;white-space:pre;font-weight:var(--fdx-bw,400);color:var(--t1)}
+.fdx-ex-codelines li::before{content:counter(fdxln);flex:none;width:1.6em;text-align:right;color:var(--t2);-webkit-user-select:none;user-select:none}
+.fdx-ex-shell{margin:0;font-size:12.5px;line-height:1.7;font-weight:var(--fdx-bw,400);color:var(--t1);white-space:pre}
+.fdx-ex-figlist{margin:0}
+.fdx-ex-figrow{display:flex;justify-content:space-between;gap:24px;padding:7px 0;border-bottom:1px solid var(--border)}
+.fdx-ex-figrow:last-child{border-bottom:0}
+.fdx-ex-figrow dt{font-weight:var(--fdx-bw,400);font-size:13.5px;color:var(--t1)}
+/* NO font-variant-numeric. Forcing tabular figures onto a face that has none
+   would answer the question this scene exists to ask. */
+.fdx-ex-figrow dd{margin:0;font-weight:var(--fdx-mw,500);font-size:15px;color:var(--t0)}
+
+/* ── Script: invitation, signature, and where it stops working ────────────── */
+.fdx-ex-invite{text-align:center}
+.fdx-ex-invite .fdx-ex-overline{letter-spacing:.06em;text-transform:none}
+.fdx-ex-invitetitle{margin:12px 0;font-weight:var(--fdx-hw,700);font-size:clamp(24px,5vw,38px);line-height:1.2}
+.fdx-ex-invitefoot{display:block;font-weight:var(--fdx-bw,400);font-size:14px;line-height:1.45;color:var(--t1)}
+.fdx-ex-sign{margin:0;font-weight:var(--fdx-bw,400);font-size:clamp(24px,5vw,38px);line-height:1.3}
+.fdx-ex-signfoot{display:block;margin-top:10px;font-family:var(--font);font-size:11.5px;color:var(--t2)}
+
+/* ── Symbols: the marks, because letters are not what this family draws ───── */
+/* anywhere, not break-word: a barcode family renders each character as a wide
+   block, so a 26-character run is thousands of pixels and has no spaces in it
+   for a normal break to use. */
+.fdx-ex-glyphrow{margin:0 0 10px;font-weight:var(--fdx-bw,400);font-size:clamp(17px,3.4vw,24px);line-height:1.6;overflow-wrap:anywhere}
+.fdx-ex-glyphrow:last-child{margin-bottom:0}
+
+/* ── The ladder, drawn only when the family ships three or more cuts ──────── */
+.fdx-ex-ladder{display:flex;flex-direction:column;gap:12px}
+.fdx-ex-rung{display:flex;align-items:baseline;justify-content:space-between;gap:16px;min-width:0}
+.fdx-ex-rungline{margin:0;min-width:0;font-size:clamp(19px,3.6vw,27px);line-height:1.2;overflow-wrap:anywhere}
+.fdx-ex-runglabel{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--t2)}
+
+/* ── The outbound search, worded as a search ──────────────────────────────── */
+.fdx-fiu-note{margin:18px 0 0;padding-top:14px;font-size:11.5px;line-height:1.55;color:var(--t2);border-top:1px solid var(--border)}
+/* Resting underline, not a hover one — founder direction 2026-09-02 rules out
+   hover-only affordances on touch, and the footer attribution link settled the
+   same question the same way. 70% of currentColor rather than a fixed token,
+   which is what measured clear of 1.4.11 there. */
+/* Radius at REST, not on :focus-visible — see the note on the global
+   :focus-visible rule near the top of this file. An inline link paints no box,
+   so 2px is inert here and exists only so the ring has a shape to trace. */
+.fdx-fiu{border-radius:2px;color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
+.fdx-fiu:hover{color:var(--t0)}
+.fdx-fiu:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* ── The "In use" tab ────────────────────────────────────────────────────────
+   Photographs of real work set in the family. It ships EMPTY for every family
+   and will stay that way until an image arrives with its provenance attached —
+   see src/data/fontRealWorldUses for the rule and the founder's decision.
+
+   THE EMPTY STATE HAS NO ILLUSTRATION, AND THAT IS THE DESIGN DECISION HERE.
+   Jira's and Xero's empty states both draw one and both work, but neither of
+   them is a panel ABOUT A MISSING PICTURE: a grey box with a picture glyph in
+   it, in this panel, is indistinguishable from an image that failed to load —
+   the exact failure PRODUCT.md names when it says a decorative mock-up "reads
+   as a component that failed to load". So the shape taken is Lyssna's: a
+   heading naming what is absent, prose naming the CONDITION under which it
+   would appear, and one outbound link. Type only, on the panel's own ground,
+   with no dashed box and no frame — a frame would be an empty slot, and an
+   empty slot is a thing waiting to be filled rather than a thing that is
+   deliberately not there yet.
+
+   Held at a reading measure rather than run to the full dialog width: this is
+   three short paragraphs of explanation, and 60ch is where they stop being a
+   wall. */
+.fdx-empty{max-width:60ch;padding:6px 0 2px}
+.fdx-empty-head{margin:0 0 10px;font-size:14.5px;font-weight:650;letter-spacing:-.01em;color:var(--t0)}
+.fdx-empty-body{margin:0 0 10px;font-size:12.5px;line-height:1.6;color:var(--t2)}
+.fdx-empty-body--last{margin-bottom:0}
+
+/* The filled state. One column: these are photographs of printed matter and
+   signage, and a two-up grid at dialog width would render each one too small to
+   read the type in — which is the only reason the picture is there. */
+.fdx-uses{display:flex;flex-direction:column;gap:22px;margin:0;padding:0;list-style:none}
+.fdx-use figure{margin:0}
+/* CAPPED, and `contain` rather than `cover`. MEASURED with a 1200px-wide test
+   image seeded into the registry: uncapped it rendered 797px tall inside a
+   792px dialog and pushed the caption — which carries the LICENCE, the reason
+   the photograph is allowed to be on the page at all — off the bottom. A
+   licence that scrolls away from its picture is not attached to anything.
+   `cover` would have solved the height by cropping, which on a photograph of
+   type in use removes the thing the reader came to look at, so the whole image
+   is shown letterboxed on the panel ground instead. */
+.fdx-use-img{display:block;width:100%;height:auto;max-height:min(56vh,420px);object-fit:contain;border-radius:var(--radius);border:1px solid var(--border);background:var(--cbg)}
+/* The caption is a stack rather than a run of separated spans: the credit and
+   the licence are two different facts about who may show this, and running them
+   together with middots invites a reader to skim past the one that matters. */
+.fdx-use-cap{display:flex;flex-direction:column;gap:3px;margin-top:10px}
+.fdx-use-title{font-size:12.5px;font-weight:600;color:var(--t0)}
+.fdx-use-credit{font-size:11.5px;color:var(--t1)}
+.fdx-use-licence{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t2)}
+.fdx-use-src{align-self:flex-start;margin-top:3px;font-size:11.5px}
+@media(max-width:560px){
+  .fbd-dialog{max-height:96vh;padding:16px}
+  /* 200px, not 150px. At 150 a phone got two ~150px tiles, and a 122px content
+     box cannot hold ten characters of a display face at a judgeable size — the
+     specimen either ellipsised (what shipped) or shrank under 17px (what the
+     first fix did). 200 makes a 390px phone one full-width tile, where the face
+     renders at the full 30px ceiling, and still gives two tiles from ~470px up.
+     Fewer families per screen is the right trade for a picker whose entire
+     premise is that you choose by LOOKING: search and the category tray are how
+     a 1,852-family corpus is actually navigated, not scrolling. */
+  .fbd-grid{--lbry-col-min:200px}
+  /* NO `width` here. This is the third time this control has been given a fixed
+     face box and the second time it has had to be taken away again — the design
+     note above `.typ-picker-trigger` records the first, where a 104px box cut
+     "Handgloves" mid-word and read as a broken control rather than a preview.
+     `width:78px` did it again and worse: at 390px the specimen showed "Handglo"
+     with the o sliced down the middle and ~200px of empty trigger to the right
+     of the cut. The base rule already has everything needed to stay inside the
+     row — `min-width:0`, `overflow:hidden`, and a `minmax(0,1fr)` grid track —
+     so the width was never load-bearing, only harmful. The font-size drop is
+     kept; that is what actually buys room on a phone. */
+  .typ-picker-face{font-size:22px}
+  .typ-picker-cue{display:none}
+}
+.fpr-grid>*{min-width:0}
+
+/* ─── Type Scale Generator (/typescale) — tsc- ─────────────────────────────── */
+.tsc-page{min-width:0;padding-bottom:var(--s-4)}
+/* ── The masthead ──────────────────────────────────────────────────────────
+   Quiet on purpose. `.tsc-hero h1` was clamp(38px,5vw,64px) in the display
+   face, which made the largest type on a page ABOUT type the one string the
+   visitor cannot change — it set a scale the specimen then had to compete
+   with, and it is the first thing the eye lands on when judging whether a page
+   looks authored or assembled. The ladder is the loudest thing here now.
+
+   The two-column hero grid went with it. It reserved minmax(380px,560px) for a
+   paragraph that is one sentence long. */
+.tsc-masthead{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-5);margin-bottom:var(--s-4)}
+.tsc-masthead-copy{min-width:0;max-width:62ch}
+.tsc-masthead h1{margin:0;font-family:var(--display);font-size:clamp(26px,3vw,34px);font-weight:500;line-height:1.1;letter-spacing:-.02em;color:var(--t0)}
+.tsc-masthead-copy>p{margin:6px 0 0;font-size:13.5px;line-height:1.6;color:var(--t2)}
+.tsc-scale-term{display:flex;flex-direction:column;min-width:0}
+.tsc-scale-custom{display:flex;flex-direction:column;margin:calc(var(--s-4) * -1 + 4px) 0 var(--s-4);padding:12px 18px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l)}
+/* NO REORDER HERE ANY MORE, and Font Pair's equivalent block above is NOT the
+   pattern to copy for this page.
+
+   #327 added one because the rail held every input the tool had and sat 1,836px
+   below the ladder at 1280. Both halves of that are now false: the base and the
+   ratio live in `.tsc-scale-bar` above this grid, and the rail is markup-ordered
+   after the ladder. `1fr 340px` with the ladder first in the DOM puts the wide
+   column where the ladder is and the rail on the right, which is what the
+   reorder was buying. */
+.tsc-grid>*{min-width:0}
+.tsc-panel{display:flex;flex-direction:column;min-width:0;padding:24px;background:var(--card);overflow:hidden}
+.tsc-ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-4);flex-wrap:wrap;margin-bottom:var(--s-4);padding-bottom:var(--s-4);border-bottom:1px solid var(--border)}
+.tsc-ladder-head>div{flex:1 1 240px;min-width:0}
+.tsc-ladder-head .tsc-width-switch{flex:0 0 auto;margin-bottom:0}
+.tsc-ladder-head .tsc-width-btn{white-space:nowrap}
+.tsc-width-switch{display:flex;gap:3px;margin-bottom:var(--s-4);padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.tsc-width-btn:hover{color:var(--t0)}
+.tsc-width-btn--on{color:var(--t0);background:var(--card);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tsc-width-btn:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+/* The fluid/fixed pair. Same treatment as the width switch it used to borrow
+   the class from, and a class of its own now that one of the two lives inside
+   a disclosure and the other does not — a test asking for "the first width
+   button" must not be able to reach a hidden mode button. */
+.tsc-mode-btn{flex:1;min-height:34px;padding:7px 10px;font-size:11px;font-weight:600;color:var(--t1);background:transparent;border:1px solid transparent;border-radius:var(--radius-xs);cursor:pointer;transition:background var(--t),border-color var(--t),color var(--t)}
+.tsc-mode-btn:hover{color:var(--t0)}
+.tsc-mode-btn--on{color:var(--t0);background:var(--card);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tsc-mode-btn:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.tsc-sample-input{flex:1;min-width:0;height:36px;padding:0 12px;font-family:var(--font);font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);transition:border-color var(--t),box-shadow var(--t)}
+.tsc-sample-input::placeholder{color:var(--t3)}
+.tsc-sample-input:hover{border-color:var(--bh)}
+.tsc-sample-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+
+.tsc-ladder{display:flex;flex-direction:column;width:100%;border:1px solid var(--border);border-radius:var(--radius-s);overflow:hidden}
+.tsc-ladder--clamped{max-width:var(--tsc-w);margin-inline:auto}
+.tsc-fit-note{margin:0;padding:10px 16px;font-size:11px;line-height:1.45;color:var(--t1);background:var(--brand-bg);border-bottom:1px solid color-mix(in srgb,var(--brand) 22%,var(--border))}
+.tsc-row-sub{font-family:var(--mono);font-size:9px;color:var(--t3)}
+.tsc-row-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t0);font-family:var(--tsc-body-ff);font-size:var(--tsc-fs);font-weight:var(--tsc-body-fw);line-height:var(--tsc-lh);letter-spacing:var(--tsc-body-ls)}
+.tsc-row-text--heading{font-family:var(--tsc-heading-ff);font-weight:var(--tsc-heading-fw);letter-spacing:var(--tsc-heading-ls)}
+.tsc-delivery{margin-top:var(--s-5);padding-top:var(--s-5);border-top:1px solid var(--border)}
+.tsc-delivery-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-4);margin-bottom:var(--s-4)}
+.tsc-delivery-head>div:first-child{min-width:0}
+.tsc-view-switch{display:flex;gap:3px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.tsc-view-btn{min-height:34px;padding:7px 11px;font-size:10.5px;font-weight:600;color:var(--t1);background:transparent;border:1px solid transparent;border-radius:var(--radius-xs);cursor:pointer;transition:background var(--t),border-color var(--t),color var(--t)}
+.tsc-view-btn:hover{color:var(--t0)}
+.tsc-view-btn--on{color:var(--t0);background:var(--card);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tsc-view-btn:focus-visible,.tsc-fmt-btn:focus-visible,.tsc-copy-all:focus-visible,.tsc-copy-primary:focus-visible,.tsc-reset:focus-visible,.tsc-handoff:focus-visible,.tsc-weight:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.tsc-article{padding:clamp(20px,3vw,36px);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1)}
+.tsc-article-eyebrow{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.tsc-article-h1,.tsc-article-h2{margin:14px 0 8px;color:var(--t0);font-family:var(--tsc-heading-ff);font-size:var(--tsc-fs);font-weight:var(--tsc-heading-fw);line-height:var(--tsc-lh);letter-spacing:var(--tsc-heading-ls)}
+.tsc-article-lede,.tsc-article-body,.tsc-article-small{margin:0 0 14px;max-width:64ch;color:var(--t1);font-family:var(--tsc-body-ff);font-size:var(--tsc-fs);font-weight:var(--tsc-body-fw);line-height:var(--tsc-lh);letter-spacing:var(--tsc-body-ls)}
+.tsc-article-small{margin-bottom:0;color:var(--t2)}
+.tsc-developer-view{display:flex;flex-direction:column}
+.tsc-code-meta{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:10px;flex-wrap:wrap}
+.tsc-fmt{display:flex;gap:3px;margin-top:6px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.tsc-fmt-btn{min-height:32px;padding:6px 10px;font-size:10.5px;font-weight:600;color:var(--t1);background:transparent;border:1px solid transparent;border-radius:var(--radius-xs);cursor:pointer;transition:background var(--t),border-color var(--t),color var(--t)}
+.tsc-fmt-btn:hover{color:var(--t0)}
+.tsc-fmt-btn--on{color:var(--t0);background:var(--card);border-color:var(--border);box-shadow:var(--shadow-xs)}
+.tsc-code-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.tsc-copy-all{min-height:34px;padding:7px 11px;font-size:10.5px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
+.tsc-copy-all:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.tsc-copy-primary{min-height:38px;padding:8px 14px;font-size:11px;font-weight:650;color:var(--accent-fg);background:var(--accent-strong);border:1px solid var(--accent-strong);border-radius:var(--radius-s);cursor:pointer;transition:background var(--t),border-color var(--t)}
+/* Hover DARKENS a filled primary. The old --brand-soft hover put white on
+   #4D90FF at 3.11:1 for 11px text (2026-09-09); an 88/12 mix towards the
+   theme's ink is 6.9:1 light and 6.5:1 dark. */
+.tsc-copy-primary:hover{background:color-mix(in srgb,var(--accent-strong) 88%,var(--t0));border-color:color-mix(in srgb,var(--accent-strong) 88%,var(--t0))}
+.tsc-export{max-height:420px;margin:0;padding:18px;font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);overflow:auto}
+.tsc-export:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* FOCUS VISIBILITY. This was `outline:none` plus a 3px ring in --brand-bg,
+   which is an 8%-alpha blue: composited over the white panel it measures
+   1.12:1, against the 3:1 that WCAG 2.2 SC 2.4.11 requires and the plain
+   "visible" that SC 2.4.7 requires. Every button on the same page already used
+   a real 2px outline, so this was an inconsistency rather than a decision — a
+   keyboard user could not see where they were among the controls that ARE the
+   tool. The tinted ring stays as a soft halo behind a real outline. */
+.tsc-select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.tsc-slider-row{margin-bottom:18px}
+.tsc-slider-row input[type="range"]{width:100%;accent-color:var(--brand)}
+.tsc-slider-head{display:flex;justify-content:space-between;align-items:baseline}
+.tsc-fonts{display:flex;flex-direction:column;margin-top:6px;padding-top:var(--s-4);border-top:1px solid var(--border)}
+.tsc-weights{display:flex;gap:4px;flex-wrap:wrap;margin:-6px 0 16px}
+.tsc-weight{min-height:30px;padding:5px 9px;font-family:var(--mono);font-size:10px;font-weight:650;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
+.tsc-weight:hover{border-color:var(--bh);color:var(--t0)}
+.tsc-weight--on{color:var(--t0);background:var(--brand-bg);border-color:color-mix(in srgb,var(--brand) 32%,var(--border))}
+.tsc-handoff{align-self:flex-start;min-height:36px;margin-bottom:6px;padding:8px 12px;font-size:11px;font-weight:650;color:var(--accent-strong);background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 28%,var(--border));border-radius:var(--radius-s);cursor:pointer;transition:background var(--t),border-color var(--t),color var(--t)}
+.tsc-handoff:hover{background:var(--accent-strong);color:var(--accent-fg);border-color:var(--accent-strong)}
+/* Reset now sits in the masthead, where it reads as acting on the whole page.
+   It was the thirteenth and last control in the rail. */
+.tsc-reset{flex:0 0 auto;min-height:36px;padding:8px 12px;font-size:11px;font-weight:600;color:var(--t1);background:transparent;border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
+.tsc-reset:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.tsc-reset:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* ── Fine tuning ───────────────────────────────────────────────────────────
+   A plain text toggle, not a twelfth card and not an accordion chevron. The
+   page was already criticised for containers; adding one to hide the others
+   would have been the wrong instrument. Dialpad's settings screen on Mobbin
+   (mobbin.com/screens/6087e60e-1bc3-44dd-9f6b-252fb48706ab) is the reference:
+   primary control at the top, everything else behind a bare "Hide advanced
+   options" link in accent text. */
+/* The radius is declared AT REST, not in the focus rule. A :focus-visible that
+   also sets border-radius makes the outline trace a shape the control does not
+   have when it is not focused — tests/unit/focus-ring-geometry.test.js fails
+   the build on it, and it caught this rule. */
+.tsc-tuning-toggle{align-self:flex-start;margin-top:var(--s-4);padding:6px 0;font-size:11.5px;font-weight:650;color:var(--accent-strong);background:none;border:0;border-radius:var(--radius-xs);cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;text-decoration-color:color-mix(in srgb,var(--accent-strong) 40%,transparent);transition:text-decoration-color var(--t)}
+.tsc-tuning-toggle:hover{text-decoration-color:currentColor}
+.tsc-tuning-toggle:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.tsc-tuning{margin-top:var(--s-3)}
+/* Three links. What stood above them was a mono-caps kicker ("Continue your
+   typography system") and an aphorism in bold ("A scale is half the system —
+   the families carry the rest"), neither of which said anything the links do
+   not — the register the anti-slop bar calls generic aspirational copy. */
+.tsc-more{display:flex;align-items:center;gap:24px;flex-wrap:wrap;margin-top:var(--s-6);padding:var(--s-5) 0;border-top:1px solid var(--border)}
+.tsc-more-link{font-size:11px;font-weight:600;color:var(--t1);text-decoration:none;transition:color var(--t)}
+.tsc-more-link:hover{color:var(--accent-strong)}
+.tsc-more-link:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+@media(max-width:768px){
+  .tsc-delivery-head{flex-direction:column}
+  .tsc-more{align-items:flex-start;flex-direction:column;gap:12px}
+}
+@media(max-width:560px){
+  .tsc-masthead{align-items:flex-start;flex-direction:column;gap:var(--s-3)}
+  .tsc-masthead-copy>p{font-size:13px}
+  .tsc-panel{padding:18px}
+  .tsc-ladder-head{margin-bottom:18px}
+  .tsc-sample-row{align-items:flex-start;flex-direction:column;gap:6px}
+  .tsc-sample-row .tsc-sample-input{width:100%}}
+
+@media(max-width:560px){
+  .tsc-view-switch{width:100%}
+  .tsc-view-btn{flex:1}
+  .tsc-code-meta{align-items:flex-start;flex-direction:column}
+  .tsc-copy-primary{width:100%}
+  .tsc-export{font-size:10px}}
+
+@media(max-width:380px){
+  .tsc-panel{padding:16px}
+  .tsc-scale-bar{padding:14px}
+  .tsc-width-btn{font-size:10px;padding:7px 6px}
+}
+
+/* Coarse pointers need a 44px target even when the compact visual treatment is
+   useful on small screens. These are the typography controls QA identified.
+   Size only — the compare button's PLACEMENT is set once in the premium block
+   below, which comes later in the cascade and would silently win anyway. */
+@media(pointer:coarse){
+  .fg-card-compare{width:44px;height:44px;opacity:1}}
+
+
+/* Font Gallery */
+/* min-height 320, not 420 (#surface-headers-read-as-ai). The 420 was sized
+   around a topline row plus a clamp(64px,9vw,116px) gap plus a three-up figure
+   strip, all of which are gone. Measured at 1440 with the old floor: content
+   ended at y=346 and the slab ran to y=508 - 162px of nothing, only 62px of it
+   padding. Same failure mode #331 fixed on .dgh-hero: the layout with LESS in
+   it kept the TALLER box. The narrow-viewport floor drops to 0 for the same
+   reason it did there - the copy is the tallest thing on a phone anyway. */
+.fg-page{padding-bottom:72px}
+.fg-hero-cta:focus-visible,.fpr-hero-cta:focus-visible{outline:2px solid #b8adff;outline-offset:3px}
+/* The whole control block pins, not just its first row. The wrapper carries an
+   opaque page-coloured backdrop so the filters sitting under the panel are not
+   transparent to the specimen list scrolling behind them. */
+/* 97%, not 90%: a specimen list scrolling underneath a 90%-opaque bar showed
+   through it as ghosted type, which read as a rendering fault. The blur stays
+   for depth; legibility no longer depends on it. */
+/* The bespoke `.fg-command` bar is gone — search and filtering are the shared
+   Library toolbar now. These two survive as its second row: they change how a
+   result is RENDERED, not which results there are. */
+.fg-command-text{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:9px;flex:1 1 260px;min-width:0;min-height:46px;padding:0 13px;color:var(--t2);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl)}
+.fg-command-text:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.fg-command-text input{min-width:0;width:100%;padding:0;color:var(--t0);background:transparent;border:0;outline:0;font-family:var(--font);font-size:13px}
+/* --t3 at 8px is 3.3:1 in the light theme — under AA, and the smallest type on
+   the page was on the two controls people have to read to use it. */
+.fg-command-text>span,.fg-command-size>span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
+.fg-command-size{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;flex:0 1 260px;min-height:46px;padding:0 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xl)}
+/* The two text controls beside this one already ring on :focus-within; the size
+   control did not, and a focused range input carries no outline of its own —
+   keyboard focus arrived here invisibly. Every range on the page now rings. */
+.fg-command-size:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.fg-command-size input:focus-visible,.fg-compare-control input[type=range]:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.fg-command-size input{min-width:70px;width:100%;accent-color:var(--brand)}
+.fg-command-size strong{font-family:var(--mono);font-size:10px;color:var(--t1)}
+.fg-count{margin:18px 0 20px;text-transform:uppercase;letter-spacing:.11em}
+/* ONE SPECIMEN PER ROW, AT EVERY WIDTH (founder, 2026-09-02).
+   This reverses the three-column grid that shipped here, and the tablet column
+   PR #298 restored — read that one for the arithmetic it fixed, which was
+   correct for a grid and is moot for a list.
+
+   The audit that produced #298 was not complaining about one column. It was
+   complaining that a 790px row spent ~150px on the specimen and left the other
+   640px empty, and one column BY INTENT looks exactly like one column by
+   accident unless the row is rebuilt to want the width. So the row is now three
+   full-bleed lines, and each of them is something the 434px card could not show:
+
+     .fg-card-sample   the display line, at up to 72px instead of 48, in the
+                       reader's own words when they type some
+     .fg-card-pangram  the same family as running text at body weight, 15px
+                       rather than the card's 12px squeeze
+     .fg-card-ladder   the family's weight range, DRAWN — each numeral set in
+                       the family at the weight it names. Nine of them across a
+                       full-width row is the thing that needs a row; the grid's
+                       entire answer to "what weights has this got" was "9w".
+
+   Measured at 1440: the specimen block runs 1,180px against the grid's 386px.
+   `--lbry-col-min:100%` rather than a hand-written `grid-template-columns:1fr`,
+   so this stays the shared Library grid with a different minimum — the same
+   knob the three-column version turned, turned further. */
+/* A CONTINUOUS TABLE, NOT A STACK OF FLOATING CARDS.
+   The panel rules at the end of this file already made that argument for the
+   full-width list that used to live here, and they survived the three-column
+   grid unnoticed — `.fg-grid` has been a bordered, card-coloured panel this
+   whole time, drawn behind a grid that did not want one. Going back to one row
+   per line is the moment to honour it rather than fight it.
+   It is also the right answer for the width. A card's own border, radius and
+   ground are chrome, and chrome is what a full-width row can least afford: at
+   1,341px the rounded box drew a frame around type that is itself the content.
+   Rules between rows separate them for a tenth of the ink, which is what every
+   type foundry's catalogue does (Locomotive's list is hairlines and nothing
+   else), and it settles the question a stack of cards could not — a caption
+   between two specimens belongs to the one inside its own rules. */
+.fg-grid{--lbry-col-min:100%;margin:0 0 var(--s-5);padding:0;list-style:none;gap:0}
+/* The rank gutter is a real column, not padding: it gives a 1,341px row a left
+   edge for the eye to return to, which is the thing a list of full-width bands
+   otherwise lacks. 56px holds "00"–"99" in the mono face with its tracking. */
+.fg-card-open{display:grid;grid-template-columns:56px minmax(0,1fr);width:100%;padding:0;text-align:left;background:transparent;border:0;border-radius:0;cursor:pointer}
+.fg-card-open:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.fg-card-index{padding:4px 0 0;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);text-align:center;font-variant-numeric:tabular-nums}
+/* THE RESERVED BOX TRACKS THE SLIDER.
+   The grid reserved a fixed 68px line because its 48px ceiling was fixed. A
+   full-width row can afford 72px, and reserving 72px worth of line on every row
+   for a size most readers never drag to costs 24px × 24 rows — about 580px of
+   page — permanently. So the box is derived from the chosen size instead:
+   1.28em is ~1.17em of ascent-plus-descent plus optical padding, the same
+   arithmetic the 68px box ran, expressed as a ratio rather than a constant.
+   The reserved-metrics contract is that rows agree WITH EACH OTHER, and they
+   still do — every row solves this from the same two variables — so nothing
+   moves as faces stream in. What changes is that the whole list breathes with
+   the slider, which is the honest behaviour for a control labelled Size. */
+.fg-card-preview{--fg-line:calc(clamp(22px,var(--fg-card-size,52px),72px) * 1.28);height:auto;padding:0 26px 0 0;background:transparent}
+.fg-card-skeleton--sample{height:var(--fg-line)}
+.fg-card-skeleton--body{height:24px}
+.fg-card-skeleton--ladder{width:44%;height:26px}
+.fg-card-sample{display:flex;align-items:center;height:var(--fg-line);font-size:clamp(22px,var(--fg-card-size),72px);line-height:1.06;letter-spacing:-.035em}
+/* 15px, up from the card's 12px. At 386px the pangram was a texture swatch you
+   squinted at; across 1,180px it is a line of running text set in the family,
+   which is what a body-weight sample is for.
+   SLICED, NOT ELLIPSISED. The line is ~105 characters and fits whole at 1440;
+   from about 1200px down it runs past the edge. An ellipsis would be the wrong
+   signal — it says "words were omitted", which matters when the words are the
+   reader's and does not when they are a fixed specimen string. A clean slice is
+   the type-specimen convention (Readymag cuts its pangram at the pane edge;
+   Aave lets the letterforms bleed out of the frame) and it reads as "the face
+   continues" rather than as truncation damage. */
+.fg-card-pangram{height:24px;font-size:15px;line-height:24px;white-space:nowrap;text-overflow:clip}
+/* THE LADDER. Each numeral is drawn in the family at the weight it names, so
+   the row shows the range instead of counting it. `margin-top:auto` pins it to
+   the bottom of the reserved box, which keeps every row's ladder on one
+   baseline down the page — a ladder that floated with its family's metrics
+   would be unreadable as the column-of-comparison it is meant to be.
+   Fixed height + hidden overflow: a family can carry two weights or nine and
+   the row must not change height between them. */
+.fg-card-ladder{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 26px;height:26px;overflow:hidden;font-family:var(--fg-ff);font-size:19px;line-height:26px;color:var(--t1);font-variant-numeric:tabular-nums}
+.fg-card-step{font-weight:var(--fg-fw)}
+/* Always visible, unlike the colour libraries' like button: comparison is the
+   gallery's primary shortlisting gesture, and a control you must hover to
+   discover is not a shortlisting tool. */
+.fg-card-compare{position:static;opacity:1;transform:none}
+.fg-card-scripts{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t3)}
+
+/* The hero is a near-black slab, which reads as a deliberate object on the
+   light page and as NOTHING on the dark one: #0a0a0b against a --bg-0 of
+   #0A0B0D is the same colour. Lift it clear of the page in dark instead. */
+[data-theme="dark"] .fg-hero--premium{background:linear-gradient(158deg,#191a1f,#0e0f13 64%);border-color:rgba(255,255,255,.16);box-shadow:0 30px 90px rgba(0,0,0,.5)}
+[data-theme="dark"] .fg-hero--premium::after{color:rgba(255,255,255,.05)}
+
+/* The shared loading strip reserves 320px because in the other two tools it
+   stands alone. Here it sits above the skeleton, so the reserve is a hole. */
+.fg-page .typ-loading{min-height:0;padding:var(--s-6) var(--s-5) var(--s-5)}
+/* First-paint skeleton — the row geometry drawn empty while the catalogue is in
+   flight, so the list lands in a shape the reader has already seen. Deliberately
+   NOT .fg-card: the reserved-metrics contract is asserted across .fg-card, and
+   these are not typefaces. */
+.fg-grid--skeleton{--lbry-col-min:100%}
+.fg-skel-row{--fg-line:67px;display:flex;flex-direction:column;gap:10px;padding:18px 26px 16px 56px;border-bottom:1px solid var(--border)}
+.fg-skel-row:last-child{border-bottom-color:transparent}
+.fg-skel-row .fg-card-skeleton--sample{width:min(48%,520px)}
+.fg-skel-row .fg-card-skeleton--body{width:min(64%,700px)}
+.fg-skel-row .fg-card-skeleton--ladder{width:min(34%,380px);margin-top:auto}
+@media(max-width:1050px){
+  .fg-command-size{order:3}}
+
+@media(min-width:981px) and (max-width:1343px){
+  .tsc-config{position:static}}
+
+/* WRAPPED IN THE TABLET BAND TOO, FOR THE REASON THE PHONE BLOCK GIVES BELOW.
+   The slice defended on `.fg-card-pangram` above is the right call when the
+   line runs off the frame and the loss is a tail. Neither is true between 721
+   and 959px. MEASURED across the 77 families the catalogue serves, at 834px:
+   the box is 710px, the widest line wants 823px, and 48 of the 77 specimens
+   clip - Comfortaa by 113px, Sora 104, Montserrat 98, Poppins 91, Work Sans 89,
+   and the mildest survivors by 4. It is clean at 960 (836px of box) and above,
+   and clean at 720 and below where the phone block already wraps it, so this
+   band is the whole of the defect.
+   Two things make the slice wrong specifically here. `.fg-card-preview` holds
+   26px of right padding, so the cut lands 26px SHORT of the row edge rather
+   than bleeding past it - it reads as damage, not as continuation. And the loss
+   scales with the width of the face, so the specimen is least complete for
+   exactly the widest and most distinctive families, which inverts the job of
+   the page: the pangram is the sentence you read to judge a face.
+   So it takes the phone's answer at the desktop's 15px - two clamped lines, a
+   box reserved for exactly two at 24px each. It costs 24px a row and it keeps
+   the reserved-metrics contract, which is that rows agree WITH EACH OTHER: they
+   still all solve this from the same two numbers, so nothing moves as faces
+   stream in. */
+@media(min-width:721px) and (max-width:959px){
+  .fg-card-pangram,.fg-card-skeleton--body{height:48px}
+  .fg-card-pangram{-webkit-line-clamp:2;line-clamp:2;white-space:normal}
+}
+@media(max-width:720px){
+  .fg-command-size{order:initial}
+  .fg-card-open{grid-template-columns:34px minmax(0,1fr)}
+  .fg-card-index{padding-top:2px;font-size:10px}}
+
+@media(max-width:720px){
+  /* 18 + 64 + 8 + 22 + 6 + 24 + 14 = 156 in a 156px box — the same reserved
+     arithmetic as the wide layout, re-run for the narrower specimen. The
+     ceiling drops to 52px because 64px of reserved line only clears a 52px face
+     (52 × 1.17 ≈ 61), and the slider still runs to 72 on the same page: the
+     clamp is what stops a phone honouring a size its box cannot. */
+  /* CEILING 44, NOT 52. The slider still runs to 72 on the same page; the
+     clamp is what stops a phone honouring a size its row cannot hold. At 52px
+     a 271px specimen box slices "Montserrat" mid-stem — and slicing the family
+     NAME is the one thing this gallery must not do, which is the same reason
+     the three-column layout capped itself at 40. 44px fits the great majority
+     of families whole; the longest ("Playfair Display" wants ~330px) still run
+     past the edge, and the foot below carries the complete name for exactly
+     that case. */
+  .fg-card-preview{--fg-line:calc(clamp(26px,var(--fg-card-size,52px),44px) * 1.28);padding:0 60px 0 0}
+  .fg-card-sample{font-size:clamp(26px,var(--fg-card-size),44px)}
+  /* The tail goes, and the name gets its width back. At 390 the script list ran
+     ~200px of a 351px foot and left the family name ~150px, so the row's own
+     label truncated to protect a fact the specimen dialog states in full two
+     taps away. The name is the content of a font gallery — the ≤380px rule
+     below already fought this once for the same reason. */
+  .fg-card-scripts{display:none}
+  /* WRAPPED, NOT SLICED, ON A PHONE. A 350px row slices the body line after
+     about thirty characters, which is a shorter running-text sample than the
+     three-column card managed. Two clamped lines give ~70 instead, and the box
+     is reserved for exactly two so a family whose line wraps at a different
+     word still agrees in height with every other row. */
+  .fg-card-pangram,.fg-card-skeleton--body{height:40px}
+  .fg-card-pangram{-webkit-line-clamp:2;white-space:normal;font-size:13px;line-height:20px}
+  /* Two lines of ladder reserved, not one. Nine numerals at 16px with 18px gaps
+     need ~430px and a 390px phone has ~312px, so the widest families wrap once.
+     The box is reserved for the wrap rather than clipping it — a ladder that
+     silently dropped 800 and 900 would misreport the family. */
+  .fg-card-ladder,.fg-card-skeleton--ladder{height:24px}
+  .fg-card-ladder{gap:2px 18px;font-size:16px;line-height:24px}}
+
+@media(max-width:720px){
+  /* Stacked, the meta goes back to a single line under the specimen: the name
+     has the full column width there, so it does not need its own row.
+     True down to about 380px, and NOT below it — see the ≤380px block. */
+  .fg-card-meta{grid-column:2;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;padding:0;border-left:0}}
+
+@media(max-width:720px){
+  .fg-skel-row{--fg-line:67px;padding:16px 24px 14px 34px}
+  .fg-skel-row .fg-card-skeleton--sample{width:72%}
+  .fg-skel-row .fg-card-skeleton--body{width:90%}
+  .fg-skel-row .fg-card-skeleton--ladder{width:56%}}
+
+/* N1 (responsive-audit-2026-08): the family name is the content of a font
+   gallery, and 7 of 48 were truncated at 320px — "Roboto Condensed" needing
+   151px and getting 94.
+
+   The premium block above already solved exactly this once, for the wide
+   layout, and its own comment says why: side by side, the classification tag
+   takes a fixed width and the name gets the remainder. The stacked layout then
+   puts the meta back on one row, reasoning that "the name has the full column
+   width there". That holds at 380px and stops holding below it — `.fg-card-info`
+   is `flex-shrink:0`, so at 320px it keeps ~98px of the 202px available and the
+   name gets what is left. Same fault as the wide layout, same fix: give the name
+   its own row back, and the full 202px with it.
+
+   This block must stay AFTER the ≤720px one. It was first written earlier in the
+   file, next to the other ≤380px rules, where it lost the cascade to
+   `.fg-card-meta{flex-direction:row}` at equal specificity and changed nothing —
+   caught by measuring rather than by reading, since the rule looked right. */
+@media(max-width:380px){
+  .fg-card-meta{flex-direction:column;align-items:flex-start;gap:4px}
+}
+
+/* Type-scale ladder: let the specimen actually truncate.
+   `.tsc-row-text` already asked for `overflow:hidden; text-overflow:ellipsis;
+   white-space:nowrap` — and none of it took effect, because `.tsc-row` is a
+   flex ITEM and flex items default to `min-width: auto`, which refuses to
+   shrink below their content. With a Display-sized specimen that content is
+   enormous: measured 1328px inside a 247px row at 320px viewport, clipped by an
+   ancestor's `overflow:hidden` and therefore unreachable (WCAG 1.4.10).
+   `min-width: 0` restores the truncation the rule already intended, so the
+   specimen keeps its TRUE size — which is the whole point of a type scale —
+   and simply ends in an ellipsis. */
+.tsc-ladder{min-width:0}
+.tsc-row-text{max-width:100%}
+
+/* Ratio calculator panel — the same root cause as .plb-col-tools and
+   .tsc-row-text, which is worth naming because it accounts for all three of the
+   audit's reflow findings and one it missed:
+   A FLEX OR GRID ITEM DEFAULTS TO `min-width: auto`, WHICH REFUSES TO SHRINK
+   BELOW ITS CONTENT. So a `1fr` track quietly becomes as wide as its widest
+   child, an ellipsis rule never fires, and `overflow-x: clip` on body then
+   hides the result instead of producing a visible scrollbar that would have
+   made it obvious. Measured here: a 322px track in a 315px viewport. */
+.rc-panel{min-width:0}
+
+/* ── Font Gallery: the specimen list is a panel, not a bare strip ───────────
+   The flush, full-bleed rows are deliberate and stay — a specimen list reads
+   better as a continuous table than as a stack of floating cards. What was
+   missing is the container around them: `.fg-grid` carried only a `border-top`
+   and `.fg-card` set `border-radius: 0`, so the whole block met the rounded
+   toolbar and filter chips above it with four hard corners.
+
+   Rounding the CONTAINER and clipping to it keeps every row square against its
+   neighbours while the block itself matches the rest of the page. */
+.fg-grid{
+  border:1px solid var(--border);
+  border-radius:var(--radius-l);
+  overflow:hidden;
+  background:var(--card);
+}
+/* The container's own edge is the bottom rule for the final row, so the row's
+   border would double it into a 2px line.
+   TRANSPARENT, not `border-bottom: 0` — removing the border makes the last row
+   1px shorter than every other, and these cards reserve an identical height on
+   purpose so the grid cannot reflow as webfaces load (asserted by
+   11-typography-tools.spec.js). Hiding the line keeps the box identical. */
+.fg-card:last-child{border-bottom-color:transparent}
+.soon-badge-accent{border-color:var(--accent-strong);color:var(--accent-strong)}
+
+/* Type-scale specimens on a phone: stack the row and let the specimen WRAP.
+   The reflow-320 fix above made the specimen truncate rather than overflow
+   unreachably, which was right about reachability and left the tool useless:
+   measured at 390x844, all 9 rows truncated and the largest showed 192px of a
+   1305px string - 15% of the specimen, so every row read "The quick b..." while
+   the page promises you can read the scale back in a real layout (S16,
+   mobile-audit-2026-08).
+
+   Two changes, and the first is what makes the second affordable. Stacking the
+   row (the treatment that already existed below 380px) gives the specimen the
+   full row width instead of the ~192px left over beside the meta column. Then
+   wrapping shows the whole string at its TRUE size, which is the one property a
+   type scale exists to demonstrate.
+
+   The cost is height, and it is real: the ladder goes 986px -> 1931px at 390px
+   wide, and the page 5635px -> 6580px (+17%). Measured alternatives, so the
+   trade is on the record rather than asserted:
+     - wrap without stacking      100% shown, ladder 2546px (+1560)
+     - clamp to 2 lines           22% shown, ladder 1105px (+119)
+     - stack + wrap (this)        100% shown, ladder 1931px (+945)
+     - do nothing                 15% shown, ladder 986px
+   The 2-line clamp is the tempting middle and it is not worth it: it buys 7
+   percentage points and still hides three quarters of the specimen.
+
+   The STACKING is scoped to <=768px; the WRAPPING is not, and that split is the
+   completion of S16 above 768px. When this was first written the rest was left
+   because 769+ is wider and because PR #263 is reworking those grids. Measured,
+   being wider was not enough: 3 to 5 of the 9 specimens were still cut from
+   769px all the way up, showing 31-59% of the string —
+
+     769x900  5 of 9, largest 39%      1024x768  5 of 9, largest 31%
+     834x1194 4 of 9, largest 44%      1180x820  4 of 9, largest 43%
+     900x900  4 of 9, largest 49%      1280x900  4 of 9, largest 51%
+     980x900  3 of 9, largest 55%      1440x900  3 of 9, largest 59%
+
+   1024x768 is the worst of them, worse than 769, because the two-column grid
+   arrives at 981px and takes 340px back out — the wider-is-narrower step. That
+   grid is #263's to fix and this change does not touch it; wrapping composes
+   with whatever column width the grid ends up handing over.
+
+   Above 768 the row does NOT stack. There is horizontal room for the meta
+   column at these widths, and stacking would spend it: measured on a phone that
+   choice cost +945px of ladder, where wrapping alone here costs +156 to +491
+   depending on width (944 -> 1100 at 1440, 944 -> 1435 at 1024). Wrapping alone
+   takes every one of those rows to 0 cut. */
+@media(min-width:769px){
+  .tsc-row-text{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}
+}
+@media(max-width:768px){
+  .tsc-row-text{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:break-word}}
+
+
+/* ── Save a type system (components/SaveTypeSystem.jsx) ──────────────────────
+   The typography half of the paywall the colour tools already have. Borrows
+   .plb-menu's geometry rather than inventing a second popover language: same
+   offset, same card, same shadow, so the Font Pair and Type Scale menus read as
+   the Palette save menu moved rather than as a new control.
+
+   NOTE FOR ANYONE TEMPTED TO GATE WITH CSS HERE: there is deliberately no
+   `.svt-wall .svt-row{display:none}` or any rule of that shape. At the project
+   cap the component renders no name field and no save button at all, so this
+   stylesheet has no power to reveal one. A gate that lives in a stylesheet is
+   one devtools toggle from being no gate — see utils/lockedPreview.js. */
+.svt-wrap{position:relative;display:inline-flex}
+.svt-trigger{white-space:nowrap}
+.svt-summary{margin:0 2px 10px;font-size:11.5px;line-height:1.5;color:var(--t2)}
+.svt-menu-title{font-size:12px;font-weight:700;color:var(--t0);margin:2px 2px 10px}
+.svt-row{display:flex;gap:8px}
+.svt-input{flex:1;min-width:0;padding:8px 10px;font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
+.svt-input:focus{outline:none;border-color:var(--brand)}
+.svt-menu-sub{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:12px 2px 6px}
+.svt-list{display:flex;flex-direction:column;gap:2px;max-height:min(40vh,220px);overflow-y:auto;overscroll-behavior:contain}
+.svt-item{display:block;width:100%;padding:8px 10px;font-size:13px;font-weight:500;text-align:left;color:var(--t1);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.svt-item:hover{background:var(--bg-2);color:var(--t0)}
+.svt-allowance{margin:10px 2px 0;font-size:11.5px;line-height:1.55;color:var(--t2)}
+.svt-link{color:var(--accent-strong);font-weight:600}
+/* The wall. An accent edge and a solid border, never a dashed skeleton: this is
+   a stated limit, not a row that failed to load. */
+.svt-wall{padding:12px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-l);background:var(--cbg)}
+.svt-wall-head{margin:0 0 6px;font-size:13px;font-weight:700;color:var(--t0)}
+.svt-wall-body{margin:0;font-size:11.5px;line-height:1.6;color:var(--t1)}
+.svt-foot{margin:12px 2px 0;padding-top:10px;border-top:1px solid var(--border);font-size:11px;line-height:1.55;color:var(--t2)}
+.fpr-keep-note,.tsc-keep-note{flex:1;min-width:200px;margin:0;font-size:11.5px;line-height:1.5;color:var(--t2)}

@@ -16,6 +16,11 @@ import SaveRefusal from '../components/SaveRefusal'
 // The `projects` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/account.css'
+import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
 
 // Read-only sample design systems shown under the "Community" tab.

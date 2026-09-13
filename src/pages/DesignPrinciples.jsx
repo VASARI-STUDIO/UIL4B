@@ -53,6 +53,10 @@ import {
   ThemeValueProof,
   TypeLadderProof,
 } from '../components/SystemProofs'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/reading.css'
 
 // Keyed by principle id rather than positioned: a reordering of the data module
 // must move the proof with its rule, and a rule added there without a proof

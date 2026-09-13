@@ -23,6 +23,7 @@ import path from 'node:path'
 
 const STYLES = path.join(process.cwd(), 'src', 'styles')
 const PAGES = path.join(STYLES, 'pages')
+const DEFERRED = path.join(STYLES, 'deferred')
 
 export const GLOBAL_CSS = fs.readFileSync(path.join(STYLES, 'global.css'), 'utf8')
 
@@ -30,7 +31,29 @@ export const PAGE_STYLESHEETS = fs.existsSync(PAGES)
   ? fs.readdirSync(PAGES).filter((f) => f.endsWith('.css')).sort()
   : []
 
-/** global.css followed by every page stylesheet, in filename order. */
-export const ALL_CSS = [GLOBAL_CSS, ...PAGE_STYLESHEETS.map(
-  (f) => fs.readFileSync(path.join(PAGES, f), 'utf8'),
-)].join('\n')
+// The same narrowing happened again, larger, on 2026-09-13: the rest of
+// global.css was split by tool family into src/styles/deferred/*.css, each
+// imported by the lazy chunks that can reach it. Every test that reads ALL_CSS
+// has to see those too, or it goes quietly vacuous about two thirds of the
+// app's rules, which is the failure this file was written after.
+export const DEFERRED_STYLESHEETS = fs.existsSync(DEFERRED)
+  ? fs.readdirSync(DEFERRED).filter((f) => f.endsWith('.css')).sort()
+  : []
+
+/**
+ * Every stylesheet the app ships, in cascade order, each with the path a
+ * message can name. Use this instead of ALL_CSS when a failure has to say
+ * WHICH file and WHICH line, which a concatenation cannot.
+ */
+export const ALL_STYLESHEETS = [
+  { file: 'src/styles/global.css', css: GLOBAL_CSS },
+  ...DEFERRED_STYLESHEETS.map((f) => ({ file: `src/styles/deferred/${f}`, css: fs.readFileSync(path.join(DEFERRED, f), 'utf8') })),
+  ...PAGE_STYLESHEETS.map((f) => ({ file: `src/styles/pages/${f}`, css: fs.readFileSync(path.join(PAGES, f), 'utf8') })),
+]
+
+/** global.css, then the deferred family sheets, then every page stylesheet. */
+export const ALL_CSS = [
+  GLOBAL_CSS,
+  ...DEFERRED_STYLESHEETS.map((f) => fs.readFileSync(path.join(DEFERRED, f), 'utf8')),
+  ...PAGE_STYLESHEETS.map((f) => fs.readFileSync(path.join(PAGES, f), 'utf8')),
+].join('\n')

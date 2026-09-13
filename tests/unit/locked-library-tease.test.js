@@ -30,6 +30,11 @@ import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
 import { FREE_PROMPT_LIMIT } from '../../src/data/promptCategories.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
+// Reads the WHOLE app stylesheet, not global.css alone. The rules this file
+// asserts on were split out of global.css into src/styles/deferred/*.css on
+// 2026-09-13; a test that keeps reading one file after a lift like that does
+// not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
+import { ALL_CSS } from './appStylesheets.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 
@@ -231,7 +236,7 @@ test('a locked placeholder never animates, so it cannot read as a failed load', 
   // there is, so no .lockt- rule may carry an animation or a transition — and
   // #336 means any animation added here would also need the reduced-motion
   // guard pair, which is a second reason not to reach for one.
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   const offenders = []
   for (const rule of css.split('}')) {
     const [selector, body = ''] = rule.split('{')
@@ -364,7 +369,7 @@ test('the teased grid continues the gallery instead of hugging it', () => {
   // band retunes the gap to 14px and a copied number would stop matching there
   // silently. Same drift argument the .lockt-stripes comment makes about
   // heights.
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   assert.ok(/\.pl-gallery\{[^}]*--pl-gap:16px[^}]*gap:var\(--pl-gap\)/.test(css),
     'the gallery must publish its row gap as --pl-gap and consume it')
   assert.ok(/\.pl-gallery--continues\{margin-top:var\(--pl-gap\)\}/.test(css),
