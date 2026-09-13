@@ -167,14 +167,14 @@ test('every tool listed is live and prerendered; every Soon tool is under Option
 
   const [, tools] = COMMITTED.split('\n## Tools\n')
   const toolsSection = tools.split('\n## ')[0]
-  const listedUrls = [...toolsSection.matchAll(/\]\((https:\/\/www\.uil4b\.com(\/[^)]*))\)/g)]
+  const listedUrls = [...toolsSection.matchAll(/\]\((https:\/\/uil4b\.com(\/[^)]*))\)/g)]
   assert.ok(listedUrls.length >= 10, 'the Tools section has almost nothing in it')
   for (const [, , route] of listedUrls) {
     assert.ok(prerendered.has(route), `${route} is listed as a tool but gets no prerendered shell`)
   }
   for (const t of createTools()) {
     if (t.soon) continue
-    assert.ok(toolsSection.includes(`(https://www.uil4b.com${t.route})`),
+    assert.ok(toolsSection.includes(`(https://uil4b.com${t.route})`),
       `the live tool ${t.label} (${t.route}) is missing from the Tools section`)
   }
 
@@ -183,7 +183,7 @@ test('every tool listed is live and prerendered; every Soon tool is under Option
   for (const t of soon) {
     assert.ok(optional.includes(`(${t.route})`), `the Soon tool ${t.label} is not disclosed under Optional`)
     assert.ok(!toolsSection.includes(t.route), `the Soon tool ${t.label} is listed as a live tool`)
-    assert.ok(!COMMITTED.includes(`https://www.uil4b.com${t.route}`),
+    assert.ok(!COMMITTED.includes(`https://uil4b.com${t.route}`),
       `the Soon tool ${t.label} is advertised by absolute URL`)
   }
   assert.ok(live.size >= 10)
@@ -193,7 +193,7 @@ test('every description is the route’s own meta description, not a second copy
   // The prose on each row is the routeMetaMap.js entry — the same table every
   // prerendered <meta name="description"> comes from — so a tool description
   // cannot be corrected on the page and left stale for the machine.
-  const rows = [...COMMITTED.matchAll(/^- \[[^\]]+\]\(https:\/\/www\.uil4b\.com(\/[^)]*)\): (.+)$/gm)]
+  const rows = [...COMMITTED.matchAll(/^- \[[^\]]+\]\(https:\/\/uil4b\.com(\/[^)]*)\): (.+)$/gm)]
   assert.ok(rows.length >= 20, `only ${rows.length} linked rows found`)
   for (const [, route, description] of rows) {
     assert.equal(description, PAGE_DESCRIPTIONS[route],

@@ -19,7 +19,7 @@
 // X" is exactly the assertion this migration broke four times over.
 //
 // NOT VERIFIED ANYWHERE HERE: what status code Vercel returns in production for
-// the catch-all rewrite. This suite cannot reach www.uil4b.com and
+// the catch-all rewrite. This suite cannot reach the live site and
 // `npm run preview` does not apply vercel.json. Treat it as unknown.
 import test from 'node:test'
 import assert from 'node:assert/strict'

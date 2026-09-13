@@ -29,7 +29,7 @@ live **inside** the repo or their imports will not resolve. Delete them when
 done.
 
 This sandbox reaches `localhost` and general external hosts, but **not**
-`www.uil4b.com`. Test the local preview build; never claim a production result.
+the live site. Test the local preview build; never claim a production result.
 
 ## Viewport matrix
 

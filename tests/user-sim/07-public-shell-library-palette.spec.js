@@ -400,7 +400,7 @@ test.describe('public UI quality release', () => {
       name: 'Palette submission',
       author: '@designer',
       category: 'Branding',
-      url: 'https://www.uil4b.com/create/palette?c=fff,000',
+      url: 'https://uil4b.com/create/palette?c=fff,000',
     }, storage)
 
     const stored = readCommunitySubmissions(storage)
