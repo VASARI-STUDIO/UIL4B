@@ -1,12 +1,20 @@
-// TYPOGRAPHY ONLY (founder decision, 2026-09-13). NOT ONE WORD OF THE LEGAL
-// TEXT IS TOUCHED HERE, and none should be.
+// TYPOGRAPHY ONLY. NOT ONE WORD OF THE LEGAL TEXT IS TOUCHED HERE, and none
+// should be.
 // The eight section headings ran .legal-h--sm - 16px, body font, weight 700 -
 // while /privacy's ran .legal-h at 22px display. Same content type, same
 // component shape, same <h2> level, two different answers to how a section
 // heading looks. The 2026-09-11 marketing pass measured it and deliberately
 // left it, on the grounds that guessing wrong about a legal page's typography
-// is worse than writing the inconsistency down. The founder has now decided:
-// match /privacy. .legal-h--sm went with it - Terms was its only caller.
+// is worse than writing the inconsistency down.
+//
+// UNVERIFIED WHETHER THE FOUNDER RULED ON THIS. An earlier version of this
+// comment said he had decided it on 2026-09-13; no PROPOSALS.md verdict,
+// CHANGELOG founder-decision record, commit or PR says so, so the claim was
+// removed rather than left to harden into a cited precedent. What stands on
+// its own is the consistency argument above: two legal pages of the same
+// shape should set a section heading the same way, and /privacy's is the one
+// that matches the rest of the reading surfaces. .legal-h--sm went with it -
+// Terms was its only caller. Reverse it freely if he wants the smaller mark.
 import { useI18n } from '../contexts/I18nContext'
 
 export default function Terms() {
