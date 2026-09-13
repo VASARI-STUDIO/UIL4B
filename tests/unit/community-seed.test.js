@@ -58,3 +58,61 @@ test('ids are unique — they key both the save state and the React list', () =>
   const ids = COMMUNITY_DESIGNS.map(d => d.id)
   assert.equal(new Set(ids).size, ids.length)
 })
+
+// ── THE GUARD ABOVE READ ONE FILE, AND THE FABRICATION LIVED IN TWO ─────────
+//
+// Every test above imports COMMUNITY_DESIGNS. That is the seed for /community
+// and for Discover's "From the community" band, and it has been honest since
+// the 2026-08-11 audit rewrote it.
+//
+// src/pages/Projects.jsx carried its own copy the audit never saw: a
+// COMMUNITY_PROJECTS array of four design systems credited to four people who
+// do not exist, rendered under the sentence "Explore design systems shared by
+// the community" on a tab beside a person's own saved work. One of the four
+// was credited to "Maya R." — the same invented designer named in this file's
+// own header as the thing these tests exist to prevent. It shipped for a month
+// after the guard was written, because the guard checked a constant rather than
+// the product.
+//
+// So this one reads the SOURCE of every surface that renders a community, and
+// asks whether a person is credited for something they did not do. It is a
+// text scan on purpose: the next copy of this will not be called
+// COMMUNITY_PROJECTS and will not be importable from here.
+test('no surface invents a designer to credit', () => {
+  // The four invented designers that shipped on /projects, plus the one from
+  // the 2026-08-11 audit. A name is the cheapest possible tell and these are
+  // the exact strings that were rendered to real users.
+  const INVENTED = ['Maya R.', 'Devon K.', 'Sam T.', 'Alex P.']
+  const SURFACES = [
+    'src/pages/Projects.jsx',
+    'src/pages/Community.jsx',
+    'src/data/communityDesigns.js',
+    'src/components/discover/CommunityCard.jsx',
+  ]
+  for (const file of SURFACES) {
+    const src = read(file)
+    for (const name of INVENTED) {
+      // The comment in Projects.jsx that records the deletion names them, and
+      // must stay readable. Only a name outside a comment is a fabrication.
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+      assert.ok(
+        !code.includes(name),
+        `${file} credits "${name}", who does not exist — see this file's header`,
+      )
+    }
+  }
+})
+
+test('positive control: the scan can actually see a name in the source', () => {
+  // Without this, the test above passes just as happily on an empty read, a
+  // renamed file or a regex that stopped matching. It asserts the machinery
+  // reports a fabrication when one is really there.
+  const src = read('src/pages/Projects.jsx')
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  assert.ok(code.length > 1000, 'the surface scan read an empty or missing file')
+  const planted = code + "\nconst x = { author: 'Maya R.' }\n"
+  assert.ok(planted.includes('Maya R.'), 'the scan cannot see a name it is meant to catch')
+  // And the comment-stripper must not be what is hiding it: the real file DOES
+  // name the four in its deletion note, and that note must survive stripping.
+  assert.ok(src.includes('Maya R.'), 'the record of what was deleted is gone from Projects.jsx')
+})

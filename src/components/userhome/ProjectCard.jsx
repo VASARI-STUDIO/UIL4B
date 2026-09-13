@@ -13,8 +13,7 @@ import ProjectActions from './ProjectActions'
 
 export default function ProjectCard({
   project, isCurrent, onLoad, onDelete, onRename, onOverwrite, onArchive,
-  folder, onFolderChange, folders, onOpenDetail, icon,
-  onDuplicate, onExportCss, onOpenIn,
+  onOpenDetail, icon, onDuplicate, onExportCss, onOpenIn,
 }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(project.name)
@@ -135,15 +134,6 @@ export default function ProjectCard({
             ) : (
               <button className="btn btn-s" onClick={() => onArchive(project.id)}>Restore</button>
             )}
-            <label className="uh-card-folder">
-              <span className="sr-only">Folder for {project.name}</span>
-              <select value={folder || ''} onChange={e => onFolderChange(project.id, e.target.value)}>
-                <option value="">No folder</option>
-                {(folders || []).filter(f => f !== 'all').map(f => (
-                  <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
-                ))}
-              </select>
-            </label>
           </div>
         )}
       </div>

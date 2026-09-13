@@ -1226,7 +1226,7 @@ html[data-reduced-motion="true"] .rail-overflow{scroll-snap-type:none}
    highlight state shared by hover and arrow keys. */
 .settings-suggest-item.on{background:var(--bg-2);color:var(--t0)}
 .sub-billing-toggle{display:inline-flex;padding:4px;gap:4px;background:var(--bg-2);border:1px solid var(--border);border-radius:999px;margin-bottom:18px}
-.sub-billing-toggle button{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:none;background:none;border-radius:999px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--dur-2) var(--ease-standard)}
+.sub-billing-toggle button{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:none;background:none;border-radius:999px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;font-family:var(--font);transition:background var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .sub-billing-toggle button.active{background:var(--card);color:var(--t0);box-shadow:var(--warm-shadow)}
 
 /* Subscription — tier cards */
@@ -1329,7 +1329,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .checkout-form{padding:20px;min-height:420px}
 .checkout-return-card{max-width:460px;width:100%;padding:40px 32px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
 @keyframes checkout-spin{to{transform:rotate(360deg)}}
-.lang-tile{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-1);color:var(--t1);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;transition:all var(--t);text-align:left;position:relative}
+.lang-tile{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-1);color:var(--t1);cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;transition:border-color var(--t),background var(--t),color var(--t),box-shadow var(--t),transform var(--t);text-align:left;position:relative}
 .lang-tile:hover{border-color:var(--bh);background:var(--bg-2);transform:translateY(-1px)}
 .lang-tile.active{border-color:var(--accent);background:var(--accent-bg);color:var(--t0);box-shadow:0 0 0 1px var(--accent),0 4px 16px var(--accent-glow)}
 .lang-flag{width:32px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--bg-2);border:1px solid var(--border);overflow:hidden;flex-shrink:0;line-height:1}
@@ -1818,7 +1818,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-optional{color:var(--t3);font-weight:400;letter-spacing:0;text-transform:none}
 .fb-required{color:var(--err-strong)}
 .fb-types{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.fb-type{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 6px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all var(--t)}
+.fb-type{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 6px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
 .fb-type:hover{border-color:var(--bh);color:var(--t1)}
 .fb-type.on{border-color:var(--brand);background:var(--brand-bg);color:var(--accent-strong)}
 .fb-type svg{flex-shrink:0}
@@ -1949,11 +1949,6 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 /* ─── UI Builder: Code tabs ─── */
 
-/* ─── Projects: Folder chips ─── */
-.proj-folder-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
-
-/* ─── Projects: Tabs ─── */
-.proj-tab.active{color:var(--accent-strong);border-bottom-color:var(--accent)}
 
 
 /* New project modal */

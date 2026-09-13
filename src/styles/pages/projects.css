@@ -25,17 +25,6 @@
 
 .proj-count{margin-left:auto;font-size:12px;color:var(--t2);font-weight:500}
 
-.proj-folders{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
-
-.proj-folder-chip{padding:5px 14px;border-radius:999px;font-size:11px;font-weight:600;font-family:var(--font);border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;transition:all var(--t)}
-
-.proj-folder-chip:hover{color:var(--t0);border-color:var(--bh)}
-
-.proj-folder-note{margin-left:auto;align-self:center;font-size:11px;color:var(--t2)}
-
-.proj-folder-note a{color:var(--accent-strong);font-weight:600;text-decoration:none}
-
-.proj-folder-note a:hover{text-decoration:underline}
 
 .proj-detail{max-width:520px}
 
@@ -55,12 +44,6 @@
 
 .proj-detail-meta-row strong{color:var(--t0);font-weight:600}
 
-.proj-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
-
-.proj-tab{padding:8px 16px;font-size:13px;font-weight:600;font-family:var(--font);border:none;background:transparent;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
-
-.proj-tab:hover{color:var(--t0)}
-
 /* ─── Projects: Cards ─── */
 .proj-card{transition:transform var(--dur-2) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
 .proj-card:hover{transform:translateY(-2px);box-shadow:var(--warm-shadow-lg)}
@@ -71,8 +54,6 @@
 .proj-detail-icon-empty{display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:20px}
 
 .proj-new-modal{max-width:460px}
-
-.proj-new-folders{display:flex;flex-wrap:wrap;gap:6px}
 
 .proj-new-start{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
@@ -175,8 +156,6 @@
 .uh-card-when{flex:0 0 auto;font-family:var(--mono);letter-spacing:.02em;line-height:1.6;color:var(--t3);white-space:nowrap}
 
 .uh-card-foot{display:flex;align-items:center;gap:var(--s-2)}
-.uh-card-folder{margin-left:auto}
-.uh-card-folder select{padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--bg-1);color:var(--t2);font-family:var(--mono);font-size:var(--fs-micro);cursor:pointer}
 
 /* Deletion still types the name. The ⋯ row only ARMS this — a one-click destroy
    in a menu that also holds “Rename” is how people lose work. */
@@ -266,8 +245,6 @@
 @media(max-width:640px){
   .uh-head{margin-bottom:var(--s-4)}
   .uh-card-foot{flex-wrap:wrap}
-  .uh-card-folder{margin-left:0;width:100%}
-  .uh-card-folder select{width:100%}
   .uh-head-actions{width:100%}
   .uh-stats li + li{padding-left:var(--s-3)}
   .uh-parts{flex-wrap:wrap}
