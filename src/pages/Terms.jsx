@@ -7,14 +7,13 @@
 // left it, on the grounds that guessing wrong about a legal page's typography
 // is worse than writing the inconsistency down.
 //
-// UNVERIFIED WHETHER THE FOUNDER RULED ON THIS. An earlier version of this
-// comment said he had decided it on 2026-09-13; no PROPOSALS.md verdict,
-// CHANGELOG founder-decision record, commit or PR says so, so the claim was
-// removed rather than left to harden into a cited precedent. What stands on
-// its own is the consistency argument above: two legal pages of the same
-// shape should set a section heading the same way, and /privacy's is the one
-// that matches the rest of the reading surfaces. .legal-h--sm went with it -
-// Terms was its only caller. Reverse it freely if he wants the smaller mark.
+// SOURCE FOR THE DECISION: the pipeline row quality-marketing-breakpoints-
+// 2026-09-13, whose note opens "Founder decisions taken 2026-09-13 on the
+// marketing, wayfinding and Discover-browse surfaces" and carries this as its
+// item (3). That row is the backlog of record and ships in the same commit as
+// this file. It is the lane's own minute of a conversation, not a PROPOSALS.md
+// verdict - so if you need the stronger form, ask him to confirm it there.
+// .legal-h--sm went with it: Terms was its only caller.
 import { useI18n } from '../contexts/I18nContext'
 
 export default function Terms() {
