@@ -414,8 +414,15 @@ function PalettePanel({ swatches, onChange, announce }) {
         <div className="plb-board hw-board" role="group" aria-label="Generated palette">
           {swatches.map((s, i) => {
             const ink = readableInk(s.hex)
+            // Grouped, not a landmark — see the long note over .plb-board in
+            // PaletteBuilder.jsx. This board is the same markup, so it had the
+            // same fault: measured on / at 1440x900, five of the ten regions on
+            // the homepage were colour swatches named with raw hex, sitting among
+            // the five real ones named by its h2s. The container two lines above
+            // has always carried the grouping role; the columns inside it now
+            // match it.
             return (
-              <section className="plb-col" key={i} ref={colRef(s.hex, ink)} aria-label={`${roleLabel(HANDOFF_SYSTEM, i)} ${s.hex}`}>
+              <div role="group" className="plb-col" key={i} ref={colRef(s.hex, ink)} aria-label={`${roleLabel(HANDOFF_SYSTEM, i)} ${s.hex}`}>
                 <div className="plb-col-tools">
                   <button
                     type="button"
@@ -447,7 +454,7 @@ function PalettePanel({ swatches, onChange, announce }) {
                 </button>
                 <div className="plb-role">{roleLabel(HANDOFF_SYSTEM, i)}</div>
                 {copiedHex === s.hex && <span className="plb-badge" aria-hidden="true">Copied</span>}
-              </section>
+              </div>
             )
           })}
         </div>
