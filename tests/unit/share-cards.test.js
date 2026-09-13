@@ -45,7 +45,7 @@ import {
 import { railSections, readHero, readTokens } from '../../scripts/og-cards.mjs'
 
 const REPO = process.cwd()
-const ORIGIN = 'https://www.uil4b.com'
+const ORIGIN = 'https://uil4b.com'
 const read = (p) => fs.readFileSync(path.join(REPO, p), 'utf8')
 const previews = (f) => path.join(REPO, 'public', 'previews', f)
 const built = fs.existsSync(path.join(REPO, 'dist', 'index.html'))
@@ -100,7 +100,7 @@ test('THE ONE THAT MATTERS: no prerendered route unfurls as the wrong picture', 
     assert.ok(card && card.file, `${route} resolves to no share card at all`)
     assert.ok(fs.existsSync(previews(card.file)),
       `${route} points at public/previews/${card.file}, which does not exist`)
-    assert.match(cardUrl(ORIGIN, card), /^https:\/\/www\.uil4b\.com\/previews\/.+\.png$/,
+    assert.match(cardUrl(ORIGIN, card), /^https:\/\/uil4b\.com\/previews\/.+\.png$/,
       `${route}'s og:image is not an absolute URL — relative og:image is ignored by most unfurlers`)
     if (card.id !== DEFAULT_CARD.id) carded += 1
   }

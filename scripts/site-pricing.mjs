@@ -67,8 +67,11 @@ import {
   resolvePlanLadder,
 } from '../src/config/planLadder.js'
 import { AI_LIMITS } from '../src/config/plans.js'
+import { SITE_ORIGIN } from '../src/utils/routeMeta.js'
 
-const ORIGIN = 'https://www.uil4b.com'
+// Imported, not retyped. This file's own header says a second copy of a
+// price is the defect; the same holds for the origin it is published under.
+const ORIGIN = SITE_ORIGIN
 
 // The markers index.html carries in place of any number. Distinctive enough
 // that a grep finds every one, and an HTML comment so the un-substituted file

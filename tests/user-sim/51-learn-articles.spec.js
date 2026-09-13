@@ -85,7 +85,7 @@ test.describe('Learn articles', () => {
       // The head is the article's own, not the homepage's.
       await expect(page).toHaveTitle(new RegExp(article.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
       await expect(page.locator('link[rel="canonical"]'))
-        .toHaveAttribute('href', `https://www.uil4b.com/learn/${article.slug}`)
+        .toHaveAttribute('href', `https://uil4b.com/learn/${article.slug}`)
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'index,follow')
     })
   }
