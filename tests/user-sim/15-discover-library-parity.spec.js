@@ -42,8 +42,18 @@ test.describe('Discover libraries share one header', () => {
       const hero = page.locator('.dgh-hero')
       await expect(hero).toBeVisible()
       await expect(hero.getByRole('heading', { level: 1, name: library.title })).toBeVisible()
-      // Title + description are what make the two pages read as one surface.
-      await expect(hero.locator('p')).not.toBeEmpty()
+      // THE DESCRIPTION IS ASSERTED GONE, NOT PRESENT (founder decision,
+      // 2026-09-13), and that is a reversal of what this line said. It used to
+      // read "Title + description are what make the two pages read as one
+      // surface" and assert the paragraph was not empty. The paragraph is
+      // exactly what stopped being shared: BOTH libraries ran one template
+      // sentence, "...with a point of view ... make it yours.", and the parity
+      // it produced was the parity of a filled-in blank. The founder deleted
+      // both. What makes the two pages one surface is the shared component and
+      // its rendered surface, which the two tests below this one measure
+      // directly; a slot that is empty on both is still parity, and this
+      // asserts the template cannot come back rather than asserting the slot.
+      await expect(hero.locator('p')).toHaveCount(0)
       // REGRESSION GUARD (#surface-headers-read-as-ai). The founder marked both
       // of these "AI" on the Font Gallery masthead: a taxonomy eyebrow above an
       // h1 that already says it, and a display numeral counting the catalogue.
@@ -115,7 +125,14 @@ test.describe('Discover libraries share one header', () => {
 
       // The page's own identity, through the shared slots.
       await expect(hero.getByRole('heading', { level: 1, name: surface.title })).toBeVisible()
-      await expect(hero.locator('p')).not.toBeEmpty()
+      // The description slot is OPTIONAL now. The two Discover libraries no
+      // longer fill it (see the note on the per-library test above); the two
+      // Create surfaces still do, from their own locale strings. So this
+      // asserts what is actually required of the slot - if a surface fills it,
+      // it must not be filled with the empty string - rather than requiring
+      // every surface to have something to say.
+      const description = hero.locator('p')
+      if (await description.count()) await expect(description.first()).not.toBeEmpty()
       // Same regression guard as above, across all four browse surfaces.
       await expect(hero.locator('.dgh-eyebrow')).toHaveCount(0)
       await expect(hero.locator('.dgh-mark')).toHaveCount(0)
@@ -126,29 +143,50 @@ test.describe('Discover libraries share one header', () => {
       const h1 = await hero.getByRole('heading', { level: 1 }).innerText()
       expect(h1.endsWith('.')).toBe(false)
 
+      // THE DESCRIPTION RAMP MOVED OUT OF THIS OBJECT (2026-09-13) and is
+      // compared separately below. It used to be read as
+      // `getComputedStyle(el.querySelector('p'))` unconditionally, which throws
+      // outright on a masthead with no description - and two of these four have
+      // none since the founder deleted the shared template sentence. Folding a
+      // null into the shape object instead would have been worse than throwing:
+      // `{ pSize: null }` and `{ pSize: '19px' }` are unequal, so the parity
+      // assertion would have started failing for a difference in CONTENT while
+      // claiming the masthead's rendered surface had drifted.
       shapes.push(await page.evaluate(() => {
         const el = document.querySelector('.dgh-hero')
         const s = getComputedStyle(el)
         const h = getComputedStyle(el.querySelector('h1'))
-        const p = getComputedStyle(el.querySelector('p'))
+        const p = el.querySelector('p')
+        const ps = p ? getComputedStyle(p) : null
         return {
-          background: s.backgroundColor,
-          radius: s.borderTopLeftRadius,
-          padding: s.paddingTop,
-          colour: s.color,
-          h1Family: h.fontFamily,
-          h1Size: h.fontSize,
-          h1Weight: h.fontWeight,
-          h1LineHeight: h.lineHeight,
-          pSize: p.fontSize,
-          pColour: p.color,
+          shape: {
+            background: s.backgroundColor,
+            radius: s.borderTopLeftRadius,
+            padding: s.paddingTop,
+            colour: s.color,
+            h1Family: h.fontFamily,
+            h1Size: h.fontSize,
+            h1Weight: h.fontWeight,
+            h1LineHeight: h.lineHeight,
+          },
+          description: ps ? { pSize: ps.fontSize, pColour: ps.color } : null,
         }
       }))
     }
     // One masthead means one set of numbers, on all four.
     for (let i = 1; i < shapes.length; i += 1) {
-      expect(shapes[i], `${BROWSE_SURFACES[i].route} has drifted from ${BROWSE_SURFACES[0].route}`)
-        .toEqual(shapes[0])
+      expect(shapes[i].shape, `${BROWSE_SURFACES[i].route} has drifted from ${BROWSE_SURFACES[0].route}`)
+        .toEqual(shapes[0].shape)
+    }
+    // And wherever a description IS rendered, it is rendered the one way. This
+    // is the same claim the ramp was making inside the object above, made
+    // against the surfaces that actually have one.
+    const described = shapes.filter((x) => x.description)
+    expect(described.length, 'no browse surface rendered a description, so the ramp was never compared')
+      .toBeGreaterThanOrEqual(2)
+    for (const d of described) {
+      expect(d.description, 'the description ramp has drifted between browse surfaces')
+        .toEqual(described[0].description)
     }
   })
 
