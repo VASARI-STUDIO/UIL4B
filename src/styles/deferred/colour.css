@@ -1181,34 +1181,6 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
      390px, with no affordance. Same fault as S4 on the shared .pl-chips. */
   .grg-chips{flex:1 1 100%}
 }
-/* M6 (responsive-audit-2026-08): every gradient name and meta line truncated
-   between 450 and 579px. Measured across the 100-card library: at 450px, 78 of
-   100 names and 100 of 100 meta lines were cut, e.g. "Sunset Blaze" needing 86px
-   and getting 47.
-
-   THE AUDIT'S DIAGNOSIS IS WRONG, and the difference is worth 250% of the page
-   height. It blamed the 200px grid minimum below ("well below the ~245px the
-   card footer actually needs") and proposed raising it to the desktop 280px.
-   That does clear the truncation, because it stops there being two columns at
-   all until 608px — measured, the grid goes from 17,849px to 64,658px tall at
-   450px, +262%, to browse the same 100 cards one enormous 619px card at a time.
-
-   The actual cause is in the footer, not the grid. `.grg-actions` is
-   `flex-shrink:0`, so Copy CSS + Open take a fixed ~142px however narrow the
-   card is, and `.grg-id` gets what is left — 47px in a 201px column. The name is
-   not being denied width by the column; it is being denied width by the action
-   row beside it. Stacking the two clears every truncation at every width for
-   +11% card height (330px to 368px at 450px), and keeps two columns.
-
-   Below 450px the grid is already a single 288-408px column and nothing was
-   truncated there, so this is not needed for correctness — it is applied to the
-   whole ≤640px band anyway so that a phone card has ONE footer shape rather than
-   changing arrangement at an invisible seam, and it gives the two actions a
-   full-width row, which is the friendlier touch target of the two layouts. */
-@media(max-width:640px){
-  .grg-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:28px 16px}
-  .grg-toolbar{gap:10px;margin-bottom:24px}}
-
 @media(max-width:640px){
   .grg-foot{flex-direction:column;align-items:stretch;gap:8px}
   .grg-actions{justify-content:space-between}}

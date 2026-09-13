@@ -56,7 +56,6 @@
 .ic-sections{display:flex;flex-direction:column;gap:10px}
 .ic-acc{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);overflow:hidden;box-shadow:var(--warm-shadow);scroll-margin-top:72px}
 .ic-acc-h{margin:0;font-size:inherit;font-weight:inherit;line-height:inherit}
-.ic-acc-head{display:flex;align-items:center;gap:12px;width:100%;padding:16px 18px;background:none;border:none;cursor:pointer;font-family:var(--font);text-align:left;transition:background var(--t)}
 .ic-acc-head:hover{background:var(--hvr)}
 .ic-acc-emoji{font-size:19px;line-height:1;flex-shrink:0}
 .ic-acc-title{font-size:15px;font-weight:650;color:var(--t0);margin:0;flex:1}
@@ -211,6 +210,12 @@ html[data-reduced-motion="true"] .home-anim{animation:none!important;opacity:1!i
 .spec-frame::before{content:"";position:absolute;inset:0;background:linear-gradient(45deg,transparent calc(50% - .5px),var(--border) calc(50% - .5px),var(--border) calc(50% + .5px),transparent calc(50% + .5px)),linear-gradient(-45deg,transparent calc(50% - .5px),var(--border) calc(50% - .5px),var(--border) calc(50% + .5px),transparent calc(50% + .5px))}
 .spec-label{position:relative;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-pill);padding:4px 10px}
 .soon-badge-accent{border-color:var(--accent);color:var(--accent-strong);background:var(--accent-bg)}
+
+/* ── 404 ────────────────────────────────────────────────────────────────────
+   pages/NotFound.jsx. Replaces a redirect to `/`, which returned 200 for every
+   typo and silently teleported the user so a broken link looked like it had
+   worked. */
+.nf-path{font-family:var(--mono);font-size:.92em;padding:2px 6px;border-radius:var(--radius-s);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);word-break:break-all}
 .nf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:var(--s-6) 0}
 .nf-card{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--card);text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .nf-card:hover{border-color:var(--bh);background:var(--bg-1)}

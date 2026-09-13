@@ -173,7 +173,6 @@
 .adm-cat{padding:20px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--card-grad);margin-bottom:24px;display:flex;flex-direction:column;gap:16px}
 .adm-cat-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .adm-cat-title{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--t0)}
-.adm-cat-desc{font-size:11px;color:var(--t3)}
 
 /* Users tab — masked emails, flags, sorting, filters */
 .adm-mask{display:inline-flex;align-items:center;gap:6px;max-width:100%}

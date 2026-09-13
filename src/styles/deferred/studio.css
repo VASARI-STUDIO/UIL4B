@@ -48,12 +48,6 @@
 .auth-gate-google-link,.auth-gate-switch{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-strong);cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 4px}
 .auth-gate-google-link:hover,.auth-gate-switch:hover{text-decoration:underline}
 .auth-gate-sep{color:var(--t3);font-size:11px}
-/* --t2, not --t3: the 8px SOON tag measured 4.07:1 on its chip in light at
-   every width (2026-09-09). --t2 is 4.95:1. The size is left as found and
-   flagged: 8px uppercase is the smallest type on the page. */
-.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
-/* Alpha badge — token-driven accent pill (no hardcoded colours). */
-.fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
 .fc-card{display:flex;flex-direction:column;gap:8px;padding:12px;position:relative;align-items:stretch}
 .fc-remove{position:absolute;top:8px;right:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:none;border-radius:50%;background:var(--bg-3);color:var(--t1);font-size:16px;line-height:1;cursor:pointer;transition:all var(--t);z-index:2}
 .fc-remove:hover{background:var(--err);color:var(--err-fg)}

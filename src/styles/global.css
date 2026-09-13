@@ -264,9 +264,16 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 /* The active library is marked by a persistent raised thumb, not by hover —
    on a touch screen there is no hover state to reveal which one you are in. */
 .lib-switch-btn.is-active{color:#fff;background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22)}
+.lib-switch-emoji{font-size:22px;line-height:1}
+.lib-switch-btn>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
 .lib-switch-btn strong{font-size:var(--fs-body-s);font-weight:700;color:inherit}
 .lib-switch-btn small{font-size:var(--fs-micro);color:rgba(255,255,255,.5)}
 .lib-switch-btn.is-active small{color:rgba(255,255,255,.66)}
+.lib-head-status{display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-family:var(--mono);font-size:var(--fs-micro);color:rgba(255,255,255,.55)}
+/* .48 not lower: at 11px this needs 4.5:1 against the masthead ground, and it
+   measures 4.99. It was .38 (3.51) for one commit — the dark hero is a much
+   darker ground than the page this text used to sit on. */
+.lib-keyhint{color:rgba(255,255,255,.48)}
 
 /* ─── Color Studio Nav & Sections ─── */
 /* Pill-nav (CS#1/2/2.1): glass panel + absolutely-positioned sliding thumb whose
@@ -431,6 +438,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 
 .stc-head.solo{cursor:default}
 .stc-head.solo .stc-toolbar{margin-left:0;width:100%}
+.stc-role-presets .pt-t{padding:4px 10px;font-size:10px;min-height:0}
 
 /* Semantic colour workbench */
 .stc-head.solo{padding-bottom:var(--s-5);border-bottom:1px solid var(--border)}
@@ -569,6 +577,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .pl-tab.active{color:var(--accent-strong);border-bottom-color:var(--accent);font-weight:600}
 .pl-tab-count{font-size:10px;font-weight:700;background:var(--bg-3);color:var(--t2);padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
 .pl-tab.active .pl-tab-count{background:var(--accent-bg);color:var(--accent-strong)}
+.pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
+.pl-card-saves{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s)}
 .pl-chip{padding:6px 14px;border-radius:var(--radius);font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--t);white-space:nowrap;flex-shrink:0}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
 .pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
@@ -594,6 +604,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 /* Card */
 .pl-card{border-radius:var(--radius-l);overflow:hidden;cursor:pointer;transition:all var(--dur-3) var(--ease-out);position:relative;background:var(--card);border:1px solid var(--border)}
 .pl-card-title{font-size:15px;font-weight:600;color:#fff;line-height:1.35;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* MOTION IS EARNED PER CARD. The scroll plays on hover and on keyboard focus,
+   never on its own. motionsites plays every card at once and it works there
+   because its artefact is a PAGE — there is no text to read. A prompt IS text,
+   and twelve bodies of it moving at once is not a preview.
+
+   It is also WCAG 2.2 SC 2.2.2 (Pause, Stop, Hide): content that moves
+   automatically for more than five seconds alongside other content needs a
+   mechanism to pause it, and this layout has nowhere to put one. Hover- and
+   focus-driven motion is user-initiated and self-cancelling, so it is outside
+   2.2.2 entirely and it answers the question for the one card the reader is
+   looking at.
+
+   The travel is min(0px, window - text height - the window's own top padding),
+   so a prompt that already fits moves by exactly nothing rather than sliding up
+   to reveal blank space. `alternate` returns it to the top rather than jumping,
+   and the 7%/93% holds are the dwell at each end. */
+.pl-card-preview-text{margin:0;padding-bottom:var(--pl-preview-fade);font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--t1);white-space:pre-wrap;word-break:break-word;animation:pl-preview-scroll var(--pl-preview-dur) linear infinite alternate;animation-play-state:paused}
 @keyframes pl-preview-scroll{0%,7%{transform:translateY(0)}93%,100%{transform:translateY(min(0px,calc(var(--pl-preview-h) - 100% - 16px)))}}
 
 /* No-image card */
@@ -612,6 +639,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    page ground - under AA at these sizes, and this page renders ~80 tags at once.
    --accent-strong is the same blue at 5.84 / 5.03. See [accent-small-text-contrast]. */
 .pl-card.no-img .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
+.pl-modal-header .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
 .pl-modal-delete{color:var(--err-strong)!important;border-color:var(--err)!important}
 .pl-modal-delete:hover{background:color-mix(in srgb,var(--err) 8%,transparent)!important}
 .emoji-cell{display:flex;align-items:center;justify-content:center;width:var(--emoji-cell,42px);height:var(--emoji-cell,42px);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard);position:relative}
@@ -1351,6 +1379,8 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
   .storage-table td::before{content:attr(data-label);font-family:var(--mono);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--t2);line-height:1.55}
   .storage-table td:not(:last-child){border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px}
 }
+.danger-zone-h{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--err-strong);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.danger-zone p{font-size:12.5px;color:var(--t1);line-height:1.6;margin-bottom:14px}
 /* Deletion confirmation. Replaces a set of inline style={} objects — this
    codebase keeps its styling in this file (docs/reference/css-conventions.md),
    and the old dialog also asked Google-only accounts for a password they do
@@ -1956,6 +1986,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .adm-submission.done{opacity:.7}
 .adm-submission-preview{font-size:12px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .adm-submission-preview.expanded{white-space:normal}
+.adm-cat-desc{font-size:11px;color:var(--t3)}
 .adm-th-sort{display:inline-flex;align-items:center;gap:4px;padding:0;border:none;background:none;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .adm-th-sort:hover{color:var(--t0)}
 .adm-th-sort.active{color:var(--accent-strong)}
@@ -1978,6 +2009,12 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fc-tab{position:relative;display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fc-tab:hover{color:var(--t0)}
 .fc-tab.on{background:var(--card);color:var(--t0);box-shadow:var(--ring)}
+/* --t2, not --t3: the 8px SOON tag measured 4.07:1 on its chip in light at
+   every width (2026-09-09). --t2 is 4.95:1. The size is left as found and
+   flagged: 8px uppercase is the smallest type on the page. */
+.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
+/* Alpha badge — token-driven accent pill (no hardcoded colours). */
+.fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
 .fc-drop{cursor:pointer;transition:border-color var(--t),background var(--t),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .fc-drop:hover{transform:translateY(-2px);box-shadow:var(--warm-shadow-lg)}
 .fc-drop-ico{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;margin-bottom:12px;border-radius:var(--radius);background:var(--accent-bg);color:var(--accent)}
@@ -2017,6 +2054,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .ch-filter.is-active{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
 .ch-sort-btn{padding:5px 14px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--t2);font-family:var(--font);transition:all var(--dur-2) var(--ease-standard)}
 .ch-sort-btn.is-active{background:var(--accent-strong);color:var(--accent-fg)}
+.ic-acc-head{display:flex;align-items:center;gap:12px;width:100%;padding:16px 18px;background:none;border:none;cursor:pointer;font-family:var(--font);text-align:left;transition:background var(--t)}
 .ic-acc-head.is-open .ic-acc-chevron{transform:rotate(180deg)}
 .ic-acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--dur-3) var(--ease-out)}
 .ic-acc-body.is-open{grid-template-rows:1fr}
@@ -5920,6 +5958,8 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
 .ui-login-why-h{margin:0 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--t1)}
 .ui-login-why-list{margin:0;padding-left:16px;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .ui-login-why-list li+li{margin-top:4px}
+.uname-owner .uname-text{color:#F6C453;text-shadow:0 1px 0 color-mix(in srgb,#6B4A00 45%,transparent)}
+[data-theme="light"] .uname-owner .uname-text{color:#8A5A00;text-shadow:none}
 
 /* ═════════════════════════════════ UI System Builder ═══════════════════════ */
 /* This is a dense operating surface, not a gallery of six cards. The scale
@@ -6280,6 +6320,34 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 
 @media(hover:hover){
   .grg-card:hover .grg-like,.grg-like:focus-visible,.grg-like.is-liked{opacity:1;transform:none}}
+
+/* M6 (responsive-audit-2026-08): every gradient name and meta line truncated
+   between 450 and 579px. Measured across the 100-card library: at 450px, 78 of
+   100 names and 100 of 100 meta lines were cut, e.g. "Sunset Blaze" needing 86px
+   and getting 47.
+
+   THE AUDIT'S DIAGNOSIS IS WRONG, and the difference is worth 250% of the page
+   height. It blamed the 200px grid minimum below ("well below the ~245px the
+   card footer actually needs") and proposed raising it to the desktop 280px.
+   That does clear the truncation, because it stops there being two columns at
+   all until 608px — measured, the grid goes from 17,849px to 64,658px tall at
+   450px, +262%, to browse the same 100 cards one enormous 619px card at a time.
+
+   The actual cause is in the footer, not the grid. `.grg-actions` is
+   `flex-shrink:0`, so Copy CSS + Open take a fixed ~142px however narrow the
+   card is, and `.grg-id` gets what is left — 47px in a 201px column. The name is
+   not being denied width by the column; it is being denied width by the action
+   row beside it. Stacking the two clears every truncation at every width for
+   +11% card height (330px to 368px at 450px), and keeps two columns.
+
+   Below 450px the grid is already a single 288-408px column and nothing was
+   truncated there, so this is not needed for correctness — it is applied to the
+   whole ≤640px band anyway so that a phone card has ONE footer shape rather than
+   changing arrangement at an invisible seam, and it gives the two actions a
+   full-width row, which is the friendlier touch target of the two layouts. */
+@media(max-width:640px){
+  .grg-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:28px 16px}
+  .grg-toolbar{gap:10px;margin-bottom:24px}}
 
 .typ-notice{display:flex;gap:12px;align-items:flex-start;margin:0 0 var(--s-5);padding:14px 16px;border-radius:var(--radius);background:color-mix(in srgb,var(--warn) 10%,var(--bg-0));border:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
 .typ-notice>svg{color:var(--warn);flex-shrink:0;margin-top:1px}
@@ -6854,12 +6922,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 @media (prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .bill-banner{animation:none}
 }
-
-/* ── 404 ────────────────────────────────────────────────────────────────────
-   pages/NotFound.jsx. Replaces a redirect to `/`, which returned 200 for every
-   typo and silently teleported the user so a broken link looked like it had
-   worked. */
-.nf-path{font-family:var(--mono);font-size:.92em;padding:2px 6px;border-radius:var(--radius-s);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);word-break:break-all}
 
 /* ── Narrow-viewport reflow (WCAG 1.4.10) ───────────────────────────────────
    Measured at 320px: .plb-col became a single nowrap row at ≤768px, and its

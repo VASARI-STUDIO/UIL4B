@@ -41,8 +41,6 @@
 .lib-loading{display:flex;min-height:280px;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--t2)}
 .lib-loading strong{font-size:var(--fs-body);color:var(--t0)}
 .lib-loading span{font-size:var(--fs-caption)}
-.stc-role-presets .pt-t{padding:4px 10px;font-size:10px;min-height:0}
-.pl-modal-header .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
 
 /* Empty state */
 .pl-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:80px 20px;text-align:center;color:var(--t2)}
@@ -515,8 +513,6 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .uname-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uname--bold .uname-text{font-weight:700;letter-spacing:-.01em}
 .uname-owner{position:relative;display:inline-flex;align-items:center;gap:4px;min-width:0;border-radius:var(--radius-s);outline:none}
-.uname-owner .uname-text{color:#F6C453;text-shadow:0 1px 0 color-mix(in srgb,#6B4A00 45%,transparent)}
-[data-theme="light"] .uname-owner .uname-text{color:#8A5A00;text-shadow:none}
 .uname-owner:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .uname-crown{font-size:.85em;line-height:1;filter:saturate(1.1)}
 /* Owner tooltip — hidden until the name is hovered or keyboard-focused. */

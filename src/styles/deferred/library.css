@@ -35,16 +35,9 @@
 .lib-switch{display:grid;grid-template-columns:1fr;gap:4px;width:100%;padding:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-l)}
 .lib-switch-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .lib-switch-btn>svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.lib-switch-emoji{font-size:22px;line-height:1}
-.lib-switch-btn>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
-.lib-head-status{display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-family:var(--mono);font-size:var(--fs-micro);color:rgba(255,255,255,.55)}
 .lib-net{display:inline-flex;align-items:center;gap:7px}
 .lib-net i{width:7px;height:7px;border-radius:50%;background:#facc15;flex:none}
 .lib-net.is-online i{background:#4ade80}
-/* .48 not lower: at 11px this needs 4.5:1 against the masthead ground, and it
-   measures 4.99. It was .38 (3.51) for one commit — the dark hero is a much
-   darker ground than the page this text used to sit on. */
-.lib-keyhint{color:rgba(255,255,255,.48)}
 /* Below the masthead's own 720px stack point the aside spans the full width,
    so the two libraries sit side by side again; on a phone they stack back. */
 @media(max-width:720px){.lib-switch{grid-template-columns:1fr 1fr}.lib-head-status{flex-direction:row;align-items:center;justify-content:space-between;width:100%}}
@@ -120,8 +113,6 @@
 
 /* ─── Prompt Library (gallery style) ─── */
 .pl-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
-.pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
-.pl-card-saves{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s)}
 /* Sticky library command bar. It used to carry a negative-margin bleed sized to
    the page gutter, but every page that uses it nests it inside .sec (max-width
    1400) — so the bleed could never reach the viewport edge and simply
@@ -238,23 +229,6 @@
    prompt's LAST LINE sitting inside the gradient, washed out at the exact
    moment the reader has scrolled to reach it. */
 .pl-card-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:var(--pl-preview-fade);background:linear-gradient(180deg,transparent 0%,var(--cbg) 88%);pointer-events:none}
-/* MOTION IS EARNED PER CARD. The scroll plays on hover and on keyboard focus,
-   never on its own. motionsites plays every card at once and it works there
-   because its artefact is a PAGE — there is no text to read. A prompt IS text,
-   and twelve bodies of it moving at once is not a preview.
-
-   It is also WCAG 2.2 SC 2.2.2 (Pause, Stop, Hide): content that moves
-   automatically for more than five seconds alongside other content needs a
-   mechanism to pause it, and this layout has nowhere to put one. Hover- and
-   focus-driven motion is user-initiated and self-cancelling, so it is outside
-   2.2.2 entirely and it answers the question for the one card the reader is
-   looking at.
-
-   The travel is min(0px, window - text height - the window's own top padding),
-   so a prompt that already fits moves by exactly nothing rather than sliding up
-   to reveal blank space. `alternate` returns it to the top rather than jumping,
-   and the 7%/93% holds are the dwell at each end. */
-.pl-card-preview-text{margin:0;padding-bottom:var(--pl-preview-fade);font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--t1);white-space:pre-wrap;word-break:break-word;animation:pl-preview-scroll var(--pl-preview-dur) linear infinite alternate;animation-play-state:paused}
 .pl-card:hover .pl-card-preview-text,.pl-card:focus-visible .pl-card-preview-text{animation-play-state:running}
 /* BOTH HALVES — and the reason is narrower than the usual one, so it is worth
    stating precisely rather than repeating the house line.
