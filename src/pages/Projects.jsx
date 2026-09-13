@@ -602,6 +602,34 @@ export default function Projects({ toast }) {
   const stats = homeStats(projects)
   const suggestion = resolving ? null : nextToolSuggestion(projects)
 
+  // WHETHER THIS ACCOUNT HAS ANYTHING YET, and it decides where DailyBand goes.
+  //
+  // Measured on a 390x844 phone, signed in, list empty: the masthead ends at
+  // 242, the band runs 258-516, the tabs sit at 548, and the empty state's card
+  // starts at 604 — so "Create your first project" landed at y=829..873, with
+  // its centre at 851 in an 844px viewport. Seven pixels of the centre and 29
+  // of the control were below the fold. At 360x800 the whole button was below
+  // it (top 842), and at 320 the top was 886 — 42px clear of the bottom edge on
+  // an 844-tall screen and 166 on a 720-tall one. Since the founder stopped
+  // seeding a "Default Project" this panel is the FIRST SCREEN of the product
+  // for a new signup, so on every phone we support the one thing it asks them
+  // to do could not be seen or tapped, and nothing said to scroll.
+  //
+  // The band is 258px of that because it stacks to one column at <=860px —
+  // widest exactly where vertical space is scarcest. And on an empty account
+  // its NEXT column reads "Nothing saved yet. A palette is the fastest…",
+  // which is the empty state's own sentence, one screen earlier, without the
+  // control. So the thing pushing the primary action off the phone was a
+  // duplicate of it.
+  //
+  // "Orientation before inventory" (the note above DailyBand) is right when
+  // there IS an inventory. With none, the empty state is the orientation, and
+  // the band reads better after it as what to look at next. Nothing is removed
+  // and nothing is width-gated: the order changes with the account's STATE, so
+  // it is the same at 320 and at 1440 and the reading order stays invariant
+  // across breakpoints.
+  const accountIsEmpty = !resolving && projects.length === 0
+
   // B6 (2026-08-12 account lifecycle audit): the cap was enforced and never
   // announced. `projects` is the SAME array saveProject() counts — archived
   // records included — so this counter cannot drift from the rule that actually
@@ -687,8 +715,13 @@ export default function Projects({ toast }) {
       </header>
 
       {/* Orientation before inventory: what to do next, and one thing worth
-          knowing, above the list of things you already have. */}
-      <DailyBand suggestion={suggestion} resolving={resolving} />
+          knowing, above the list of things you already have.
+
+          UNLESS THERE IS NO INVENTORY — see the note on `accountIsEmpty`. An
+          account with nothing in it gets the band below its empty state
+          instead, because up here it was 258px of stacked phone layout between
+          a new signup and the only control the page offers them. */}
+      {!accountIsEmpty && <DailyBand suggestion={suggestion} resolving={resolving} />}
 
       {showSaveForm && (
         <div className="card" style={{ padding: 20, marginBottom: 24, maxWidth: 560 }}>
@@ -846,14 +879,21 @@ export default function Projects({ toast }) {
              the sentence. It is decoration for a panel whose heading already
              says what it means, so it is hidden rather than given a name it
              does not need. */
-        <div className="card" style={{ padding: 48, textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+        /* THE PADDING WAS 48 AND IT WAS A NUMBER, not a rule. Written inline it
+           applied unchanged at 320px, where 48 left and 48 right of a 272px-wide
+           card leave 176px for a sentence that names two tools — it wrapped to
+           five lines and the card grew from 319px tall at 390 to 340 at 320,
+           pushing its own button further down the narrower the screen got. It
+           is a class now so the value can answer the width; the 48 is unchanged
+           from 641px up, which is every width it was ever looked at on. */
+        <div className="card uh-empty">
+          <div className="uh-empty-mark">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
               <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
             </svg>
           </div>
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No projects yet</h2>
-          <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 16, maxWidth: 360, margin: '0 auto 16px' }}>
+          <h2 className="uh-empty-title">No projects yet</h2>
+          <p className="uh-empty-text">
             Build a palette in <NavLink to="/create/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/create/font-pair">Font Pair Finder</NavLink>, then save your design as a project.
           </p>
           <button className="btn btn-accent" onClick={() => setShowNewModal(true)}>Create your first project</button>
@@ -925,6 +965,13 @@ export default function Projects({ toast }) {
       )}
       </>
       )}
+
+      {/* The other half of the swap above. Same component, same props, same
+          copy — only later in the document, and only while the account has
+          nothing in it. It still precedes the starters, so the page reads:
+          what you have (nothing, and here is how to change that) → what to do
+          next and one thing worth knowing → four artefacts to open. */}
+      {accountIsEmpty && <DailyBand suggestion={suggestion} resolving={resolving} />}
 
       {detailProject && (
         <ProjectDetail

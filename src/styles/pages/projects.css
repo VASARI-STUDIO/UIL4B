@@ -220,6 +220,25 @@
 .uh-signin h2{margin:0 0 var(--s-2);font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0)}
 .uh-signin p{margin:0 0 var(--s-4);font-size:var(--fs-body-s);line-height:1.65;color:var(--t2)}
 
+/* ── Nothing saved yet ─────────────────────────────────────────── */
+/* The panel a new account lands on, and since the "Default Project" seed was
+   dropped it is the FIRST SCREEN of the product. Every value here was an inline
+   style on the <div> until 2026-09-13 and is unchanged from 641px up; what was
+   missing was a rule for what happens below that.
+
+   MEASURED, 320px wide: 48px of padding each side left 176px of line for a
+   sentence that names two tools, so it wrapped to five lines and the card grew
+   from 319px tall to 340 — the panel got taller the less room it had, and its
+   own button went down with it. 24px below 640 buys back 48px of width and
+   48px of height on exactly the screens that had neither. */
+.uh-empty{padding:48px;text-align:center}
+.uh-empty-mark{display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin:0 auto 16px;border-radius:50%;background:var(--accent-bg)}
+.uh-empty-title{margin-bottom:6px;font-size:16px;font-weight:700}
+.uh-empty-text{margin:0 auto 16px;max-width:360px;font-size:13px;color:var(--t2)}
+@media(max-width:640px){
+  .uh-empty{padding:24px}
+}
+
 /* ── Daily starters ────────────────────────────────────────────── */
 .uh-starters{margin-top:var(--s-8);padding-top:var(--s-5);border-top:1px solid var(--border)}
 .uh-band + .uh-starters{margin-top:var(--s-6);padding-top:0;border-top:none}
