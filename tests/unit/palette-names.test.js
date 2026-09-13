@@ -16,7 +16,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { generateHarmony } from '../../src/utils/colors.js'
 import {
-  NAME_MOVEMENTS, NAME_THEMES, colorName, colorTheme, paletteColorNames, paletteTheme,
+  NAME_MOVEMENTS, NAME_THEMES, colorName, colorTheme, paletteColorNames, paletteTheme, themeForHue,
   randomPaletteName,
 } from '../../src/utils/paletteNames.js'
 
@@ -164,4 +164,58 @@ test('the community-submit dice name stays deliberately random', () => {
   const rolls = new Set()
   for (let i = 0; i < 200; i++) rolls.add(randomPaletteName(GREENS))
   assert.ok(rolls.size > 1, 'the dice must produce more than one name')
+})
+
+// ── The hue families are cut on HCT, not on sRGB ───────────────────────────
+//
+// REGRESSION GUARD, founder report 2026-09-13: "Bauhaus Mulberry" was sitting
+// on #97ADCD, a pale blue. Mulberry is in the `cosmic` (purple) bank. The cause
+// was that `themeForHue`'s boundaries were spaced for an sRGB hue wheel while
+// every caller feeds it an HCT hue, and the two are rotated by up to 45° in the
+// blues — so ordinary blues landed past the ocean/cosmic cut and were titled as
+// purples, purples landed past the cosmic/candy cut and were titled as pinks,
+// and muted reds fell into the all-green `nature` bank.
+//
+// These are the exact hexes from the report and from the rendered board, with
+// the family each one visibly belongs to. They are asserted as FAMILIES, not as
+// finished titles: which word a colour draws inside its own bank is the hash's
+// business and must stay free to change.
+test('a colour is titled from the vocabulary of its own HUE FAMILY', () => {
+  const cases = [
+    ['#97ADCD', 'ocean', 'a pale blue — the founder\u2019s "Bauhaus Mulberry"'],
+    ['#3558B9', 'ocean', 'a royal blue'],
+    ['#405C9D', 'ocean', 'a slate blue'],
+    ['#25619B', 'ocean', 'a mid blue'],
+    ['#006B5E', 'ocean', 'a deep teal'],
+    ['#72518A', 'cosmic', 'a muted purple'],
+    ['#904C2A', 'sunset', 'a burnt orange'],
+    ['#A03C4C', 'sunset', 'a brick red'],
+    ['#436828', 'nature', 'a leaf green'],
+    ['#54651F', 'nature', 'an olive'],
+    ['#918F9C', 'mono', 'a near-grey'],
+  ]
+  // POSITIVE CONTROL. If `colorTheme` ever returned one constant for
+  // everything, every row below would still pass against that constant — so
+  // prove first that the cases actually discriminate.
+  const families = new Set(cases.map(([, family]) => family))
+  assert.ok(families.size >= 4, `the cases only cover ${families.size} families`)
+
+  for (const [hex, family, why] of cases) {
+    assert.equal(colorTheme(hex), family, `${hex} (${why}) belongs to ${family}`)
+    assertFromTheme(colorName(hex), family, `${hex} (${why})`)
+  }
+})
+
+test('the HCT hue wheel is walked without a family being skipped', () => {
+  // The cuts are only right if each one is actually reachable. A boundary typo
+  // that swallowed a neighbour (`h < 290` written as `h < 390`, say) would
+  // leave a family with no colour that can reach it, and every test above would
+  // still pass. Walk the wheel and require all five chromatic families.
+  const seen = new Set()
+  for (let h = 0; h < 360; h += 2) seen.add(themeForHue(h, 45, true))
+  for (const family of ['sunset', 'nature', 'ocean', 'cosmic']) {
+    assert.ok(seen.has(family), `no hue on the wheel reaches "${family}"`)
+  }
+  // And the grey gate still wins over any hue.
+  assert.equal(themeForHue(200, 4, false), 'mono')
 })
