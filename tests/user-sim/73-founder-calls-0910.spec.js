@@ -205,6 +205,31 @@ test.describe('a new account starts empty', () => {
         await expect(cta).toBeVisible()
         const box = await cta.boundingBox()
         expect(box.height, 'the empty state’s only control must be reachable by thumb').toBeGreaterThanOrEqual(24)
+
+        // WITHOUT SCROLLING FIRST, and said in its own assertion because the
+        // hit test below cannot say it. `elementFromPoint` is viewport-relative
+        // and returns null for a point outside the viewport, so a control below
+        // the fold fails the hit test with "something paints over the button" —
+        // which is what happened at 390 and 320 on 2026-09-13 and sent three
+        // lanes looking for an overlay that was not there. The real reading was
+        // geometry: the button's centre was at y=851 in an 844px viewport, and
+        // at 320 its top was at 886. Same defect either way, but a failure has
+        // to name the thing that broke, so this one is measured and reported
+        // before the occlusion question is even asked.
+        //
+        // This is the first screen a new signup sees, on the narrowest phone
+        // the suite tests. A primary action that needs a scroll nobody was told
+        // about is a defect in the page, not in the assertion.
+        const geometry = await cta.evaluate((el) => {
+          const r = el.getBoundingClientRect()
+          return { top: Math.round(r.top), bottom: Math.round(r.bottom), vh: window.innerHeight }
+        })
+        expect(geometry.bottom,
+          `the empty state’s only control is below the fold: it runs y=${geometry.top}..${geometry.bottom} `
+          + `in a ${geometry.vh}px viewport, so a new account on this phone cannot see or tap the one thing `
+          + 'the panel asks them to do and nothing tells them to scroll',
+        ).toBeLessThanOrEqual(geometry.vh)
+
         const hit = await cta.evaluate((el) => {
           const r = el.getBoundingClientRect()
           const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)

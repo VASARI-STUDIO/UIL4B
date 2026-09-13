@@ -12,7 +12,7 @@
 //   THE SIGNED-IN PAGE is covered through the mounted fixture, the same way
 //   12-ui-system-builder and the type-save flow are.
 import { test, expect } from './base.js'
-import { go, watch, expectRendered } from './helpers.js'
+import { go, watch, expectRendered, signIn } from './helpers.js'
 
 const SESSION_HINT = 'vs-session'
 const FIXTURE = '/tests/user-sim/fixtures/user-home.html'
@@ -266,4 +266,161 @@ test.describe('quick actions', () => {
     await card.getByRole('textbox', { name: /Type the project name/ }).fill('Default Project')
     await expect(confirm).toBeEnabled()
   })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTERED TO NOTHING — the page's OTHER empty state
+// ─────────────────────────────────────────────────────────────────────────────
+// Found on 2026-09-13 by sweeping the class of the 390px empty-state defect
+// rather than by reading the file, which is the only reason it was found at
+// all: it is one tap from a chip row and it had been shipping.
+//
+// TWO filters can empty this list — the search box and the folder chips — and
+// the sentence named only the search. Measured at 390 and at 1280, tapping
+// "Marketing" on an account with no marketing projects rendered:
+//
+//     No projects match “”.
+//
+// An empty pair of curly quotes, in a panel that held no control at all. The
+// reader was told nothing matched a search they had not run, and left to work
+// out for themselves which of two controls they had set — the dead end
+// LibraryEmpty's own comment says every Library surface exists to forbid.
+//
+// These run against the REAL route with a real session rather than the fixture
+// page, because the filters, the sentence and the reset are the page's own and
+// the fixture does not have them.
+test.describe('a filter that matches nothing says which filter, and undoes itself', () => {
+  const open = async (page) => {
+    await signIn(page, { plan: 'free', projects: 2 })
+    await go(page, '/projects')
+    await expectRendered(page, '/projects')
+    await expect(page.locator('.uh-grid .proj-card')).toHaveCount(2)
+  }
+
+  test('a folder with nothing in it names the FOLDER, not an empty search', async ({ page }) => {
+    watch(page, 'somebody tapping a folder chip that holds none of their work')
+    await open(page)
+
+    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
+    const panel = page.locator('.uh-filtered')
+    await expect(panel).toBeVisible()
+
+    // The regression, stated as the thing it must never say again.
+    await expect(panel, 'the panel quotes a search the reader never typed').not.toContainText('“”')
+    await expect(panel).toContainText('No projects in Marketing.')
+    // Announced: the grid emptying is silent otherwise, and at 390 this panel
+    // opens at y=815 in an 844px viewport.
+    await expect(panel).toHaveAttribute('role', 'status')
+  })
+
+  test('a search that matches nothing still quotes the search', async ({ page }) => {
+    watch(page, 'somebody searching their projects for something that is not there')
+    await open(page)
+
+    await page.locator('.proj-search input').fill('zzqqxx')
+    await expect(page.locator('.uh-filtered')).toContainText('No projects match “zzqqxx”.')
+  })
+
+  test('both filters at once name both', async ({ page }) => {
+    watch(page, 'somebody who set a folder and then searched inside it')
+    await open(page)
+
+    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
+    await page.locator('.proj-search input').fill('zzqqxx')
+    await expect(page.locator('.uh-filtered')).toContainText('No projects match “zzqqxx” in Marketing.')
+  })
+
+  test('the way out is IN the panel, and it clears both filters', async ({ page }) => {
+    // The escape has to be in the panel rather than only back up at the
+    // controls: the panel is what the reader is looking at, and at 390 the
+    // chips and the search box are 200px above it.
+    watch(page, 'somebody getting back to their work after filtering it away')
+    await open(page)
+
+    await page.getByRole('button', { name: 'Marketing', exact: true }).click()
+    await page.locator('.proj-search input').fill('zzqqxx')
+
+    const reset = page.locator('.uh-filtered').getByRole('button', { name: 'Clear filters' })
+    await expect(reset).toBeVisible()
+    const box = await reset.boundingBox()
+    expect(box.height, 'the way out must be reachable by thumb').toBeGreaterThanOrEqual(24)
+
+    await reset.click()
+    await expect(page.locator('.uh-filtered')).toHaveCount(0)
+    await expect(page.locator('.uh-grid .proj-card'), 'both projects must come back').toHaveCount(2)
+    await expect(page.locator('.proj-search input')).toHaveValue('')
+    await expect(page.locator('.proj-folder-chip.active')).toHaveText('All')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE FIRST SCREEN OF THE PRODUCT, ON THE NARROWEST PHONE WE TEST
+// ─────────────────────────────────────────────────────────────────────────────
+// Since the founder stopped seeding a "Default Project" (73-founder-calls-0910
+// § 2), the projects empty state is what every new signup sees first. On
+// 2026-09-13 its only control was below the fold on every phone width in this
+// suite, measured on pristine main:
+//
+//     390 x 844   button y=829..873, centre 851 — 29px of it past the edge
+//     360 x 800   button y=842..886 — the whole control past the edge
+//     320 x 844   button y=886..930 — 42px clear of the bottom
+//     320 x 720   button y=886..930 — 166px clear of the bottom
+//
+// 73-founder-calls-0910 catches the 390 case, because `elementFromPoint`
+// returns null outside the viewport. It cannot catch 320 or 360: it only runs
+// at 390 and 1280. THIS is the test for the class, and it is why the fix has
+// two halves — the card's padding stopped being a fixed 48 below 640 (which is
+// what clears 390 on its own) and the NEXT|TIP band moved below the empty state
+// (which is what clears 320 and 360, where the padding alone leaves the control
+// 16px past the edge).
+//
+// WITHOUT SCROLLING. A page that scrolls is fine; a page whose ONLY control is
+// off the first screen, on the first screen a new account ever sees, with
+// nothing saying to scroll, is not.
+//
+// 320x568 IS HERE ON PURPOSE, and it is the tightest of the four. The suite's
+// shortest viewport elsewhere is 320x720; 568 is the shortest phone screen
+// still in real use, and after the fix the control clears it by 19px. That
+// margin is the reason the card's padding is part of the fix and not a tidy-up:
+// put the fixed 48 back and the control goes 29px past the edge here, while
+// every taller screen stays green. If a future edit lengthens this panel, this
+// is the width that says so first, and it prints the numbers when it does.
+test.describe('the projects empty state puts its control on the first screen', () => {
+  for (const [w, h] of [[320, 568], [320, 720], [360, 800], [390, 844]]) {
+    test(`${w}x${h}: "Create your first project" is above the fold and hit-testable`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width: w, height: h } })
+      const page = await context.newPage()
+      watch(page, `a new account opening their projects on a ${w}px phone`)
+      await signIn(page, { plan: 'free', projects: 0 })
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+
+      const cta = page.getByRole('button', { name: 'Create your first project' })
+      await expect(cta).toBeVisible()
+
+      // Measured off the page rather than off boundingBox(), so the numbers in
+      // the failure are the ones a person on that phone would be looking at.
+      const m = await cta.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
+        return {
+          top: Math.round(r.top),
+          bottom: Math.round(r.bottom),
+          vh: window.innerHeight,
+          scrolled: Math.round(window.scrollY),
+          hit: at === el || el.contains(at),
+        }
+      })
+
+      expect(m.scrolled, 'the measurement must be of the FIRST screen').toBe(0)
+      expect(m.bottom,
+        `the empty state's only control runs y=${m.top}..${m.bottom} in a ${m.vh}px viewport — `
+        + `${m.bottom - m.vh}px of it is below the fold. This is the first screen a new account `
+        + 'sees, and nothing on it says to scroll.',
+      ).toBeLessThanOrEqual(m.vh)
+      expect(m.hit, 'the control is on the first screen but something paints over it').toBe(true)
+
+      await context.close()
+    })
+  }
 })
