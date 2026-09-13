@@ -41,6 +41,7 @@ import { DEFAULT_CARD, cardFor, cardUrl } from './share-cards.mjs'
 import { breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
 import { JSONLD_MARKER, PRICING_MARKER, ladderOffers } from './site-pricing.mjs'
 import { buildLlmsTxt } from './llms-txt.mjs'
+import { HOME_SHELL_ROUTES, applyHomeShell, assertHomeShellApplied } from './home-shell.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const dist = path.join(root, 'dist')
@@ -223,10 +224,36 @@ async function main() {
     })
     misses.forEach(m => allMisses.add(m))
 
+    // ── The one route whose BODY is rewritten too ───────────────────────────
+    //
+    // Everything above this line rewrites heads, which is what the comment at
+    // the top of this file means by "This does NOT render React". That is still
+    // true: nothing here runs a component. What `/` additionally gets is its
+    // HEADLINE — one <h1>, in the markup the hydrated page uses, out of the
+    // founder's sentence in src/data/positioning.js.
+    //
+    // It is scoped to the two sales-page URLs and the 404 shell never sees it.
+    // See scripts/home-shell.mjs for the measurement that motivated it and for
+    // why the markup is the hydrated markup element for element.
+    const body = HOME_SHELL_ROUTES.has(route) ? applyHomeShell(html) : html
+
     const dir = path.join(dist, route.replace(/^\//, ''))
+    if (body !== html) assertHomeShellApplied(body, `${route}/index.html`)
     await mkdir(dir, { recursive: true })
-    await writeFile(path.join(dir, 'index.html'), html, 'utf8')
+    await writeFile(path.join(dir, 'index.html'), body, 'utf8')
   }
+
+  // ── `/`, the one shell this script has never written ──────────────────────
+  //
+  // The route matrix carries `/home`, not `/` — routeMeta.js canonicalises the
+  // first onto the second — so the front door is served straight out of
+  // dist/index.html exactly as vite emitted it. Its HEAD needs nothing: it is
+  // already the homepage's, which is why it was left alone. Its BODY is the
+  // whole point of this change, so it is rewritten here, in place, from the
+  // same function the `/home` shell used.
+  const homeShell = applyHomeShell(shell)
+  assertHomeShellApplied(homeShell, 'dist/index.html')
+  await writeFile(path.join(dist, 'index.html'), homeShell, 'utf8')
 
   // ── The 404 shell ─────────────────────────────────────────────────────────
   // vercel.json's catch-all serves this for every URL that matched no explicit

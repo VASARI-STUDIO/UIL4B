@@ -95,6 +95,20 @@ html[data-theme="dark"] .boot-nav{background:rgba(18,20,24,.82);border-color:rgb
 html[data-theme="dark"] .boot-status{color:rgba(203,213,225,.72)}
 html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[data-theme="dark"] .boot-copy,html[data-theme="dark"] .boot-card{background:rgba(255,255,255,.09)}
 @keyframes boot-shimmer{to{transform:translateX(100%)}}
+/* THE HOMEPAGE VARIANT OF THE SHELL. Only scripts/prerender.mjs's `/` output
+   carries `.boot-shell-home`, and only that shell paints a real headline —
+   every other route keeps the skeleton above, unchanged.
+   These three rules do ONE job: get the shell's box chain out of the way so
+   `.home-hero`'s own padding is what positions the headline, exactly as it does
+   on the hydrated page. `.boot-shell`'s page padding is dropped; the skeleton
+   nav becomes `position:fixed` like the real `.pnav` it stands in for, so it is
+   out of flow and `.home-hero`'s `calc(var(--nav-top) + var(--nav-h) + …)`
+   top padding is the only thing above the h1; and the skeleton strip sits after
+   the hero in flow, where it cannot move it. Nothing here styles the headline —
+   that is global.css's `.home-hero-h1` block and there is only one of it. */
+.boot-shell-home{padding:0}
+.boot-shell-home .boot-nav{position:fixed;top:0;left:0;right:0;z-index:1;max-width:none;height:var(--nav-h,60px);margin:0;border-width:0 0 1px;border-radius:0;padding:0 clamp(18px,4vw,48px)}
+.boot-shell-home .boot-below{padding:0 clamp(18px,4vw,48px)}
 @media(max-width:640px){.boot-nav-lines{display:none}.boot-main{padding-top:88px}.boot-cards{grid-template-columns:1fr}.boot-card:nth-child(n+2){display:none}}
 @media(prefers-reduced-motion:reduce){.boot-line::after,.boot-action::after,.boot-copy::after,.boot-card::after{animation:none}}
 html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="true"] .boot-action::after,html[data-reduced-motion="true"] .boot-copy::after,html[data-reduced-motion="true"] .boot-card::after{animation:none}
