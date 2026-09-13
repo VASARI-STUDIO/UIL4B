@@ -11,7 +11,7 @@ console and credential work lives in
 decisions behind it live in [`CHANGELOG.md`](CHANGELOG.md). Do not use historical
 commits or closed audit prose as a parallel backlog.
 
-**Live:** [uil4b.com](https://www.uil4b.com)
+**Live:** [uil4b.com](https://uil4b.com)
 
 ## Tools
 

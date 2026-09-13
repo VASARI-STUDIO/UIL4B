@@ -76,7 +76,7 @@ const RETIRED_OR_THIN_ROUTES = [
 ]
 
 function crawlerPaths(xml) {
-  return [...xml.matchAll(/<loc>https:\/\/www\.uil4b\.com([^<]*)<\/loc>/g)]
+  return [...xml.matchAll(/<loc>https:\/\/uil4b\.com([^<]*)<\/loc>/g)]
     .map((match) => match[1] || '/')
 }
 

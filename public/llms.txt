@@ -3,40 +3,40 @@
 > Build and export UI and brand design kits and content for website building. Every core tool is free forever, with 5 AI generations a day and 40 a month. Pro is from $4 USD a month and raises that to 30 a day and 300 a month, adds the advanced colour controls, and removes the export watermark. Free and Pro run the same AI model.
 
 ## Tools
-- [Palette Generator](https://www.uil4b.com/create/palette): Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps, accessibility checks, and production-ready CSS exports.
-- [Semantic Colour Generator](https://www.uil4b.com/create/semantic-color): Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.
-- [Tint Scale Generator](https://www.uil4b.com/create/tint): Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.
-- [Gradient Generator](https://www.uil4b.com/create/gradient): Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.
-- [Colour Contrast Checker](https://www.uil4b.com/create/contrast): Free WCAG colour contrast checker. Test text and background pairs against AA and AAA, preview the pair live, and get one-click fixes that pass.
-- [Icon Library](https://www.uil4b.com/create/icons): Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.
-- [Emoji Library](https://www.uil4b.com/create/emoji): Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.
-- [Font Gallery](https://www.uil4b.com/create/font-gallery): Browse the Google Fonts catalogue with full specimens, category filters and side-by-side comparison, then carry a family into a pairing or a type scale.
-- [Font Pair](https://www.uil4b.com/create/font-pair): Free font pairing tool. Pick a heading face and see which body faces work under it, with the reasoning, previewed as a real page. Copy the import and CSS.
-- [Type Scale Generator](https://www.uil4b.com/create/type-scale): Free modular type scale generator. Set a base size and a ratio, preview the whole scale in a real layout, and copy CSS custom properties, Tailwind or SCSS.
-- [File Converter](https://www.uil4b.com/create/file-converter): Convert files between formats directly in your browser. Fast, private, client-side processing.
-- [Aspect & Resolution Calculator](https://www.uil4b.com/create/aspect-ratio): Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.
-- [Alt Text Generator](https://www.uil4b.com/create/alt-text): Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.
-- [Brand Starter (beta)](https://www.uil4b.com/create/auto-builder): Describe what you are making and get a palette, a font pairing and a type scale to start from — each opens in the tool that owns it.
-- [SEO Specialist](https://www.uil4b.com/seo): Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.
+- [Palette Generator](https://uil4b.com/create/palette): Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps, accessibility checks, and production-ready CSS exports.
+- [Semantic Colour Generator](https://uil4b.com/create/semantic-color): Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.
+- [Tint Scale Generator](https://uil4b.com/create/tint): Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.
+- [Gradient Generator](https://uil4b.com/create/gradient): Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.
+- [Colour Contrast Checker](https://uil4b.com/create/contrast): Free WCAG colour contrast checker. Test text and background pairs against AA and AAA, preview the pair live, and get one-click fixes that pass.
+- [Icon Library](https://uil4b.com/create/icons): Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.
+- [Emoji Library](https://uil4b.com/create/emoji): Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.
+- [Font Gallery](https://uil4b.com/create/font-gallery): Browse the Google Fonts catalogue with full specimens, category filters and side-by-side comparison, then carry a family into a pairing or a type scale.
+- [Font Pair](https://uil4b.com/create/font-pair): Free font pairing tool. Pick a heading face and see which body faces work under it, with the reasoning, previewed as a real page. Copy the import and CSS.
+- [Type Scale Generator](https://uil4b.com/create/type-scale): Free modular type scale generator. Set a base size and a ratio, preview the whole scale in a real layout, and copy CSS custom properties, Tailwind or SCSS.
+- [File Converter](https://uil4b.com/create/file-converter): Convert files between formats directly in your browser. Fast, private, client-side processing.
+- [Aspect & Resolution Calculator](https://uil4b.com/create/aspect-ratio): Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.
+- [Alt Text Generator](https://uil4b.com/create/alt-text): Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.
+- [Brand Starter (beta)](https://uil4b.com/create/auto-builder): Describe what you are making and get a palette, a font pairing and a type scale to start from — each opens in the tool that owns it.
+- [SEO Specialist](https://uil4b.com/seo): Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.
 
 ## Learn
 7 published reference guides. Neutral and factual — design education, not documentation for these tools.
 
-- [Learn](https://www.uil4b.com/learn): Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.
-- [Colour contrast and the WCAG thresholds](https://www.uil4b.com/learn/colour-contrast): The WCAG contrast thresholds — 4.5:1, 3:1 and 7:1 — the relative-luminance formula behind them, what counts as large text, and what a ratio cannot see.
-- [Modular type scales](https://www.uil4b.com/learn/type-scales): How a modular type scale works: size = base x ratio^step, which ratio suits which interface, why a ratio compounds, and how clamp() joins two scales.
-- [What a typeface’s metrics decide](https://www.uil4b.com/learn/typeface-metrics): Why two typefaces at the same font-size are not the same size: the em box, the aspect value, and the formula CSS gives for matching one face to another.
-- [What the reader sees before the font arrives](https://www.uil4b.com/learn/font-loading): The three periods of a webfont load, what font-display block and swap cost the reader, why a line re-breaks on swap, and how unicode-range splits a family.
-- [Colour spaces for interface work](https://www.uil4b.com/learn/colour-spaces): sRGB, HSL and OKLCH for UI work: why an HSL lightness of 50% is not a lightness, what OKLCH measures instead, and what CSS does between two colours.
-- [Dark and light themes](https://www.uil4b.com/learn/theme-systems): A dark theme is a second set of values on the same token names, not an inversion: what inversion does to contrast and hue, and what the reader decides.
-- [Choosing a brand colour](https://www.uil4b.com/learn/brand-colour): A brand colour has to be text, a fill and a border in two themes. Why no ramp stop clears 4.5:1 on both grounds, and how far a neutral can be tinted.
+- [Learn](https://uil4b.com/learn): Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.
+- [Colour contrast and the WCAG thresholds](https://uil4b.com/learn/colour-contrast): The WCAG contrast thresholds — 4.5:1, 3:1 and 7:1 — the relative-luminance formula behind them, what counts as large text, and what a ratio cannot see.
+- [Modular type scales](https://uil4b.com/learn/type-scales): How a modular type scale works: size = base x ratio^step, which ratio suits which interface, why a ratio compounds, and how clamp() joins two scales.
+- [What a typeface’s metrics decide](https://uil4b.com/learn/typeface-metrics): Why two typefaces at the same font-size are not the same size: the em box, the aspect value, and the formula CSS gives for matching one face to another.
+- [What the reader sees before the font arrives](https://uil4b.com/learn/font-loading): The three periods of a webfont load, what font-display block and swap cost the reader, why a line re-breaks on swap, and how unicode-range splits a family.
+- [Colour spaces for interface work](https://uil4b.com/learn/colour-spaces): sRGB, HSL and OKLCH for UI work: why an HSL lightness of 50% is not a lightness, what OKLCH measures instead, and what CSS does between two colours.
+- [Dark and light themes](https://uil4b.com/learn/theme-systems): A dark theme is a second set of values on the same token names, not an inversion: what inversion does to contrast and hue, and what the reader decides.
+- [Choosing a brand colour](https://uil4b.com/learn/brand-colour): A brand colour has to be text, a fill and a border in two themes. Why no ramp stop clears 4.5:1 on both grounds, and how far a neutral can be tinted.
 
 ## Browse
-- [Discover](https://www.uil4b.com/discover): The best external design resources — gradients, palettes, fonts and inspiration — with a one-tap hand-off into the UI L4B tools that use them.
-- [Palette Library](https://www.uil4b.com/discover/palettes): Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.
-- [Gradient Library](https://www.uil4b.com/discover/gradients): A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.
-- [Prompt Library](https://www.uil4b.com/discover/prompts): A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.
-- [Curated Resources](https://www.uil4b.com/discover/resources): Hand-picked design and dev tools — gradients, palettes, fonts, components and free assets — each with a route into the UI L4B tool that finishes the job.
+- [Discover](https://uil4b.com/discover): The best external design resources — gradients, palettes, fonts and inspiration — with a one-tap hand-off into the UI L4B tools that use them.
+- [Palette Library](https://uil4b.com/discover/palettes): Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.
+- [Gradient Library](https://uil4b.com/discover/gradients): A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.
+- [Prompt Library](https://uil4b.com/discover/prompts): A curated library of high-quality, ready-to-use prompts for UI, web design and marketing. A free selection for everyone; the full library with Pro.
+- [Curated Resources](https://uil4b.com/discover/resources): Hand-picked design and dev tools — gradients, palettes, fonts, components and free assets — each with a route into the UI L4B tool that finishes the job.
 
 ## Plans
 - Free: 5 AI generations a day and 40 a month; style guide export in HTML, Markdown, PNG and JPEG, with a "Made with UIL4B" footer line; Brand Starter (beta) 1 generation, once per account.
@@ -44,12 +44,12 @@
 - Not built, on any plan, and not for sale: CSS tokens, JSON tokens, Tailwind theme and Asset bundle.
 
 ## More
-- [Pricing & Plans](https://www.uil4b.com/plans): Honest pricing for UI L4B. The toolkit is free forever — palettes, type scales and exports. Pro adds AI capacity and watermark-free export.
-- [Help & Getting Started](https://www.uil4b.com/help): Start with any UI L4B tool without an account or setup. What each tool opens with, what the free plan covers, and where your work is stored.
-- [Design Principles](https://www.uil4b.com/principles): The rules UI L4B holds to when building an interface system, each one shown beside the tool that enforces it and the measurement that proves it.
-- [Sitemap](https://www.uil4b.com/sitemap): The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.
-- [Privacy](https://www.uil4b.com/privacy): UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.
-- [Terms](https://www.uil4b.com/terms): UI L4B terms of service. Usage rules, intellectual property, and account policies.
+- [Pricing & Plans](https://uil4b.com/plans): Honest pricing for UI L4B. The toolkit is free forever — palettes, type scales and exports. Pro adds AI capacity and watermark-free export.
+- [Help & Getting Started](https://uil4b.com/help): Start with any UI L4B tool without an account or setup. What each tool opens with, what the free plan covers, and where your work is stored.
+- [Design Principles](https://uil4b.com/principles): The rules UI L4B holds to when building an interface system, each one shown beside the tool that enforces it and the measurement that proves it.
+- [Sitemap](https://uil4b.com/sitemap): The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.
+- [Privacy](https://uil4b.com/privacy): UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.
+- [Terms](https://uil4b.com/terms): UI L4B terms of service. Usage rules, intellectual property, and account policies.
 
 ## Optional
 Not yet built. These routes resolve to an honest "still in the workshop" state rather than a working tool, and should not be described as available:

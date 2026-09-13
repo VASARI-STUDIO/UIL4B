@@ -7,16 +7,16 @@ import assert from 'node:assert/strict'
 import { canonicalUrl, isSoonRoute } from '../../src/utils/routeMeta.js'
 
 test('canonicalUrl never falls back to the homepage for a real route', () => {
-  assert.equal(canonicalUrl('/create/palette'), 'https://www.uil4b.com/create/palette')
-  assert.equal(canonicalUrl('/create/icons'), 'https://www.uil4b.com/create/icons')
+  assert.equal(canonicalUrl('/create/palette'), 'https://uil4b.com/create/palette')
+  assert.equal(canonicalUrl('/create/icons'), 'https://uil4b.com/create/icons')
 })
 
 test('canonicalUrl strips query, hash and trailing slash, keeps the bare root', () => {
-  assert.equal(canonicalUrl('/create/aspect-ratio?foo=bar'), 'https://www.uil4b.com/create/aspect-ratio')
-  assert.equal(canonicalUrl('/create/emoji#recent'), 'https://www.uil4b.com/create/emoji')
-  assert.equal(canonicalUrl('/create/icons/'), 'https://www.uil4b.com/create/icons')
-  assert.equal(canonicalUrl('/'), 'https://www.uil4b.com/')
-  assert.equal(canonicalUrl(''), 'https://www.uil4b.com/')
+  assert.equal(canonicalUrl('/create/aspect-ratio?foo=bar'), 'https://uil4b.com/create/aspect-ratio')
+  assert.equal(canonicalUrl('/create/emoji#recent'), 'https://uil4b.com/create/emoji')
+  assert.equal(canonicalUrl('/create/icons/'), 'https://uil4b.com/create/icons')
+  assert.equal(canonicalUrl('/'), 'https://uil4b.com/')
+  assert.equal(canonicalUrl(''), 'https://uil4b.com/')
 })
 
 test('isSoonRoute is true only for a Create tool/category still in the workshop', () => {

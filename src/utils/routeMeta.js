@@ -6,7 +6,28 @@
 import { resolveTool } from '../data/toolTree.js'
 import { PAGE_TITLES } from '../data/routeMetaMap.js'
 
-const SITE_ORIGIN = 'https://www.uil4b.com'
+// The one origin this site claims as its own. Every canonical link, og:url,
+// og:image, twitter:image, JSON-LD `url`, sitemap `<loc>`, llms.txt row and
+// export watermark is built from this constant, in src/ and in scripts/
+// alike, because two spellings of one origin is the defect it exists to end.
+//
+// APEX, NOT www. Measured 2026-09-13: `https://uil4b.com/` answers 200 in
+// 0.9 s; `https://www.uil4b.com/` times out on 443, twice, 21 s each. The
+// Vercel project `ui_l4b` has never carried `www` among its domains
+// (`uil4b.com`, `uil4b-dylan-coleman.vercel.app`,
+// `uil4b-git-main-dylan-coleman.vercel.app`), and `www.uil4b.com` is a CNAME
+// to `ns1.vercel-dns.com` — a NAMESERVER, not the serving endpoint
+// `cname.vercel-dns.com`. So every shell shipped before this told crawlers
+// its authoritative URL was a host that does not answer, and every shared
+// link unfurled with a broken preview image on Slack, LinkedIn, X, Discord
+// and iMessage. Founder decision, 2026-09-13: point the site at the apex,
+// which already serves and is the only configured domain, rather than do the
+// DNS work to make the second spelling real.
+//
+// tests/unit/canonical-host.test.js fails the build if the www host appears
+// in any SHIPPED artefact: the built shells, their JSON-LD, dist/llms.txt,
+// dist/sitemap.xml, dist/robots.txt, or the export watermark in the bundle.
+export const SITE_ORIGIN = 'https://uil4b.com'
 
 // Routes that exist and work, but must never be indexed: they are either
 // private to one account or a step inside a flow that means nothing on its own.

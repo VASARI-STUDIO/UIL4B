@@ -5,7 +5,7 @@
 //
 // WHAT THIS GUARDS. A client-rendered SPA served one index.html for every URL,
 // so every route shipped the HOMEPAGE's title, description and — worst —
-// `canonical = https://www.uil4b.com`, telling crawlers to drop 25 URLs. The
+// the HOMEPAGE's canonical, telling crawlers to drop 25 URLs. The
 // prerender fixes that, but it is silent: if a rewrite is missing, or a route
 // has no title, the build still passes and the served HTML quietly reverts to
 // the homepage's metadata. Nothing would notice.
@@ -220,14 +220,14 @@ test('CANONICAL AND NOINDEX TRUTH: every prerendered route is one the runtime in
   for (const route of prerenderRoutes()) {
     assert.equal(robotsFor(route), 'index,follow',
       `${route} is prerendered but the runtime marks it ${robotsFor(route)}`)
-    assert.match(canonicalUrl(route), /^https:\/\/www\.uil4b\.com(\/|\/\S+)$/,
+    assert.match(canonicalUrl(route), /^https:\/\/uil4b\.com(\/|\/\S+)$/,
       `${route} has no usable canonical`)
   }
   // /home is the reason this matters: its canonical is NOT origin + its own
   // path. prerender.mjs used to build `ORIGIN + route`, which would have
   // self-canonicalised the site's most-linked URL against the homepage it
   // duplicates. Pinned by value because it is the whole point.
-  assert.equal(canonicalUrl('/home'), 'https://www.uil4b.com/',
+  assert.equal(canonicalUrl('/home'), 'https://uil4b.com/',
     '/home must canonicalise onto the homepage, not onto itself')
 })
 
@@ -248,7 +248,7 @@ test('the sitemap is a SUBSET of the matrix, and every extra route is explainabl
   // a page whose canonical points somewhere else. Anything else in this list is
   // a page we prerender and then forgot to advertise.
   for (const route of unadvertised(routes, sitemap)) {
-    assert.notEqual(canonicalUrl(route), `https://www.uil4b.com${route}`,
+    assert.notEqual(canonicalUrl(route), `https://uil4b.com${route}`,
       `${route} is prerendered, self-canonical and NOT in sitemap.xml — either `
       + 'advertise it or explain why it is prerendered at all')
   }

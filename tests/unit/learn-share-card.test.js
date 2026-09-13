@@ -94,12 +94,12 @@ test('the built shells point Learn and every guide at the Learn card', {
 }, () => {
   for (const route of ['/learn', ...LEARN_ARTICLE_ROUTES]) {
     const html = read(`dist${route}/index.html`)
-    assert.equal(meta(html, 'property', 'og:image'), 'https://www.uil4b.com/previews/og-learn.png',
+    assert.equal(meta(html, 'property', 'og:image'), 'https://uil4b.com/previews/og-learn.png',
       `dist${route}/index.html does not unfurl as the Learn card`)
-    assert.equal(meta(html, 'name', 'twitter:image'), 'https://www.uil4b.com/previews/og-learn.png')
+    assert.equal(meta(html, 'name', 'twitter:image'), 'https://uil4b.com/previews/og-learn.png')
     assert.equal(meta(html, 'property', 'og:image:alt'), cardFor(route).alt)
   }
   // Control: the shell next door still carries its own card.
   assert.equal(meta(read('dist/discover/index.html'), 'property', 'og:image'),
-    'https://www.uil4b.com/previews/og-discover.png')
+    'https://uil4b.com/previews/og-discover.png')
 })

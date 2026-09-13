@@ -9,8 +9,12 @@
 //   • every shared tool link unfurled as the homepage card — the WORDS were
 //     fixed first and the PICTURE was not, so until og:image was written per
 //     route as well, a link to the Contrast Checker still showed the homepage;
-//   • all ~26 URLs declared `canonical = https://www.uil4b.com`, which is an
-//     explicit instruction to drop them from the index;
+//   • all ~26 URLs declared the HOMEPAGE as their canonical, which is an
+//     explicit instruction to drop them from the index. That fixed the
+//     per-ROUTE half of the canonical and left the HOST half unchecked: on
+//     2026-09-13 all 40 shells still named a `www` host that does not
+//     serve. See SITE_ORIGIN in src/utils/routeMeta.js for the measurement
+//     and the founder's decision;
 //   • the <noscript> block was homepage copy on every one of them, so a non-JS
 //     crawler also saw ~26 byte-identical pages.
 //
@@ -31,7 +35,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DEFAULT_DESCRIPTION, PAGE_DESCRIPTIONS, PAGE_TITLES } from '../src/data/routeMetaMap.js'
-import { canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
+import { SITE_ORIGIN, canonicalUrl, robotsFor } from '../src/utils/routeMeta.js'
 import { prerenderRoutes } from './route-matrix.mjs'
 import { DEFAULT_CARD, cardFor, cardUrl } from './share-cards.mjs'
 import { breadcrumbJsonLd, breadcrumbRoutes } from './route-schema.mjs'
@@ -40,7 +44,9 @@ import { buildLlmsTxt } from './llms-txt.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const dist = path.join(root, 'dist')
-const ORIGIN = 'https://www.uil4b.com'
+// Imported, never retyped. A second spelling of the origin here is exactly
+// how 40 shells came to advertise a hostname that does not answer.
+const ORIGIN = SITE_ORIGIN
 
 /** Escape for an HTML attribute value. Titles carry `|`, descriptions carry
  *  apostrophes and em dashes — none of which may break out of the attribute. */
