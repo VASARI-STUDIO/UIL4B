@@ -40,6 +40,17 @@ export const DEFERRED_STYLESHEETS = fs.existsSync(DEFERRED)
   ? fs.readdirSync(DEFERRED).filter((f) => f.endsWith('.css')).sort()
   : []
 
+/**
+ * Every stylesheet the app ships, in cascade order, each with the path a
+ * message can name. Use this instead of ALL_CSS when a failure has to say
+ * WHICH file and WHICH line, which a concatenation cannot.
+ */
+export const ALL_STYLESHEETS = [
+  { file: 'src/styles/global.css', css: GLOBAL_CSS },
+  ...DEFERRED_STYLESHEETS.map((f) => ({ file: `src/styles/deferred/${f}`, css: fs.readFileSync(path.join(DEFERRED, f), 'utf8') })),
+  ...PAGE_STYLESHEETS.map((f) => ({ file: `src/styles/pages/${f}`, css: fs.readFileSync(path.join(PAGES, f), 'utf8') })),
+]
+
 /** global.css, then the deferred family sheets, then every page stylesheet. */
 export const ALL_CSS = [
   GLOBAL_CSS,

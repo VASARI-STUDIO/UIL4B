@@ -23,6 +23,11 @@ import path from 'node:path'
 import { contrastRatio, inkOnGradient, mixHex } from '../../src/utils/colors.js'
 import { COMMUNITY_DESIGNS } from '../../src/data/communityDesigns.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
+// Reads the WHOLE app stylesheet, not global.css alone. The rules this file
+// asserts on were split out of global.css into src/styles/deferred/*.css on
+// 2026-09-13; a test that keeps reading one file after a lift like that does
+// not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
+import { ALL_CSS } from './appStylesheets.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 
@@ -183,7 +188,7 @@ test('CommunityCard chooses the ink per item and hands it to the stylesheet', ()
 })
 
 test('.ch-thumb-mono reads the per-item ink and is opaque', () => {
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   const rule = css.match(/\.ch-thumb-mono\{[^}]*\}/)
   assert.ok(rule, '.ch-thumb-mono has gone from the stylesheet')
   assert.match(rule[0], /color:var\(--mono-ink/, '.ch-thumb-mono is not reading the per-item ink')
@@ -241,7 +246,7 @@ function fallbackInk(css, theme) {
 }
 
 test('the accent-gradient fallback carries a MEASURED ink in both themes', () => {
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   for (const theme of ['light', 'dark']) {
     const c1 = themeToken(css, theme, 'accent')
     const c2 = themeToken(css, theme, 'accent-strong')
@@ -261,7 +266,7 @@ test('and prefers-contrast: more does not undo it', () => {
   // That block overrides --accent and --accent-strong to a single value per
   // theme, so the fallback ground changes shape - a solid, not a ramp - for
   // the one user who asked for MORE contrast. Both poles are checked there too.
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   const block = css.match(/@media \(prefers-contrast: more\)\{([\s\S]*?)[\r\n]\}/)
   assert.ok(block, 'the prefers-contrast block has gone from the sheet')
   for (const theme of ['light', 'dark']) {
@@ -282,7 +287,7 @@ test('the fixture discriminates: the hard-coded white this replaced really faile
   // one - so the defect was theme-shaped, and a light-only check would have
   // reported a clean pass. Same reversal [gradient-text-below-aa] recorded for
   // --accent-strong on /seo.
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   const dark = worstOnGradient('#FFFFFF', themeToken(css, 'dark', 'accent'), themeToken(css, 'dark', 'accent-strong'))
   assert.ok(dark < FLOOR, `plain white now measures ${dark.toFixed(2)}:1 on the dark accent pair - `
     + 'the brand values moved and the two tests above need re-measuring, not deleting')

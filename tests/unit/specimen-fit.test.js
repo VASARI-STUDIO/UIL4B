@@ -28,6 +28,11 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { specimenSizeCqw } from '../../src/utils/fontGallery.js'
+// Reads the WHOLE app stylesheet, not global.css alone. The rules this file
+// asserts on were split out of global.css into src/styles/deferred/*.css on
+// 2026-09-13; a test that keeps reading one file after a lift like that does
+// not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
+import { ALL_CSS } from './appStylesheets.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 const CATALOGUE = JSON.parse(read('tests/unit/fixtures/google-font-families.json')).families
@@ -217,7 +222,7 @@ test('the stylesheet clamps at the number this file just justified', () => {
   // Wiring. The arithmetic above is a statement about .fbd-sample's clamp, and
   // an arithmetic-only version of this test passed for the whole time the clamp
   // was trimming 249 families.
-  const css = read('src/styles/global.css').replace(/\/\*[\s\S]*?\*\//g, '')
+  const css = ALL_CSS.replace(/\/\*[\s\S]*?\*\//g, '')
   const rule = css.match(/\.fbd-sample\{([^}]*)\}/)
   assert.ok(rule, '.fbd-sample has gone from the stylesheet')
   assert.match(rule[1], /-webkit-line-clamp:3/, '.fbd-sample no longer clamps at three lines')

@@ -38,6 +38,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { contrastRatio, derivePreviewRoles, hslToHex, mixHex } from '../../src/utils/colors.js'
 import { stripJs as stripSourceComments } from '../helpers/strip-comments.js'
+// Reads the WHOLE app stylesheet, not global.css alone. The rules this file
+// asserts on were split out of global.css into src/styles/deferred/*.css on
+// 2026-09-13; a test that keeps reading one file after a lift like that does
+// not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
+import { ALL_CSS } from './appStylesheets.js'
 
 const AA = 4.5
 
@@ -604,7 +609,7 @@ test('15 . the engine is WIRED to the page: the hand-off and the five rules', ()
   assert.match(jsx, /setProperty\('--pv-primary-ink', roles\.primaryInk\)/,
     'PalettePreview no longer hands primaryInk to the scene')
 
-  const css = stripSourceComments(readSource('src/styles/global.css'))
+  const css = stripSourceComments(ALL_CSS)
   const TEXT_RULES = [
     ['.plb-pv-n--accent', '--pv-accent-ink'],
     ['.plb-pvb-eyebrow', '--pv-accent-ink'],
