@@ -1,3 +1,12 @@
+// TYPOGRAPHY ONLY (founder decision, 2026-09-13). NOT ONE WORD OF THE LEGAL
+// TEXT IS TOUCHED HERE, and none should be.
+// The eight section headings ran .legal-h--sm - 16px, body font, weight 700 -
+// while /privacy's ran .legal-h at 22px display. Same content type, same
+// component shape, same <h2> level, two different answers to how a section
+// heading looks. The 2026-09-11 marketing pass measured it and deliberately
+// left it, on the grounds that guessing wrong about a legal page's typography
+// is worse than writing the inconsistency down. The founder has now decided:
+// match /privacy. .legal-h--sm went with it - Terms was its only caller.
 import { useI18n } from '../contexts/I18nContext'
 
 export default function Terms() {
@@ -12,31 +21,31 @@ export default function Terms() {
       </div>
 
       <div className="card legal-card">
-        <h2 className="legal-h legal-h--sm">{t('terms.s1Title')}</h2>
+        <h2 className="legal-h">{t('terms.s1Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>{t('terms.s1Text')}</p>
 
-        <h2 className="legal-h legal-h--sm">{t('terms.s2Title')}</h2>
+        <h2 className="legal-h">{t('terms.s2Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>{t('terms.s2Text')}</p>
 
-        <h2 className="legal-h legal-h--sm">{t('terms.s3Title')}</h2>
+        <h2 className="legal-h">{t('terms.s3Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>{t('terms.s3Text')}</p>
 
-        <h2 className="legal-h legal-h--sm">{t('terms.s4Title')}</h2>
+        <h2 className="legal-h">{t('terms.s4Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>{t('terms.s4Text')}</p>
 
-        <h2 className="legal-h legal-h--sm">{t('terms.s5Title')}</h2>
+        <h2 className="legal-h">{t('terms.s5Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 8 }}>{t('terms.s5Intro')}</p>
         <ul style={{ fontSize: 14, color: 'var(--t1)', paddingLeft: 20, marginBottom: 20 }}>
           {(Array.isArray(s5Items) ? s5Items : []).map((item, i) => <li key={i}>{item}</li>)}
         </ul>
 
-        <h2 className="legal-h legal-h--sm">{t('terms.s6Title')}</h2>
+        <h2 className="legal-h">{t('terms.s6Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>{t('terms.s6Text')}</p>
 
-        <h2 className="legal-h legal-h--sm">{t('terms.s7Title')}</h2>
+        <h2 className="legal-h">{t('terms.s7Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)', marginBottom: 20 }}>{t('terms.s7Text')}</p>
 
-        <h2 className="legal-h legal-h--sm">{t('terms.s8Title')}</h2>
+        <h2 className="legal-h">{t('terms.s8Title')}</h2>
         <p style={{ fontSize: 14, color: 'var(--t1)' }}>
           {t('terms.s8Text')}{' '}
           <a href="mailto:legal@uil4b.com">legal@uil4b.com</a>.

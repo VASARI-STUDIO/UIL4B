@@ -20,7 +20,13 @@
 
 .lart-crumb{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--t3);margin-bottom:var(--s-4)}
 
-.lart-crumb a{color:var(--t3)}
+/* SC 2.5.8 (2026-09-13). The 2026-09-11 pass lifted this page's Sources and
+   spec citations to 24px and missed the one control above them: the crumb's
+   "Learn" link, 36.3x18.1px on all seven guides at every width. .lart-crumb is
+   display:flex, so this anchor is a blockified flex item sitting on its own -
+   the Inline exception does not reach it, and it is the only way back to the
+   index from the top of the page. inline-flex + min-height, type unchanged. */
+.lart-crumb a{color:var(--t3);display:inline-flex;align-items:center;min-height:24px}
 
 .lart-crumb a:hover{color:var(--t0)}
 

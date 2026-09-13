@@ -40,7 +40,16 @@ test('the heading SIZE was preserved — only the level changed', () => {
   // for a worse one.
   const css = read('src/styles/global.css')
   assert.match(css, /\.legal-h\{[^}]*font-size:22px/)
-  assert.match(css, /\.legal-h--sm\{[^}]*font-size:16px/)
+  // .legal-h--sm is GONE (founder decision, 2026-09-13). /terms was its only
+  // caller and it set the same kind of heading 6px smaller and in a different
+  // family from /privacy's. The assertion inverts rather than disappears: the
+  // point was never that a second size existed, it was that the heading did not
+  // shrink to satisfy a heading-level checker. One shared .legal-h at 22px is a
+  // stronger version of that guarantee than two sizes were.
+  assert.ok(!/\.legal-h--sm\{/.test(css),
+    'the 16px legal heading variant is back - /terms and /privacy must set a section heading the same way')
+  assert.ok(!/legal-h--sm/.test(read('src/pages/Terms.jsx')),
+    '/terms is setting its section headings at body size again')
 })
 
 test('the section headings carry no inline styles', () => {
