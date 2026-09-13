@@ -42,6 +42,7 @@ import path from 'node:path'
 import { stripJs } from '../helpers/strip-comments.js'
 import { HERO_HEADLINE, heroHeadlineText } from '../../src/data/positioning.js'
 import { SESSION_HINT_KEY } from '../../src/utils/sessionHint.js'
+import { SITE_ORIGIN } from '../../src/utils/routeMeta.js'
 import {
   HOME_SHELL_ROUTES,
   applyHomeShell,
@@ -200,7 +201,12 @@ test('applying it to the REAL index.html keeps the head and swaps only #root', (
   assertHomeShellApplied(applied, 'the applied index.html')
   // The head is untouched: `/` is the one route whose metadata was already right.
   assert.match(applied, /<title>[\s\S]*?<\/title>/)
-  assert.match(applied, /<link rel="canonical" href="https:\/\/www\.uil4b\.com">/)
+  // The canonical, taken from SITE_ORIGIN rather than typed. #457 moved the
+  // advertised host from www to the apex and this assertion went red on a
+  // correct page — a host spelled out here is a second place the site's own
+  // origin is written down, which is the defect src/utils/routeMeta.js exports
+  // SITE_ORIGIN to prevent.
+  assert.match(applied, new RegExp(`<link rel="canonical" href="${SITE_ORIGIN}">`))
   // And the noscript block — the non-JS reader's page — survives the splice.
   assert.match(applied, /<noscript>/)
   assert.match(applied, /<script type="module" src="\/src\/main\.jsx"><\/script>/)
