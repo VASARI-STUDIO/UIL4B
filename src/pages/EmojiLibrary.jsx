@@ -5,6 +5,11 @@ import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import { EMOJI_DATA } from '../data/emojiData'
 import { normaliseQuery, searchEmoji } from '../data/emojiSearch'
 import { getLoadedEmojiIndex, loadEmojiIndex } from '../data/emojiIndexLoader'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/library.css'
+import '../styles/deferred/tool-shell.css'
 
 function parseEmojis(str) {
   return str.split(/\s+/).filter(Boolean)

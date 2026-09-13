@@ -7,6 +7,10 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS } from '../config/exportFormats'
 import BrandLogoField from './BrandLogoField'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/overlay.css'
 
 // The Export dialog. It works from any page (it reads nothing from the current
 // tool) and is opened from the PillNav search cluster.

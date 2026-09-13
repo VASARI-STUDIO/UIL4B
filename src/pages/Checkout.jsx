@@ -5,6 +5,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
 import { refreshPrices, useProPrice } from '../hooks/usePrices'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/account.css'
+import '../styles/deferred/tool-shell.css'
 
 const PLANS = {
   monthly: {

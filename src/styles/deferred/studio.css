@@ -1,0 +1,288 @@
+/* ── STUDIO — lifted out of src/styles/global.css ─────────────────
+ *
+ * Every rule below was in the one render-blocking stylesheet, where it cost the
+ * homepage its bytes without ever being used there. It now travels with the
+ * lazy route chunks that can actually reach it:
+ *
+ *   FileConverter, AltTextGenerator, BrandStarter, SeoInspector
+ *
+ * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
+ * in global.css, so the cascade between any two of them is the one that was
+ * already shipping. What DID change is that they now cascade after the whole
+ * critical sheet rather than from the middle of it — which is why
+ * tests/user-sim/64-computed-style-snapshot.spec.js, and not a reading of this
+ * file, is the evidence that nothing painted moved.
+ *
+ * Adding a rule here is only correct when no eagerly-loaded module can reach
+ * it. tests/unit/home-asset-budget.test.js holds the byte budget that keeps
+ * the traffic going this way rather than back.
+ */
+
+
+.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr));gap:10px}
+@media(max-width:640px){
+  .grad-presets{grid-template-columns:repeat(auto-fill,minmax(min(180px,100%),1fr))}}
+
+@media(max-width:640px){
+  .img-grid{grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr))}}
+
+@media(max-width:480px){
+  /* The 8px override is gone — see the `.ic span` note by the base rule. */
+  .img-grid{grid-template-columns:1fr}}
+
+@media(max-width:480px){
+  .grad-presets{grid-template-columns:1fr}
+  .btn-cat{grid-template-columns:1fr}
+  .tint-grid-responsive{grid-template-columns:repeat(auto-fill,minmax(min(48px,calc((100% - 18px)/4)),1fr))!important}}
+
+
+/* ── Usage Gate ────────────────────────────────────────────────── */
+/* Inline auth gate (AI tools) */
+.auth-gate-prompt{display:flex;flex-direction:column;align-items:center;gap:14px;padding:32px 24px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);text-align:center;margin:16px 0}
+.auth-gate-icon{width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--accent-bg);color:var(--accent)}
+.auth-gate-text{font-size:14px;color:var(--t1);font-weight:500}
+.auth-gate-form{width:100%;max-width:300px;display:flex;flex-direction:column;gap:10px;text-align:left}
+.auth-gate-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:4px}
+.auth-gate-error{font-size:12px;color:var(--err-strong);background:rgba(239,68,68,.08);padding:8px 12px;border-radius:var(--radius-s);text-align:center}
+.auth-gate-footer{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
+.auth-gate-google-link,.auth-gate-switch{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-strong);cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 4px}
+.auth-gate-google-link:hover,.auth-gate-switch:hover{text-decoration:underline}
+.auth-gate-sep{color:var(--t3);font-size:11px}
+/* --t2, not --t3: the 8px SOON tag measured 4.07:1 on its chip in light at
+   every width (2026-09-09). --t2 is 4.95:1. The size is left as found and
+   flagged: 8px uppercase is the smallest type on the page. */
+.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
+/* Alpha badge — token-driven accent pill (no hardcoded colours). */
+.fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
+.fc-card{display:flex;flex-direction:column;gap:8px;padding:12px;position:relative;align-items:stretch}
+.fc-remove{position:absolute;top:8px;right:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:none;border-radius:50%;background:var(--bg-3);color:var(--t1);font-size:16px;line-height:1;cursor:pointer;transition:all var(--t);z-index:2}
+.fc-remove:hover{background:var(--err);color:var(--err-fg)}
+.fc-remove:disabled{opacity:.4;cursor:not-allowed}
+.fc-thumb{width:100%;aspect-ratio:16/10;border-radius:var(--radius-s);overflow:hidden;background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.fc-thumb img{width:100%;height:100%;object-fit:contain}
+.fc-name{font-size:12px;font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-video{width:100%;max-height:380px;border-radius:var(--radius);background:#000;display:block}
+.fc-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-top:10px}
+.fc-status-err{color:var(--err-strong)}
+/* The byte count beside the engine-download sentence: tabular so it does not
+   jitter as it climbs. */
+.fc-status-bytes{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--t1);white-space:nowrap}
+.fc-progress{height:8px;background:var(--bg-3);border-radius:999px;overflow:hidden;margin-top:10px}
+.fc-progress-bar{height:100%;background:var(--brand);border-radius:999px;transition:width var(--dur-2) var(--ease-out)}
+.fc-soon-card{padding:36px 28px;text-align:left;border-style:dashed}
+.fc-soon-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,var(--brand),var(--brand-soft));color:var(--accent-fg);margin-bottom:14px}
+.fc-spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:fc-spin .7s linear infinite;flex-shrink:0}
+.fc-settings{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;align-items:flex-start}
+.fc-actions{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.fc-note{font-size:10px;color:var(--t2);margin-top:2px}
+/* States what a homepage output draft actually became here — including the part
+   this converter cannot honour. Never a success claim: nothing is converted yet. */
+.fc-draft-note{margin-top:12px;padding:10px 14px;border:1px solid color-mix(in srgb,var(--accent) 32%,var(--border));border-radius:var(--radius-s);background:color-mix(in srgb,var(--accent) 7%,var(--bg-1));font-size:var(--fs-caption);line-height:1.5;color:var(--t1)}
+.fc-draft-note strong{color:var(--t0);font-weight:650}
+.fc-field-grow{flex:1;min-width:200px}
+.fc-bg-pick{width:42px;height:30px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);cursor:pointer}
+@media(max-width:768px){
+  .fc-video{max-height:260px}
+  .fc-soon-card{padding:24px 18px}
+  .fc-soon-card h2{font-size:20px}
+  .fc-soon-card p{font-size:13px}}
+
+@media(max-width:480px){
+  .fc-card{padding:10px}
+  .fc-video{max-height:200px}
+  .fc-soon-card{padding:20px 14px}
+  .fc-soon-card h2{font-size:18px}}
+
+
+/* ── Keyboard Shortcuts Overlay ─────────────────────────────── */
+.kbd-overlay{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;display:flex;justify-content:center;align-items:center;animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.kbd-panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);width:min(420px,calc(100vw - 32px));box-shadow:var(--warm-shadow-lg);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.kbd-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--border)}
+.kbd-header h3{margin:0;font-size:15px;font-weight:600;color:var(--t0)}
+.kbd-close{background:none;border:none;cursor:pointer;color:var(--t2);font-size:16px;padding:4px 6px;border-radius:var(--radius-s);line-height:1}
+.kbd-close:hover{background:var(--bg-2);color:var(--t0)}
+.kbd-list{list-style:none;margin:0;padding:10px 22px 18px}
+.kbd-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)}
+.kbd-row:last-child{border-bottom:none}
+.kbd-keys{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.kbd-key{font-family:var(--mono);font-size:11px;color:var(--t1);background:var(--bg-2);padding:3px 8px;border-radius:var(--radius-s);border:1px solid var(--border);white-space:nowrap}
+.kbd-plus{color:var(--t3);font-size:11px;margin:0 1px}
+.kbd-desc{color:var(--t1);font-size:13px;text-align:right}
+@media(max-width:480px){
+  .kbd-panel{width:calc(100vw - 24px)}
+  .kbd-header{padding:14px 16px 10px}
+  .kbd-list{padding:8px 16px 14px}
+  .kbd-desc{font-size:12px}
+}
+.seo-serp.is-mobile{max-width:360px}
+
+
+/* Pro-locked overlay shell (placeholder is server-gated; we style the shell only) */
+.pro-lock{position:relative;border-radius:var(--radius-l);overflow:hidden;isolation:isolate}
+.pro-lock-veil{position:absolute;inset:0;background:var(--scrim);backdrop-filter:blur(10px) saturate(120%);-webkit-backdrop-filter:blur(10px) saturate(120%)}
+.pro-lock-cta{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 28px;text-align:center;max-width:360px;margin:0 auto;min-height:200px;justify-content:center}
+.pro-lock-badge{display:inline-flex;align-items:center;gap:6px;font:700 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-fg);background:var(--accent-strong);padding:4px 10px;border-radius:var(--radius-pill)}
+.pro-lock-title{font:600 18px/1.3 var(--font);letter-spacing:-.02em;color:var(--t0)}
+.pro-lock-sub{font:400 13px/1.6 var(--font);color:var(--t1);max-width:42ch}
+.pro-lock-cta .btn-primary{margin-top:4px}
+/* Non-revealing teaser background — generic shimmer tiles, freeze under reduced motion */
+.pro-lock-skeleton{position:absolute;inset:0;z-index:0;background:linear-gradient(100deg,var(--bg-2) 30%,var(--bg-3) 50%,var(--bg-2) 70%);background-size:200% 100%;animation:pl-shimmer 1.4s linear infinite}
+.cs-ctx-head{display:flex;align-items:center;gap:8px;padding:7px 9px 9px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+.cs-ctx-chip{width:16px;height:16px;border-radius:5px;border:1px solid var(--border);flex:0 0 auto;background:var(--cs-ctx-chip,#000)}
+.cs-ctx-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--t2);text-transform:uppercase}
+.cs-ctx-hex{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t0);margin-left:auto}
+.cs-ctx-item:hover,.cs-ctx-item.cs-ctx-active{background:var(--hvr);color:var(--t0)}
+.cs-ctx-item:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cs-ctx-item svg{flex:0 0 16px;opacity:.7}
+.cs-ctx-kbd{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t3);font-weight:600}
+.cs-ctx-arrow{margin-left:auto;opacity:.5}
+.cs-ctx-sep{height:1px;background:var(--border);margin:4px 6px}
+.cs-ctx-danger{color:var(--err-strong)}
+.cs-ctx-danger svg{opacity:.85}
+.cs-ctx-danger:hover{background:color-mix(in srgb, var(--err) 12%, transparent);color:var(--err-strong)}
+.cs-sw-hero{position:relative;padding:var(--s-5) var(--s-5) var(--s-4);display:flex;flex-direction:column;gap:2px;flex:0 0 auto;background:var(--cs-sw-bg,#000);color:var(--cs-sw-fg,#fff)}
+.cs-sw-role{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+.cs-sw-name{font-size:13px;font-weight:700;letter-spacing:-.01em;opacity:.85}
+.cs-sw-hex{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-.01em}
+.cs-sw-edit-pill{position:absolute;top:var(--s-3);right:var(--s-3);display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 10px;border-radius:var(--radius-pill);background:color-mix(in srgb,currentColor 0%,transparent);border:1.5px solid currentColor;color:currentColor;cursor:pointer}
+.cs-sw-edit-pill:hover{background:color-mix(in srgb,currentColor 14%,transparent)}
+.cs-sw-close{position:absolute;top:var(--s-3);left:var(--s-3);width:30px;height:30px;border:none;border-radius:50%;background:color-mix(in srgb,#000 30%,transparent);color:#fff;font-size:18px;line-height:1;cursor:pointer;display:grid;place-items:center;z-index:2}
+.cs-sw-close:hover{background:color-mix(in srgb,#000 48%,transparent)}
+.cs-sw-tabs{display:flex;position:relative;border-bottom:1px solid var(--border);background:var(--bg-2);flex:0 0 auto}
+.cs-sw-tab-underline{position:absolute;bottom:-1px;left:0;height:2px;background:var(--accent);width:var(--cs-sw-tab-w,0);transform:translateX(var(--cs-sw-tab-x,0));transition:transform var(--dur-3) var(--ease-spring),width var(--dur-3) var(--ease-spring)}
+.cs-sw-body{padding:var(--s-4) var(--s-5) var(--s-5);overflow-y:auto;flex:1 1 auto;overscroll-behavior:contain}
+
+/* Values tab */
+.cs-sw-values{display:flex;flex-direction:column;gap:2px;margin-bottom:var(--s-4)}
+.cs-sw-val-row{display:flex;align-items:center;gap:12px;padding:9px 12px;border:none;background:var(--bg-2);border-radius:var(--radius-s);cursor:pointer;color:var(--t1);transition:background var(--dur-1) var(--ease-standard);text-align:left}
+.cs-sw-val-row:hover{background:var(--bg-3)}
+.cs-sw-val-row svg{margin-left:auto;color:var(--t3);flex:0 0 auto}
+.cs-sw-val-label{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--t3);width:40px;text-align:left;flex:0 0 auto}
+.cs-sw-val-text{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--t0)}
+.cs-sw-val-copied{margin-left:auto;font-size:10px;font-weight:700;color:var(--ok-strong)}
+.cs-sw-quick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cs-sw-qc{padding:12px;border-radius:var(--radius);border:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--cs-qc-bg,#fff)}
+.cs-sw-qc-aa{font-size:22px;font-weight:800;font-family:var(--font);line-height:1;color:var(--cs-qc-fg,#000)}
+.cs-sw-qc-ratio{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--cs-qc-tx,var(--t1))}
+
+/* Contrast tab */
+.cs-sw-contrast{display:flex;flex-direction:column;gap:var(--s-3)}
+.cs-sw-group-label{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--t3);text-transform:uppercase;margin:4px 0 2px}
+.cs-sw-cc-pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-2)}
+.cs-sw-cc{padding:var(--s-3);border-radius:var(--radius);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--cs-cc-bg,#fff)}
+.cs-sw-cc-aa{font-size:26px;font-weight:800;line-height:1;color:var(--cs-cc-fg,#000)}
+.cs-sw-cc-ratio{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--cs-cc-tx,var(--t1))}
+.cs-sw-badges{display:flex;gap:4px}
+.cs-sw-badge{font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 6px;border-radius:5px}
+.cs-sw-fix{margin-top:6px;font-size:11px;font-weight:700;color:var(--accent-strong);background:none;border:1px solid var(--border);border-radius:var(--radius-s);padding:5px 10px;cursor:pointer}
+.cs-sw-fix:hover{border-color:var(--bh);background:var(--hvr)}
+.cs-sw-siblings{display:flex;flex-direction:column;gap:2px}
+.cs-sw-sib-row{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius-s)}
+.cs-sw-sib-chip{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);flex:0 0 auto;background:var(--cs-sib,#000)}
+.cs-sw-sib-role{font-family:var(--mono);font-size:10px;color:var(--t2);letter-spacing:.06em}
+.cs-sw-sib-ratio{margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t1)}
+
+/* Shades tab */
+.cs-sw-helper{font-size:11px;color:var(--t2);margin-bottom:var(--s-3);line-height:1.5}
+.cs-sw-shade-strip{display:flex;height:40px;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border);margin-bottom:var(--s-3)}
+.cs-sw-shade-seg{flex:1;cursor:pointer;border:none;padding:0;background:var(--cs-seg,#000);transition:flex var(--dur-2) var(--ease-out)}
+.cs-sw-shade-seg:hover{flex:1.6}
+.cs-sw-shade-row{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border:none;background:none;cursor:pointer;border-radius:var(--radius-s);transition:background var(--dur-1) var(--ease-standard)}
+.cs-sw-shade-row:hover{background:var(--hvr)}
+.cs-sw-shade-row[aria-current="true"]{box-shadow:inset 0 0 0 2px var(--accent)}
+.cs-sw-shade-dot{width:22px;height:22px;border-radius:6px;border:1px solid var(--border);flex:0 0 auto;background:var(--cs-dot,#000)}
+.cs-sw-shade-tone{font-family:var(--mono);font-size:10px;color:var(--t3);width:24px;text-align:left}
+.cs-sw-shade-hex{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t1)}
+.cs-sw-shade-ratio{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--t3)}
+.cs-sw-shade-copy{flex:0 0 auto;padding:4px;border:none;background:none;color:var(--t3);cursor:pointer;border-radius:4px;display:grid;place-items:center}
+.cs-sw-shade-copy:hover{color:var(--t0);background:var(--hvr)}
+
+/* D. Edit tab (manual per-swatch set) */
+.cs-sw-edit-label{font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--t3);text-transform:uppercase;margin-bottom:8px}
+.cs-sw-edit-field{display:flex;gap:8px;align-items:center;margin-bottom:var(--s-3)}
+/* Sizing only now. The chip used to BE this element (a --cs-edit-chip ground
+   under an invisible native input); it is now the shared trigger's own chip,
+   so a background here would paint over it. */
+.cs-sw-edit-chip{width:40px;height:40px;flex:0 0 auto}
+.cs-sw-edit-err{font-size:11px;color:var(--err-strong);display:flex;align-items:center;gap:5px;margin-bottom:var(--s-3)}
+.cs-sw-edit-note{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:var(--s-3)}
+.cs-sw-edit-note button{font:inherit;font-weight:700;color:var(--accent-strong);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline}
+.cs-sw-edit-sub{font-family:var(--mono);font-size:11px;color:var(--t2);margin-bottom:var(--s-3)}
+.cs-sw-edit-sep{height:1px;background:var(--border);margin:0 0 var(--s-3)}
+.cs-sw-recent{display:flex;gap:6px;margin-bottom:var(--s-3);flex-wrap:wrap}
+.cs-sw-recent-chip{width:24px;height:24px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:var(--cs-recent,#000)}
+
+/* ── C. Colour-blindness overlay (palette-wide lens) ── */
+.cs-cb-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cs-cb-title{font-size:12px;font-weight:600;color:var(--t2);white-space:nowrap}
+.cs-cb-select-label{font-size:12px;font-weight:600;color:var(--t2)}
+.cs-cb-thumb{position:absolute;top:3px;left:3px;z-index:0;height:calc(100% - 6px);border-radius:var(--radius-pill);background:var(--brand);box-shadow:0 2px 8px -2px var(--brand-glow);transform:translateX(var(--cs-cb-x,0));width:var(--cs-cb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
+.cs-cb-select{height:34px;padding:0 30px 0 12px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer}
+.cs-cb-banner{display:flex;align-items:center;gap:10px;margin-bottom:var(--s-3);padding:9px var(--s-4);border-radius:var(--radius);background:color-mix(in srgb,var(--brand) 8%,var(--bg-2));border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));font-size:12px;color:var(--t1)}
+.cs-cb-banner-icon{flex:0 0 auto;color:var(--brand)}
+.cs-cb-banner-exit{margin-left:auto;font-weight:700;color:var(--accent-strong);background:none;border:none;cursor:pointer;font-size:12px;white-space:nowrap}
+.cs-cb-tag{position:absolute;top:6px;right:6px;font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:color-mix(in srgb,#000 38%,transparent);color:#fff;z-index:3}
+.cs-pb-rail.cb-on .cs-pb-swatch{cursor:default}
+.cs-pb-rail.cb-on .cs-pb-swatch.cs-cb-clash{box-shadow:inset 0 0 0 2px var(--warn)}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Colour System popup (CS#3.14, Slice 3). Replaces the old cs-add-menu dropdown.
+   Inherits Slice 2's cs-sw chrome/positioner/keyframes verbatim for seam-free
+   consistency — only the wider shell (canvas needs room) and the per-tab surfaces
+   are new. Dynamic values (point coords, sampled colour, loupe transform, tab
+   underline) arrive via custom properties set on refs — no inline styles.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Trigger — the 2×2 swatch-grid glyph replaces the bare "+". */
+.cs-csys-trigger svg{flex:0 0 auto}
+
+/* Head */
+.cs-csys-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--border);flex:0 0 auto}
+.cs-csys-title{font-size:16px;line-height:1.2;font-weight:600;letter-spacing:-.01em;color:var(--t0);margin:0}
+.cs-csys-close{width:32px;height:32px;flex:0 0 auto;border:none;border-radius:var(--radius-s);background:none;color:var(--t2);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:background var(--t-fast),color var(--t-fast)}
+.cs-csys-close:hover{background:var(--hvr);color:var(--t0)}
+.cs-csys-close:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
+.cs-csys-tab:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--brand)}
+.cs-csys-tab-underline{position:absolute;bottom:-1px;left:0;height:2px;background:var(--brand);width:var(--cs-csys-tab-w,0);transform:translateX(var(--cs-csys-tab-x,0));transition:transform var(--dur-3) var(--ease-spring),width var(--dur-3) var(--ease-spring)}
+
+/* Body / panel */
+.cs-csys-body{padding:var(--s-4);overflow-y:auto;flex:1 1 auto;overscroll-behavior:contain}
+.cs-csys-panel{display:flex;flex-direction:column}
+
+/* Eyebrow labels (Slice 1 rhythm) */
+.cs-csys-eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;line-height:1;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin-bottom:var(--s-2)}
+.cs-csys-eyebrow + .cs-csys-eyebrow,.cs-csys-auto + .cs-csys-eyebrow{margin-top:var(--s-5)}
+.cs-csys-free-badge{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.02em;color:var(--ok-strong);background:color-mix(in srgb,var(--ok) 14%,transparent);padding:2px 6px;border-radius:var(--radius-pill);text-transform:none}
+
+/* Foot — contextual action bar. */
+.cs-csys-foot{display:flex;align-items:center;gap:var(--s-3);margin-top:var(--s-5);padding-top:var(--s-4);border-top:1px solid var(--border)}
+.cs-csys-add:hover:not(:disabled){filter:brightness(1.08)}
+.cs-csys-add:disabled{opacity:.45;cursor:not-allowed}
+.cs-csys-add:focus-visible{outline:none;box-shadow:0 0 0 3px var(--brand-glow)}
+.cs-csys-ghost:hover{background:var(--hvr);color:var(--t0)}
+.cs-csys-ghost:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
+.cs-csys-foot-note{font-size:12px;line-height:1.45;color:var(--t2)}
+
+/* Visually-hidden aria-live */
+.cs-csys-live{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ── Generate tab ── */
+.cs-csys-auto{display:flex;border-radius:var(--radius);overflow:hidden}
+.cs-csys-auto-tile{flex:1;height:40px;background:var(--cs-csys-tile,var(--bg-3))}
+.cs-csys-harm-chip:hover{background:var(--bh)}
+.quota-row{display:grid;gap:5px}
+.quota-row-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.quota-label{font-size:12px;font-weight:600;color:var(--t1)}
+.quota-count{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums}
+.quota-track{position:relative;height:6px;border-radius:var(--radius-pill);background:var(--bg-3);overflow:hidden}
+.quota-fill{display:block;height:100%;width:var(--quota-pct,0%);border-radius:var(--radius-pill);background:var(--accent);transition:width var(--dur-3) var(--ease-out)}
+.quota-track--low .quota-fill{background:var(--warn)}
+.quota-track--out .quota-fill{background:var(--err)}
+.quota-msg{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
+.quota-msg--low{color:var(--warn-strong)}
+.quota-msg--out{color:var(--err-strong)}
+.quota-note{margin:0;font-size:11.5px;line-height:1.45;color:var(--t3)}
+html[data-reduced-motion="true"] .quota-fill{transition:none}
+@media (prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .quota-fill{transition:none}
+}

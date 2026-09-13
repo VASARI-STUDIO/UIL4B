@@ -13,6 +13,11 @@ import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { splitLockedLibrary } from '../utils/lockedPreview'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../utils/paletteMood'
 import { LIBRARY_PALETTES } from '../data/paletteLibrary'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/colour.css'
+import '../styles/deferred/tool-shell.css'
 
 // ── TWO QUESTIONS, TWO TRAYS ────────────────────────────────────────
 //

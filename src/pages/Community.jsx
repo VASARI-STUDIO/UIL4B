@@ -10,6 +10,11 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 import { buildQueueRecord, mergeSubmissions } from '../utils/communityQueue'
 import { listMySubmissions, publishToQueue } from '../utils/communityQueueApi'
 import useModalDialog from '../hooks/useModalDialog'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/account.css'
+import '../styles/deferred/tool-shell.css'
 
 // Community Hub — browse, save, and submit design inspiration. Saves drive the
 // ranking. Baseline save counts are illustrative for now; the heart toggle and

@@ -11,6 +11,11 @@ import {
   draftToConverterSettings,
   readImageHandoff,
 } from '../utils/imageHandoff'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/studio.css'
+import '../styles/deferred/tool-shell.css'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MODES = [

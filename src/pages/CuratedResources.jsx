@@ -10,6 +10,11 @@ import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { DISCOVER_RESOURCES } from '../data/discoverResources'
 import { FILTER_CATEGORIES, CATEGORY_MAP } from '../data/discoverCategories'
 import { primaryAvailableTool, buildToolHandoffUrl } from '../components/discover/discoverUtils'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/library.css'
+import '../styles/deferred/tool-shell.css'
 
 // /discover/resources — the Curated Resources library.
 //

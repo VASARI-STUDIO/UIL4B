@@ -1,0 +1,243 @@
+/* ── ADMIN — lifted out of src/styles/global.css ─────────────────
+ *
+ * Every rule below was in the one render-blocking stylesheet, where it cost the
+ * homepage its bytes without ever being used there. It now travels with the
+ * lazy route chunks that can actually reach it:
+ *
+ *   Admin
+ *
+ * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
+ * in global.css, so the cascade between any two of them is the one that was
+ * already shipping. What DID change is that they now cascade after the whole
+ * critical sheet rather than from the middle of it — which is why
+ * tests/user-sim/64-computed-style-snapshot.spec.js, and not a reading of this
+ * file, is the evidence that nothing painted moved.
+ *
+ * Adding a rule here is only correct when no eagerly-loaded module can reach
+ * it. tests/unit/home-asset-budget.test.js holds the byte budget that keeps
+ * the traffic going this way rather than back.
+ */
+
+
+
+/* ─── Admin Dashboard ─── */
+.adm{max-width:1200px}
+.adm-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.adm-header-left h1{font-family:var(--display);font-size:clamp(28px,5vw,36px);font-weight:500;letter-spacing:-.03em;margin-bottom:4px}
+.adm-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong)}
+.adm-status-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:adm-pulse 2s infinite}
+.adm-actions{display:flex;gap:6px;flex-wrap:wrap}
+.adm-tab-badge{margin-left:6px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--accent-strong);color:var(--accent-fg)}
+
+/* Time filter */
+.adm-time-filter{display:flex;gap:2px;padding:2px;background:var(--bg-2);border-radius:var(--radius-s)}
+
+/* Section header */
+.adm-section{margin-bottom:32px}
+.adm-section-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.adm-section-title{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--t0)}
+.adm-section-bar{width:20px;height:2px;border-radius:1px;background:var(--accent)}
+.adm-stat{padding:18px 20px;border-radius:var(--radius);background:var(--card-grad);border:1px solid var(--border);box-shadow:var(--warm-shadow);transition:border-color var(--dur-1) var(--ease-standard)}
+.adm-stat:hover{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
+.adm-stat-label{font-size:11px;font-weight:600;color:var(--t2);margin-top:8px;letter-spacing:.02em}
+.adm-stat-sub{font-size:10px;color:var(--t3);margin-top:3px}
+.adm-stat-delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:8px}
+.adm-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:14px}
+
+/* Card variants */
+.adm-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow);overflow:hidden}
+.adm-card-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.adm-card-title{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
+
+/* Chart wrapper */
+.adm-chart{width:100%;position:relative}
+.adm-chart svg{display:block;width:100%;overflow:visible}
+
+/* Bar chart */
+.adm-bar{display:flex;flex-direction:column;gap:10px}
+.adm-bar-row{display:flex;align-items:center;gap:10px}
+.adm-bar-track{flex:1;height:8px;border-radius:4px;background:var(--bg-2);overflow:hidden}
+.adm-bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width var(--dur-4) var(--ease-standard)}
+.adm-bar-value{font-size:11px;font-weight:700;color:var(--t2);width:40px;text-align:right;flex-shrink:0;font-family:var(--mono)}
+
+/* Donut chart */
+.adm-donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.adm-donut-legend{display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px}
+.adm-donut-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t1)}
+.adm-donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.adm-donut-count{margin-left:auto;font-weight:700;font-family:var(--mono);color:var(--t0)}
+
+/* Data list */
+.adm-list{display:flex;flex-direction:column}
+.adm-list-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);gap:10px}
+.adm-list-row:last-child{border-bottom:none}
+.adm-list-rank{width:20px;font-size:10px;font-weight:700;color:var(--t3);text-align:center;flex-shrink:0}
+.adm-list-name{font-size:12px;font-weight:500;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.adm-list-value{font-size:12px;font-weight:700;color:var(--accent-strong);font-family:var(--mono);flex-shrink:0}
+
+/* Activity feed */
+.adm-feed{display:flex;flex-direction:column;gap:0}
+.adm-feed-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.adm-feed-item:last-child{border-bottom:none}
+.adm-feed-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.adm-feed-body{flex:1;min-width:0}
+.adm-feed-text{font-size:12px;color:var(--t0);font-weight:500}
+.adm-feed-meta{font-size:10px;color:var(--t3);margin-top:2px}
+
+/* Badge */
+.adm-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:4px;white-space:nowrap}
+
+/* Table */
+.adm-table{width:100%;border-collapse:collapse;min-width:fit-content}
+.adm-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.adm-table tbody tr:last-child td{border-bottom:none}
+.adm-table tbody tr:nth-child(even){background:var(--bg-1)}
+
+/* Checklist */
+.adm-checklist{display:flex;flex-direction:column;gap:0}
+.adm-check-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.adm-check-row:last-child{border-bottom:none}
+.adm-check-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.adm-check-label{font-size:12px;font-weight:600;color:var(--t0)}
+.adm-check-note{font-size:11px;color:var(--t2);margin-top:2px;line-height:1.5}
+
+/* Colour swatch list */
+.adm-swatch-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
+.adm-swatch-row:last-child{border-bottom:none}
+.adm-swatch{width:24px;height:24px;border-radius:var(--radius-s);border:1px solid var(--border);flex-shrink:0}
+.adm-swatch-grid{display:flex;flex-wrap:wrap;gap:4px}
+.adm-swatch-grid .adm-swatch{cursor:default;transition:transform var(--dur-2) var(--ease-standard)}
+.adm-swatch-grid .adm-swatch:hover{transform:scale(1.15)}
+
+/* Empty state */
+.adm-empty{padding:32px 16px;text-align:center;font-size:13px;color:var(--t3)}
+
+/* Pipeline tab */
+.adm-pipe-bar{height:5px;border-radius:var(--radius-pill);background:var(--bg-2);overflow:hidden}
+.adm-pipe-bar-fill{display:block;height:100%;border-radius:var(--radius-pill);transition:width var(--t)}
+.adm-pipe-todo{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);transition:border-color var(--dur-1) var(--ease-standard)}
+.adm-pipe-todo:hover{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
+.adm-pipe-prio{flex-shrink:0;font-size:10px;font-weight:800;letter-spacing:.04em;font-family:var(--mono);padding:3px 7px;border:1px solid;border-radius:var(--radius-xs,4px);line-height:1}
+.adm-pipe-status{font-size:10px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:var(--radius-pill);white-space:nowrap}
+
+/* Submission cards */
+.adm-submission{border-left:3px solid var(--border);transition:opacity var(--dur-2) var(--ease-standard)}
+.adm-submission-head{padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.adm-submission-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.adm-submission-title{font-size:14px;font-weight:600;color:var(--t0);margin-bottom:2px}
+.adm-submission-body{padding:0 16px 16px;border-top:1px solid var(--border);padding-top:14px}
+.adm-submission-msg{font-size:13px;line-height:1.7;color:var(--t0);margin-bottom:12px;white-space:pre-wrap}
+.adm-submission-notes{background:var(--bg-2);border-radius:var(--radius-s);padding:12px;margin-bottom:12px}
+.adm-submission-notes-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+.adm-submission-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Prompt admin cards */
+.adm-prompt{border-left:3px solid var(--border);margin-bottom:8px}
+.adm-prompt-header{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.adm-prompt-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.adm-prompt-tag{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--bg-2);color:var(--t2);font-weight:600}
+.adm-prompt-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;border-top:1px solid var(--border);padding-top:10px}
+
+/* Sparkline */
+.adm-sparkline{display:flex;align-items:end;gap:2px;height:32px}
+.adm-sparkline-bar{flex:1;border-radius:2px 2px 0 0;background:var(--accent);opacity:.6;transition:opacity var(--dur-1) var(--ease-standard),height var(--dur-3) var(--ease-standard)}
+.adm-sparkline-bar:hover{opacity:1}
+
+/* Verify error banner */
+.adm-verify-error{padding:16px;border-left:3px solid var(--err);margin-bottom:20px}
+
+/* Lock screen */
+.adm-lock{max-width:400px;margin:80px auto;text-align:center}
+.adm-lock-eyebrow{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:16px;font-family:var(--mono)}
+.adm-lock h1{font-size:28px;font-weight:800;letter-spacing:-.03em;margin-bottom:8px}
+.adm-lock p{font-size:14px;color:var(--t1);margin-bottom:24px}
+.adm-lock form{display:flex;gap:8px}
+.adm-lock input{flex:1;text-align:center;font-size:14px;letter-spacing:.04em}
+
+/* Stripe panel */
+.adm-stripe-desc{font-size:13px;color:var(--t1);line-height:1.7;margin-bottom:4px}
+.adm-stripe-tip{font-size:11px;color:var(--t3);margin-bottom:16px}
+.adm-stripe-table{width:100%;border-collapse:collapse;min-width:360px}
+.adm-stripe-table th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);padding:8px 10px;border-bottom:1px solid var(--border)}
+.adm-stripe-table td{padding:8px 10px;border-bottom:1px solid var(--border)}
+.adm-stripe-input{display:flex;align-items:center;gap:4px}
+.adm-stripe-input span{font-size:11px;color:var(--t3);min-width:24px}
+.adm-stripe-input input{width:90px;font-size:12px;font-family:var(--mono)}
+.adm-stripe-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.adm-stripe-env{font-size:12px;font-family:var(--mono);line-height:2.2;color:var(--t1)}
+.adm-stripe-env span{color:var(--t3)}
+.adm-stripe-autofill{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:12px;color:var(--t1);cursor:pointer;line-height:1.5}
+.adm-stripe-autofill input{accent-color:var(--accent);flex-shrink:0}
+
+/* Overview category blocks */
+.adm-cat{padding:20px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--card-grad);margin-bottom:24px;display:flex;flex-direction:column;gap:16px}
+.adm-cat-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.adm-cat-title{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--t0)}
+.adm-cat-desc{font-size:11px;color:var(--t3)}
+
+/* Users tab — masked emails, flags, sorting, filters */
+.adm-mask{display:inline-flex;align-items:center;gap:6px;max-width:100%}
+.adm-mask-text{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-mask-blur{filter:blur(4px);user-select:none;-webkit-user-select:none;opacity:.8}
+.adm-eye-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:none;background:none;border-radius:var(--radius-s);color:var(--t3);cursor:pointer;flex-shrink:0;transition:color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.adm-eye-btn:hover{color:var(--t0);background:var(--bg-2)}
+.adm-user-sub{font-size:11px;color:var(--t3);margin-top:3px}
+.adm-flag{font-size:15px;line-height:1}
+.adm-flag-cell{display:inline-flex;align-items:center;gap:6px;cursor:default;font-family:var(--mono);font-size:11px}
+.adm-th-arrow{font-size:10px;opacity:.75}
+.adm-country-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.adm-users-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.adm-search{flex:1 1 220px;min-width:180px;font-size:12px}
+.adm-users-table td{vertical-align:top}
+.adm-plan-pro{background:rgba(16,185,129,.12);color:var(--ok-strong)}
+.adm-plan-free{background:var(--bg-2);color:var(--t2)}
+
+/* Submissions toolbar */
+.adm-sub-summary{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:11px;font-weight:600}
+.adm-sub-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+@media(max-width:480px){
+  .adm-stats{grid-template-columns:repeat(2,1fr)}
+  .adm-stat{padding:14px}
+  .adm-stat-value{font-size:20px}
+}
+
+/* ── Admin: community review queue ──────────────────────────────────────────
+   components/admin/CommunityQueue.jsx. The reviewer's side of the shared
+   submission queue — which did not exist, because gradient and design
+   submissions were written to localStorage and nowhere else. */
+.cq{display:grid;gap:14px}
+.cq-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cq-filters{display:flex;gap:6px;flex-wrap:wrap}
+.cq-filter-count{font-family:var(--mono);font-size:11px;opacity:.85}
+.cq-msg{display:grid;gap:8px;justify-items:start;padding:28px;border:1px dashed var(--border);border-radius:var(--radius-l);color:var(--t2);font-size:13px}
+.cq-msg--error{border-style:solid;border-color:color-mix(in srgb,var(--err) 40%,transparent);background:color-mix(in srgb,var(--err) 6%,transparent);color:var(--err-strong)}
+.cq-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.cq-item{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--card)}
+.cq-preview{flex:0 0 auto;width:64px;height:44px;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;display:flex}
+.cq-preview--gradient{background:var(--cq-grad,var(--bg-3))}
+.cq-preview--palette i{flex:1;background:var(--cq-sw,var(--bg-3))}
+.cq-preview--none{background:var(--bg-2)}
+.cq-item-body{flex:1;min-width:0}
+.cq-item-name{margin:0;font-size:13.5px;font-weight:650;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cq-item-meta{margin:3px 0 0;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cq-kind{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-strong);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px}
+.cq-item-actions{display:flex;gap:6px;flex-shrink:0}
+.cq-approve{border-color:var(--ok);color:var(--ok-strong)}
+.cq-approve:hover:not(:disabled){background:var(--ok);border-color:var(--ok);color:var(--ok-fg)}
+.cq-delete{border-color:var(--err);color:var(--err-strong)}
+.cq-delete:hover:not(:disabled){background:var(--err);border-color:var(--err);color:var(--err-fg)}
+@media(max-width:640px){
+  .cq-item{flex-wrap:wrap}
+  .cq-item-body{flex-basis:100%;order:2}
+  .cq-item-actions{order:3;margin-left:auto}
+}
+
+/* The admin tab bar scrolls rather than wrapping into three ragged rows at
+   narrow widths — ten tabs plus badges never fit, and a wrapped tab bar makes
+   the page header taller than the content it labels.
+   overflow / scrollbar / edge fade come from `.rail-overflow`; this was the
+   ninth instance of the hidden-scroller shape. Founder-gated, so it was never
+   going to be found by a user report — which is exactly why it is swept here
+   with the rest rather than left for someone to notice. */
+.adm-tabs{flex-wrap:nowrap}
+.adm-tab{flex:0 0 auto}

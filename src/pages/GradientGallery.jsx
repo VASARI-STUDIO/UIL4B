@@ -12,6 +12,11 @@ import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gr
 import { mergeSubmissions } from '../utils/communityQueue'
 import { listMySubmissions } from '../utils/communityQueueApi'
 import { useAuth } from '../contexts/AuthContext'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/colour.css'
+import '../styles/deferred/tool-shell.css'
 
 // /discover/gradients — the Gradient Library. A designgradients-style browse
 // surface over the local static set (src/data/gradientGallery.js): search by

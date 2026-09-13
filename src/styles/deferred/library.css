@@ -1,0 +1,787 @@
+/* ── LIBRARY — lifted out of src/styles/global.css ─────────────────
+ *
+ * Every rule below was in the one render-blocking stylesheet, where it cost the
+ * homepage its bytes without ever being used there. It now travels with the
+ * lazy route chunks that can actually reach it:
+ *
+ *   IconLibrary, EmojiLibrary, IconEmojiLibrary, PromptLibrary, CuratedResources
+ *
+ * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
+ * in global.css, so the cascade between any two of them is the one that was
+ * already shipping. What DID change is that they now cascade after the whole
+ * critical sheet rather than from the middle of it — which is why
+ * tests/user-sim/64-computed-style-snapshot.spec.js, and not a reading of this
+ * file, is the evidence that nothing painted moved.
+ *
+ * Adding a rule here is only correct when no eagerly-loaded module can reach
+ * it. tests/unit/home-asset-budget.test.js holds the byte budget that keeps
+ * the traffic going this way rather than back.
+ */
+
+
+
+/* ─── Merged Icon + Emoji library — the library switch and its status ─── */
+/* The masthead itself is now the shared .dgh-hero (see DiscoverGalleryHero);
+   this surface's own header rules — .lib-head, .lib-head-copy, .lib-eyebrow —
+   went with it. What is left is genuinely local: the tablist that flips between
+   the two libraries, and the connection status.
+
+   THESE COLOURS ARE WRITTEN FOR THE MASTHEAD'S GROUND, NOT THE THEME'S.
+   The switch renders inside .dgh-aside, and .dgh-hero is a fixed dark surface
+   in BOTH themes — so --bg-2 / --border / --t0..t3 would drop out of contrast
+   on it in light mode, exactly as the comment on .dgh-action .btn describes.
+   The dot colours are the --ok / --warn values from the dark palette, stated
+   literally for the same reason. */
+.lib-switch{display:grid;grid-template-columns:1fr;gap:4px;width:100%;padding:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-l)}
+.lib-switch-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.lib-switch-btn>svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.lib-switch-emoji{font-size:22px;line-height:1}
+.lib-switch-btn>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lib-head-status{display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-family:var(--mono);font-size:var(--fs-micro);color:rgba(255,255,255,.55)}
+.lib-net{display:inline-flex;align-items:center;gap:7px}
+.lib-net i{width:7px;height:7px;border-radius:50%;background:#facc15;flex:none}
+.lib-net.is-online i{background:#4ade80}
+/* .48 not lower: at 11px this needs 4.5:1 against the masthead ground, and it
+   measures 4.99. It was .38 (3.51) for one commit — the dark hero is a much
+   darker ground than the page this text used to sit on. */
+.lib-keyhint{color:rgba(255,255,255,.48)}
+/* Below the masthead's own 720px stack point the aside spans the full width,
+   so the two libraries sit side by side again; on a phone they stack back. */
+@media(max-width:720px){.lib-switch{grid-template-columns:1fr 1fr}.lib-head-status{flex-direction:row;align-items:center;justify-content:space-between;width:100%}}
+@media(max-width:480px){.lib-switch{grid-template-columns:1fr}.lib-keyhint{display:none}}
+.cs-pillnav-item:active{transform:translateY(.5px)}
+/* No radius hoisted to rest for this one: #348 left the block with no JSX
+   consumer, so there is no rendered shape to preserve and a new rule here
+   would be dead CSS added on top of dead CSS. The geometry override is just
+   dropped. */
+.cs-pillnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cs-pillnav-thumb{position:absolute;top:5px;left:0;z-index:0;height:calc(100% - 10px);border-radius:var(--radius-pill);background:var(--brand);box-shadow:0 2px 8px -2px var(--brand-glow);transform:translateX(var(--cs-thumb-x,0));width:var(--cs-thumb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
+[data-theme="light"] .cs-pillnav{box-shadow:var(--shadow-m)}
+.cs-section-header{user-select:none;position:relative;z-index:10}
+.cs-section-header>h2{transition:color var(--dur-1) var(--ease-standard)}
+.cs-section-header:hover>h2{color:var(--t1)}
+/* Solo tool pages (#50): the header is a plain action toolbar — no collapse. */
+.cs-section-header.cs-solo-toolbar{cursor:default}
+
+/* ─── Palette Builder core (CS#3.1/3.3–3.6/3.8/3.10/3.15/3.16) ─── */
+.cs-pb-section{margin-bottom:48px;scroll-margin-top:100px}
+/* Header */
+.cs-pb-header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer}
+.cs-pb-title{margin:0;flex-shrink:0}
+.cs-pb-randomize{display:inline-flex;align-items:center;gap:8px}
+.cs-pb-kbd{font-family:var(--mono);font-size:10px;font-weight:700;line-height:1;padding:3px 6px;border-radius:var(--radius-xs);background:color-mix(in srgb,#000 18%,transparent);color:var(--accent-fg)}
+.cs-pb-reset{display:inline-flex;align-items:center;gap:8px}
+.cs-pb-add-trigger{display:inline-flex;align-items:center;gap:5px}
+.cs-pb-live{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0}
+
+/* Base colour + harmony quick-switch */
+.cs-pb-base{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--s-3)}
+.cs-pb-base-swatch{position:relative;width:40px;height:40px;flex-shrink:0;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border)}
+.cs-pb-base-hex{width:104px;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;padding:9px 12px;min-height:40px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg-1);color:var(--t0)}
+.cs-pb-base-div{width:1px;height:24px;background:var(--border);flex-shrink:0}
+.cs-pb-harms{display:flex;gap:4px;flex-wrap:wrap}
+
+/* Swatch rail (CS#3.1/3.3) */
+.cs-pb-rail{display:flex;gap:var(--s-2);margin-bottom:var(--s-3);flex-wrap:wrap}
+.cs-pb-swatch.cs-d0{animation-delay:0ms}
+.cs-pb-swatch.cs-d1{animation-delay:48ms}
+.cs-pb-swatch.cs-d2{animation-delay:96ms}
+.cs-pb-swatch.cs-d3{animation-delay:144ms}
+.cs-pb-swatch.cs-d4{animation-delay:192ms}
+.cs-pb-swatch.cs-d5{animation-delay:240ms}
+.cs-pb-swatch:active{cursor:grabbing}
+.cs-pb-swatch.skeleton{background:linear-gradient(100deg,var(--bg-1) 30%,var(--bg-2) 50%,var(--bg-1) 70%);background-size:200% 100%;animation:cs-shimmer 1.2s ease-in-out infinite;border-color:var(--border)}
+.cs-pb-swatch-meta{padding:var(--s-3) var(--s-3) var(--s-2)}
+.cs-pb-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.65}
+.cs-pb-hex{position:relative;display:inline-block;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;cursor:pointer;background:none;border:none;padding:0;color:inherit;text-align:left}
+.cs-pb-edit{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0}
+.cs-pb-tints{display:flex;height:36px;flex-shrink:0}
+.cs-pb-tint{flex:1;border:none;padding:0;cursor:pointer;transition:filter var(--dur-1) var(--ease-standard)}
+.cs-pb-tint:hover{filter:brightness(1.06)}
+.cs-pb-tool:active{transform:scale(.92)}
+.cs-pb-tool:focus-visible{outline:2px solid var(--accent-fg);outline-offset:1px}
+.cs-pb-tool--drag{cursor:grab}
+
+/* Gap-insert ×1–3 (CS#3.5) */
+.cs-pb-gap{position:relative;flex:0 0 var(--s-2);align-self:stretch;display:grid;place-items:center;cursor:pointer}
+.cs-pb-gap-count{font-family:var(--mono);font-size:12px;font-weight:700;line-height:1}
+.cs-pb-add-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.cs-pb-adjust-field{display:flex;flex-direction:column;gap:6px}
+.cs-pb-adjust-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.cs-pb-adjust-val{color:var(--t1)}
+.cs-pb-adjust-reset{grid-column:1/-1;justify-self:start;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-strong);padding:4px 0;min-height:32px;transition:opacity var(--dur-1) var(--ease-standard)}
+.cs-pb-adjust-reset:disabled{color:var(--t3);cursor:default;opacity:.6}
+
+/* Pro-lock affordance (real gate — glyph is the conversion driver) */
+.cs-pro-lock{position:relative}
+.cs-pro-lock-glyph{margin-left:6px;color:var(--accent);flex-shrink:0;vertical-align:-1px}
+
+.cs-chevron{color:var(--t2);transition:transform var(--dur-2) var(--ease-standard);flex-shrink:0}
+
+/* ─── Prompt Library (gallery style) ─── */
+.pl-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
+.pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
+.pl-card-saves{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s)}
+/* Sticky library command bar. It used to carry a negative-margin bleed sized to
+   the page gutter, but every page that uses it nests it inside .sec (max-width
+   1400) — so the bleed could never reach the viewport edge and simply
+   overhung the content column by whatever the gutter was. The bar now spans its
+   own container and lines up with the grid it filters. */
+/* `top:var(--nav-clear)`, not `top:0`. This bar is `position:sticky` at
+   z-index 30 and `.pnav` is `position:fixed;top:0` at z-index 120, so with a
+   zero offset the bar pins itself UNDERNEATH the floating nav the moment the
+   page is scrolled. Measured on /discover/prompts, scrolled, hit-testing each
+   control at its own centre:
+
+     1440px   10 of 10 covered — search, both sort buttons, all six category
+              chips and "Submit prompt". The bar is 80px tall and the nav is
+              60px, so almost none of it is left.
+      834px    3 of 10
+      390px    1 of 10
+
+   WORST AT DESKTOP, which is why two mobile audits walked past it: the taller
+   the bar wraps, the more of it escapes below the nav, so the narrow widths
+   that get audited are the widths that hide it.
+
+   The offset itself is not new — `--nav-clear` is what `.lbry-toolbar` and
+   `.plb-toolbar` already use, and there was a `.rail-content .pl-toolbar`
+   override carrying exactly this value. That override matched NOTHING:
+   `.rail-content` is rendered only by CreateTool.jsx and the sole consumer of
+   `.pl-toolbar` is PromptLibrary, which is not inside it. A correct rule
+   scoped to a selector that never matches is the shape this defect had. */
+/* RETIRED (#323). `.pl-toolbar` and `.pl-search-*` were the last one-off
+   browse toolbar in the app — the Prompt Library was the only consumer, and
+   it is now on the shared `LibraryToolbar` / `.lbry-toolbar` like every
+   other browse surface. The sticky-offset reasoning above is preserved
+   because it is why `--nav-clear` exists on the shared toolbar too. */
+/* The category row WRAPS (S4, mobile-audit-2026-08). It was
+   `flex-wrap:nowrap; overflow-x:auto` with the scrollbar suppressed on both
+   `scrollbar-width` and `::-webkit-scrollbar`, which under touch emulation
+   renders no affordance at all — the same "hidden scroller" shape as S1, S2, S3
+   and S8, and the fifth instance of it in this stylesheet.
+
+   Measured chips sitting outside their own box, before → after, per consumer of
+   this shared class (it is not only the Emoji Library, which is all S4 records):
+
+     /emoji              320px  9 of 12 → 0     390px  9 of 12 → 0
+     /icons              320px  4 of 7  → 0     768px  5 of 7  → 0
+     /discover/prompts   320px  3 of 6  → 0     768px  4 of 6  → 0
+     /discover/gradients 320px  4 of 8  → 0     390px  3 of 8  → 0
+
+   The Emoji Library was still hiding 5 of 12 at 1180px, so this was never only
+   a phone defect. Category is the primary navigation for a 1,655-item library.
+
+   The cost is height and it is the largest this sweep has spent: the emoji row
+   goes 29px → 169px at 320px wide, 29 → 134 at 390, 29 → 64 at 1180. That is
+   accepted on the same reasoning PR #271 recorded for .stc-bundles — a page
+   that already scrolls vertically can afford rows; an undiscoverable gesture
+   costs the option entirely. .grg-chips already wraps at ≥821px, so this is the
+   established look on one of the four surfaces rather than a new one. */
+.pl-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.pl-add-inner{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:24px;box-shadow:var(--warm-shadow)}
+.pl-add-fields{display:flex;flex-direction:column;gap:12px}
+/* The two !important here were a workaround for the bare-type-selector trap,
+   not a real override. The reset is :where()-wrapped now, so the class wins. */
+.pl-input-title{font-size:16px;font-weight:600;padding:12px 16px}
+.pl-textarea{min-height:100px;resize:vertical;font-size:13px;line-height:1.7}
+.pl-add-row{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
+.pl-add-field{flex:1;min-width:180px;display:flex;flex-direction:column;gap:6px}
+.pl-add-field label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.pl-add-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+/* The locked tease continues the gallery, so its seam is the ROW GAP, not
+   the 8px that separates the first grid from the toolbar. --pl-gap is read
+   rather than repeated: the 720px band retunes it and the seam follows. */
+.pl-gallery--continues{margin-top:var(--pl-gap)}
+.pl-card:hover{transform:translateY(-4px);box-shadow:var(--warm-shadow-lg);border-color:var(--bh)}
+.pl-card:hover .pl-card-overlay{opacity:1}
+.pl-card:hover .pl-card-img img{transform:scale(1.04)}
+
+/* Card image */
+.pl-card-img{position:relative;overflow:hidden;aspect-ratio:16/10}
+.pl-card-img img{width:100%;height:100%;object-fit:cover;transition:transform var(--dur-5) var(--ease-out)}
+.pl-card-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.1) 50%,transparent 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:20px;opacity:0;transition:opacity var(--dur-3) var(--ease-standard)}
+
+/* ── The prompt preview: the card shows the ARTEFACT ────────────────────────
+   The founder asked the library to "preivew the prompts" and referenced
+   motionsites.com, a gallery whose cards continuously auto-play a scrolling
+   preview of the real page behind them, with the title and category beneath
+   and a badge on the paid entries. The transferable half is that the card
+   carries the artefact rather than a NAME for it, so the body of a prompt card
+   is now the prompt's own text, set in --mono exactly as .pl-modal-prompt sets
+   the same text one activation away. Reference screens are cited in
+   PromptCard.jsx (WRITER's prompt library, Sana AI's workflow grid).
+
+   THE WINDOW IS NOT A SCROLL CONTAINER, and that is deliberate. Making it one
+   would put a nested scroller under the pointer on twenty cards, which the
+   app-wide Lenis instance then has to arbitrate on every wheel event —
+   allowNestedScroll measures the element under the pointer and hands the
+   gesture back only once that element can no longer move. A transform inside
+   overflow:hidden is invisible to the wheel, so a scroll over the gallery stays
+   an ordinary page scroll and Lenis is never involved.
+
+   --pl-preview-dur is ONE PASS, written per card by PromptCard from the
+   prompt's length so that a 400-character brief and a 3,000-character one
+   travel at the same reading pace. The value on .pl-card is the fallback for a
+   card that never sets it. */
+.pl-card-preview{position:relative;height:var(--pl-preview-h);overflow:hidden;padding:16px 18px 0;background:var(--cbg);border-bottom:1px solid var(--border)}
+/* The bottom fade is the truncation signal, and it is drawn over the WINDOW
+   rather than masked onto the text: a mask on the text would travel with the
+   transform, so the fade would follow the words instead of marking the edge.
+   Where a prompt is shorter than the window the gradient lies over its own
+   ground colour and is invisible, so a short prompt gets no fade pretending
+   there is more of it.
+
+   --pl-preview-fade is ONE number for two properties: the height of this
+   gradient and the bottom padding of the text. They have to match, because the
+   scroll ends with the text's padded bottom on the window's bottom edge —
+   measured at 0.0px — so any padding smaller than the fade would leave the
+   prompt's LAST LINE sitting inside the gradient, washed out at the exact
+   moment the reader has scrolled to reach it. */
+.pl-card-preview::after{content:'';position:absolute;left:0;right:0;bottom:0;height:var(--pl-preview-fade);background:linear-gradient(180deg,transparent 0%,var(--cbg) 88%);pointer-events:none}
+/* MOTION IS EARNED PER CARD. The scroll plays on hover and on keyboard focus,
+   never on its own. motionsites plays every card at once and it works there
+   because its artefact is a PAGE — there is no text to read. A prompt IS text,
+   and twelve bodies of it moving at once is not a preview.
+
+   It is also WCAG 2.2 SC 2.2.2 (Pause, Stop, Hide): content that moves
+   automatically for more than five seconds alongside other content needs a
+   mechanism to pause it, and this layout has nowhere to put one. Hover- and
+   focus-driven motion is user-initiated and self-cancelling, so it is outside
+   2.2.2 entirely and it answers the question for the one card the reader is
+   looking at.
+
+   The travel is min(0px, window - text height - the window's own top padding),
+   so a prompt that already fits moves by exactly nothing rather than sliding up
+   to reveal blank space. `alternate` returns it to the top rather than jumping,
+   and the 7%/93% holds are the dwell at each end. */
+.pl-card-preview-text{margin:0;padding-bottom:var(--pl-preview-fade);font-family:var(--mono);font-size:11px;line-height:1.75;color:var(--t1);white-space:pre-wrap;word-break:break-word;animation:pl-preview-scroll var(--pl-preview-dur) linear infinite alternate;animation-play-state:paused}
+.pl-card:hover .pl-card-preview-text,.pl-card:focus-visible .pl-card-preview-text{animation-play-state:running}
+/* BOTH HALVES — and the reason is narrower than the usual one, so it is worth
+   stating precisely rather than repeating the house line.
+
+   MEASURED IN A RENDERED BROWSER, four motion contexts, hovering a card in each:
+     OS reduce, no stored choice ............ animation-name none, translateY 0
+     OS no-preference, no stored choice ..... pl-preview-scroll, 27s, travels
+     OS no-preference, Settings say REDUCE .. animation-name none, translateY 0
+     OS reduce, Settings say MOTION ......... pl-preview-scroll, 27s, travels
+   All four correct, in both directions.
+
+   THE CLAIM THIS COMMENT ORIGINALLY MADE WAS WRONG AND WAS TESTED RATHER THAN
+   TRUSTED. It said that without these two rules the global clamp would run one
+   0.01ms iteration and leave the text RESTING AT ITS LAST KEYFRAME — every
+   hovered card snapped to the BOTTOM of its prompt. Deleting exactly these two
+   rules at runtime and re-measuring gives translateY 0: the clamp forces
+   animation-iteration-count to 1, the animation finishes immediately, and with
+   `animation-fill-mode: none` the element reverts to its UN-ANIMATED transform,
+   which is the top. Forcing fill-mode `both` on top of that did not move it
+   either. So the clamp handles this animation on its own today.
+
+   THE PAIR STILL SHIPS, for the honest reason rather than the dramatic one: it
+   is what stops the correct behaviour from depending on two defaults staying
+   put — the clamp's iteration count and this animation's fill mode. Someone
+   adding `forwards` so a preview holds where the pointer left it is a plausible
+   next edit, and it would be reaching past the clamp. `animation:none` says the
+   thing outright instead of arriving at it by subtraction, and the repo's
+   contract (tests/unit/reduced-motion-guard) requires the explicit-attribute
+   companion beside the media half in any case.
+
+   The hover and focus selectors are listed in both halves, or the play-state
+   rule above would put a cancelled animation back on hover. */
+html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion="true"] .pl-card:hover .pl-card-preview-text,html[data-reduced-motion="true"] .pl-card:focus-visible .pl-card-preview-text{animation:none;transform:none}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .pl-card-preview-text,html:not([data-reduced-motion="false"]) .pl-card:hover .pl-card-preview-text,html:not([data-reduced-motion="false"]) .pl-card:focus-visible .pl-card-preview-text{animation:none;transform:none}}
+.pl-card-text-hero{padding:16px 18px 18px;min-height:0;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+
+/* Tags */
+.pl-card-tags{display:flex;gap:5px;flex-wrap:wrap}
+
+/* Card date inline */
+.pl-card-date-inline{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:8px}
+/* Copy hint */
+.pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-strong);transition:opacity var(--dur-2) var(--ease-standard)}
+/* Prompt modal overlay */
+.pl-modal-backdrop{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;animation:fg-fade var(--dur-2) var(--ease-entrance)}
+.pl-modal{background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);width:100%;max-width:680px;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--warm-shadow-lg);position:relative;animation:fg-rise var(--dur-3) var(--ease-entrance)}
+.pl-modal-close{position:absolute;top:16px;right:16px;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all var(--t);z-index:2}
+.pl-modal-close:hover{background:var(--bg-3);color:var(--t0)}
+.pl-modal-header{padding:28px 28px 0;flex-shrink:0}
+.pl-modal-header h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;padding-right:32px}
+.pl-modal-author{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--t2)}
+.pl-modal-body{flex:1;overflow-y:auto;padding:20px 28px}
+.pl-modal-prompt{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;position:relative;transition:background var(--dur-2) var(--ease-standard)}
+.pl-modal-prompt:hover{background:var(--hvr)}
+.pl-modal-prompt pre{font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--t0);white-space:pre-wrap;word-break:break-word;margin:0}
+.pl-modal-prompt .pl-card-copy-hint{position:absolute;top:12px;right:12px;opacity:.5}
+.pl-modal-prompt:hover .pl-card-copy-hint{opacity:1}
+.pl-modal-footer{display:flex;align-items:center;gap:8px;padding:16px 28px;border-top:1px solid var(--border);flex-shrink:0;justify-content:flex-end}
+
+/* ─── Emoji Library ───
+   Windowed list: .emoji-virt is a relative container sized to the full layout
+   height; only rows near the viewport are mounted, each absolutely positioned
+   at a precomputed top. No content-visibility here — its paint containment was
+   what clipped the scale(1.2) hover — off-screen work is avoided by simply not
+   mounting those rows at all. */
+.emoji-virt{position:relative}
+.emoji-vhead{position:absolute;left:0;right:0;display:flex;align-items:center;gap:10px}
+.emoji-vhead h2{font-size:14px;font-weight:700;letter-spacing:-.01em;margin:0}
+.emoji-vrow{position:absolute;left:0;right:0;display:flex;gap:4px}
+/* --t2, not --t3: at 10px on the --bg-3 chip this measured 4.07:1 in light
+   (#6c6c66 on #e4e2da) at every width, under AA. --t2 takes it to 4.95:1;
+   dark was already clear and stays so. Same reasoning as .arc-ratio-card-use. */
+.emoji-section-count{font-size:10px;font-weight:700;color:var(--t2);background:var(--bg-3);padding:2px 8px;border-radius:10px;font-family:var(--mono)}
+/* Recovery action inside the search empty/error states (Try again · Search all
+   categories). 40px tall — comfortably over the 24px WCAG 2.5.8 floor, and it
+   matches .emoji-tone-btn so the two controls on this surface agree. */
+.emoji-retry-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);font-weight:600;cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
+.emoji-retry-btn:hover{border-color:var(--bh);background:var(--hvr)}
+/* Skin-tone popover — one compact toolbar button opens the six tone swatches */
+.emoji-tone-wrap{position:relative;flex-shrink:0}
+.emoji-tone-btn svg{color:currentColor}
+/* Placement is written by usePopover (placePopover): end-aligned on the
+   trigger by default, start-aligned when that would run off the left edge,
+   upward when there is more room above. The trigger is the toolbar's last
+   control, so on a desktop "end" is the case that keeps all six tones on
+   screen — measured cut off at 1280, 1440 and 1920 before this. */
+.emoji-tone-pop[data-pop-align="end"]{left:auto;right:0}
+/* clamp follows usePopover's convention after #434: the hook writes --pop-x
+   (the panel's left edge pinned EDGE_PAD from the viewport), not a centre. */
+.emoji-tone-pop[data-pop-align="clamp"]{left:var(--pop-x,0px)}
+.emoji-tone-pop[data-pop-side="top"]{top:auto;bottom:calc(100% + 6px)}
+/* Category chips — glyph icon + label, count badge on the All chip */
+.emoji-chip{display:inline-flex;align-items:center;gap:6px}
+.emoji-chip-ic{font-size:13px;line-height:1}
+
+/* ─── Box Shadow Generator ─── */
+
+/* ─── UI Builder ─── */
+
+/* ─── Docs ─── */
+.doc-sub{border-bottom:1px solid var(--border)}
+.doc-sub:last-child{border-bottom:none}
+.doc-body p{font-size:14px;color:var(--t1);line-height:1.75;margin-bottom:12px}
+.doc-body h4{font-size:14px;font-weight:700;color:var(--t0);margin:16px 0 6px}
+.doc-body ul,.doc-body ol{padding-left:20px;margin-bottom:12px}
+.doc-body li{font-size:14px;color:var(--t1);line-height:1.7;margin-bottom:6px}
+.doc-body li strong{color:var(--t0)}
+.auth-brand{display:flex;justify-content:center;margin-bottom:22px;text-decoration:none}
+.auth-brand:hover{text-decoration:none}
+.auth-trust{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:20px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--t3);line-height:1.4;text-align:center}
+.auth-trust svg{flex-shrink:0;color:var(--t3)}
+
+/* ─── Seg bar ─── */
+.seg-bar{display:flex;flex-wrap:wrap;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);overflow:hidden}
+.fp:hover{border-color:var(--accent)}
+@media(max-width:640px){
+  .btn-cat{grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))}}
+
+
+/* ══ Icon library — Customizer dialog (icust-), recents rail (ig-rail-), toolbar
+   add button (ig-addbtn), Custom-icons lock/empty (ig-custom-), fetch notice
+   (ig-notice), skeletons (ig-skel-), status/sentinel and CDN monochrome invert
+   (ig-inv). The Customizer is a structural sibling of the Export dialog and reuses
+   its a11y/motion; the Stage is a DELIBERATELY fixed dark canvas (literal hexes,
+   not tokens) that swaps to a light canvas so dark icons stay visible. Live values
+   arrive on .icust-stage as --ig-size/--ig-stroke/--ig-color/--ig-transform and are
+   consumed by the inline SVG below via currentColor.
+   --ig-stroke is a viewBox USER-UNIT number, not a pixel one: CSS stroke-width
+   resolves in the SVG's own coordinate space, exactly like the stroke-width
+   attribute in the exported file. The Customizer's control is in pixels and JS
+   converts it once (src/utils/iconStroke.js, strokeAttrForPx) for both the Stage
+   and the export, so the preview cannot disagree with the download. The literal
+   2 below is the pre-paint fallback and equals the 4px default at size 48. ══ */
+.icust-overlay{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding:max(6vh,48px) 16px 32px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow:hidden;animation:cp-fade var(--dur-1) var(--ease-entrance)}
+/* Panel clips to its rounded corners; the header is fixed and a single inner
+   .icust-body owns the scroll — so the scrollbar lives INSIDE the panel, never
+   in the scrim. Height caps to the padded overlay box so the overlay itself
+   never needs a second scrollbar. */
+.icust-panel{display:flex;flex-direction:column;width:min(600px,calc(100vw - 32px));max-height:min(880px,calc(100dvh - max(6vh,48px) - 32px));overflow:hidden;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+.icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
+.icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
+.icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.icust-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
+.icust-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.icust-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.icust-paste-help{font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
+.icust-paste-help code{font-family:var(--mono);font-size:.85em;padding:1px 5px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--t0)}
+.icust-paste-input{width:100%;min-height:160px;resize:vertical;padding:14px 16px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s);font-family:var(--mono);font-size:var(--fs-caption);line-height:1.6;color:var(--t0);outline:none;transition:border-color var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
+.icust-paste-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.icust-paste-input::placeholder{color:var(--t3)}
+.icust-err{font-size:var(--fs-caption);color:var(--err-strong)}
+.icust-stage--light{background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
+.icust-stage-img{display:block;max-width:100%;height:auto}
+.icust-stage-msg{position:absolute;font-family:var(--mono);font-size:var(--fs-caption);color:rgba(244,244,245,.55)}
+.icust-stage--light .icust-stage-msg{color:rgba(10,10,11,.5)}
+.icust-value{flex:0 0 auto;min-width:42px;text-align:right;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t1)}
+.icust-note{flex:1;font-size:var(--fs-caption);color:var(--t2);font-style:italic}
+/* Pro-gated line-style controls: buttons preview their own cap/join effect */
+.icust-seg--icon button{padding:6px}
+.icust-pro{display:flex;flex-direction:column;gap:12px;margin-top:2px;padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
+.icust-pro-head{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+/* Signed-out upgrade gate — a small alert dialog floated over the customizer
+   when a visitor taps a Pro-locked line-style control. (The overlay's
+   backdrop-filter makes it the containing block for this fixed backdrop.) */
+.icust-gate-backdrop{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.icust-gate{display:flex;flex-direction:column;align-items:flex-start;gap:10px;width:min(380px,100%);padding:22px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.icust-gate-title{margin:0;font-size:var(--fs-h5);font-weight:640;color:var(--t0)}
+.icust-gate-copy{margin:0;font-size:var(--fs-body-s);line-height:1.55;color:var(--t1)}
+.icust-gate-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.icust-gate-dismiss{align-self:center;margin-top:2px;padding:6px 12px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
+.icust-gate-dismiss:hover{color:var(--t0);background:var(--hvr)}
+/* Save-to-project picker (shares the gate dialog shell) */
+.icust-proj-list{display:flex;flex-direction:column;gap:6px;width:100%;max-height:240px;overflow-y:auto;margin-top:2px}
+.icust-proj-btn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:10px 14px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t0);cursor:pointer;text-align:left;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out)}
+.icust-proj-btn:hover:not(:disabled){border-color:var(--accent);background:var(--hvr)}
+.icust-proj-btn:disabled{opacity:.55;cursor:not-allowed}
+.icust-proj-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icust-proj-count{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;font-size:var(--fs-caption);font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums}
+.icust-proj-btn--new{background:none;border-style:dashed;color:var(--t1);width:100%}
+.icust-proj-btn--new:hover{color:var(--t0)}
+/* Inline new-project creation: name first, then the icon is assigned */
+.icust-newproj{display:flex;gap:8px;width:100%;margin-top:2px}
+.icust-newproj-input{flex:1;min-width:0;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--inp);color:var(--t0);font-family:var(--font);font-size:var(--fs-body-s);transition:border-color var(--dur-2) var(--ease-out)}
+.icust-newproj-input:focus{outline:none;border-color:var(--accent)}
+.icust-newproj-input::placeholder{color:var(--t3)}
+/* Footer extras: saved-in note */
+.icust-savedin{margin:0;padding:10px 24px 20px;font-size:var(--fs-caption);color:var(--t2)}
+.icust-savedin strong{font-weight:600;color:var(--t1)}
+/* Code readout */
+.icust-code{margin:12px 24px 0}
+.icust-code-label{margin-bottom:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
+.icust-code-box{position:relative;display:block;width:100%;text-align:left;padding:26px 16px 14px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out)}
+.icust-code-box:hover{border-color:var(--accent)}
+.icust-code-hint{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--dur-2) var(--ease-out)}
+.icust-code-box:hover .icust-code-hint{color:var(--accent-strong)}
+/* Copy-only snippet: the text is not selectable, so the Copy button is the one
+   way out — keeps the workflow inside UIL4B. */
+.icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
+.icust-reset{margin-left:0}
+.icust-save-lock{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}
+.icust-save--locked{cursor:pointer;opacity:.85}
+.icust-save--locked:hover{opacity:1}
+.icust-lock-glyph{display:inline-grid;place-items:center}
+.icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-strong);white-space:nowrap}
+.icust-upgrade:hover{text-decoration:underline}
+
+/* Similar icons — same-pack siblings, a foot-of-popup retention nudge */
+.icust-similar{padding:16px 24px 24px;border-top:1px solid var(--border)}
+.icust-similar-label{margin-bottom:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+.icust-similar-row{display:flex;flex-wrap:wrap;gap:8px}
+.icust-similar-btn{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+.icust-similar-btn:hover{border-color:var(--bh);background:var(--hvr);transform:translateY(-1px)}
+.icust-similar-btn img{display:block;width:24px;height:24px}
+
+/* Recents rail */
+.ig-rail{margin:8px 0 28px}
+.ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
+.ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--radius-s);background:none;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.ig-rail-clear:hover{color:var(--accent-strong);border-color:var(--border);background:var(--bg-1)}
+.ig-rail-clear svg{width:11px;height:11px}
+/* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
+.ig-rail-item{position:relative;flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-1) var(--ease-out)}
+.ig-rail-item:hover{border-color:var(--bh);background:var(--bg-2)}
+.ig-rail-item:active{transform:scale(.94)}
+.ig-rail-item img,.ig-rail-item svg{width:24px;height:24px}
+.ig-rail-item svg{color:var(--t0);stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.ig-rail-badge{position:absolute;right:-5px;bottom:-5px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;border:2px solid var(--bg-0);color:#fff}
+.ig-rail-badge svg{width:9px;height:9px}
+.ig-rail-badge--edit{background:var(--accent)}
+.ig-rail-badge--copy{background:var(--t2)}
+
+/* Toolbar add-icon button (icon-scoped; does not touch shared .pl- toolbar bits) */
+.ig-addbtn{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.ig-addbtn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-strong)}
+.ig-addbtn svg{flex-shrink:0}
+
+/* Custom-icons: Pro lock + empty state */
+.ig-custom-lock{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;max-width:420px;margin:0 auto;padding:72px 24px}
+.ig-custom-lock-glyph{display:grid;place-items:center;width:56px;height:56px;border-radius:var(--radius-l);background:var(--accent-bg);color:var(--accent)}
+.ig-custom-lock-title{font-family:var(--display);font-size:var(--fs-h4);font-weight:600;letter-spacing:-.01em;color:var(--t0)}
+.ig-custom-lock-sub{max-width:340px;font-size:var(--fs-body-s);color:var(--t2);line-height:1.55}
+.ig-custom-empty{max-width:460px;margin:0 auto;padding:56px 24px;text-align:center;font-size:var(--fs-body-s);color:var(--t2);line-height:1.6}
+
+/* My Icons: two stacked, independently-clearable collections (Saved + Copied) */
+.ig-myicons{display:flex;flex-direction:column;gap:32px}
+.ig-mysec{display:flex;flex-direction:column;gap:14px}
+.ig-mysec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.ig-mysec-title{font-family:var(--display);font-size:var(--fs-h5);font-weight:600;letter-spacing:-.01em;color:var(--t0)}
+.ig-mysec .ig-custom-empty{margin:0;padding:32px 24px;text-align:left}
+.ig-mysec .ig-custom-lock{padding:48px 24px}
+/* Free-tier allowance hint under the Saved collection (non-Pro only). */
+.ig-custom-hint{margin-top:4px;font-size:var(--fs-caption);color:var(--t3)}
+.ig-custom-hint-link{font:inherit;color:var(--accent-strong);font-weight:600;background:none;border:0;padding:0;cursor:pointer}
+.ig-custom-hint-link:hover{text-decoration:underline}
+
+/* Fetch-fallback notice, skeletons, status line, sentinel, CDN invert, pack tag */
+.ig-notice{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;border:1px solid color-mix(in srgb,var(--warn) 40%,var(--border));border-radius:var(--radius-s);background:color-mix(in srgb,var(--warn) 8%,var(--bg-1));font-size:var(--fs-body-s);color:var(--t1)}
+.ig-notice span{flex:1;min-width:180px}
+.ig-skel{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:80px;padding:16px 6px 12px}
+.ig-skel-glyph{width:24px;height:24px;border-radius:var(--radius-xs)}
+.ig-skel-label{width:60%;max-width:52px;height:8px;border-radius:var(--radius-pill)}
+.ig-sentinel{width:100%;height:1px}
+.ig-status{padding:20px 0;text-align:center;font-family:var(--mono);font-size:var(--fs-caption);color:var(--t3)}
+.ig-inv{filter:var(--icon-inv)}
+/* Brand-glyph contrast chip — colored/brand artwork can't be tinted for contrast,
+   so it sits on a miniature of the customizer Stage: the light radial gradient by
+   default, flipped to the dark Stage gradient (.ig-chip--dark) when pixel sampling
+   finds the artwork itself is near-white. */
+.ig-chip{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;border-radius:8px;background:radial-gradient(120% 120% at 50% 0%,#FFFFFF 0%,#EDEDF0 72%);box-shadow:inset 0 0 0 1px rgba(10,10,11,.08)}
+.ig-chip--dark{background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+/* object-fit, because the request now asks the API for a HEIGHT rather than a
+   box (see BrandGlyph in IconLibrary.jsx). A 4:3 flag therefore arrives with a
+   4:3 intrinsic size, and pinning both sides of a 24px box without `contain`
+   would squash it. With it, the flag letterboxes to 24 x 18 exactly as before. */
+.ig-chip img{width:24px;height:24px;display:block;object-fit:contain}
+
+/* THE WIDE CHIP: a horizontal lockup gets the cell's width, not a 24px square.
+
+   Measured on /create/icons under the Brand logos filter at 1440x900, painted
+   glyph height inside the tile:
+
+     logos/aerospike        11.38:1   24 x 2.1px  ->  106 x 9.3px
+     logos/active-campaign   9.88:1   24 x 2.4px  ->  106 x 10.7px
+     logos/500px             4.00:1   24 x 6.0px  ->  106 x 26.5px
+     logos/adobe             3.81:1   24 x 6.3px  ->  106 x 27.8px
+     devicon/*-wordmark      square canvas, wide ink: drawn across 106px, not 24
+
+   The slot is the cell's full content width (118px cell less its 6px side
+   padding) and stays 36px TALL — the same height as the square chip — so a row
+   that contains a wide item is exactly as tall as one that does not and the
+   grid rhythm is untouched. No column span, so nothing is re-ordered: #298
+   rejected visual re-ordering on this codebase's grids on WCAG 2.4.3 grounds
+   and that reasoning holds here.
+
+   overflow:hidden with a centred, full-width image is what reaches devicon's
+   `-wordmark` entries. Their canvas is square, so `width:100%` renders them
+   106 x 106 with the lockup as a band across the middle; clipping to 36px shows
+   that band at its natural size instead of the whole empty canvas shrunk to fit.
+   Artwork that is genuinely wide never reaches the clip — at 106px wide it is
+   already shorter than 36px — so one rule serves both causes.
+
+   WHY A WIDER CELL RATHER THAN A SQUARE ONE, from the Mobbin pass: Squarespace's
+   Asset Library gives a wide logotype a double-width cell in an otherwise
+   uniform grid; Air lays assets out at a fixed row height with the cell width
+   following each asset's aspect; Google Ads' logo picker keeps a uniform
+   landscape thumbnail and fits the art inside it at its natural aspect, naming
+   the aspect on the card. Arcade's Brand Kit goes furthest and splits
+   "Logotypes" from "Icons" into two sections with different cell shapes. None of
+   them letterboxes a lockup into a square. This is the Google Ads answer, which
+   is the one that transplants into a dense icon grid without re-ordering it. */
+.ig-chip--wide{width:100%;height:36px;overflow:hidden;position:relative}
+/* NOTHING IS EVER CROPPED. `--ig-wide-cap` is measured per icon in sampleGlyph:
+   how many multiples of this slot height the element may be drawn wide before
+   the INK grows taller than the slot. A one-line lockup on a square canvas gets
+   the full 100%; a two-line one gets a narrower element instead of losing its
+   top and bottom rows; genuinely wide artwork is capped by 100% long before its
+   own limit bites. The chip clips only the artwork transparent margins. */
+/* Centred by absolute positioning rather than by the flex box: .ig-chip is
+   display:flex at its own rule but computes flow-root here, and a top-aligned
+   element that is 104px tall in a 36px slot shows its empty top margin instead
+   of the lockup. Measured as blank tiles on eleven devicon -wordmark entries
+   before this line existed. */
+.ig-chip--wide img{position:absolute;left:50%;top:50%;width:min(100%,calc(36px * var(--ig-wide-cap,1)));height:auto;max-height:none;transform:translate(-50%,-50%)}
+.ig-chip img.ig-logo{width:28px;height:28px}
+.ig-attrib{padding:6px 0 20px;text-align:center;font-size:var(--fs-caption);color:var(--t3);line-height:1.5}
+.ig-attrib code{font-family:var(--mono);font-size:.92em;color:var(--t2)}
+.ig-attrib a{color:var(--accent-strong);text-decoration:none;font-weight:600}
+.ig-attrib a:hover{text-decoration:underline}
+
+@media(max-width:560px){
+  .icust-overlay{padding:24px 12px 32px}
+  .icust-panel{max-height:min(880px,calc(100dvh - 56px))}
+  .icust-head{padding:20px 16px 12px}
+  .icust-paste{padding:8px 16px 20px}}
+
+@media(max-width:560px){
+  .icust-code{margin:12px 16px 0}
+  .icust-foot{padding:16px 16px 20px;flex-wrap:wrap}}
+
+
+/* ══ Kept-page wrapper (nav clearance + container) ══ */
+.page-shell{max-width:1216px;margin:0 auto;padding-inline:clamp(20px,4vw,32px);padding-bottom:var(--s-9);min-height:60vh}
+.soon-mark{margin-bottom:var(--s-4)}
+.soon-title{font-size:var(--fs-h2);font-weight:700;letter-spacing:-.02em;line-height:1.12;color:var(--t0);margin-bottom:12px;text-wrap:balance}
+.soon-text{font-size:var(--fs-body);color:var(--t1);line-height:1.6;margin-bottom:var(--s-6);max-width:48ch}
+.soon-actions{display:flex;gap:12px;flex-wrap:wrap}
+
+/* Hero */
+.home-workspace-intro{position:relative;isolation:isolate}
+
+/* The ?hero=a|b|c direction explorer that lived here is GONE, with
+   src/components/HomeHeroDirections.jsx and its three variants' rules
+   (.home-hero--dir, .hero-dir-*, .hero-a-*, .hero-b-*, .hero-c-*).
+   Founder, 2026-09-07: "Retire it, V2 hero decides." The shipped hero above
+   is the decision; the exploration has no second reader. */
+
+
+/* Trust / stat strip (honest — no fabricated logos) */
+
+
+/* ══ V2 homepage ═══════════════════════════════════════════════════════════════
+   Built against docs/reference/design-language-v2.md. Colour comes entirely
+   from existing role tokens, so this block inherits the V2 palette the moment
+   feat/v2-token-foundation remaps them — nothing here names a hex.
+
+   ⚠️ ACCENT CONTRAST (founder, 2026-08-16): the V2 accent is blue #0F6FFF,
+   which measures ≈3.85:1 on the page ground — fine for fills, borders, icons,
+   large display text and focus rings, and BELOW the 4.5:1 floor for normal
+   text. Every accent-coloured string in this block that is smaller than large
+   text therefore uses --accent-strong, never --accent. If you add an accent
+   text colour here, check its size first.
+
+   The five V2 tokens this block consumes — --hi, --hi-fg, --radius-3xl,
+   --shadow-cmd, --shadow-panel — are owned by feat/v2-token-foundation. */
+
+/* ── Shared V2 section furniture ── */
+.hbrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+
+/* ── Hero ────────────────────────────────────────────────────────────────────
+   Composition is the page's existing centred measure; every TYPE and SPACING
+   value is the V2 display scale. */
+/* The centred stat strip that used to sit above the headline is gone — see the
+   note in Home.jsx. What replaces it is a single quiet category line, the way a
+   product page names its own category rather than opening with proof. */
+/* .home-hero-kicker's rule is gone with its element — the "UI system
+   toolkit" tagline, removed 2026-09-07. */
+/* The catalogue figures, now beside the toolset grid they describe. A
+   definition list because that is what they are: a number and what it counts. */
+.htools-facts{display:flex;flex-wrap:wrap;gap:var(--s-6);margin:var(--s-5) 0 0;padding:0}
+.htools-facts>div{display:grid;gap:2px}
+.htools-facts dt{font-size:var(--fs-h4,22px);font-weight:700;line-height:1;letter-spacing:-.02em;color:var(--t0);font-variant-numeric:tabular-nums}
+.htools-facts dd{margin:0;font-size:var(--fs-body-s);color:var(--t2)}
+/* A select inside the shared toolbar. The Icon Library's pack picker is 26
+   options across six optgroups — not a pill tray, and forcing it into one to
+   look consistent would trade a working control for a matching one. It takes
+   the shared field metrics instead, which is what consistency has to mean for a
+   control this size. */
+.lbry-select{flex:0 0 auto;min-width:0;max-width:220px;height:38px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t1);font-family:var(--font);font-size:11px;font-weight:650;cursor:pointer}
+.lbry-select:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media(max-width:640px){.lbry-select{max-width:100%;width:100%}}
+
+/* `.pl-sort` is retired with `.pl-toolbar` (#323): the Prompt Library's sort is
+   a LibraryFilterGroup now, so it reflows with every other filter tray instead
+   of needing its own 320px rescue. `.pl-chips` stays — five other surfaces
+   (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,
+   ColorStudio's named-library switch) still render it. */
+.pl-chips{max-width:100%}
+/* ══ Curated Resources (/discover/resources) ═══════════════════════════════
+   A hand-picked set is SMALL and has to look edited at that size. So the
+   catalogue is hairline-ruled rows, not a card grid: Mobbin's "AI in Design
+   Report 2026" resource list and Webflow's rule-separated index both hold up
+   at five items where a four-up grid of the same five reads as a grid that
+   failed to fill. It is also this repo's own answer already — the Font Gallery
+   dropped card borders, radius and ground for hairline rules in
+   #font-gallery-one-per-row.
+
+   Pacing comes from inside each category band (one opened-up lead over compact
+   rows, after Upwork's Resource Centre), not from decoration. The only colour
+   a band carries is its own category hue on the head rule, via [data-cat] →
+   --cur-c, matching the discoverCategories map every other Discover surface
+   reads. */
+.cur-wrap{padding-bottom:64px}
+
+/* Category hue. Mirrors the --dsc-c pattern the Discover card face already
+   uses, so the two never disagree about what colour "gradients" is. */
+.cur-band[data-cat="gradients"]{--cur-c:#8b5cf6}
+.cur-band[data-cat="palettes"]{--cur-c:#ec4899}
+.cur-band[data-cat="inspiration"]{--cur-c:#3b82f6}
+.cur-band[data-cat="dev-tools"]{--cur-c:#10b981}
+.cur-band[data-cat="free-assets"]{--cur-c:#f59e0b}
+.cur-band[data-cat="fonts"]{--cur-c:#06b6d4}
+.cur-band[data-cat="components"]{--cur-c:#f43f5e}
+
+.cur-bands{display:flex;flex-direction:column;gap:44px;margin-top:8px}
+.cur-band{--cur-c:var(--accent)}
+
+/* The head is a rule the category colours, not a chip or a pill — the page
+   already has enough pills, and a 2px coloured rule reads as a section edge
+   rather than as another badge competing with the Free/Paid marker. */
+.cur-band-head{display:flex;align-items:center;gap:10px;padding-bottom:10px;
+  border-bottom:2px solid color-mix(in srgb,var(--cur-c) 55%,transparent)}
+.cur-band-glyph{display:inline-flex;color:var(--cur-c)}
+.cur-band-title{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--t0)}
+.cur-band-count{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--t3);
+  font-variant-numeric:tabular-nums}
+
+/* ── The lead item ──
+   Opened up: the full `whyUseful` reasoning rather than the two-line clamp,
+   the use-case and difficulty it actually carries, and the hand-off as a real
+   button. It sits on a faint tint of its own category so it is legible as the
+   head of the band without a border box around it. */
+.cur-lead{padding:16px 16px 14px;margin-top:14px;border-radius:var(--radius-l);
+  background:color-mix(in srgb,var(--cur-c) 5%,var(--bg-1));
+  border:1px solid color-mix(in srgb,var(--cur-c) 16%,transparent)}
+.cur-lead-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.cur-lead-title{margin:0;font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.25}
+.cur-why{margin:10px 0 0;font-size:13.5px;line-height:1.6;color:var(--t1);max-width:68ch}
+.cur-lead-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* ── Compact rows ──
+   No border, no radius, no ground. A row separated by a hairline is the
+   content; a card around it is chrome around the content. */
+.cur-list{list-style:none;margin:0;padding:0}
+.cur-row{display:flex;align-items:flex-start;gap:20px;padding:14px 2px;
+  border-bottom:1px solid var(--border)}
+.cur-row:last-child{border-bottom:0}
+.cur-row-main{flex:1;min-width:0}
+.cur-row-title{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0;
+  font-size:14.5px;font-weight:650;letter-spacing:-.01em;line-height:1.3}
+.cur-row-desc{margin:5px 0 0;font-size:12.75px;line-height:1.55;color:var(--t2);max-width:74ch}
+.cur-row-aside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;
+  flex-shrink:0;text-align:right}
+
+.cur-host{margin:4px 0 0;font-family:var(--mono);font-size:11.5px;color:var(--t3);
+  overflow-wrap:anywhere}
+.cur-row-aside .cur-host{margin:0}
+
+.cur-link{color:var(--t0);text-decoration:none;border-radius:2px;
+  border-bottom:1px solid color-mix(in srgb,currentColor 32%,transparent)}
+.cur-link:hover{color:var(--cur-c,var(--accent));border-bottom-color:currentColor}
+/* The radius sits on the element at rest so the focus outline traces the shape
+   the control actually has — a radius introduced by :focus-visible changes the
+   geometry at the moment the ring appears. */
+.cur-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+/* SC 2.5.8: the lead title holds only this link, so the Inline exception does
+   not apply to it (the row title's does — it also carries a PriceTag). At the
+   16px this title takes below 640px the inline box measured 23.0px, one pixel
+   under, at 320 and 390. inline-block gives it a height of its own and still
+   wraps internally; inline-flex would not have. */
+.cur-lead-title .cur-link{display:inline-block;min-height:24px}
+/* Resting, not hover-only: founder direction 2026-09-02 rules out hover-only
+   affordances on touch, and this arrow is how an outbound link says it leaves. */
+.cur-ext{display:inline-block;margin-left:3px;font-size:.82em;color:var(--t3);vertical-align:baseline}
+
+/* Free / Paid. The only metric on the page, and it is a fact from the record
+   rather than a count nobody has generated yet. */
+.cur-tag{flex-shrink:0;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;
+  letter-spacing:.03em;text-transform:uppercase;color:var(--ok-strong);
+  background:color-mix(in srgb,var(--ok) 13%,transparent)}
+.cur-tag--paid{color:var(--t2);background:color-mix(in srgb,var(--t2) 12%,transparent)}
+
+.cur-chips{display:flex;gap:6px;flex-wrap:wrap}
+.cur-chip{padding:3px 9px;border-radius:999px;border:1px solid var(--border);
+  font-size:11px;color:var(--t2);white-space:nowrap}
+
+/* The in-product hand-off on a compact row. A link, not a button: it is a
+   navigation, and it must not out-weigh the lead item's real button. */
+.cur-go{font-size:12px;font-weight:650;color:var(--accent);text-decoration:none;
+  white-space:nowrap;border-radius:2px}
+.cur-go:hover{text-decoration:underline}
+.cur-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* The real sample swatches a palette resource carries in its own record.
+   Rendered only where they exist (3 of 22) — a strip under a resource with no
+   colours would be decoration pretending to be content. */
+.cur-pal{display:flex;gap:3px;margin-top:9px;max-width:260px}
+.cur-pal-chip{flex:1;height:22px;border-radius:3px;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
+
+/* ── Narrow ──
+   The aside stops being a right-hand column and becomes a line under the copy:
+   at 390px a right-aligned column leaves the description four words wide. */
+@media (max-width:640px){
+  .cur-row{flex-direction:column;gap:8px}
+  .cur-row-aside{flex-direction:row;align-items:center;justify-content:space-between;
+    width:100%;text-align:left;gap:12px}
+  .cur-bands{gap:36px}
+  .cur-lead{padding:14px}
+  .cur-lead-title{font-size:16px}
+}

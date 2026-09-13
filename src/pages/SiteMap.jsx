@@ -1,6 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP } from '../data/toolTree'
 import { LEARN_ARTICLES } from '../data/learnIndex'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/reading.css'
+import '../styles/deferred/tool-shell.css'
 
 // The full visual site map — a single page that lays out every destination in
 // UIL4B so a visitor (or the founder) can see the whole product at a glance.

@@ -50,6 +50,12 @@ import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '.
 // random precedence — kept pure so the free-settings default and “a shared link
 // beats the random draw” can be tested exhaustively without a DOM.
 import { colorsFromSearch, defaultPaletteBoard, DEFAULT_SYSTEM, initialPaletteBoard, isDefaultSettings } from '../utils/paletteDefaults'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/account.css'
+import '../styles/deferred/colour.css'
+import '../styles/deferred/tool-shell.css'
 
 // Palette Builder — the standalone /create/palette workbench. A full-bleed
 // board so the columns are the page, not a panel floating in chrome: a

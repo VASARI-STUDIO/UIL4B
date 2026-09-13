@@ -21,6 +21,11 @@ import {
   stickyStrokePx, strokeAttrForPx, viewBoxOf,
 } from '../utils/iconStroke'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/library.css'
+import '../styles/deferred/tool-shell.css'
 
 const API_LIMIT = 999
 
