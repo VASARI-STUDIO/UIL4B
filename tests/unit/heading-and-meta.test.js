@@ -48,7 +48,10 @@ test('the heading SIZE was preserved — only the level changed', () => {
   // stronger version of that guarantee than two sizes were.
   assert.ok(!/\.legal-h--sm\{/.test(css),
     'the 16px legal heading variant is back - /terms and /privacy must set a section heading the same way')
-  assert.ok(!/legal-h--sm/.test(read('src/pages/Terms.jsx')),
+  // stripComments, for the same reason the file already strips them above: the
+  // note at the top of Terms.jsx explains what .legal-h--sm was, and a comment
+  // may quote the class it explains removing. Only shipped JSX can USE it.
+  assert.ok(!/legal-h--sm/.test(stripComments(read('src/pages/Terms.jsx'))),
     '/terms is setting its section headings at body size again')
 })
 
