@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams, NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/account.css'
+import '../styles/deferred/tool-shell.css'
 
 export default function CheckoutReturn() {
   const [params] = useSearchParams()

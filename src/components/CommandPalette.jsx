@@ -7,6 +7,10 @@ import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { ADMIN_EMAILS } from '../utils/constants'
 import useModalDialog from '../hooks/useModalDialog'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/overlay.css'
 
 // The command bar. V2 gives it a front door in the nav, which makes its
 // keyboard contract load-bearing rather than a power-user extra.

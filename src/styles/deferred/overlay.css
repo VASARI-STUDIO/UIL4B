@@ -1,0 +1,119 @@
+/* ── OVERLAY — lifted out of src/styles/global.css ─────────────────
+ *
+ * Every rule below was in the one render-blocking stylesheet, where it cost the
+ * homepage its bytes without ever being used there. It now travels with the
+ * lazy route chunks that can actually reach it:
+ *
+ *   CommandPalette, ExportPanel
+ *
+ * SOURCE ORDER IS PRESERVED. The rules appear here in the order they appeared
+ * in global.css, so the cascade between any two of them is the one that was
+ * already shipping. What DID change is that they now cascade after the whole
+ * critical sheet rather than from the middle of it — which is why
+ * tests/user-sim/64-computed-style-snapshot.spec.js, and not a reading of this
+ * file, is the evidence that nothing painted moved.
+ *
+ * Adding a rule here is only correct when no eagerly-loaded module can reach
+ * it. tests/unit/home-asset-budget.test.js holds the byte budget that keeps
+ * the traffic going this way rather than back.
+ */
+
+
+
+/* ─── Command Palette ─── */
+.cp-overlay{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding-top:max(10vh,80px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.cp-input-wrap{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border)}
+.cp-input-wrap svg{color:var(--t2);flex-shrink:0}
+.cp-input{flex:1;background:none;border:none;outline:none;color:var(--t0);font-family:var(--font);font-size:17px;font-weight:400;letter-spacing:-.01em;padding:0}
+.cp-input::placeholder{color:var(--t3)}
+.cp-kbd{font-family:var(--mono);font-size:10px;color:var(--t2);background:var(--bg-2);padding:3px 7px;border-radius:var(--radius-s);border:1px solid var(--border)}
+.cp-results{flex:1;overflow-y:auto;padding:8px}
+.cp-section-label{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;padding:10px 14px 4px}
+.cp-item-icon svg{width:13px;height:13px}
+.cp-item-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.cp-item-label{font-size:13px;font-weight:500;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-item-desc{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-item-cat{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;flex-shrink:0;padding:3px 8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
+.cp-empty{padding:48px 20px;text-align:center;font-size:13px;color:var(--t2)}
+.cp-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);background:var(--bg-2);font-size:11px;color:var(--t2);gap:12px;flex-wrap:wrap}
+.cp-footer-keys{display:flex;gap:14px}
+.cp-footer-keys span{display:inline-flex;align-items:center;gap:6px}
+.cmdk-hint-text{flex:1;text-align:left}
+.cmdk-hint-keys kbd{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:2px 6px;line-height:1}
+
+/* ─── Section switcher (top bar) ─── */
+.nav-switch{position:relative;flex-shrink:0}
+.nav-switch-trigger:hover{border-color:var(--bh);background:var(--bg-2)}
+.nav-switch-trigger-label{white-space:nowrap}
+.nav-switch-chev{width:13px;height:13px;flex-shrink:0;color:var(--t2);transition:transform var(--t)}
+.pnav-group{min-width:0}
+/* Hue-tinted icon tile — colour comes from the group's data-hue */
+.pnav-ico{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong));transition:background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+.pnav-group-title{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-h5);font-weight:700;letter-spacing:-.012em;color:var(--t0);transition:color var(--dur-2) var(--ease-out)}
+.pnav-promo-visual{border-radius:var(--radius-l);overflow:hidden;background:var(--bg-1);border:1px solid var(--border);aspect-ratio:16/10;margin-bottom:4px}
+
+/* ══ Export shell (exp-) — the polished, accessible Export dialog opened from the
+   nav search cluster. No real export yet: every format previews and the primary
+   action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
+.exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84vh,720px);overflow-y:auto;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 16px}
+.exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
+.exp-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.exp-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
+.exp-sub{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
+.exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.exp-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.exp-formats{display:flex;flex-direction:column;gap:8px;padding:8px 24px 20px}
+.exp-fmt-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.exp-fmt-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0)}
+.exp-fmt-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
+.exp-fmt-soon{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
+.exp-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg-0)}
+
+
+/* Export panel error. The panel deliberately stays OPEN on a failed export —
+   closing it would leave the user with no file and no explanation, which reads
+   as the button doing nothing. */
+.exp-error{margin:0 0 12px;padding:10px 12px;font-size:12.5px;line-height:1.5;color:var(--err-strong);background:color-mix(in srgb,var(--err) 7%,transparent);border:1px solid color-mix(in srgb,var(--err) 30%,transparent);border-radius:var(--radius)}
+
+/* ── Export panel · the brand logo field ─────────────────────────────────────
+   The one place UIL4B accepts an asset it did not generate. It renders only for
+   an export format whose document has logo pages (`logo` in
+   src/config/exportFormats.js), and it sits in its OWN bordered block beneath
+   the format list rather than inside the guidelines row — Pitch's "Export as"
+   puts its watermark notice in exactly that slot, and a control nested inside a
+   radio row is a control you cannot reach without selecting the row.
+   Anatomy — thumbnail, label with the one line saying what the file is used
+   for, action on the right — is Uvodo's Brand row.
+   https://mobbin.com/screens/fe97c269-f702-4dfe-8185-55a1f6cbbf6c
+   https://mobbin.com/screens/6f36a615-a60f-4a47-954b-337698f6c86a          */
+.exp-logo{margin:0 24px 20px;padding:14px 16px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l)}
+.exp-logo-row{display:flex;align-items:flex-start;gap:14px}
+/* The chequer is not decoration: it is the only way the preview can show
+   whether the artwork has a transparent ground, which is the exact thing the
+   note below asks the user to check. */
+.exp-logo-chip{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border:1px solid var(--border);border-radius:var(--radius-s);color:var(--t3);background-color:var(--bg-1);overflow:hidden}
+.exp-logo-chip.has-mark{background-image:linear-gradient(45deg,var(--bg-2) 25%,transparent 25%),linear-gradient(-45deg,var(--bg-2) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--bg-2) 75%),linear-gradient(-45deg,transparent 75%,var(--bg-2) 75%);background-size:10px 10px;background-position:0 0,0 5px,5px -5px,-5px 0}
+.exp-logo-chip img{max-width:38px;max-height:38px;width:auto;height:auto;object-fit:contain}
+.exp-logo-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.exp-logo-name{font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow-wrap:anywhere}
+.exp-logo-hint{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
+.exp-logo-acts{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto}
+.exp-logo-drop{padding:0;background:none;border:0;font-size:var(--fs-micro);color:var(--t2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.exp-logo-drop:hover{color:var(--t0)}
+.exp-logo-drop:disabled{opacity:.5;cursor:default}
+/* The accepted formats and the ceiling are stated BEFORE anything is chosen —
+   Deel's "Custom branding". An upload limit discovered as an error message is a
+   limit the product kept to itself.
+   https://mobbin.com/screens/a60bceec-975d-4a91-bffd-70cda485c249 */
+.exp-logo-note{margin:12px 0 0;padding-top:12px;border-top:1px solid var(--border);font-size:var(--fs-micro);color:var(--t3);line-height:1.5}
+.exp-logo-error{margin:10px 0 0;font-size:var(--fs-caption);color:var(--err-strong);line-height:1.45}
+
+@media(max-width:560px){
+  .exp-logo{margin:0 16px 16px}
+  /* The action column cannot hold a pill and a Remove link beside two lines of
+     hint text at 320px; it takes its own row under the label instead. */
+  .exp-logo-row{flex-wrap:wrap}
+  .exp-logo-acts{flex-direction:row;align-items:center;width:100%;margin-left:0;justify-content:flex-start;gap:14px}
+}

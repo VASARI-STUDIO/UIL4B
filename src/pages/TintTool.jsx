@@ -10,6 +10,11 @@ import { consumeTintDraft, readTintDraft } from '../utils/colorHandoff'
 // The `tint` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/colour.css'
+import '../styles/deferred/tool-shell.css'
 import '../styles/pages/tint.css'
 
 // Tint Scale Generator — the standalone /create/tint page. Turns one OR MORE base

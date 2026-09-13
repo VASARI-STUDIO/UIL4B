@@ -73,6 +73,11 @@ import { transformWithOxc } from 'vite'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
 import { stripCss } from '../helpers/strip-comments.js'
+// Reads the WHOLE app stylesheet, not global.css alone. The rules this file
+// asserts on were split out of global.css into src/styles/deferred/*.css on
+// 2026-09-13; a test that keeps reading one file after a lift like that does
+// not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
+import { ALL_CSS } from './appStylesheets.js'
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
@@ -86,7 +91,7 @@ const GALLERY = read('src/pages/FontGallery.jsx')
 const MATCHER = read('src/pages/FontMatcher.jsx')
 const SCALE = read('src/pages/TypeScale.jsx')
 const SAVE = read('src/components/SaveTypeSystem.jsx')
-const CSS = read('src/styles/global.css')
+const CSS = ALL_CSS
 const PLANS = read('src/pages/Plans.jsx')
 
 const TOOLS = [

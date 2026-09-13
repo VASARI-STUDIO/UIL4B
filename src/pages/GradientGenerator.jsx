@@ -16,6 +16,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useModalDialog from '../hooks/useModalDialog'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/colour.css'
+import '../styles/deferred/tool-shell.css'
 
 // ── Gradient Generator ──
 // The standalone /create/gradient tool: build any linear / radial / conic

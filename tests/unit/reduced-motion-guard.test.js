@@ -53,19 +53,44 @@
 // This file guards the shape of the stylesheet, which is the cheap half.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import path from 'node:path'
+import { ALL_STYLESHEETS } from './appStylesheets.js'
 
-const RAW = fs.readFileSync(path.join(process.cwd(), 'src/styles/global.css'), 'utf8')
-
+// EVERY stylesheet the app ships, joined, not global.css alone. The reduced-
+// motion blocks were split across src/styles/deferred/*.css on 2026-09-13, and
+// a scan of one file after a lift like that does not go red — it goes vacuous,
+// which is the failure tests/unit/appStylesheets.js exists to prevent.
+//
 // Comments are stripped FIRST, newlines preserved so line numbers survive.
-// This header and the prose blocks throughout global.css are themselves full of
-// `prefers-reduced-motion` and of the guard string; without this, a bare block
-// could be "proved" guarded by a comment sitting above it. A previous mutation
-// run on tests/unit/input-specificity.test.js found exactly that failure.
-const CSS = RAW.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+// This header and the prose blocks throughout the stylesheets are themselves
+// full of `prefers-reduced-motion` and of the guard string; without this, a bare
+// block could be "proved" guarded by a comment sitting above it. A previous
+// mutation run on tests/unit/input-specificity.test.js found exactly that.
+const SHEETS = ALL_STYLESHEETS.map(({ file, css }) => ({
+  file,
+  css: css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')),
+}))
 
-const lineOf = (index) => CSS.slice(0, index).split('\n').length
+// The sheets are scanned as one string so the parsers below need no rewrite,
+// and an offset table turns any position back into the file and line a person
+// can open. A message reading `:4871` with no filename would be worse than no
+// message at all now that there are twenty-one stylesheets.
+const SEPARATOR = '\n'
+const CSS = SHEETS.map((s) => s.css).join(SEPARATOR)
+const STARTS = []
+{
+  let at = 0
+  for (const s of SHEETS) {
+    STARTS.push({ file: s.file, start: at })
+    at += s.css.length + SEPARATOR.length
+  }
+}
+
+/** `src/styles/deferred/colour.css:812` for any offset into CSS. */
+const lineOf = (index) => {
+  let sheet = STARTS[0]
+  for (const s of STARTS) if (s.start <= index) sheet = s
+  return `${sheet.file}:${CSS.slice(sheet.start, index).split('\n').length}`
+}
 
 const GUARD = 'html:not([data-reduced-motion="false"])'
 const EXPLICIT = 'html[data-reduced-motion="true"]'
@@ -156,7 +181,7 @@ function remainder(selector, token) {
 
 const BLOCKS = reducedMotionBlocks()
 
-test('1 · global.css actually contains reduced-motion blocks to guard', () => {
+test('1 · the app stylesheets actually contain reduced-motion blocks to guard', () => {
   // Without this the two assertions below pass vacuously on an empty set —
   // deleting every block, or breaking the block parser, would look like success.
   assert.ok(
@@ -173,7 +198,7 @@ test('2 · every prefers-reduced-motion selector carries the in-app override gua
     for (const rule of topLevelRules(block.body, block.bodyOffset)) {
       for (const sel of splitSelectors(rule.prelude)) {
         if (!sel.includes(GUARD)) {
-          bare.push(`  global.css:${lineOf(rule.index)}  ${sel}`)
+          bare.push(`  ${lineOf(rule.index)}  ${sel}`)
         }
       }
     }
@@ -209,7 +234,7 @@ test('3 · every guarded selector has an explicit-attribute companion rule', () 
         const r = remainder(sel, GUARD)
         if (r === null) continue // reported by test 2
         if (!companions.has(r)) {
-          orphans.push(`  global.css:${lineOf(rule.index)}  ${sel}`)
+          orphans.push(`  ${lineOf(rule.index)}  ${sel}`)
         }
       }
     }

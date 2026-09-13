@@ -17,6 +17,12 @@ import {
 } from '../utils/googleFonts'
 import { filterGalleryTypefaces, formatSubsets, ladderWeights, weightName } from '../utils/fontGallery'
 import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/colour.css'
+import '../styles/deferred/tool-shell.css'
+import '../styles/deferred/type.css'
 
 // Font Gallery — the standalone /create/font-gallery page. Browse the Google Fonts
 // catalogue, read a specimen, then carry the choice into Font Pair or Type

@@ -18,6 +18,11 @@ import {
 } from '../../src/utils/promptPreview.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
 import { stripJs as stripComments } from '../helpers/strip-comments.js'
+// Reads the WHOLE app stylesheet, not global.css alone. The rules this file
+// asserts on were split out of global.css into src/styles/deferred/*.css on
+// 2026-09-13; a test that keeps reading one file after a lift like that does
+// not go red, it goes VACUOUS. See tests/unit/appStylesheets.js.
+import { ALL_CSS } from './appStylesheets.js'
 
 const read = (rel) => fs.readFileSync(path.join(process.cwd(), rel), 'utf8')
 // Comments are stripped before matching. global.css and the components are full
@@ -89,7 +94,7 @@ test('the preview window is not a scroll container', () => {
   // scrollers in a gallery is a fight with the scroll engine; overflow:hidden
   // plus a transform is simply invisible to it. The rendered proof is in
   // 54-prompt-preview-motion; this pins the declaration that makes it true.
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   const rule = /\.pl-card-preview\{([^}]*)\}/.exec(css)
   assert.ok(rule, '.pl-card-preview has no rule at all')
   assert.match(rule[1], /overflow:hidden/, 'the preview window is no longer overflow:hidden')
@@ -100,7 +105,7 @@ test('the scroll plays on intent, never on its own', () => {
   // WCAG 2.2 SC 2.2.2: automatic motion past five seconds alongside other
   // content needs a pause control, and this layout has nowhere to put one. The
   // animation is therefore declared paused and released by hover and focus.
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   const rule = /\.pl-card-preview-text\{([^}]*)\}/.exec(css)
   assert.ok(rule, '.pl-card-preview-text has no rule at all')
   assert.match(rule[1], /animation:pl-preview-scroll/, 'the preview animation is gone')
@@ -115,7 +120,7 @@ test('the scroll plays on intent, never on its own', () => {
 test('the scroll never travels past the end of a prompt that already fits', () => {
   // min(0px, …) is what stops a short prompt sliding up to reveal blank space.
   // Without it the keyframe is a positive translation on every short card.
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   const frames = /@keyframes pl-preview-scroll\{([^}]*\}[^}]*)\}/.exec(css)
   assert.ok(frames, 'the preview keyframes are gone')
   assert.match(frames[1], /translateY\(min\(0px,/,
@@ -130,7 +135,7 @@ test('the placeholder block is the same height as the window it stands in for', 
   // the card is now an artefact window, so the placeholder reads the height
   // rather than restating it — the rule the .lockt-stripes comment already
   // states for the palette placeholders.
-  const css = stripComments(read('src/styles/global.css'))
+  const css = stripComments(ALL_CSS)
   assert.match(css, /\.pl-gallery\{[^}]*--pl-preview-h:172px/,
     'the gallery no longer publishes the preview window height')
   assert.match(css, /\.lockt-lines\{[^}]*min-height:var\(--pl-preview-h,\s*104px\)/,

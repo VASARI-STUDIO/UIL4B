@@ -3,6 +3,11 @@ import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { saveFeedback } from '../utils/analytics'
 import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/account.css'
+import '../styles/deferred/tool-shell.css'
 
 // The feedback form. Four surfaces across the app point here as THE way to
 // report a problem — including, now, the 404 page — so this is the last place

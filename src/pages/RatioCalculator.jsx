@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+// The stylesheet families this surface needs, split out of the one
+// render-blocking global sheet (see src/styles/deferred/). They ride this
+// route's own lazy chunk, so they arrive with it and never with the homepage.
+import '../styles/deferred/tool-shell.css'
+import '../styles/deferred/type.css'
 
 // Aspect & Resolution Calculator — start from ANY single piece of information
 // (a device, a screen, a social format, a ratio, one dimension, or a full size)
