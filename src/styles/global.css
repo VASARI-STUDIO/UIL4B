@@ -4006,6 +4006,27 @@ html.lenis{scroll-behavior:auto!important}
   html:not([data-reduced-motion="false"]) :is(.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
 }
 html[data-reduced-motion="true"] :is(.home-hero-line-in,.home-hero-sub,.hcmd,.home-hero-cta>*,.home-hero-hint){animation:none}
+/* A HEADLINE THAT WAS ALREADY ON SCREEN DOES NOT ARRIVE TWICE.
+   scripts/prerender.mjs writes the real headline into the `/` and `/home`
+   shells so the homepage's largest paint happens with the stylesheet rather
+   than ~1.8s later with the entry chunk (measured: LCP 3662ms -> 1702ms mean).
+   Those two shells — and only those two — are served with
+   `data-hero-prepainted` on <html>.
+   The clip-up announces a headline arriving after the page did. On that path
+   the headline arrives WITH the page, so there is nothing to announce, and the
+   entrance would run a second time roughly 1.7s after the shell's copy settled
+   — measured at clip-up START 3529ms against the shell's DONE 2734ms. That is a
+   visible double-render, and it is also why suppressing only half of it is not
+   an option: Chrome records a text element's LCP size on its first painted
+   frame, so a settled hydrated headline against a mid-clip shell one is a
+   LARGER candidate and walks LCP back to hydration. Both copies paint the
+   settled box, or neither does.
+   ONLY the pre-painted hero. src/pages/Home.jsx drops the attribute when the
+   homepage unmounts, so arriving at `/` later in the same session — from
+   another route, into a page that is already there — is a real arrival and
+   plays the entrance exactly as before. `prefers-reduced-motion` above is
+   untouched and still wins in both directions. */
+html[data-hero-prepainted] .home-hero-line-in{animation:none}
 /* V2 body: 54ch measure, --mute, line-height 1.65. */
 .home-hero-sub{font-size:var(--fs-lede);font-weight:400;color:var(--t2);line-height:1.6;max-width:54ch;margin:var(--s-5) auto 0;text-wrap:pretty}
 /* C5 rhythm: the mark now occupies more of its line box and the headline's

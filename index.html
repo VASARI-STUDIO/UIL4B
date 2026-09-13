@@ -95,6 +95,35 @@ html[data-theme="dark"] .boot-nav{background:rgba(18,20,24,.82);border-color:rgb
 html[data-theme="dark"] .boot-status{color:rgba(203,213,225,.72)}
 html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[data-theme="dark"] .boot-copy,html[data-theme="dark"] .boot-card{background:rgba(255,255,255,.09)}
 @keyframes boot-shimmer{to{transform:translateX(100%)}}
+/* THE HOMEPAGE VARIANT OF THE SHELL. Only scripts/prerender.mjs's `/` output
+   carries `.boot-shell-home`, and only that shell paints a real headline —
+   every other route keeps the skeleton above, unchanged.
+   These three rules do ONE job: get the shell's box chain out of the way so
+   `.home-hero`'s own padding is what positions the headline, exactly as it does
+   on the hydrated page. `.boot-shell`'s page padding is dropped; the skeleton
+   nav becomes `position:fixed` like the real `.pnav` it stands in for, so it is
+   out of flow and `.home-hero`'s `calc(var(--nav-top) + var(--nav-h) + …)`
+   top padding is the only thing above the h1; and the skeleton strip sits after
+   the hero in flow, where it cannot move it. Nothing here styles the headline —
+   that is global.css's `.home-hero-h1` block and there is only one of it. */
+/* `font-family:inherit` is the load-bearing half of this line. `.boot-shell`
+   above declares its own Manrope stack, and a class on a nearer ancestor beats
+   `body{font-family:var(--font)}` for everything inside it — so the pre-painted
+   headline would inherit a DIFFERENT stack from the one the hydrated headline
+   inherits. Both start with Manrope, so both render the same face while the
+   self-hosted file loads; they diverge only if it ever fails, which is exactly
+   the case where a fallback difference would show as a re-wrap. Inheriting from
+   <body> means the two headlines take their family from one declaration rather
+   than from two that happen to agree. Measured identical at 360, 390, 480, 768,
+   1024, 1280, 1440 and 1920. */
+.boot-shell-home{padding:0;font-family:inherit}
+/* The paint half of the gate below the theme script. The script REMOVES the
+   headline for a visitor who must not see it; this makes it impossible for that
+   headline to have painted in the meantime, without depending on when the
+   script ran. Inert on the other 38 shells, which carry no `.home-hero`. */
+html:not([data-hero-prepainted]) #boot-shell .home-hero{display:none}
+.boot-shell-home .boot-nav{position:fixed;top:0;left:0;right:0;z-index:1;max-width:none;height:var(--nav-h,60px);margin:0;border-width:0 0 1px;border-radius:0;padding:0 clamp(18px,4vw,48px)}
+.boot-shell-home .boot-below{padding:0 clamp(18px,4vw,48px)}
 @media(max-width:640px){.boot-nav-lines{display:none}.boot-main{padding-top:88px}.boot-cards{grid-template-columns:1fr}.boot-card:nth-child(n+2){display:none}}
 @media(prefers-reduced-motion:reduce){.boot-line::after,.boot-action::after,.boot-copy::after,.boot-card::after{animation:none}}
 html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="true"] .boot-action::after,html[data-reduced-motion="true"] .boot-copy::after,html[data-reduced-motion="true"] .boot-card::after{animation:none}
@@ -142,6 +171,52 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 // records for its own hardened read: a visitor who cannot persist a choice must
 // still get the resolved one.
 (function(){try{var r=document.documentElement;var q=function(s){return !!(window.matchMedia&&window.matchMedia(s).matches)};var g=function(k){try{return localStorage.getItem(k)}catch(e){return null}};var t=g('vs-t');if(t!=='dark'&&t!=='light'){t=q('(prefers-color-scheme: dark)')?'dark':'light'}r.setAttribute('data-theme',t);r.setAttribute('data-rounding','default');r.setAttribute('data-density','cozy');var a={};try{a=JSON.parse(g('vs-appearance')||'{}')||{}}catch(e){}var m=typeof a.reducedMotion==='boolean'?a.reducedMotion:q('(prefers-reduced-motion: reduce)');r.setAttribute('data-reduced-motion',String(m))}catch(e){}})();
+</script>
+<script>
+// THE GATE ON THE PRE-PAINTED HEADLINE.
+//
+// scripts/prerender.mjs writes the homepage's real <h1> into the served `/` and
+// `/home` shells and marks those two documents with `data-hero-prepainted`, so
+// the largest paint happens with the stylesheet instead of ~1.8s later with the
+// entry chunk (LCP 3662ms -> 1698ms mean on scripts/home-field-metrics.mjs's
+// profile, 10 cold runs each). See scripts/home-shell.mjs.
+//
+// TWO VISITORS MUST NOT SEE THAT HEADLINE, and this is where both are answered.
+// It runs in the HEAD, before the body is parsed, and the attribute check is
+// the first line — so on the other 38 shells it is one `hasAttribute` and out.
+//
+//   1. A RETURNING SIGNED-IN VISITOR AT `/`. App.jsx does not render the sales
+//      page for them; it redirects to their app home, decided synchronously
+//      from the `vs-session` hint (src/utils/sessionHint.js) so the correct
+//      page is chosen in the first render. The shell cannot run App.jsx, so it
+//      asks the same hint the same way. It is deliberately a NARROWER question
+//      than rootDestination(): not "where does this visitor go" but "might this
+//      document not end up being the sales page", answered conservatively.
+//      tests/user-sim/57-signed-in-session.spec.js samples every frame for
+//      `.home-hero` and requires it never appears — that contract predates this
+//      and still binds.
+//
+//   2. ANY VISITOR WHO WAS HANDED THE WRONG SHELL. vercel.json rewrites each
+//      prerendered URL to its own file, so in production only `/` and `/home`
+//      carry this markup. `vite preview` — which the acceptance suite runs
+//      against — has no such table and serves dist/index.html for EVERY path,
+//      so under the suite /privacy and /create/contrast receive the homepage
+//      shell. Rather than trusting a routing table, the shell checks the URL it
+//      was actually served at. That also means a future rewrite mistake costs
+//      nothing: the page falls back to exactly the skeleton it shipped before.
+//
+// HOW IT REMOVES IT WITHOUT A FLASH. A MutationObserver callback is a
+// microtask, and microtasks run at the end of the parser's task, BEFORE the
+// rendering step that would paint the node or fire a requestAnimationFrame
+// callback. So the headline is gone before any frame can observe it — which is
+// what 57-signed-in-session measures. The `html:not([data-hero-prepainted])`
+// rule in the block above is the belt: even if this script never ran, that
+// headline cannot paint.
+//
+// EVERY STORAGE READ IN ITS OWN try/catch, for the reason the theme script
+// above records at length: localStorage THROWS on the accessor itself in some
+// privacy modes, and one shared catch would abandon the whole function.
+(function(){try{var r=document.documentElement;if(!r.hasAttribute('data-hero-prepainted'))return;var p=location.pathname.replace(/\/+$/,'')||'/';var s=false;try{s=localStorage.getItem('vs-session')==='1'}catch(e){}if((p==='/'||p==='/home')&&!s)return;r.removeAttribute('data-hero-prepainted');var mo=new MutationObserver(function(){var h=document.querySelector('#boot-shell .home-hero');if(h){h.remove();mo.disconnect()}});mo.observe(r,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',function(){mo.disconnect()})}catch(e){}})();
 </script>
 </head>
 <body>
