@@ -4,6 +4,7 @@ import { requireAdmin } from './_lib/admin.js'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 import { cleanKey } from './_lib/env.js'
 import { classifyGeminiFinish } from './_lib/geminiFinish.js'
+import { mailFrom, REPLY_TO, sendingDomainConfigured } from './_lib/mail.js'
 import {
   BRAND_STARTER_TOOL_ID,
   MAX_PROMPT_CHARS,
@@ -606,7 +607,10 @@ async function alertFirstFailoverOfDay(db, date, summary) {
       signal: controller.signal,
       headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'UIL4B <onboarding@resend.dev>',
+        from: mailFrom(),
+        // A reply reaches the real mailbox even while `from` is still the
+        // Resend sandbox, because reply_to needs no verified domain.
+        reply_to: REPLY_TO,
         to: [notifyEmail],
         subject: '[UIL4B] OpenRouter is failing — AI prompts are running on the fallback',
         text,
@@ -678,6 +682,13 @@ export function summariseProviderHealth(days, { alerting = false } = {}) {
     totals,
     byDay,
     lastFailover,
+    // Reported so the founder can see from Admin whether outbound mail is still
+    // going out as the Resend sandbox, without opening a dashboard. A mailbox is
+    // not a verified sending domain, and the difference is invisible until
+    // someone tries to email a customer.
+    sender: sendingDomainConfigured()
+      ? `${mailFrom()} — a verified uil4b.com sender`
+      : `${mailFrom()} — SANDBOX. Resend will only deliver this to the account owner. Set MAIL_FROM to "UIL4B <admin@uil4b.com>" in Vercel once uil4b.com is verified (OWNER-ACTIONS §4.10). Replies already reach ${REPLY_TO}.`,
     alerting: alerting
       ? 'on — the first OpenRouter failure of each day is emailed to SUPPORT_NOTIFY_EMAIL'
       : 'OFF — set RESEND_API_KEY and SUPPORT_NOTIFY_EMAIL in Vercel to be emailed the first time OpenRouter fails on any day. Until then this panel is the only place a failover surfaces.',

@@ -276,6 +276,29 @@
 }
 
 @media(max-width:768px){
+  /* THE RAMP WRAPS INSTEAD OF SCROLLING SIDEWAYS.
+     Measured at 390px on 2026-09-14: `.tt-ramp` showed 318px of an 814px
+     track, so 61% of an eleven-stop scale — the artefact the page exists to
+     produce — sat off-screen behind a nested horizontal scrollbar, inside a
+     page that already scrolls vertically. The founder rejected exactly this
+     pattern on the Font Pair panel the same day.
+
+     `.tt-cell` is `flex:1 1 0` with `min-width:60px`, and eleven of those
+     cannot fit 318px at any font size. Wrapping is the honest answer: four per
+     row, three rows, every stop on screen and reachable without a second
+     scroll gesture. The basis is a percentage so the row divides the width it
+     actually has rather than a guessed pixel count.
+
+     AT 768, NOT 560. Eleven cells at `min-width:60px` need 660px plus
+     borders, and the ramp only gets the viewport minus the page and panel
+     padding — so it still overflowed everywhere from about 561 to 760,
+     which a 560 breakpoint left scrolling. 768 is the first width where
+     eleven cells genuinely fit: measured 684px of track in a 684px box.
+
+     `--dense` keeps its own behaviour: it is the deliberate 6px-wide variant
+     with an inspector under it, and it already fits. */
+  .tt-ramp:not(.tt-ramp--dense){flex-wrap:wrap;overflow-x:visible}
+  .tt-ramp:not(.tt-ramp--dense) .tt-cell{flex:1 0 25%;min-width:0}
   .tt-delivery-head{flex-direction:column}
   .tt-preview-body{grid-template-columns:1fr;align-items:start}
   .tt-preview-card{min-height:132px}

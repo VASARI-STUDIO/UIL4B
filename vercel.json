@@ -6,7 +6,7 @@
   "installCommand": "npm ci",
   "functions": {
     "api/ai.js": {
-      "includeFiles": "src/data/*.js"
+      "includeFiles": "src/data/{pipeline,moduleBoard}.js"
     }
   },
   "redirects": [

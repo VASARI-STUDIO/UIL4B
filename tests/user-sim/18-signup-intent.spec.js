@@ -34,8 +34,29 @@ test.describe('signup intent', () => {
     await expect(dialogHeading(page)).toBeVisible()
     await expect(nameField(page), 'a signup form collects a name').toBeVisible()
     await expect(dialogHeading(page)).toHaveText(/create your free account/i)
-    // …and the form actually collects what a signup needs.
-    await expect(page.getByLabel('Name')).toBeVisible()
+    // …and that field is LABELLED, which the id lookup above cannot prove. This
+    // asserts the accessible name of THAT element rather than searching the page
+    // for one containing "Name".
+    //
+    // It used to be `page.getByLabel('Name')`, and that broke on 2026-09-14 for
+    // a reason worth keeping: getByLabel does a SUBSTRING match, and the
+    // founder's new positioning line — "No more trying to remember the names of
+    // the 1 tool websites." — labels the closing `.system-cta` region on this
+    // very page. So the locator matched the region AND the input, and Playwright
+    // refused it in strict mode. The page was correct; the locator was never
+    // anchored.
+    // A REAL <label>, not a placeholder. `toHaveAccessibleName` alone was not
+    // enough and this was proved rather than assumed: orphaning the <label> and
+    // re-running left all five tests GREEN, because Playwright falls back to
+    // `placeholder="Your name"` when computing the name. A placeholder is not a
+    // label — it disappears the moment someone types, so a person who looks away
+    // mid-form has nothing left telling them what the field is.
+    //
+    // So this asserts the association itself.
+    await expect(
+      page.locator('label[for="ui-login-name"]'),
+      'the name field is labelled by a real <label>, not just a placeholder',
+    ).toHaveCount(1)
   })
 
   test('"Log in" still opens the sign-in form — the two are not the same button', async ({ page }) => {

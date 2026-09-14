@@ -297,9 +297,24 @@ export default function RatioCalculator({ onCopy }) {
   const out = useMemo(() => {
     const k = Number(known) || 0
     if (!validRatio || k <= 0) return null
+    // WHOLE PIXELS. `round()` here is the 2-decimal helper, and it was being
+    // used on a PIXEL COUNT: ratio 9:16 against a known width of 1920 returned
+    // a height of 3413.33, and there is no such thing as a third of a pixel.
+    //
+    // It was not only a display problem. This object feeds three things that
+    // all break on a fraction: the copy buttons below hand "3413.33" to
+    // whoever asked for a dimension; `sizeOptions.find(o => o.w === out.width)`
+    // can never match a preset once either side is fractional, so the named
+    // size silently stops being recognised; and the swap/lock handlers write
+    // out.width and out.height straight back into the ratio inputs, carrying
+    // the fraction into the next calculation.
+    //
+    // Rounding means the rendered size cannot always hit the ratio exactly —
+    // 1920x3413 is 0.0001 off 9:16 — but an exact ratio you cannot render is
+    // worth less than a whole number you can.
     return side === 'height'
-      ? { width: round(k * ratioW / ratioH), height: k }
-      : { width: k, height: round(k * ratioH / ratioW) }
+      ? { width: Math.round(k * ratioW / ratioH), height: k }
+      : { width: k, height: Math.round(k * ratioH / ratioW) }
   }, [known, side, ratioW, ratioH, validRatio])
 
   const simplified = useMemo(() => {

@@ -325,6 +325,14 @@ export default function Home() {
   // the workbench, and the callback is memoised so the effect that reports it
   // does not re-fire on every render of this page.
   const [system, setSystem] = useState(null)
+  // Which Pro cadence the price panel has selected. Seeded from the ladder's
+  // own `best` flag rather than a literal, so the recommended tier and the
+  // preselected one can never drift apart; `purchasablePlans()` guarantees at
+  // least one entry, and the `?.id` fallback keeps this defined if that ever
+  // stops being true rather than selecting nothing.
+  const [billing, setBilling] = useState(
+    () => (PRICE_LADDER.find((r) => r.best) || PRICE_LADDER[0])?.id,
+  )
   const onSystemChange = useCallback((next) => {
     setSystem({ ...next, href: paletteBuilderUrl(next.palette) })
   }, [])
@@ -867,20 +875,75 @@ export default function Home() {
               </div>
 
               <div className="hprice-ladder">
-                <ul className="hprice-rows">
-                  {PRICE_LADDER.map((row) => (
-                    <li className="hprice-row" key={row.id} data-best={row.best || undefined}>
-                      <span className="hprice-cadence">{row.label}</span>
-                      <span className="hprice-amount">
-                        <strong>{row.perMonthLabel}</strong>
-                        <span className="hprice-per">/month</span>
-                      </span>
-                      <span className="hprice-total">{row.totalLabel} {row.cadence}</span>
-                      <span className="hprice-note">{ladderNote(row)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link className="ui-pill ui-pill-hi ui-pill-lg hprice-cta" to="/plans">
+                {/* THE ROWS ARE CHOOSABLE, not a read-only price list. Founder,
+                    2026-09-14: "for this panel allow me to click on each option
+                    to select it instead of the current selection."
+
+                    A RADIOGROUP, because that is exactly what this is: two
+                    mutually exclusive options where picking one un-picks the
+                    other. `role="radio"` + `aria-checked` gives a screen-reader
+                    user the same "2 of 2, selected" reading a sighted user gets
+                    from the highlight, and arrow keys move between them for
+                    free. A list of <li>s with a click handler would have given
+                    neither.
+
+                    ROVING TABINDEX: only the selected row is tabbable, so the
+                    group is one stop rather than two, which is the APG pattern
+                    for radios and stops the panel eating two tabs on the way to
+                    the CTA.
+
+                    THE DEFAULT IS THE LADDER'S OWN `best`, not a hardcoded id,
+                    so if the recommended tier ever changes in planLadder.js the
+                    preselection follows it. */}
+                <div
+                  className="hprice-rows"
+                  role="radiogroup"
+                  aria-label="Choose how to pay for Pro"
+                >
+                  {PRICE_LADDER.map((row) => {
+                    const chosen = row.id === billing
+                    return (
+                      <button
+                        type="button"
+                        className="hprice-row"
+                        key={row.id}
+                        role="radio"
+                        aria-checked={chosen}
+                        tabIndex={chosen ? 0 : -1}
+                        data-best={row.best || undefined}
+                        data-chosen={chosen || undefined}
+                        onClick={() => setBilling(row.id)}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'ArrowRight' && e.key !== 'ArrowDown'
+                            && e.key !== 'ArrowLeft' && e.key !== 'ArrowUp') return
+                          e.preventDefault()
+                          const step = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1
+                          const i = PRICE_LADDER.findIndex((r) => r.id === billing)
+                          const next = PRICE_LADDER[(i + step + PRICE_LADDER.length) % PRICE_LADDER.length]
+                          setBilling(next.id)
+                          e.currentTarget.parentElement
+                            ?.querySelector(`[data-cadence="${next.id}"]`)?.focus()
+                        }}
+                        data-cadence={row.id}
+                      >
+                        <span className="hprice-cadence">{row.label}</span>
+                        <span className="hprice-amount">
+                          <strong>{row.perMonthLabel}</strong>
+                          <span className="hprice-per">/month</span>
+                        </span>
+                        <span className="hprice-total">{row.totalLabel} {row.cadence}</span>
+                        <span className="hprice-note">{ladderNote(row)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* The choice travels. /plans seeds its own billing toggle from
+                    this parameter, so picking Monthly here and landing on a page
+                    defaulted to Yearly cannot happen. Both ids come from
+                    purchasablePlans(), which is the same list /plans offers —
+                    quarterly is absent from both by construction because it has
+                    no Stripe price. */}
+                <Link className="ui-pill ui-pill-hi ui-pill-lg hprice-cta" to={`/plans?billing=${billing}`}>
                   See plans and start free
                   <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
                 </Link>
