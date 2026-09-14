@@ -179,7 +179,7 @@ function FontTile({ font, selected, onPick, onInspect }) {
 // it opens — #305 found the Font Gallery's specimen dialog 1,763px tall in a
 // 900px viewport with every action below the fold, and a tabbed detail view is
 // exactly how that returns if the whole thing is allowed to grow.
-function FontDetail({ font, selected, onUse, onBack }) {
+function FontDetail({ font, selected, onUse, onBack, intent }) {
   const [tab, setTab] = useState('specimen')
   const cuts = useMemo(() => ladderWeights(font.variants, 5), [font])
 
@@ -245,7 +245,7 @@ function FontDetail({ font, selected, onUse, onBack }) {
           <FontAboutPanel font={font} id="fbd-panel-about" labelledBy="fbd-tab-about" />
         )}
         {tab === 'examples' && (
-          <FontExamplesPanel font={font} id="fbd-panel-examples" labelledBy="fbd-tab-examples" />
+          <FontExamplesPanel font={font} id="fbd-panel-examples" labelledBy="fbd-tab-examples" intent={intent} />
         )}
         {tab === 'inuse' && (
           <FontInUsePanel font={font} id="fbd-panel-inuse" labelledBy="fbd-tab-inuse" />
@@ -261,7 +261,7 @@ function FontDetail({ font, selected, onUse, onBack }) {
   )
 }
 
-export default function FontBrowseDialog({ title, fonts, value, onPick, onClose }) {
+export default function FontBrowseDialog({ title, fonts, value, onPick, onClose, intent }) {
   const ref = useModalDialog(onClose)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('all')
@@ -348,6 +348,7 @@ export default function FontBrowseDialog({ title, fonts, value, onPick, onClose 
             selected={value?.family === detailFont.family}
             onUse={pick}
             onBack={() => setInspecting(null)}
+            intent={intent}
           />
         ) : (
           <>

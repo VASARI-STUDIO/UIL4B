@@ -521,8 +521,11 @@ function SceneBody({ id, font }) {
   }
 }
 
-export function FontExamplesPanel({ font, id, labelledBy }) {
-  const scenes = useMemo(() => scenesFor(font), [font])
+// `intent` is the SLOT this dossier was opened for — 'heading' or nothing.
+// It only reorders the scenes (see scenesFor); every other caller omits it and
+// gets exactly the panel it had.
+export function FontExamplesPanel({ font, id, labelledBy, intent }) {
+  const scenes = useMemo(() => scenesFor(font, intent), [font, intent])
   const w = useMemo(() => sceneWeights(font), [font])
 
   // EVERY WEIGHT THIS PANEL IS ABOUT TO SET, requested explicitly. Both dialogs
