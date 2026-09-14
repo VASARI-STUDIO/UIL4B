@@ -3966,7 +3966,27 @@ html.lenis{scroll-behavior:auto!important}
    .98 stays where the line cannot collide with itself; anywhere the headline is
    guaranteed to wrap, the line box gets enough height to hold its own
    background. Measured at 390, 768 and 1440. */
-.home-hero-h1{font-size:clamp(46px,6.6vw,96px);font-weight:800;letter-spacing:-.045em;line-height:.98;color:var(--t0);text-wrap:balance}
+/* THE ONE HEADLINE ON THE SITE THAT IS SIZED BY HEIGHT AS WELL AS WIDTH.
+   `clamp(46px, 6.6vw, 96px)` reads the viewport WIDTH only, and a laptop is
+   wide and short. Measured 2026-09-15 on the built preview, this headline
+   wraps to four lines at every desktop width from 960 to 1920, and its share
+   of the screen climbs as the window gets shorter:
+     1920x1080   96px   365px   34% of the viewport
+     1656x910    96px   365px   40%   <- the founder's own window
+     1512x850    96px   365px   43%
+     1440x780    95px   361px   46%
+     1366x768    90px   343px   45%
+   34% is the design. 46% is the same rule mis-serving a shorter screen, and it
+   is what he reported as "on smaller desktop pages the scale seems too large".
+   Nothing was below the fold at any of those sizes, so this is proportion, not
+   overflow, which is why the fix is the type and not the layout.
+   `min(6.6vw, 9.5svh)` takes whichever axis is tighter, holding the share at
+   34-37% across all ten sizes instead of letting it climb. Every other hero on
+   the site was measured the same way and none of them needed it: the next
+   largest is /create/font-gallery at 25% and the rest sit under 13%. `svh`
+   rather than `vh` matches .home-hero's own min-height, and the 900px block
+   below replaces this declaration outright, so no phone ever reads a vh here. */
+.home-hero-h1{font-size:clamp(46px,min(6.6vw,9.5svh),96px);font-weight:800;letter-spacing:-.045em;line-height:.98;color:var(--t0);text-wrap:balance}
 /* Measured at 390x844. Two things were wrong and they compound:
    the clamp floors at 46px, which puts this headline on FOUR lines and fills
    the whole first screen with it; and at line-height 1.08 the descender of
