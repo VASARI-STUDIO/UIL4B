@@ -25,6 +25,10 @@ import { specimenSizeCqw } from '../utils/fontGallery'
 
 export default function FontPicker({
   label,
+  // The SLOT this picker fills — 'heading' or nothing. Passed to the dossier
+  // so its Examples tab can lead with headline scenes rather than interface
+  // ones. Omitted everywhere else, which leaves those callers unchanged.
+  intent,
   fonts,
   value,
   onChange,
@@ -89,6 +93,7 @@ export default function FontPicker({
       {browsing && (
         <FontBrowseDialog
           title={label}
+          intent={intent}
           fonts={fonts}
           value={current}
           onPick={onChange}
