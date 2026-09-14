@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
+import { standardSizesForRatio } from '../utils/standardWidths'
 
 // Aspect & Resolution Calculator — start from ANY single piece of information
 // (a device, a screen, a social format, a ratio, one dimension, or a full size)
@@ -103,6 +104,20 @@ const COMMON_RATIOS = [
   ['7:5', 1.4], ['4:3', 4 / 3], ['5:4', 1.25], ['1:1', 1],
 ]
 
+// Returns the nearest standard AND its two numbers, because a suggestion you
+// cannot adopt is not a suggestion.
+//
+// Founder, 2026-09-15: "i put in 1280x 589 thats the resoltion of the area, it
+// should suggest the closent neighbour for aspect ratio this makes sure im
+// working in real sizes not partial ratios or other things." The tool already
+// computed the neighbour — 1280x589 is 19.5:9 to within 0.3% — and printed it
+// as plain text beside the exact-but-useless "1280:589". You could read it and
+// not get into it, so the size ladder underneath went on building itself from
+// the partial ratio.
+//
+// The label is parsed rather than stored separately because every entry in
+// COMMON_RATIOS is already "A:B" and a second copy of those numbers is a
+// second thing to keep in step.
 function nearestCommon(w, h) {
   if (!(w > 0 && h > 0)) return null
   const a = w >= h ? w / h : h / w
@@ -112,7 +127,8 @@ function nearestCommon(w, h) {
     if (!best || d < best.d) best = { label, d }
   }
   const label = w < h ? best.label.split(':').reverse().join(':') : best.label
-  return { label, off: best.d * 100 }
+  const [nw, nh] = label.split(':').map(Number)
+  return { label, off: best.d * 100, w: nw, h: nh }
 }
 
 // Precomputed dropdown options (deterministic, so module scope is safe).
@@ -408,10 +424,26 @@ export default function RatioCalculator({ onCopy }) {
   // inputs automatically deselects a preset that no longer matches.
   const pixelValue = (opts) => opts.find(o => o.w === Number(rw) && o.h === Number(rh) && (!out || o.w === out.width))?.name
   const ratioMatch = RATIOS.find(r => r.name === simplified || (Number(rw) === r.w && Number(rh) === r.h))
+  // THE PICKER USED TO DISAPPEAR THE MOMENT YOU TYPED YOUR OWN MEASUREMENTS.
+  //
+  // It rendered only when the ratio matched one of the eleven curated RATIOS,
+  // each carrying a hand-written `sizes` list. Measure a real artboard — 1456 ×
+  // 816, say — and the ratio is almost never one of those, so the standard-size
+  // picker vanished exactly when the user had done the work to earn it.
+  //
+  // Founder, 2026-09-15: "lock the ratio based on the numbers supplied then
+  // chose a standard size to match the ratio such as 1920 x or 800 x or 2480x
+  // or 1600x or whatever else."
+  //
+  // The curated list still WINS where it applies, because it carries names a
+  // function cannot derive: "Full HD 1080p" is worth more than "1920 × 1080".
+  // Everywhere else the ladder is computed from the locked ratio.
   const sizeOptions = useMemo(() => {
-    if (!ratioMatch) return []
-    return ratioMatch.sizes.map(([w, h, label]) => ({ name: `${w} × ${h}`, meta: label, w, h }))
-  }, [ratioMatch])
+    if (ratioMatch) {
+      return ratioMatch.sizes.map(([w, h, label]) => ({ name: `${w} × ${h}`, meta: label, w, h }))
+    }
+    return standardSizesForRatio(ratioW, ratioH)
+  }, [ratioMatch, ratioW, ratioH])
   const sizeValue = out ? sizeOptions.find(o => o.w === out.width && o.h === out.height)?.name : undefined
 
   return (
@@ -482,11 +514,13 @@ export default function RatioCalculator({ onCopy }) {
             </>
           )}
 
-          {ratioMatch && sizeOptions.length > 0 && (
+          {sizeOptions.length > 0 && (
             <div className="rc-field">
-              <div className="seg-label">Standard {ratioMatch.name} sizes</div>
+              {/* ratioMatch is null for a computed ladder, so the name comes from
+                  the simplified ratio the user is actually in. */}
+              <div className="seg-label">Standard {ratioMatch?.name || simplified} sizes</div>
               <PresetSelect
-                placeholder={`Pick a standard ${ratioMatch.name} size…`}
+                placeholder={`Pick a standard ${ratioMatch?.name || simplified} size…`}
                 options={sizeOptions} value={sizeValue} onPick={applyPixel}
               />
             </div>
@@ -590,10 +624,32 @@ export default function RatioCalculator({ onCopy }) {
                 <button className="arc-stat" onClick={() => copy(simplified || '')} title="Copy ratio">
                   <span className="arc-stat-k">Ratio</span>
                   <span className="arc-stat-v">{simplified}</span>
-                  {nearest && nearest.label !== simplified && nearest.off < 2 && (
-                    <span className="arc-stat-sub">≈ {nearest.label}{nearest.off >= 0.05 ? ` · ${round(nearest.off)}% off` : ''}</span>
-                  )}
                 </button>
+                {/* SNAP TO THE NEAREST STANDARD.
+
+                    Its own control, not a line of text inside the Ratio stat:
+                    that button copies, so a nested one was impossible and the
+                    suggestion could only ever be read.
+
+                    The ceiling moved from 2% to 5%. Under the old one a
+                    measurement 3% off a standard got no suggestion at all,
+                    which is the case that needs one most — 2% is close enough
+                    that the user has usually already noticed. The percentage is
+                    always printed so the offer can be judged rather than
+                    trusted. */}
+                {nearest && nearest.label !== simplified && nearest.off < 5 && nearest.w > 0 && nearest.h > 0 && (
+                  <button
+                    className="arc-stat arc-stat--snap"
+                    onClick={() => applyRatio({ w: nearest.w, h: nearest.h })}
+                    title={`Use ${nearest.label} and re-derive the other side`}
+                  >
+                    <span className="arc-stat-k">Nearest standard</span>
+                    <span className="arc-stat-v">{nearest.label}</span>
+                    <span className="arc-stat-sub">
+                      {nearest.off >= 0.05 ? `${round(nearest.off)}% off · ` : ''}tap to use
+                    </span>
+                  </button>
+                )}
                 <button className="arc-stat" onClick={() => copy(String(round(ratioW / ratioH)))} title="Copy decimal ratio">
                   <span className="arc-stat-k">Decimal</span>
                   <span className="arc-stat-v">{round(ratioW / ratioH)}</span>
