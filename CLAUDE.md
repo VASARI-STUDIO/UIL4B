@@ -208,3 +208,24 @@ or user-generated content takes the security gate every time — see
 **Bugs are not proposals.** Defects, regressions and accessibility failures go
 straight into `src/data/pipeline.js` and get fixed. Only genuine product
 direction goes to `PROPOSALS.md` for a verdict.
+**The knowledge and research tools outside this repository are not optional.**
+Reviewed 2026-09-15 after the founder asked whether we were using them. Three
+assets existed and none of them was named in this file, so each was used only
+when an agent happened to remember it.
+
+| Asset | Where | Use it when | Not for |
+|---|---|---|---|
+| **The LLM wiki** | `d:/Obsidian Vault/Vasari Studio/wiki/` — start at `index.md`, route via the `graph-*` pages | A design, testing or agent-workflow question that is not specific to UIL4B. `principle-ai-slop-diagnostic.md` is the six-dimension version of the founder's "AI generated" verdict and is the first thing to read before answering one | Product facts. Nothing there is authoritative about UIL4B; this file and the table above are |
+| **Mobbin MCP** | `search_flows`, `search_screens`, `search_sections` | **Every UI or UX task**, before proposing a layout. Search by task and state, not by brand or aesthetic, and open the images rather than reading the metadata — the skill is `mobbin-flow-research` | Proof. A still cannot show conversion, keyboard behaviour, motion quality or live pricing. Cite the canonical `mobbin.com` URL and say what part of the flow you actually saw |
+| **The vault skills** | `d:/Obsidian Vault/Vasari Studio/.claude/skills/` — 20 of them, alongside this repo's own 22 | The named job exists: `anti-slop-design-review`, `skene-seo-audit`, `skene-accessibility-audit`, `usability-testing`, `domain-launch-and-dns`, `award-worthy-web-delivery` | Replacing the gate. A skill produces a review, not a pass |
+
+**Write findings back.** The wiki compounds only if it is fed. When work here
+produces knowledge that would be true on the next project — a diagnostic, a
+measurement method, a failure mode — file it in the wiki under its contract
+(`d:/Obsidian Vault/Vasari Studio/CLAUDE.md`) rather than only in this
+repository. Anything UIL4B-specific stays here.
+
+**Subagents:** the five roles in [`.claude/agents/README.md`](.claude/agents/README.md)
+are the roster. Sequence them by the files they will touch, not by topic — two
+agents editing `src/data/pipeline.js` will clobber each other, because it packs
+many items onto one line.
