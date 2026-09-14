@@ -592,6 +592,28 @@ const LEARN_MENU = [
 //
 // NOTE (for PM / design): the `promo` copy below is first-pass placeholder text —
 // it's honest and on-brand, but it hasn't been through a copy pass. Flag for review.
+/** Live Discover libraries, menu order, with the category noun trimmed off. */
+function liveDiscoverGroups() {
+  return DISCOVER_GROUPS.filter((group) => !group.soon)
+}
+
+/** "Palettes, gradients, fonts, icons and prompts" — assembled, never typed. */
+function discoverPromoTitle() {
+  const names = liveDiscoverGroups()
+    .map((group) => group.label.replace(/ (?:Library|Gallery|Resources)$/, ''))
+    .filter((label) => label !== 'Curated')
+    .map((label) => (label.endsWith('s') ? label.toLowerCase() : label.toLowerCase() + 's'))
+  if (!names.length) return 'Discover'
+  const last = names[names.length - 1]
+  const sentence = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${last}` : last
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1)
+}
+
+/** The count of libraries a signed-out visitor can open right now. */
+function discoverPromoBlurb() {
+  return `${liveDiscoverGroups().length} libraries, free to browse.`
+}
+
 export const NAV_SECTIONS = [
   {
     id: 'create', label: 'Create', groups: CREATE_GROUPS, columns: CREATE_MENU, viewAllHref: '/sitemap', width: 960,
@@ -611,8 +633,31 @@ export const NAV_SECTIONS = [
     id: 'discover', label: 'Discover', groups: DISCOVER_GROUPS, columns: DISCOVER_MENU, viewAllHref: '/discover', width: 640,
     promo: {
       eyebrow: 'Discover',
-      title: 'Inspiration worth the tab',
-      blurb: 'Community UI systems, font pairings and prompts — curated, never scraped.',
+      // DERIVED, BECAUSE THE TYPED VERSION WAS FALSE.
+      //
+      // It read 'Inspiration worth the tab' over 'Community UI systems, font
+      // pairings and prompts — curated, never scraped.' Inspiration and
+      // Collections are the two DISCOVER_GROUPS carrying `soon: true`, so the
+      // heading led on an unbuilt surface and the blurb opened by promising
+      // community UI systems that do not exist. "curated, never scraped" is
+      // also the "not an X" defensive negation the founder rejected by name on
+      // the export heading and on /discover's own h1.
+      //
+      // Both are COUNTED off the groups the menu is already listing, which is
+      // the fix the 404 suggestions and the /plans delta took before it: a
+      // claim that is computed cannot go stale, and a library that ships later
+      // appears here on the next build with nobody remembering to edit a
+      // sentence. Inspiration is simply not mentioned — it carries its own
+      // Soon badge in the column beside this card, which is where that fact
+      // belongs. Counted from DISCOVER_GROUPS only: importing the palette and
+      // gradient arrays to print their lengths would pull 137 records into
+      // every bundle that loads the nav, which is every page.
+      //
+      // This is an inventory, not a voice. The sentence with a point of view
+      // is still the founder's to write — see the anti-slop audit row in
+      // pipeline.js, which lists the three nav promo lines as his.
+      title: discoverPromoTitle(),
+      blurb: discoverPromoBlurb(),
       href: '/discover',
       docsHref: '/learn',
     },
