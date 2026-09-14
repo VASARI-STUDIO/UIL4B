@@ -13,6 +13,43 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### Founder decisions — 2026-09-14
+
+Taken across one working session with the Director. **Fourteen decisions.**
+Quoted where he was quoted; nothing inferred. **Two went against our
+recommendation and are marked as such**, and one is recorded as a correction of
+a claim this repository had been making about him.
+
+| # | Decision | Ours? |
+|---|---|---|
+| 1 | **Export formats: the pages are right.** The design system book and brand guidelines stay Pro; the two documents claiming every format was free were corrected | Yes |
+| 2 | **Stripe changes to match the app** — 30 AI actions a day, 300 a month — rather than raising the app's limits to the promised 1,000/day | Yes |
+| 3 | **Never name a free AI tier to a user.** Verbatim: *"when telling about AI usage dont tell them we use free plans that is a deterent just tell them AI usage is lowered while in Beta, if there is enough support for this then we will upgrade plans api and MCPs to improve the app"* | New |
+| 4 | **Learn widens** to include SEO, Marketing and AI assistants | **No — we recommended keeping Learn narrow** |
+| 5 | **Muted preview text stays darkened.** Readable everywhere; hierarchy carried by size and weight on the 19% where the two levels converge (P-023) | Yes |
+| 6 | **The condition notices move into the page flow** so they stop covering the Palette Builder toolbar | Yes |
+| 7 | **The homepage export section needs its own heading** — the hero above it already opens with the same five words. His to write | New |
+| 8 | **Semantic-colour "buttons" stop being buttons**, the SOON tag grows 8px → 10px, the emoji pill is deleted, and the gradient stop handle stays at 20×20 | Yes on all four |
+| 9 | **The homepage gradient demo re-seeds from the brand accent** `#0F6FFF` instead of the mock's unused violet (P-015) | Yes |
+| 10 | **A chargeback does not cancel the Stripe subscription.** Access revocation already happens and is tested (P-018) | Yes |
+| 11 | **The June portfolio screenshots are archived**, not recaptured (P-013) | **Neither option as put** — he was asked recapture-now or recapture-later and answered *"archive the old screenshots"* |
+| 12 | **A new positioning line**, written by him: *"no more trying to remember the names of the 1 tool websites."* It replaces *"All the design tools you're constantly searching for, in one unified location."* on the two surfaces that displayed it | New |
+| 13 | **Font Pair becomes two zones** — a control rail and a dominant preview — with suggestion cards that preview the pairing and keep their reasoning on expand | Yes |
+| 14 | **The taxonomy eyebrow is removed site-wide**, continuing #382/#386 where he first marked that element "AI" | Yes |
+
+**A correction to the record, not a decision.** `OWNER-ACTIONS.md` §4.5 and the
+retired readiness page both told him he was paying for OpenRouter and asked
+whether to cancel. He is not: *"im not paying for it im on the free tier."* The
+saving that item offered never existed, so it was never a P1. Both documents
+were corrected rather than quietly re-scoped.
+
+**Still his to write, and deliberately not written for him:** the founder note's
+four lines, the `/create/palette` lede, the `/discover` lede, a heading for the
+homepage export section, the three nav card lines, and the six homepage
+tool-card descriptions.
+
+---
+
 ### Founder decisions — 2026-09-05
 
 Taken in an interview with the Director on 2026-09-05. **Ten decisions.** Four
