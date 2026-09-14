@@ -482,12 +482,22 @@ export default function FontMatcher({ onCopy, toast }) {
 
         {/* ── Specimen + suggestions ── */}
         <section className="card fpr-panel fpr-output" aria-labelledby="fpr-output-title">
-          <div className="fpr-section-head">
-            <div>
-              <h2 id="fpr-output-title">Read the pairing</h2>
-              <p>The two faces together, at the sizes and weights they&rsquo;ll actually ship at.</p>
-            </div>
-          </div>
+          {/* THE HEADING AND ITS BLURB ARE GONE FROM SIGHT. Founder, 2026-09-14:
+              "remove this text its not needed it takes up space again its
+              another AI thing."
+
+              "Read the pairing" + "The two faces together, at the sizes and
+              weights they'll actually ship at" sat directly above a preview
+              that demonstrates precisely that, with a three-way switch naming
+              the three layouts underneath it. Ninety-six pixels explaining a
+              picture that is already on screen.
+
+              THE h2 STAYS IN THE DOCUMENT, sr-only, because this <section> is
+              aria-labelledby it — deleting it outright would leave the main
+              region of the page unnamed, and the page's outline would drop
+              from four headings to three with no replacement. Same shape as
+              /create/palette. */}
+          <h2 id="fpr-output-title" className="sr-only">Read the pairing</h2>
 
           <div className="fpr-preset-switch" role="group" aria-label="Preview layout">
             {PREVIEW_PRESETS.map(p => (

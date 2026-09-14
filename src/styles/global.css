@@ -6930,7 +6930,14 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fg-card .lbry-card-foot{align-items:baseline;padding-left:56px}
 
 /* Font Pair */
-.fpr-hero--premium{position:relative;min-height:340px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
+/* 260px, not 340, and a shallower pad — founder, 2026-09-14: "this page has a
+   bit of a panel overload", and the direction chosen was two zones with the
+   preview dominant. The masthead is the page's signature and keeps its
+   oversized Font Pair wordmark; what it gives up is 80px of floor and ~18px
+   of padding it was not using for anything. Measured: the specimen's top
+   moves up by ~98px once this and the retired "Read the pairing" head are
+   both out, so more of the artefact is on the first screen. */
+.fpr-hero--premium{position:relative;min-height:260px;margin:-4px 0 16px;padding:clamp(24px,3.6vw,44px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
 /* RETIRED (#surface-headers-read-as-ai): .fpr-hero-topline, its
    .sec-h-eyebrow override and .fpr-gallery-link - the same corner-parked
    action and duplicate taxonomy eyebrow as the Font Gallery, which is the
