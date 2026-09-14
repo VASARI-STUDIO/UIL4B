@@ -432,12 +432,47 @@ export default function FontMatcher({ onCopy, toast }) {
             ))}
           </div>
 
-          <FontPicker
-            label="Body family"
-            fonts={catalog}
-            value={bodyFont}
-            onChange={chooseBody}
-          />
+          {/* PICK THE BODY FROM THE HEADING. Founder, 2026-09-14: "when
+              selecting a second font, show a wand button to pick automatically
+              based on the first font."
+
+              IT REUSES THE RANKING THAT IS ALREADY ON THE PAGE rather than
+              inventing a second opinion. `suggestions` is what the panel below
+              scores and explains; taking its first entry means the wand and the
+              cards can never disagree about which body face wins, and the
+              reasoning for what it chose is already written and one click away
+              under that card.
+
+              It is DISABLED until there is something to apply — no heading yet,
+              or the catalogue has not answered — instead of being hidden, so
+              the control does not appear and disappear under the pointer. The
+              title says what it will do; the visible label is an icon because
+              the row it sits in is already two fields deep. */}
+          <div className="fpr-bodyrow">
+            <FontPicker
+              label="Body family"
+              fonts={catalog}
+              value={bodyFont}
+              onChange={chooseBody}
+            />
+            <button
+              type="button"
+              className="fpr-wand"
+              onClick={() => { if (suggestions[0]) applyPair(suggestions[0].font) }}
+              disabled={!suggestions.length}
+              title={suggestions.length
+                ? `Use ${suggestions[0].font.family}, the best match for ${headingFont.family}`
+                : 'No suggestions yet'}
+              aria-label={suggestions.length
+                ? `Pick a body face automatically: use ${suggestions[0].font.family} with ${headingFont.family}`
+                : 'Pick a body face automatically — no suggestions yet'}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5" />
+              </svg>
+              <span className="fpr-wand-label">Auto</span>
+            </button>
+          </div>
           <div className="fpr-weights" role="group" aria-label="Body weight">
             {bodyFont.variants.map(w => (
               <button

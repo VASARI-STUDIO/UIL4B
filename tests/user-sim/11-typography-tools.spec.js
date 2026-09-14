@@ -201,6 +201,36 @@ test.describe('Type Scale Generator', () => {
 })
 
 test.describe('Font Pair', () => {
+  test('the Auto button picks the body face the suggestions already rank first', async ({ page }) => {
+    watch(page, 'a designer who wants the pairing decided for them')
+    await go(page, '/create/font-pair')
+    await expect(page.locator('.fpr-card')).toHaveCount(6)
+
+    // THE CONTRACT IS THAT IT AGREES WITH THE PANEL. The wand takes
+    // `suggestions[0]`, which is the same ranking the cards render and explain,
+    // so the button and the list can never name different winners. Read the
+    // first card's family and require the button to be offering exactly it —
+    // an implementation that scored its own pick would fail here.
+    const wand = page.locator('.fpr-wand')
+    await expect(wand).toBeEnabled()
+    const top = (await page.locator('.fpr-card-name').first().innerText()).split(String.fromCharCode(10))[0].trim()
+    // A plain substring check rather than a RegExp: a family name can carry a
+    // regex metacharacter, and escaping one to assert on it adds a way for the
+    // test to be wrong that the assertion itself does not need.
+    const offered = await wand.getAttribute('aria-label')
+    expect(offered).toContain(top)
+
+    // POSITIVE CONTROL: the body face must not already BE the suggestion, or
+    // the assertion below would pass without the click doing anything.
+    const bodyBefore = (await page.locator('.fpr-hero-pair span').last().innerText()).trim()
+    expect(bodyBefore).not.toBe(top)
+
+    await wand.click()
+    await expect(page.locator('.fpr-hero-pair span').last()).toHaveText(top)
+    // …and the panel agrees: exactly one card reads "In use".
+    await expect(page.getByRole('button', { name: 'In use' })).toHaveCount(1)
+  })
+
   test('a designer gets reasoned body suggestions and a live specimen', async ({ page }) => {
     watch(page, 'designer choosing a font pairing')
     await go(page, '/create/font-pair')
