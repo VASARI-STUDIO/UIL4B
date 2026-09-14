@@ -27,11 +27,127 @@ the rest.
 | **10** | Confirm `dylanjacob1100@gmail.com` is the admin account | — | 1 min | Admin and server checks may be keyed to the wrong address |
 | **11** | Restrict the public Google Fonts key | Google Cloud → Credentials | 5 min | The key is public and unrestricted |
 | **12** | Check legacy customers still match to accounts | Stripe → Customers | minutes each | A paying customer can lose access silently |
+| **13** | Make `www.uil4b.com` work (it is broken right now) | Vercel → Domains, then your DNS | 10 min | Anyone who types `www.` gets a page that never loads |
+| **14** | Make the Google sign-in box say `uil4b.com` | Firebase + Google Cloud | 20 min | It says `uil4b-357c5.firebaseapp.com`, which looks fake |
 
 **After row 3 you must also:** publish the new rules (Firebase console, or
 `firebase deploy --only firestore:rules`) **and deploy the site** —
 `api/verify-admin.js` is a serverless function and does nothing until it ships.
 That deploy is waiting on row 1.
+
+---
+
+## 🌐 Your web address and the sign-in box
+
+Two things people see before they ever use the product. Both look wrong today.
+Neither is hard to fix.
+
+---
+
+### 13 · `www.uil4b.com` does not load
+
+**What is wrong.** Your site works at `uil4b.com`. It does **not** work at
+`www.uil4b.com`. If someone types the `www.` version, or an old link uses it,
+they wait about 20 seconds and then get nothing.
+
+**How we know.** We timed both on 2026-09-13. `uil4b.com` answered in 0.9
+seconds. `www.uil4b.com` timed out twice, 21 seconds each time.
+
+**Why it happens.** Two reasons, and you need to fix both:
+
+1. Vercel has never been told that `www.uil4b.com` belongs to your project. It
+   only knows about `uil4b.com`.
+2. Your DNS has `www` pointed at the wrong address. It points at
+   `ns1.vercel-dns.com`. That is a **nameserver** — a signpost that says where
+   to ask. It is not a web server, so nothing answers. It needs to point at
+   `cname.vercel-dns.com` instead, which is the machine that actually serves
+   pages.
+
+Think of it like a phone book that lists the phone book's own address instead
+of the person's number.
+
+**Do this.**
+
+1. Go to **Vercel → your project → Settings → Domains**.
+2. Click **Add**, type `www.uil4b.com`, and add it.
+3. Vercel will ask what you want it to do. Choose **Redirect to `uil4b.com`**.
+   That sends `www` visitors to the working address automatically.
+4. Vercel will then show you the DNS record it wants. It will be a **CNAME**
+   record for `www` pointing at **`cname.vercel-dns.com`**.
+5. Go to wherever you bought the domain, find the DNS settings, and change the
+   `www` record to match what Vercel showed you. Delete the old one pointing at
+   `ns1.vercel-dns.com`.
+6. Wait. DNS changes take anywhere from a few minutes to a few hours.
+7. Test it: open `https://www.uil4b.com` in a private window. It should jump
+   straight to `uil4b.com`.
+
+**Time.** About 10 minutes of clicking, then waiting for DNS.
+
+**If you do nothing.** Anyone who types `www.` — and plenty of people still do —
+sees a broken page. So does any old link or business card with `www.` on it.
+
+**One thing we already did.** Every link the site prints about itself now uses
+`uil4b.com`, not `www.` A test fails the build if the `www.` version ever
+sneaks back in. So this is about visitors who type it themselves, not about
+links we publish.
+
+---
+
+### 14 · The Google sign-in box shows a strange address
+
+**What is wrong.** When someone clicks "Sign in with Google", the Google box
+says:
+
+> Continue to **uil4b-357c5.firebaseapp.com**
+
+It should say **uil4b.com**.
+
+**Why this matters.** That address looks like nothing the visitor has heard of.
+They came to `uil4b.com`, clicked sign in, and Google is now asking them to
+trust a random-looking name with numbers in it. People stop at that screen.
+It is the single worst moment to look untrustworthy, because it is the moment
+you are asking for their account.
+
+**Why it happens.** Firebase gives every project a free address like
+`uil4b-357c5.firebaseapp.com`. Google shows whatever address handles the
+sign-in. Right now that is the Firebase one, because nobody has told it to use
+yours. You can see it in the code at `src/utils/firebase.js` line 16.
+
+**Do this.** Three steps, in this order. Do not skip step 1.
+
+**Step 1 — pick an address for sign-in.** Use `auth.uil4b.com`. It is a
+subdomain, like `www`, and it exists only to handle the sign-in handoff.
+Visitors will barely see it, but they will see `uil4b.com` in it, which is the
+whole point.
+
+**Step 2 — tell Firebase about it.**
+
+1. **Firebase Console → Hosting → Add custom domain.**
+2. Enter `auth.uil4b.com` and follow the steps it gives you. It will ask you to
+   add a DNS record, same as step 13 above.
+3. Then go to **Firebase Console → Authentication → Settings → Authorized
+   domains** and make sure both `uil4b.com` and `auth.uil4b.com` are listed.
+
+**Step 3 — tell the app to use it.**
+
+1. **Vercel → Settings → Environment Variables.**
+2. Add `VITE_FIREBASE_AUTH_DOMAIN` with the value `auth.uil4b.com`.
+3. Redeploy the site. The variable only takes effect on a new build.
+
+**Then check your branding.** Go to **Google Cloud Console → APIs & Services →
+OAuth consent screen**. Make sure the app name says **UIL4B** and the logo is
+set. That is the other half of what the visitor reads on that screen.
+
+**Time.** About 20 minutes, plus waiting for DNS.
+
+**If you do nothing.** Every person who tries to sign in with Google is shown a
+name that looks made up, at the exact moment they are deciding whether to trust
+you. Some of them will not finish.
+
+**Test it when you are done.** Open a private window, go to `uil4b.com`, click
+sign in with Google, and read the top of the Google box. It should say
+`uil4b.com` or `auth.uil4b.com`. If it still says `firebaseapp.com`, the
+environment variable did not reach the build — redeploy.
 
 ---
 
