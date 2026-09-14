@@ -125,5 +125,10 @@ supposed to contain it.
 **The screenshots those audits cited (`docs/qa/screenshots/…`) were never in the
 repository and still are not** — 11 MB of PNGs that go stale the moment the
 stylesheet they document changes. They are gitignored deliberately. Regenerate
-them with a build plus a preview run. The similarly named
-`docs/qa/screenshots-mobile/` **is** tracked, and is a different thing.
+them with a build plus a preview run.
+
+`docs/qa/screenshots-mobile/` **used to be tracked and was deleted on
+2026-09-14**, for the same reason and one more: all sixteen defects it
+illustrated are fixed, so it showed a UI that no longer exists. What was
+load-bearing is the written record below, not the pictures. Both directories are
+now ignored.
