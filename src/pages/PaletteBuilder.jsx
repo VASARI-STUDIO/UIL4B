@@ -2090,26 +2090,37 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       <p className="sr-only" aria-live="polite">{liveMsg}</p>
 
       {/* ── Page heading ──
-          This page had no heading area. Its only heading was a 15px <h1> in
-          the toolbar reading "Palette", set at the SAME size and weight as
-          `.plb-hex` (both 15px/700) — so the page's own name was typographically
-          identical to a colour value sitting two rows below it, and every one of
-          the five sibling colour tools shipped a 36-64px h1 that this one did
-          not have.
+          FOUNDER, 2026-09-14, with a screenshot of this page at ~700px: the
+          words "Palette Generator" struck through, the whole header boxed in
+          red, "horrible UI and UX".
 
-          The name is "Palette Generator" because that is what this route is
-          already called in `src/data/routeMetaMap.js` — the string in the
-          browser tab and in the share card. It is not a new name; the toolbar
-          label was the short one.
+          What he approved on 2026-09-13 was a heading SLOT — "Build the slot,
+          then I'll write the line." What shipped in the slot was the ROUTE'S
+          OWN NAME at clamp(38px,5vw,64px), above an empty lede. So the page
+          spent up to 64px of display type, plus the block's own padding,
+          restating a word that is already in the nav, the browser tab and the
+          share card — and then opened the working area below the fold on a
+          phone. A workspace that titles itself is the tell: not one of
+          Squarespace's palette editor, Arcade's Colors, Gamma's theme editor
+          or Adobe Color spends a heading row on its own name. They open on the
+          work.
 
-          The h1 keeps `id="plb-page-title"`, because `.plb-board` below is
-          `aria-labelledby` it: the board's accessible name is the page's
-          heading, and moving the h1 without moving the id would have silently
-          left the board unnamed. */}
-      <header className="plb-hero">
-        <h1 id="plb-page-title">Palette Generator</h1>
-        {PALETTE_LEDE ? <p className="plb-hero-lede">{PALETTE_LEDE}</p> : null}
-      </header>
+          THE SLOT IS NOT DELETED, it just stops painting nothing. The heading
+          area renders only when PALETTE_LEDE has something in it — the day he
+          writes the line, the h1 and his sentence appear together, which is
+          what the slot was for. Until then the h1 is still IN THE DOCUMENT,
+          carrying id="plb-page-title", because `.plb-board` below is
+          aria-labelledby it: the board's accessible name is this heading, and
+          hiding it visually must not take the board's name away. Screen-reader
+          users lose nothing; the page keeps exactly one h1 either way. */}
+      {PALETTE_LEDE ? (
+        <header className="plb-hero">
+          <h1 id="plb-page-title">Palette Generator</h1>
+          <p className="plb-hero-lede">{PALETTE_LEDE}</p>
+        </header>
+      ) : (
+        <h1 id="plb-page-title" className="sr-only">Palette Generator</h1>
+      )}
 
       {/* ── Toolbar ── */}
       <header className="plb-toolbar">
@@ -2400,7 +2411,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               for. That split is also why the cluster is contiguous in the DOM:
               a collapse that reordered the row would move focus order for
               everyone to buy space for one band. */}
-          <button type="button" className="btn btn-s btn-accent plb-random" onClick={randomize}>
+          {/* NOT `btn-accent`. Measured 2026-09-14: this button and "Save /
+              export" both carried it, so the row showed TWO filled accent
+              buttons of equal weight and the eye had no way to tell the
+              reversible act from the committing one. Randomise is the cheap,
+              undoable, repeatable act — Space does it, and Undo sits next to
+              it. Save / export is the one that leaves the page. One primary
+              per row; this is the one that gives it up. */}
+          <button type="button" className="btn btn-s plb-random" onClick={randomize}>
             <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
           </button>
           {/* `plb-undo` / `plb-reset` are layout hooks, not new styling: below
@@ -3298,7 +3316,21 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           adjustments" was written here, and Chrome's accessibility tree
           reported this strip nameless at every width and in both themes. The
           string is unchanged; it simply reaches a reader now. */}
-      <footer className="plb-adjust" role="group" aria-label="Global palette adjustments">
+      <footer className="plb-adjust" role="group" aria-labelledby="plb-adjust-title">
+        {/* THE STRIP NOW SAYS WHAT IT DOES, ON SCREEN.
+            "Global palette adjustments" existed only as an aria-label, so the
+            name reached assistive technology and nobody else. A sighted user
+            got four sliders against the bottom edge with no statement of
+            SCOPE — and scope is the one thing that matters here, because
+            every other control on this page acts on ONE swatch (lock, copy,
+            the per-row menu) while these four move all of them at once. The
+            founder's screenshot boxed this strip as horrible UX; reading it
+            cold, there is nothing that tells you dragging Hue will repaint
+            the whole board.
+
+            aria-labelledby, not aria-label, so the accessible name IS the
+            visible one rather than a second string that can drift from it. */}
+        <p className="plb-adjust-title" id="plb-adjust-title">Adjust all</p>
         {/* One grid for all four fields, with each field as display:contents, so
             the LABEL columns size to their own text while the TRACK columns are
             equal `1fr` siblings of one grid. That is what makes every track the

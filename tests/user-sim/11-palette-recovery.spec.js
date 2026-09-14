@@ -70,19 +70,23 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await go(page, '/create/palette')
     await expect(page.locator('.plb-toolbar')).toBeVisible()
 
-    // WHAT MOVED, AND WHY THIS STILL GUARDS THE SAME THING. The page's h1 used
-    // to be `.plb-title`, a 15px heading inside the toolbar, and this probe read
-    // its left edge to prove the shell's content edge lined up with the nav's.
-    // The h1 is now `.plb-hero h1`, a 64px heading in a heading area ABOVE the
-    // toolbar, so the toolbar is no longer the first thing under the nav — the
-    // heading area is. Both halves of the original guarantee are kept, and the
-    // sticky half is new: the toolbar has to come back flush to the nav once the
-    // heading has scrolled past it, which is the whole point of it being sticky.
+    // WHAT MOVED, AND WHY THIS STILL GUARDS THE SAME THING. The page's h1 was
+    // `.plb-title` (15px, inside the toolbar), then `.plb-hero h1` (a 38-64px
+    // heading ABOVE the toolbar). On 2026-09-14 the founder struck the words
+    // "Palette Generator" off a screenshot of this page: a workspace does not
+    // spend a display heading restating the route's own name. The heading area
+    // now renders ONLY when PALETTE_LEDE has a sentence in it; with the lede
+    // still empty the h1 is sr-only and the toolbar is once again the first
+    // thing under the nav.
+    //
+    // Both halves of the original guarantee survive: the content edge still
+    // lines up with the nav's, and the h1 still exists and still names the
+    // board. What changed is which element sits flush to the nav.
     const geometry = await page.evaluate(() => {
       const nav = document.querySelector('.pnav')
       const navInner = document.querySelector('.pnav-inner')
-      const hero = document.querySelector('.plb-hero')
-      const title = document.querySelector('.plb-hero h1')
+      const toolbar = document.querySelector('.plb-toolbar')
+      const title = document.querySelector('h1#plb-page-title')
       const toolbarGroup = document.querySelector('.plb-toolbar-group')
       const controls = [
         document.querySelector('.plb-seedpick .cpk-trigger'),
@@ -90,22 +94,34 @@ test.describe('Palette Builder recovery and tool continuity', () => {
         document.querySelector('.plb-harm'),
       ]
       const navLeft = navInner.getBoundingClientRect().left + parseFloat(getComputedStyle(navInner).paddingLeft)
+      const board = document.querySelector('.plb-board')
       return {
-        gap: hero.getBoundingClientRect().top - nav.getBoundingClientRect().bottom,
-        leftDelta: title.getBoundingClientRect().left - navLeft,
+        heroPresent: !!document.querySelector('.plb-hero'),
+        gap: toolbar.getBoundingClientRect().top - nav.getBoundingClientRect().bottom,
         toolbarLeftDelta: toolbarGroup.getBoundingClientRect().left - navLeft,
-        // POSITIVE CONTROL for the two deltas above: a probe that read a
-        // detached or zero-width node would report 0 for both and pass. The h1
-        // has to be a real, painted, non-empty heading first.
-        titleWidth: title.getBoundingClientRect().width,
-        titleText: title.textContent.trim(),
+        // POSITIVE CONTROL for the delta above: a probe that read a detached or
+        // zero-width node would report 0 and pass. The toolbar group has to be
+        // a real, painted, non-trivial box first.
+        toolbarWidth: toolbarGroup.getBoundingClientRect().width,
+        titlePresent: !!title,
+        titleText: title ? title.textContent.trim() : null,
+        // The h1 is hidden from sight but NOT from the accessibility tree: the
+        // board is aria-labelledby it, so a clipped-to-1px box is the pass and
+        // display:none would be a regression that takes the board's name away.
+        titleBox: title ? Math.round(title.getBoundingClientRect().width) : null,
+        titleDisplay: title ? getComputedStyle(title).display : null,
+        boardLabelledBy: board ? board.getAttribute('aria-labelledby') : null,
         heights: controls.map(element => element.getBoundingClientRect().height),
       }
     })
-    expect(geometry.titleWidth, 'the h1 is actually painted').toBeGreaterThan(100)
+    expect(geometry.heroPresent, 'no heading area paints while the lede is empty').toBe(false)
+    expect(geometry.titlePresent, 'the h1 still exists for the board to be named by').toBe(true)
     expect(geometry.titleText).toBe('Palette Generator')
-    expect(Math.abs(geometry.gap)).toBeLessThanOrEqual(1)
-    expect(Math.abs(geometry.leftDelta)).toBeLessThanOrEqual(1)
+    expect(geometry.titleDisplay, 'sr-only, not display:none').not.toBe('none')
+    expect(geometry.titleBox, 'the h1 is visually clipped').toBeLessThanOrEqual(2)
+    expect(geometry.boardLabelledBy, 'the board still takes its name from the h1').toBe('plb-page-title')
+    expect(geometry.toolbarWidth, 'the toolbar group is actually painted').toBeGreaterThan(100)
+    expect(Math.abs(geometry.gap), 'the toolbar is flush to the nav').toBeLessThanOrEqual(1)
     expect(Math.abs(geometry.toolbarLeftDelta)).toBeLessThanOrEqual(1)
     expect(new Set(geometry.heights.map(value => Math.round(value))).size).toBe(1)
 

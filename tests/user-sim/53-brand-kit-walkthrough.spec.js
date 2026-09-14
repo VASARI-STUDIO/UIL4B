@@ -131,10 +131,12 @@ test.describe('Brand kit walkthrough', () => {
     // ColorLanding, whose H1 is "One colour system, start to finish." — a page
     // of links. Step one has to be the tool.
     await expect(page).toHaveURL(/\/create\/palette$/)
-    // The h1 was a 15px "Palette" in the toolbar, at the same size and weight as
-    // `.plb-hex`. It is a heading area now and reads the route's own name from
-    // routeMetaMap.js.
-    await expect(page.getByRole('heading', { name: 'Palette Generator', exact: true })).toBeVisible()
+    // The h1 is sr-only while the page's lede is unwritten (founder struck the
+    // visible "Palette Generator" on 2026-09-14), so this asserts it is
+    // ATTACHED rather than visible — it still names the board via
+    // aria-labelledby, and the visible proof that the right route arrived is
+    // the seed field below.
+    await expect(page.getByRole('heading', { name: 'Palette Generator', exact: true })).toBeAttached()
     await expect(page.getByRole('textbox', { name: 'Seed colour hex' })).toBeVisible()
 
     // And the flow is actually running on it.

@@ -93,7 +93,7 @@ const readBoard = () => {
     return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.opacity !== '0'
   }
   const cols = [...document.querySelectorAll('.plb-col')].filter(shown)
-  const h1 = document.querySelector('.plb-hero h1')
+  const h1 = document.querySelector('h1#plb-page-title')
   const hex = document.querySelector('.plb-hex')
   return {
     // The positive control. Every count and every absence below is read off
@@ -128,7 +128,9 @@ const readBoard = () => {
         width: Math.round(col.getBoundingClientRect().width),
       }
     }),
-    h1: h1 ? { text: h1.textContent.trim(), size: parseFloat(getComputedStyle(h1).fontSize), tag: h1.tagName } : null,
+    h1: h1 ? { text: h1.textContent.trim(), size: parseFloat(getComputedStyle(h1).fontSize), tag: h1.tagName,
+      width: Math.round(h1.getBoundingClientRect().width), display: getComputedStyle(h1).display } : null,
+    heroPainted: !!document.querySelector('.plb-hero'),
     hexSize: hex ? parseFloat(getComputedStyle(hex).fontSize) : null,
     overflowX: document.documentElement.scrollWidth - innerWidth,
   }
@@ -231,9 +233,15 @@ test.describe('the palette board across the width matrix', () => {
 
       expect(board.h1.tag).toBe('H1')
       expect(board.h1.text).toBe('Palette Generator')
-      expect(board.h1.size, `${width}px: the h1 is a heading size`).toBeGreaterThanOrEqual(34)
-      expect(board.h1.size, `${width}px: the h1 outranks the hex (${board.h1.size} vs ${board.hexSize})`)
-        .toBeGreaterThan(board.hexSize)
+      // FOUNDER, 2026-09-14: "Palette Generator" struck off a screenshot of
+      // this page. A workspace does not spend a display heading restating the
+      // route's own name, and this one pushed the board below the fold on a
+      // phone. The h1 stays in the document because `.plb-board` is
+      // aria-labelledby it — hiding it visually must not take the board's
+      // accessible name away — but it must not PAINT while the lede is empty.
+      expect(board.heroPainted, `${width}px: no heading area paints while the lede is empty`).toBe(false)
+      expect(board.h1.display, `${width}px: sr-only, never display:none`).not.toBe('none')
+      expect(board.h1.width, `${width}px: the h1 is visually clipped`).toBeLessThanOrEqual(2)
       await ctx.close()
     }
   })

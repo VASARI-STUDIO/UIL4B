@@ -5932,7 +5932,14 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
   .plb-pvg-title{font-size:36px}
   .plb-tintpop,.plb-picker{left:12px;right:12px;width:auto;transform:none;bottom:auto;top:calc(100% + 4px);z-index:46}
   .plb-swappop{top:calc(100% + 4px)}
-  .plb-copycss{margin-left:0;width:100%}}
+  /* NOT width:100%. A full-bleed bordered pill on a white ground, alone on the
+     last row of the page, is the shape of a TEXT FIELD - the founder read this
+     exact button as one off a screenshot (recorded on
+     quality-colour-breakpoints-2026-09-13), and stretching it to 628px at
+     660px wide is what made that reading reasonable. It keeps its own width
+     and sits at the end of the strip, where an action belongs. The leading
+     glyph is the second tell that it is a button; the width was the first. */
+  .plb-copycss{margin-left:auto;width:auto}}
 
 /* Reduced motion: drop the action ribbon's scroll snapping. One unscoped pair
    covers BOTH scrolling bands (769–960 and ≤768) — the guard is more specific
