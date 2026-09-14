@@ -224,7 +224,7 @@ thought. We will not rewrite them, and that is the point.
 | AI usage wording | **Never mention free plans to users.** The line is *"AI usage is lowered while in Beta; with enough support we'll upgrade plans, API and MCPs to improve the app"* |
 | Learn scope | **Widen it** — SEO, Marketing and AI assistants now belong in Learn |
 | Muted preview text | **Keep it.** Readable everywhere; hierarchy carried by size and weight on the 19% |
-| Condition notices | **Move them into the page flow** so they stop covering the Palette Builder toolbar. Engineering work, queued |
+| Condition notices | **Move them into the page flow** so they stop covering the Palette Builder toolbar. Done 2026-09-15 — the offline and sync notices now sit in a strip that reserves its own height, so no toolbar on the site is covered |
 | Semantic-colour "buttons" | **Stop making them buttons** — done, they are spans |
 | SOON tag | **Grow 8px → 10px** — done |
 | Gradient stop handle | **Leave it at 20×20** — dragging is the whole interaction |

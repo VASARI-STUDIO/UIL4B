@@ -27,7 +27,7 @@ a claim this repository had been making about him.
 | 3 | **Never name a free AI tier to a user.** Verbatim: *"when telling about AI usage dont tell them we use free plans that is a deterent just tell them AI usage is lowered while in Beta, if there is enough support for this then we will upgrade plans api and MCPs to improve the app"* | New |
 | 4 | **Learn widens** to include SEO, Marketing and AI assistants | **No — we recommended keeping Learn narrow** |
 | 5 | **Muted preview text stays darkened.** Readable everywhere; hierarchy carried by size and weight on the 19% where the two levels converge (P-023) | Yes |
-| 6 | **The condition notices move into the page flow** so they stop covering the Palette Builder toolbar | Yes |
+| 6 | **The condition notices move into the page flow** so they stop covering the Palette Builder toolbar. Shipped 2026-09-15: one strip, one `--notice-h` token, every sticky toolbar clear of it | Yes |
 | 7 | **The homepage export section needs its own heading** — the hero above it already opens with the same five words. His to write | New |
 | 8 | **Semantic-colour "buttons" stop being buttons**, the SOON tag grows 8px → 10px, the emoji pill is deleted, and the gradient stop handle stays at 20×20 | Yes on all four |
 | 9 | **The homepage gradient demo re-seeds from the brand accent** `#0F6FFF` instead of the mock's unused violet (P-015) | Yes |
