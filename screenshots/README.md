@@ -1,5 +1,17 @@
 # `screenshots/` — portfolio assets, not build output
 
+**ARCHIVED 2026-09-14, on the founder's instruction: "archive the old
+screenshots."** All 26 PNGs moved to `archive-2026-06/`, which is what the
+folder name now says about them — captured 2026-06-07, showing a product that
+has since been rebuilt. They are kept, not deleted: they are the only record of
+what the app looked like before the V2 homepage, and a before-state is worth
+having. **Nothing in here should be used as a current portfolio shot.**
+
+The earlier plan was to recapture once the deploy block cleared. That is no
+longer the standing answer — the founder asked for them archived instead, so
+recapturing is a fresh decision whenever he wants one, against whatever the app
+looks like then.
+
 **Do not delete these.** They are referenced by nothing in the app, which makes
 them look like dead weight in a file-system tidy. They are not.
 
@@ -25,8 +37,10 @@ than no shot** — it advertises the older work as current.
 
 Recapturing is a founder call, not an agent one: which pages belong in a
 portfolio, and when the app is settled enough to be worth freezing, are both
-judgement calls about how Dylan wants the work presented. Flagged here rather
-than acted on.
+judgement calls about how Dylan wants the work presented. **Answered 2026-09-14
+— archive rather than recapture**, so the staleness above is now recorded in the
+directory name instead of being a pending task. `docs/PROPOSALS.md` P-013 is
+closed on that answer.
 
 ## Not to be confused with `docs/qa/screenshots/`
 

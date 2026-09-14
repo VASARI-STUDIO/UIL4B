@@ -190,9 +190,10 @@ sits in which sub-area is read from `tool-tree.md`.
 - **Core promise:** create, organize, validate, and export a UI system in one
   place — no tab-hopping.
 - **Free vs Pro:** Free = save projects (capped), share a live preview URL, and
-  **export in every format with a visible footer credit**. Pro removes the
-  credit and lifts the caps. (See `human-validation-zones.md` for the Stripe
-  surface.)
+  **export the four standard formats (HTML, Markdown, PNG, JPEG) with a visible
+  footer credit**. Pro removes the credit, lifts the caps, and adds the two
+  document exports — the **design system book** and the **brand guidelines**.
+  (See `human-validation-zones.md` for the Stripe surface.)
 
 > **Corrected 2026-08-20, founder-approved.** This line read "Pro = all file
 > exports", which the product does not do and has not done. `ExportPanel.jsx`
@@ -203,20 +204,16 @@ sits in which sub-area is read from `tool-tree.md`.
 > (P-003). Any surface currently implying exports are Pro-only is now the thing
 > that is wrong.
 >
-> **⚠️ The code stopped agreeing with this, and the claim above is KEPT rather
-> than quietly corrected — flagged 2026-09-10, not decided here.** The
-> watermark model is still exactly right for the four formats it was written
-> about: `html`, `md`, `png` and `jpeg` are all `pro: false` in
-> `src/config/exportFormats.js` and still pass `watermark: !isPro`. Two
-> formats shipped **after** this decision and are gated by name instead:
-> `book` (the design system book) and `guidelines` (the brand guidelines
-> presentation) are `pro: true`, `proOnlyFormats()` returns both, `/plans`
-> prints them as "Not included" for Free, and `Home.jsx`'s `PRO_INCLUDES`
-> lists them under "Everything in Free, plus:" — beside a separate line for
-> the credit removal, so the homepage sells both models at once.
->
-> So "export in every format with a visible footer credit" is a
-> founder-approved sentence that three shipped surfaces contradict. Which one
-> moves is a decision about what Pro sells, and it is the founder's:
-> `docs/OWNER-ACTIONS.md` §2.3. **Until he answers, neither this line nor
-> `exportFormats.js` should be edited to match the other.**
+> **RESOLVED 2026-09-14 by the founder: the pages are right, and this line was
+> the thing that was wrong.** The 2026-08-20 correction above was made when
+> every export was watermark-gated, and it was true of the product as it then
+> stood. Two formats shipped *after* it and are gated by name instead: `book`
+> and `guidelines` are `pro: true` in `src/config/exportFormats.js`,
+> `proOnlyFormats()` returns both, `/plans` prints them as "Not included" for
+> Free, and `Home.jsx`'s `PRO_INCLUDES` lists them under "Everything in Free,
+> plus:". Asked which side moves, he chose the pages — so the sentence above
+> now names the four free formats rather than claiming all of them, and the
+> watermark model it describes still holds exactly where it was written about:
+> `html`, `md`, `png` and `jpeg` are `pro: false` and still pass
+> `watermark: !isPro`. Nothing on a page moved. See `docs/OWNER-ACTIONS.md`
+> §2.3 for the question as it was put to him.**

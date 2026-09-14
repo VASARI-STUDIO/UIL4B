@@ -2013,7 +2013,11 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 /* --t2, not --t3: the 8px SOON tag measured 4.07:1 on its chip in light at
    every width (2026-09-09). --t2 is 4.95:1. The size is left as found and
    flagged: 8px uppercase is the smallest type on the page. */
-.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
+/* 10px, not 8px — founder call, 2026-09-14. At 8px this was the smallest
+   type anywhere in the product, and the lines sitting beside it on the same
+   card are 10px. It is a status a visitor is meant to READ before they click
+   into something that is not built yet. */
+.fc-soon{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
 /* Alpha badge — token-driven accent pill (no hardcoded colours). */
 .fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
 .fc-drop{cursor:pointer;transition:border-color var(--t),background var(--t),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
