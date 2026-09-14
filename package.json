@@ -19,7 +19,8 @@
     "sync:rewrites": "node scripts/sync-vercel-rewrites.mjs",
     "sync:sitemap": "node scripts/sync-sitemap.mjs",
     "sync:llms": "node scripts/llms-txt.mjs",
-    "icons": "node scripts/brand-icons.mjs"
+    "icons": "node scripts/brand-icons.mjs",
+    "design:md": "node scripts/design-md.mjs"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.6",
