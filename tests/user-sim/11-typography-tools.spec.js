@@ -212,10 +212,27 @@ test.describe('Font Pair', () => {
 
     const cards = page.locator('.fpr-card')
     await expect(cards).toHaveCount(6)
-    // Every suggestion states WHY it is here — that is the whole point of the tool.
-    for (const reason of await cards.locator('.fpr-card-reason').allInnerTexts()) {
-      expect(reason.trim().length).toBeGreaterThan(20)
-    }
+    // Every suggestion states WHY it is here — that is the whole point of the
+    // tool, and it survived the 2026-09-14 change that put the reason behind a
+    // <details> so the cards could compact.
+    //
+    // READ WITH textContent, NOT innerText. A closed <details> renders nothing,
+    // so allInnerTexts() returns six empty strings and this assertion would
+    // fail on a page whose words are all present and one click away. The
+    // guarantee is that the reasoning EXISTS and is reachable, not that it is
+    // permanently on screen.
+    const reasons = await cards.locator('.fpr-card-reason')
+      .evaluateAll((els) => els.map((e) => (e.textContent || '').trim()))
+    expect(reasons).toHaveLength(6)
+    for (const reason of reasons) expect(reason.length).toBeGreaterThan(20)
+
+    // …and REACHABLE, which is the half textContent cannot prove. Open one and
+    // the words paint; a <details> that never opened would satisfy the check
+    // above and tell the user nothing.
+    const why = cards.first().locator('.fpr-card-why')
+    await expect(why.locator('summary')).toHaveText('Why this pairs')
+    await why.locator('summary').click()
+    await expect(why.locator('.fpr-card-reason')).toBeVisible()
 
     // Applying a pair marks it in use and swaps the body family everywhere.
     const first = cards.first()
