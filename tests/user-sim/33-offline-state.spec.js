@@ -119,6 +119,64 @@ test.describe('offline state', () => {
     expect(onTop, 'the offline banner is on top of the nav').toBe(true)
   })
 
+  // AND IT NEVER COVERS THE TOOL EITHER, which is the half that was wrong.
+  //
+  // The banner was fixed at `calc(var(--nav-h) + 10px)`. `.plb-toolbar` is
+  // sticky at the nav height. Those are the same 60-odd pixels, so on the
+  // Palette Builder the banner sat on the toolbar — reported by the founder
+  // on 2026-09-14, and true of every sticky toolbar on the site, because they
+  // all derive from the same nav height.
+  //
+  // MUTATION: set `--notice-h:0px` on :root after mount (or give .notice-stack
+  // `position:fixed;top:calc(var(--nav-h) + 10px)` again) — `covers` and
+  // `hitsToolbar` both fail.
+  test('it never covers the toolbar of the tool it appears over', async ({ page }) => {
+    await pinOnLine(page, false)
+    await go(page, '/create/palette')
+    await expect(page.locator(BANNER)).toBeVisible()
+    const toolbar = page.locator('.plb-toolbar')
+    await expect(toolbar).toBeVisible()
+
+    const m = await page.evaluate(() => {
+      const strip = document.querySelector('.notice-stack').getBoundingClientRect()
+      const bar = document.querySelector('.plb-toolbar').getBoundingClientRect()
+      const mid = document.elementFromPoint(bar.x + bar.width / 2, bar.y + bar.height / 2)
+      return {
+        covers: strip.bottom > bar.top + 1,
+        hitsToolbar: !!mid?.closest('.plb-toolbar'),
+        reserved: getComputedStyle(document.documentElement).getPropertyValue('--notice-h').trim(),
+        stripHeight: Math.round(strip.height),
+      }
+    })
+
+    expect(m.covers, `the notice strip ends below the top of the toolbar`).toBe(false)
+    expect(m.hitsToolbar, 'the middle of the toolbar belongs to something else').toBe(true)
+    // The strip does not merely sit elsewhere — it published its height, which
+    // is what moved the toolbar down. Without this the first two assertions
+    // would also pass if the banner had simply stopped rendering.
+    expect(m.stripHeight).toBeGreaterThan(20)
+    expect(m.reserved).toBe(`${m.stripHeight}px`)
+  })
+
+  // AND THE ROOM IT TAKES IS GIVEN BACK. --notice-h is written on the root
+  // element, so a stale value would push every toolbar on the site down by a
+  // notice that is no longer there.
+  test('the reserved height returns to nothing when the connection does', async ({ page }) => {
+    await pinOnLine(page, false)
+    await go(page, '/create/palette')
+    await expect(page.locator(BANNER)).toBeVisible()
+
+    await page.evaluate(() => {
+      Object.defineProperty(window.navigator, 'onLine', { get: () => true, configurable: true })
+      window.dispatchEvent(new Event('online'))
+    })
+    await expect(page.locator(BANNER)).toHaveCount(0)
+
+    await expect.poll(() => page.evaluate(
+      () => getComputedStyle(document.documentElement).getPropertyValue('--notice-h').trim(),
+    ), { message: '--notice-h is still reserving room for a banner that has gone' }).toBe('0px')
+  })
+
   test('it announces itself politely rather than interrupting', async ({ page }) => {
     await pinOnLine(page, false)
     await go(page, '/create/palette')

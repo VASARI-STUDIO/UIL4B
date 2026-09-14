@@ -530,7 +530,7 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .uis-title-block h1{font-size:clamp(26px,3vw,42px);line-height:1.02;letter-spacing:-.035em}
 .uis-title-block>p{max-width:68ch;margin-top:var(--s-3);font-size:14px;line-height:1.55;color:var(--t2)}
 
-.uis-command{position:sticky;top:calc(var(--nav-top) + var(--nav-h));z-index:28;display:flex;align-items:center;gap:var(--s-4);padding:var(--s-3) var(--page-inline);background:color-mix(in srgb,var(--bg-0) 94%,transparent);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}
+.uis-command{position:sticky;top:var(--chrome-h);z-index:28;display:flex;align-items:center;gap:var(--s-4);padding:var(--s-3) var(--page-inline);background:color-mix(in srgb,var(--bg-0) 94%,transparent);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}
 .uis-seed-control{display:flex;align-items:center;gap:var(--s-2);flex:0 0 auto}
 .uis-seed-control>label,.uis-neutral-control>span{font-size:10px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .uis-seed-picker{width:36px;height:36px;padding:3px;background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer}
