@@ -61,7 +61,7 @@ The whole group carries `soon: true` in `src/data/toolTree.js`: it is badged
 - **Command Palette** — `Cmd/Ctrl + K` to search and jump to any tool
 - **Dark / Light Theme** — System-aware with manual toggle, CSS custom property theming
 - **Internationalisation** — 10 locales with browser auto-detection: English (AU), English (US), Deutsch, Español, Français, Italiano, Português, 日本語, 中文, 한국어
-- **Design System Export** — Export palette + tint scale + state colours as a styled HTML page, CSS custom properties file, or copy to clipboard; every format is available on the free tier with a visible footer credit; Pro removes the credit
+- **Design System Export** — Export palette + tint scale + state colours as a styled HTML page, CSS custom properties file, or copy to clipboard; HTML, Markdown, PNG and JPEG are available on the free tier with a visible footer credit, and Pro removes it; the design system book and the brand guidelines are Pro
 
   > ⚠️ **This sentence and the code disagree, and the disagreement is the
   > founder's to settle — flagged 2026-09-10, not decided here.** It is

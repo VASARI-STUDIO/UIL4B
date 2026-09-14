@@ -32,6 +32,7 @@ import path from 'node:path'
 import { test, expect } from './base.js'
 import { watch, go } from './helpers.js'
 import { GALLERY_PALETTES } from '../../src/data/paletteGallery.js'
+import { inkFor, grade } from '../../src/utils/styleGuideExport.js'
 import { GALLERY_GRADIENTS, gradientCss } from '../../src/data/gradientGallery.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
@@ -115,19 +116,24 @@ async function enterDark(page) {
 test.describe('the mega menu shows real contents and keeps its keyboard contract', () => {
   // ── The complaint: it read as a directory, not as this product ────────────
 
-  test('the Create card previews a real stored palette, not a drawing of one', async ({ page }) => {
+  test('the Create card previews a page of the real export, not a drawing of one', async ({ page }) => {
     watch(page, 'a first-time visitor deciding whether this product is for them')
     await go(page, '/')
     await openWithPointer(page, 'Create')
 
-    const swatches = page.locator('.pnav-prev--create .pnav-prev-swatch')
+    // FOUNDER, 2026-09-14: "the build a brand kit graphic should show a page of
+    // what an export will look like maybe the page of colours". It used to be a
+    // swatch rail plus "Ag" and "0123 abc" — the INGREDIENTS, never the
+    // artefact — beside a card selling a flow whose whole point is what you get
+    // at the end. It is page 2 of the style guide now.
+    const chips = page.locator('.pnav-prev--create .pnav-prev-chip')
     const expected = GALLERY_PALETTES[0].colors
-    await expect(swatches).toHaveCount(expected.length)
+    await expect(chips).toHaveCount(expected.length)
 
-    // Read back the painted colour of every swatch and compare against the
-    // gallery entry itself. This is what makes the preview un-fakeable: a
-    // decorative row of pleasant rectangles would fail here.
-    const painted = await swatches.evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor))
+    // Un-fakeable, exactly as before: read back the painted colour of every
+    // chip and compare it against the gallery entry itself. A decorative row of
+    // pleasant rectangles fails here.
+    const painted = await chips.evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor))
     const asRgb = (hex) => {
       const h = hex.replace('#', '')
       const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16)
@@ -135,13 +141,29 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     }
     expect(painted).toEqual(expected.map(asRgb))
 
-    // The two families that genuinely ship, doing two jobs. A third specimen
-    // cannot be honest here: --display is Manrope, the same value as --font.
-    // (The token used to be called --serif and claimed otherwise; renamed in
-    // serif-token-is-not-a-serif.)
-    await expect(page.locator('.pnav-prev-ag')).toHaveText('Ag')
-    const mono = await page.locator('.pnav-prev-mono').evaluate((el) => getComputedStyle(el).fontFamily)
-    expect(mono.toLowerCase()).toContain('jetbrains')
+    // AND IT IS THE EXPORT'S PAGE, not a lookalike. These three strings are
+    // written by src/utils/styleGuideExport.js onto the real page 2: the
+    // section number, the heading, and the footer a FREE export carries.
+    await expect(page.locator('.pnav-prev-eyebrow')).toHaveText('01 — Colour')
+    await expect(page.locator('.pnav-prev-title')).toHaveText('The palette')
+    await expect(page.locator('.pnav-prev-foot')).toContainText('Made with UIL4B')
+
+    // THE PART THAT CANNOT DRIFT. The preview computes its ink and its ratio
+    // with the exporter's own inkFor() and grade(), so this asserts the printed
+    // evidence against the same functions the export runs — not against a
+    // hard-coded "AAA" that would quietly become a lie the first time a colour
+    // or a WCAG threshold moved.
+    const metas = await page.locator('.pnav-prev-meta').allTextContents()
+    expect(metas).toEqual(expected.map((hex) => {
+      const { ratio } = inkFor(hex)
+      return `${grade(ratio)} · ${ratio.toFixed(1)}:1`
+    }))
+
+    // The hex is painted in the ink the exporter chose for that fill, which is
+    // the whole claim the colour page makes: every swatch shown with the text
+    // colour that reads on it.
+    const inks = await chips.evaluateAll((els) => els.map((el) => getComputedStyle(el).color))
+    expect(inks).toEqual(expected.map((hex) => (inkFor(hex).ink === '#000000' ? 'rgb(0, 0, 0)' : 'rgb(255, 255, 255)')))
   })
 
   test('the Discover card previews real gradients at their stored angles', async ({ page }) => {
@@ -392,9 +414,16 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
     // The palette this preview shows opens on near-black values, which is
     // exactly the case a black hairline could not separate from a dark card.
-    const ring1 = await page.locator('.pnav-prev-swatch').first()
+    const ring1 = await page.locator('.pnav-prev-chip').first()
       .evaluate((el) => getComputedStyle(el).boxShadow)
     expect(ring1).not.toBe('none')
+
+    // The sheet is WHITE IN BOTH THEMES on purpose: the exported page is white
+    // paper, and a dark-mode "preview" of a document that prints white would be
+    // showing the user something they will never receive.
+    const sheetBg = await page.locator('.pnav-prev-page')
+      .evaluate((el) => getComputedStyle(el).backgroundColor)
+    expect(sheetBg).toBe('rgb(255, 255, 255)')
 
     // The card, the guided path and the action all survive the theme.
     await expect(page.locator('#pnav-mega .pnav-prev--create')).toBeVisible()

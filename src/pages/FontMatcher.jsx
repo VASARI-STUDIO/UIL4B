@@ -46,7 +46,12 @@ import '../styles/pages/font-pair.css'
 const PREVIEW_PRESETS = [
   { id: 'article', label: 'Article' },
   { id: 'product', label: 'Product page' },
-  { id: 'specimen', label: 'Specimen' },
+  // "Letterforms", not "Specimen" — founder, 2026-09-14. The other two presets
+  // name what you are looking AT in plain words, an article and a product page;
+  // "specimen" named it in type-trade language, on the one preset that is not a
+  // page at all. The id stays `specimen` because it is a stored preference key,
+  // not a label.
+  { id: 'specimen', label: 'Letterforms' },
 ]
 
 const PANGRAM = 'The quick brown fox jumps over the lazy dog'
@@ -381,12 +386,26 @@ export default function FontMatcher({ onCopy, toast }) {
             </div>
           </div>
 
+          {/* ONE LINE, NOT THREE. Founder, 2026-09-14: "the choose the pair
+              panel should not be scrollable."
+
+              MEASURED at 1440x900 before this: the panel's content was 849px
+              against 796px of usable height, so it overflowed by 53px and
+              carried its own scrollbar inside the page — a nested scroller in
+              a column that is already sticky. This callout was 114px of that,
+              the tallest single thing in a panel whose job is the two pickers
+              below it, and it is a LINK AWAY from the tool rather than part of
+              choosing a pair.
+
+              The second line went: "Browse live specimens, compare families,
+              then send one back here" explained a destination that the name of
+              the destination and an arrow already name. Dropping it, and
+              tightening the mark and the spacing, returns 54px — which is the
+              53 the panel was over by. The scroller is then unnecessary rather
+              than suppressed, and nothing is clipped. */}
           <NavLink to="/create/font-gallery" className="fpr-gallery-callout">
             <span className="fpr-gallery-callout-mark" aria-hidden="true">Aa</span>
-            <span>
-              <strong>Select from the Font Gallery</strong>
-              <small>Browse live specimens, compare families, then send one back here.</small>
-            </span>
+            <strong>Select from the Font Gallery</strong>
             <span aria-hidden="true">↗</span>
           </NavLink>
 
@@ -463,14 +482,24 @@ export default function FontMatcher({ onCopy, toast }) {
 
         {/* ── Specimen + suggestions ── */}
         <section className="card fpr-panel fpr-output" aria-labelledby="fpr-output-title">
-          <div className="fpr-section-head">
-            <div>
-              <h2 id="fpr-output-title">Read the pairing</h2>
-              <p>The two faces together, at the sizes and weights they&rsquo;ll actually ship at.</p>
-            </div>
-          </div>
+          {/* THE HEADING AND ITS BLURB ARE GONE FROM SIGHT. Founder, 2026-09-14:
+              "remove this text its not needed it takes up space again its
+              another AI thing."
 
-          <div className="fpr-preset-switch" role="group" aria-label="Specimen layout">
+              "Read the pairing" + "The two faces together, at the sizes and
+              weights they'll actually ship at" sat directly above a preview
+              that demonstrates precisely that, with a three-way switch naming
+              the three layouts underneath it. Ninety-six pixels explaining a
+              picture that is already on screen.
+
+              THE h2 STAYS IN THE DOCUMENT, sr-only, because this <section> is
+              aria-labelledby it — deleting it outright would leave the main
+              region of the page unnamed, and the page's outline would drop
+              from four headings to three with no replacement. Same shape as
+              /create/palette. */}
+          <h2 id="fpr-output-title" className="sr-only">Read the pairing</h2>
+
+          <div className="fpr-preset-switch" role="group" aria-label="Preview layout">
             {PREVIEW_PRESETS.map(p => (
               <button
                 key={p.id}
@@ -487,7 +516,12 @@ export default function FontMatcher({ onCopy, toast }) {
           <div className="fpr-specimen" ref={varsRef(specimenVars)}>
             {preset === 'article' && (
               <article className="fpr-article">
-                <span className="fpr-kicker">Long-form</span>
+                {/* NO KICKER. Founder, 2026-09-14, striking "INTERFACE" off a
+                screenshot of this panel: "remove this text its such a common AI
+                trait". All three previews carried one — "Long-form", "Interface",
+                "Letterforms" — each restating the preset ALREADY SELECTED in the
+                switch directly above the panel, and the last one word-for-word.
+                A label that repeats the control that produced it is the tell. */}
                 <h3 className="fpr-h1">{headline}</h3>
                 <p className="fpr-lede">
                   {sample || 'A heading face sets the tone; the body face has to survive four hundred words of it.'}
@@ -499,8 +533,7 @@ export default function FontMatcher({ onCopy, toast }) {
 
             {preset === 'product' && (
               <div className="fpr-product">
-                <span className="fpr-kicker">Interface</span>
-                <h3 className="fpr-h1">{headline}</h3>
+                    <h3 className="fpr-h1">{headline}</h3>
                 <p className="fpr-body">{sample || 'Short body copy, buttons and labels — the register most interfaces actually live in.'}</p>
                 <div className="fpr-product-actions">
                   <span className="fpr-product-primary">Get started</span>
@@ -519,8 +552,7 @@ export default function FontMatcher({ onCopy, toast }) {
 
             {preset === 'specimen' && (
               <div className="fpr-specimen-raw">
-                <span className="fpr-kicker">Letterforms</span>
-                <p className="fpr-h1">{sample || 'Aa Bb Cc'}</p>
+                    <p className="fpr-h1">{sample || 'Aa Bb Cc'}</p>
                 <p className="fpr-glyphs fpr-glyphs--heading">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
                 <p className="fpr-glyphs fpr-glyphs--heading">abcdefghijklmnopqrstuvwxyz 0123456789</p>
                 <p className="fpr-glyphs">{sample || PANGRAM}</p>
