@@ -605,7 +605,24 @@ export default function FontMatcher({ onCopy, toast }) {
                       <p className="fpr-card-body">
                         {font.family} carries the body copy — {PANGRAM.toLowerCase()}.
                       </p>
-                      <p className="fpr-card-reason">{reason}</p>
+                      {/* THE REASON IS ON DEMAND, NOT ALWAYS ON. Founder's
+                          choice, 2026-09-14: "card previews the pairing, reason
+                          on hover/expand".
+
+                          It is what makes this tool more than a font list, so
+                          it is NOT deleted — but printed on every card it was
+                          the tallest thing in each one, and the grid is the
+                          second of three stacked sections under a preview that
+                          should dominate. A <details> keeps the words one click
+                          away, keeps them in the DOM for a screen reader and
+                          for find-in-page, and needs no JavaScript or state.
+
+                          `fpr-card-why` rather than a bare <summary> marker so
+                          the affordance reads as a control at 11.5px. */}
+                      <details className="fpr-card-why">
+                        <summary>Why this pairs</summary>
+                        <p className="fpr-card-reason">{reason}</p>
+                      </details>
                       <div className="fpr-card-foot">
                         <span className="fpr-card-name">
                           {font.family}
