@@ -68,12 +68,29 @@ export const PAGE_TITLES = {
   '/create/file-converter': 'UI L4B | File Converter',
   ...LEARN_PAGE_TITLES,
 }
-export const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion, video frames, and production-ready CSS exports.'
+// THE "CSS EXPORTS" CLAUSE WAS FALSE AND IS DELETED, not reworded.
+//
+// exportFormats.js has `css` at live:false — the CSS export renders a Soon
+// badge over a disabled button — so every page on the site described an
+// export nobody can run. This constant is the worst possible home for that:
+// on 2026-09-14 the homepage was carrying four DIFFERENT descriptions and
+// they were all unified onto this one, which made a single false claim
+// consistent across meta, og, twitter AND the JSON-LD on every route.
+//
+// Deleted rather than rewritten because a replacement is a new claim and
+// those are the founder's to write. What is left is only what ships. The
+// tools DO have per-tool Copy CSS buttons, and index.html already words that
+// honestly — "Copy colour values and CSS from the individual tools that
+// support them" — so if he wants CSS mentioned here, that sentence is the
+// shape, and it is his call.
+export const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion and video frames.'
 export const PAGE_DESCRIPTIONS = {
   '/': DEFAULT_DESCRIPTION,
   '/home': DEFAULT_DESCRIPTION,
   '/create/color': 'Build professional colour systems with palette generation, tint scales, gradient builder, and named colour libraries. Export CSS, Tailwind, PNG and SVG.',
-  '/create/palette': 'Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps, accessibility checks, and production-ready CSS exports.',
+  // The same deleted clause as DEFAULT_DESCRIPTION above: the CSS export is
+  // not live, so the promise of one came out. The rest is what the page does.
+  '/create/palette': 'Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps and accessibility checks.',
   '/create/semantic-color': 'Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.',
   '/create/tint': 'Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.',
   '/create/gradient': 'Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.',
