@@ -161,7 +161,7 @@ const SECTIONS = [
     title: 'Privacy & your data',
     body: (
       <>
-        <p>UIL4B stores preferences and projects in your browser&rsquo;s localStorage. There are no third-party trackers or ad networks. When you sign in, data syncs securely through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
+        <p>UIL4B stores preferences and projects in your browser&rsquo;s localStorage. When you sign in, data syncs securely through Firebase. You can export or delete everything from <Link to="/settings">Settings → Your data</Link>.</p>
       </>
     ),
   },

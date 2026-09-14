@@ -49,6 +49,23 @@ export function I18nProvider({ children }) {
   // async via the effect below.
   const [messages, setMessages] = useState(() => localeCache[lang] || en)
 
+  // THE DOCUMENT HAS TO SAY WHAT LANGUAGE IT IS IN.
+  //
+  // index.html ships `<html lang="en-AU">` and nothing ever changed it, so all
+  // ten locales rendered under en-AU — Japanese and French content declared as
+  // Australian English on every route. That is WCAG 3.1.1 (Language of Page),
+  // and it is not cosmetic: a screen reader picks its voice and its
+  // pronunciation rules from this attribute, so it reads Japanese aloud with
+  // English phonetics. It also decides hyphenation and which quotation marks a
+  // browser substitutes.
+  //
+  // Written here rather than in the render because it is a DOM side effect on
+  // an element outside the React tree, and it has to survive a locale change
+  // rather than only a first paint.
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
+
   useEffect(() => {
     let cancelled = false
     async function load() {
