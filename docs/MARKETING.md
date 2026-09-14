@@ -408,6 +408,19 @@ Smaller, and none of them is a campaign.
 - **The Learn articles should link to the tools.** Cheapest win on this page.
   Someone reading about WCAG thresholds is one click from the contrast checker
   and currently has no idea it exists.
+- **Page speed is already fine, measured rather than assumed.** Your research
+  puts the bar at sub-two-second loads. Measured 2026-09-15 on the production
+  build with the CPU throttled 4x and the connection capped at 10 Mbps:
+  first contentful paint **~400ms** and load complete **~800ms** on `/`,
+  `/plans`, `/discover/palettes`, `/create/palette`, `/create/contrast`,
+  `/create/tint` and `/create/font-pair`. One 2.1-second reading on
+  `/create/contrast` did not reproduce across three further runs and was a
+  server warm-up, not the page. The only outlier worth knowing about is
+  `/create/font-pair`, which transfers 276KB against 66KB elsewhere because of
+  the font catalogue, and still finishes in 808ms. **Nothing to fix here** —
+  the figure is recorded so nobody spends a week on it, and so it can be
+  re-measured against the live site once it deploys, which is where the number
+  that matters actually lives.
 - **Set up analytics before, not after.** Every "how you know it worked" line
   above needs the two-or-more-tools number. If that is not being recorded, the
   campaigns produce anecdotes instead of answers.
