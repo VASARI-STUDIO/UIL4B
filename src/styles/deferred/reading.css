@@ -439,4 +439,9 @@ html[data-reduced-motion="true"] .home-anim{animation:none!important;opacity:1!i
   .prn-cx-row{grid-template-columns:minmax(0,1fr)}
   .prn-th-grid{grid-template-columns:minmax(0,1fr)}
 }
-.sync-notice--error{border-color:color-mix(in srgb,var(--err) 45%,var(--bh))}
+/* The error level used to carry a red border on its own card. It is a row in
+   .notice-stack now, so the strip's own bottom edge is what reddens: one line
+   across the full width, more visible than the old 1px outline and without
+   reintroducing a card. Where :has() is unsupported the tinted icon chip still
+   carries the level. */
+.notice-stack:has(.sync-notice--error){border-bottom-color:color-mix(in srgb,var(--err) 60%,var(--bh))}
