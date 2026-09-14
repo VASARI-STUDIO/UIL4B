@@ -33,10 +33,20 @@ const FOUNDER = {
   'bookmark-folders': 'Gone are the days of searching through bookmark folders upon bookmark folders to find each tool.',
   'build-and-export': 'Build and export UI and brand design kits and content for website building.',
   'one-unified-location': "All the design tools you're constantly searching for, in one unified location.",
+  // Added 2026-09-14. He quoted `one-unified-location` back and said it should
+  // be this instead, then wrote the shorter phrasing himself when asked whether
+  // to use his first draft verbatim or trim it. "1 tool websites" is his, and
+  // is deliberately not corrected to "one-tool".
+  //
+  // `one-unified-location` STAYS ABOVE IT. HERO_HEADLINE is spliced from that
+  // line and `cutFrom` names it, so rewriting it in place would have invalidated
+  // a headline he approved on 2026-09-10. The surfaces that displayed it now
+  // point at this entry instead; the old line remains as the hero's provenance.
+  'one-tool-websites': 'No more trying to remember the names of the 1 tool websites.',
 }
 
-test('the four founder lines are exactly what he said', () => {
-  assert.equal(VALUE_PROPOSITION.length, 4, 'a line was added or removed — this array is a record of what the founder said, not a copy deck')
+test('the five founder lines are exactly what he said', () => {
+  assert.equal(VALUE_PROPOSITION.length, 5, 'a line was added or removed — this array is a record of what the founder said, not a copy deck')
   for (const [id, text] of Object.entries(FOUNDER)) {
     assert.equal(line(id), text, `the founder line "${id}" has been edited`)
   }

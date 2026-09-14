@@ -59,6 +59,28 @@ export const VALUE_PROPOSITION = Object.freeze([
     text: "All the design tools you're constantly searching for, in one unified location.",
     source: 'all the design tools your constantly searching for in one unified location',
   }),
+  // FOUNDER, 2026-09-14. He quoted `one-unified-location` back and said it
+  // "should be" this instead — first as "stop tirelessly searching those
+  // bookmark folders and trying to remember Site names of each Design Tool
+  // youre looking for", then, asked whether to use that verbatim or trim it,
+  // he wrote a shorter one himself: "no more trying to remember the names of
+  // the 1 tool websites."
+  //
+  // His sentence, his phrasing, including "1 tool websites". Only the leading
+  // capital is added, the way the apostrophe was added to the line above.
+  //
+  // IT IS A NEW ENTRY RATHER THAN AN EDIT OF `one-unified-location`, and that
+  // is not tidiness. HERO_HEADLINE is spliced from that line — its marked run
+  // "in one unified location" is taken from it verbatim, and `cutFrom` names it
+  // so a test can check the trace. Rewriting the line in place would have
+  // silently invalidated a headline he approved on 2026-09-10 and broken the
+  // provenance the splice depends on. The old line stays as the hero's source;
+  // the surfaces that DISPLAYED it now show this one.
+  Object.freeze({
+    id: 'one-tool-websites',
+    text: 'No more trying to remember the names of the 1 tool websites.',
+    source: 'no more trying to remember the names of the 1 tool websites',
+  }),
 ])
 
 /** Look one up by id. Throws on an unknown id, the same contract toolRoute()
@@ -137,7 +159,7 @@ export const SURFACE_LINE = Object.freeze({
   llmsSummary: 'build-and-export',
   // The homepage tools section, on the founder's 2026-09-07 instruction that
   // the heading should read "more something like" this line.
-  toolsSectionHeading: 'one-unified-location',
+  toolsSectionHeading: 'one-tool-websites',
   // The homepage export section's heading (HomeExportKit, passed down from
   // Home.jsx). It read "Your system leaves as a document, not a screenshot."
   // — the "not an X" defensive negation the founder threw out by name on the
@@ -149,5 +171,5 @@ export const SURFACE_LINE = Object.freeze({
   // asks for it." over a "No trial clock on Free" reassurance hint — agent copy
   // in the slot where the retired "No credit card required" line used to sit.
   // The founder's own closing claim is the unified-location sentence.
-  plansClosing: 'one-unified-location',
+  plansClosing: 'one-tool-websites',
 })
