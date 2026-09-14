@@ -273,9 +273,43 @@ export function sceneIdsFor(font) {
   return ids
 }
 
-/** The scene ids resolved to `{ id, label, asks }`, in render order. */
-export function scenesFor(font) {
-  return sceneIdsFor(font).map(id => ({ id, ...SCENES[id] }))
+/**
+ * THE SCENES FOLLOW THE JOB, NOT ONLY THE FACE.
+ *
+ * Founder, 2026-09-14: "for the heading family examples popup show it more in
+ * heading uses."
+ *
+ * `SETS` keys on what a family IS — sans, serif, mono — and for a sans that
+ * means `['ui', 'datatable', 'form']`. Correct when you are choosing body copy,
+ * and wrong in a specific way when you are choosing a HEADING: open the dossier
+ * from the "Heading family" picker on a sans and every example is an interface,
+ * a data table and a form. Not one headline. The panel answers a question the
+ * user is not asking.
+ *
+ * So `intent` reorders it. With 'heading', the display scenes lead — a poster,
+ * then the second scene the display branch already picks between (a masthead
+ * for a serif or slab, a title card otherwise, which is the existing rule and
+ * not a new opinion), then `atsmall`, which is the honest counterweight: it
+ * shows where the face stops working and why a body face is still needed.
+ *
+ * The role scenes are KEPT and follow, rather than being replaced. A heading
+ * face still has to survive a label somewhere, and dropping them would answer
+ * one question by deleting another.
+ *
+ * Without `intent` the order is exactly what it was, so every other caller —
+ * the Font Gallery, the body picker — is untouched.
+ */
+export function scenesFor(font, intent) {
+  const base = sceneIdsFor(font)
+  if (intent !== 'heading' || !font) return base.map(id => ({ id, ...SCENES[id] }))
+
+  const shape = familyShape(font)
+  const second = shape === 'serif' || shape === 'slab' ? 'masthead' : 'titlecard'
+  const lead = ['poster', second, 'atsmall']
+
+  // A display face already leads with these; de-duplicate rather than repeat.
+  const ids = [...lead, ...base.filter(id => !lead.includes(id))]
+  return ids.map(id => ({ id, ...SCENES[id] }))
 }
 
 /**

@@ -411,6 +411,7 @@ export default function FontMatcher({ onCopy, toast }) {
 
           <FontPicker
             label="Heading family"
+            intent="heading"
             fonts={catalog}
             value={headingFont}
             onChange={chooseHeading}
