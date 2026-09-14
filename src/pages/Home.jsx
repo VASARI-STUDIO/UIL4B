@@ -311,6 +311,41 @@ const STARTER_TOTALS = { gradients: GALLERY_GRADIENTS.length, palettes: LIBRARY_
  * same descriptions move onto the tools grid.
  */
 const FAMILY_BY_ROUTE = Object.fromEntries(HOME_SATELLITES.map((s) => [s.route, s.family]))
+/* ── The grid reports the inventory instead of asserting six peers ───────────
+ * Founder, 2026-09-14: "the mini tools on the homepage are bad visual
+ * representations." Measured at 1280 the same day: six cards of identical
+ * weight for six unequal things. Colour System Generator has five live tools
+ * and UI Component Builder has none — both of its tools are Soon — and the
+ * grid said they were peers. Equal visual weight across unequal items is on
+ * the anti-slop tell list, and it also produced the dead space: three equal
+ * columns forced the two-tool cards to the height of the four-tool one, so
+ * Icons & Emoji carried a single row of chips above 180px of nothing.
+ *
+ * So the order and the width are COUNTED, never chosen. `liveCount` is the
+ * number of tools in the group that are not Soon; the sort is stable, so
+ * groups that tie keep the order CREATE_GROUPS gives them, and the nav's own
+ * order is untouched. The tier drives one `grid-column` span each:
+ *
+ *   lead   3 or more live   Colour (5), Typography (3)     half width
+ *   core   1 to 2 live      Icons, Imagery, AI Studio (2)  a third
+ *   next   nothing live     UI Component Builder (0)       full width, quiet
+ *
+ * Nothing here is a judgement about which category matters most. Add a tool to
+ * Imagery and its card widens on the next build, because the only input is how
+ * many of its tools a visitor can actually open today.
+ *
+ * The DOM order is the visual order — sorted here rather than with CSS
+ * `order`, which would leave a keyboard user tabbing through the grid in a
+ * sequence that does not match what they see.
+ */
+const liveCount = (group) => group.tools.filter((tool) => !tool.soon).length
+const groupTier = (group) => {
+  const live = liveCount(group)
+  if (live === 0) return 'next'
+  return live >= 3 ? 'lead' : 'core'
+}
+const HOME_TOOL_GROUPS = [...CREATE_GROUPS].sort((a, b) => liveCount(b) - liveCount(a))
+
 
 export default function Home() {
   const rootRef = useRef(null)
@@ -723,8 +758,8 @@ export default function Home() {
             </div>
 
             <ul className="htools-grid" data-reveal-group>
-              {CREATE_GROUPS.map((group) => (
-                <li className="htool" key={group.id} data-hue={group.hue}>
+              {HOME_TOOL_GROUPS.map((group) => (
+                <li className="htool" key={group.id} data-hue={group.hue} data-tier={groupTier(group)}>
                   <Link className="htool-head" to={categoryDestination(group)}>
                     <span className="htool-glyph" aria-hidden="true">
                       <NavIcon id={group.id} />
