@@ -211,6 +211,7 @@ thought. We will not rewrite them, and that is the point.
 | 3 | **The `/discover` line** | Its h1 is the bare word "Discover" with nothing under it |
 | 4 | **A heading for the homepage export section** | You decided 2026-09-14 it needs its own, because the hero above it already opens with the same five words |
 | 5 | **Three nav card lines** — Create, Discover, Learn | They hold an agent's sentence today. The Discover one is also **false**: it advertises Inspiration, which is badged Soon |
+| 6 | **Six homepage tool-card lines** | `src/data/toolTree.js`, the `desc` on each group. All six are an agent's. Two overclaim: *"scales that hold up"* says nothing measurable, and *"frame every asset"* is not true of every format |
 
 ---
 
@@ -520,6 +521,33 @@ questions. Five sentences, none of which an agent should produce:
 The Discover nav card is the one with a cost attached: it advertises
 Inspiration, which is badged Soon, so it currently promises something nobody can
 open.
+
+### The homepage tool cards, measured 2026-09-14
+
+Founder: *"the mini tools on the homepage are bad visual representations, and the
+text areas besides them look AI generated."* Rendered at 1280, three things are
+true and only one of them is copy:
+
+1. **Six cards of identical weight for six unequal things.** Colour System
+   Generator has five live tools; UI Component Builder has none — both of its
+   tools are Soon. Equal visual weight across unequal items is on the
+   anti-slop tell list, and here the grid says the six are peers when they are
+   not.
+2. **The glyphs are category pictograms, not the product.** Each card leads with
+   a small line icon in a tinted rounded square. The mega-menu graphic was
+   changed on the same day for exactly this reason — it now shows a page of a
+   real export instead of a drawing of its parts, and the tool cards still show
+   the drawing.
+3. **The six descriptions are agent-written**, which is row 6 above.
+
+**Checked and NOT a defect**, so it is not re-raised: the Soon badges are
+honest. AI Studio's group badge is off and the two Soon labels inside it belong
+to Image Prompt and Landing-Page Prompt, which genuinely are unbuilt. Alt Text
+and Brand Starter are live and unbadged.
+
+Items 1 and 2 are design work and do not need you. Item 3 is six sentences and
+does.
+
 
 ---
 
