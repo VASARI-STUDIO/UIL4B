@@ -121,3 +121,7 @@ vite.config.trial.mjs
 .tmp-rules-patch-*/
 .tmp-gated-patch-*/
 .tmp-gated-diff-*/
+
+# Impeccable live-mode session state and journal. Durable for the tool,
+# not project source, and it holds absolute machine paths.
+.impeccable/
