@@ -25,18 +25,19 @@ you probably think, and three are blockers.
 | **137 finished artefacts** you did not have to make this week | 37 palettes and 100 gradients, each already a page | `src/data/paletteLibrary.js`, `src/data/gradientGallery.js` |
 | **7 Learn articles that are genuinely good** | An outside SEO audit on 2026-09-14 scored the Learn content **9/10** — "specific, cited, formula-driven, honest about its own limits — genuinely differentiated, not template copy." That is rare and it is the thing most small products cannot fake | `src/data/learnIndex.js`; audit in this session |
 | **A palette already travels in a URL** | `paletteBuilderUrl(colors)` puts the colours in the link, so a shared link opens the real tool with that palette loaded. The hard half of a sharing loop is done | `src/data/paletteGallery.js` |
-| **$7 a month** | Cheap enough that the decision is not a budget decision | `PLAN_LADDER` in `src/config/planLadder.js` |
+| **$4.99 a month** | Cheap enough that the decision is not a budget decision. Note this is what Stripe actually charges today, read live on 2026-09-15 — the approved $7 has not been applied, and the site correctly shows the real number | Live Stripe price `uil4b_pro_monthly`; ladder in `src/config/planLadder.js` |
 
 **Blockers — nothing on this page works until these are cleared**
 
 | | What | Which campaigns it stops |
 |---|---|---|
-| 1 | **The site has not deployed since 2 September.** Everything below is about sending people somewhere | All five |
-| 2 | **No verified sending domain.** `admin@uil4b.com` exists as a mailbox, but until SPF, DKIM and a return path are set up, we cannot email a customer at all | 3 and 5 |
+| 1 | ~~**The site has not deployed since 2 September.**~~ **CLEARED 2026-09-15.** Twenty deploys went out on 14–15 September, all of them succeeded, and the live site is current. There is somewhere to send people now | — |
+| 2 | **No verified sending domain.** `admin@uil4b.com` exists as a mailbox, but until SPF, DKIM and a return path are set up, we cannot email a customer at all. **Re-checked 2026-09-15: still true.** The domain has an SPF record for Titan, your mailbox provider, and no DKIM at all | 3 and 5 |
 | 3 | **A shared link unfurls as its category, not as the thing.** Post a palette in Slack and the preview says "Colour" | 2, badly |
 
-Blockers 1 and 2 are rows 1–8 of `OWNER-ACTIONS.md` and are yours. Blocker 3
-is mine and is inside campaign 2.
+Blocker 2 is row 8 of `OWNER-ACTIONS.md` and is yours. Blocker 3 is mine and is
+inside campaign 2. **Blocker 1 is gone**, so campaigns 1, 2 and 4 are no longer
+waiting on anything but the work itself.
 
 ---
 
@@ -188,8 +189,8 @@ open?" is a question people answer.
 **Where it goes.** This is a post, not a billboard:
 - The design subreddits where "what's in your toolkit" threads already appear,
   answering the question rather than announcing yourself.
-- Hacker News, as a Show HN — but only once blocker 1 is cleared, because a
-  Show HN that 404s is a one-time card you have burnt.
+- Hacker News, as a Show HN. Blocker 1 is cleared, so the link works — but a
+  Show HN is a one-time card, so spend it on a day the tools are at their best.
 - Designer News, Indie Hackers.
 
 **The conversion path:** the page is the landing. Each row links straight into
@@ -388,7 +389,7 @@ the last.
 
 | When | Do | Why then |
 |---|---|---|
-| **First — this week** | Clear blockers 1 and 2: deploy, and verify the sending domain | Nothing below exists for anyone until the site is live, and two campaigns need email |
+| **First — this week** | Clear blocker 2: verify the sending domain. **Blocker 1 cleared itself — the site is live and current** | Two campaigns need email, and nothing else here is waiting on anything now |
 | **Then** | **Campaign 1**, the eleven tool sentences | It is writing, not building, so it does not wait on me. It is also the foundation the other four convert into |
 | **Together** | **Campaigns 2 and 4** | They are the same engineering — per-artefact pages and the share-card fix — and building them apart means building them twice |
 | **Then** | **Campaign 3**, the tabs page | It is the one with a launch moment, so it should fire when the tools behind it are at their best |

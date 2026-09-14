@@ -13,6 +13,21 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### Founder decisions — 2026-09-15
+
+| # | Decision | Ours? |
+|---|---|---|
+| 1 | **Vercel billing stays free.** Verbatim: *"vercel billing is staying free"*. No upgrade off Hobby. `OWNER-ACTIONS.md` row 1 changed from "upgrade or wait for the reset" to living within the Hobby limits, and the constraints are written out there under *What free costs you* | New |
+
+**Why this closed rather than became a task.** The deploy block that made row 1
+urgent had already cleared on its own. Verified 2026-09-15: twenty production
+deploys across 14–15 September, all successful, the newest built from the
+newest commit. The jsDelivr move on 2026-09-06 — which took the 32 MB converter
+engine off our own origin and the deploy from 35 MB to 5.6 MB — is what let
+Hobby cope. The number still worth watching is function storage:
+`src/data/pipeline.js` is 964 KB and grows ~5 KB a commit, and `vercel.json`
+already excludes the 280 KB of `src/data/*.js` the AI function never imports.
+
 ### Founder decisions — 2026-09-14
 
 Taken across one working session with the Director. **Fourteen decisions.**

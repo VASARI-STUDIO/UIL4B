@@ -3,17 +3,24 @@
 **Your to-do list.** Everything here needs your login, your card, or your
 decision. No agent can do any of it.
 
-_Last reviewed: 2026-09-14 — 12 decisions answered by the founder and struck off._
+_Last reviewed: 2026-09-15 — every row below was re-checked against the live
+service that day, not reworded. Three rows changed._
 
 > ## Can we release?
 >
-> **The code is ready. The account is not.**
+> **The site is live and current. The money side is not.**
 >
-> Every gate passes locally. Nothing is failing and nothing is half-built at the
-> release boundary. But the site **cannot deploy**, so none of it is on
-> uil4b.com — and that is a billing page, not an engineering problem.
+> **The deploy block is gone.** Twenty deploys went out on 14–15 September,
+> every one of them succeeded, and the newest is the newest commit — so
+> uil4b.com is now showing what is actually in the repository. That was row 1
+> for weeks. It is finished, and you are staying on the free plan.
 >
-> **If you do exactly one thing today, do row 1.**
+> **What is left is Stripe and email.** You still cannot email a customer, a
+> Pro subscriber still cannot cancel, and the Stripe webhook is pointed at the
+> wrong address so refunds never reach us.
+>
+> **If you do exactly one thing today, do row 2** — your tests have not run
+> since 4 September and it is one billing page.
 >
 > (This replaces `RELEASE-READINESS.md`, retired 2026-09-14. It restated this
 > page's own rows with a second set of numbers, so the two could disagree — and
@@ -25,26 +32,59 @@ _Last reviewed: 2026-09-14 — 12 decisions answered by the founder and struck o
 
 ## ⚡ Do these now, in order
 
-Work straight down. Each row is one place to click. **Stop after row 3 and
-everything else on this page still cannot be finished** — those three unblock
-the rest.
+Work straight down. Each row is one place to click. **Rows 2 and 3 unblock the
+most** — everything after them is money and email plumbing.
+
+A struck row is done — it keeps its number so nothing that points at it breaks.
 
 | # | Do this | Where | Time | If you skip it |
 |---|---|---|---|---|
-| **1** | Check **Fast Origin Transfer** usage. Upgrade off Hobby, or wait for the monthly reset | Vercel → your team → **Usage** | 5 min | **Nothing you have built since 2 September is live.** 100+ merged PRs invisible |
+| **1** | ~~Check Fast Origin Transfer. Upgrade off Hobby~~ **Nothing — you are staying free.** Read *What free costs you* below once | — | 2 min to read | Nothing. The site is deploying again and the free plan is holding |
 | **2** | Clear the failed payment, or raise the spending limit | GitHub → Settings → **Billing** | 5 min | No test has run since 4 September. Every PR reads `UNSTABLE`, which looks like broken code |
 | **3** | Run `npm run apply:gated`, type **y**, then publish the rules | a terminal in this repo | 2 min | **This is what the Firebase "insecure rules" email is about.** Your feedback collection is open to anyone on the internet, and you stay the only person who can approve a submission |
-| **4** | Confirm live prices: **$7** monthly · **$18** quarterly · **$48** yearly | Stripe → Products → UIL4B Pro | 20 min | **The site advertises one price and charges another.** The only item here with a legal edge |
+| **4** | Decide: keep **$4.99 / $39.99**, or raise to the **$7 · $48** you approved | Stripe → Products → UIL4B Pro | 20 min | Nothing breaks and nobody is misled — the site shows the real Stripe price. You just keep selling at the old one |
 | **5** | Edit the product description: **30 AI actions a day, 300 a month** | Stripe → Products → UIL4B Pro | 2 min | Your own product page promises 1,000/day that the app does not give |
-| **6** | Subscribe the webhook to the events we handle | Stripe → Developers → Webhooks | 20 min | Refunds and chargebacks never reach us |
+| **6** | Point the webhook at **`/api/stripe-webhook`**, then add the refund and dispute events | Stripe → Developers → Webhooks | 20 min | **It currently posts to your homepage, so nothing Stripe sends is ever handled.** Refunds and chargebacks vanish |
 | **7** | Switch Storage on, publish `storage.rules` | Firebase Console → Storage | 10 min | Anything that uploads a file cannot work |
 | **8** | Verify a real sending domain (SPF, DKIM, return path) | Resend, or your provider | 20 min + DNS | **We cannot email a customer at all** — no welcome, no failed-payment notice |
-| **9** | Add a retention offer before cancel | Stripe → Customer Portal | 15 min | Every cancel is one click with nothing offered |
+| **9** | Turn the Customer Portal on, then add a retention offer | Stripe → Customer Portal | 15 min | **A Pro subscriber cannot cancel at all.** The portal has never been set up |
 | **10** | Confirm `dylanjacob1100@gmail.com` is the admin account | — | 1 min | Admin and server checks may be keyed to the wrong address |
 | **11** | Restrict the public Google Fonts key | Google Cloud → Credentials | 5 min | The key is public and unrestricted |
-| **12** | Check legacy customers still match to accounts | Stripe → Customers | minutes each | A paying customer can lose access silently |
-| **13** | Make `www.uil4b.com` work (it is broken right now) | Vercel → Domains, then your DNS | 10 min | Anyone who types `www.` gets a page that never loads |
+| **12** | ~~Check legacy customers still match to accounts~~ **Done — checked 2026-09-15** | — | — | — |
+| **13** | ~~Make `www.uil4b.com` work~~ **Done — it works, 2026-09-15** | — | — | — |
 | **14** | Make the Google sign-in box say `uil4b.com` | Firebase + Google Cloud | 20 min | It says `uil4b-357c5.firebaseapp.com`, which looks fake |
+
+### What free costs you — Vercel stays on Hobby
+
+**Your decision, 2026-09-15: Vercel billing stays free.** Good news first —
+the thing that was blocking you fixed itself. Twenty deploys went out on 14–15
+September and every one succeeded, so the "nothing is live since 2 September"
+problem is over. You are still on Hobby and it is coping.
+
+**So what does free actually cost you?** Three limits, and only one of them is
+close to biting.
+
+| The limit | Where you stand | What happens if you hit it |
+|---|---|---|
+| **Fast Origin Transfer** — 10 GB a month | The 32 MB converter engine that ate it now loads from a free public CDN instead of your site. That was 91% of the weight, gone since 2026-09-06 | Deploys get rate-limited again, exactly like 2 September. It clears on the monthly reset |
+| **Function storage** — the deploy carries `src/data/pipeline.js` into the AI function | **This is the one to watch.** It is 964 KB today and grows about 5 KB every commit. `vercel.json` already trims the other 280 KB of files the function does not import | Nothing sudden. It creeps, and one day a deploy is refused |
+| **Deploy retention and history** | Hobby keeps fewer old deploys | You lose the ability to roll back to something old. The last few are always there |
+
+**What we do about it, so you do not have to.** Two things, both ours:
+
+1. The 280 KB of files the AI function never imports are already excluded.
+2. `pipeline.js` is the file that grows. It is our engineering log, and it is
+   only in the deploy because the admin backlog view reads it. Shrinking it is
+   a product decision we will bring you as a proposal, not a surprise.
+
+**If you do nothing.** Nothing, for now. Free is genuinely working. The number
+that creeps is function storage, and we are the ones watching it — if it gets
+close we will tell you before Vercel does.
+
+**One thing we still cannot see.** Your actual Vercel usage page. Only you can
+open that, so if a deploy ever fails again, that is the first place to look.
+
+---
 
 ### Why Firebase emailed you about insecure rules
 
@@ -81,63 +121,35 @@ email will keep coming until you publish — see the line below.
 **After row 3 you must also:** publish the new rules (Firebase console, or
 `firebase deploy --only firestore:rules`) **and deploy the site** —
 `api/verify-admin.js` is a serverless function and does nothing until it ships.
-That deploy is waiting on row 1.
+**Deploys work again**, so that half is no longer blocked: push the change and
+it goes out on its own.
 
 ---
 
 ## 🌐 Your web address and the sign-in box
 
-Two things people see before they ever use the product. Both look wrong today.
-Neither is hard to fix.
+One of these is fixed. The other still looks wrong to every new visitor.
 
 ---
 
-### 13 · `www.uil4b.com` does not load
+### 13 · ~~`www.uil4b.com` does not load~~ — FIXED, and it went the other way round
 
-**What is wrong.** Your site works at `uil4b.com`. It does **not** work at
-`www.uil4b.com`. If someone types the `www.` version, or an old link uses it,
-they wait about 20 seconds and then get nothing.
+**Checked 2026-09-15 and it works.** `www.uil4b.com` answers **200 OK**
+straight away. Somebody — you, last night — added it in Vercel and pointed the
+DNS at a real Vercel server instead of the nameserver it used to point at.
 
-**How we know.** We timed both on 2026-09-13. `uil4b.com` answered in 0.9
-seconds. `www.uil4b.com` timed out twice, 21 seconds each time.
+**One thing changed that you should know about.** `www` is now the **main**
+address, not the redirect. Type `uil4b.com` and you get sent to
+`www.uil4b.com`, which is the opposite of what this page told you to set up.
 
-**Why it happens.** Two reasons, and you need to fix both:
+**That is fine and nothing is broken.** Both addresses work, nobody sees an
+error, and every link we publish still says `uil4b.com` — which now costs one
+extra hop before the page loads. Not worth undoing.
 
-1. Vercel has never been told that `www.uil4b.com` belongs to your project. It
-   only knows about `uil4b.com`.
-2. Your DNS has `www` pointed at the wrong address. It points at
-   `ns1.vercel-dns.com`. That is a **nameserver** — a signpost that says where
-   to ask. It is not a web server, so nothing answers. It needs to point at
-   `cname.vercel-dns.com` instead, which is the machine that actually serves
-   pages.
-
-Think of it like a phone book that lists the phone book's own address instead
-of the person's number.
-
-**Do this.**
-
-1. Go to **Vercel → your project → Settings → Domains**.
-2. Click **Add**, type `www.uil4b.com`, and add it.
-3. Vercel will ask what you want it to do. Choose **Redirect to `uil4b.com`**.
-   That sends `www` visitors to the working address automatically.
-4. Vercel will then show you the DNS record it wants. It will be a **CNAME**
-   record for `www` pointing at **`cname.vercel-dns.com`**.
-5. Go to wherever you bought the domain, find the DNS settings, and change the
-   `www` record to match what Vercel showed you. Delete the old one pointing at
-   `ns1.vercel-dns.com`.
-6. Wait. DNS changes take anywhere from a few minutes to a few hours.
-7. Test it: open `https://www.uil4b.com` in a private window. It should jump
-   straight to `uil4b.com`.
-
-**Time.** About 10 minutes of clicking, then waiting for DNS.
-
-**If you do nothing.** Anyone who types `www.` — and plenty of people still do —
-sees a broken page. So does any old link or business card with `www.` on it.
-
-**One thing we already did.** Every link the site prints about itself now uses
-`uil4b.com`, not `www.` A test fails the build if the `www.` version ever
-sneaks back in. So this is about visitors who type it themselves, not about
-links we publish.
+**If you would rather have it the other way** (plain `uil4b.com` as the main
+address, `www` redirecting to it), it is the same screen: Vercel → Settings →
+Domains, and set `uil4b.com` as the primary. Say the word and we will tell you
+exactly what to click. **Nothing bad happens if you leave it.**
 
 ---
 
@@ -161,6 +173,10 @@ you are asking for their account.
 sign-in. Right now that is the Firebase one, because nobody has told it to use
 yours. You can see it in the code at `src/utils/firebase.js` line 16.
 
+**Still open, checked 2026-09-15.** `auth.uil4b.com` does not exist yet — we
+asked the internet for it and got "no such address". So none of the steps
+below has been done.
+
 **Do this.** Three steps, in this order. Do not skip step 1.
 
 **Step 1 — pick an address for sign-in.** Use `auth.uil4b.com`. It is a
@@ -172,7 +188,7 @@ whole point.
 
 1. **Firebase Console → Hosting → Add custom domain.**
 2. Enter `auth.uil4b.com` and follow the steps it gives you. It will ask you to
-   add a DNS record, same as step 13 above.
+   add a DNS record, the same kind you just added for `www`.
 3. Then go to **Firebase Console → Authentication → Settings → Authorized
    domains** and make sure both `uil4b.com` and `auth.uil4b.com` are listed.
 
@@ -225,6 +241,15 @@ in `src/config/planLadder.js` is still `null`, and that is deliberate: flipping
 it puts quarterly in front of buyers, and today there is no Stripe price behind
 it, so the buy button would fail.
 
+**Checked in your live Stripe account, 2026-09-15: the quarterly price is not
+there yet.** We read every price on UIL4B Pro. There are two — monthly and
+yearly — and neither is a three-month one. So **step 5 below has definitely not
+been done.**
+
+**What we could not check: test mode.** Our Stripe access only reaches your
+live account, so if you already made the test-mode price in steps 2 and 3, we
+cannot see it. Tell us and we will pick up at step 4.
+
 You chose test mode first. Do these in order.
 
 | # | Do this | Where | Why it is in this order |
@@ -236,9 +261,11 @@ You chose test mode first. Do these in order.
 | 5 | Repeat steps 2 and 3 in **Live mode** | Stripe dashboard | Only after the test-mode checkout passed |
 | 6 | Tell me again, and I flip the one field | — | Quarterly goes on sale |
 
-**What is already safe.** Until the price exists, choosing quarterly cannot
-charge anybody — the server finds no price and answers "the quarterly price is
-temporarily unavailable. No payment session was created."
+**What is already safe, and we checked the live site says so.** Until the price
+exists, choosing quarterly cannot charge anybody — the server finds no price
+and answers "the quarterly price is temporarily unavailable. No payment session
+was created." Asked live on 2026-09-15, the site reports quarterly as
+unavailable in every currency, which is the right answer.
 
 **The trap this closed.** The code that creates Stripe prices was sending the
 recurrence but not the *count*. Stripe reads that as "every month", so a
@@ -258,6 +285,30 @@ Not a task and not a sentence — a taste call, and it is yours.
 | | The question | The options |
 |---|---|---|
 | 1 | **The small square icons on the homepage tool cards.** You said the mini tools were bad visual representations. The card sizes now carry that meaning instead, which leaves the 38px pictogram doing nothing | **Delete them** (my recommendation) or **keep them**. Full reasoning under *The homepage tool cards* further down. Nothing breaks either way |
+
+---
+
+## ✅ Done and checked 2026-09-15 — three rows came off this page
+
+Each of these was checked against the real service on 2026-09-15, not taken on
+anyone's word.
+
+| Row | What changed | How we know |
+|---|---|---|
+| **1** | **The deploy block is over, and Vercel stays free.** Nothing to upgrade | Twenty production deploys on 14–15 September, every one of them succeeded, and the newest carries the newest commit. The live page was last rebuilt at 22:35 on 14 September |
+| **12** | **Legacy customers are fine. Nothing to back-fill** | Read your live Stripe customers. There are two, both already carry the `firebaseUid` we match accounts by, and there are no subscriptions at all — so no one can lose access |
+| **13** | **`www.uil4b.com` works** | It answers 200 OK and its DNS now points at a real Vercel server. Note the direction flipped — see row 13 above |
+
+**Two things this turned up that are worse than they looked**, and both are
+still on your list:
+
+- **Row 6 — the Stripe webhook posts to `https://uil4b.com/`**, your homepage,
+  not to `/api/stripe-webhook`. It is switched on and subscribed to ten events,
+  so it looks healthy in the dashboard, and **not one of those events has ever
+  reached our code.** Refunds and disputes are not even in the list.
+- **Row 9 — your Customer Portal has never been set up at all.** We asked
+  Stripe for its settings and it has none. So this is not "cancelling customers
+  get no offer" — **a Pro subscriber has no way to cancel**.
 
 ---
 
@@ -299,44 +350,38 @@ read it to do the work.
 
 ---
 
-# 1 · Stopped right now — a deploy block, a bill and one command
+# 1 · Stopped right now — a bill and one command
 
-These three are not engineering problems and no amount of waiting fixes any of
-them. **They are in order of how much each one unblocks.**
+The deploy block that used to head this section is gone. **Two things are left
+here and neither is an engineering problem.**
 
-## 1.1 · Nothing is live. Vercel has not deployed since 2 September.
+## 1.1 · ~~Nothing is live~~ — CLEARED. The site deploys again, and you are staying free.
 
-**Do.** Vercel → your team → **Usage**. Look at two numbers: **Fast Origin
-Transfer** and deployments. If Fast Origin Transfer is at or near its limit,
-either upgrade off Hobby or wait for the monthly reset. Tell us which you chose.
+**Nothing to do.** This was the biggest thing on the page for two weeks and it
+is finished.
 
-**Time.** A few minutes to upgrade; up to a month if you wait for the reset.
+**What we checked, 2026-09-15.** Twenty production deploys went out across 14
+and 15 September. Every single one succeeded. The newest one is built from the
+newest commit in the repository, and the live page was last rebuilt at 22:35 on
+14 September — so what a visitor sees now is genuinely current, not the 2
+September build.
 
-**Why.** This is the single biggest thing on the page. **Every change merged
-since 2 September is sitting on `main` and has never reached uil4b.com** — well
-over a hundred pull requests now, and it grows every day. Vercel first answered
-*"Deployment rate limited — retry in 24 hours"*, and that message on its own
-suggested waiting would fix it. Waiting has not fixed it.
+**Why it cleared.** The video/image converter's engine is a single 32 MB file
+that used to be served from our own site — 91% of everything we deployed.
+Hobby includes **10 GB a month** of that traffic and the file got a new name on
+every deploy, so every region re-fetched all 32 MB each time. **About 300
+visitors was the entire month's allowance, from one file.** That engine now
+loads from a free public CDN instead (jsDelivr, pinned to one exact version).
+It shipped 2026-09-06 and took the deploy from 35 MB to **5.6 MB**. Once the
+old traffic aged out, deploys started working again on their own.
 
-**The cause we found, in plain terms.** The video/image converter's engine is a
-single 32 MB file, and it was being served from our own site. It is 91% of
-everything we deploy. Vercel's Hobby plan includes **10 GB a month** of that kind
-of traffic, and — because the file gets a new name on every deploy — every
-region has to fetch all 32 MB again after each one. **About 300 visitors is the
-entire month's allowance, from one file.**
+**Your decision, 2026-09-15: Vercel billing stays free.** That is the right
+call and nothing on this page needs you to change it. What free constrains, and
+the one number that still creeps, is in *What free costs you* near the top.
 
-**Our half is done and is not waiting on you.** That 32 MB engine now loads
-from a free public CDN (jsDelivr, pinned to one exact version), which takes
-91% of the weight off your bill permanently. It shipped on 2026-09-06 and
-the deploy went from 35 MB to **5.6 MB**. It cannot reach the live site
-until the block below clears, which is the whole point of this item.
-
-**So your part is only the dashboard.** Check the Usage page and decide upgrade
-versus wait. **We have not seen your Vercel usage numbers — only you can.**
-
-**If you do nothing.** The live site keeps serving the 2 September build. Every
-fix in the changelog since then is invisible to real visitors, so none of it
-counts yet — and our fix, when it merges, cannot deploy either.
+**The one thing we still cannot see** is your actual Vercel usage page. If a
+deploy ever fails again, that is the first place to look — and tell us, because
+the cause will almost certainly be ours to fix, not yours to pay for.
 
 ## 1.2 · GitHub is running no tests at all. Pay the bill.
 
@@ -347,8 +392,14 @@ spending limit.
 
 **Why.** GitHub's own message, word for word: *"The job was not started because
 recent account payments have failed or your spending limit needs to be
-increased."* Every automated test run in this repository has died in 1–3 seconds
-since 2026-09-04 — on branches **and on `main`**.
+increased. Please check the 'Billing & plans' section in your settings."* Every
+automated test run in this repository has died in 1–3 seconds since 2026-09-04 —
+on branches **and on `main`**.
+
+**Re-checked 2026-09-15 and it is still broken.** We read the last ten runs.
+All ten failed, the most recent at 22:23 on 14 September, and it died in **two
+seconds** carrying that exact message. **This is now the oldest unfixed thing
+on the page.**
 
 **The trap, and it matters.** GitHub now shows our pull requests as
 **UNSTABLE**. That word looks like "this code is broken". It is not. It means
@@ -434,8 +485,8 @@ the repository and not in front of your users: publish them from the Firebase
 console, or run `firebase deploy --only firestore:rules`. Second, commit and
 deploy the site — `api/verify-admin.js` is a serverless function, so until it
 is deployed the moderator role cannot be granted from a file that only exists
-on your laptop. Until the deploy block in §1.1 is cleared, that second step is
-waiting on Vercel.
+on your laptop. **That second step is no longer blocked** — deploys work again,
+so pushing the change is enough to ship it.
 
 **If it stops and says a change no longer fits.** Tell us. It means the file
 moved after the change was reviewed, and it needs an engineer to regenerate the
@@ -722,49 +773,82 @@ without it.
 
 **Every item here has a code side and a dashboard side.** The code side is
 stated on each one and every code side below is **done** — there is no item
-on this list waiting on us. We cannot see your dashboards, so we cannot tick
-any of these for you; that is why none of them has moved to §5.
+on this list waiting on us.
 
-## 4.1 · P0 — Stripe prices do not match the prices on screen
+**Re-checked against the live services on 2026-09-15.** We can now read your
+Stripe account directly, so the Stripe items below say what is actually there
+rather than what we assumed. One of them (4.7) closed as a result, one got
+better (4.1 is no longer a legal risk) and two got worse (4.2 and 4.6).
+Firebase and Google Cloud we still cannot see.
 
-**Do.** Stripe Dashboard → Products → **UIL4B Pro** → create or confirm live
-prices at **$7 monthly · $18 quarterly · $48 yearly**.
+## 4.1 · P1 — Stripe is still on the old prices. Nobody is being misled.
 
-**Time.** 15–30 minutes, plus a decision about existing customers.
+**This item used to say the site advertises one price and charges another, and
+that is no longer true.** It was the one thing on this page with a legal edge.
+It does not have one any more. Here is what we actually read on 2026-09-15.
 
-**Why.** You approved this ladder on 2026-08-20. The website now shows those
-prices. **Stripe still charges whatever its own price objects say** — the repo
-only holds the display. **Yearly is a price rise, $39.99 → $48**; decide what
-happens to existing yearly subscribers before you publish it.
+**What is live in your Stripe account right now:**
 
-Quarterly cannot be sold until four small code changes ship alongside it; that
-part is our job, not yours, and it is in the queue.
+| Plan | What Stripe charges | What you approved |
+|---|---|---|
+| Monthly | **$4.99** | $7 |
+| Quarterly | *does not exist* | $18 |
+| Yearly | **$39.99** | $48 |
 
-**Code side: done.** The site reads every amount from `src/config/planLadder.js`.
-Quarterly is the exception and it is ours, not yours: it has no Stripe price and
-no checkout entry, so it cannot be sold yet.
+**And what does the website show?** We asked the live site, and it shows
+**$4.99 and $39.99** — the real Stripe numbers. It is built to always prefer
+the price Stripe will actually charge over the one written in the code, so the
+two can never disagree in front of a customer. That is why this is no longer a
+legal problem.
 
-**If you do nothing.** The site advertises one price and charges another. That is
-the only item on this page with a legal edge to it.
+**So the real question is just: do you want the price rise or not?**
 
-## 4.2 · P0 — Stripe webhook is not subscribed to the events we handle
+- **Leave it.** You keep selling at $4.99 and $39.99. Nothing breaks. You earn
+  less than you decided to.
+- **Raise it** to the $7 and $48 you approved on 2026-08-20. Yearly is the big
+  one, $39.99 → $48, so decide what happens to existing yearly subscribers
+  first — though right now **you have none**, which makes this the cheapest it
+  will ever be to do.
 
-**Do.** Stripe → Developers → Webhooks → `/api/stripe-webhook`. Subscribe to:
-`checkout.session.completed`, `checkout.session.async_payment_succeeded`,
-`charge.refunded`, all three `charge.dispute.*`, subscription
-create/update/delete, invoice paid/failed, and trial-will-end. Send a test event
-for each and confirm HTTP 200.
+**Time.** 15–30 minutes.
+
+**Code side: done.** Every amount on the site comes from Stripe when Stripe has
+one, and from `src/config/planLadder.js` only as a fallback.
+
+**If you do nothing.** You keep charging the old prices. That is a revenue
+decision now, not a risk.
+
+**Quarterly is separate** and it is the section near the top of this page.
+
+## 4.2 · P0 — The Stripe webhook is pointed at your homepage
+
+**We read your live webhook on 2026-09-15 and found something worse than this
+item used to say.** The webhook exists, it is switched on, and it is subscribed
+to ten events — so in the dashboard it looks completely healthy.
+
+**It is pointed at `https://uil4b.com/`.** That is your homepage. The code that
+handles these events lives at `/api/stripe-webhook`. **So every event Stripe
+has ever sent has been delivered to a web page that ignores it.** Nothing
+errors. Nothing is retried. It just goes nowhere.
+
+**Do. Two fixes on one screen** — Stripe → Developers → Webhooks → open the
+endpoint called *UI L4B App*:
+
+1. **Change the URL** to `https://uil4b.com/api/stripe-webhook`. This is the
+   important one.
+2. **Add the four missing events:** `charge.refunded` and all three
+   `charge.dispute.*`. The other ten are already subscribed and correct.
+
+Then send a test event and confirm it comes back **HTTP 200**.
 
 **Time.** 20 minutes.
 
-**Why.** Our code handles all of these; Stripe is not sending them. Refunds and
-chargebacks in particular are handled in code and never arrive.
+**Code side: done.** Every event listed has a handler in
+`api/stripe-webhook.js`, and they have never been reached.
 
-**Code side: done.** Every event listed above has a handler in
-`api/stripe-webhook.js`.
-
-**If you do nothing.** Do not create a lifetime price. A one-off payment we never
-hear about is a customer who paid and got nothing.
+**If you do nothing.** A customer can pay, cancel, be refunded, or charge back,
+and we never find out. Do not create a lifetime price — a one-off payment we
+never hear about is a customer who paid and got nothing.
 
 ## 4.3 · P0 — Firebase Storage is not switched on
 
@@ -778,6 +862,13 @@ file can work until it exists — including the community gallery in §3.8.
 
 **Code side: done.** `storage.rules` is written and the emulator suite covers
 it; it just has nowhere to be published to until Storage exists.
+
+**Checked 2026-09-15, and this one is not certain.** We asked both of the
+addresses your storage bucket would live at and got "not found" from each,
+which is what an un-created bucket answers. A bucket that exists but refuses
+strangers answers differently. **So this is strong evidence Storage is still
+off, not proof** — only the Firebase console can settle it, and we cannot open
+it.
 
 **If you do nothing.** Community media stays unbuildable.
 
@@ -847,7 +938,14 @@ have recorded a PASS for a check that never ran — which is the silent failover
 itself, written into the runbook. **Presence is not proof of path.** The
 `provider` field on a real response is the only thing that closes this.
 
-## 4.6 · P1 — Stripe Customer Portal has no retention offer
+## 4.6 · P0 — The Stripe Customer Portal has never been set up
+
+**Checked 2026-09-15: your Customer Portal has no settings at all.** We asked
+Stripe for them and it returned nothing — not a portal without a retention
+offer, a portal that was never turned on. **So a Pro subscriber has no way to
+cancel**, which is why "Cancel any time" had to come off `/plans`.
+
+This was filed as P1 "no retention offer". It is P0 and it is bigger than that.
 
 **Do.** Two halves, and the item is not finished without both.
 
@@ -869,16 +967,17 @@ to cancel at all**, because the portal has no cancellation flow to show them.
 That is why “Cancel any time” had to be taken off `/plans`: we could not
 honour it. Everything on the code side is written and defensive already.
 
-## 4.7 · P1 — Check the legacy customers can still be matched to accounts
+## 4.7 · ~~P1 — Check the legacy customers can still be matched to accounts~~ — DONE, checked 2026-09-15
 
-**Do.** Stripe → Customers. For each legacy paying customer, confirm
-`metadata.firebaseUid` exists. Back-fill only genuinely missing values.
-**Investigate — do not overwrite — a mismatched one.**
+**Nothing to do.** We read your live Stripe customers. There are **two**, and
+both already carry the `firebaseUid` we match accounts by. Nothing is missing,
+so there is nothing to back-fill and nothing to investigate.
 
-**Time.** Depends on how many; minutes each.
+**There are also no subscriptions at all** — not active, not cancelled, none.
+So nobody can lose Pro access at renewal, because nobody is renewing.
 
-**If you do nothing.** A paying customer can lose their Pro access at renewal
-because we cannot tell which account is theirs.
+**Worth re-running this** once you genuinely have paying customers. It is a
+two-minute read and we can do it for you.
 
 ## 4.8 · P1 — Confirm your login email
 
@@ -919,6 +1018,13 @@ the address to send from.
 
 **Time.** 20 minutes plus DNS propagation.
 
+**Checked 2026-09-15 — half a step exists, and it is the wrong half.** Your
+domain has an SPF record, but it only names **Titan**, your mailbox provider:
+`v=spf1 include:spf.titan.email ~all`. That is what lets you *receive* mail at
+`admin@uil4b.com`. There is **no DKIM record at all** — we looked for Resend's
+and for Titan's and neither exists. So nothing has been done toward letting the
+product *send*.
+
 **Why.** **The product sends zero emails to users.** Not a welcome, not a quota
 warning, not a trial-ending reminder, not a failed-payment notice, not a
 cancellation confirmation. The only mail we send is inbound to you, from
@@ -947,6 +1053,10 @@ to the UIL4B and preview referrers, and to the Web Fonts API only.
 quota with it.
 
 ## 4.12 · P1 — Your Stripe product still promises 1,000 AI actions a day
+
+**Confirmed still wrong on 2026-09-15.** We read the live product description
+and it says, word for word: *"1,000 AI generations per day, higher-quality
+models, cross-device project sync, and advanced design-system exports."*
 
 **Do.** One of two, and we recommend the first:
 
@@ -997,15 +1107,26 @@ it is in writing, from us.
 - **The hero headline.** Approved 2026-09-10 and pinned by a test — §3.12.
 - **The hero shape exploration.** Retired 2026-09-07 — §3.11. The `?hero=`
   sketches are deleted; there is nothing to go back and look at.
+- **The site deploys again, and it is current.** Twenty successful production
+  deploys on 14–15 September; the newest is the newest commit. Checked
+  2026-09-15 — §1.1.
+- **`www.uil4b.com` works.** Answers 200 OK; DNS points at a real Vercel
+  server. Checked 2026-09-15 — row 13.
+- **Legacy Stripe customers are correctly matched.** Both of them. Checked
+  2026-09-15 — §4.7.
 
 That is the whole list of confirmations. It does **not** cover Storage, the
 admin flag, analytics accuracy, a working AI generation, or any live payment or
 login flow. All of those are open above.
 
-**Nothing in §4 has moved here, and that is deliberate.** Every one of those
-items is finished on our side and finished nowhere else, and we have no way to
-see a Stripe or Firebase dashboard. Ticking one off on your word is how §4.4
-came to say something false for weeks.
+**One item moved here on 2026-09-15, and only because we could read it
+ourselves.** §4.7, the legacy-customer check, closed on a direct read of your
+live Stripe account — two customers, both correctly matched. That is evidence,
+not a tick on somebody's word, which is the distinction that matters: ticking
+one off on your word is how §4.4 came to say something false for weeks.
+
+**Everything else in §4 stays open.** The Firebase and Google Cloud items in
+particular we still cannot see at all.
 
 ---
 
