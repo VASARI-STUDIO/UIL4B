@@ -1,4 +1,4 @@
-# Marketing — five campaigns, and what each one needs
+# Marketing — six campaigns, and what each one needs
 
 > Written for Dylan, 2026-09-15. Everything here is measured off the repository
 > on that date, not guessed. Where a number appears, the place it was counted
@@ -290,6 +290,95 @@ it instantly and it is the fastest way to become the thing you have been calling
 AI slop all month. `docs/reference/growth-persuasion.md` is the longer version
 of this rule.
 
+------
+
+# 6 · Email — the one to run once people are signing up
+
+**Standalone on purpose.** You said you would look at this once there are enough
+sign-ins, and that is the right order: an email campaign with no list is a
+project with no audience. It is here so that the day the list exists, the plan
+already does.
+
+**Why it goes last and still matters most.** Of every channel in this document,
+email to an existing list converts best by a wide margin — the benchmark
+material puts targeted email at **5–20%+** against organic search at about
+**2.7%** and paid social at **1–6%**. The reason is not the medium. It is that
+the person already knows who you are, so the message lands on someone with
+context instead of a stranger.
+
+**The blocker is still blocker 2.** `admin@uil4b.com` is a mailbox, not a
+verified sending domain. Until SPF, DKIM and a return path exist, we cannot send
+to a customer at all, and every send below is theoretical. The templates are
+already written and sitting in `brand/email/`.
+
+**What to send, in the order it earns the right to be sent:**
+
+1. **The one triggered email that is not marketing.** Someone signs up, so tell
+   them what they now have and what the one thing worth doing first is. It is
+   the highest-open message you will ever send and most products waste it on a
+   greeting.
+2. **The trial ending.** Quarterly and yearly now carry 7 free days. Two
+   messages — one partway through, one the day before — saying what they built
+   during the trial. Not "your trial is ending": *what they made*, which the
+   product knows and a generic reminder does not.
+3. **The drop from Pro to free.** Whoever finishes a trial without subscribing
+   is the warmest audience the product will ever have, and the moment they lose
+   a limit is the moment the value becomes concrete.
+4. **Only then, anything broadcast.** A short note when something real shipped.
+   Not a newsletter, not a digest, not "5 tips" — a changelog with a human
+   sentence on top, sent when there is something to say and not on a schedule.
+
+**What you write:** all of it. Every one of these is a founder talking to
+someone who signed up to a product he built alone, and that is the only voice
+that makes a small product's email worth opening.
+
+**What gets built:** the triggers, the send, the unsubscribe, and the rule that
+nobody gets two of these in one day.
+
+**How you know it worked:** open rate tells you the subject line worked. What
+you actually measure is whether people who got the trial-ending pair subscribe
+at a higher rate than people who did not.
+
+**Never:** buying a list, "we noticed you didn't...", fake personal-looking
+plain-text messages that are actually a broadcast, or a re-engagement campaign
+to people who never engaged in the first place.
+
+---
+
+# What the conversion research says, and what I did with it
+
+You sent a lot of CRO material on 2026-09-15. It is digested into the wiki as
+durable prose — `principle-conversion-patterns` gained a benchmark section and
+`principle-ai-search-visibility` is new — rather than kept as links that can be
+edited or deleted. Two things are worth repeating here.
+
+**The one finding that changes this plan.** All three of the agency scenarios
+you sent describe the same fix: traffic with a specific intent was landing on a
+page that answered a broader question, and sending it to a dedicated page moved
+the rate several times over — 0.8% to 3.2%, 0.9% to 2.7%, 1.1% to 4.8%. That is
+exactly the argument for campaign 1 and campaign 3, arrived at independently.
+**The homepage is the wrong landing page for someone who searched for a contrast
+checker**, and we already have 14 pages that are the right one.
+
+**The numbers to be careful with.** "Personalised CTAs convert 202% better" and
+"social proof beside the CTA lifts 68%" arrive with no sample size, no date and
+no method. The single-CTA figure — 13.5% against 10.5% — is correlational:
+pages built around one action differ from multi-CTA pages in far more than the
+button count. They are worth testing on a specific page; they are not worth
+designing around as if they were established.
+
+**One of your notes contradicts something the wiki already held.** You said
+three seconds is the window in which someone judges a bad experience. The wiki's
+existing position is that no verified universal three-second rule exists. I kept
+both rather than overwriting either: the part nobody disputes is that first
+impressions form fast and cost a lot to reverse, and where speed *does* have
+measured support it is as load time, not as an attention budget.
+
+**Acting on the speed material is free and worth doing.** Sub-two-second loads
+and the bounce curve are the least contested figures in everything you sent, and
+page speed is the one thing on this page that needs neither your words nor a
+Stripe price. That belongs in the engineering queue, not in a campaign.
+
 ---
 
 # The order to do them in
@@ -304,6 +393,7 @@ the last.
 | **Together** | **Campaigns 2 and 4** | They are the same engineering — per-artefact pages and the share-card fix — and building them apart means building them twice |
 | **Then** | **Campaign 3**, the tabs page | It is the one with a launch moment, so it should fire when the tools behind it are at their best |
 | **Last** | **Campaign 5** | It needs people already using the product. Running it first would be asking strangers to fund a roadmap they have no reason to care about |
+| **When the list exists** | **Campaign 6**, email | Your own call, and the right one — it is the best-converting channel in this document and the only one that cannot start from zero |
 
 ---
 

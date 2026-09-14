@@ -215,6 +215,42 @@ thought. We will not rewrite them, and that is the point.
 
 ---
 
+---
+
+## 💳 Turning quarterly on — the one thing that is built and waiting on you
+
+You asked on 2026-09-15 for monthly, quarterly and yearly, with the free trial
+on quarterly and yearly only. **All of the code is done and pushed.** One field
+in `src/config/planLadder.js` is still `null`, and that is deliberate: flipping
+it puts quarterly in front of buyers, and today there is no Stripe price behind
+it, so the buy button would fail.
+
+You chose test mode first. Do these in order.
+
+| # | Do this | Where | Why it is in this order |
+|---|---|---|---|
+| 1 | Switch Stripe to **Test mode** (the toggle, top right) | Stripe dashboard | Everything below is reversible while this is on |
+| 2 | Create a price on the **UIL4B Pro** product: **$18.00 USD**, Recurring, **every 3 months** | Stripe → Products → UIL4B Pro → Add price | **Check the "every 3 months" twice.** If it says "monthly" you have made an $18-a-month price, which is three times what you meant to charge |
+| 3 | Set its **lookup key** to `uil4b_pro_quarterly` | same screen, under "Advanced" | This is the name the code looks it up by. A different key means the code cannot find it |
+| 4 | Tell me it is done | — | I run a full test-mode checkout on quarterly and on yearly, and confirm the trial is 7 days and the first charge is 3 months out |
+| 5 | Repeat steps 2 and 3 in **Live mode** | Stripe dashboard | Only after the test-mode checkout passed |
+| 6 | Tell me again, and I flip the one field | — | Quarterly goes on sale |
+
+**What is already safe.** Until the price exists, choosing quarterly cannot
+charge anybody — the server finds no price and answers "the quarterly price is
+temporarily unavailable. No payment session was created."
+
+**The trap this closed.** The code that creates Stripe prices was sending the
+recurrence but not the *count*. Stripe reads that as "every month", so a
+quarterly price created by the old code would have billed **$18 every month**.
+Nothing would have errored; the first you would have known is a customer's
+statement. That is fixed, and a test fails if anyone undoes it.
+
+**What the trial is now.** Monthly bills the day you subscribe and the page says
+so. Quarterly and yearly each get 7 free days. The sentence the customer reads
+and the number Stripe is told are now the same value read from the same table,
+so the page cannot promise a trial the server will not honour.
+
 ## 🤔 One thing to decide
 
 Not a task and not a sentence — a taste call, and it is yours.
