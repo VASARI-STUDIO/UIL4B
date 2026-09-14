@@ -4269,7 +4269,6 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
 
 .hstep{max-width:54ch;transition:opacity var(--dur-3) var(--ease-standard)}
 .hstep-num{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
-.hstep-num-sep{opacity:.5}
 .hstep-title{margin-top:var(--s-3);font-size:clamp(26px,2.8vw,36px);font-weight:800;letter-spacing:-.03em;line-height:1.08;color:var(--t0);text-wrap:balance}
 .hstep-body{margin-top:var(--s-3);font-size:var(--fs-body);line-height:1.65;color:var(--t2);text-wrap:pretty}
 .hstep-points{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:var(--s-4)}
@@ -4321,8 +4320,6 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
    itself. */
 .htool-head{border-radius:var(--radius-xs)}
 .htool-head:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.htool-glyph{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--hue,var(--accent-strong))}
-.htool-glyph svg{width:19px;height:19px}
 .htool-title{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:var(--t0)}
 .htool-desc{margin-top:12px;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
 .htool-links{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--s-4)}
@@ -7851,7 +7848,28 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 /* The wall. Full width beneath the teased row (Savee), not a per-card button —
    one focus stop for the whole locked group. */
-.lockt-cta{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:22px;padding:18px 20px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-l);background:var(--cbg)}
+/* THE 3px ACCENT STRIPE IS OFF THE PAYWALL.
+
+   It was `border-left:3px solid var(--accent)` on a 14px-radius panel. Two
+   things were wrong with it and only one is taste.
+
+   The taste half: a thick coloured border on one side of a rounded card is
+   the single most recognisable tell of a generated interface, and it fights
+   the radius it sits inside. Impeccable's detector flags it by name and the
+   comment above this rule never argued for it — it argued the layout.
+
+   The half that is not taste: .bill-banner wears the same stripe, and THERE
+   it carries state, going --t3 to --err when a payment is urgent. Two panels
+   in the same product wearing one treatment, where it means something on one
+   and nothing on the other, is what anti-slop-quality-bar.md calls similar
+   controls changing treatment without a semantic reason. The stripe belongs
+   to the banner that uses it.
+
+   Presence comes from the GROUND instead, which is what .plb-harm-opt--on
+   already does after that component dropped its own stripe: a tinted fill and
+   a border mixed toward the accent, so the whole panel reads as accented
+   rather than one edge of it. */
+.lockt-cta{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:22px;padding:18px 20px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));border-radius:var(--radius-l);background:var(--accent-bg)}
 .lockt-cta-head{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--t0)}
 .lockt-cta-body{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .lockt-cta-btn{white-space:nowrap;flex:0 0 auto}

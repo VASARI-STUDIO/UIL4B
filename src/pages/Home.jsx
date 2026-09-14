@@ -80,7 +80,7 @@ const STEPS = [
     kicker: 'GRADIENT',
     title: 'Tune a gradient and take the CSS.',
     body: 'Two stops and an angle, previewed live. A half-typed hex never destroys the preview — the field tells you what to correct and keeps the last valid value.',
-    points: ['Live preview from real CSS', 'Invalid input explains itself', 'Copy the declaration, not a screenshot'],
+    points: ['Live preview from real CSS', 'Invalid input explains itself', 'Copy the declaration'],
     tool: 'gradient',
     cta: { label: 'Open Gradient Generator' },
   },
@@ -681,11 +681,23 @@ export default function Home() {
                     data-step={step.tab}
                     data-active={index === activeStep}
                   >
-                    <p className="hstep-num">
-                      <span>{step.num}</span>
-                      <span className="hstep-num-sep" aria-hidden="true">/</span>
-                      <span>{step.kicker}</span>
-                    </p>
+                    {/* THE NUMBER STAYS, THE TAXONOMY GOES.
+
+                        This was `02 / GRADIENT` directly above an h3 reading
+                        "Tune a gradient and take the CSS." The category was a
+                        second label for a thing the heading had already named,
+                        which is the exact reasoning this file used to delete the
+                        bracketed [ CREATE ] eyebrow from the tools section, and
+                        founder decision #14 removed the taxonomy eyebrow
+                        site-wide. It also appears a third time in the tick rail
+                        above, which is wayfinding and keeps it.
+
+                        The NUMBER is not an eyebrow: this is a five-step
+                        sequence and the position in it is information the reader
+                        uses. Impeccable's craft floor bans section numbers only
+                        "unless the sequence itself carries information", and
+                        here it does. */}
+                    <p className="hstep-num"><span>{step.num}</span></p>
                     <h3 className="hstep-title">{step.title}</h3>
                     <p className="hstep-body">{step.body}</p>
                     <ul className="hstep-points">
@@ -761,9 +773,21 @@ export default function Home() {
               {HOME_TOOL_GROUPS.map((group) => (
                 <li className="htool" key={group.id} data-hue={group.hue} data-tier={groupTier(group)}>
                   <Link className="htool-head" to={categoryDestination(group)}>
-                    <span className="htool-glyph" aria-hidden="true">
-                      <NavIcon id={group.id} />
-                    </span>
+                    {/* THE 38px PICTOGRAM IS GONE. Founder call, 2026-09-15.
+
+                        It was a line icon in a tinted rounded square, and the
+                        2026-09-14 audit named it: the glyphs are category
+                        pictograms, not the product. The remedy the audit
+                        suggested — show real output, the way the mega menu was
+                        fixed — does not fit a 38px square, so it went to him as
+                        a decision and he chose to delete.
+
+                        It had also stopped doing work. Since the grid started
+                        sizing each card off its live tool count, the card’s
+                        width and its list of tools already say what it is, and
+                        an icon that repeats the title is decoration. The
+                        per-category hue survives on data-hue, which the Soon
+                        badge and the focus ring still read. */}
                     <h3 className="htool-title">{group.label}</h3>
                     {group.soon && <em className="htool-soon">Soon</em>}
                   </Link>
