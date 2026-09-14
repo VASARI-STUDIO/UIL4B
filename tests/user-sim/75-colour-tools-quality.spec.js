@@ -152,8 +152,10 @@ const UNDERSIZED = ([root, minimum]) => {
 // met the identical eight again in the dark copy.
 //
 // MUTATION: remove `inert` from `.stc-scene-list` in src/pages/ColorStudio.jsx
-// and both tests below go red — the first on eight controls it should not see,
-// the second on `.stc-sc-link` at 54.3x14.0.
+// and both tests below go red — the first on the two readonly inputs it should
+// not see, the second on the sizes. (It was eight controls until 2026-09-14,
+// when the three <button> depictions became <span>s; see the note on the
+// positive control below.)
 test('the semantic-colour preview is a depiction, not eight controls that do nothing', async ({ browser }) => {
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'someone reading this page with a screen reader')
@@ -166,10 +168,21 @@ test('the semantic-colour preview is a depiction, not eight controls that do not
   const scenes = page.locator('.stc-scene')
   await expect(scenes).toHaveCount(10)          // five roles x light + dark
   await expect(scenes.first()).toBeVisible()
+  // TWO, NOT EIGHT, SINCE 2026-09-14 — and the drop is the founder's fix, not a
+  // regression. `.stc-sc-ghost`, `.stc-sc-solid` and `.stc-sc-link` were
+  // <button>s with tabIndex={-1} drawn INSIDE the specimens; they are <span>s
+  // now, because enlarging them to the 24x24 floor was impossible (they are
+  // scaled to the miniature they are drawn in) and the honest fix was to stop
+  // claiming they are controls at all. Three buttons x the light and dark copy
+  // is the six that left. What remains is the two readonly <input>s.
+  //
+  // The positive control still does its job: it proves the scenes rendered
+  // REAL markup rather than a stand-in, so the absence asserted below means
+  // something. It just counts a smaller, truer number.
   const drawn = await page.evaluate(() => document.querySelectorAll('.stc-scene-list button, .stc-scene-list input').length)
-  expect(drawn, 'the scenes still draw real controls — that is the point of them').toBe(8)
+  expect(drawn, 'the scenes still draw real controls — that is the point of them').toBe(2)
 
-  // THE ASSERTION: none of those eight is exposed as operable.
+  // THE ASSERTION: neither of those two is exposed as operable.
   const exposed = await page.evaluate(() => {
     const out = []
     for (const el of document.querySelectorAll('.stc-scene-list button, .stc-scene-list input, .stc-scene-list [role=button]')) {

@@ -324,7 +324,17 @@ const SEMANTIC_SCENES = [
         <span className="stc-sc-help">
           <SceneIcon role="warning" size={13} />
           Already used by 2 projects
-          <button type="button" className="stc-sc-ghost" tabIndex={-1}>Use anyway</button>
+          {/* A SPAN, NOT A BUTTON — founder call, 2026-09-14. These three are
+            drawn INSIDE the semantic-colour specimens: they are a picture of an
+            interface showing what a warning, a solid action and a link look
+            like in the chosen palette. They were <button>s with tabIndex={-1}
+            and cursor:default, so nothing could ever click them, yet they
+            reached the accessibility tree as three controls and were counted
+            against the 24x24 target-size floor at 71.7x21, 63x22 and 54.3x14.
+            Enlarging them was never the fix — they are scaled to the miniature
+            they are drawn in, and growing them would blow up the specimen. The
+            fix is to stop claiming they are controls. */}
+        <span className="stc-sc-ghost">Use anyway</span>
         </span>
       </div>
     ),
@@ -340,7 +350,7 @@ const SEMANTIC_SCENES = [
           <strong>Payment declined</strong>
           <small>Your card was declined on 2 September.</small>
         </span>
-        <button type="button" className="stc-sc-solid" tabIndex={-1}>Update card</button>
+        <span className="stc-sc-solid">Update card</span>
       </div>
     ),
   },
@@ -353,7 +363,7 @@ const SEMANTIC_SCENES = [
       <div className="stc-sc-note">
         <SceneIcon role="info" size={15} />
         <span>Billing runs on the 1st. Changes apply next cycle.</span>
-        <button type="button" className="stc-sc-link" tabIndex={-1}>Learn more</button>
+        <span className="stc-sc-link">Learn more</span>
       </div>
     ),
   },
