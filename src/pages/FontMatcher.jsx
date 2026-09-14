@@ -62,6 +62,11 @@ const BODY_COPY = 'Pack my box with five dozen liquor jugs. How vexingly quick d
 // something nobody would ship, which reads as broken rather than serendipitous.
 const SHUFFLE_POOL = 200
 
+// The heading the pair page opens on when the carried design has no pairing to
+// show. A serif against the Inter body, so the first paint demonstrates the
+// contrast the tool is for.
+const PAIR_FALLBACK_HEADING = 'Playfair Display'
+
 export default function FontMatcher({ onCopy, toast }) {
   const navigate = useNavigate()
   const { design, setFonts } = useProject()
@@ -74,7 +79,21 @@ export default function FontMatcher({ onCopy, toast }) {
   const seedHeading = carried?.heading || design?.fonts?.heading
   const seedBody = carried?.body || design?.fonts?.body
 
-  const [headingName, setHeadingName] = useState(() => seedHeading?.family || 'Playfair Display')
+  // A PAIRING TOOL MAY NOT OPEN SHOWING ONE FONT TWICE.
+  //
+  // designDefaults.js seeds both slots with Inter, so seedHeading?.family was
+  // always truthy and always "Inter" — the Playfair Display fallback beside it
+  // was unreachable, and the page opened with the masthead reading
+  // "Inter + Inter" under a lede that says "Two families". The one thing this
+  // tool exists to demonstrate was the one thing its first paint did not show.
+  //
+  // Keyed on the two being EQUAL rather than on either matching the default:
+  // a heading that equals the body is a non-pairing however it got there, and
+  // comparing against the default cannot tell "never chose" from "chose Inter".
+  // A real choice carried in from another tool still wins, because the only
+  // case this rejects is the one with nothing to show.
+  const seedPairs = Boolean(seedHeading?.family) && seedHeading.family !== seedBody?.family
+  const [headingName, setHeadingName] = useState(() => (seedPairs ? seedHeading.family : PAIR_FALLBACK_HEADING))
   const [bodyName, setBodyName] = useState(() => seedBody?.family || 'Inter')
   const [headingW, setHeadingW] = useState(() => seedHeading?.weight || 700)
   const [bodyW, setBodyW] = useState(() => seedBody?.weight || 400)
