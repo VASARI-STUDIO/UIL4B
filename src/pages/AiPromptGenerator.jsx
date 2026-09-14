@@ -208,8 +208,14 @@ export default function AiPromptGenerator({ toast }) {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">AI Tools <span className="nav-alpha-badge" style={{ marginLeft: 8 }}>Alpha</span></div>
-        <h1>AI Image Prompt <em>Generator</em></h1>
+        {/* THE EYEBROW IS GONE, THE ALPHA BADGE IS NOT. Founder, 2026-09-14,
+            continuing #382/#386: the 10px mono-caps "AI Tools" restated the
+            section directly above an h1 reading "AI Image Prompt Generator",
+            on a route the nav already has lit. But the badge riding inside it
+            is the opposite of decoration — it is the only thing on the page
+            telling a visitor this tool is unfinished, so it moves up to sit
+            with the name it qualifies rather than going with the label. */}
+        <h1>AI Image Prompt <em>Generator</em> <span className="nav-alpha-badge">Alpha</span></h1>
         <p>
           Build a structured, max-quality prompt from preset rule packs — or write a quick brief.
           {isPro ? ' Pro plan active.' : ''}

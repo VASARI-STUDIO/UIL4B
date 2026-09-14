@@ -238,7 +238,7 @@ test.describe('Font Pair', () => {
 
     await page.getByRole('button', { name: 'Product page' }).click()
     await expect(page.locator('.fpr-product')).toBeVisible()
-    await page.getByRole('button', { name: 'Specimen' }).click()
+    await page.getByRole('button', { name: 'Letterforms' }).click()
     await expect(page.locator('.fpr-specimen-raw')).toBeVisible()
     await page.getByRole('button', { name: 'Article' }).click()
 

@@ -170,16 +170,23 @@
 .stc-sc-label{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.72}
 .stc-sc-input{width:100%;padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--stc-ink);background:#fff;border:1.5px solid var(--stc-strong);border-radius:var(--radius-xs);pointer-events:none}
 .stc-sc-help{display:flex;align-items:center;gap:6px;font-size:10px;line-height:1.3;color:var(--stc-ink)}
-.stc-sc-ghost{margin-left:auto;padding:3px 8px;font-family:var(--font);font-size:9.5px;font-weight:650;color:var(--stc-ink);background:transparent;border:1px solid var(--stc-strong);border-radius:var(--radius-xs);cursor:default}
+/* text-align:center and line-height:normal are the UA defaults a <button>
+   carried and a <span> does not. These three stopped being buttons on
+   2026-09-14 (they are depictions inside the specimens, not controls), and
+   the computed-style baseline caught the difference: text-align center ->
+   start and line-height normal -> inherited, on all three, at both widths.
+   Restated here so the conversion is SEMANTIC ONLY and not a silent
+   restyle of the picture. */
+.stc-sc-ghost{margin-left:auto;padding:3px 8px;font-family:var(--font);font-size:9.5px;font-weight:650;color:var(--stc-ink);background:transparent;border:1px solid var(--stc-strong);border-radius:var(--radius-xs);cursor:default;text-align:center;line-height:normal}
 
 /* ERROR - the alert, and the only solid fill in the set. */
 .stc-sc-alert-ico{display:inline-flex;color:var(--stc-strong)}
-.stc-sc-solid{flex:0 0 auto;padding:6px 11px;font-family:var(--font);font-size:10px;font-weight:700;color:#fff;background:var(--stc-solid);border:1px solid var(--stc-solid);border-radius:var(--radius-xs);cursor:default;white-space:nowrap}
+.stc-sc-solid{flex:0 0 auto;padding:6px 11px;font-family:var(--font);font-size:10px;font-weight:700;color:#fff;background:var(--stc-solid);border:1px solid var(--stc-solid);border-radius:var(--radius-xs);cursor:default;white-space:nowrap;text-align:center;line-height:normal}
 
 /* INFO - the quietest object here, deliberately. No fill, a hairline only. */
 .stc-sc-note{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:10.5px;line-height:1.4;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:transparent;color:var(--stc-onpanel)}
 .stc-sc-note .stc-scene-ico{color:var(--stc-onpanel)}
-.stc-sc-link{margin-left:auto;padding:0;font-family:var(--font);font-size:10px;font-weight:700;color:var(--stc-onpanel);background:none;border:0;text-decoration:underline;text-underline-offset:2px;cursor:default;white-space:nowrap}
+.stc-sc-link{margin-left:auto;padding:0;font-family:var(--font);font-size:10px;font-weight:700;color:var(--stc-onpanel);background:none;border:0;text-decoration:underline;text-underline-offset:2px;cursor:default;white-space:nowrap;text-align:center;line-height:normal}
 
 /* PENDING - an activity row with a turning icon and a status badge. */
 .stc-sc-act-ico{display:inline-flex;color:var(--stc-strong)}

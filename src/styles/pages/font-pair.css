@@ -38,7 +38,6 @@
 
 .fpr-specimen{padding:clamp(22px,3vw,40px);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1)}
 
-.fpr-kicker{display:block;margin-bottom:14px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
 
 .fpr-h1{margin:0 0 12px;color:var(--t0);font-family:var(--fpr-h-ff);font-weight:var(--fpr-h-fw);font-size:clamp(30px,4.2vw,52px);line-height:1.06;letter-spacing:-.03em;overflow-wrap:break-word}
 
@@ -208,17 +207,19 @@
    36px at 360 — and hands back to the old curve from 420px, where 42px fits. */
 .fpr-h1{font-size:clamp(30px,min(10vw,max(42px,6vw)),76px);line-height:1.01}
 
-.fpr-gallery-callout{display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;margin:-4px 0 22px;padding:12px;color:var(--t0);background:linear-gradient(135deg,var(--brand-bg),var(--bg-1));border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:13px;text-decoration:none;transition:transform var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
+.fpr-gallery-callout{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;margin:-4px 0 14px;padding:9px 10px;color:var(--t0);background:linear-gradient(135deg,var(--brand-bg),var(--bg-1));border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));border-radius:13px;text-decoration:none;transition:transform var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard)}
 
 .fpr-gallery-callout:hover{transform:translateY(-2px);border-color:var(--brand)}
 
-.fpr-gallery-callout-mark{display:grid;place-items:center;width:48px;height:48px;font-family:var(--display);font-size:22px;background:var(--card);border:1px solid var(--border);border-radius:10px}
+.fpr-gallery-callout-mark{display:grid;place-items:center;width:34px;height:34px;font-family:var(--display);font-size:16px;background:var(--card);border:1px solid var(--border);border-radius:10px}
 
-.fpr-gallery-callout>span:nth-child(2){display:flex;flex-direction:column;gap:3px;min-width:0}
 
-.fpr-gallery-callout strong{font-size:12.5px}
+/* The callout is one row now: mark, name, arrow. The text wrapper and the
+   <small> under it are gone with the second line, so their rules went too
+   rather than being left to match nothing. min-width:0 keeps the name
+   truncating inside the grid column instead of widening it. */
+.fpr-gallery-callout strong{min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.fpr-gallery-callout small{font-size:10.5px;line-height:1.4;color:var(--t2)}
 
 .fpr-gallery-callout>span:last-child{font-size:15px;color:var(--accent-strong)}
 
@@ -245,6 +246,6 @@
 }
 
 @media(max-width:480px){
-  .fpr-gallery-callout{grid-template-columns:44px 1fr}
+  .fpr-gallery-callout{grid-template-columns:34px 1fr}
   .fpr-gallery-callout>span:last-child{display:none}
 }

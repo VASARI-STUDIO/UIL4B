@@ -2013,7 +2013,11 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 /* --t2, not --t3: the 8px SOON tag measured 4.07:1 on its chip in light at
    every width (2026-09-09). --t2 is 4.95:1. The size is left as found and
    flagged: 8px uppercase is the smallest type on the page. */
-.fc-soon{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
+/* 10px, not 8px — founder call, 2026-09-14. At 8px this was the smallest
+   type anywhere in the product, and the lines sitting beside it on the same
+   card are 10px. It is a status a visitor is meant to READ before they click
+   into something that is not built yet. */
+.fc-soon{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
 /* Alpha badge — token-driven accent pill (no hardcoded colours). */
 .fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
 .fc-drop{cursor:pointer;transition:border-color var(--t),background var(--t),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
@@ -3365,6 +3369,27 @@ html.lenis{scroll-behavior:auto!important}
    the palette and gradient values themselves, which is the point -- they are
    product data, not styling. */
 .pnav-prev{display:flex;flex-direction:column;gap:10px;padding:14px}
+/* ── The Create preview is a MINIATURE OF THE EXPORT, not a specimen ──
+   Founder, 2026-09-14: the brand-kit graphic should show what an export
+   actually looks like. So `.pnav-prev-page` is a scaled page of the style guide:
+   a white A4-proportioned sheet on the panel's own ground, cropped at the
+   bottom edge so it reads as a document that continues rather than a card that
+   stops. The ground stays --bg-1 and the sheet is always white with dark ink,
+   in BOTH themes, because the exported page is white paper — a dark-mode
+   "preview" of a document that prints white would be showing something the
+   user will never receive. */
+.pnav-prev--create{padding:12px 12px 0}
+.pnav-prev-page{display:flex;flex-direction:column;gap:7px;padding:12px 12px 0;background:#fff;border:1px solid rgba(16,16,20,.10);border-radius:var(--radius-s) var(--radius-s) 0 0;box-shadow:0 2px 10px rgba(16,16,20,.10)}
+.pnav-prev-eyebrow{margin:0;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:#5F5F69}
+.pnav-prev-title{margin:0;font-family:var(--display);font-size:15px;font-weight:500;letter-spacing:-.02em;line-height:1.1;color:#101014}
+.pnav-prev-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pnav-prev-sw{display:flex;flex-direction:column;gap:2px;min-width:0}
+/* The hex sits INSIDE the chip in the ink the exporter chose for it, which is
+   the export's own layout and also the only way a 2-up chip this small can
+   carry its value without a second row of type. */
+.pnav-prev-chip{display:flex;align-items:flex-end;height:26px;padding:0 5px;border-radius:2px;font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.02em;box-shadow:inset 0 0 0 1px rgba(16,16,20,.08)}
+.pnav-prev-meta{font-family:var(--mono);font-size:7px;letter-spacing:.02em;color:#5F5F69;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pnav-prev-foot{display:flex;justify-content:space-between;gap:8px;margin-top:2px;padding:5px 0 6px;border-top:1px solid #E4E4E8;font-family:var(--mono);font-size:7px;letter-spacing:.04em;color:#5F5F69}
 .pnav-prev-swatches{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;height:44px}
 /* The ring is --border, not a black alpha: this palette is real product data
    and it contains near-black values (Midnight Teal opens #222831), which on the
@@ -6905,7 +6930,14 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .fg-card .lbry-card-foot{align-items:baseline;padding-left:56px}
 
 /* Font Pair */
-.fpr-hero--premium{position:relative;min-height:340px;margin:-4px 0 18px;padding:clamp(28px,5vw,62px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
+/* 260px, not 340, and a shallower pad — founder, 2026-09-14: "this page has a
+   bit of a panel overload", and the direction chosen was two zones with the
+   preview dominant. The masthead is the page's signature and keeps its
+   oversized Font Pair wordmark; what it gives up is 80px of floor and ~18px
+   of padding it was not using for anything. Measured: the specimen's top
+   moves up by ~98px once this and the retired "Read the pairing" head are
+   both out, so more of the artefact is on the first screen. */
+.fpr-hero--premium{position:relative;min-height:260px;margin:-4px 0 16px;padding:clamp(24px,3.6vw,44px);overflow:hidden;color:#fff;background:#0a0a0b;border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:0 30px 90px rgba(7,7,12,.2)}
 /* RETIRED (#surface-headers-read-as-ai): .fpr-hero-topline, its
    .sec-h-eyebrow override and .fpr-gallery-link - the same corner-parked
    action and duplicate taxonomy eyebrow as the Font Gallery, which is the

@@ -525,7 +525,15 @@ function PalettePanel({ swatches, onChange, announce }) {
 
 /* ── 2 · Gradient ────────────────────────────────────────────────────────── */
 
-const DEFAULT_GRADIENT = { from: '#7C3AED', to: '#22D3EE', angle: 135 }
+// FROM THE BRAND ACCENT, not the design file's violet — founder call,
+// 2026-09-14. #7C3AED was the mock's default, and CHANGELOG.md records for V2
+// that "the design file's default violet is not used anywhere". It was still
+// the first thing the homepage DEMONSTRATED: a visitor's first look at the
+// product showed violet/cyan while every accent on the page around it is
+// #0F6FFF. This is sample content rather than a token, which is exactly why it
+// needed a decision rather than a lint rule. The cyan end is kept — the point
+// was the off-brand START, and a gradient demo still has to travel somewhere.
+const DEFAULT_GRADIENT = { from: '#0F6FFF', to: '#22D3EE', angle: 135 }
 
 function gradientCss({ from, to, angle }) {
   return `linear-gradient(${angle}deg, ${from} 0%, ${to} 100%)`

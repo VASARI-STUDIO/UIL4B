@@ -38,7 +38,14 @@ export default function Privacy() {
   return (
     <div className="sec">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">Legal</div>
+        {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
+            common AI trait, scan the whole site and remove alot of them where
+            applied." This continues #382 and #386, where he marked this exact
+            element "AI" and it was deleted from the Font Gallery, Font Pair,
+            the Type Scale and the Tint tool. A 10px mono-caps label restating
+            the page's own section, directly above an h1 that names the page,
+            on a route the nav already has lit. Hierarchy is a control, not a
+            label. */}
         <h1>Privacy &amp; <em>data</em>.</h1>
         <p>{t('privacy.lastUpdated')}</p>
       </div>
