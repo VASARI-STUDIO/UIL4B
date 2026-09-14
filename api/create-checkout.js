@@ -3,8 +3,10 @@ import { getStripeServer } from './_lib/stripe.js'
 import {
   CURRENCY_CODES,
   LIFETIME_CURRENCY_CODES,
+  BILLING_INTERVALS,
   LOOKUP_KEYS,
   PRICE_ENV_KEYS,
+  trialDaysFor,
 } from './_lib/pricing.js'
 import { LIFETIME_SKU, ensureStripeCustomer, parseBillingInterval } from './_lib/billing.js'
 import { planForUser } from './_lib/plans.js'
@@ -64,10 +66,9 @@ export default async function handler(req, res) {
     const { interval: rawInterval, currency } = req.body || {}
     const interval = parseBillingInterval(rawInterval)
     if (!interval) {
-      return res.status(400).json({ error: 'interval must be one of: monthly, yearly, lifetime' })
+      return res.status(400).json({ error: `interval must be one of: ${BILLING_INTERVALS.join(', ')}` })
     }
     const stripe = getStripeServer()
-    const isYearly = interval === 'yearly'
     const isLifetime = interval === 'lifetime'
     const wantCurrency = typeof currency === 'string' && CURRENCY_CODES.includes(currency.toLowerCase())
       ? currency.toLowerCase()
@@ -102,9 +103,21 @@ export default async function handler(req, res) {
 
     const origin = resolveOrigin(req)
 
+    // THE TRIAL IS READ FROM THE CADENCE, NOT FROM `isYearly`.
+    //
+    // This was `if (isYearly) trial_period_days = 7` — one literal here and a
+    // second one in src/pages/Checkout.jsx, with nothing holding them together.
+    // A checkout page promising a trial that Stripe does not grant is a bug
+    // whose only symptom is a card statement, so both now read the same table
+    // and tests/unit/trial-cadence.test.js fails if they drift.
+    //
+    // Founder, 2026-09-15: monthly bills today, quarterly and yearly each get
+    // seven days. Yearly is unchanged by this commit — it granted 7 before and
+    // grants 7 now — so no existing promise moved.
     const subscriptionData = { metadata: { firebaseUid: uid } }
-    if (isYearly) {
-      subscriptionData.trial_period_days = 7
+    const trialDays = isLifetime ? 0 : trialDaysFor(interval)
+    if (trialDays > 0) {
+      subscriptionData.trial_period_days = trialDays
       subscriptionData.trial_settings = {
         end_behavior: { missing_payment_method: 'cancel' },
       }

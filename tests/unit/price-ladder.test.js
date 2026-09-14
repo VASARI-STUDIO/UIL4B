@@ -95,29 +95,42 @@ test('a longer commitment is never worse value, in any currency', () => {
   }
 })
 
-test('quarterly is described but NOT offered for sale', () => {
-  // A tripwire, not a preference. BILLING_INTERVALS is the allowlist
-  // parseBillingInterval enforces on /api/create-checkout, the loop
-  // /api/get-prices publishes, and the loop /api/setup-stripe CREATES STRIPE
-  // PRICES from. Adding 'quarterly' to it is a decision to sell quarterly, and
-  // three things are not true yet:
+test('quarterly is fully wired and still not offered for sale', () => {
+  // A TRIPWIRE ON ONE FIELD, rewritten 2026-09-15.
   //
-  //   1. setup-stripe sends `recurring: { interval: INTERVAL_MAP[interval] }`
-  //      and no interval_count, so it would create an $18-per-MONTH price.
-  //   2. There is no PRICE_ENV_KEYS.quarterly and no Stripe price to resolve.
-  //   3. src/pages/Checkout.jsx accepts monthly|yearly|lifetime only, so the
-  //      buyer would land on "Invalid selection" after choosing it.
+  // It used to guard three preconditions. All three were built that day with
+  // the founder's approval for the gated payment files, and each is now
+  // asserted POSITIVELY in tests/unit/trial-cadence.test.js rather than as an
+  // absence here:
   //
-  // If you are enabling quarterly on purpose: fix those three, then delete this
-  // test. Do not delete it to make a red suite green.
-  assert.ok(!BILLING_INTERVALS.includes('quarterly'),
-    'quarterly was added to BILLING_INTERVALS — see the three preconditions in this test')
-  assert.ok(!PRICE_ENV_KEYS.quarterly,
-    'a quarterly price env key exists but quarterly is still not sellable — see this test')
-
+  //   1. setup-stripe sends `recurring.interval_count` from INTERVAL_COUNTS, so
+  //      quarterly is a genuine three-month recurrence and not an $18-per-MONTH
+  //      price. That was the one that could overcharge a real customer.
+  //   2. PRICE_ENV_KEYS.quarterly exists, and quarterly is in BILLING_INTERVALS.
+  //   3. src/pages/Checkout.jsx has a quarterly case, so the buyer no longer
+  //      lands on "Invalid selection".
+  //
+  // ONE THING IS STILL NOT TRUE: the Stripe price does not exist. It is created
+  // in the dashboard, not in this repository. `checkoutPlan` is what publishes
+  // a machine-readable Offer in index.html and puts the cadence in front of a
+  // buyer, and an Offer for a price create-checkout would answer 503 for is the
+  // same class of false claim about money as the wrong amount — which is what
+  // index-html-pricing.test.js#"no tier that cannot reach checkout" enforces.
+  //
+  // The founder chose test-mode-first on 2026-09-15. When the test-mode price
+  // exists and a checkout has been run through it, set `checkoutPlan` to
+  // 'quarterly' and delete this test. Do not delete it to make a red suite
+  // green — the thing it is protecting is a customer being charged for
+  // something that cannot be bought.
   const quarterly = PLAN_LADDER.find((p) => p.id === 'quarterly')
   assert.equal(quarterly.checkoutPlan, null,
-    'the client ladder now routes quarterly to checkout, which dead-ends on "Invalid selection"')
+    'quarterly is now offered — confirm the Stripe price exists, then delete this test')
+
+  // The preconditions, asserted here too so that flipping the switch above
+  // cannot be done against a half-built path. If any of these has regressed,
+  // quarterly must NOT be turned on.
+  assert.ok(BILLING_INTERVALS.includes('quarterly'), 'quarterly can no longer reach create-checkout')
+  assert.ok(PRICE_ENV_KEYS.quarterly, 'the quarterly price env key has gone')
   assert.equal(INTERVAL_COUNTS.quarterly, 3,
     'quarterly must be recorded as a 3-month recurrence, or a price created from it bills monthly')
 })
