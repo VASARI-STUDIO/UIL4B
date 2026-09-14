@@ -183,11 +183,23 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
 
   // PRESENT: the four panels still exist and are still named, in words. The
   // headings are the ordering now, and they say what the numbers only implied.
+  // THREE VISIBLE PANEL HEADS SINCE 2026-09-14, not four. The founder struck
+  // "Read the pairing / The two faces together, at the sizes and weights
+  // they'll actually ship at" — ninety-six pixels describing the preview
+  // directly beneath it. Its h2 still EXISTS, because the output <section> is
+  // aria-labelledby it, but it is sr-only and so carries no `.fpr-section-head`.
+  // The guarantee this test exists for is untouched: whatever panel heads are
+  // on screen, none of them may be numbered.
   const headings = page.locator('.fpr-section-head h2')
-  await expect(headings).toHaveCount(4)
+  await expect(headings).toHaveCount(3)
   await expect(headings.nth(0)).toHaveText('Choose the pair')
-  await expect(headings.nth(1)).toHaveText('Read the pairing')
-  await expect(headings.nth(3)).toHaveText('Prepare the handoff')
+  await expect(headings.nth(2)).toHaveText('Prepare the handoff')
+
+  // The retired head's h2 is still in the document and still names the region,
+  // which is the half of this that must NOT have been lost.
+  const named = page.locator('h2#fpr-output-title')
+  await expect(named).toHaveText('Read the pairing')
+  await expect(page.locator('section[aria-labelledby="fpr-output-title"]')).toHaveCount(1)
 
   // ABSENT: the badges.
   await expect(page.locator('.fpr-section-num')).toHaveCount(0)
@@ -213,9 +225,20 @@ test('Font Pair numbers no panels, because at 1440 the numbers ran backwards', a
   // that panel 1 leads on the x axis, this assertion fails and the decision
   // can be revisited on purpose rather than by accident.
   expect(geometry.xs[0], 'the config rail has moved to the left column')
-    .toBeGreaterThan(geometry.xs[1])
-  expect(geometry.ys[0], 'the first two panel heads are no longer on one line')
-    .toBe(geometry.ys[1])
+    .toBeGreaterThan(Math.max(...geometry.xs.slice(1)))
+
+  // THE `ys[0] === ys[1]` ASSERTION WAS RETIRED ON 2026-09-14, deliberately.
+  // It said the first two panel heads sat on one line, which was a fact about
+  // the OLD layout rather than the guarantee: the output panel's first head
+  // used to be "Read the pairing", level with the config head. That head is
+  // sr-only now, so the second visible head is "Body faces…", which sits below
+  // the preview and never was level with anything.
+  //
+  // What condemned the numbering is the X axis, and that is asserted above and
+  // is still true: the config rail — panel ONE — leads on x at 1440, so any
+  // ascending numbering across these heads reads against the page. Keeping a
+  // y-equality that the layout no longer has would have meant loosening the x
+  // check to make it pass, which is the wrong half to give up.
 })
 
 test('the Tint Scale audience switch is the one next to the panel it changes', async ({ page }) => {
