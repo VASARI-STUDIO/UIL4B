@@ -267,10 +267,14 @@ test('the rules that paint hue-coloured TEXT read the readable role', () => {
   // what every one of these did before. Fills, dots, rails, borders, outlines
   // and icons deliberately keep var(--hue) - they are 1.4.11 non-text at 3:1
   // and the base hue is the point of them.
+  // .hw-chrome-here was the third entry here until 2026-09-15. The homepage
+  // workbench no longer draws a browser title bar with a breadcrumb in it, so
+  // the rule it guarded does not exist to guard. The list is shorter, not
+  // weaker: the defect is a TEXT rule reading the fill token, and the two
+  // survivors still fail if either of them regresses.
   const TEXT_RULES = [
     '.smap-link-a.active .smap-link-label{color:var(--hue-strong,var(--accent-strong))}',
     '.smap-link-a:hover .smap-link-label{color:var(--hue-strong,var(--accent-strong))}',
-    '.hw-chrome-here{color:var(--hue-strong,var(--accent-strong));font-weight:600}',
   ]
   for (const rule of TEXT_RULES) {
     assert.ok(RAW.includes(rule), `this text rule no longer reads --hue-strong:\n  ${rule}`)

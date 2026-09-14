@@ -199,7 +199,7 @@ const UI_ROWS = [
  * Studio previews now speak one language: the same palette produces the same
  * roles wherever a visitor meets it.
  *
- * Inert and aria-hidden, exactly like `.hw-chrome`: nothing inside is
+ * Inert and aria-hidden: nothing inside is
  * focusable, no control is impersonated, and every hex it paints is announced
  * for real by the board's own `.plb-hex` buttons above it.
  */
@@ -1662,27 +1662,35 @@ export default function HomeWorkbench({ variant = 'section', activeTab, onTabCha
 
   const shell = (
         <div className="hw-shell" data-hue={activeMeta.hue}>
-          {/* App chrome. The shell was a bare card with tabs, so the "live
-              workspace" claim above it was carried entirely by the copy. This
-              is the same furniture the real tool pages wear — a title bar, the
-              route you are notionally standing in, and the state readout — so
-              the panel reads as a window into the product rather than as a
-              marketing widget that happens to be interactive.
+          {/* THE DRAWN BROWSER FRAME IS GONE, and its own justification is why.
+              It was a title bar, traffic-light dots, a UIL4B / Create / <tab>
+              breadcrumb and a "Live preview" pill, added under a comment saying
+              it was "the same furniture the real tool pages wear" so the panel
+              would read as a window into the product.
 
-              Decorative and inert: aria-hidden, nothing focusable, no route
-              claimed that does not exist. The breadcrumb tracks the active tab,
-              so it is never lying about where you are. */}
-          <div className="hw-chrome" aria-hidden="true">
-            <span className="hw-chrome-dots"><i /><i /><i /></span>
-            <span className="hw-chrome-crumb">
-              <span className="hw-chrome-app">UIL4B</span>
-              <span className="hw-chrome-sep">/</span>
-              <span className="hw-chrome-route">Create</span>
-              <span className="hw-chrome-sep">/</span>
-              <span className="hw-chrome-here">{activeMeta.label}</span>
-            </span>
-            <span className="hw-chrome-live"><i />Live preview</span>
-          </div>
+              Measured 2026-09-15, that premise was false on all three counts.
+              No tool page renders traffic-light dots — they existed only here
+              and in this file's own CSS. No tool page renders a "Live preview"
+              status pill. And PaletteBuilder.jsx carries a comment recording
+              that its "UI System / Admin" BREADCRUMB was deliberately deleted
+              as clutter. The frame was imitating furniture the tool had either
+              never worn or had already taken off.
+
+              Founder, 2026-09-15: "the interactive tools on the homepage could
+              look more visually appealing, and feel more like a minature
+              extension of the tool."
+
+              The panel is running the real thing — real generated palettes,
+              real clipboard, the same functions PaletteBuilder calls — so a
+              drawn frame around it made something real look like a picture of
+              itself. Mobbin, same day: Mural and Grain both draw a browser
+              frame, and both are showing SCREENSHOTS, where the frame is
+              honest. Retool runs its product frameless and bleeds it off the
+              section edge. Ours is the Retool case.
+
+              PRODUCT.md is blunter: "Decorative mock-ups count as claims."
+              The tabs below stay — they are real controls and they are what
+              tells a visitor the panel can be touched. */}
           <div className="hw-tabs rail-overflow" role="tablist" aria-label="Workbench modes">
             {HOME_WORKBENCH_TABS.map((tab, index) => (
               <button
