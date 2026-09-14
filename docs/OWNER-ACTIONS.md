@@ -5,6 +5,22 @@ decision. No agent can do any of it.
 
 _Last reviewed: 2026-09-14 — 12 decisions answered by the founder and struck off._
 
+> ## Can we release?
+>
+> **The code is ready. The account is not.**
+>
+> Every gate passes locally. Nothing is failing and nothing is half-built at the
+> release boundary. But the site **cannot deploy**, so none of it is on
+> uil4b.com — and that is a billing page, not an engineering problem.
+>
+> **If you do exactly one thing today, do row 1.**
+>
+> (This replaces `RELEASE-READINESS.md`, retired 2026-09-14. It restated this
+> page's own rows with a second set of numbers, so the two could disagree — and
+> did. What it held that was genuinely its own is now in
+> [`build-and-verify.md`](reference/build-and-verify.md) under *What a green
+> gate does NOT prove*.)
+
 ---
 
 ## ⚡ Do these now, in order
@@ -194,7 +210,6 @@ thought. We will not rewrite them, and that is the point.
 
 ## Where everything else lives
 
-- **Are we ready to release?** [`RELEASE-READINESS.md`](RELEASE-READINESS.md)
 - **Ideas awaiting your verdict** — [`PROPOSALS.md`](PROPOSALS.md)
 - **Engineering work** — `src/data/pipeline.js`
 - **Decisions you already made** — [`CHANGELOG.md`](../CHANGELOG.md) and §3 below
