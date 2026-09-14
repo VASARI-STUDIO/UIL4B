@@ -867,6 +867,11 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
    205px track and an 86px label left a 143px one.
    minmax(0,…) not 1fr: a bare 1fr floors at the content's min-width, which
    would let one field's readout make its column wider than its siblings. */
+/* The strip's own name, and the only thing on it that states scope. Sized
+   and weighted like .plb-adjust-label so it reads as part of the same
+   control group rather than as a page heading, but inked at --t0 so it
+   leads the four labels beside it instead of competing with them. */
+.plb-adjust-title{margin:0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t0);white-space:nowrap;flex:0 0 auto}
 .plb-adjust-fields{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(4,auto minmax(0,1fr));align-items:center;gap:12px 10px}
 .plb-adjust-field{display:contents}
 .plb-adjust-label{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
