@@ -847,8 +847,29 @@ endpoint called *UI L4B App*:
 
 1. **Change the URL** to `https://uil4b.com/api/stripe-webhook`. This is the
    important one.
-2. **Add the four missing events:** `charge.refunded` and all three
-   `charge.dispute.*`. The other ten are already subscribed and correct.
+2. **Make the event list exactly these twelve.** Read out of the `switch` in
+   `api/stripe-webhook.js` on 2026-09-15 — these are every event that has a
+   handler, and anything else you subscribe to is delivered and ignored. Tick
+   them against what is already there rather than counting:
+
+   ```
+   checkout.session.completed
+   checkout.session.async_payment_succeeded
+   customer.subscription.created
+   customer.subscription.updated
+   customer.subscription.deleted
+   customer.subscription.trial_will_end
+   invoice.paid
+   invoice.payment_failed
+   charge.refunded
+   charge.dispute.created
+   charge.dispute.funds_withdrawn
+   charge.dispute.closed
+   ```
+
+   The last four are the ones that decide whether a refund or a chargeback ever
+   reaches us. `customer.subscription.trial_will_end` is the one that matters
+   once quarterly and yearly start granting seven free days.
 
 Then send a test event and confirm it comes back **HTTP 200**.
 
