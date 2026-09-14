@@ -66,7 +66,36 @@
 .fc-soon-card{padding:36px 28px;text-align:left;border-style:dashed}
 .fc-soon-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,var(--brand),var(--brand-soft));color:var(--accent-fg);margin-bottom:14px}
 .fc-spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:fc-spin .7s linear infinite;flex-shrink:0}
-.fc-settings{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;align-items:flex-start}
+/* THE SETTINGS ROW WAS ONE FLEX LINE WITH A GREEDY MIDDLE.
+
+   Measured at 1280 on 2026-09-15: Output Format sat at the far left, the
+   quality slider took roughly 870px of the row because .fc-field-grow is the
+   only flexible cell, and Size limit and Export Scale were pushed against the
+   right edge — so the eye travelled about 1200px between the format and the
+   two controls that decide the output, and the slider was four times wider
+   than any value it sets needs.
+
+   A grid with a sane track size puts every control at a comparable width and
+   lets them wrap in reading order on a narrow screen. The slider gets two
+   tracks because it genuinely wants more room than a select, and no more. */
+.fc-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px 16px;margin-top:10px;align-items:start;max-width:860px}
+.fc-settings .fc-field-grow{grid-column:span 2;min-width:0}
+.fc-select{width:100%;max-width:220px}
+.fc-select--narrow{max-width:120px}
+
+/* The output readout. One line, under the controls it explains, and quiet
+   enough that it reads as a status rather than another control. */
+.fc-outsize{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12.5px;color:var(--t2);max-width:860px}
+.fc-outsize-k{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.fc-outsize-v{color:var(--t1)}
+.fc-outsize-v strong{color:var(--t0);font-weight:700}
+.fc-outsize-arrow{color:var(--t3)}
+.fc-outsize-note{margin-top:0}
+
+@media(max-width:640px){
+  .fc-settings{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  .fc-settings .fc-field-grow{grid-column:1 / -1}
+}
 .fc-actions{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
 .fc-note{font-size:10px;color:var(--t2);margin-top:2px}
 /* States what a homepage output draft actually became here — including the part
