@@ -130,6 +130,108 @@ test.describe('the homepage below the hero', () => {
     await expect(page.locator('.htool-soon').first()).toHaveText('Soon')
   })
 
+  test('the tool grid is weighted by what is live, not six equal cards', async ({ page }) => {
+    // THE FOUNDER: "the mini tools on the homepage are bad visual
+    // representations." Measured at 1280 on 2026-09-14: six cards of identical
+    // weight for six unequal things. Colour System Generator has five live
+    // tools and UI Component Builder has none — both of its tools are Soon —
+    // and the grid said they were peers. Equal visual weight across unequal
+    // items is on the anti-slop tell list.
+    //
+    // Nothing here pins a width or a card order as a LITERAL. Both are read
+    // off the same thing the page reads them off: how many tools in each group
+    // a visitor can actually open. Add a live tool to Imagery and this test
+    // keeps passing while the layout changes, which is the point — the shape
+    // is a report, not a decision.
+    //
+    // MUTATION: drop the data-tier spans, or sort HOME_TOOL_GROUPS the other
+    // way, and `narrower` and `outOfOrder` name the exact pair that broke.
+    watch(page, PERSONA)
+    await go(page, '/')
+    await expectRendered(page, '/')
+    await walk(page)
+
+    const cards = await page.evaluate(() => [...document.querySelectorAll('.htool')].map((el) => ({
+      title: el.querySelector('.htool-title').textContent.trim(),
+      tier: el.dataset.tier,
+      width: Math.round(el.getBoundingClientRect().width),
+      top: Math.round(el.getBoundingClientRect().top),
+      height: Math.round(el.getBoundingClientRect().height),
+      live: [...el.querySelectorAll('.htool-link')].filter((a) => !a.querySelector('.htool-soon')).length,
+      // The stretch shows up HERE, not under the card. `.htool-open` is
+      // `margin-top:auto`, so a card padded out to its row's height keeps its
+      // footer on the floor and opens a hole above it instead.
+      gapBeforeFooter: (() => {
+        const links = el.querySelector('.htool-links')
+        const open = el.querySelector('.htool-open')
+        if (!links || !open) return 0
+        return Math.round(open.getBoundingClientRect().top - links.getBoundingClientRect().bottom)
+      })(),
+    })))
+    expect(cards.length, 'the tool grid is not rendering').toBeGreaterThan(4)
+
+    // 1 · Among the CARDS, a family with more live tools is never given less
+    //     room than one with fewer. This is the founder's complaint as
+    //     arithmetic. The unbuilt family is excluded here and checked in 3:
+    //     it spans the row as a strip, so its WIDTH is the widest on the page
+    //     while its height is the shortest, and width alone would read that
+    //     backwards.
+    const narrower = []
+    const built = cards.filter((c) => c.tier !== 'next')
+    for (const a of built) {
+      for (const b of built) {
+        if (a.live > b.live && a.width < b.width) {
+          narrower.push(`${a.title} (${a.live} live) is ${a.width}px, ${b.title} (${b.live}) is ${b.width}px`)
+        }
+      }
+    }
+    expect(narrower, `a deeper family got a smaller card:\n  ${narrower.join('\n  ')}`).toEqual([])
+
+    // …and "never smaller" is satisfied by six identical cards, which is the
+    // thing being fixed. The deepest family must be STRICTLY wider than the
+    // shallowest one, so a grid that went back to equal columns fails here
+    // rather than passing on a technicality.
+    const deepest = built.reduce((a, b) => (b.live > a.live ? b : a))
+    const shallowest = built.reduce((a, b) => (b.live < a.live ? b : a))
+    expect(deepest.live, 'every built family has the same number of live tools')
+      .toBeGreaterThan(shallowest.live)
+    expect(deepest.width, `${deepest.title} (${deepest.live} live) is no wider than ${shallowest.title} (${shallowest.live})`)
+      .toBeGreaterThan(shallowest.width)
+
+    // 2 · DOM order is reading order is visual order. Sorting in the component
+    //     rather than with CSS `order` is what keeps a keyboard user's tab
+    //     sequence the same as what they see.
+    const outOfOrder = cards
+      .slice(1)
+      .map((c, i) => (c.live > cards[i].live ? `${c.title} (${c.live} live) comes after ${cards[i].title} (${cards[i].live})` : null))
+      .filter(Boolean)
+    expect(outOfOrder, `the grid reads out of order:\n  ${outOfOrder.join('\n  ')}`).toEqual([])
+
+    // 3 · The family with nothing live is last, spans the row on its own, and
+    //     is the only one that does. A Soon badge on a peer-sized card was the
+    //     old way of saying this and it did not carry.
+    const dead = cards.filter((c) => c.live === 0)
+    expect(dead.length, 'no group has nothing live — this fixture has changed').toBe(1)
+    expect(dead[0], 'the unbuilt family is not last').toEqual(cards[cards.length - 1])
+    expect(dead[0].tier).toBe('next')
+    expect(dead[0].width, 'the unbuilt family does not span the row')
+      .toBeGreaterThan(Math.max(...built.map((c) => c.width)))
+    // …and spanning the row is only honest because it is a STRIP. Without
+    //  this the rule above would be satisfied by making the one thing nobody
+    //  can use the largest object on the page.
+    expect(dead[0].height, 'the unbuilt family is the tallest thing in the grid')
+      .toBeLessThan(Math.min(...built.map((c) => c.height)))
+
+    // 4 · AND NO CARD IS PADDED OUT TO ANOTHER CARD'S HEIGHT, which is what
+    //     three equal columns did: on 2026-09-14 Icons & Emoji carried one row
+    //     of chips above 180px of nothing, because its row was stretched to the
+    //     tallest card in it. A card now ends where its content ends.
+    const padded = cards
+      .filter((c) => c.gapBeforeFooter > 48)
+      .map((c) => `${c.title} has a ${c.gapBeforeFooter}px hole above its footer`)
+    expect(padded, `cards are being stretched to fill a row:\n  ${padded.join('\n  ')}`).toEqual([])
+  })
+
   test('the export section is headed by the founder’s sentence, read by id', async ({ page }) => {
     // Was: "Your system leaves as a document, not a screenshot." — the
     // "not an X" defensive negation the founder rejected by name on the tools
