@@ -158,7 +158,7 @@ Read the relevant one before working in that area.
 | Ideas awaiting founder approve/deny, and their verdicts | [`PROPOSALS.md`](docs/PROPOSALS.md) |
 | **What the gate requires** (and the lint-warning ceiling) | [`build-and-verify.md`](docs/reference/build-and-verify.md) |
 | Founder-only console / credential / live-service work | [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) |
-| **Can we release?** — what is done, on him, or on an outside service | [`RELEASE-READINESS.md`](docs/RELEASE-READINESS.md) |
+| **Can we release?** — what is done, on him, or on an outside service | [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md), the box at the top. `RELEASE-READINESS.md` was retired 2026-09-14: it restated that page's rows with a second set of numbers that could disagree, and did |
 | Execution order, blockers, known-unfixed bugs | `src/data/pipeline.js` |
 | Per-module product status | `src/data/moduleBoard.js` |
 | Shipped release history, and the record of founder decisions already made | [`CHANGELOG.md`](CHANGELOG.md) |

@@ -4405,17 +4405,50 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 
 /* ── Pricing — the inverted panel (structural pattern 6). One per page. ── */
 .hprice{padding-top:var(--sec-pad)}
-.hprice-panel{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-7);padding:clamp(28px,4vw,64px);border-radius:var(--radius-3xl);background:var(--t0);color:var(--bg-0)}
+/* THE PRICE PANEL IS DARK IN BOTH THEMES. Founder, 2026-09-14: "the dark mode
+   plans CTA on the home page should still be the dark version seen on the light
+   mode."
+
+   It was an inversion that flipped WITH the theme rather than against it. The
+   panel painted `background:var(--t0)` over `color:var(--bg-0)` — the primary
+   ink over the page ground — and both tokens swap per theme, so it measured
+   rgb(15,15,16) on a light page and rgb(242,241,236) on a dark one. Readable
+   either way, but the inverted showcase block became the single brightest
+   surface on a dark page, which is the opposite of what an inversion is for.
+
+   The fix pins the two tokens LOCALLY rather than restating the colours. Every
+   child inside already draws its text from `--bg-0` (title, lede, cadence,
+   amount, total, note, fine print, all at their own opacities), so freezing the
+   pair here makes the whole block render in both themes exactly as it already
+   did in light — one declaration pair instead of nine overrides, and a new
+   child that follows the existing convention inherits the right colours for
+   free.
+
+   `--hi` is deliberately NOT frozen: the lime CTA is identical in both themes
+   already (#E9FF64 on #0F0F10, measured), so it needs nothing. */
+.hprice-panel{--t0:#0F0F10;--bg-0:#EFEEE9;display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s-7);padding:clamp(28px,4vw,64px);border-radius:var(--radius-3xl);background:var(--t0);color:var(--bg-0)}
 .hprice-title{color:var(--bg-0)}
 .hprice-hi{color:var(--hi)}
 .hprice-lede{margin-top:var(--s-4);max-width:46ch;font-size:var(--fs-body);line-height:1.65;color:var(--bg-0);opacity:.76;text-wrap:pretty}
 .hprice-includes{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:var(--s-5)}
 .hprice-includes li{display:flex;align-items:flex-start;gap:10px;font-size:var(--fs-body-s);line-height:1.5;color:var(--bg-0);opacity:.88}
 .hprice-includes svg{flex:0 0 auto;margin-top:3px;color:var(--hi)}
-.hprice-rows{list-style:none;display:flex;flex-direction:column;gap:8px}
+.hprice-rows{display:flex;flex-direction:column;gap:8px}
 .hprice-row{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"cadence amount" "total note";gap:4px 14px;align-items:baseline;padding:16px 18px;border:1px solid color-mix(in srgb,var(--bg-0) 18%,transparent);border-radius:var(--radius-l);transition:border-color var(--dur-2) var(--ease-standard)}
 .hprice-row:hover{border-color:color-mix(in srgb,var(--bg-0) 40%,transparent)}
+/* `.hprice-row` is a <button> in a radiogroup now, so it needs the button
+   reset the <li> never did: buttons do not inherit font, they centre their
+   text, and they carry a UA background and border. Without these four the row
+   rendered in the UA's 13.333px system face, centred, on a grey ground. */
+.hprice-row{font-family:inherit;font-size:inherit;color:inherit;text-align:left;background:none;cursor:pointer;width:100%}
+/* BEST is the ladder's recommendation; CHOSEN is what the visitor picked. They
+   start as the same row and stop being so the moment anything is clicked, which
+   is why they are two attributes and not one. `best` keeps the lime hairline it
+   always had; `chosen` is what the eye should follow, so it gets the filled
+   ground and the ring. */
 .hprice-row[data-best]{border-color:var(--hi)}
+.hprice-row[data-chosen]{border-color:var(--hi);background:color-mix(in srgb,var(--hi) 12%,transparent);box-shadow:inset 0 0 0 1px var(--hi)}
+.hprice-row:focus-visible{outline:2px solid var(--hi);outline-offset:2px}
 .hprice-cadence{grid-area:cadence;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--bg-0);opacity:.7}
 .hprice-amount{grid-area:amount;display:inline-flex;align-items:baseline;gap:3px;color:var(--bg-0)}
 .hprice-amount strong{font-size:28px;font-weight:800;letter-spacing:-.03em}

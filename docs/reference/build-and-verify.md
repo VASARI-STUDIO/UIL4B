@@ -104,6 +104,54 @@ retire one legitimately, say so in the PR and lower the number here — that
 direction is a real improvement and the only reason this figure should ever
 move.
 
+## What a green gate does NOT prove
+
+Absorbed from `RELEASE-READINESS.md` §4 when that file was retired on
+2026-09-14. These are boundaries of the suite, not defects. They are here
+because a green run is read as "everything works", and each of the following is
+a thing a green run has never checked.
+
+- **A community submission is not followed into the moderation queue.** Both
+  ends are covered — the submit form renders and states that nothing appears
+  publicly until reviewed, and `/admin` → Submissions renders the queue — but
+  the write between them goes to Firestore, and the test session answers from
+  memory rather than from a server. "Submitted, therefore it arrives" is checked
+  by reading the code, not by rendering it.
+
+- **Resuming a half-finished submission after sign-up has no rendered test.**
+  `setSubmitIntent()` exists to reopen the form when a new account detours
+  through onboarding. Deleting that call leaves the whole flow-6 spec green,
+  which was verified deliberately. The sign-in gate's "Where you left off"
+  sentence comes from a different source, so the two promises read as one and
+  only the first is guarded.
+
+- **The browser suite has a known flake class under runner contention**, and it
+  announces itself: `base.js` asserts every `/assets/` request arrived and
+  prints *"Every result in this run is void — the passes as much as the
+  failures"* when one did not. **A void run is not a gate result.** Re-run it
+  before treating a single red job as a regression, and say in the pull request
+  which failures were void and which were real. Measured cause, 2026-09-13:
+  TIME_WAIT socket exhaustion against a 16384-port ephemeral range — one suite
+  opens thousands of short-lived connections and Windows holds each ~120s, so
+  back-to-back runs starve the preview server. Let the count drain before
+  re-running, and drop to `--workers=2`.
+
+- **Anything that needs a live service is unverifiable from a local run**, and
+  an agent auditing `vite preview` will report its absence as a product defect.
+  Two confirmed false positives on 2026-09-14: the Icon Library rendering blank
+  (every `api.iconify.design` request fails — the app correctly falls back to
+  120 built-in icons and says so), and `/plans` showing "Live pricing is
+  unreachable" (`vite preview` serves no serverless functions, so
+  `/api/get-prices` returns HTML). Check a network-dependent finding against a
+  real deployment before acting on it.
+
+- **`AiPromptGenerator.jsx` exists and no route reaches it, deliberately.** A
+  page file existing is not evidence a route reaches it — the trap
+  `doc-authority-map.md` documents. It is the only caller of the OpenRouter
+  path; deleting it would settle a question by default rather than by decision.
+
+---
+
 ## History
 
 Everything below this line is a **dated record of a past change or a past

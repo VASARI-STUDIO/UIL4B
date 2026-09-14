@@ -65,8 +65,26 @@ export default function CommunityCard({ item, saved, count, onToggle, offline = 
       ? { '--c1': item.c1, '--c2': item.c2, '--mono-ink': mono.ink, '--mono-glow': mono.glow }
       : undefined,
   }
+  // THE AMPERSAND WAS BEING READ AS A WORD. `split(' ').map(w => w[0])` takes
+  // the first character of every space-separated token, and "&" is a token, so
+  // it contributed itself as an initial. Rendered on /community 2026-09-14, SIX
+  // of the twelve monograms carried punctuation: "Dashboard & analytics UI"
+  // drew D&, and so did P&, E&, B&, P& and F& and C&.
+  //
+  // Filtering to tokens that START with a letter or digit fixes all of them and
+  // changes nothing else: "Award-winning landing pages" still draws Al,
+  // "Mobile app patterns" still draws Ma. The test is on the FIRST character
+  // rather than the whole token, so hyphenated and possessive words keep
+  // working.
   const thumbContent = (
-    <span className="ch-thumb-mono">{item.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
+    <span className="ch-thumb-mono">
+      {item.name
+        .split(/\s+/)
+        .filter(w => /^[\p{L}\p{N}]/u.test(w))
+        .map(w => w[0])
+        .join('')
+        .slice(0, 2)}
+    </span>
   )
   return (
     <article className="ch-card">

@@ -62,6 +62,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { mailFrom, sendingDomainConfigured, REPLY_TO } from '../../api/_lib/mail.js'
 import vm from 'node:vm'
 import { timingSafeEqual as nodeTimingSafeEqual } from 'node:crypto'
 
@@ -159,6 +160,13 @@ function loadAi({
     // so a test that wanders into them says so.
     cleanKey,
     nodeTimingSafeEqual,
+    // api/_lib/mail.js — the outbound sender. Stubbed with the REAL helpers
+    // rather than a literal so a change to the fallback shows up here: the
+    // diagnostic prints mailFrom()'s answer, and the two failover tests below
+    // assert an email was sent with it.
+    mailFrom: () => mailFrom({ ...env }),
+    sendingDomainConfigured: () => sendingDomainConfigured({ ...env }),
+    REPLY_TO,
     adminDb: () => db,
     adminAuth: () => ({ verifyIdToken: async () => { throw new Error('not modelled here') } }),
     credentialProblem: () => credential,

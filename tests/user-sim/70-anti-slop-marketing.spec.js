@@ -73,7 +73,12 @@ test.describe('the homepage below the hero', () => {
     // the last section in <main>.
     const last = page.locator('#main > section').last()
     await expect(last).toHaveClass(/\bhprice\b/)
-    await expect(last.locator('.hprice-cta')).toHaveAttribute('href', '/plans')
+    // The href carries the cadence the panel has selected, since 2026-09-14 —
+    // the rows are a radiogroup now and the choice travels to /plans, which
+    // seeds its own toggle from it. Asserted as a pattern rather than a literal
+    // so the default tier can move in planLadder.js without failing here; the
+    // guarantee is that the close still points at /plans, not which tier wins.
+    await expect(last.locator('.hprice-cta')).toHaveAttribute('href', /^\/plans\?billing=(monthly|yearly)$/)
   })
 
   test('the price panel describes Pro from the config that enforces it', async ({ page }) => {
