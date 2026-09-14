@@ -526,7 +526,7 @@ function coverPage(ctx, field, ink, year) {
     <span class="cv-mark">${d.logo ? markImg(d.logo, { cls: 'mk-cover', alt: `${ctx.projectName} logo` }) : esc(ctx.projectName)}</span>
     <span class="cv-year">${esc(year)}</span>
   </div>
-  <h1 class="cv-title">Brand<br>Guidelines</h1>
+  <h1 class="cv-title">Brand <br>Guidelines</h1>
   <div class="cv-foot">
     <span>${esc(ctx.projectName)}</span>
     <span>${ctx.sections.map(s => esc(s.title)).join(' · ')}</span>
