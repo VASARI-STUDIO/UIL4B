@@ -51,7 +51,14 @@ export default function SeoInspector({ onCopy, toast }) {
   return (
     <div className="sec seo-wrap">
       <div className="sec-h">
-        <div className="sec-h-eyebrow">SEO Specialist</div>
+        {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
+            common AI trait, scan the whole site and remove alot of them where
+            applied." This continues #382 and #386, where he marked this exact
+            element "AI" and it was deleted from the Font Gallery, Font Pair,
+            the Type Scale and the Tint tool. A 10px mono-caps label restating
+            the page's own section, directly above an h1 that names the page,
+            on a route the nav already has lit. Hierarchy is a control, not a
+            label. */}
         <h1>{active.title}</h1>
         <p>{active.desc}</p>
       </div>
