@@ -18,6 +18,7 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 | # | Decision | Ours? |
 |---|---|---|
 | 1 | **Vercel billing stays free.** Verbatim: *"vercel billing is staying free"*. No upgrade off Hobby. `OWNER-ACTIONS.md` row 1 changed from "upgrade or wait for the reset" to living within the Hobby limits, and the constraints are written out there under *What free costs you* | New |
+| 2 | **The prices are $7, $18 and $48.** Verbatim: *"the 7,18,48 is the correct pricing i want to use"*, answering the read-out that live Stripe charges $4.99 monthly and $39.99 yearly with no quarterly at all. The repo ladder was right and Stripe is the stale side; OWNER-ACTIONS row 4 changes from a question to a task with the Stripe steps | Yes |
 
 **Why this closed rather than became a task.** The deploy block that made row 1
 urgent had already cleared on its own. Verified 2026-09-15: twenty production
