@@ -42,7 +42,7 @@ A struck row is done — it keeps its number so nothing that points at it breaks
 | **1** | ~~Check Fast Origin Transfer. Upgrade off Hobby~~ **Nothing — you are staying free.** Read *What free costs you* below once | — | 2 min to read | Nothing. The site is deploying again and the free plan is holding |
 | **2** | Clear the failed payment, or raise the spending limit | GitHub → Settings → **Billing** | 5 min | No test has run since 4 September. Every PR reads `UNSTABLE`, which looks like broken code |
 | **3** | Run `npm run apply:gated`, type **y**, then publish the rules | a terminal in this repo | 2 min | **This is what the Firebase "insecure rules" email is about.** Your feedback collection is open to anyone on the internet, and you stay the only person who can approve a submission |
-| **4** | Decide: keep **$4.99 / $39.99**, or raise to the **$7 · $48** you approved | Stripe → Products → UIL4B Pro | 20 min | Nothing breaks and nobody is misled — the site shows the real Stripe price. You just keep selling at the old one |
+| **4** | Set the prices to **$7 · $18 · $48** (you decided this 2026-09-15) | Stripe → Products → UIL4B Pro | 25 min | You keep selling at $4.99 and $39.99 — less than you decided to charge, and quarterly cannot be bought at all |
 | **5** | Edit the product description: **30 AI actions a day, 300 a month** | Stripe → Products → UIL4B Pro | 2 min | Your own product page promises 1,000/day that the app does not give |
 | **6** | Point the webhook at **`/api/stripe-webhook`**, then add the refund and dispute events | Stripe → Developers → Webhooks | 20 min | **It currently posts to your homepage, so nothing Stripe sends is ever handled.** Refunds and chargebacks vanish |
 | **7** | Switch Storage on, publish `storage.rules` | Firebase Console → Storage | 10 min | Anything that uploads a file cannot work |
@@ -783,34 +783,45 @@ Firebase and Google Cloud we still cannot see.
 
 ## 4.1 · P1 — Stripe is still on the old prices. Nobody is being misled.
 
-**This item used to say the site advertises one price and charges another, and
-that is no longer true.** It was the one thing on this page with a legal edge.
-It does not have one any more. Here is what we actually read on 2026-09-15.
+**You decided on 2026-09-15: the prices are $7, $18 and $48.** So this is a
+task now, not a question. Here is what we read in your live Stripe account on
+the same day, and what has to change.
 
-**What is live in your Stripe account right now:**
+| Plan | Stripe charges today | You want | Action |
+|---|---|---|---|
+| Monthly | **$4.99** | **$7** | Add a new $7 price, make it the default |
+| Quarterly | *does not exist* | **$18** | Create it — every 3 months, not monthly |
+| Yearly | **$39.99** | **$48** | Add a new $48 price, make it the default |
 
-| Plan | What Stripe charges | What you approved |
+**Nobody is being misled while you do this.** The site always shows the price
+Stripe will actually charge, not the one written in the code, so today it says
+$4.99 and $39.99 and that is the truth. The moment you add the new prices the
+site says $7 and $48 by itself. There is nothing to change in the code.
+
+**Two things to know before you click.**
+
+**Your existing customers do not move.** You have two live subscriptions.
+Adding a new price never changes an existing one — they keep paying $4.99 until
+you migrate them, which is a separate decision you do not have to make today.
+
+**You have no yearly subscribers at all.** So the $39.99 → $48 rise, which is
+the big one, costs you nothing and annoys nobody. It will never be cheaper to
+do than right now.
+
+**Do it in this order**
+
+| # | Step | Why this order |
 |---|---|---|
-| Monthly | **$4.99** | $7 |
-| Quarterly | *does not exist* | $18 |
-| Yearly | **$39.99** | $48 |
+| 1 | Switch Stripe to **Test mode** | Everything below is reversible while this is on |
+| 2 | On **UIL4B Pro**, add a price: **$7.00 USD, recurring, monthly** | |
+| 3 | Add a price: **$18.00 USD, recurring, every 3 months** | **Check "every 3 months" twice.** If it says monthly you have made an $18-a-month price — three times the intended charge |
+| 4 | Add a price: **$48.00 USD, recurring, yearly** | |
+| 5 | Give the quarterly one the lookup key `uil4b_pro_quarterly` | It is the name the code finds it by |
+| 6 | Tell me — I run a full test-mode checkout on all three | |
+| 7 | Repeat 2–5 in **Live mode** | Only after the test-mode checkout passed |
+| 8 | Tell me again, and I switch quarterly on in the code | One field |
 
-**And what does the website show?** We asked the live site, and it shows
-**$4.99 and $39.99** — the real Stripe numbers. It is built to always prefer
-the price Stripe will actually charge over the one written in the code, so the
-two can never disagree in front of a customer. That is why this is no longer a
-legal problem.
-
-**So the real question is just: do you want the price rise or not?**
-
-- **Leave it.** You keep selling at $4.99 and $39.99. Nothing breaks. You earn
-  less than you decided to.
-- **Raise it** to the $7 and $48 you approved on 2026-08-20. Yearly is the big
-  one, $39.99 → $48, so decide what happens to existing yearly subscribers
-  first — though right now **you have none**, which makes this the cheapest it
-  will ever be to do.
-
-**Time.** 15–30 minutes.
+**Time.** 20–30 minutes.
 
 **Code side: done.** Every amount on the site comes from Stripe when Stripe has
 one, and from `src/config/planLadder.js` only as a fallback.

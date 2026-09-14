@@ -25,7 +25,7 @@ you probably think, and three are blockers.
 | **137 finished artefacts** you did not have to make this week | 37 palettes and 100 gradients, each already a page | `src/data/paletteLibrary.js`, `src/data/gradientGallery.js` |
 | **7 Learn articles that are genuinely good** | An outside SEO audit on 2026-09-14 scored the Learn content **9/10** — "specific, cited, formula-driven, honest about its own limits — genuinely differentiated, not template copy." That is rare and it is the thing most small products cannot fake | `src/data/learnIndex.js`; audit in this session |
 | **A palette already travels in a URL** | `paletteBuilderUrl(colors)` puts the colours in the link, so a shared link opens the real tool with that palette loaded. The hard half of a sharing loop is done | `src/data/paletteGallery.js` |
-| **$4.99 a month** | Cheap enough that the decision is not a budget decision. Note this is what Stripe actually charges today, read live on 2026-09-15 — the approved $7 has not been applied, and the site correctly shows the real number | Live Stripe price `uil4b_pro_monthly`; ladder in `src/config/planLadder.js` |
+| **$7 a month** | Cheap enough that the decision is not a budget decision. He confirmed $7 / $18 / $48 on 2026-09-15. Live Stripe still charges $4.99 until he adds the new prices, and the site correctly shows whatever Stripe will really charge — so the number below moves on its own the day he does it | `src/config/planLadder.js`; live amounts from Stripe via `/api/get-prices` |
 
 **Blockers — nothing on this page works until these are cleared**
 
