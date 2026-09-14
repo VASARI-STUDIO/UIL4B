@@ -68,6 +68,7 @@ import {
 } from '../src/config/planLadder.js'
 import { AI_LIMITS } from '../src/config/plans.js'
 import { SITE_ORIGIN } from '../src/utils/routeMeta.js'
+import { DEFAULT_DESCRIPTION } from '../src/data/routeMetaMap.js'
 
 // Imported, not retyped. This file's own header says a second copy of a
 // price is the defect; the same holds for the origin it is published under.
@@ -144,9 +145,12 @@ export function webApplicationSchema() {
     url: ORIGIN,
     applicationCategory: 'DesignApplication',
     operatingSystem: 'Web',
-    description: 'Free browser-based design toolkit for building colour systems, '
-      + 'browsing icons and emoji, converting imagery, calculating aspect ratios, '
-      + 'and checking interface colour.',
+    // IMPORTED, NOT RETYPED. This is the one description the runtime can never
+    // repair: App.jsx rewrites <title> and the description/og/twitter META tags
+    // on hydration, but nothing rewrites JSON-LD, so whatever is written here
+    // ships to every structured-data consumer permanently. It carried a fourth,
+    // hand-typed variant until 2026-09-14.
+    description: DEFAULT_DESCRIPTION,
     offers: ladderOffers(),
   }
 }

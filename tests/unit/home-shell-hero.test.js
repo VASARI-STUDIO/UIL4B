@@ -199,14 +199,24 @@ test('assertHomeShellApplied fails on a shell whose headline went missing', () =
 test('applying it to the REAL index.html keeps the head and swaps only #root', () => {
   const applied = applyHomeShell(read('index.html'))
   assertHomeShellApplied(applied, 'the applied index.html')
-  // The head is untouched: `/` is the one route whose metadata was already right.
+  // The head survives the splice, which is what this whole assertion block is
+  // for. It is NOT a claim that the head's contents were already correct: as of
+  // 2026-09-14 `/` shipped four disagreeing descriptions, fixed in the same
+  // pass as this line — see tests/unit/index-html-description.test.js.
   assert.match(applied, /<title>[\s\S]*?<\/title>/)
   // The canonical, taken from SITE_ORIGIN rather than typed. #457 moved the
   // advertised host from www to the apex and this assertion went red on a
   // correct page — a host spelled out here is a second place the site's own
   // origin is written down, which is the defect src/utils/routeMeta.js exports
   // SITE_ORIGIN to prevent.
-  assert.match(applied, new RegExp(`<link rel="canonical" href="${SITE_ORIGIN}">`))
+  //
+  // THE TRAILING SLASH IS NEW, and the bare origin was the stale side. `/` and
+  // `/home` render the same page, and `canonicalUrl()` returns
+  // `https://uil4b.com/` for BOTH — so dist/home/index.html shipped the slash
+  // while the root shell, the one page that never runs through canonicalUrl(),
+  // shipped it without. Two shells for one page, disagreeing on the string that
+  // exists to say they are one page.
+  assert.match(applied, new RegExp(`<link rel="canonical" href="${SITE_ORIGIN}/">`))
   // And the noscript block — the non-JS reader's page — survives the splice.
   assert.match(applied, /<noscript>/)
   assert.match(applied, /<script type="module" src="\/src\/main\.jsx"><\/script>/)

@@ -5,6 +5,22 @@ decision. No agent can do any of it.
 
 _Last reviewed: 2026-09-14 — 12 decisions answered by the founder and struck off._
 
+> ## Can we release?
+>
+> **The code is ready. The account is not.**
+>
+> Every gate passes locally. Nothing is failing and nothing is half-built at the
+> release boundary. But the site **cannot deploy**, so none of it is on
+> uil4b.com — and that is a billing page, not an engineering problem.
+>
+> **If you do exactly one thing today, do row 1.**
+>
+> (This replaces `RELEASE-READINESS.md`, retired 2026-09-14. It restated this
+> page's own rows with a second set of numbers, so the two could disagree — and
+> did. What it held that was genuinely its own is now in
+> [`build-and-verify.md`](reference/build-and-verify.md) under *What a green
+> gate does NOT prove*.)
+
 ---
 
 ## ⚡ Do these now, in order
@@ -17,7 +33,7 @@ the rest.
 |---|---|---|---|---|
 | **1** | Check **Fast Origin Transfer** usage. Upgrade off Hobby, or wait for the monthly reset | Vercel → your team → **Usage** | 5 min | **Nothing you have built since 2 September is live.** 100+ merged PRs invisible |
 | **2** | Clear the failed payment, or raise the spending limit | GitHub → Settings → **Billing** | 5 min | No test has run since 4 September. Every PR reads `UNSTABLE`, which looks like broken code |
-| **3** | Run `npm run apply:gated`, type **y** | a terminal in this repo | 2 min | Your feedback queue stays open to **anyone on the internet**, and you stay the only person who can approve a submission |
+| **3** | Run `npm run apply:gated`, type **y**, then publish the rules | a terminal in this repo | 2 min | **This is what the Firebase "insecure rules" email is about.** Your feedback collection is open to anyone on the internet, and you stay the only person who can approve a submission |
 | **4** | Confirm live prices: **$7** monthly · **$18** quarterly · **$48** yearly | Stripe → Products → UIL4B Pro | 20 min | **The site advertises one price and charges another.** The only item here with a legal edge |
 | **5** | Edit the product description: **30 AI actions a day, 300 a month** | Stripe → Products → UIL4B Pro | 2 min | Your own product page promises 1,000/day that the app does not give |
 | **6** | Subscribe the webhook to the events we handle | Stripe → Developers → Webhooks | 20 min | Refunds and chargebacks never reach us |
@@ -27,11 +43,159 @@ the rest.
 | **10** | Confirm `dylanjacob1100@gmail.com` is the admin account | — | 1 min | Admin and server checks may be keyed to the wrong address |
 | **11** | Restrict the public Google Fonts key | Google Cloud → Credentials | 5 min | The key is public and unrestricted |
 | **12** | Check legacy customers still match to accounts | Stripe → Customers | minutes each | A paying customer can lose access silently |
+| **13** | Make `www.uil4b.com` work (it is broken right now) | Vercel → Domains, then your DNS | 10 min | Anyone who types `www.` gets a page that never loads |
+| **14** | Make the Google sign-in box say `uil4b.com` | Firebase + Google Cloud | 20 min | It says `uil4b-357c5.firebaseapp.com`, which looks fake |
+
+### Why Firebase emailed you about insecure rules
+
+**It is real, it is ours, and the fix is already written.**
+
+`firestore.rules` line 56 says:
+
+```
+match /feedback/{feedbackId} {
+  allow create: if true;
+```
+
+`if true` means no sign-in, no field checks, no size limit, no rate limit.
+Anyone on the internet can write documents straight into the collection your
+admin feedback queue reads from — as many as they like, any shape, up to
+Firestore's 1 MB per-document ceiling. Firebase's scanner looks for exactly this
+and emails you about it.
+
+**Nothing in the app relies on it.** Every report goes through
+`fetch('/api/support')`, which writes with the Admin SDK and skips these rules
+entirely. So the rule never protected a real write — it only granted one to
+strangers. Closing it breaks nothing, and reads, updates and deletes are
+untouched, so the queue keeps working.
+
+**The fix is row 3.** `npm run apply:gated` changes it to `allow create: if
+false` and also puts size and shape limits on the three collections a signed-in
+account can write to. It was reviewed in #418 and is tested against the Firebase
+emulator before you publish it.
+
+**Then publish.** Applying the change only edits the file on your machine. The
+rules that are live are whatever the Firebase console last published, so the
+email will keep coming until you publish — see the line below.
 
 **After row 3 you must also:** publish the new rules (Firebase console, or
 `firebase deploy --only firestore:rules`) **and deploy the site** —
 `api/verify-admin.js` is a serverless function and does nothing until it ships.
 That deploy is waiting on row 1.
+
+---
+
+## 🌐 Your web address and the sign-in box
+
+Two things people see before they ever use the product. Both look wrong today.
+Neither is hard to fix.
+
+---
+
+### 13 · `www.uil4b.com` does not load
+
+**What is wrong.** Your site works at `uil4b.com`. It does **not** work at
+`www.uil4b.com`. If someone types the `www.` version, or an old link uses it,
+they wait about 20 seconds and then get nothing.
+
+**How we know.** We timed both on 2026-09-13. `uil4b.com` answered in 0.9
+seconds. `www.uil4b.com` timed out twice, 21 seconds each time.
+
+**Why it happens.** Two reasons, and you need to fix both:
+
+1. Vercel has never been told that `www.uil4b.com` belongs to your project. It
+   only knows about `uil4b.com`.
+2. Your DNS has `www` pointed at the wrong address. It points at
+   `ns1.vercel-dns.com`. That is a **nameserver** — a signpost that says where
+   to ask. It is not a web server, so nothing answers. It needs to point at
+   `cname.vercel-dns.com` instead, which is the machine that actually serves
+   pages.
+
+Think of it like a phone book that lists the phone book's own address instead
+of the person's number.
+
+**Do this.**
+
+1. Go to **Vercel → your project → Settings → Domains**.
+2. Click **Add**, type `www.uil4b.com`, and add it.
+3. Vercel will ask what you want it to do. Choose **Redirect to `uil4b.com`**.
+   That sends `www` visitors to the working address automatically.
+4. Vercel will then show you the DNS record it wants. It will be a **CNAME**
+   record for `www` pointing at **`cname.vercel-dns.com`**.
+5. Go to wherever you bought the domain, find the DNS settings, and change the
+   `www` record to match what Vercel showed you. Delete the old one pointing at
+   `ns1.vercel-dns.com`.
+6. Wait. DNS changes take anywhere from a few minutes to a few hours.
+7. Test it: open `https://www.uil4b.com` in a private window. It should jump
+   straight to `uil4b.com`.
+
+**Time.** About 10 minutes of clicking, then waiting for DNS.
+
+**If you do nothing.** Anyone who types `www.` — and plenty of people still do —
+sees a broken page. So does any old link or business card with `www.` on it.
+
+**One thing we already did.** Every link the site prints about itself now uses
+`uil4b.com`, not `www.` A test fails the build if the `www.` version ever
+sneaks back in. So this is about visitors who type it themselves, not about
+links we publish.
+
+---
+
+### 14 · The Google sign-in box shows a strange address
+
+**What is wrong.** When someone clicks "Sign in with Google", the Google box
+says:
+
+> Continue to **uil4b-357c5.firebaseapp.com**
+
+It should say **uil4b.com**.
+
+**Why this matters.** That address looks like nothing the visitor has heard of.
+They came to `uil4b.com`, clicked sign in, and Google is now asking them to
+trust a random-looking name with numbers in it. People stop at that screen.
+It is the single worst moment to look untrustworthy, because it is the moment
+you are asking for their account.
+
+**Why it happens.** Firebase gives every project a free address like
+`uil4b-357c5.firebaseapp.com`. Google shows whatever address handles the
+sign-in. Right now that is the Firebase one, because nobody has told it to use
+yours. You can see it in the code at `src/utils/firebase.js` line 16.
+
+**Do this.** Three steps, in this order. Do not skip step 1.
+
+**Step 1 — pick an address for sign-in.** Use `auth.uil4b.com`. It is a
+subdomain, like `www`, and it exists only to handle the sign-in handoff.
+Visitors will barely see it, but they will see `uil4b.com` in it, which is the
+whole point.
+
+**Step 2 — tell Firebase about it.**
+
+1. **Firebase Console → Hosting → Add custom domain.**
+2. Enter `auth.uil4b.com` and follow the steps it gives you. It will ask you to
+   add a DNS record, same as step 13 above.
+3. Then go to **Firebase Console → Authentication → Settings → Authorized
+   domains** and make sure both `uil4b.com` and `auth.uil4b.com` are listed.
+
+**Step 3 — tell the app to use it.**
+
+1. **Vercel → Settings → Environment Variables.**
+2. Add `VITE_FIREBASE_AUTH_DOMAIN` with the value `auth.uil4b.com`.
+3. Redeploy the site. The variable only takes effect on a new build.
+
+**Then check your branding.** Go to **Google Cloud Console → APIs & Services →
+OAuth consent screen**. Make sure the app name says **UIL4B** and the logo is
+set. That is the other half of what the visitor reads on that screen.
+
+**Time.** About 20 minutes, plus waiting for DNS.
+
+**If you do nothing.** Every person who tries to sign in with Google is shown a
+name that looks made up, at the exact moment they are deciding whether to trust
+you. Some of them will not finish.
+
+**Test it when you are done.** Open a private window, go to `uil4b.com`, click
+sign in with Google, and read the top of the Google box. It should say
+`uil4b.com` or `auth.uil4b.com`. If it still says `firebaseapp.com`, the
+environment variable did not reach the build — redeploy.
 
 ---
 
@@ -47,6 +211,7 @@ thought. We will not rewrite them, and that is the point.
 | 3 | **The `/discover` line** | Its h1 is the bare word "Discover" with nothing under it |
 | 4 | **A heading for the homepage export section** | You decided 2026-09-14 it needs its own, because the hero above it already opens with the same five words |
 | 5 | **Three nav card lines** — Create, Discover, Learn | They hold an agent's sentence today. The Discover one is also **false**: it advertises Inspiration, which is badged Soon |
+| 6 | **Six homepage tool-card lines** | `src/data/toolTree.js`, the `desc` on each group. All six are an agent's. Two overclaim: *"scales that hold up"* says nothing measurable, and *"frame every asset"* is not true of every format |
 
 ---
 
@@ -78,7 +243,6 @@ thought. We will not rewrite them, and that is the point.
 
 ## Where everything else lives
 
-- **Are we ready to release?** [`RELEASE-READINESS.md`](RELEASE-READINESS.md)
 - **Ideas awaiting your verdict** — [`PROPOSALS.md`](PROPOSALS.md)
 - **Engineering work** — `src/data/pipeline.js`
 - **Decisions you already made** — [`CHANGELOG.md`](../CHANGELOG.md) and §3 below
@@ -357,6 +521,33 @@ questions. Five sentences, none of which an agent should produce:
 The Discover nav card is the one with a cost attached: it advertises
 Inspiration, which is badged Soon, so it currently promises something nobody can
 open.
+
+### The homepage tool cards, measured 2026-09-14
+
+Founder: *"the mini tools on the homepage are bad visual representations, and the
+text areas besides them look AI generated."* Rendered at 1280, three things are
+true and only one of them is copy:
+
+1. **Six cards of identical weight for six unequal things.** Colour System
+   Generator has five live tools; UI Component Builder has none — both of its
+   tools are Soon. Equal visual weight across unequal items is on the
+   anti-slop tell list, and here the grid says the six are peers when they are
+   not.
+2. **The glyphs are category pictograms, not the product.** Each card leads with
+   a small line icon in a tinted rounded square. The mega-menu graphic was
+   changed on the same day for exactly this reason — it now shows a page of a
+   real export instead of a drawing of its parts, and the tool cards still show
+   the drawing.
+3. **The six descriptions are agent-written**, which is row 6 above.
+
+**Checked and NOT a defect**, so it is not re-raised: the Soon badges are
+honest. AI Studio's group badge is off and the two Soon labels inside it belong
+to Image Prompt and Landing-Page Prompt, which genuinely are unbuilt. Alt Text
+and Brand Starter are live and unbadged.
+
+Items 1 and 2 are design work and do not need you. Item 3 is six sentences and
+does.
+
 
 ---
 
@@ -790,7 +981,35 @@ and the date beside one when you run it.
 
 **Private (server):** `FIREBASE_SERVICE_ACCOUNT_KEY`, `GEMINI_API_KEY`,
 `OPENROUTER_API_KEY`, optional `OPENROUTER_MODEL`, `STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET`, the price ids, and the optional retention/support
-variables.
+`STRIPE_WEBHOOK_SECRET`, the price ids, `MAIL_FROM` (see below), and the
+optional retention/support variables.
+
+### `MAIL_FROM` — set this the day uil4b.com can send
+
+Every email the product sends currently goes out as
+`UIL4B <onboarding@resend.dev>`. That is Resend's sandbox address: it is not
+your domain, and **Resend will only deliver it to your own inbox**. It is fine
+for the alerts that come to you, and useless for anything sent to a customer.
+
+**When the sending domain is verified** (row 8 — SPF, DKIM and a return path on
+uil4b.com), add this in **Vercel → Settings → Environment Variables**:
+
+```
+MAIL_FROM = UIL4B <admin@uil4b.com>
+```
+
+Then redeploy. That one field switches every outbound message. No code change.
+
+**Do not set it before the domain is verified.** Resend rejects a sender it
+cannot verify, so the mail would simply vanish — and the notifications that
+reach you today would stop.
+
+**Replies already work.** Every message the product sends now carries
+`reply-to: admin@uil4b.com`, which needs no verified domain. Hitting reply on a
+notification reaches the real mailbox today.
+
+**How to check which one is live:** Admin → Overview → AI. The panel names the
+current sender and says plainly whether it is the sandbox or a verified
+uil4b.com address.
 
 **Never paste a secret value into this repository.**

@@ -157,7 +157,18 @@ export default function Plans() {
   const { user } = useAuth()
   const { isPro, loading: subLoading } = useSubscription()
   const location = useLocation()
-  const [billing, setBilling] = useState('yearly')
+  // SEEDED FROM `?billing=`, which the homepage price panel sets when a visitor
+  // picks a cadence there. Picking Monthly on the homepage and landing on a page
+  // defaulted to Yearly is the kind of small lie that makes a price feel like a
+  // bait — the choice has to survive the click.
+  //
+  // Validated against BILLING_OPTIONS rather than trusted: a hand-typed or stale
+  // `?billing=quarterly` falls back to the default instead of putting the page
+  // into a state its own toggle cannot represent.
+  const [billing, setBilling] = useState(() => {
+    const asked = new URLSearchParams(window.location.search).get('billing')
+    return BILLING_OPTIONS.some((o) => o.id === asked) ? asked : 'yearly'
+  })
   const [openFaq, setOpenFaq] = useState(null)
   const tabRefs = useRef([])
   const price = useProPrice()

@@ -50,9 +50,16 @@ pubsub-debug.log
 # (11 MB of PNGs that go stale the moment the stylesheet they document
 # changes), so those citations record what was captured and at which width
 # rather than linking a file you can open. Regenerate with the Method
-# section of that audit. The similarly-named docs/qa/screenshots-mobile/ IS
-# tracked and is not ignored.
+# section of that audit.
+#
+# docs/qa/screenshots-mobile/ WAS tracked and was deleted on 2026-09-14: 4.3 MB
+# of evidence for the sixteen defects of the 2026-08-26 mobile audit (#268),
+# every one of them since fixed, showing a UI that no longer exists. The written
+# findings survive in defect-register-2026-08.md, which is the part that was
+# load-bearing. Both directories are now the same policy: the register records
+# what was captured and at which width, and the capture itself is regenerable.
 docs/qa/screenshots/
+docs/qa/screenshots-mobile/
 
 # Throwaway audit/probe scripts run from the repo root (module resolution
 # needs them here). Never committed.

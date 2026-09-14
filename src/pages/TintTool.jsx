@@ -514,7 +514,26 @@ export default function TintTool({ onCopy, toast }) {
                       <span>Use left and right arrow keys to inspect.</span>
                     </div>
                   )}
-                  <p className="tt-ramp-scroll">{dense ? 'Dense scale: scroll horizontally; one swatch per ramp stays in the Tab order.' : 'Scroll horizontally to inspect every stop.'}</p>
+                  {/* THE NON-DENSE HINT IS GONE, because it stopped being true.
+                      "Scroll horizontally to inspect every stop" described a
+                      nested horizontal scrollbar that held 61% of an
+                      eleven-stop scale off-screen at 390px. Below 768 the ramp
+                      WRAPS now — measured 3 rows, 11 of 11 cells on screen, 0
+                      overflow at 320/390/430/560 — so there is nothing to
+                      scroll and no instruction to give. An instruction for a
+                      gesture the page no longer needs is worse than silence:
+                      it sends someone looking for a scrollbar that is not
+                      there.
+
+                      DENSE KEEPS ITS HINT and keeps its scroller. That variant
+                      is a deliberate 6px-per-stop strip with an inspector
+                      under it, it genuinely does scroll, and its sentence also
+                      carries the keyboard contract — one swatch per ramp stays
+                      in the Tab order — which is not a restatement of the
+                      scrollbar. */}
+                  {dense && (
+                    <p className="tt-ramp-scroll">Dense scale: scroll horizontally; one swatch per ramp stays in the Tab order.</p>
+                  )}
                 </div>
               )
             })}
