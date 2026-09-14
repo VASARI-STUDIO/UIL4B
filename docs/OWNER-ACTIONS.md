@@ -215,6 +215,16 @@ thought. We will not rewrite them, and that is the point.
 
 ---
 
+## 🤔 One thing to decide
+
+Not a task and not a sentence — a taste call, and it is yours.
+
+| | The question | The options |
+|---|---|---|
+| 1 | **The small square icons on the homepage tool cards.** You said the mini tools were bad visual representations. The card sizes now carry that meaning instead, which leaves the 38px pictogram doing nothing | **Delete them** (my recommendation) or **keep them**. Full reasoning under *The homepage tool cards* further down. Nothing breaks either way |
+
+---
+
 ## ✅ Answered 2026-09-14 — nothing here needs you again
 
 | | You decided |
@@ -522,31 +532,39 @@ The Discover nav card is the one with a cost attached: it advertises
 Inspiration, which is badged Soon, so it currently promises something nobody can
 open.
 
-### The homepage tool cards, measured 2026-09-14
+### The homepage tool cards, measured 2026-09-14 — item 1 fixed 2026-09-15
 
 Founder: *"the mini tools on the homepage are bad visual representations, and the
-text areas besides them look AI generated."* Rendered at 1280, three things are
+text areas besides them look AI generated."* Rendered at 1280, three things were
 true and only one of them is copy:
 
-1. **Six cards of identical weight for six unequal things.** Colour System
-   Generator has five live tools; UI Component Builder has none — both of its
-   tools are Soon. Equal visual weight across unequal items is on the
-   anti-slop tell list, and here the grid says the six are peers when they are
-   not.
-2. **The glyphs are category pictograms, not the product.** Each card leads with
-   a small line icon in a tinted rounded square. The mega-menu graphic was
-   changed on the same day for exactly this reason — it now shows a page of a
-   real export instead of a drawing of its parts, and the tool cards still show
-   the drawing.
-3. **The six descriptions are agent-written**, which is row 6 above.
+1. ~~**Six cards of identical weight for six unequal things.**~~ **Done
+   2026-09-15.** The grid is six columns now and the span is counted, not
+   chosen: half a row for a family with three or more live tools, a third for
+   one with a pair, and the whole row — as a low strip with no card fill — for
+   UI Component Builder, which has nothing live at all. Add a live tool to a
+   family and its card widens on the next build. The dead space went with it:
+   every card now ends where its content ends, instead of being stretched to the
+   height of the tallest card in its row.
+2. **The glyphs are category pictograms, not the product.** Still true, and
+   **this one needs a word from you**, because the remedy the audit suggested
+   does not fit. The mega menu was fixed by showing a page of a real export —
+   it has a panel to put one in. These cards have a 38px square, which will not
+   hold a screenshot of anything. So the real choice is:
+   - **Delete the squares** (what I would do). The card's size and its list of
+     tools now say what it is, so the pictogram is decoration that stopped doing
+     work. Subtracting is also what you asked for on the favicon and the mega
+     menu. Cost: the per-category colour on this section goes with it.
+   - **Keep them.** They help scanning, and nobody but you has called them out.
+   - *Cost of leaving it undecided:* nothing breaks. The squares stay where
+     they are until you pick.
+3. **The six descriptions are agent-written**, which is row 6 above. Unchanged —
+   they are yours to write and nothing here touched them.
 
 **Checked and NOT a defect**, so it is not re-raised: the Soon badges are
 honest. AI Studio's group badge is off and the two Soon labels inside it belong
 to Image Prompt and Landing-Page Prompt, which genuinely are unbuilt. Alt Text
 and Brand Starter are live and unbadged.
-
-Items 1 and 2 are design work and do not need you. Item 3 is six sentences and
-does.
 
 
 ---
