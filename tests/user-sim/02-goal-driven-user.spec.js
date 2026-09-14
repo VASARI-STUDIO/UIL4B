@@ -25,7 +25,28 @@ test.describe('goal-driven flows on the Aspect & Resolution calculator', () => {
     await page.getByRole('button', { name: /Width × height/ }).click()
     await page.getByRole('spinbutton', { name: 'Width in pixels' }).fill('1179')
     await page.getByRole('spinbutton', { name: 'Height in pixels' }).fill('2556')
-    await expect(page.getByRole('button', { name: /Ratio 131:284.*9:19.5/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Ratio 131:284/ })).toBeVisible()
+
+    // THE SUGGESTION MOVED OUT OF THE RATIO BUTTON AND BECAME A CONTROL.
+    //
+    // It used to be a <small> nested inside the Ratio stat, so this assertion
+    // read both strings off one accessible name. That button copies, which is
+    // why a nested control was impossible and the nearest standard could only
+    // ever be read — the founder's report on 2026-09-15 was exactly that: he
+    // typed a measured 1280×589, was shown its neighbour, and had no way into
+    // it, so the size ladder underneath kept building from the partial ratio.
+    //
+    // The assertion moves onto the markup that ships and gets stronger with it:
+    // the old one proved the text existed, this proves the offer WORKS.
+    const snap = page.getByRole('button', { name: /Nearest standard 9:19.5/ })
+    await expect(snap).toBeVisible()
+    await snap.click()
+
+    // 9:19.5 against the typed width of 1179 is 2554.5, so 2555 — one pixel
+    // from the 2556 that was measured. That closeness is the finding, not a
+    // rounding detail: the screenshot was already this standard, and the tool
+    // could not say so in a way you could act on.
+    await expect(page.getByRole('spinbutton', { name: 'Height in pixels' })).toHaveValue('2555')
   })
 
   test('“What PPI is a 27-inch QHD monitor?”', async ({ page }) => {

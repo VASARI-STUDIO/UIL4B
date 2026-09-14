@@ -234,6 +234,12 @@
 .arc-ppi-or{font-size:11.5px;color:var(--t3)}
 .arc-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:14px}
 .arc-stat{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 10px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);font-family:var(--font);text-align:left;cursor:pointer;transition:border-color var(--t)}
+/* The snap control shares the stat row with the read-outs beside it, so it has
+   to read as the one thing you can DO there rather than a sixth value. Accent
+   as an outline, same geometry. */
+.arc-stat--snap{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-bg)}
+.arc-stat--snap:hover{border-color:var(--accent)}
+.arc-stat--snap .arc-stat-v{color:var(--accent-strong)}
 .arc-stat:hover{border-color:var(--accent)}
 .arc-stat-k{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .arc-stat-v{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--t0)}
