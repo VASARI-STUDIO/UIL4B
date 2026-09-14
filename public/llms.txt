@@ -3,7 +3,7 @@
 > Build and export UI and brand design kits and content for website building. Every core tool is free forever, with 5 AI generations a day and 40 a month. Pro is from $4 USD a month and raises that to 30 a day and 300 a month, adds the advanced colour controls, and removes the export watermark. Free and Pro run the same AI model.
 
 ## Tools
-- [Palette Generator](https://uil4b.com/create/palette): Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps, accessibility checks, and production-ready CSS exports.
+- [Palette Generator](https://uil4b.com/create/palette): Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps and accessibility checks.
 - [Semantic Colour Generator](https://uil4b.com/create/semantic-color): Generate semantic UI colours — success, warning, error, and info — that stay legible and consistent with your palette in light and dark mode.
 - [Tint Scale Generator](https://uil4b.com/create/tint): Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.
 - [Gradient Generator](https://uil4b.com/create/gradient): Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.

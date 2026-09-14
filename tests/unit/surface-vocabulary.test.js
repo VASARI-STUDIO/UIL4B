@@ -28,7 +28,20 @@ import path from 'node:path'
 // there is nothing left on that page to enforce against. src/pages/Home.jsx,
 // the homepage that replaced it, stays first in this list and still carries the
 // homepage half of the rule.
+// index.html IS PUBLIC COPY AND WAS OUTSIDE THIS GUARD.
+//
+// The list was seven src/pages files, so the one page that is not a React
+// component was never scanned — and on 2026-09-15 its <noscript> block, which
+// is what a crawler without JS reads on the highest-traffic URL on the site,
+// described UIL4B as "a free, browser-based workspace". The rule held
+// everywhere it was looking and was broken where it was not.
+//
+// It is also the page prerender.mjs clones into all 39 route shells, so one
+// banned word there ships on every route at once. HTML comments are stripped
+// below for the same reason the JS ones are: this file's own notes about the
+// rule must not be read as copy that breaks it.
 const PUBLIC_COPY = [
+  'index.html',
   'src/pages/Home.jsx',
   'src/pages/Plans.jsx',
   'src/pages/SiteMap.jsx',
@@ -44,6 +57,7 @@ const ALLOWED = /WorkspaceContext|home-workspace|plb-pv-workspace|Product Worksp
 const stripComments = (src) => src
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .replace(/^\s*\/\/.*$/gm, '')
+  .replace(new RegExp(String.fromCharCode(60)+'!--[^]*?--'+String.fromCharCode(62),'g'), '')
 
 test('no public page calls a UIL4B surface a "workspace"', () => {
   const offenders = []
