@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import AuthGate from '../components/AuthGate'
+import { useAuth } from '../contexts/AuthContext'
 import useOnline from '../hooks/useOnline'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { auth as firebaseAuth } from '../utils/firebase'
@@ -131,6 +132,37 @@ const BANDS = [
   { n: '02', id: 'fonts', label: 'Font pairing' },
   { n: '03', id: 'typeScale', label: 'Type scale' },
 ]
+
+// A FIXED, HONEST EXAMPLE of the generator's output, for signed-out visitors.
+//
+// Not a random draw and not a live call: a signed-out page must not spend an AI
+// allowance, and a specimen that changed on every reload would be decoration
+// rather than an example. The hexes are a real ramp, the two families are the
+// two that genuinely ship (the same constraint the Font Pair preview documents
+// — `--display` resolves to Manrope, so a third "family" would be a duplicate
+// passed off as variety), and the steps are a real 1.25 scale off a 16px base:
+// 16, 20, 25, 31, 39.
+//
+// `brief` is printed beside it so the example is attributed to an input rather
+// than floating free, which is what makes it read as a sample and not a claim.
+const SAMPLE_STARTER = Object.freeze({
+  brief: 'a calm reading app for long articles',
+  palette: Object.freeze([
+    Object.freeze({ role: 'Primary', hex: '#1F3A5F' }),
+    Object.freeze({ role: 'Secondary', hex: '#4A6FA5' }),
+    Object.freeze({ role: 'Accent', hex: '#C97B4A' }),
+    Object.freeze({ role: 'Subtle', hex: '#E8E4DC' }),
+    Object.freeze({ role: 'Deep', hex: '#12202F' }),
+  ]),
+  fonts: Object.freeze({ heading: 'Manrope', body: 'JetBrains Mono' }),
+  scale: Object.freeze([
+    Object.freeze({ name: 'Body', px: 16 }),
+    Object.freeze({ name: 'H4', px: 20 }),
+    Object.freeze({ name: 'H3', px: 25 }),
+    Object.freeze({ name: 'H2', px: 31 }),
+    Object.freeze({ name: 'H1', px: 39 }),
+  ]),
+})
 
 /**
  * The Background and Text roles, by name, falling back to the extremes.
@@ -563,12 +595,26 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
  */
 export default function BrandStarter({ toast }) {
   const { plan } = useSubscription()
+  // AuthGate owns the sign-in UI; this only decides whether the EXAMPLE is
+  // worth showing. A signed-in visitor gets the workbench and does not need a
+  // sample of what they are about to generate.
+  const { user } = useAuth()
 
   return (
     <div className="sec">
       <div className="sec-h bs-head">
+        {/* NO <em> ON THE SECOND WORD. Founder, 2026-09-14: "the brand starter
+            page needs a UI overhaul i dont like the heading it looks so AI
+            generated."
+
+            The italic-second-word h1 is a house formula, not a decision — the
+            same shape as "Make it <em>yours</em>.", "Privacy &amp; <em>data</em>."
+            and "The whole <em>map</em>." It reads as styling applied to a
+            heading rather than a heading that means something, which is exactly
+            the tell he has named on four surfaces now. The tool's name is two
+            words; it does not need one of them leaning. */}
         <h1>
-          Brand <em>Starter</em>{' '}
+          Brand Starter{' '}
           {/* The word, and only the word. No sparkle, no shimmer, no gradient —
               a badge that decorates itself is doing marketing, and the honest
               content of "beta" is a limit rather than an event. */}
@@ -581,6 +627,70 @@ export default function BrandStarter({ toast }) {
         </p>
         <p className="bs-beta-note">{BETA_NOTE}</p>
       </div>
+
+      {/* WHAT YOU GET, SHOWN BEFORE THE WALL.
+          Founder, 2026-09-14: the page "needs a UI overhaul". Rendered
+          signed-out at 1280 before this, the whole page below the lede was a
+          lock icon and two buttons — a promise ("get a palette, a font pairing
+          and a type scale") followed immediately by a sign-in gate, with
+          nothing between them. A visitor was asked to make an account to find
+          out what an account gets, on a site whose nav says "Start for Free".
+
+          This is the SAME three bands the generator returns, in the same order,
+          with the same labels, drawn from `SAMPLE_STARTER` — real hexes, the
+          two families that actually ship, and a real 1.25 scale. It is marked
+          as an example in words rather than implied, because a specimen a
+          visitor mistakes for their own result is worse than no specimen.
+
+          Signed-in visitors never see it: AuthGate renders its children
+          instead, and the workbench is the page from that point on. */}
+      {!user && (
+        <section className="bs-sample" aria-labelledby="bs-sample-h">
+          <h2 className="bs-sample-h" id="bs-sample-h">
+            An example of what comes back
+          </h2>
+          <p className="bs-sample-note">
+            Generated from the brief &ldquo;{SAMPLE_STARTER.brief}&rdquo;. Yours will differ.
+          </p>
+
+          <div className="bs-sample-bands">
+            <div className="bs-sample-band">
+              <span className="bs-sample-n" aria-hidden="true">{BANDS[0].n}</span>
+              <h3 className="bs-sample-label">{BANDS[0].label}</h3>
+              <ul className="bs-sample-swatches">
+                {SAMPLE_STARTER.palette.map((c) => (
+                  <li key={c.hex}>
+                    <span className="bs-sample-chip" style={{ background: c.hex }} aria-hidden="true" />
+                    <span className="bs-sample-role">{c.role}</span>
+                    <span className="bs-sample-hex">{c.hex}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bs-sample-band">
+              <span className="bs-sample-n" aria-hidden="true">{BANDS[1].n}</span>
+              <h3 className="bs-sample-label">{BANDS[1].label}</h3>
+              <p className="bs-sample-pair">
+                <strong>{SAMPLE_STARTER.fonts.heading}</strong> over {SAMPLE_STARTER.fonts.body}
+              </p>
+            </div>
+
+            <div className="bs-sample-band">
+              <span className="bs-sample-n" aria-hidden="true">{BANDS[2].n}</span>
+              <h3 className="bs-sample-label">{BANDS[2].label}</h3>
+              <ul className="bs-sample-scale">
+                {SAMPLE_STARTER.scale.map((s) => (
+                  <li key={s.name}>
+                    <span className="bs-sample-step">{s.name}</span>
+                    <span className="bs-sample-px">{s.px}px</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
 
       <AuthGate featureLabel="generate a brand starter">
         <BrandStarterWorkbench
