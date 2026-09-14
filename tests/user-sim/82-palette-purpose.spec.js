@@ -131,10 +131,35 @@ test.describe('the palette board is a named set, not a list of landmarks', () =>
     await go(page, '/create/palette')
     await expect(page.locator('.plb-adjust')).toBeVisible()
 
+    // The name is "Adjust all" now, and the point of the change is that it is
+    // the VISIBLE one. It used to exist only as an aria-label, so the strip's
+    // name reached assistive technology and nobody else — while the one thing
+    // a sighted user needed was the scope, because every other control on this
+    // page acts on one swatch and these four move the whole board.
+    // The name is "Adjust all" now, and the point of the change is that it is
+    // the VISIBLE one. It used to exist only as an aria-label, so the strip's
+    // name reached assistive technology and nobody else - while the one thing
+    // a sighted user needed was the SCOPE, because every other control on this
+    // page acts on one swatch and these four move the whole board.
+    //
+    // ASSERTED UPPERCASE ON PURPOSE, and it is not a typo. The source says
+    // "Adjust all"; `.plb-adjust-title` carries text-transform:uppercase, and
+    // Chrome folds CSS text-transform into the COMPUTED accessible name. So
+    // the tree really does say "ADJUST ALL" while the JSX says "Adjust all",
+    // and a test written against the source string fails against the browser.
+    // Measured through CDP, not assumed. The contract that matters is WCAG
+    // 2.5.3: the accessible name must carry the visible label's words, which
+    // the case-insensitive comparison below is what actually pins.
     const nodes = await axNodes(page)
-    const strip = nodes.find((n) => n.name === 'Global palette adjustments')
+    const strip = nodes.find((n) => /^adjust all$/i.test(n.name))
     expect(strip, 'the strip reaches a reader under the name in its own source').toBeTruthy()
     expect(strip.role).toBe('group')
+    // ...and that name is on screen, not only in the tree. aria-labelledby is
+    // what ties the two together; an aria-label would let them drift apart.
+    const title = page.locator('#plb-adjust-title')
+    await expect(title).toBeVisible()
+    const visible = (await title.textContent()).trim()
+    expect(strip.name.toLowerCase()).toBe(visible.toLowerCase())
   })
 
   test('signed in, at the free cap, the board is still not five landmarks', async ({ page }) => {
