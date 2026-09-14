@@ -181,6 +181,97 @@ function hashHex(hex) {
  * odds to about one in sixty, without inventing any new vocabulary: both
  * extras already pair with theme nouns elsewhere in this module.
  */
+/* ── A noun may not contradict the colour it is naming ────────────────────
+
+   colorTheme() picks the right BANK from the hue, and that half was fixed on
+   2026-09-13, when every ordinary blue was drawing the purple bank. What was
+   left open, and recorded as open, is the word inside the bank: the noun is
+   chosen by hash across all eighteen, so a deep blue could draw "Teal" and a
+   bronze could draw "Firebrick". The family is right; the word is not.
+
+   WHY THIS STOPPED BEING COSMETIC. Measured 2026-09-15 by generating the Pro
+   brand-guidelines export: #1C2792 printed as PRIMARY "Muted Teal", in a
+   document that then ARGUES for the name it just got wrong — "Say “Muted
+   Teal” in a review and the decision survives; say the hex and it does not."
+   The customer sends that file to their client. A misnamed primary is the
+   most expensive place in the product for this to surface, and the note that
+   deferred the fix did not know it reached the export.
+
+   THE FIX IS A FILTER, NOT A RE-BANK. The recorded objection was that
+   re-banking ~84 nouns by hue halves the pool the determinism contract leans
+   on, which doubles the odds of two colours in one palette sharing a name. So
+   the banks are untouched and no word was added, moved or invented. Only
+   nouns that unambiguously NAME a hue carry one, and a noun is withheld only
+   from a colour it would actively contradict. Anything evocative rather than
+   chromatic — Slate, Fathom, Harvest, Brutalist — has no entry and stays
+   available to its whole bank, so most colours lose nothing.
+
+   EVERY NUMBER BELOW IS HCT, MEASURED, NOT AN sRGB ANGLE. That distinction is
+   the whole reason the 2026-09-13 bug existed: callers feed hexToHct(hex)[0],
+   and the two wheels are rotated by up to 45 degrees in the blues. Writing
+   sRGB angles here would have rebuilt exactly the defect this guards. Each
+   value is Math.round(hexToHct(canonical)[0]) for that word's usual colour —
+   Teal lands at 197, Indigo at 279, Cobalt at 269 — so the comparison happens
+   on one wheel. */
+const NOUN_HUE = {
+  // sunset
+  Terracotta: 37, Sienna: 42, Ochre: 59, Oxblood: 16, Corten: 40, Ember: 38,
+  Saffron: 90, Cinnabar: 26, Marmalade: 54, Rust: 38, Amber: 85, Vermilion: 26,
+  Firebrick: 24, Persimmon: 40,
+  // nature
+  Sage: 135, Moss: 124, Olive: 111, Verdigris: 193, Celadon: 151, Fern: 141,
+  Eucalyptus: 170, Malachite: 148, Laurel: 140, Thyme: 124, Pistachio: 137,
+  Patina: 185, Wintergreen: 191,
+  // ocean
+  Indigo: 279, Cobalt: 269, Prussian: 251, Cerulean: 273, Teal: 197, Delft: 272,
+  Denim: 264, Marine: 255, Glacier: 216, Azure: 264, Petrol: 210, Cyanotype: 245,
+  // cosmic
+  Aubergine: 326, Plum: 336, Amethyst: 310, Damson: 346, Orchid: 333, Iris: 289,
+  Mulberry: 1, Byzantine: 341, Tyrian: 356, Mauve: 315, Wine: 14, Heather: 314,
+  // candy
+  Rose: 3, Blush: 4, Coral: 38, Peony: 3, Fuchsia: 335, Raspberry: 9,
+  Flamingo: 3, Guava: 25, Watermelon: 11, Bubblegum: 6, Punch: 27,
+  Camellia: 11, Rosewater: 18,
+  // tech — the only two that name a colour rather than a material
+  Neon: 141, Blueprint: 253,
+}
+
+/** Degrees a noun may sit from the colour before it reads as a contradiction.
+    45 is chosen against the two cases on record. #1C2792 is HCT 281 and Teal
+    is 197, 84 apart, so Teal is withheld — while Indigo (2), Cobalt (12) and
+    Cerulean (8) all stay available to it. #835507, the bronze, is HCT 72
+    against Firebrick at 24, 48 apart, so that one goes too. */
+const NOUN_HUE_TOLERANCE = 45
+
+/** Shortest distance around the wheel, 0-180, so the banks that straddle 0 —
+    candy and cosmic both do — compare correctly. */
+function hueGap(a, b) {
+  const d = Math.abs(((a - b) % 360 + 360) % 360)
+  return d > 180 ? 360 - d : d
+}
+
+/** The nouns in `bank` that do not contradict `hue`, or the whole bank when
+    filtering would leave nothing to choose from. A colour with no readable hue
+    — a grey, or a hex that did not parse — constrains nothing. */
+function nounsForHue(bank, hue) {
+  if (!Number.isFinite(hue)) return bank
+  const kept = bank.filter((noun) => {
+    const named = NOUN_HUE[noun]
+    return named === undefined || hueGap(named, hue) <= NOUN_HUE_TOLERANCE
+  })
+  return kept.length ? kept : bank
+}
+
+/** HCT hue for a hex, or null when it cannot be read. */
+function hctHue(hex) {
+  try {
+    const [h] = hexToHct(hex)
+    return Number.isFinite(h) ? h : null
+  } catch {
+    return null
+  }
+}
+
 export function colorName(hex) {
   const key = normaliseHex(hex) || String(hex ?? '').toUpperCase()
   const theme = NAME_THEMES[colorTheme(key)] || NAME_THEMES.mono
@@ -191,7 +282,10 @@ export function colorName(hex) {
   // the quotient picks the noun, so the pair varies across the whole space
   // rather than the two moving in lockstep.
   const adj = adjectives[h % adjectives.length]
-  const noun = nouns[Math.floor(h / adjectives.length) % nouns.length]
+  // The pool is narrowed BEFORE the index is taken, not after, so the choice
+  // stays a pure function of the hex and one colour keeps one name forever.
+  const pool = nounsForHue(nouns, hctHue(key))
+  const noun = pool[Math.floor(h / adjectives.length) % pool.length]
   return `${adj} ${noun}`
 }
 
