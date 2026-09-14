@@ -426,7 +426,7 @@ now lives in `screenshots/README.md`. But they were captured in June, **before
 the routes moved and the surfaces were rebuilt**, so they show a product that no
 longer exists. Recapture them, or accept them as an archive and say so.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(DECIDED 2026-09-14 — **archive them**.)_ Chosen against both options as put. He was asked recapture-now versus recapture-after-the-deploy-unblocks, picked the latter, then said plainly: *"archive the old screenshots."* So neither recapture happens on a schedule. All 26 PNGs moved to `screenshots/archive-2026-06/` — the directory name now states the staleness the README had to explain in three paragraphs. **Kept, not deleted:** they are the only record of the app before the V2 homepage, which is worth having as a before-state. Recapturing becomes a fresh decision whenever he wants one, against whatever the app looks like then.
 
 ---
 
@@ -462,7 +462,7 @@ token bug — but the first thing a visitor sees demonstrated is violet/cyan whi
 the product's accent is `#0F6FFF`. Worth a deliberate call rather than an
 inherited default.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(DECIDED 2026-09-14 — **re-seed from the brand accent**.)_ Matches the recommendation. `DEFAULT_GRADIENT.from` is `#0F6FFF` instead of `#7C3AED`. The cyan end is kept: the fault was the off-brand START, and a gradient demo still has to travel somewhere. This was sample content rather than a token, which is exactly why it needed a decision rather than a lint rule — the first colour the homepage DEMONSTRATES was one `CHANGELOG.md` records as "not used anywhere" in V2.
 
 ---
 
@@ -529,7 +529,7 @@ a chargeback in most configurations. That is a judgement about someone's money,
 which makes it a founder call rather than an engineering one. Confirm the
 current behaviour or change it.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(DECIDED 2026-09-14 — **do not cancel the subscription**.)_ Matches the recommendation, and the shipped behaviour is therefore correct as it stands. Access revocation already happens immediately and is tested. Cancelling on top of it is an irreversible outward action on a live billing account, fired off a single webhook, and Stripe already cancels on repeated failure. No code change.
 
 ---
 
@@ -860,7 +860,7 @@ paints a low-contrast tint of the ink on a saturated ground.**
 
 **What would settle it:** keep, reverse, or add the on-screen note.
 
-**Verdict:** _(PENDING)_
+**Verdict:** _(DECIDED 2026-09-14 — **A, keep it**.)_ Matches the recommendation, and it was already live. Everything stays readable everywhere; on the 19.1% of palettes where the two levels converge, hierarchy is carried by size and weight rather than colour — which is what Polywork and Squarespace both do on a background the user picked. Option C (printing "contrast has been adjusted" beside the preview) was declined. `OWNER-ACTIONS.md` §2.1 closes on this.
 
 ---
 
@@ -868,6 +868,10 @@ paints a low-contrast tint of the ink on a saturated ground.**
 
 | Date | Proposal | Verdict |
 |---|---|---|
+| 2026-09-14 | P-013 · Recapture the portfolio screenshots, or leave them stale | **ARCHIVED** — "archive the old screenshots". All 26 moved to `screenshots/archive-2026-06/`, kept as a before-state record. Neither recapture option was taken |
+| 2026-09-14 | P-015 · The homepage gradient preview is violet; the brand is blue | **RE-SEEDED** — `DEFAULT_GRADIENT.from` is `#0F6FFF`. Cyan end kept; the fault was the off-brand start |
+| 2026-09-14 | P-018 · Should a chargeback also cancel the Stripe subscription? | **NO** — access revocation already happens and is tested. Cancelling is irreversible, off one webhook, on a live billing account. No code change |
+| 2026-09-14 | P-023 · Muted text now looks like body text on 19% of palettes | **KEEP** — readable everywhere; hierarchy carried by size and weight on the 19%. Option C declined |
 | 2026-08-14 | P-001 · Ship the instrumentation before shipping more features | APPROVED — env guard + gate event shipped; per-tool activation partial |
 | 2026-08-14 | P-002 · Give users somewhere to tell us something is wrong | APPROVED — every report now carries its route, tool and state; no API change needed |
 | 2026-08-14 | P-003 · Decide what the free tier is for | ANSWERED — "a foot in the door". Silent system collapse now names the paid edge; remaining gates still to audit |
