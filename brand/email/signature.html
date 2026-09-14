@@ -1,0 +1,71 @@
+<!--
+  UIL4B email signature — admin@uil4b.com
+  Paste target: Gmail → Settings → General → Signature (or Workspace admin).
+
+  WHY IT IS A TABLE AND NOT A DIV. Outlook on Windows renders mail through
+  Microsoft Word's HTML engine, which ignores flexbox, grid, and most modern
+  CSS. Tables with inline styles are the only layout that survives Gmail,
+  Outlook, Apple Mail and Superhuman without a per-client fix.
+
+  WHY THERE IS NO IMAGE BY DEFAULT. Most clients block remote images until the
+  reader clicks "show images", so an image-led signature arrives as a broken
+  placeholder to a stranger — which is exactly who cold mail goes to. The
+  default below is type and a rule, both of which always render. The avatar
+  variant is at the bottom, commented out, for threads with people who already
+  trust the sender.
+
+  NO SOCIAL ICONS, NO LEGAL BLOB, NO "SENT FROM". Each is a line a reader has
+  to skip, and none of them is doing work.
+
+  ONE THING IS YOURS TO FILL IN: the name on the first line. It currently reads
+  "Dylan Coleman" because that is the name on the account this signature is for,
+  but a role address can also sign as "UIL4B Support". Pick one — see README.md.
+-->
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Manrope,'Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td style="padding:0 0 10px 0;font-size:15px;line-height:1.35;font-weight:700;color:#0F0F10;">
+      Dylan Coleman
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 0 12px 0;font-size:13px;line-height:1.45;color:#5F5F59;">
+      UIL4B &middot; the UI system workspace
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 0 12px 0;">
+      <div style="width:40px;height:3px;background:#0F6FFF;font-size:0;line-height:0;">&nbsp;</div>
+    </td>
+  </tr>
+  <tr>
+    <td style="font-size:13px;line-height:1.7;color:#5F5F59;">
+      <a href="mailto:admin@uil4b.com" style="color:#0B5ED7;text-decoration:none;">admin@uil4b.com</a><br>
+      <a href="https://uil4b.com" style="color:#0B5ED7;text-decoration:none;">uil4b.com</a>
+    </td>
+  </tr>
+</table>
+
+<!--
+  VARIANT WITH THE AVATAR. Use this only once the image is reachable at a public
+  URL — the src below assumes brand/email/avatar-512.png has been deployed to
+  the site, and the site has not deployed since 2026-09-02, so this will show a
+  broken image until that clears. Width and height are set as ATTRIBUTES as well
+  as CSS because Outlook ignores the CSS ones.
+
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Manrope,'Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td valign="top" style="padding:0 14px 0 0;">
+      <img src="https://uil4b.com/brand/email/avatar-512.png" alt="UIL4B" width="48" height="48"
+           style="display:block;width:48px;height:48px;border-radius:8px;border:0;outline:none;text-decoration:none;">
+    </td>
+    <td valign="top" style="border-left:3px solid #0F6FFF;padding:0 0 0 14px;">
+      <div style="font-size:15px;line-height:1.35;font-weight:700;color:#0F0F10;">Dylan Coleman</div>
+      <div style="font-size:13px;line-height:1.45;color:#5F5F59;padding:2px 0 8px 0;">UIL4B &middot; the UI system workspace</div>
+      <div style="font-size:13px;line-height:1.7;color:#5F5F59;">
+        <a href="mailto:admin@uil4b.com" style="color:#0B5ED7;text-decoration:none;">admin@uil4b.com</a><br>
+        <a href="https://uil4b.com" style="color:#0B5ED7;text-decoration:none;">uil4b.com</a>
+      </div>
+    </td>
+  </tr>
+</table>
+-->
