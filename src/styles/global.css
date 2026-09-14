@@ -4265,7 +4265,28 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
 /* ── Tools grid (structural pattern 7) ── */
 .htools{padding-top:var(--sec-pad)}
 .htools-head{max-width:720px}
-.htools-grid{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-4);margin-top:var(--s-7)}
+/* SIX COLUMNS FOR SIX UNEQUAL THINGS, not three equal ones.
+   The span comes from data-tier, which Home.jsx counts off the number of
+   tools in the group a visitor can open today — see the note above
+   HOME_TOOL_GROUPS. Half width for the two deep families, a third for the
+   three with a pair each, and the full row for the one with nothing live
+   yet, which is the only honest width for it.
+   Three equal columns also caused the dead space measured on 2026-09-14:
+   the row stretched every card to its tallest member, so a two-chip card
+   carried 180px of nothing. Rows now size to what is in them. */
+.htools-grid{list-style:none;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));align-items:start;gap:var(--s-4);margin-top:var(--s-7)}
+.htool[data-tier="lead"]{grid-column:span 3}
+.htool[data-tier="core"]{grid-column:span 2}
+.htool[data-tier="next"]{grid-column:1 / -1}
+/* NOTHING IN IT IS BUILT, SO IT IS NOT A SURFACE YET. No card fill: it
+   takes the section ground and reads as an outline of a thing to come,
+   which is what the Soon badge says in one word and the shape now says
+   without one. The 3px lift comes off with it — a card that is not open
+   should not rise toward the pointer as though it were. */
+.htool[data-tier="next"]{flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px var(--s-5);padding:18px 26px;background:transparent}
+.htool[data-tier="next"]:hover{transform:none}
+.htool[data-tier="next"] .htool-desc,.htool[data-tier="next"] .htool-links{margin-top:0}
+.htool[data-tier="next"] .htool-open{margin:0 0 0 auto;padding-top:0}
 .htool{position:relative;display:flex;flex-direction:column;padding:26px;border:1px solid var(--border);border-radius:var(--radius-2xl);background:var(--bg-1);transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
 /* The V2 hover language: border to ink AND a 3px lift, together. */
 .htool:hover{border-color:var(--t0);transform:translateY(-3px)}
@@ -4603,7 +4624,18 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
   .hprice-panel{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:var(--s-8);align-items:center}
 }
 @media(max-width:1180px){
-  .htools-grid,.hcomm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hcomm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* SIX COLUMNS UNTIL A THIRD STOPS HOLDING A CHIP, then one.
+   Four columns were tried first and could not come out even: five cards over
+   four columns is 2, 2, 1, and the odd card leaves half a row empty. Six tile
+   exactly — 3+3, then 2+2+2 — so the band simply extends down, and below it
+   the grid goes to a single column rather than to a shape that cannot tile.
+   The spans have to be unset with it: a card still asking for three of six
+   columns inside a one-column grid overflows its own row. */
+@media(max-width:860px){
+  .htools-grid{grid-template-columns:minmax(0,1fr)}
+  .htool[data-tier]{grid-column:1 / -1}
 }
 @media(max-width:768px){
   .hcmd-bar{min-height:54px;padding-left:14px}
@@ -4612,7 +4644,7 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
   .hcomm-head{align-items:flex-start}
 }
 @media(max-width:640px){
-  .htools-grid,.hcomm-grid{grid-template-columns:minmax(0,1fr)}
+  .hcomm-grid{grid-template-columns:minmax(0,1fr)}
   .hprice-row{grid-template-columns:minmax(0,1fr);grid-template-areas:"cadence" "amount" "total" "note"}
   .hprice-note{text-align:left}
 }
