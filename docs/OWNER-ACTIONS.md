@@ -953,7 +953,35 @@ and the date beside one when you run it.
 
 **Private (server):** `FIREBASE_SERVICE_ACCOUNT_KEY`, `GEMINI_API_KEY`,
 `OPENROUTER_API_KEY`, optional `OPENROUTER_MODEL`, `STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET`, the price ids, and the optional retention/support
-variables.
+`STRIPE_WEBHOOK_SECRET`, the price ids, `MAIL_FROM` (see below), and the
+optional retention/support variables.
+
+### `MAIL_FROM` — set this the day uil4b.com can send
+
+Every email the product sends currently goes out as
+`UIL4B <onboarding@resend.dev>`. That is Resend's sandbox address: it is not
+your domain, and **Resend will only deliver it to your own inbox**. It is fine
+for the alerts that come to you, and useless for anything sent to a customer.
+
+**When the sending domain is verified** (row 8 — SPF, DKIM and a return path on
+uil4b.com), add this in **Vercel → Settings → Environment Variables**:
+
+```
+MAIL_FROM = UIL4B <admin@uil4b.com>
+```
+
+Then redeploy. That one field switches every outbound message. No code change.
+
+**Do not set it before the domain is verified.** Resend rejects a sender it
+cannot verify, so the mail would simply vanish — and the notifications that
+reach you today would stop.
+
+**Replies already work.** Every message the product sends now carries
+`reply-to: admin@uil4b.com`, which needs no verified domain. Hitting reply on a
+notification reaches the real mailbox today.
+
+**How to check which one is live:** Admin → Overview → AI. The panel names the
+current sender and says plainly whether it is the sandbox or a verified
+uil4b.com address.
 
 **Never paste a secret value into this repository.**

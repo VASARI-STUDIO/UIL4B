@@ -1,6 +1,7 @@
 import { adminDb } from './_lib/firebase-admin.js'
 import { allowedOrigins } from './_lib/origins.js'
 import { clientIp, consume } from './_lib/rateLimit.js'
+import { mailFrom, REPLY_TO } from './_lib/mail.js'
 
 // THE BOOTSTRAP IS SHARED, NOT COPIED. This file used to carry its own
 // initializeApp(): a bare JSON.parse of FIREBASE_SERVICE_ACCOUNT_KEY inside a
@@ -191,7 +192,10 @@ export default async function handler(req, res) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'UIL4B <onboarding@resend.dev>',
+          from: mailFrom(),
+          // A reply reaches the real mailbox even while `from` is still the
+          // Resend sandbox, because reply_to needs no verified domain.
+          reply_to: REPLY_TO,
           to: [notifyEmail],
           subject: `[UIL4B ${entry.type}] ${entry.subject}`,
           html: `
