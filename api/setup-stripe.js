@@ -5,7 +5,8 @@ import { ADMIN_EMAILS } from './_lib/admin.js'
 import { proProductDescription } from './_lib/plans.js'
 import {
   SUPPORTED_CURRENCIES, CURRENCY_CODES, BASE_CURRENCY, DEFAULT_PRICES,
-  LOOKUP_KEYS, INTERVAL_MAP, BILLING_INTERVALS, LIFETIME_CURRENCY_CODES, toCents, fromCents,
+  LOOKUP_KEYS, INTERVAL_MAP, INTERVAL_COUNTS, BILLING_INTERVALS, LIFETIME_CURRENCY_CODES,
+  toCents, fromCents,
 } from './_lib/pricing.js'
 
 const PRODUCT_NAME = 'UIL4B Pro'
@@ -152,7 +153,24 @@ export default async function handler(req, res) {
         currency_options,
         nickname: `${PRODUCT_NAME} ${interval}`,
       }
-      if (interval !== 'lifetime') priceParams.recurring = { interval: INTERVAL_MAP[interval] }
+      // THE THREE-TIMES-OVERCHARGE. `recurring.interval` alone is only half of
+      // a quarterly price: Stripe reads { interval: 'month' } as billing every
+      // month, so a quarterly price created without `interval_count: 3` charges
+      // $18 a MONTH. INTERVAL_COUNTS has carried the right number since
+      // quarterly was first described in pricing.js and nothing read it, which
+      // is precisely how that ships unnoticed — the price object looks correct
+      // in the dashboard and the error appears on a customer's statement.
+      //
+      // Sent for every recurring interval, not only quarterly. Monthly and
+      // yearly are both count 1, so this changes nothing for them and it means
+      // the next interval added cannot reintroduce the bug by forgetting a
+      // special case.
+      if (interval !== 'lifetime') {
+        priceParams.recurring = {
+          interval: INTERVAL_MAP[interval],
+          interval_count: INTERVAL_COUNTS[interval] ?? 1,
+        }
+      }
       const newPrice = await stripe.prices.create(priceParams)
 
       if (existing.data[0] && existing.data[0].id !== newPrice.id) {

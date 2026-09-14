@@ -79,8 +79,37 @@ export const INTERVAL_COUNTS = Object.freeze({ monthly: 1, quarterly: 3, yearly:
 
 export const PRICE_ENV_KEYS = {
   monthly: 'STRIPE_PRICE_MONTHLY',
+  quarterly: 'STRIPE_PRICE_QUARTERLY',
   yearly: 'STRIPE_PRICE_YEARLY',
   lifetime: 'STRIPE_PRICE_LIFETIME',
+}
+
+// HOW LONG A CADENCE IS FREE BEFORE THE FIRST CHARGE, and the only place that
+// answer is written on the server. api/create-checkout.js read `isYearly` and
+// hard-coded 7, which meant the promise a customer was shown on the checkout
+// page and the promise Stripe actually honoured were two separate literals in
+// two files with nothing holding them together.
+//
+// Founder, 2026-09-15: the trial is EARNED BY THE CADENCE. Monthly bills
+// today and says so; quarterly and yearly each get seven days. That is the
+// friction his own conversion note argues for — a card is taken either way,
+// so the trial filters for intent — while the free tier stays the
+// no-commitment way in.
+//
+// src/config/planLadder.js carries the same numbers for the UI, and
+// tests/unit/trial-cadence.test.js fails if the two ever disagree. A CTA that
+// promises a trial the server will not grant is the worst version of this bug
+// because it only surfaces on the card statement.
+export const TRIAL_DAYS = Object.freeze({
+  monthly: 0,
+  quarterly: 7,
+  yearly: 7,
+  lifetime: 0,
+})
+
+/** Days of trial for a billing interval, 0 for anything unrecognised. */
+export function trialDaysFor(interval) {
+  return TRIAL_DAYS[interval] ?? 0
 }
 
 // The intervals that may be SOLD today. This is the allowlist
@@ -88,13 +117,27 @@ export const PRICE_ENV_KEYS = {
 // loop /api/get-prices publishes, and the loop /api/setup-stripe creates Stripe
 // prices from — so adding a key here is a decision to sell that interval.
 //
-// Quarterly is fully described above (defaults, lookup key, interval, count)
-// but is NOT here. It has no Stripe price, no PRICE_ENV_KEYS entry, no
-// `interval_count` support in setup-stripe and no src/pages/Checkout.jsx case,
-// so offering it today would dead-end on "Invalid selection". The data path is
-// wired so it can be switched on deliberately rather than rebuilt;
-// tests/unit/price-ladder.test.js lists what has to be true first.
-export const BILLING_INTERVALS = Object.freeze(['monthly', 'yearly', 'lifetime'])
+// QUARTERLY WAS SWITCHED ON 2026-09-15, on the founder's instruction and with
+// his explicit approval for the gated payment files. The four things this
+// comment used to list as missing were done in that one commit, in this order,
+// because the third one is a way to charge somebody wrongly:
+//
+//   1. PRICE_ENV_KEYS.quarterly            above
+//   2. src/pages/Checkout.jsx case         so the CTA has somewhere to go
+//   3. `interval_count` in setup-stripe.js  THE ONE THAT MATTERS. Stripe reads
+//      `recurring.interval` alone as a MONTHLY price. Creating quarterly
+//      without `interval_count: 3` produces an $18-per-month subscription —
+//      three times the intended charge, on a real card, and only visible on a
+//      statement. The count was already sitting in INTERVAL_COUNTS above,
+//      unused, which is exactly how that bug would have shipped.
+//   4. this list
+//
+// The Stripe price itself is created in the DASHBOARD and is not in this
+// repository. Until it exists, resolvePrice returns null and create-checkout
+// answers 503 with "the quarterly price is temporarily unavailable" rather
+// than charging anyone anything — see docs/OWNER-ACTIONS.md for the test-mode
+// steps the founder asked to run first.
+export const BILLING_INTERVALS = Object.freeze(['monthly', 'quarterly', 'yearly', 'lifetime'])
 export const LIFETIME_CURRENCY_CODES = Object.freeze(Object.keys(DEFAULT_PRICES.lifetime))
 
 export function toCents(amount) { return Math.round(Number(amount) * 100) }
