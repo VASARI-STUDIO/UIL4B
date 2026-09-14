@@ -1494,6 +1494,39 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setLoading(false)
   }, [activeCat])
 
+  /* ── WHEN THE CATALOGUE ANSWERS AND THE GLYPHS DO NOT ────────────────────
+
+     The 2026-09-08 outage work built a real refused-state — "Couldn't reach
+     the icon service — showing built-in icons", a Try again button, and the
+     built-in set underneath — and keyed it on the CATALOGUE requests failing.
+
+     Measured 2026-09-15, the founder reported the library broken and it was
+     failing a way that state cannot see: all 24 /collection requests returned
+     200 while every individual glyph .svg came back 429 from Cloudflare
+     (error 1015, rate limited by IP). The API answers a rate-limited glyph
+     with text/plain, the browser had asked for an image, so ORB blocks it and
+     the <img> just fails. Result: the app believed the service was healthy,
+     the masthead pill read "Live library connected", and the grid showed 120
+     blank cells with nothing said about it.
+
+     A glyph <img> failing tells us nothing on its own — a single icon can be
+     missing from a pack. A BATCH of them failing is the service refusing, so
+     the count is what carries the meaning. Past the threshold this flips the
+     SAME loadError the catalogue path sets, so the notice, the built-in grid
+     and the masthead pill all come from one flag and cannot disagree. */
+  const glyphFails = useRef(0)
+  const noteGlyphFailure = useCallback(() => {
+    // Already in the fallback, or the catalogue itself already failed.
+    if (cdnOk.current === false) return
+    glyphFails.current += 1
+    // Eight is past coincidence and well inside one screen of a 120-cell grid,
+    // so the swap happens while the user is still looking at the first page.
+    if (glyphFails.current < 8) return
+    cdnOk.current = false
+    setLoadError(true)
+    renderLocal('', '')
+  }, [renderLocal])
+
   // Load EVERY pack by default, progressively. Fire all /collection requests in
   // parallel but append per-pack as each resolves (never Promise.all-block), and
   // round-robin merge so the grid stays mixed. Skeleton shows until the first
@@ -1600,7 +1633,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     if (!packFilter) { browseAll(); return }
     const rid = ++reqId.current
     retryRef.current = () => browsePack(packFilter, groupKey)
-    setLoading(true); setLoadError(false)
+    setLoading(true); setLoadError(false); glyphFails.current = 0
     getCollectionNames(packFilter)
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
@@ -1628,7 +1661,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => browseGroup(groupKey)
     setSource('group'); setGroup(groupKey); setPack('')
-    setLoading(true); setLoadError(false)
+    setLoading(true); setLoadError(false); glyphFails.current = 0
     Promise.all(g.packs.map(p =>
       getCollectionNames(p)
         .then(({ names }) => ({ names: keepStyle(p, names, groupKey).slice(0, PER_PACK_CAP), pack: p, ok: true }))
@@ -1688,7 +1721,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     const rid = ++reqId.current
     retryRef.current = () => doSearch(q, scope)
     setSource('search')
-    setLoading(true); setLoadError(false)
+    setLoading(true); setLoadError(false); glyphFails.current = 0
     // Pack and chip compose: a set pack narrows the endpoint, the chip narrows
     // the STYLE of the results (matchesStyle below); chip alone fans out to the
     // whole collection's packs.
@@ -1906,7 +1939,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     }
     if (icon.cdn) {
       if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} />
-      return <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} />
+      return <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} onError={noteGlyphFailure} />
     }
     return (
       <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} aria-hidden="true">
@@ -2000,7 +2033,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 onClick={() => handleIconClick(r)}
               >
                 {r.cdn ? (
-                  <img src={`https://api.iconify.design/${r.pack}/${r.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" />
+                  <img src={`https://api.iconify.design/${r.pack}/${r.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
                 ) : (
                   <svg viewBox="0 0 24 24" fill={r.filled ? 'currentColor' : 'none'} stroke={r.filled ? 'none' : 'currentColor'} aria-hidden="true"><path d={r.d} /></svg>
                 )}
