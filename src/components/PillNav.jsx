@@ -10,6 +10,7 @@ import { searchHints } from '../data/toolIndex'
 // paletteLibrary.js and SurfaceLanding.jsx already pull them in), so this is
 // a second consumer of bytes that ship regardless, not new weight.
 import { GALLERY_PALETTES } from '../data/paletteGallery'
+import { inkFor, grade } from '../utils/styleGuideExport'
 import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
 import usePopover from '../hooks/usePopover'
 import { BRAND_KIT_STEPS, guideEntry, isGuideActive, startGuide } from '../utils/brandKitGuide'
@@ -368,22 +369,48 @@ function MenuPreview({ section }) {
 
 function previewFor(section) {
   if (section === 'create') {
-    // The artefacts the guided flow actually produces: a real palette, and the
-    // two families that are genuinely installed. A third specimen is impossible
-    // to do honestly here -- --display resolves to 'Manrope', the same value as
-    // --font, so it would render a duplicate and pass it off as variety. That is
-    // the trap the Font Gallery preview hit first; see serif-token-is-not-a-serif.
+    // FOUNDER, 2026-09-14: "the build a brand kit graphic should show a page of
+    // what an export will look like maybe the page of colours".
+    //
+    // It used to be an abstract specimen — a swatch rail, "Ag", "0123 abc" —
+    // which showed the INGREDIENTS and never the artefact. The card beside it
+    // sells a guided flow whose whole point is the thing you get at the end, and
+    // the panel showed everything except that thing.
+    //
+    // So this is a miniature of page 2 of the real style guide: `01 — Colour`,
+    // "The palette", the swatch grid, the footer. Section number, heading, the
+    // "Made with UIL4B" footer a free export carries, and the per-swatch
+    // contrast evidence are all the same strings `styleGuideExport.js` writes.
+    //
+    // IT COMPUTES THE INK AND THE RATIO WITH THE EXPORT'S OWN `inkFor` AND
+    // `grade`, imported rather than reimplemented. That is the part that keeps
+    // it honest: a preview that hard-coded "AAA" would become a lie the first
+    // time the palette or the thresholds moved, and this one cannot — it reads
+    // whatever the exporter would read, from the same function, on the same
+    // colours. If a swatch here ever showed "Fail", the export would too.
     const palette = GALLERY_PALETTES[0]
     return (
       <div className="pnav-prev pnav-prev--create">
-        <div className="pnav-prev-swatches">
-          {palette.colors.map((c, i) => (
-            <span className="pnav-prev-swatch" key={`${c}-${i}`} style={{ background: c }} />
-          ))}
-        </div>
-        <div className="pnav-prev-type">
-          <span className="pnav-prev-ag">Ag</span>
-          <span className="pnav-prev-mono">0123 abc</span>
+        <div className="pnav-prev-page">
+          <p className="pnav-prev-eyebrow">01 — Colour</p>
+          <p className="pnav-prev-title">The palette</p>
+          <div className="pnav-prev-grid">
+            {palette.colors.map((hex, i) => {
+              const { ink, ratio } = inkFor(hex)
+              return (
+                <div className="pnav-prev-sw" key={`${hex}-${i}`}>
+                  <span className="pnav-prev-chip" style={{ background: hex, color: ink }}>
+                    {hex.toUpperCase()}
+                  </span>
+                  <span className="pnav-prev-meta">{grade(ratio)} · {ratio.toFixed(1)}:1</span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="pnav-prev-foot">
+            <span>Colour</span>
+            <span>Made with UIL4B</span>
+          </div>
         </div>
       </div>
     )

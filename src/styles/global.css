@@ -3369,6 +3369,27 @@ html.lenis{scroll-behavior:auto!important}
    the palette and gradient values themselves, which is the point -- they are
    product data, not styling. */
 .pnav-prev{display:flex;flex-direction:column;gap:10px;padding:14px}
+/* ── The Create preview is a MINIATURE OF THE EXPORT, not a specimen ──
+   Founder, 2026-09-14: the brand-kit graphic should show what an export
+   actually looks like. So `.pnav-prev-page` is a scaled page of the style guide:
+   a white A4-proportioned sheet on the panel's own ground, cropped at the
+   bottom edge so it reads as a document that continues rather than a card that
+   stops. The ground stays --bg-1 and the sheet is always white with dark ink,
+   in BOTH themes, because the exported page is white paper — a dark-mode
+   "preview" of a document that prints white would be showing something the
+   user will never receive. */
+.pnav-prev--create{padding:12px 12px 0}
+.pnav-prev-page{display:flex;flex-direction:column;gap:7px;padding:12px 12px 0;background:#fff;border:1px solid rgba(16,16,20,.10);border-radius:var(--radius-s) var(--radius-s) 0 0;box-shadow:0 2px 10px rgba(16,16,20,.10)}
+.pnav-prev-eyebrow{margin:0;font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:#5F5F69}
+.pnav-prev-title{margin:0;font-family:var(--display);font-size:15px;font-weight:500;letter-spacing:-.02em;line-height:1.1;color:#101014}
+.pnav-prev-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pnav-prev-sw{display:flex;flex-direction:column;gap:2px;min-width:0}
+/* The hex sits INSIDE the chip in the ink the exporter chose for it, which is
+   the export's own layout and also the only way a 2-up chip this small can
+   carry its value without a second row of type. */
+.pnav-prev-chip{display:flex;align-items:flex-end;height:26px;padding:0 5px;border-radius:2px;font-family:var(--mono);font-size:7.5px;font-weight:700;letter-spacing:.02em;box-shadow:inset 0 0 0 1px rgba(16,16,20,.08)}
+.pnav-prev-meta{font-family:var(--mono);font-size:7px;letter-spacing:.02em;color:#5F5F69;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pnav-prev-foot{display:flex;justify-content:space-between;gap:8px;margin-top:2px;padding:5px 0 6px;border-top:1px solid #E4E4E8;font-family:var(--mono);font-size:7px;letter-spacing:.04em;color:#5F5F69}
 .pnav-prev-swatches{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;height:44px}
 /* The ring is --border, not a black alpha: this palette is real product data
    and it contains near-black values (Midnight Teal opens #222831), which on the
