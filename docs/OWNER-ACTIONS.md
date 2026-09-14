@@ -33,7 +33,7 @@ the rest.
 |---|---|---|---|---|
 | **1** | Check **Fast Origin Transfer** usage. Upgrade off Hobby, or wait for the monthly reset | Vercel → your team → **Usage** | 5 min | **Nothing you have built since 2 September is live.** 100+ merged PRs invisible |
 | **2** | Clear the failed payment, or raise the spending limit | GitHub → Settings → **Billing** | 5 min | No test has run since 4 September. Every PR reads `UNSTABLE`, which looks like broken code |
-| **3** | Run `npm run apply:gated`, type **y** | a terminal in this repo | 2 min | Your feedback queue stays open to **anyone on the internet**, and you stay the only person who can approve a submission |
+| **3** | Run `npm run apply:gated`, type **y**, then publish the rules | a terminal in this repo | 2 min | **This is what the Firebase "insecure rules" email is about.** Your feedback collection is open to anyone on the internet, and you stay the only person who can approve a submission |
 | **4** | Confirm live prices: **$7** monthly · **$18** quarterly · **$48** yearly | Stripe → Products → UIL4B Pro | 20 min | **The site advertises one price and charges another.** The only item here with a legal edge |
 | **5** | Edit the product description: **30 AI actions a day, 300 a month** | Stripe → Products → UIL4B Pro | 2 min | Your own product page promises 1,000/day that the app does not give |
 | **6** | Subscribe the webhook to the events we handle | Stripe → Developers → Webhooks | 20 min | Refunds and chargebacks never reach us |
@@ -45,6 +45,38 @@ the rest.
 | **12** | Check legacy customers still match to accounts | Stripe → Customers | minutes each | A paying customer can lose access silently |
 | **13** | Make `www.uil4b.com` work (it is broken right now) | Vercel → Domains, then your DNS | 10 min | Anyone who types `www.` gets a page that never loads |
 | **14** | Make the Google sign-in box say `uil4b.com` | Firebase + Google Cloud | 20 min | It says `uil4b-357c5.firebaseapp.com`, which looks fake |
+
+### Why Firebase emailed you about insecure rules
+
+**It is real, it is ours, and the fix is already written.**
+
+`firestore.rules` line 56 says:
+
+```
+match /feedback/{feedbackId} {
+  allow create: if true;
+```
+
+`if true` means no sign-in, no field checks, no size limit, no rate limit.
+Anyone on the internet can write documents straight into the collection your
+admin feedback queue reads from — as many as they like, any shape, up to
+Firestore's 1 MB per-document ceiling. Firebase's scanner looks for exactly this
+and emails you about it.
+
+**Nothing in the app relies on it.** Every report goes through
+`fetch('/api/support')`, which writes with the Admin SDK and skips these rules
+entirely. So the rule never protected a real write — it only granted one to
+strangers. Closing it breaks nothing, and reads, updates and deletes are
+untouched, so the queue keeps working.
+
+**The fix is row 3.** `npm run apply:gated` changes it to `allow create: if
+false` and also puts size and shape limits on the three collections a signed-in
+account can write to. It was reviewed in #418 and is tested against the Firebase
+emulator before you publish it.
+
+**Then publish.** Applying the change only edits the file on your machine. The
+rules that are live are whatever the Firebase console last published, so the
+email will keep coming until you publish — see the line below.
 
 **After row 3 you must also:** publish the new rules (Firebase console, or
 `firebase deploy --only firestore:rules`) **and deploy the site** —
