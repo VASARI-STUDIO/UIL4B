@@ -50,15 +50,19 @@ export default function SyncNotice() {
   const entry = state.first
   if (!entry) return null
 
-  // WHILE OFFLINE, THE OFFLINE BANNER SPEAKS AND THIS ONE WAITS. Both are
-  // fixed, centred, under the nav — the same slot — and a lost connection is
-  // precisely when a sync fails, so the two arrived together: measured
-  // 2026-09-08 at 320, 390 and 1280, this notice (z-index 130) sat on top of
-  // .offline-banner (119) and hid it. The offline banner already says the
-  // work is safe and that things resume on their own; a second card saying
-  // "your projects aren't syncing — this device looks offline" over it adds
-  // nothing a person can act on. The entry is NOT cleared — it is still true
-  // — so the moment the connection returns this renders again, with Try again.
+  // WHILE OFFLINE, THE OFFLINE BANNER SPEAKS AND THIS ONE WAITS. A lost
+  // connection is precisely when a sync fails, so the two always arrived
+  // together: measured 2026-09-08 at 320, 390 and 1280, this notice (z-index
+  // 130) sat on top of .offline-banner (119) and hid it.
+  //
+  // Both are rows in .notice-stack now, so the second one would stack rather
+  // than cover — but this branch stays, because the reason was never only the
+  // geometry. The offline banner already says the work is safe and that things
+  // resume on their own; a second row saying "your projects aren't syncing —
+  // this device looks offline" underneath it adds nothing a person can act on,
+  // and it would push every toolbar on the page down to say it. The entry is
+  // NOT cleared — it is still true — so the moment the connection returns this
+  // renders again, with Try again.
   if (!online) return null
 
   const isError = entry.level === 'error'

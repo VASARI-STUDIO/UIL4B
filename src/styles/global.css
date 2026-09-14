@@ -2667,7 +2667,7 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --fs-h3:1.5rem;--fs-h4:1.25rem;--fs-h5:1.0625rem;
   --fs-lede:clamp(1.0625rem,calc(0.96rem + 0.45vw),1.3125rem);
   --fs-body:1rem;--fs-body-s:0.875rem;--fs-caption:0.8125rem;--fs-micro:0.6875rem;
-  --nav-h:60px;--nav-top:0px;--nav-clear:calc(var(--nav-top) + var(--nav-h) + 8px);
+  --nav-h:60px;--nav-top:0px;--notice-h:0px;--chrome-h:calc(var(--nav-top) + var(--nav-h) + var(--notice-h));--nav-clear:calc(var(--chrome-h) + 8px);
   /* Wide shared chrome: navigation, toolbars, and footers can use up to 1680px
      instead of collapsing to the old ~1400px desktop span. `--page-inline`
      is the actual viewport inset, so the content-max token means what it says.
@@ -3317,7 +3317,7 @@ html.lenis{scroll-behavior:auto!important}
    breathing gap) and the COLUMNS scroll inside it, not the whole panel — the
    footer stays put, which is what makes it legible that there is more above.
    `svh` so a mobile browser's collapsing toolbar cannot shrink it mid-open. */
-.pnav-menu{position:fixed;top:calc(var(--nav-top) + var(--nav-h) + 8px);left:50%;transform:translateX(-50%);z-index:119;display:flex;flex-direction:column;width:1040px;max-width:calc(100vw - 32px);max-height:calc(100svh - var(--nav-top) - var(--nav-h) - 24px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;animation:pnav-menu-in var(--dur-4) var(--ease-entrance)}
+.pnav-menu{position:fixed;top:var(--nav-clear);left:50%;transform:translateX(-50%);z-index:119;display:flex;flex-direction:column;width:1040px;max-width:calc(100vw - 32px);max-height:calc(100svh - var(--chrome-h) - 24px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;animation:pnav-menu-in var(--dur-4) var(--ease-entrance)}
 @keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
 .pnav-menu[data-menu="create"]{width:1260px}
 /* 940 held two columns. Discover has three groups and now gets three columns,
@@ -3545,7 +3545,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-menu-foot-link{font-size:var(--fs-body-s);font-weight:560;color:var(--t0);text-decoration:none}
 
 /* Mobile sheet */
-.pnav-sheet{position:fixed;inset:0;z-index:110;background:var(--bg-1);padding:calc(var(--nav-top) + var(--nav-h) + 16px) 20px 20px;overflow-y:auto;overscroll-behavior:contain;animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
+.pnav-sheet{position:fixed;inset:0;z-index:110;background:var(--bg-1);padding:calc(var(--chrome-h) + 16px) 20px 20px;overflow-y:auto;overscroll-behavior:contain;animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
 @keyframes pnav-sheet-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .pnav-acc{border-top:1px solid var(--border)}
 .pnav-acc:first-child{border-top:none}
@@ -3945,7 +3945,7 @@ html.lenis{scroll-behavior:auto!important}
    `.hsteps`, whose first --sec-pad (160px at 1440) is padding and whose next
    element is the heading — the workbench sits far below that. The peek shows
    the section has started; it does not show the tools. */
-.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:min(78svh,760px);margin:0 auto;padding:calc(var(--nav-top) + var(--nav-h) + var(--s-7)) 24px var(--s-8)}
+.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:min(78svh,760px);margin:0 auto;padding:calc(var(--chrome-h) + var(--s-7)) 24px var(--s-8)}
 /* The 70px top margin here was headroom for the absolutely-positioned satellite
    field, which V2 removed. Keeping it pushed the hero's primary CTA below an
    800px fold once the command bar arrived — see the below-the-fold test. */
@@ -4150,7 +4150,7 @@ html[data-hero-prepainted] .home-hero-line-in{animation:none}
    condition the below-the-fold test guards. Type sizes are untouched — only the
    gaps between blocks give way. */
 @media(max-height:900px){
-  .home-hero{padding-top:calc(var(--nav-top) + var(--nav-h) + var(--s-6))}
+  .home-hero{padding-top:calc(var(--chrome-h) + var(--s-6))}
   .home-hero-sub{margin-top:var(--s-4)}
   .hcmd{margin-top:var(--s-4)}
   .home-hero-cta{margin-top:var(--s-5)}
@@ -5214,7 +5214,7 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
   .pnav-more-wrap{display:none}}
 
 @media(max-width:768px){
-  .home-hero{padding-top:calc(var(--nav-top) + var(--nav-h) + var(--s-8))}
+  .home-hero{padding-top:calc(var(--chrome-h) + var(--s-8))}
   .hw-tab{flex:1 1 0;min-width:74px;padding:0 8px;font-size:var(--fs-caption)}}
 
 @media(max-width:480px){
@@ -5312,7 +5312,7 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
 .cc-level-opt.is-on{color:var(--bg-1);background:var(--t0)}
 /* Horizontal padding mirrors .pnav-inner (same --page-inline token) so the
    toolbar's content edge lines up with the pill nav's at every width. */
-.plb-toolbar{position:sticky;top:calc(var(--nav-top) + var(--nav-h));z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px 18px;flex-wrap:wrap;padding:10px var(--page-inline);background:var(--bg-0);border-bottom:1px solid var(--border)}
+.plb-toolbar{position:sticky;top:var(--chrome-h);z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px 18px;flex-wrap:wrap;padding:10px var(--page-inline);background:var(--bg-0);border-bottom:1px solid var(--border)}
 /* Neither group ever shrinks below its content, and the toolbar wraps the action
    group onto a second row when the two no longer share one line. That is the ONLY
    content-aware mechanism CSS offers here, and the width at which they stop
@@ -7075,17 +7075,38 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    a payment warning hidden under a "Copied!" toast is a warning nobody reads.
    z-index sits above the FAB and below the toast, so a transient confirmation
    still wins the foreground for its two seconds. */
-/* The app-level offline notice.
-   TOP-CENTRE, under the nav — not bottom-left beside the billing banner. Three
-   things already compete for the bottom corners: the toast and the feedback FAB
-   on the right, the billing banner on the left. Stacking a fourth there means
-   every pair of them needs to know about the other, and the first attempt at
-   this needed a hard-coded banner height in a `:has()` rule to do it. Top-centre
-   collides with nothing and is where a connection notice is conventionally
-   looked for.
-   z-index sits BELOW the nav's 120 deliberately: the nav is how someone leaves a
-   page that is not working, and a notice that covers it makes things worse. */
-.offline-banner{position:fixed;top:calc(var(--nav-h) + 10px);left:50%;transform:translateX(-50%);z-index:119;display:flex;align-items:flex-start;gap:10px;width:min(520px,calc(100vw - 32px));padding:12px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--warn);border-radius:var(--radius-l);box-shadow:var(--ring),var(--warm-shadow-lg)}
+/* ── THE NOTICE STRIP ─────────────────────────────────────────────
+   One strip under the nav that every app-wide CONDITION notice renders into,
+   and the reason it reserves space instead of floating over the page.
+
+   Until 2026-09-15 each notice was its own `position:fixed` card at
+   `calc(var(--nav-h) + 10px)`. That coordinate is not empty. It is exactly
+   where `.plb-toolbar`, `.uis-command`, `.lbry-toolbar` and `.pgl-section-head`
+   park themselves, because every one of them derives from the same nav height
+   — so the notice landed on the toolbar of whatever tool you were using. The
+   founder reported it on the Palette Builder on 2026-09-14 and decided the
+   notices move into the page flow. The geometry says it was true of every
+   sticky toolbar on the site, not just that one.
+
+   The strip carries the chrome — background, bottom border — and the notices
+   are rows inside it, so a second one appearing stacks under the first rather
+   than over it. NoticeStack.jsx measures the strip and writes `--notice-h`,
+   which `--chrome-h` folds into every "just below the nav" offset in this
+   file.
+
+   Its own `top` is now the one place that spells out `--nav-top + --nav-h`
+   without `--notice-h`: a strip offset by its own height would walk down the
+   page. Empty, it is display:none, `--notice-h` is 0px, and every offset that
+   folds it resolves to exactly the value it had before this existed.
+
+   z-index stays BELOW the nav's 120, for the reason the old card gave and
+   33-offline-state.spec.js still checks: the nav is how someone leaves a page
+   that is not working. */
+.notice-stack{position:fixed;top:calc(var(--nav-top) + var(--nav-h));left:0;right:0;z-index:119;background:var(--card);border-bottom:1px solid var(--bh)}
+.notice-stack:empty{display:none}
+/* The app-level offline notice — a row in the strip above, which is where its
+   placement and z-index are now argued. */
+.offline-banner{display:flex;align-items:flex-start;gap:10px;width:min(560px,100%);margin:0 auto;padding:11px 16px}
 .offline-banner svg{color:var(--warn);flex-shrink:0;margin-top:1px}
 .offline-banner-text{margin:0;font-size:12.5px;line-height:1.55;color:var(--t1)}
 .offline-banner-text strong{color:var(--t0);font-weight:700}
@@ -8054,7 +8075,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    account" is a condition that is still true after the animation ends. So it
    sits where a condition banner belongs and stays until it is resolved or
    dismissed. */
-.sync-notice{position:fixed;top:calc(var(--nav-h,56px) + 12px);left:50%;transform:translateX(-50%);display:flex;align-items:flex-start;gap:11px;width:min(560px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--ring),var(--warm-shadow-lg);color:var(--t0);padding:13px 13px 13px 12px;border-radius:var(--radius-l);font-family:var(--font);z-index:130}
+.sync-notice{display:flex;align-items:flex-start;gap:11px;width:min(560px,100%);margin:0 auto;color:var(--t0);padding:12px 16px;font-family:var(--font)}
 .sync-notice-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .sync-notice-ico svg{width:15px;height:15px}
 .sync-notice--error .sync-notice-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
@@ -8073,7 +8094,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    actions sit on their own row beneath it —
    https://mobbin.com/screens/821ee5aa-8dbc-4885-ac84-265a17a7cc9b */
 @media (max-width:520px){
-  .sync-notice{width:calc(100vw - 24px);flex-wrap:wrap;row-gap:8px}
+  .sync-notice{flex-wrap:wrap;row-gap:8px}
   .sync-notice-msg{flex:1 1 calc(100% - 37px)}
   .sync-notice-actions{margin-left:auto}
 }

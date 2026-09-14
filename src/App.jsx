@@ -6,8 +6,7 @@ import AppFooter from './components/AppFooter'
 import FeedbackButton from './components/FeedbackButton'
 import GoogleOneTap from './components/oneTapMount'
 import BillingBanner from './components/BillingBanner'
-import OfflineBanner from './components/OfflineBanner'
-import SyncNotice from './components/SyncNotice'
+import NoticeStack from './components/NoticeStack'
 import { useToast } from './hooks/useToast'
 import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
@@ -523,23 +522,24 @@ export default function App() {
             tool takes the CHROMELESS_PATHS early return, and those are exactly
             the pages where a lapsed subscription is about to be felt. */}
         <BillingBanner />
-        {/* Same reasoning as the billing banner: mounted outside AppInner's
-            shell so it also reaches the chromeless Create tools. It renders
-            top-centre under the nav rather than in a corner — see the CSS note
-            on .offline-banner. */}
-        <OfflineBanner />
-        {/* And the sync notice, for the same reason a third time. It was
-            mounted inside AppInner's shell beside <Toast>, under a comment
-            explaining it belonged on every route because "the person whose
-            sync has stopped is, by definition, busy editing — and the surface
-            they are editing on is a tool page". Every tool page takes the
-            CHROMELESS_PATHS early return above the shell, so those were
-            exactly the routes it never reached: measured 2026-09-08, a
-            refused sync showed on /projects and /discover/palettes and was
-            absent from the DOM on /create/palette, /create/type-scale,
-            /create/font-pair, /create/contrast, /create/tint and
-            /create/auto-builder. See tests/user-sim/65-new-surfaces-breakpoints.spec.js. */}
-        <SyncNotice />
+        {/* Same reasoning as the billing banner, for the offline and sync
+            notices: mounted outside AppInner's shell so they also reach the
+            chromeless Create tools. The sync notice was originally inside the
+            shell beside <Toast>, under a comment explaining it belonged on
+            every route because "the person whose sync has stopped is, by
+            definition, busy editing — and the surface they are editing on is a
+            tool page". Every tool page takes the CHROMELESS_PATHS early return
+            above the shell, so those were exactly the routes it never reached:
+            measured 2026-09-08, a refused sync showed on /projects and
+            /discover/palettes and was absent from the DOM on /create/palette,
+            /create/type-scale, /create/font-pair, /create/contrast,
+            /create/tint and /create/auto-builder. See
+            tests/user-sim/65-new-surfaces-breakpoints.spec.js.
+
+            Both now render as rows inside <NoticeStack>, which reserves the
+            height they occupy instead of floating them over the toolbar of
+            whatever tool is open — founder decision, 2026-09-14. */}
+        <NoticeStack />
         {/* And the feedback entry points, for the same reason a fourth time —
             except that this one is about the RIGHT-CLICK menu rather than a
             banner. Mounted inside AppInner's shell it was absent from every
