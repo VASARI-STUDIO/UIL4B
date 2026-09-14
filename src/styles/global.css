@@ -4563,7 +4563,7 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
      `margin:0 auto` would shrink the panel to fit its content. `height`, not
      `max-height`: the frame is the point. */
   .hsteps-sticky .hw-shell{width:100%;height:var(--hw-frame);display:flex;flex-direction:column;box-shadow:var(--shadow-panel)}
-  .hsteps-sticky .hw-chrome,.hsteps-sticky .hw-tabs{flex:0 0 auto}
+  .hsteps-sticky .hw-tabs{flex:0 0 auto}
   /* ── #341's zoning, kept verbatim ─────────────────────────────────
      THE ARTEFACT IS NEVER SQUEEZED. #341's first attempt let the stage flex down
      and clip, and every measurement passed while the type ladder had quietly
@@ -4727,23 +4727,6 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
    controls inside. The dots are a window affordance, not a macOS pastiche —
    they take the border colour, so they read as "this is an application" without
    impersonating one. */
-.hw-chrome{display:flex;align-items:center;gap:12px;padding:0 14px;height:38px;border-bottom:1px solid var(--border);background:var(--bg-1)}
-.hw-chrome-dots{display:inline-flex;gap:5px;flex-shrink:0}
-.hw-chrome-dots i{width:8px;height:8px;border-radius:50%;background:var(--border);border:1px solid var(--bh)}
-.hw-chrome-crumb{display:inline-flex;align-items:center;gap:6px;min-width:0;font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hw-chrome-app{font-weight:700;color:var(--t2)}
-.hw-chrome-sep{opacity:.5}
-.hw-chrome-here{color:var(--hue-strong,var(--accent-strong));font-weight:600}
-.hw-chrome-live{display:inline-flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
-.hw-chrome-live i{width:6px;height:6px;border-radius:50%;background:var(--hue,var(--accent))}
-/* `.hw-chrome-sep:first-of-type` matched NOTHING. Every child of the crumb is a
-   span, so `:first-of-type` resolves to the first span — `.hw-chrome-app` — and
-   the compound `.hw-chrome-sep:first-of-type` then fails on the class. The
-   route was hidden and both separators stayed, so the homepage's flagship panel
-   rendered `UIL4B / / Palette`. Sibling-combinator, not position-counting: it
-   says what it means (the separator that belongs to the route) and it cannot
-   drift if a span is ever added before it. */
-@media(max-width:600px){.hw-chrome-crumb .hw-chrome-route,.hw-chrome-crumb .hw-chrome-app+.hw-chrome-sep{display:none}.hw-chrome-live{font-size:0;gap:0}}
 
 /* Tabs — the active one lifts onto the panel surface, so selection is carried
    by shape and border as well as colour. */
@@ -4968,7 +4951,17 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
    loses its height to a 0% flex-basis and the board renders at whatever the
    content happens to be (measured: 181px, names wrapping to two lines). The
    descendant selector is the smallest thing that outranks it. */
-.hw-stage .hw-board{flex:0 0 auto;height:248px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-s)}
+/* THE BOARD BLEEDS TO THE PANEL EDGE, because the real one does.
+   /create/palette is a full-bleed board: five columns of colour running to
+   the viewport edges with no card, no radius and no shadow, and the name, hex
+   and role anchored at the BOTTOM of each column. Measured 2026-09-15, this
+   was a rounded card with its own shadow, inset inside a padded .hw-panel,
+   inside a bordered .hw-shell that also wore a drawn browser title bar —
+   three nested containers around a tool that renders the real .plb-col.
+   Impeccable craft-floor: "Cards are the lazy container; nested cards are
+   always wrong." The negative inline margin cancels .hw-panel padding rather
+   than removing it, because the controls below the board still want it. */
+.hw-stage .hw-board{flex:0 0 auto;height:248px;margin-inline:-20px;overflow:hidden}
 /* The column's own padding assumes a tall board. At 248px the tool stack, ramp,
    name, hex and role share that height instead, so the breathing room comes
    down with it. Still geometry. */
