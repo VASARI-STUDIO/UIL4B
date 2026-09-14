@@ -5,11 +5,26 @@ import { useAuth } from '../contexts/AuthContext'
 import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
 import { refreshPrices, useProPrice } from '../hooks/usePrices'
+import { PLAN_LADDER } from '../config/planLadder'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
+
+// THE TRIAL SENTENCE IS DERIVED, NOT TYPED.
+//
+// It used to be the string "7-day free trial" sitting here next to
+// `if (isYearly) trial_period_days = 7` in api/create-checkout.js, with nothing
+// holding the two together. A page that promises a trial the server does not
+// grant is a bug whose only symptom is a card statement, so the number comes
+// off PLAN_LADDER — which tests/unit/trial-cadence.test.js pins to the server's
+// own TRIAL_DAYS table.
+function trialLine(planId) {
+  const days = PLAN_LADDER.find((entry) => entry.id === planId)?.trialDays || 0
+  if (days <= 0) return null
+  return days + '-day free trial \u2014 you won\u2019t be charged today'
+}
 
 const PLANS = {
   monthly: {
@@ -17,14 +32,21 @@ const PLANS = {
     name: 'UIL4B Pro',
     cadence: 'Monthly',
     per: 'per month',
-    trial: null,
+    trial: trialLine('monthly'),
+  },
+  quarterly: {
+    interval: 'quarterly',
+    name: 'UIL4B Pro',
+    cadence: 'Quarterly',
+    per: 'per quarter',
+    trial: trialLine('quarterly'),
   },
   yearly: {
     interval: 'yearly',
     name: 'UIL4B Pro',
     cadence: 'Yearly',
     per: 'per year',
-    trial: '7-day free trial — you won\'t be charged today',
+    trial: trialLine('yearly'),
   },
   lifetime: {
     interval: 'lifetime',
@@ -71,8 +93,9 @@ export default function Checkout() {
   const plan = PLANS[planKey]
   const proPrice = useProPrice()
   const amount = planKey === 'yearly' ? proPrice.yearlyTotal
-    : planKey === 'lifetime' ? proPrice.lifetime
-      : proPrice.monthly
+    : planKey === 'quarterly' ? proPrice.quarterlyTotal
+      : planKey === 'lifetime' ? proPrice.lifetime
+        : proPrice.monthly
   // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PAGE HAS TO RENDER, and until
   // 2026-09-11 it rendered it as a lie. `useProPrice` returns `loaded: true`
   // the moment the fetch SETTLES — including when it settled by failing — and

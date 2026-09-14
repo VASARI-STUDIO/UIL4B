@@ -44,10 +44,16 @@
 // regex-scraping this file's source. Vite resolves it identically.
 import { PRICE_SYMBOLS } from '../utils/currency.js'
 
-// `trialDays` mirrors src/pages/Checkout.jsx, which grants the 7-day trial on
-// the YEARLY plan only. Saying "start your free trial" over a monthly plan that
-// bills immediately would be exactly the manufactured promise
-// docs/reference/growth-persuasion.md forbids, so the CTA reads the flag.
+// `trialDays` MIRRORS api/_lib/pricing.js#TRIAL_DAYS, which is what Stripe is
+// actually told. Saying "start your free trial" over a plan that bills
+// immediately would be exactly the manufactured promise
+// docs/reference/growth-persuasion.md forbids, so the CTA reads the flag — and
+// a flag that disagrees with the server is the same lie with an extra step,
+// which is why tests/unit/trial-cadence.test.js compares the two tables.
+//
+// Founder, 2026-09-15: THE TRIAL IS EARNED BY THE CADENCE. Monthly bills today
+// and says so; quarterly and yearly each get seven days. Yearly granted 7
+// before this change and grants 7 after it, so no promise already made moved.
 export const PLAN_LADDER = Object.freeze([
   Object.freeze({
     id: 'monthly',
@@ -65,10 +71,27 @@ export const PLAN_LADDER = Object.freeze([
     cadence: 'billed every 3 months',
     months: 3,
     liveKey: 'quarterly',
-    // No Stripe price and no Checkout.jsx entry — see the flag above.
+    // ONE FIELD IS THE SWITCH, and it is deliberately still null.
+    //
+    // Everything else quarterly needs was built on 2026-09-15 with the
+    // founder's approval for the gated payment files: BILLING_INTERVALS,
+    // PRICE_ENV_KEYS, the Checkout.jsx case, useProPrice.quarterlyTotal, the
+    // trial, and `interval_count` in setup-stripe so the price is a genuine
+    // three-month recurrence rather than $18 a month.
+    //
+    // What does NOT exist is the Stripe price itself, which lives in the
+    // dashboard. Setting this to 'quarterly' publishes a machine-readable
+    // Offer in index.html and puts the cadence in front of buyers, and today
+    // that Offer would be a claim about money nobody can act on: create-checkout
+    // would resolve no price and answer 503.
+    //
+    // He chose test-mode-first. So: create the price in Stripe TEST mode, run a
+    // checkout through it, then change this one field to 'quarterly'.
+    // docs/OWNER-ACTIONS.md carries the steps; tests/unit/price-ladder.test.js
+    // holds the line until then.
     checkoutPlan: null,
     approvedTotal: 18,
-    trialDays: 0,
+    trialDays: 7,
   }),
   Object.freeze({
     id: 'yearly',
