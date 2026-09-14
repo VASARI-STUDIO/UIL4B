@@ -382,6 +382,112 @@ test.describe('the marketing set exposes a usable landmark list', () => {
 })
 
 // ── The two legal pages ─────────────────────────────────────────────────────
+// ── THE HOMEPAGE HEADLINE IS SIZED BY HEIGHT AS WELL AS WIDTH ───────────────
+//
+// Founder, 2026-09-15, with a screenshot of his own window: "on smaller
+// desktop pages the scale seems too large."
+//
+// `.home-hero-h1` was `clamp(46px, 6.6vw, 96px)` — viewport WIDTH only. A
+// laptop is wide and short, so the width said "big screen" while the height
+// said the opposite, and the headline's share of the screen climbed as the
+// window got shorter. Measured on the built preview before the fix:
+//
+//   1920x1080   96px   365px   34% of the viewport   <- the design
+//   1656x910    96px   365px   40%                   <- his window
+//   1512x850    96px   365px   43%
+//   1440x780    95px   361px   46%
+//   1366x768    90px   343px   45%
+//
+// It wraps to four lines at every desktop width from 960 to 1920, and nothing
+// was below the fold at any size — so this was never overflow, it was
+// proportion, which is why the assertion is a SHARE and not a pixel count.
+//
+// The other five large heroes on the site were measured the same way and none
+// of them needed the fix; /create/font-gallery is next at 25% and the rest sit
+// under 13%. So this test covers the one headline that had the problem, and
+// the last case fences the others so a later pass cannot "harmonise" them onto
+// a rule they never needed.
+//
+// MUTATION: put the width-only clamp back — 1440x780, 1512x850 and 1366x768
+// all report a share over the ceiling, and 1920x1080 keeps passing, which is
+// the point: the old rule was right at one size and wrong at five.
+const HERO_VIEWPORTS = [
+  [1920, 1080], [1656, 910], [1512, 850], [1440, 900], [1440, 780],
+  [1366, 768], [1280, 720], [1100, 700], [1024, 640],
+]
+
+test.describe('the homepage headline keeps its proportion on a short desktop', () => {
+  for (const [width, height] of HERO_VIEWPORTS) {
+    test(`at ${width}x${height} the headline is not most of the screen`, async ({ browser }) => {
+      const ctx = await browser.newContext({ viewport: { width, height } })
+      const page = await ctx.newPage()
+      await go(page, '/')
+      const h1 = page.locator('.home-hero-h1')
+      await expect(h1).toBeVisible()
+      await page.waitForTimeout(160)
+
+      const m = await page.evaluate(() => {
+        const el = document.querySelector('.home-hero-h1')
+        const r = el.getBoundingClientRect()
+        const hint = document.querySelector('.home-hero-hint')?.getBoundingClientRect()
+        return {
+          fs: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
+          height: Math.round(r.height),
+          share: Math.round((r.height / window.innerHeight) * 100),
+          hintBottom: hint ? Math.round(hint.bottom) : null,
+          viewport: window.innerHeight,
+        }
+      })
+      await ctx.close()
+
+      // 38, not 36: the fixed value is 36 at every size and 34 at 1920, so this
+      // leaves two points for a font metric moving a pixel and still sits below
+      // every reading that was reported broken — 39, 40, 43, 45 and 46. 40
+      // would have been the obvious ceiling and it is the wrong one: his own
+      // window measured exactly 40, so the case that was reported would have
+      // passed the test written to catch it.
+      expect(m.share, `the headline is ${m.height}px of a ${m.viewport}px viewport at ${width}x${height}`)
+        .toBeLessThanOrEqual(38)
+
+      // POSITIVE CONTROL. The rule above is satisfied by a headline that has
+      // shrunk to nothing, or by one that has stopped rendering. It is still
+      // the largest type on the page and the hero still fits above the fold.
+      expect(m.fs, 'the headline has collapsed').toBeGreaterThanOrEqual(46)
+      expect(m.hintBottom, 'the hero no longer fits above the fold').toBeLessThanOrEqual(m.viewport)
+    })
+  }
+})
+
+test('the height rule is on the homepage headline and nowhere else', async ({ browser }) => {
+  // FENCE. Five other heroes were measured at 1440x780 and sat at 25% or less,
+  // so none of them needs a height term — and adding one to a masthead that is
+  // already small would shrink it for no reason. This pins which heroes were
+  // examined and what they measured, so a later sweep has to re-measure rather
+  // than assume the rule generalises.
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 780 } })
+  const page = await ctx.newPage()
+  const OTHERS = [
+    ['/discover/palettes', '.dgh-hero h1', 20],
+    ['/create/font-gallery', '.fg-hero h1', 30],
+    ['/create/font-pair', '.fpr-hero h1', 20],
+    ['/create/tint', '.tt-hero h1', 20],
+  ]
+  const over = []
+  for (const [route, sel, ceiling] of OTHERS) {
+    await go(page, route)
+    const m = await page.evaluate((s) => {
+      const el = document.querySelector(s)
+      if (!el) return null
+      const r = el.getBoundingClientRect()
+      return { share: Math.round((r.height / window.innerHeight) * 100), h: Math.round(r.height) }
+    }, sel)
+    if (!m) { over.push(`${route}: ${sel} is not rendering`); continue }
+    if (m.share > ceiling) over.push(`${route}: ${m.h}px, ${m.share}% of the viewport (was under ${ceiling}%)`)
+  }
+  await ctx.close()
+  expect(over, `a hero this lane left alone has grown:\n  ${over.join('\n  ')}`).toEqual([])
+})
+
 test('/terms and /privacy set a section heading the same way', async ({ page }) => {
   // Founder decision, 2026-09-13. /terms ran .legal-h--sm (16px, body font,
   // weight 700) where /privacy ran .legal-h (22px, display, 500) — the same
