@@ -10,7 +10,18 @@ import { billingAlert, isWithinPastDueGrace } from '../utils/billingState'
 
 const SubscriptionContext = createContext()
 
-const BILLING_INTERVALS = new Set(['monthly', 'yearly', 'lifetime'])
+// The intervals the CLIENT will start a checkout for. It has to match
+// api/_lib/pricing.js#BILLING_INTERVALS, and on 2026-09-15 it did not:
+// quarterly was switched on server-side, given a Checkout.jsx case, a price
+// lookup, a trial and a quarterlyTotal — and this Set was missed. The result
+// would have been the worst shape available: /checkout?plan=quarterly renders
+// completely, with the name, the cadence, the price and the 7-day trial line,
+// and then throws "Invalid billing interval" on the button instead of the
+// clean 503 create-checkout was written to give. Not reachable in production
+// yet only because planLadder.js still holds checkoutPlan: null.
+//
+// Guarded by tests/unit/trial-cadence.test.js, which now compares the two.
+const BILLING_INTERVALS = new Set(['monthly', 'quarterly', 'yearly', 'lifetime'])
 
 // The billing APIs return a generic message plus a correlation id (the real
 // Stripe/Firebase error stays in the server log). Show the id so a user can
