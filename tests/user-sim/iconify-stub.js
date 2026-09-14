@@ -82,6 +82,31 @@ export async function refuseIconify(page) {
     (route) => route.fulfill({ status: 403, contentType: 'text/plain', headers, body: 'Forbidden' }))
 }
 
+/**
+ * Refuse ONLY the individual glyph .svg requests, and let the catalogue
+ * (collections.json, collection/<pack>.json, search) answer normally from the
+ * fixture.
+ *
+ * This is a different outage from refuseIconify above, and the difference is
+ * the whole point. On 2026-09-15 the founder reported the icon library broken;
+ * measured, all 24 catalogue requests returned 200 while every glyph came back
+ * 429 from Cloudflare (error 1015, rate limited per IP). The API answers a
+ * rate-limited glyph with text/plain, the browser had asked for an image, so
+ * ORB blocks it and the <img> simply fails.
+ *
+ * The refused-state built for the 2026-09-08 outage could not see it: that one
+ * keys on the CATALOGUE failing, so with the catalogue healthy the app
+ * reported "Live library connected" over 120 blank cells.
+ */
+export async function refuseIconifyGlyphs(page) {
+  const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }
+  await page.route(
+    (u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname.endsWith('.svg'),
+    (route) => route.fulfill({
+      status: 429, contentType: 'text/plain', headers, body: 'Too Many Requests',
+    }),
+  )
+}
 /** Set this (to anything non-empty) to bypass the fixture and hit the live API. */
 export const LIVE_ICONIFY_ENV = 'UIL4B_LIVE_ICONIFY'
 
