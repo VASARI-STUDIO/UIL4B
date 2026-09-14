@@ -11,6 +11,12 @@ import {
   draftToConverterSettings,
   readImageHandoff,
 } from '../utils/imageHandoff'
+import {
+  EXPORT_SCALES,
+  SIZE_PRESETS,
+  exceedsCanvasLimit,
+  outputDimensions,
+} from '../utils/imageResize'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -48,15 +54,10 @@ const LARGE_FILE_BYTES = 50 * 1024 * 1024 // 50 MB warning threshold
 const QUALITY_SNAPS = [25, 50, 75, 90]
 const QUALITY_DEFAULT = 90
 
-// Render scales for image export (@1x keeps source size, @2x doubles it).
-const EXPORT_SCALES = [
-  { id: 1, label: '@1x' },
-  { id: 2, label: '@2x' },
-]
-
-// Longest canvas side we will attempt — beyond this most browsers fail or
-// silently produce an empty bitmap.
-const MAX_CANVAS_DIM = 16384
+// EXPORT_SCALES, SIZE_PRESETS, MAX_CANVAS_DIM and the sizing arithmetic all
+// live in utils/imageResize.js — the encoder and the new output readout have to
+// agree, and the order the two size controls apply in is a decision worth
+// stating once rather than inlining twice.
 
 // canvas.toBlob never settling (seen with some format/browser combos) would
 // leave the converter stuck in its busy state, disabling every control. Fail
@@ -406,6 +407,26 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       error: null,
     }))
     setItems(prev => [...prev, ...next])
+
+    // THE SOURCE SIZE, READ ONCE, AS SOON AS THE FILE LANDS.
+    //
+    // Nothing here knew how big an incoming image was until the moment it was
+    // encoded, so the panel could not say what "Size limit" and "Export Scale"
+    // were going to do to it — the user picked two multipliers against an
+    // unknown and found out afterwards. Probing costs one decode per file and
+    // it is what makes the output readout below possible.
+    //
+    // Failure is silent on purpose: a file the browser cannot decode will fail
+    // again, loudly and with a real message, during conversion. Losing the
+    // readout is not a reason to refuse the file.
+    for (const item of next) {
+      loadImage(item.srcUrl).then((img) => {
+        const srcW = img.naturalWidth || img.width || 0
+        const srcH = img.naturalHeight || img.height || 0
+        if (!srcW || !srcH) return
+        setItems(prev => prev.map(it => (it.id === item.id ? { ...it, srcW, srcH } : it)))
+      }).catch(() => {})
+    }
     return imgs.length
   }, [toast])
 
@@ -467,12 +488,9 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       const blob = await encodeIco(img, iw, ih)
       return { blob, url: URL.createObjectURL(blob), bytes: blob.size, w: 48, h: 48, note: `favicon • ${ICO_SIZES.join(' + ')} px`, noPreview: true }
     }
-    const longest = Math.max(iw, ih)
-    const scale = (maxDim > 0 && longest > maxDim ? maxDim / longest : 1) * renderScale
-    const w = Math.max(1, Math.round(iw * scale))
-    const h = Math.max(1, Math.round(ih * scale))
-    if (Math.max(w, h) > MAX_CANVAS_DIM) {
-      throw new Error(`Too large to export at @${renderScale}x — reduce Max Dimension`)
+    const { w, h } = outputDimensions(iw, ih, { maxDim, renderScale })
+    if (exceedsCanvasLimit(w, h)) {
+      throw new Error(`Too large to export at @${renderScale}x — pick a smaller size`)
     }
     const canvas = document.createElement('canvas')
     canvas.width = w
@@ -521,6 +539,16 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   }, [items, busy, convertOne, toast])
 
   const fmt = OUTPUT_FORMATS.find(f => f.id === format)
+
+  // Every item whose real pixel size is known, with the size it will come out
+  // at under the CURRENT settings. Derived on render rather than stored: the
+  // settings change far more often than the file list does, and a stored copy
+  // is a second answer waiting to disagree with the encoder.
+  const sized = items
+    .filter(it => it.srcW > 0 && it.srcH > 0)
+    .map(it => ({ ...it, out: outputDimensions(it.srcW, it.srcH, { maxDim, renderScale }) }))
+  const widestOut = sized.length ? Math.max(...sized.map(it => Math.max(it.out.w, it.out.h))) : 0
+  const anyCapped = sized.some(it => it.out.capped)
 
   // What a homepage output draft actually became here. Stated explicitly rather
   // than applied silently — including the part this converter cannot honour, so
@@ -648,7 +676,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     </>
                   ) : (
                     <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {formatBytes(it.file.size)} • not converted
+                      {it.srcW ? `${it.srcW}×${it.srcH} • ` : ''}{formatBytes(it.file.size)}
                     </div>
                   )}
                 </div>
@@ -697,26 +725,44 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               </div>
               {!fmt.ico && (
                 <div>
-                  <div className="seg-label">Max Dimension</div>
-                  <select value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
-                    <option value={0}>Keep original</option>
-                    <option value={3840}>3840 px</option>
-                    <option value={1920}>1920 px</option>
-                    <option value={1200}>1200 px</option>
-                    <option value={800}>800 px</option>
+                  <div className="seg-label">Size limit</div>
+                  <select value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} className="fc-select" aria-label="Output size limit">
+                    {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                 </div>
               )}
               {!fmt.ico && (
                 <div>
                   <div className="seg-label">Export Scale</div>
-                  <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} style={{ maxWidth: 100 }} aria-label="Export render scale">
+                  <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} className="fc-select fc-select--narrow" aria-label="Export render scale">
                     {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                 </div>
               )}
             </div>
 
+            {/* WHAT YOU ARE ABOUT TO GET, stated before you press the button.
+                The panel had four controls and no answer: Size limit and Export
+                Scale are both relative to a source size the tool never showed,
+                and they interact — a scale above the limit is clamped BY it.
+                Reading one line beats reasoning about two multipliers. */}
+            {!fmt.ico && sized.length > 0 && (
+              <div className="fc-outsize" aria-live="polite">
+                <span className="fc-outsize-k">Output</span>
+                {sized.length === 1 ? (
+                  <span className="fc-outsize-v">
+                    {sized[0].srcW}×{sized[0].srcH}
+                    <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
+                    <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
+                  </span>
+                ) : (
+                  <span className="fc-outsize-v">
+                    {sized.length} images, longest side <strong>{widestOut}</strong> px
+                  </span>
+                )}
+                {anyCapped && <span className="fc-note fc-outsize-note">held to the size limit</span>}
+              </div>
+            )}
             <div className="fc-actions">
               <button className="btn btn-accent" onClick={convertAll} disabled={busy}>
                 {busy ? 'Converting…' : `Convert ${items.length} image${items.length > 1 ? 's' : ''}`}
