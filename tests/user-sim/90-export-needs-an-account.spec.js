@@ -25,7 +25,7 @@
 // found" for those and proves nothing, which is exactly what the first pass at
 // this measurement did.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
 
 const PERSONA = 'someone trying the tools before signing up for anything'
 
@@ -168,6 +168,46 @@ test.describe('a file needs a free account', () => {
       'the converted file was handed over without an account')
       .toBeVisible({ timeout: 10000 })
     expect(await downloadsSeen(page), 'the file downloaded anyway').toBe(0)
+  })
+})
+
+test.describe('a signed-in visitor is never asked again', () => {
+  // THE RISKIER HALF. A gate that over-fires is worse than one that under-fires:
+  // showing a sign-up wall to somebody who already HAS an account — or worse, to
+  // a paying one — reads as the product being broken, and it would hit them on
+  // the action they came for.
+  //
+  // The failure mode this guards is specific and plausible. useExportGate reads
+  // `user` from AuthContext, which is null while the session is still resolving.
+  // A visitor who is genuinely signed in but arrives before that resolves would
+  // be asked to sign in to their own account. So the assertion is not just "no
+  // dialog" — it is that the file is actually produced.
+  test('a signed-in visitor exports a converted file without being asked', async ({ page }) => {
+    watch(page, 'someone who already signed up, converting a file')
+    await signIn(page, {})
+    await go(page, '/create/file-converter')
+    await page.locator('.fc-drop input[type="file"]').setInputFiles([png('holiday.png')])
+
+    const convert = page.getByRole('button', { name: /^convert /i })
+    await expect(convert, 'the converter offered nothing to convert with')
+      .toBeVisible({ timeout: 20000 })
+    await convert.click()
+
+    const download = page.getByRole('button', { name: 'Download', exact: true }).first()
+    await expect(download, 'the converter produced no download control after converting')
+      .toBeVisible({ timeout: 30000 })
+    await watchDownloads(page)
+    await download.click()
+    await page.waitForTimeout(1500)
+
+    expect(await loginOpen(page),
+      'a signed-in visitor was asked to sign in before their own download')
+      .toBe(false)
+    // POSITIVE CONTROL, and the real assertion: silence is not success. A gate
+    // that quietly returned false would also produce no dialog and no file.
+    expect(await downloadsSeen(page),
+      'no file was produced — the gate refused a signed-in visitor silently')
+      .toBeGreaterThan(0)
   })
 })
 
