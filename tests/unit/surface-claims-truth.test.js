@@ -187,6 +187,42 @@ test('/info does not promise a Pro preview or a cancellation the product does no
   }
 })
 
+/* ── privacy: no "runs client-side" while a tool posts the work to /api/ai ── */
+
+test('/info makes no client-side promise while the AI tools send work to the server', () => {
+  const altText = stripComments(read('src/pages/AltTextGenerator.jsx'))
+  // POSITIVE CONTROL, and the condition: the promise is only false while a
+  // tool actually ships the visitor's input off the device. Read the call.
+  const postsImage = altText.includes("fetch('/api/ai'") && /\bimage:\s*item\.base64/.test(altText)
+  assert.ok(postsImage,
+    'AltTextGenerator.jsx no longer posts the image to /api/ai — either the tool moved in-browser '
+    + '(then delete this test) or the request changed shape and this check is reading the wrong line')
+
+  for (const phrase of ['runs client-side', 'never leaves your device']) {
+    assert.ok(!INFO.includes(phrase),
+      `/info says "${phrase}" again, and AltTextGenerator.jsx posts the image itself to /api/ai. `
+      + 'A privacy assurance that is false for the AI tools is the one sentence this page must not approximate.')
+  }
+})
+
+/* ── the Preview instruction points at the page that has the control ─────── */
+
+test('the /info Preview link goes to the tool that has a Preview control', () => {
+  const builder = stripComments(read('src/pages/PaletteBuilder.jsx'))
+  const landing = stripComments(read('src/pages/ColorLanding.jsx'))
+  // The control is real, and it is not on the page the link used to name —
+  // both halves, so the assertion below is about something.
+  assert.ok(builder.includes('aria-label="Preview"'), 'PaletteBuilder.jsx has lost its Preview control')
+  assert.ok(!landing.includes('aria-label="Preview"'),
+    'ColorLanding.jsx now has a Preview control, so the old link target was not wrong; revisit this test')
+
+  const link = INFO.match(/<Link to=(\{[^}]+\}|"[^"]+")>Preview<\/Link>/)
+  assert.ok(link, '/info no longer renders a Preview link')
+  assert.equal(link[1], "{toolRoute('palette')}",
+    `/info's Preview link points at ${link[1]}; the Preview control is PaletteBuilder's, and the route `
+    + 'is read from the tool tree so it cannot name a page the control is not on')
+})
+
 test('the superlative deleted from /discover is not on /info', () => {
   // "the best" was removed from '/discover' and '/discover/gradients' by
   // name (routeMetaMap.js). /info carried it for the same page.
