@@ -5609,9 +5609,42 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
 .plb-hex{display:inline-flex;align-items:center;justify-content:center;min-height:24px;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.01em;text-transform:uppercase;color:inherit;background:none;border:none;border-radius:6px;padding:3px 8px;cursor:pointer;transition:background var(--t)}
 .plb-hex:hover{background:color-mix(in srgb,var(--plb-ink) 12%,transparent)}
 /* The column title names the COLOUR (utils/paletteNames.js, deterministic per
-   hex); .plb-role under it names the SLOT. Both inherit the column ink. */
-.plb-name{max-width:100%;margin-bottom:3px;padding:0 8px;font-size:13.5px;font-weight:600;letter-spacing:-.01em;line-height:1.25;text-align:center;text-wrap:balance;opacity:.95}
-.plb-role{font-size:10px;font-weight:700;letter-spacing:.14em;opacity:.6}
+   hex); .plb-role under it names the SLOT. Both inherit the column ink, and
+   NEITHER may dim it - see the note on .plb-role below for the argument.
+
+   This one carried opacity:.95, which is the version of the defect that is
+   hard to see and easy to keep: five per cent is at the threshold of
+   perception, so it was buying no visible hierarchy at all. Swept 2026-09-15
+   over a 4-step grid of all 262,144 grounds, taking readableInk(ground) and
+   compositing it at the declared opacity: .95 puts 27,281 of them - 10.41%,
+   one column in ten - under 4.5:1, worst 4.14:1 on #E80070. A property that
+   changes nothing a reader can see and breaks AA on a tenth of the colour
+   space is not a trade, so it is gone rather than lowered. */
+.plb-name{max-width:100%;margin-bottom:3px;padding:0 8px;font-size:13.5px;font-weight:600;letter-spacing:-.01em;line-height:1.25;text-align:center;text-wrap:balance}
+/* THE OPACITY WAS THROWING AWAY THE ONE THING readableInk HAD GUARANTEED.
+
+   The role label takes its ink from readableInk(), which picks white or black
+   so the text clears its own column. `opacity:.6` then composited that ink
+   back toward the column and undid it. Measured 2026-09-15 on a live board:
+   PRIMARY 3.33:1, SECONDARY 3.62:1, ACCENT 4.24:1 — three of five columns
+   under the 4.5:1 floor for 10px text, on every palette, in both themes.
+
+   THE GUARANTEE IS EXACT, WHICH IS WHY NO OPACITY IS SAFE. Swept every
+   ground on a 2-step grid — 2,097,152 colours — taking readableInk(ground)
+   against that ground: 0 below 4.5:1, and the worst case is 4.500:1 on
+   #F03004. It does not clear the floor comfortably, it clears it EXACTLY, so
+   the guarantee has no headroom for anything to spend. Any opacity below 1
+   composites the ink back toward the column and falls straight through it;
+   solving for the lowest safe value returns 1.00 because there is no lower
+   one. That is what makes this a deletion rather than a nudge — and why the
+   <=768 rule that had already been nudged to .72 goes with it, since .72 puts
+   49.21% of grounds under the floor and merely failed less obviously.
+
+   The hierarchy survives without it. The role is 10px against a 15px hex and
+   carries .14em of tracking; size and weight were always doing this work, and
+   that is the same reasoning the founder approved for muted preview text
+   (decision 5, 2026-09-14): readable everywhere, hierarchy from size. */
+.plb-role{font-size:10px;font-weight:700;letter-spacing:.14em}
 .plb-badge{margin-top:4px;padding:3px 9px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.04em;border-radius:999px;background:color-mix(in srgb,var(--plb-ink) 12%,transparent)}
 .plb-badges{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap;justify-content:center}
 .plb-badges .plb-badge{margin-top:0;display:inline-flex;align-items:center}
@@ -6016,7 +6049,7 @@ button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
      back, so it comes with the hex rather than under it — the row is already a
      row, and a second line for four uppercase letters is not worth 16px of
      every swatch. */
-  .plb-role{font-size:9.5px;letter-spacing:.12em;opacity:.72;flex:0 0 auto}}
+  .plb-role{font-size:9.5px;letter-spacing:.12em;flex:0 0 auto}}
 
 @media(max-width:768px){
   .plb-gap{display:none}
@@ -6292,7 +6325,34 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
 .ggn *,.hw-ggn *{box-sizing:border-box}
 .ggn-preview{position:relative;aspect-ratio:16/11;border-radius:var(--radius-l);overflow:hidden;border:1px solid var(--ggn-line);box-shadow:var(--shadow-m)}
 .ggn-preview-pills{position:absolute;top:14px;left:14px;display:flex;gap:8px;z-index:2}
-.ggn-pill{font-size:11px;font-weight:600;color:#fff;background:rgba(10,11,13,.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);padding:5px 11px;border-radius:var(--radius-pill)}
+/* A SCRIM OVER A COLOUR THE USER CHOOSES HAS TO ASSUME THE BRIGHTEST ONE.
+
+   These pills print "Linear" and the angle on top of the gradient preview, so
+   unlike every other label in the app their background is whatever the visitor
+   just built. The ink is #fff and the scrim was rgba(10,11,13,.5), which is a
+   value that reads fine against the default gradient and fails against a light
+   one. Measured 2026-09-15, white ink on the composited scrim:
+
+     over #FFFFFF  3.69:1      over #FEF08A  4.16:1
+     over #F3F4F6  3.98:1      over #A7F3D0  4.48:1
+     over #FDE68A  4.39:1
+
+   All five under the 4.5:1 floor, and #A7F3D0 misses it by 0.02 — which is the
+   tell that .5 was picked by eye against one gradient rather than solved.
+
+   0.62 IS SOLVED, NOT ADJUSTED. The worst ground a gradient can present is
+   pure white, so that is the case the alpha has to clear; the floor is 0.56
+   (4.52:1 on white) and 0.62 gives 5.60:1, keeping a real margin for the
+   antialiasing on 11px text rather than landing two hundredths above failing.
+   backdrop-filter does not enter the arithmetic - a blur averages the
+   neighbourhood and cannot return anything brighter than the brightest pixel
+   in it, so white stays the bound with or without it.
+
+   Still translucent on purpose. The pill is meant to sit ON the gradient and
+   an opaque chip would read as a separate object floating above the preview;
+   0.62 is the darkest the scrim can be while the gradient still shows through
+   it, which is the same trade the handles take with their white ring. */
+.ggn-pill{font-size:11px;font-weight:600;color:#fff;background:rgba(10,11,13,.62);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);padding:5px 11px;border-radius:var(--radius-pill)}
 /* Stops bar overlaid at the bottom of the preview */
 /* touch-action:none is load-bearing, not tidiness: without it a touch drag on
    the rail is claimed by the page scroller and the stop never moves. */
