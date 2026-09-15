@@ -11,7 +11,7 @@ import { SEARCH_KEY, DOCUMENTED_SHORTCUTS } from '../config/shortcuts'
 // read from the registries so this page cannot name a guide that is still a
 // roadmap row — which is exactly what it did (see the docs section).
 import { LEARN_ARTICLES, TOPICS } from '../data/learnIndex'
-import { DISCOVER_GROUPS } from '../data/toolTree'
+import { DISCOVER_GROUPS, toolRoute } from '../data/toolTree'
 
 // Information Centre — a single, fully indexable knowledge hub. Everything lives
 // on one page (good for search + AI citation), with a sticky table of contents,
@@ -58,7 +58,17 @@ const SECTIONS = [
     title: 'Getting started',
     body: (
       <>
-        <p>UIL4B is a free, browser-based design toolkit. Every tool runs client-side, so your work never leaves your device unless you choose to sign in and sync.</p>
+        {/* "Every tool runs client-side, so your work never leaves your
+            device unless you choose to sign in and sync." is deleted from
+            this paragraph. AltTextGenerator.jsx posts the image itself to
+            /api/ai (`body: JSON.stringify({ task: 'alt-text', image:
+            item.base64, … })`) and Brand Starter posts the brief the same
+            way; both run on a server, through Gemini or OpenRouter. A
+            privacy assurance that is false for the two tools that handle
+            the most personal input is the one sentence on this page that
+            must not be approximately true. The rest of the paragraph is
+            what the product is. */}
+        <p>UIL4B is a free, browser-based design toolkit.</p>
         <ul>
           <li><strong>No account needed</strong> — open any tool and start working. Sign in with Google only if you want saved projects and synced settings.</li>
           {/* THE PIN BULLET IS GONE, NOT REWORDED. It read "drag any tool from
@@ -88,7 +98,13 @@ const SECTIONS = [
             the same reason; tests/unit/surface-claims-truth.test.js holds
             both to the flags. */}
         <p>Build a complete colour system: generate palettes and harmonies, produce tint/shade scales, design gradients, and verify WCAG contrast.</p>
-        <p>Press <kbd>Space</kbd> on the palette to roll a fresh random set. Use the live <Link to="/create/color">Preview</Link> to see your colours on real UI.</p>
+        {/* The Preview link went to /create/color, which is ColorLanding —
+            a page of links with no preview control on it. The control this
+            sentence describes is PaletteBuilder's (`aria-label="Preview"`,
+            "Preview the palette on a UI mockup"), on the same page as the
+            Space shortcut the sentence opens with. The route is read from
+            the tool tree, as the shortcut's file is read from shortcuts.js. */}
+        <p>Press <kbd>Space</kbd> on the palette to roll a fresh random set. Use the live <Link to={toolRoute('palette')}>Preview</Link> to see your colours on real UI.</p>
       </>
     ),
   },
