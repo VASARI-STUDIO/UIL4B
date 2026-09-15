@@ -459,11 +459,25 @@ export default function RatioCalculator({ onCopy }) {
       <div className="rc-grid">
         {/* Controls */}
         <div className="card rc-panel">
+          {/* aria-pressed, BECAUSE THE `on` CLASS IS INVISIBLE TO EVERYTHING
+              THAT IS NOT AN EYE. Eighteen buttons on this page carried their
+              selection in a class name and nowhere else - these four, the
+              eleven ratio cards below, and the three side toggles - so the
+              accessibility tree showed no pressed, selected or current state on
+              any of them, and it was the only one of the nine Create surfaces
+              doing that. A visitor using a screen reader could press a shape and
+              get no confirmation that anything had been chosen.
+
+              aria-pressed rather than a full role="tab" tablist: these are a
+              toggle group, and a real tablist owes aria-controls, tabpanels and
+              roving tabindex - a rework of the page structure, not a fix for the
+              state being unannounced. Filed as its own question. */}
           <div className="rc-tabs">
             {TABS.map(t => (
               <button
                 key={t} type="button"
                 className={`rc-tab${tab === t ? ' on' : ''}`}
+                aria-pressed={tab === t}
                 onClick={() => setTab(t)}
               >
                 {t}
@@ -503,6 +517,7 @@ export default function RatioCalculator({ onCopy }) {
                   <button
                     key={r.name} type="button"
                     className={`arc-ratio-card${ratioMatch?.name === r.name ? ' on' : ''}`}
+                    aria-pressed={ratioMatch?.name === r.name}
                     onClick={() => applyRatio(r)}
                   >
                     <RatioThumb w={r.w} h={r.h} big />
@@ -553,9 +568,9 @@ export default function RatioCalculator({ onCopy }) {
             <div className="seg-label">I know the…</div>
             <div className="rc-known">
               <div className="row" style={{ gap: 6 }}>
-                <button type="button" className={`pt-t${side === 'width' ? ' on' : ''}`} onClick={() => pickSide('width')}>Width</button>
-                <button type="button" className={`pt-t${side === 'height' ? ' on' : ''}`} onClick={() => pickSide('height')}>Height</button>
-                <button type="button" className={`pt-t${side === 'both' ? ' on' : ''}`} onClick={() => pickSide('both')}>Width × height</button>
+                <button type="button" className={`pt-t${side === 'width' ? ' on' : ''}`} aria-pressed={side === 'width'} onClick={() => pickSide('width')}>Width</button>
+                <button type="button" className={`pt-t${side === 'height' ? ' on' : ''}`} aria-pressed={side === 'height'} onClick={() => pickSide('height')}>Height</button>
+                <button type="button" className={`pt-t${side === 'both' ? ' on' : ''}`} aria-pressed={side === 'both'} onClick={() => pickSide('both')}>Width × height</button>
               </div>
               {side === 'both'
                 ? (
