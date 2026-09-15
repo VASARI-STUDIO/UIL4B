@@ -55,6 +55,12 @@ const NOT_DEPLOYED = new Map([
   ['DESIGN.md', 'generated mirror of global.css; read by agents, not by the build'],
   ['LICENSE', 'licence text'],
   ['.gitignore', 'git only'],
+  // Caught by this very test on the commit that introduced it, which is the
+  // behaviour it exists for: a new top-level entry is unclassified by
+  // construction. It shapes the build CONTEXT, not the built site — changing it
+  // cannot alter what a visitor loads, so a commit touching only this file need
+  // not deploy.
+  ['.vercelignore', 'excludes files from the build context; changes nothing that is served'],
   ['.env.example', 'a template; real values are set in the Vercel dashboard'],
   ['.mcp.json', 'local tooling'],
   ['.firebaserc', 'Firebase CLI project alias — used when publishing rules, not when building'],
