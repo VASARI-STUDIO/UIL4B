@@ -15,7 +15,7 @@
 // none of these three images is fetched on a cold homepage load at all — they
 // belong to the converter tab. The budget is still real, because the moment the
 // visitor opens that tab they are fetched together.
-import test from 'node:test'
+import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -138,6 +138,12 @@ const CRITICAL_CSS_GZIP_BUDGET = 52_000
 const outDir = path.join(os.tmpdir(), `uil4b-critical-css-${process.pid}-${Date.now()}`)
 let built = null
 
+// ONE cleanup for the whole file, not one per test. Both budget tests share the
+// single build above, and a per-test t.after meant the first one to finish
+// deleted the directory the second was about to read - which failed as ENOENT
+// on a cached path rather than as anything about a byte budget.
+after(() => fs.rmSync(outDir, { recursive: true, force: true }))
+
 async function buildOnce() {
   if (built) return built
   const { build: viteBuild } = await import('vite')
@@ -148,8 +154,7 @@ async function buildOnce() {
   return built
 }
 
-test('the render-blocking stylesheet stays inside its byte budget', async (t) => {
-  t.after(() => fs.rmSync(outDir, { recursive: true, force: true }))
+test('the render-blocking stylesheet stays inside its byte budget', async () => {
   const { assets, files } = await buildOnce()
 
   // Positive controls first. Every assertion below is satisfied for free by a
@@ -228,4 +233,140 @@ test('the deferred stylesheets exist, are substantial, and are imported by lazy 
       `src/styles/deferred/${sheet} is imported by no page or component, so it ships to nobody`,
     )
   }
+})
+// ── THE ENTRY JAVASCRIPT, which had no budget at all until 2026-09-15 ───────
+//
+// The stylesheet above has one and the JavaScript beside it did not, which is
+// precisely how src/data/communityPrompts.js came to sit in index-*.js: 20
+// prompts, 27,756 bytes of source, in the chunk every visitor downloads on
+// every route including /privacy and /terms — to render one card on /discover
+// showing a count and three titles.
+//
+// It got there without anyone deciding to put it there. SurfaceLanding is one
+// of the five pages App.jsx loads EAGERLY ("small or always-visited pages"),
+// so a single ordinary-looking `import { COMMUNITY_PROMPTS }` at the top of it
+// pulled the whole module into the first request wave. Nothing failed. Removing
+// it took the entry chunk down 24,618 raw / 9,934 gzip in a test-mode build.
+//
+// THAT IS THE CLASS THIS GUARDS, not that one module. src/data holds a 999 KB
+// backlog, a 38 KB tool tree, a 29 KB search index and a dozen galleries; any
+// of them is one eager import away from the same place, and the import will look
+// exactly as reasonable as that one did. A number on the emitted chunk catches
+// it whatever the source looks like — the same argument the stylesheet budget
+// above makes for itself.
+//
+// PRODUCTION, NOT `--mode test`. The two builds differ a lot here: the same
+// commit emits 195,213 raw in test mode and 421,071 in production, because the
+// test build swaps in the session double and chunks differently. The budget has
+// to be set on the bytes that actually ship, and buildOnce() above is already a
+// production build.
+//
+// Headroom is deliberately tight — about 4.5% on each — because the regression
+// being guarded is roughly 10 KB gzipped and a generous budget would not see
+// it. Ordinary work on the shell fits; a data module does not.
+const ENTRY_JS_RAW_BUDGET = 440_000
+const ENTRY_JS_GZIP_BUDGET = 133_000
+
+test('the entry JavaScript stays inside its byte budget', async () => {
+  const { assets, files } = await buildOnce()
+
+  // Positive controls, for the same reason the stylesheet test carries them: a
+  // build that emitted nothing satisfies every size assertion for free.
+  const entries = files.filter((f) => /^index-[\w-]+\.js$/.test(f))
+  assert.equal(entries.length, 1, `expected exactly one entry chunk, found: ${entries.join(', ')}`)
+
+  const js = fs.readFileSync(path.join(assets, entries[0]))
+  assert.ok(js.length > 50_000,
+    `the entry chunk is only ${js.length} bytes — that is not this app, and every budget `
+    + 'assertion below would pass on it')
+
+  const raw = js.length
+  const gzip = zlib.gzipSync(js, { level: 9 }).length
+  assert.ok(
+    raw <= ENTRY_JS_RAW_BUDGET,
+    `the entry chunk is ${raw} bytes, over the ${ENTRY_JS_RAW_BUDGET}-byte budget. Something `
+    + 'eagerly reached from src/main.jsx grew — most often a data module imported by one of '
+    + 'the five pages App.jsx loads statically. Import the three facts you need, not the array.',
+  )
+  assert.ok(
+    gzip <= ENTRY_JS_GZIP_BUDGET,
+    `the entry chunk is ${gzip} bytes gzipped, over the ${ENTRY_JS_GZIP_BUDGET}-byte budget.`,
+  )
+})
+
+test('no eagerly loaded module imports a bulk data table', () => {
+  // The budget above is a number; this is the shape that keeps it true, and it
+  // is the JavaScript twin of the deferred-stylesheet walk below. A module in
+  // src/data over a size threshold has no business in the first request wave,
+  // and naming the offending import is far more useful than a byte count when
+  // the build goes over.
+  //
+  // The threshold is on the SOURCE file because that is what a reviewer edits.
+  // communityPrompts.js at 27.7 KB was the case that prompted this; the
+  // allowlist below is what the shell legitimately needs.
+  const BULK_BYTES = 20_000
+
+  // Modules the app shell genuinely needs on every route, each with its reason.
+  // Adding to this list is a decision, which is the point of it being here.
+  const ALLOWED = new Map([
+    // The nav renders its own search field, mega menus and category pills on
+    // every route; the index is what fills them.
+    ['src/data/toolIndex.js', 'the nav search and mega menus need it on every route'],
+    // The route tree itself — it decides what renders at all.
+    ['src/data/toolTree.js', 'the router and the nav are built from it'],
+  ])
+
+  const dataDir = path.join(ROOT, 'src', 'data')
+  const bulk = new Set(
+    fs.readdirSync(dataDir)
+      .filter((f) => f.endsWith('.js'))
+      .filter((f) => fs.statSync(path.join(dataDir, f)).size > BULK_BYTES)
+      .map((f) => `src/data/${f}`),
+  )
+  // POSITIVE CONTROL: if nothing is over the threshold the walk below cannot
+  // find anything, and the test would be green on an app that imports the lot.
+  assert.ok(bulk.size >= 3,
+    `only ${bulk.size} modules in src/data are over ${BULK_BYTES} bytes, so this test is `
+    + 'guarding almost nothing — has the threshold drifted past the data?')
+
+  const seen = new Set()
+  const offenders = []
+  const resolve = (from, spec) => {
+    if (!spec.startsWith('.')) return null
+    const base = path.posix.join(path.posix.dirname(from), spec)
+    for (const cand of [base, `${base}.jsx`, `${base}.js`, `${base}/index.jsx`, `${base}/index.js`]) {
+      if (fs.existsSync(path.join(ROOT, cand))) return cand
+    }
+    return null
+  }
+  const queue = ['src/main.jsx']
+  while (queue.length) {
+    const file = queue.shift()
+    if (!file || seen.has(file)) continue
+    seen.add(file)
+    if (!/\.(jsx?)$/.test(file)) continue
+    // Comments quote imports they are explaining — communityPromptsPreview.js
+    // names the import it exists to avoid — so a raw scan finds the prose.
+    const src = read(file).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    // STATIC imports only. `import(...)` is a lazy chunk and is the fix, not
+    // the defect, so the pattern requires `from` on the same statement.
+    const re = /import\s+[^;]*?from\s*['"]([^'"]+)['"]/g
+    let m
+    while ((m = re.exec(src)) !== null) {
+      const next = resolve(file, m[1])
+      if (!next) continue
+      if (bulk.has(next) && !ALLOWED.has(next)) {
+        offenders.push(`${file} statically imports ${next} (`
+          + `${fs.statSync(path.join(ROOT, next)).size} bytes)`)
+      }
+      queue.push(next)
+    }
+  }
+
+  assert.ok(seen.size > 50, `the import walk only reached ${seen.size} modules — it is not seeing the app`)
+  assert.deepEqual(offenders, [],
+    'a bulk data module is reachable from the entry chunk by static import, so every visitor '
+    + 'downloads it on every route. Either import only the values needed (see '
+    + 'src/data/communityPromptsPreview.js), load the page lazily, or add it to ALLOWED above '
+    + 'with the reason it belongs in the shell.')
 })
