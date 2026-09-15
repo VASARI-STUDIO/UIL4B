@@ -81,11 +81,29 @@ async function surfaces(page) {
  * gate needs to know is WHICH PROMPT'S TEXT IS ON THE PAGE, and that is the
  * element the attribute marks.
  */
+// WHAT A CARD IS SHOWING, in both of the forms it can take.
+//
+// Until 2026-09-15 there was one: the prompt's own text, scrolling. A card
+// whose output has been BUILT now shows a poster of that output instead
+// (PromptCard, data-preview-kind="output"), so a gate test that only read
+// textContent would come back empty for those cards — and every leak assertion
+// below would pass because there was nothing in them to leak. That is the
+// vacuity the positive control exists to catch, and it is why this returns the
+// poster too rather than being taught to ignore the new cards.
+//
+// THE LEAK SURFACE MOVED WITH IT. A locked prompt reaching the grid used to
+// arrive carrying its entire text; it would now arrive carrying a poster named
+// for its id. Both are read, and both are checked.
 async function previews(page) {
-  return page.evaluate(() => [...document.querySelectorAll('.pl-card')].map((card) => ({
-    title: (card.querySelector('.pl-card-title')?.textContent || '').trim(),
-    preview: card.querySelector('[data-preview]')?.textContent || '',
-  })))
+  return page.evaluate(() => [...document.querySelectorAll('.pl-card')].map((card) => {
+    const shot = card.querySelector('[data-preview-kind="output"] img')
+    return {
+      title: (card.querySelector('.pl-card-title')?.textContent || '').trim(),
+      preview: card.querySelector('[data-preview]')?.textContent || '',
+      poster: shot ? (shot.getAttribute('src') || '') : '',
+      kind: card.querySelector('[data-preview]')?.getAttribute('data-preview-kind') || 'none',
+    }
+  }))
 }
 
 test.describe('the community prompt gate holds under every control on the page', () => {
@@ -192,18 +210,42 @@ test.describe('the community prompt gate holds under every control on the page',
     await expect(page.locator('[role="dialog"]').filter({ hasText: 'The full community library' })).toBeVisible()
   })
 
-  test('every rendered preview is a free prompt, verbatim — the positive control', async ({ page }) => {
-    // The control for everything below it. If the preview were empty, a stub, or
-    // a truncated summary, the leak assertions would all pass by accident.
+  test('every rendered card carries a free prompt\'s own artefact — the positive control', async ({ page }) => {
+    // THE CONTROL FOR EVERYTHING BELOW IT. If the cards were empty, stubs, or
+    // truncated summaries, every leak assertion in this file would pass by
+    // accident. So each card must be shown to be carrying the real artefact of
+    // the prompt it claims to be.
+    //
+    // There are two artefacts now. A prompt whose output has been built shows a
+    // POSTER of that output; every other prompt still shows its own TEXT,
+    // verbatim. Both are checked against the prompt the card is titled for, so
+    // neither kind can go quietly empty.
     const shown = await previews(page)
     expect(shown.length, 'the gallery rendered no cards').toBe(FREE.length)
+
+    let withText = 0
+    let withPoster = 0
     for (const card of shown) {
       const match = FREE.find((p) => p.title === card.title)
       expect(match, `a card titled "${card.title}" is not a free prompt`).toBeTruthy()
-      // Verbatim, not a summary: the card shows the artefact.
-      expect(card.preview, `the preview for "${card.title}" is not the prompt itself`)
-        .toBe(match.text)
+
+      if (card.kind === 'output') {
+        withPoster++
+        // The poster must be THIS prompt's. A card showing another prompt's
+        // output is the same defect as a card showing another prompt's text.
+        expect(card.poster, `the poster on "${card.title}" is not ${match.id}'s`)
+          .toBe(`/previews/prompts/poster/${match.id}.webp`)
+      } else {
+        withText++
+        expect(card.preview, `the preview for "${card.title}" is not the prompt itself`)
+          .toBe(match.text)
+      }
     }
+
+    // And the split is real in at least one direction, so this test cannot be
+    // satisfied by a page that rendered nothing of either kind.
+    expect(withText + withPoster, 'no card carried an artefact of any kind').toBe(shown.length)
+    expect(withPoster, 'no card showed a built output — has the manifest emptied?').toBeGreaterThan(0)
   })
 
   test('no preview carries a locked prompt, under search, sort or any category', async ({ page }) => {
@@ -218,6 +260,13 @@ test.describe('the community prompt gate holds under every control on the page',
           const phrase = (p.text || '').split('\n')[0].slice(0, 40).toLowerCase()
           if (card.preview.toLowerCase().includes(phrase)) found.push(`${p.id} previewed under ${where}`)
           if (card.title === p.title) found.push(`${p.id} titled under ${where}`)
+          // The second leak surface, since 2026-09-15: a locked prompt arriving
+          // with a poster of its output. The image is as much the product as
+          // the text — arguably more, for the prompts that are being sold on
+          // what they produce.
+          if (card.poster && card.poster.includes(`/${p.id}.webp`)) {
+            found.push(`${p.id} POSTERED under ${where}`)
+          }
         }
       }
       // Every card on screen must still be one of the twelve.
