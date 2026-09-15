@@ -17,6 +17,7 @@ import {
   exceedsCanvasLimit,
   outputDimensions,
 } from '../utils/imageResize'
+import useExportGate from '../hooks/useExportGate'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -251,6 +252,11 @@ function revealQueue(node) {
   else window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' })
 }
 
+// THE RAW DOWNLOAD. The account gate is NOT here, and that is deliberate:
+// this is a module-level function and the gate is a hook, so each component
+// that downloads holds its own `gatedDownload` and calls this after the gate
+// resolves. Three of them do — ImageConvert, DownloadButton and VideoFrames.
+// Calling this directly skips the gate, so do not.
 function triggerDownload(blobOrUrl, filename) {
   const url = typeof blobOrUrl === 'string' ? blobOrUrl : URL.createObjectURL(blobOrUrl)
   const a = document.createElement('a')
@@ -363,6 +369,12 @@ function DropZone({ accept, multiple, onFiles, hint, sub }) {
 
 // ── Mode 1: Image format conversion ──────────────────────────────────────────
 function ImageConvert({ toast, initialFiles, initialDraft }) {
+  // A file needs a free account; converting and previewing never do.
+  const requireExportAccount = useExportGate()
+  const gatedDownload = useCallback(async (blobOrUrl, filename, reason) => {
+    if (!(await requireExportAccount(reason))) return
+    triggerDownload(blobOrUrl, filename)
+  }, [requireExportAccount])
   // A homepage output draft is applied to the real controls once, on mount, and
   // then belongs to the visitor — nothing here keeps re-asserting it.
   const seeded = initialDraft ? draftToConverterSettings(initialDraft) : null
@@ -566,8 +578,8 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   const downloadOne = useCallback((item) => {
     if (!item.out) return
     const base = item.name.replace(/\.[^.]+$/, '')
-    triggerDownload(item.out.blob, `${base}.${fmt.ext}`)
-  }, [fmt])
+    gatedDownload(item.out.blob, `${base}.${fmt.ext}`, 'download the converted image')
+  }, [fmt, gatedDownload])
 
   const downloadAll = useCallback(async () => {
     const ready = items.filter(it => it.out)
@@ -586,13 +598,13 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
         zip.file(name, it.out.blob)
       })
       const content = await zip.generateAsync({ type: 'blob' })
-      triggerDownload(content, `converted-${fmt.ext}.zip`)
+      gatedDownload(content, `converted-${fmt.ext}.zip`, 'download the converted images')
       toast(`Downloaded ZIP with ${ready.length} images`)
     } catch {
       toast('Failed to create ZIP file')
     }
     setZipping(false)
-  }, [items, fmt, downloadOne, toast])
+  }, [items, fmt, downloadOne, toast, gatedDownload])
 
   const readyCount = items.filter(it => it.out).length
   const converted = items.filter(it => it.out)
@@ -1100,13 +1112,22 @@ function VideoToGif({ toast }) {
 
 // Small helper button to keep download wiring clean.
 function DownloadButton({ url, name }) {
+  const requireExportAccount = useExportGate()
   return (
-    <button className="btn btn-accent" onClick={() => triggerDownload(url, name)}>Download GIF</button>
+    <button className="btn btn-accent" onClick={async () => {
+      if (!(await requireExportAccount('download the GIF'))) return
+      triggerDownload(url, name)
+    }}>Download GIF</button>
   )
 }
 
 // ── Mode 3: Video → Frames (HTML5 video + canvas seek) ───────────────────────
 function VideoFrames({ toast }) {
+  const requireExportAccount = useExportGate()
+  const gatedDownload = useCallback(async (blobOrUrl, filename, reason) => {
+    if (!(await requireExportAccount(reason))) return
+    triggerDownload(blobOrUrl, filename)
+  }, [requireExportAccount])
   const [file, setFile] = useState(null)
   const [srcUrl, setSrcUrl] = useState(null)
   const [meta, setMeta] = useState(null)
@@ -1238,13 +1259,13 @@ function VideoFrames({ toast }) {
       const zip = new JSZip()
       frames.forEach(f => zip.file(f.name, f.blob))
       const content = await zip.generateAsync({ type: 'blob' })
-      triggerDownload(content, `frames-${(file?.name || 'video').replace(/\.[^.]+$/, '')}.zip`)
+      gatedDownload(content, `frames-${(file?.name || 'video').replace(/\.[^.]+$/, '')}.zip`, 'download the extracted frames')
       toast(`Downloaded ZIP with ${frames.length} frames`)
     } catch {
       toast('Failed to create ZIP file')
     }
     setZipping(false)
-  }, [frames, file, toast])
+  }, [frames, file, toast, gatedDownload])
 
   const estFrom = meta ? Math.max(0, Math.min(rangeStart || 0, meta.duration)) : 0
   const estTo = meta ? (rangeEnd == null ? meta.duration : Math.max(estFrom, Math.min(rangeEnd, meta.duration))) : 0
@@ -1353,7 +1374,7 @@ function VideoFrames({ toast }) {
           </div>
           <div className="img-grid">
             {frames.map(f => (
-              <div key={f.name} className="card fc-card" role="button" tabIndex={0} onClick={() => triggerDownload(f.blob, f.name)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerDownload(f.blob, f.name) } }} style={{ cursor: 'pointer' }} title={`Download ${f.name}`} aria-label={`Download ${f.name}`}>
+              <div key={f.name} className="card fc-card" role="button" tabIndex={0} onClick={() => gatedDownload(f.blob, f.name, 'download this frame')} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); gatedDownload(f.blob, f.name, 'download this frame') } }} style={{ cursor: 'pointer' }} title={`Download ${f.name}`} aria-label={`Download ${f.name}`}>
                 <div className="fc-thumb"><img src={f.url} alt={f.name} /></div>
                 <div className="fc-name">{f.name}</div>
                 <div style={{ fontSize: 10, color: 'var(--t2)' }}>{formatBytes(f.size)} • {formatTime(f.time)}</div>

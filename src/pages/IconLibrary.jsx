@@ -7,6 +7,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { useProModal } from '../contexts/ProModalContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { getLenis } from '../hooks/useSmoothScroll'
+import useExportGate from '../hooks/useExportGate'
 import { trackIconCopy } from '../utils/analytics'
 import UIKitGuide from '../components/UIKitGuide'
 import ColorPickerPop from '../components/ColorPickerPop'
@@ -619,6 +620,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
   const { projects, saveProject, projectLimit } = useProject()
   const { openProModal } = useProModal()
   const { requireLogin } = useLoginPrompt()
+  // Producing a FILE needs a free account; copying never does.
+  const requireExportAccount = useExportGate()
   const { theme } = useTheme()
   // The stage follows the site theme: in light mode an un-tinted icon previews
   // dark-on-light, in dark mode white-on-dark — so what you see matches where
@@ -933,8 +936,11 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
     setTimeout(() => setCopied(''), 2000)
   }
 
-  const handleDownload = () => {
+  // Copying the SVG stays free; taking the FILE needs a free account.
+  // Founder decision 2026-09-15 — see src/hooks/useExportGate.js.
+  const handleDownload = async () => {
     if (!serializedOutput) return
+    if (!(await requireExportAccount('download this icon'))) return
     try {
       const blob = new Blob([serializedOutput], { type: 'image/svg+xml' })
       const url = URL.createObjectURL(blob)
