@@ -61,7 +61,24 @@ export default function useExportGate() {
     // caller must treat false as "stop", NOT as "download anyway" — which is
     // why every call site reads `if (!(await gate(...))) return` rather than
     // ignoring the result.
-    const signedIn = await requireLogin(reason, { free: true })
+    //
+    // `signup: true` OPENS ON THE CREATE-ACCOUNT FORM, and that is this repo's
+    // own rule applied to a new surface rather than a fresh opinion.
+    // LoginPromptContext records it: a control that asks for a new free account
+    // and answers with "Welcome Back / Sign In" is "telling the visitor they
+    // already have an account", with signup demoted to a small text link — and
+    // that was fixed on the four highest-traffic paths into the product.
+    //
+    // This gate is exactly that shape, and more strictly so: it fires ONLY for
+    // somebody the product has no account for, because a signed-in visitor
+    // returned true above and never reaches this line. Opening on "Log in to
+    // continue" would greet every single person who sees it with a form for an
+    // account they do not have.
+    //
+    // Nobody is stranded either way — the dialog's own toggle reads "Already
+    // have an account? Sign in" in this mode, and Continue with Google is the
+    // primary action and identical in both.
+    const signedIn = await requireLogin(reason, { free: true, signup: true })
     return !!signedIn
   }, [user, requireLogin])
 }
