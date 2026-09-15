@@ -114,6 +114,23 @@ test.describe('a file needs a free account', () => {
       'the export panel built a file without asking for an account')
       .toBeVisible({ timeout: 10000 })
     expect(await downloadsSeen(page), 'a file was produced anyway').toBe(0)
+
+    // AND IT OPENS ON THE CREATE-ACCOUNT FORM, not "Log in to continue".
+    //
+    // This gate fires ONLY for somebody the product has no account for — a
+    // signed-in visitor never reaches it. Greeting all of them with a sign-in
+    // form is the defect LoginPromptContext already records and fixed on the
+    // four highest-traffic paths: a control that asks for a new free account
+    // and answers "Welcome Back" tells the visitor they already have one.
+    await expect(page.locator('#ui-login-title'),
+      'the export gate opened on the sign-in form. Everyone who reaches it has no '
+      + 'account — that is why it fired — so it must open on create-account. Pass '
+      + '`signup: true` in useExportGate.js.')
+      .toHaveText(/create your free account/i)
+
+    // It must also say WHICH action was interrupted, or the wall is unexplained.
+    await expect(page.getByText(/you were about to export/i),
+      'the dialog does not name the action the visitor was taking').toBeVisible()
   })
 
   test('the icon download asks, after an icon has been chosen', async ({ page }) => {
