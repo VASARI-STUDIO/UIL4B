@@ -108,7 +108,12 @@ export default function SiteMap() {
       <section className="smap-surface" aria-labelledby="smap-create">
         <div className="smap-surface-h">
           <h2 id="smap-create">Create</h2>
-          <p>Build colour, type, components, icons, media and AI systems.</p>
+          {/* "components" is deleted from this list. The `component` group
+              in toolTree.js is soon:true with both tools soon:true, and the
+              header above promises the map "only ever promises what's
+              actually live". The group still appears below, wearing its
+              Soon badge; the word comes back with the tools. */}
+          <p>Build colour, type, icons, media and AI systems.</p>
         </div>
         <div className="smap-grid">
           {CREATE_GROUPS.map((group) => (
@@ -149,7 +154,14 @@ export default function SiteMap() {
                 {DISCOVER_GROUPS.filter((group) => !group.soon).length} live &middot; more coming
               </span>
             </div>
-            <p className="smap-cat-desc">Community systems, fonts, prompts and curated resources.</p>
+            {/* The typed description is gone. It read "Community systems,
+                fonts, prompts and curated resources." — and "community
+                systems" is the Inspiration row, which DISCOVER_SPEC marks
+                soon:true; NotFound.jsx had already thrown out the same
+                wording as false for the same reason. Nothing replaces it:
+                every row beneath carries its own `desc` from the registry,
+                so the column describes itself and cannot promise a group
+                the registry does not list. */}
             <ul className="smap-links">
               {DISCOVER_GROUPS.map((g) => (
                 <MapLink key={g.id} label={g.label} route={g.route} note={g.desc} soon={g.soon} />
