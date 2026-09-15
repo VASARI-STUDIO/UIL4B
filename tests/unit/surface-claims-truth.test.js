@@ -289,6 +289,30 @@ test('/community does not promise a submission will appear while nothing shows t
   }
 })
 
+/* ── /plans: AI usage in the founder's words, never "free provider tiers" ──── */
+
+const AI_BETA_LINE = 'AI usage is lowered while in Beta, if there is enough support then we will upgrade plans, API and MCPs to improve the app.'
+
+test('no surface in this lane says AI runs on free provider plans', () => {
+  const plans = stripComments(read('src/pages/Plans.jsx'))
+  // Positive control: the page carries his sentence, verbatim, and renders
+  // it in both places the old phrase stood (declaration + two uses).
+  assert.ok(plans.includes(`'${AI_BETA_LINE}'`),
+    "Plans.jsx has lost the founder's sentence on AI usage while in Beta, or changed a word of it")
+  assert.ok((plans.match(/AI_BETA_LINE/g) || []).length >= 3,
+    'Plans.jsx declares AI_BETA_LINE but no longer renders it in both the FAQ and the Before-you-pay note')
+  const surfaces = {
+    'src/pages/Plans.jsx': plans,
+    'src/pages/InfoCentre.jsx': INFO,
+    'src/data/routeMetaMap.js': stripComments(read('src/data/routeMetaMap.js')),
+    'public/llms.txt': read('public/llms.txt'),
+  }
+  for (const [file, src] of Object.entries(surfaces)) {
+    assert.ok(!/free provider/i.test(src),
+      `${file} says AI runs on a free provider tier again. The founder's rule for describing AI usage: "${AI_BETA_LINE}"`)
+  }
+})
+
 test('the superlative deleted from /discover is not on /info', () => {
   // "the best" was removed from '/discover' and '/discover/gradients' by
   // name (routeMetaMap.js). /info carried it for the same page.
