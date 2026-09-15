@@ -4310,7 +4310,25 @@ html[data-reduced-motion="true"] .hsteps-tick{transition:none}
 /* The V2 hover language: border to ink AND a 3px lift, together. */
 .htool:hover{border-color:var(--t0);transform:translateY(-3px)}
 .htool:focus-within{border-color:var(--t0)}
-.htool-head{display:flex;align-items:center;gap:12px;text-decoration:none}
+/* min-height IS THE TARGET, and nothing here supplies one otherwise.
+
+   This link wraps only the h3, so its height is the title’s line box and
+   nothing else: 19px x 1.2 = 22.8px, measured at all six widths in both
+   themes, 23.3px on the Soon card where the badge is slightly taller. That is
+   1.2px under the 24px floor in SC 2.5.8, and it is the ONLY clickable target
+   on each tool card - elementFromPoint inside a card returns LI.htool, not a
+   link - so a pointer that misses it has nothing else to hit.
+
+   It appeared when the 38px pictogram was deleted on 2026-09-15. The icon had
+   been setting this row’s height all along, so removing decoration silently
+   removed a target size, which is the kind of regression a subtraction is not
+   expected to cause.
+
+   24 rather than a taller value, and on min-height rather than padding: the
+   row is already align-items:center, so the title stays optically where it
+   was and the card grows 1.2px. .htool-link below has carried min-height:32px
+   for the same reason since it shipped. */
+.htool-head{display:flex;align-items:center;gap:12px;min-height:24px;text-decoration:none}
 .htool-head:hover{text-decoration:none}
 /* Radius declared at REST, not on :focus-visible — see the note on the
    global :focus-visible rule near the top of this file. This element paints

@@ -123,8 +123,12 @@ const UNDERSIZED = ([root, minimum]) => {
     if (r.width < 1 || r.height < 1) continue
     if (r.width >= minimum && r.height >= minimum) continue
     // WCAG 2.5.8 "Inline": a link whose size is constrained by the sentence
-    // around it.
+    // around it. Inline-level display is part of that and is not optional -
+    // a flex or block link sets its own height, so being under 24px there is a
+    // decision rather than a constraint. See 58-target-size-24 for the 23
+    // homepage measurements the looser form waived.
     if (el.tagName === 'A' && el.parentElement
+      && getComputedStyle(el).display.startsWith('inline')
       && (el.parentElement.innerText || '').trim().length > (el.innerText || '').trim().length + 3) continue
     out.push({
       sel: `${el.tagName.toLowerCase()}.${(el.className || '').toString().slice(0, 44)}`,
