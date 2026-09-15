@@ -1,8 +1,8 @@
 diff --git a/firestore.rules b/firestore.rules
-index 5360bda..41def5f 100644
+index 9963d78..a92c216 100644
 --- a/firestore.rules
 +++ b/firestore.rules
-@@ -49,6 +49,31 @@ service cloud.firestore {
+@@ -70,6 +70,31 @@ service cloud.firestore {
        match /sync/{docId} {
          allow read, write: if isOwner();
        }
@@ -33,4 +33,4 @@ index 5360bda..41def5f 100644
 +      }
      }
  
-     // Feedback — anyone can create, only admin can read/update/delete
+     // Feedback — anyone can create, only a reviewer can read/update/delete.
