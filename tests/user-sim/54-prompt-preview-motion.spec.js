@@ -1,9 +1,24 @@
 // The prompt card preview's motion contract, in BOTH directions.
 //
-// The cards on /discover/prompts show the prompt itself in a fixed-height
-// window, and the text scrolls inside that window on hover and on keyboard
-// focus. Three things have to hold, and none of them is provable from the
-// stylesheet text:
+// A prompt card shows the prompt itself in a fixed-height window, and the text
+// scrolls inside that window on hover and on keyboard focus. Three things have
+// to hold, and none of them is provable from the stylesheet text:
+//
+// ── WHERE THIS RUNS, AND WHY IT MOVED ──────────────────────────────────────
+// It used to run on the COMMUNITY tab. On 2026-09-15 every community prompt
+// gained a built output, and those cards now show a poster of the output
+// instead of the scrolling text — so there was no scrolling text left on that
+// tab to test, and this file went red for a change that was entirely correct.
+//
+// The behaviour did not go away: it is what every prompt WITHOUT a built output
+// shows, which is every prompt a person saves or writes themselves. So the
+// tests run on MY PROMPTS now, against three seeded personal prompts, which is
+// the surface the scrolling preview actually serves today.
+//
+// Deliberately not done: keeping this on the community tab by teaching it to
+// find the one card that still had text. That would have made the file assert
+// an accident of the data rather than a behaviour, and it would go green on a
+// day the last text card disappeared.
 //
 //   1. IT PLAYS ON INTENT, NOT ON ITS OWN. Only the hovered or focused card
 //      moves; the other eleven sit still. That is the WCAG 2.2 SC 2.2.2
@@ -53,6 +68,20 @@ const TEXT = '.pl-card-preview-text'
  * `stored` of `undefined` writes nothing, which is the third state
  * AppearanceContext documents: the visitor has never chosen, so the OS answers.
  */
+// Long enough that the window cannot hold them, because the animation's travel
+// is min(0px, window - text height) — a prompt that already fits moves by
+// exactly nothing, and a test measuring that would pass whatever the CSS said.
+// Six, because the tests reach card index 3 and "only the hovered one moved"
+// needs others to sit still beside it.
+const SEEDED = [1, 2, 3, 4, 5, 6].map((n) => ({
+  id: `local-${n}`,
+  title: `Saved prompt ${n}`,
+  text: Array.from({ length: 14 }, (_, i) =>
+    `Line ${i + 1} of saved prompt ${n}: a specific instruction long enough to overflow the preview window and give the scroll something to travel through.`).join('\n'),
+  tags: 'saved, local',
+  date: '2026-09-15',
+}))
+
 async function open(browser, { os, stored }) {
   const ctx = await browser.newContext({
     viewport: { width: 1280, height: 900 },
@@ -64,8 +93,37 @@ async function open(browser, { os, stored }) {
       catch { /* storage blocked — the OS half still applies */ }
     }, stored)
   }
+  // The personal library, written before boot the way the app itself stores it
+  // (utils/promptStore.js, key 'vs-prompts').
+  await ctx.addInitScript((rows) => {
+    try { localStorage.setItem('vs-prompts', JSON.stringify(rows)) } catch { /* quota */ }
+  }, SEEDED)
   const page = await ctx.newPage()
   return { ctx, page }
+}
+
+/**
+ * Open the library on MY PROMPTS, where the scrolling text preview lives.
+ *
+ * Asserts the seeded prompts actually rendered before returning: every
+ * assertion in this file is about where text sits, and "it did not move" is
+ * trivially true of a tab that rendered nothing.
+ */
+async function openMine(page) {
+  await go(page, ROUTE)
+  // ACTIVATED BY KEYBOARD, and that is load-bearing rather than fussy.
+  // Chromium decides :focus-visible from the last input modality. Switching
+  // tabs with a CLICK tells it the visitor is using a pointer, and a later
+  // programmatic .focus() then does NOT match :focus-visible — so the keyboard
+  // test below would read "paused" and blame the product for the test's own
+  // mouse click. Pressing Enter keeps the modality where these tests assume it.
+  const tab = page.getByRole('button', { name: /my prompts/i })
+  await tab.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator(CARD).first()).toBeVisible()
+  await expect(page.locator(TEXT).first(), 'no scrolling text preview rendered').toBeVisible()
+  const n = await page.locator(TEXT).count()
+  expect(n, 'the seeded personal prompts did not render').toBe(SEEDED.length)
 }
 
 /** The resting Y translation of one preview, in pixels, from the real matrix. */
@@ -101,8 +159,7 @@ test.describe('the prompt preview scroll respects intent and reduced motion', ()
   test('motion on: only the hovered card moves, and it moves downward through the prompt', async ({ browser }) => {
     const { ctx, page } = await open(browser, { os: 'no-preference', stored: undefined })
     watch(page, 'a visitor with motion enabled browsing the prompt library')
-    await go(page, ROUTE)
-    await expect(page.locator(CARD).first()).toBeVisible()
+    await openMine(page)
 
     // At rest every preview is parked at the top of its prompt and paused.
     const resting = await page.evaluate(() => [...document.querySelectorAll('.pl-card-preview-text')].map((el) => {
@@ -134,8 +191,7 @@ test.describe('the prompt preview scroll respects intent and reduced motion', ()
   test('motion on: keyboard focus plays it too, so it is not pointer-only', async ({ browser }) => {
     const { ctx, page } = await open(browser, { os: 'no-preference', stored: undefined })
     watch(page, 'a keyboard user browsing the prompt library')
-    await go(page, ROUTE)
-    await expect(page.locator(CARD).first()).toBeVisible()
+    await openMine(page)
 
     await page.locator(CARD).nth(2).focus()
     await expect(page.locator(CARD).nth(2)).toBeFocused()
@@ -161,8 +217,7 @@ test.describe('the prompt preview scroll respects intent and reduced motion', ()
     test(`reduced motion, both directions — ${c.name}`, async ({ browser }) => {
       const { ctx, page } = await open(browser, { os: c.os, stored: c.stored })
       watch(page, `a visitor whose motion context is: ${c.name}`)
-      await go(page, ROUTE)
-      await expect(page.locator(CARD).first()).toBeVisible()
+      await openMine(page)
 
       const attr = await page.evaluate(() => document.documentElement.getAttribute('data-reduced-motion'))
       expect(attr, 'the resolved motion attribute is not what this context should produce').toBe(c.attr)
@@ -182,8 +237,7 @@ test.describe('the prompt preview scroll respects intent and reduced motion', ()
   test('a real wheel over a preview scrolls the page, not the card', async ({ browser }) => {
     const { ctx, page } = await open(browser, { os: 'no-preference', stored: undefined })
     watch(page, 'a visitor scrolling with the pointer resting inside a preview')
-    await go(page, ROUTE)
-    await expect(page.locator(CARD).first()).toBeVisible()
+    await openMine(page)
 
     // The window must not be a scroll container in the first place — that is
     // what keeps Lenis out of it rather than any handler fighting Lenis.

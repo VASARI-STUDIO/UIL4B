@@ -281,6 +281,31 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .pl-modal-header h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;padding-right:32px}
 .pl-modal-author{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--t2)}
 .pl-modal-body{flex:1;overflow-y:auto;padding:20px 28px}
+
+/* ── The prompt / output tabs ─────────────────────────────────────────────
+   Only rendered for a prompt whose output has been built, so the modal is
+   unchanged for a user-submitted one. */
+.pl-modal-views{display:flex;gap:2px;padding:14px 28px 0;flex-shrink:0}
+.pl-modal-view{appearance:none;background:none;border:none;border-bottom:2px solid transparent;border-radius:var(--radius-xs);padding:8px 2px;margin-right:18px;font:inherit;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+.pl-modal-view:hover{color:var(--t0)}
+.pl-modal-view.is-on{color:var(--t0);border-bottom-color:var(--accent)}
+.pl-modal-view:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* ── The live output ──────────────────────────────────────────────────────
+   A 16:10 box because the poster is captured at 1280x800 and a frame of a
+   different shape would show the reader a different composition from the one
+   the card promised. The frame scrolls internally; the modal body does not
+   grow to fit a 4,600px page. */
+.pl-modal-live{display:flex;flex-direction:column;gap:10px}
+.pl-modal-frame{width:100%;aspect-ratio:16/10;max-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);display:block}
+.pl-modal-live-note{margin:0;font-size:11.5px;line-height:1.5;color:var(--t2)}
+
+/* ── The card poster ──────────────────────────────────────────────────────
+   Replaces the scrolling text on a card whose output exists. object-position
+   is top, because these are full pages and the top of a page is the part that
+   says what it is. */
+.pl-card-shot{padding:0;overflow:hidden}
+.pl-card-shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
 .pl-modal-prompt{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;position:relative;transition:background var(--dur-2) var(--ease-standard)}
 .pl-modal-prompt:hover{background:var(--hvr)}
 .pl-modal-prompt pre{font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--t0);white-space:pre-wrap;word-break:break-word;margin:0}
