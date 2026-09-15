@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nadia Halvorsen — Brand Designer</title>
+<style>
+  :root{
+    --paper:#FCFCFB; --ink:#0B0B0C; --ink-2:#55555C; --ink-3:#8E8E96;
+    --line:#E3E3E0; --line-2:#F0F0ED; --shade:#F4F4F1;
+    --acc:#FF4A24; --acc-d:#D63A18;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  svg{max-width:100%}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  :focus-visible{outline:2.5px solid var(--acc);outline-offset:3px;border-radius:3px}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 32px}
+  h1,h2,h3{margin:0;letter-spacing:-.035em;font-weight:600}
+  .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+
+  /* ---------- header ---------- */
+  header{position:sticky;top:0;z-index:20;background:rgba(252,252,251,.92);
+         backdrop-filter:blur(8px);border-bottom:1px solid var(--line-2)}
+  .hd{display:flex;align-items:center;gap:30px;height:72px}
+  .sig{font-size:17px;font-weight:650;letter-spacing:-.04em;text-decoration:none;white-space:nowrap}
+  .sig em{font-style:normal;color:var(--acc)}
+  .hd nav{display:flex;gap:28px;margin-left:auto}
+  .hd nav a{font-size:14.5px;text-decoration:none;color:var(--ink-2);font-weight:500;padding:6px 0;transition:color .16s}
+  .hd nav a:hover{color:var(--ink)}
+  .talk{display:inline-flex;align-items:center;gap:9px;padding:9px 17px;border-radius:999px;
+        background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;text-decoration:none;
+        transition:background .18s}
+  .talk:hover{background:var(--acc)}
+  .talk .d{width:6px;height:6px;border-radius:50%;background:#59E08F}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  .blobs{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .blobs i{position:absolute;border-radius:50%;filter:blur(46px);display:block}
+  .b1{width:460px;height:460px;left:-90px;top:-140px;background:rgba(255,74,36,.16)}
+  .b2{width:380px;height:380px;right:4%;top:-80px;background:rgba(11,11,12,.07)}
+  .b3{width:320px;height:320px;right:24%;bottom:-160px;background:rgba(255,74,36,.09)}
+  .hero .wrap{position:relative;padding-top:92px;padding-bottom:78px}
+  .hero h1{font-size:clamp(40px,7.2vw,88px);line-height:.98;letter-spacing:-.05em;max-width:14ch;font-weight:620}
+  .hero h1 em{font-style:normal;color:var(--acc)}
+  .hero .sub{margin:28px 0 0;font-size:18.5px;color:var(--ink-2);max-width:44ch;line-height:1.55}
+  .meta{display:flex;gap:14px 40px;flex-wrap:wrap;margin-top:44px;padding-top:26px;border-top:1px solid var(--line)}
+  .meta div b{display:block;font-size:15px;font-weight:600;margin-top:3px;letter-spacing:-.01em}
+  .meta div b .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#2BB673;margin-right:7px}
+
+  section{padding:88px 0}
+  .sec-hd{display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:34px}
+  .sec-hd h2{font-size:clamp(24px,3vw,34px);line-height:1.1}
+  .sec-hd .lbl{margin-bottom:10px}
+
+  /* ---------- work ---------- */
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .chip{padding:7px 14px;border-radius:999px;border:1px solid var(--line);font-size:13.5px;
+        font-weight:550;color:var(--ink-2);transition:border-color .16s,background .16s,color .16s}
+  .chip sup{font-size:10px;color:var(--ink-3);margin-left:4px;vertical-align:super}
+  .chip:hover{border-color:var(--ink-3);color:var(--ink)}
+  .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .chip[aria-pressed=true] sup{color:rgba(252,252,251,.6)}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 20px}
+  .proj{display:block;text-decoration:none}
+  .proj .frame{display:block;position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--shade);
+               border:1px solid var(--line);border-radius:3px}
+  .proj .frame>svg{position:absolute;inset:0;width:100%;height:100%}
+  .ovl{position:absolute;inset:0;background:rgba(11,11,12,.86);color:var(--paper);
+       display:flex;flex-direction:column;justify-content:flex-end;padding:20px;
+       opacity:0;transition:opacity .22s ease}
+  .proj:hover .ovl,.proj:focus-visible .ovl{opacity:1}
+  .ovl b{font-size:19px;font-weight:600;letter-spacing:-.03em;line-height:1.15}
+  .ovl span{font-size:13px;color:#B9B9BE;margin-top:5px}
+  .ovl .go{position:absolute;top:18px;right:18px;width:32px;height:32px;border-radius:50%;
+           background:var(--acc);display:grid;place-items:center}
+  .ovl .go svg{width:14px;height:14px;stroke:#fff;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .cap{display:flex;align-items:baseline;gap:10px;padding:11px 2px 0}
+  .cap b{font-size:15px;font-weight:600;letter-spacing:-.02em}
+  .cap span{font-size:12.5px;color:var(--ink-3);margin-left:auto;white-space:nowrap}
+  .proj:hover .cap b{color:var(--acc)}
+  .more{margin-top:34px;font-size:14.5px;color:var(--ink-3)}
+  .more a{color:var(--ink);text-underline-offset:4px}
+
+  /* ---------- about ---------- */
+  .about{background:var(--shade);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .about .wrap{display:grid;grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr);gap:60px;align-items:start}
+  .idcard{border:1px solid var(--line);background:var(--paper);padding:30px 28px}
+  .idcard .init{font-size:64px;font-weight:620;letter-spacing:-.07em;line-height:.9}
+  .idcard .init em{font-style:normal;color:var(--acc)}
+  .idcard h3{font-size:20px;margin-top:22px}
+  .idcard .role{color:var(--ink-2);font-size:14.5px;margin:4px 0 0}
+  .facts{list-style:none;margin:24px 0 0;padding:20px 0 0;border-top:1px solid var(--line);
+         display:flex;flex-direction:column;gap:12px}
+  .facts li{display:flex;gap:16px;font-size:14px}
+  .facts .k{color:var(--ink-3);flex:0 0 96px}
+  .facts .v{font-weight:550}
+  .about h2{font-size:clamp(24px,3vw,34px);line-height:1.12;margin-bottom:20px;max-width:20ch}
+  .about p{font-size:17px;color:var(--ink-2);margin:0 0 16px;line-height:1.66;max-width:58ch}
+  .about p b{color:var(--ink);font-weight:600}
+  .skills{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:34px;padding-top:26px;border-top:1px solid var(--line)}
+  .skills h4{margin:0 0 12px;font-size:11px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+  .tags{display:flex;flex-wrap:wrap;gap:7px}
+  .tags span{font-size:13.5px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;background:var(--paper)}
+
+  /* ---------- quotes ---------- */
+  .quotes{position:relative}
+  .track{overflow:hidden}
+  .rail{display:flex;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+  .q{flex:0 0 100%;padding-right:2px}
+  .q blockquote{margin:0;font-size:clamp(21px,2.6vw,30px);line-height:1.35;letter-spacing:-.028em;max-width:24ch;font-weight:500}
+  .q .who{display:flex;align-items:center;gap:12px;margin-top:28px}
+  .q .av{width:40px;height:40px;border-radius:50%;background:var(--ink);color:var(--paper);
+         display:grid;place-items:center;font-size:13px;font-weight:650;flex:0 0 auto;letter-spacing:-.02em}
+  .q .who b{display:block;font-size:15px;font-weight:600}
+  .q .who span{display:block;font-size:13.5px;color:var(--ink-3)}
+  .qctl{display:flex;align-items:center;gap:10px;margin-top:34px;padding-top:22px;border-top:1px solid var(--line)}
+  .qctl button.arw{width:42px;height:42px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;
+                   transition:background .16s,border-color .16s}
+  .qctl button.arw:hover{background:var(--ink);border-color:var(--ink)}
+  .qctl button.arw:hover svg{stroke:var(--paper)}
+  .qctl svg{width:15px;height:15px;stroke:var(--ink);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .dots{display:flex;gap:7px;margin-left:8px}
+  .dots button{width:7px;height:7px;border-radius:50%;background:var(--line);padding:0;transition:background .16s,width .16s}
+  .dots button[aria-current=true]{background:var(--acc);width:22px;border-radius:99px}
+  .qctl .n{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  .demo{margin:26px 0 0;font-size:12.5px;color:var(--ink-3)}
+
+  /* ---------- contact ---------- */
+  .contact{background:var(--ink);color:var(--paper)}
+  .contact .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:64px}
+  .contact h2{font-size:clamp(30px,4.4vw,52px);line-height:1.02;letter-spacing:-.045em;max-width:12ch}
+  .contact h2 em{font-style:normal;color:var(--acc)}
+  .contact .sub{margin:22px 0 0;font-size:17px;color:#A8A8B0;max-width:40ch}
+  .direct{margin-top:38px;padding-top:26px;border-top:1px solid rgba(252,252,251,.15)}
+  .direct a.big{font-size:clamp(19px,2.4vw,26px);font-weight:550;letter-spacing:-.03em;
+                color:var(--paper);text-decoration:none;border-bottom:1px solid rgba(252,252,251,.3);padding-bottom:3px}
+  .direct a.big:hover{color:var(--acc);border-color:var(--acc)}
+  .soc{display:flex;gap:10px;margin-top:28px;flex-wrap:wrap}
+  .soc a{padding:8px 15px;border:1px solid rgba(252,252,251,.22);border-radius:999px;
+         font-size:13.5px;text-decoration:none;color:#D5D5DA;transition:border-color .16s,color .16s}
+  .soc a:hover{border-color:var(--acc);color:var(--acc)}
+  form{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .f{display:flex;flex-direction:column;gap:8px}
+  .f.wide{grid-column:1/-1}
+  label{font-size:12.5px;color:#A8A8B0;font-weight:550;letter-spacing:.02em}
+  input,textarea,select{font:inherit;font-size:15.5px;padding:12px 14px;border-radius:7px;width:100%;
+        border:1px solid rgba(252,252,251,.2);background:#141416;color:var(--paper);
+        transition:border-color .16s,background .16s}
+  textarea{min-height:110px;resize:vertical}
+  input::placeholder,textarea::placeholder{color:#6E6E77}
+  input:hover,textarea:hover,select:hover{border-color:rgba(252,252,251,.42)}
+  input:focus,textarea:focus,select:focus{border-color:var(--acc);background:#18181B}
+  select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#A8A8B0 50%),linear-gradient(135deg,#A8A8B0 50%,transparent 50%);
+         background-position:calc(100% - 20px) 21px,calc(100% - 14px) 21px;background-size:6px 6px;background-repeat:no-repeat}
+  .send{grid-column:1/-1;justify-self:start;padding:13px 24px;border-radius:999px;background:var(--acc);
+        color:#fff;font-size:15px;font-weight:650;transition:background .16s}
+  .send:hover{background:var(--acc-d)}
+  .fnote{grid-column:1/-1;margin:0;font-size:13px;color:#7C7C85}
+
+  footer{padding:26px 0 34px;font-size:13px;color:var(--ink-3)}
+  footer .wrap{display:flex;gap:10px 28px;flex-wrap:wrap;align-items:center}
+  footer .r{margin-left:auto}
+
+  @media (max-width:1000px){
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .about .wrap,.contact .wrap{grid-template-columns:1fr;gap:44px}
+    .hd nav{display:none}
+  }
+  @media (max-width:640px){
+    .wrap{padding:0 18px}
+    section{padding:58px 0}
+    .hero .wrap{padding-top:58px;padding-bottom:52px}
+    .grid{grid-template-columns:1fr;gap:26px}
+    .skills,form{grid-template-columns:1fr}
+    .chips{margin-left:0}
+    .sec-hd{margin-bottom:24px}
+    .ovl{opacity:1;background:linear-gradient(0deg,rgba(11,11,12,.9) 0%,rgba(11,11,12,.15) 62%)}
+    .cap{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media (prefers-reduced-motion:no-preference){
+    .b1{animation:d1 26s ease-in-out infinite}
+    .b2{animation:d2 32s ease-in-out infinite}
+    .b3{animation:d3 29s ease-in-out infinite}
+    @keyframes d1{0%,100%{transform:translate(0,0)}50%{transform:translate(70px,46px)}}
+    @keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(-56px,40px)}}
+    @keyframes d3{0%,100%{transform:translate(0,0)}50%{transform:translate(44px,-52px)}}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <a class="sig" href="#top">Nadia Halvorsen<em>.</em></a>
+    <nav aria-label="Main"><a href="#work">Work</a><a href="#about">About</a><a href="#contact">Contact</a></nav>
+    <a class="talk" href="#contact"><span class="d" aria-hidden="true"></span>Let's talk</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="blobs" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+    <div class="wrap">
+      <p class="lbl">Brand &amp; identity design · Melbourne</p>
+      <h1 style="margin-top:20px">I design brands that people <em>remember</em>.</h1>
+      <p class="sub">Eleven years of logotypes, packaging and identity systems for people who make things — coffee roasters, foundries, ceramicists, a bank that wanted to stop looking like one.</p>
+      <div class="meta">
+        <div><span class="lbl">Availability</span><b><span class="dot"></span>Taking work from March 2026</b></div>
+        <div><span class="lbl">Typical engagement</span><b>6–10 weeks, fixed fee</b></div>
+        <div><span class="lbl">Based in</span><b>Fitzroy North, working AEDT</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- work ---------- -->
+  <section id="work">
+    <div class="wrap">
+      <div class="sec-hd">
+        <div><p class="lbl">Selected work</p><h2>Eight projects, 2022&ndash;2026</h2></div>
+        <div class="chips" role="group" aria-label="Filter work by discipline">
+          <button class="chip" data-f="all" aria-pressed="true">All<sup>8</sup></button>
+          <button class="chip" data-f="identity" aria-pressed="false">Identity<sup>4</sup></button>
+          <button class="chip" data-f="packaging" aria-pressed="false">Packaging<sup>2</sup></button>
+          <button class="chip" data-f="editorial" aria-pressed="false">Editorial<sup>1</sup></button>
+          <button class="chip" data-f="campaign" aria-pressed="false">Campaign<sup>1</sup></button>
+        </div>
+      </div>
+
+      <div class="grid" id="grid">
+        <a class="proj" href="#work" data-c="identity">
+          <span class="frame">
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <rect width="200" height="150" fill="#E8DCCB"/>
+              <circle cx="100" cy="70" r="40" fill="none" stroke="#6B4A2B" stroke-width="2.5"/>
+              <text x="100" y="86" text-anchor="middle" font-family="Georgia,serif" font-size="44" fill="#6B4A2B">B</text>
+              <text x="100" y="124" text-anchor="middle" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="7.5" letter-spacing="3.6" fill="#6B4A2B">BRASSWORK ROASTERS</text>
+            </svg>
+            <span class="ovl"><span class="go"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span><b>Brasswork Coffee</b><span>Brand identity · 2026</span></span></span>
+          <span class="cap"><b>Brasswork Coffee</b><span>Identity</span></span>
+        </a>
+
+        <a class="proj" href="#work" data-c="identity">
+          <span class="frame">
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <rect width="200" height="150" fill="#12161A"/>
+              <path d="M0 96h200" stroke="#FF4A24" stroke-width="1.4"/>
+              <text x="24" y="86" font-family="Georgia,serif" font-size="66" fill="#F3F1ED">Aa</text>
+              <text x="132" y="52" font-family="Georgia,serif" font-size="13" fill="#7E8791">Meridian</text>
+              <text x="132" y="68" font-family="Georgia,serif" font-size="13" font-style="italic" fill="#7E8791">Display</text>
+              <text x="24" y="122" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="7" letter-spacing="3" fill="#7E8791">TYPE FOUNDRY — 14 FAMILIES</text>
+            </svg>
+            <span class="ovl"><span class="go"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span><b>Meridian Type Foundry</b><span>Identity &amp; website · 2025</span></span></span>
+          <span class="cap"><b>Meridian Type</b><span>Identity</span></span>
+        </a>
+
+        <a class="proj" href="#work" data-c="packaging">
+          <span class="frame">
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <rect width="200" height="150" fill="#E6EAE2"/>
+              <g fill="#4A6150"><rect x="34" y="26" width="38" height="98" rx="3"/><rect x="82" y="38" width="38" height="86" rx="3"/><rect x="130" y="18" width="38" height="106" rx="3"/></g>
+              <g fill="#E6EAE2"><rect x="34" y="62" width="38" height="16"/><rect x="82" y="72" width="38" height="16"/><rect x="130" y="56" width="38" height="16"/></g>
+              <g font-family="Georgia,serif" font-size="9" fill="#4A6150" text-anchor="middle"><text x="53" y="74">H&amp;P</text><text x="101" y="84">H&amp;P</text><text x="149" y="68">H&amp;P</text></g>
+            </svg>
+            <span class="ovl"><span class="go"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span><b>Harlow &amp; Pine</b><span>Packaging system · 2025</span></span></span>
+          <span class="cap"><b>Harlow &amp; Pine</b><span>Packaging</span></span>
+        </a>
+
+        <a class="proj" href="#work" data-c="editorial">
+          <span class="frame">
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <rect width="200" height="150" fill="#FAF8F3"/>
+              <text x="100" y="40" text-anchor="middle" font-family="Georgia,serif" font-size="21" fill="#12161A">The Fortnightly</text>
+              <path d="M22 50h156M22 54h156" stroke="#12161A" stroke-width="1"/>
+              <g fill="#C9C6BE"><rect x="22" y="64" width="72" height="4"/><rect x="22" y="74" width="72" height="4"/><rect x="22" y="84" width="60" height="4"/>
+                <rect x="106" y="64" width="72" height="4"/><rect x="106" y="74" width="72" height="4"/><rect x="106" y="84" width="48" height="4"/></g>
+              <rect x="22" y="98" width="72" height="30" fill="#FF4A24" opacity=".85"/>
+              <g fill="#C9C6BE"><rect x="106" y="98" width="72" height="4"/><rect x="106" y="108" width="72" height="4"/><rect x="106" y="118" width="66" height="4"/></g>
+            </svg>
+            <span class="ovl"><span class="go"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span><b>The Fortnightly</b><span>Editorial design · 2024</span></span></span>
+          <span class="cap"><b>The Fortnightly</b><span>Editorial</span></span>
+        </a>
+
+        <a class="proj" href="#work" data-c="identity">
+          <span class="frame">
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <rect width="200" height="150" fill="#1B1E3B"/>
+              <circle cx="100" cy="66" r="34" fill="#F0EDE4"/>
+              <circle cx="118" cy="58" r="30" fill="#1B1E3B"/>
+              <text x="100" y="124" text-anchor="middle" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="11" letter-spacing="7" fill="#F0EDE4">LUNE</text>
+            </svg>
+            <span class="ovl"><span class="go"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span><b>Lune Studios</b><span>Logotype &amp; mark · 2024</span></span></span>
+          <span class="cap"><b>Lune Studios</b><span>Identity</span></span>
+        </a>
+
+        <a class="proj" href="#work" data-c="packaging">
+          <span class="frame">
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <rect width="200" height="150" fill="#F2E7DF"/>
+              <g fill="#B4644A"><ellipse cx="62" cy="96" rx="30" ry="12"/><path d="M32 96V70c0-16 60-16 60 0v26z"/>
+                <ellipse cx="136" cy="100" rx="22" ry="9"/><path d="M114 100V82c0-11 44-11 44 0v18z"/></g>
+              <ellipse cx="62" cy="70" rx="30" ry="11" fill="#D89275"/>
+              <ellipse cx="136" cy="82" rx="22" ry="8" fill="#D89275"/>
+              <text x="100" y="132" text-anchor="middle" font-family="Georgia,serif" font-size="11" letter-spacing="3.5" fill="#8C4A32">PALLAS</text>
+            </svg>
+            <span class="ovl"><span class="go"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span><b>Pallas Ceramics</b><span>Identity &amp; packaging · 2023</span></span></span>
+          <span class="cap"><b>Pallas Ceramics</b><span>Packaging</span></span>
+        </a>
+
+        <a class="proj" href="#work" data-c="campaign">
+          <span class="frame">
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <rect width="200" height="150" fill="#FF4A24"/>
+              <g font-family="-apple-system,Segoe UI,Arial,sans-serif" font-weight="800" font-size="30" fill="#12161A" letter-spacing="-1.6">
+                <text x="18" y="52">RUN</text><text x="18" y="86">WAY</text>
+              </g>
+              <text x="18" y="112" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="9" letter-spacing="2.6" fill="#12161A">FESTIVAL · 14—17 NOV</text>
+              <path d="M134 18l40 40-40 40" fill="none" stroke="#12161A" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="ovl"><span class="go"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span><b>Runway Festival</b><span>Campaign identity · 2023</span></span></span>
+          <span class="cap"><b>Runway Festival</b><span>Campaign</span></span>
+        </a>
+
+        <a class="proj" href="#work" data-c="identity">
+          <span class="frame">
+            <svg viewBox="0 0 200 150" aria-hidden="true">
+              <rect width="200" height="150" fill="#F4F4F1"/>
+              <g fill="#17325C"><rect x="60" y="34" width="13" height="72"/><rect x="127" y="34" width="13" height="72"/>
+                <path d="M73 34h13l41 72h-13z"/></g>
+              <text x="100" y="128" text-anchor="middle" font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="8.5" letter-spacing="4.2" fill="#17325C">NORDSTRAND</text>
+            </svg>
+            <span class="ovl"><span class="go"><svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></span><b>Nordstrand Bank</b><span>Rebrand · 2022</span></span></span>
+          <span class="cap"><b>Nordstrand Bank</b><span>Identity</span></span>
+        </a>
+      </div>
+      <p class="more">Older work, plus the parts that did not make it, live in the <a href="#work">full archive</a>.</p>
+    </div>
+  </section>
+
+  <!-- ---------- about ---------- -->
+  <section class="about" id="about">
+    <div class="wrap">
+      <div class="idcard">
+        <div class="init">NH<em>.</em></div>
+        <h3>Nadia Halvorsen</h3>
+        <p class="role">Independent brand designer</p>
+        <ul class="facts">
+          <li><span class="k">Working since</span><span class="v">2015</span></li>
+          <li><span class="k">Based</span><span class="v">Melbourne, AEDT</span></li>
+          <li><span class="k">Studio days</span><span class="v">Tue – Fri</span></li>
+          <li><span class="k">Next opening</span><span class="v">March 2026</span></li>
+          <li><span class="k">Teaching</span><span class="v">RMIT, type &amp; identity</span></li>
+        </ul>
+      </div>
+      <div>
+        <p class="lbl">About</p>
+        <h2 style="margin-top:12px">Five years in agencies taught me what to stop doing</h2>
+        <p>I ran identity teams at two Melbourne studios before going out on my own. The useful thing I took with me was a short list of what actually moves a brand: <b>a mark that survives being 16 pixels wide</b>, a type system somebody can use without ringing me, and words the founder is willing to say out loud.</p>
+        <p>I work alone, on one project at a time. You get me in the room for the whole engagement, not a senior for the pitch and a junior for the build. Every project ends with a guidelines file and a two-hour handover with whoever inherits it.</p>
+        <div class="skills">
+          <div>
+            <h4>What I do</h4>
+            <div class="tags"><span>Identity systems</span><span>Logotype &amp; marks</span><span>Type selection</span><span>Packaging</span><span>Art direction</span><span>Brand guidelines</span></div>
+          </div>
+          <div>
+            <h4>Tools</h4>
+            <div class="tags"><span>Figma</span><span>Illustrator</span><span>InDesign</span><span>Glyphs</span><span>Blender</span><span>Notion</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- quotes ---------- -->
+  <section>
+    <div class="wrap quotes">
+      <p class="lbl">Clients</p>
+      <div class="track" style="margin-top:22px">
+        <div class="rail" id="rail">
+          <div class="q">
+            <blockquote>“She killed the first route we all liked, and she was right. The second one is on eleven thousand bags a month.”</blockquote>
+            <div class="who"><span class="av">RT</span><span><b>Rachel Tuiloma</b><span>Founder, Brasswork Coffee</span></span></div>
+          </div>
+          <div class="q">
+            <blockquote>“We had four years of drift and no system. Eight weeks later the whole foundry runs off one file and nobody argues about it.”</blockquote>
+            <div class="who"><span class="av">JO</span><span><b>Jonas Öberg</b><span>Director, Meridian Type Foundry</span></span></div>
+          </div>
+          <div class="q">
+            <blockquote>“Our board expected a bank logo. What we got tested better with under-35s than anything in the category.”</blockquote>
+            <div class="who"><span class="av">AM</span><span><b>Adaeze Mbeki</b><span>Head of Brand, Nordstrand Bank</span></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="qctl">
+        <button class="arw" type="button" id="prev" aria-label="Previous quote"><svg viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></svg></button>
+        <button class="arw" type="button" id="next" aria-label="Next quote"><svg viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"/></svg></button>
+        <span class="dots" id="dots" role="tablist" aria-label="Choose quote"></span>
+        <span class="n" id="count">01 / 03</span>
+      </div>
+      <p class="demo">Client quotes are sample content for this demonstration site.</p>
+    </div>
+  </section>
+
+  <!-- ---------- contact ---------- -->
+  <section class="contact" id="contact">
+    <div class="wrap">
+      <div>
+        <h2>Got something worth <em>naming</em>?</h2>
+        <p class="sub">Tell me what it is and roughly when. I reply to everything within two working days, including the ones I have to turn down.</p>
+        <div class="direct">
+          <a class="big" href="mailto:hello@nadiahalvorsen.example.com">hello@nadiahalvorsen.example.com</a>
+          <div class="soc">
+            <a href="#contact">Instagram</a><a href="#contact">Are.na</a><a href="#contact">LinkedIn</a><a href="#contact">Read.cv</a>
+          </div>
+        </div>
+      </div>
+      <form action="#contact" method="post" novalidate>
+        <div class="f"><label for="n">Name</label><input id="n" name="name" type="text" autocomplete="name" placeholder="Your name" required></div>
+        <div class="f"><label for="e">Email</label><input id="e" name="email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
+        <div class="f"><label for="ty">What is it</label>
+          <select id="ty" name="type"><option>New identity</option><option>Rebrand</option><option>Packaging</option><option>Editorial</option><option>Something else</option></select>
+        </div>
+        <div class="f"><label for="bd">Budget</label>
+          <select id="bd" name="budget"><option>Under $10k</option><option selected>$10k – $25k</option><option>$25k – $50k</option><option>Over $50k</option><option>Not sure yet</option></select>
+        </div>
+        <div class="f wide"><label for="m">The project</label>
+          <textarea id="m" name="message" placeholder="Two-person cider brand, launching spring, no name yet. We have the liquid and nothing else." required></textarea></div>
+        <button class="send" type="submit">Send it over</button>
+        <p class="fnote">No newsletter, no CRM. Just me reading it.</p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Nadia Halvorsen</span>
+    <span>ABN 39 771 204 668</span>
+    <span class="r">Set in the system stack. Built lean on purpose.</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  /* work filter */
+  var chips=[].slice.call(document.querySelectorAll('.chip')),
+      items=[].slice.call(document.querySelectorAll('#grid .proj'));
+  chips.forEach(function(c){
+    c.addEventListener('click',function(){
+      chips.forEach(function(o){o.setAttribute('aria-pressed',String(o===c));});
+      var f=c.dataset.f;
+      items.forEach(function(it){ it.hidden = !(f==='all'||it.dataset.c===f); });
+    });
+  });
+
+  /* quote carousel */
+  var rail=document.getElementById('rail'),
+      qs=rail.children.length, i=0,
+      dots=document.getElementById('dots'),
+      count=document.getElementById('count');
+  for(var k=0;k<qs;k++){
+    var b=document.createElement('button');
+    b.type='button'; b.setAttribute('role','tab');
+    b.setAttribute('aria-label','Quote '+(k+1));
+    b.addEventListener('click',(function(n){return function(){go(n);};})(k));
+    dots.appendChild(b);
+  }
+  function pad(n){return (n<10?'0':'')+n;}
+  function go(n){
+    i=(n+qs)%qs;
+    rail.style.transform='translateX('+(-i*100)+'%)';
+    [].forEach.call(dots.children,function(d,x){d.setAttribute('aria-current',String(x===i));});
+    count.textContent=pad(i+1)+' / '+pad(qs);
+  }
+  document.getElementById('prev').addEventListener('click',function(){go(i-1);});
+  document.getElementById('next').addEventListener('click',function(){go(i+1);});
+  go(0);
+})();
+</script>
+</body>
+</html>

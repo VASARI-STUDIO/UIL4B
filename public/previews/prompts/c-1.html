@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlowFix Plumbing — Newcastle &amp; Lake Macquarie</title>
+<style>
+  :root{
+    --navy:#1B3A5C; --navy-d:#12283F; --navy-l:#2C5580;
+    --orange:#F47B20; --orange-d:#D9640D; --orange-t:#FDF0E5;
+    --ink:#132436; --ink-2:#4B5E72; --ink-3:#77879A;
+    --paper:#FFFFFF; --wash:#F5F8FB; --line:#DFE7EE;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  img,svg{max-width:100%}
+  button{font:inherit;cursor:pointer}
+  :focus-visible{outline:3px solid var(--orange);outline-offset:2px;border-radius:4px}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+  h1,h2,h3{letter-spacing:-.025em;margin:0}
+  .eye{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--orange);margin:0 0 12px}
+
+  /* ---- bars ---- */
+  .alert{background:var(--navy-d);color:#CFE0EE;font-size:13.5px}
+  .alert .wrap{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;padding-top:9px;padding-bottom:9px}
+  .alert b{color:#fff;font-weight:600}
+  .alert .ph{margin-left:auto;color:#fff;font-weight:700;text-decoration:none;letter-spacing:.01em}
+  .alert .ph:hover{color:var(--orange)}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--orange);flex:0 0 auto}
+
+  header{border-bottom:1px solid var(--line);background:#fff;position:relative;z-index:5}
+  .hd{display:flex;align-items:center;gap:28px;height:74px}
+  .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+  .logo .m{width:34px;height:34px;border-radius:9px;background:var(--navy);display:grid;place-items:center;flex:0 0 auto}
+  .logo .m svg{width:19px;height:19px;fill:var(--orange)}
+  .logo b{font-size:19px;font-weight:800;letter-spacing:-.035em;color:var(--navy);line-height:1.05;display:block}
+  .logo small{display:block;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+  nav.main{display:flex;gap:26px;margin-left:10px}
+  nav.main a{font-size:15px;text-decoration:none;color:var(--ink-2);font-weight:550;padding:6px 0}
+  nav.main a:hover{color:var(--navy)}
+  .hd .r{margin-left:auto;display:flex;align-items:center;gap:14px}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:13px 20px;border-radius:9px;
+       font-weight:700;font-size:15.5px;text-decoration:none;border:2px solid transparent;
+       transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+  .btn svg{width:17px;height:17px;flex:0 0 auto}
+  .btn-o{background:var(--orange);color:#fff;box-shadow:0 2px 0 var(--orange-d)}
+  .btn-o:hover{background:var(--orange-d);box-shadow:0 2px 0 #B85309}
+  .btn-o svg{fill:#fff}
+  .btn-g{border-color:var(--line);color:var(--navy);background:#fff}
+  .btn-g:hover{border-color:var(--navy);background:var(--wash)}
+  .btn-sm{padding:10px 16px;font-size:14.5px}
+
+  /* ---- hero ---- */
+  .hero{background:var(--wash);border-bottom:1px solid var(--line)}
+  .hero .wrap{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);gap:52px;
+              padding-top:56px;padding-bottom:56px;align-items:center}
+  .hero h1{font-size:clamp(34px,4.6vw,52px);line-height:1.04;font-weight:800;color:var(--navy);letter-spacing:-.037em}
+  .hero .lede{margin:18px 0 0;font-size:18px;color:var(--ink-2);max-width:46ch;line-height:1.55}
+  .hero .lede b{color:var(--ink);font-weight:700}
+  .acts{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0 10px}
+  .micro{font-size:13.5px;color:var(--ink-3);margin:0}
+  .ticks{list-style:none;margin:26px 0 0;padding:20px 0 0;border-top:1px solid var(--line);
+         display:grid;grid-template-columns:1fr 1fr;gap:11px 22px}
+  .ticks li{display:flex;gap:10px;font-size:14.5px;color:var(--ink-2);font-weight:550;line-height:1.35}
+  .ticks svg{width:17px;height:17px;flex:0 0 auto;margin-top:1px;stroke:var(--orange);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  .van{background:var(--navy);border-radius:16px;padding:26px;position:relative;overflow:hidden}
+  .van::before{content:"";position:absolute;inset:0;opacity:.5;
+    background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);
+    background-size:26px 26px}
+  .van>svg{position:relative;display:block;width:100%;height:auto}
+  .van .cap{position:relative;display:flex;align-items:center;gap:9px;margin-top:18px;
+            color:#BFD6E8;font-size:13px}
+  .van .cap b{color:#fff;font-weight:700}
+  .van .cap svg{width:15px;height:15px;flex:0 0 auto}
+
+  /* ---- trust ---- */
+  .trust{border-bottom:1px solid var(--line)}
+  .trust .wrap{display:grid;grid-template-columns:repeat(4,1fr);padding:0}
+  .trust div{padding:26px 24px;border-left:1px solid var(--line)}
+  .trust div:first-child{border-left:0}
+  .trust b{display:block;font-size:30px;font-weight:800;color:var(--navy);letter-spacing:-.035em;line-height:1.1}
+  .trust span{display:block;font-size:13.5px;color:var(--ink-2);margin-top:4px}
+
+  section{padding:74px 0}
+  .sec-hd{max-width:60ch;margin-bottom:34px}
+  .sec-hd h2{font-size:clamp(26px,3.3vw,36px);color:var(--navy);font-weight:800;line-height:1.1}
+  .sec-hd p{margin:12px 0 0;font-size:17px;color:var(--ink-2)}
+
+  /* ---- services ---- */
+  .svcs{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+        border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .svc{background:#fff;padding:26px 24px 24px;display:flex;flex-direction:column;transition:background .16s}
+  .svc:hover{background:var(--wash)}
+  .svc .ic{width:44px;height:44px;border-radius:11px;background:var(--orange-t);display:grid;place-items:center;margin-bottom:16px}
+  .svc .ic svg{width:23px;height:23px;stroke:var(--orange-d);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .svc h3{font-size:17.5px;color:var(--navy);font-weight:750}
+  .svc p{margin:8px 0 0;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+  .svc .price{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+              font-size:13.5px;color:var(--ink-3);display:flex;align-items:baseline;gap:6px}
+  .svc .price b{font-size:16px;color:var(--navy);font-weight:750}
+
+  /* ---- about + map ---- */
+  .about{background:var(--wash);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .about .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:52px;align-items:center}
+  .about p{font-size:16.5px;color:var(--ink-2);margin:0 0 16px;line-height:1.62}
+  .creds{list-style:none;margin:24px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
+  .creds li{display:flex;gap:12px;font-size:14.5px;color:var(--ink);align-items:flex-start}
+  .creds svg{width:19px;height:19px;flex:0 0 auto;margin-top:2px;stroke:var(--navy);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .creds b{font-weight:700}
+  .creds span{display:block;color:var(--ink-3);font-size:13px}
+  .map{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
+  .map svg{display:block;width:100%;height:auto;border-radius:9px}
+  .map .lg{display:flex;align-items:center;gap:8px 18px;flex-wrap:wrap;margin-top:14px;font-size:13px;color:var(--ink-2)}
+  .map .lg i{width:9px;height:9px;border-radius:50%;background:var(--orange);display:inline-block;margin-right:6px}
+  .map .lg .b i{background:var(--navy-l)}
+
+  /* ---- reviews ---- */
+  .revs{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .rev{border:1px solid var(--line);border-radius:14px;padding:24px 22px;display:flex;flex-direction:column}
+  .stars{display:flex;gap:2px;margin-bottom:14px}
+  .stars svg{width:17px;height:17px;fill:var(--orange)}
+  .rev blockquote{margin:0;font-size:15.5px;color:var(--ink);line-height:1.58}
+  .rev .who{margin-top:auto;padding-top:18px;font-size:13.5px;color:var(--ink-3)}
+  .rev .who b{display:block;color:var(--navy);font-size:14.5px;font-weight:700}
+  .demo{margin:18px 0 0;font-size:12.5px;color:var(--ink-3)}
+
+  /* ---- contact ---- */
+  .contact{background:var(--navy);color:#fff}
+  .contact .wrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:52px}
+  .contact h2{font-size:clamp(26px,3.3vw,36px);font-weight:800;line-height:1.1}
+  .contact .lede{margin:12px 0 28px;font-size:17px;color:#BFD6E8;max-width:44ch}
+  form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .f{display:flex;flex-direction:column;gap:7px}
+  .f.wide{grid-column:1/-1}
+  label{font-size:13.5px;font-weight:650;color:#CFE0EE}
+  label .req{color:var(--orange)}
+  input,textarea,select{font:inherit;font-size:15.5px;padding:12px 14px;border-radius:9px;
+        border:1.5px solid #3C5F82;background:#153149;color:#fff;width:100%;
+        transition:border-color .15s,background .15s}
+  textarea{min-height:104px;resize:vertical}
+  input::placeholder,textarea::placeholder{color:#7B96AE}
+  input:hover,textarea:hover,select:hover{border-color:#517AA0}
+  input:focus,textarea:focus,select:focus{border-color:var(--orange);background:#173751}
+  form .btn{grid-column:1/-1;justify-self:start}
+  .fnote{grid-column:1/-1;font-size:13px;color:#9FBBD2;margin:0}
+
+  .side .blk{border:1px solid #3C5F82;border-radius:13px;padding:22px;margin-bottom:18px;background:#153149}
+  .side h3{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:#8FB2CE;font-weight:700;margin-bottom:14px}
+  .hrs{list-style:none;margin:0;padding:0;font-size:15px}
+  .hrs li{display:flex;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.09)}
+  .hrs li:last-child{border-bottom:0}
+  .hrs b{font-weight:650}
+  .hrs .em{color:var(--orange);font-weight:700}
+  .areas{font-size:14.5px;color:#CFE0EE;line-height:1.75;margin:0}
+  .areas b{color:#fff}
+
+  footer{background:var(--navy-d);color:#9FBBD2;font-size:13.5px;padding:34px 0}
+  footer .wrap{display:flex;gap:20px 40px;flex-wrap:wrap;align-items:flex-start}
+  footer .logo b{color:#fff}
+  footer .logo small{color:#7B96AE}
+  footer a{color:#CFE0EE;text-decoration:none}
+  footer a:hover{color:var(--orange)}
+  .legal{margin-left:auto;text-align:right;line-height:1.85}
+  .legal span{display:block}
+
+  /* ---- responsive ---- */
+  @media (max-width:960px){
+    .hero .wrap,.about .wrap,.contact .wrap{grid-template-columns:1fr;gap:38px}
+    .svcs,.revs{grid-template-columns:1fr 1fr}
+    .trust .wrap{grid-template-columns:1fr 1fr}
+    .trust div:nth-child(3){border-left:0}
+    .trust div:nth-child(n+3){border-top:1px solid var(--line)}
+    nav.main{display:none}
+    .legal{margin-left:0;text-align:left}
+  }
+  @media (max-width:640px){
+    .wrap{padding:0 16px}
+    section{padding:52px 0}
+    .svcs,.revs{grid-template-columns:1fr}
+    .trust .wrap{grid-template-columns:1fr}
+    .trust div{border-left:0;border-top:1px solid var(--line);padding:20px 16px}
+    .trust div:first-child{border-top:0}
+    .ticks{grid-template-columns:1fr}
+    form{grid-template-columns:1fr}
+    .hd{height:66px}
+    .hd .r .btn span{display:none}
+    .alert .ph{margin-left:0}
+    .acts .btn{flex:1 1 100%}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media (prefers-reduced-motion:no-preference){
+    .pulse{animation:pl 2.4s ease-in-out infinite}
+    @keyframes pl{0%,100%{box-shadow:0 0 0 0 rgba(244,123,32,.6)}60%{box-shadow:0 0 0 6px rgba(244,123,32,0)}}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="tick" viewBox="0 0 24 24"><path d="M4 12.5l5.4 5.4L20 7"/></symbol>
+  <symbol id="phone" viewBox="0 0 24 24"><path d="M6.6 3h3l1.6 4-2 1.4a12.4 12.4 0 0 0 5.4 5.4l1.4-2 4 1.6v3a2 2 0 0 1-2.2 2A16.8 16.8 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3z"/></symbol>
+  <symbol id="star" viewBox="0 0 24 24"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z"/></symbol>
+  <symbol id="s-emg" viewBox="0 0 24 24"><path d="M13.5 2L4 13.8h6L9.8 22l9.7-11.9h-6.3z"/></symbol>
+  <symbol id="s-drn" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v3.5c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M6.5 13.5L12 21l5.5-7.5"/></symbol>
+  <symbol id="s-hw" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="16" rx="3"/><path d="M9 19v2M15 19v2M6 8h12"/><circle cx="12" cy="13" r="1.6"/></symbol>
+  <symbol id="s-gas" viewBox="0 0 24 24"><path d="M12 2.5S6.5 7.8 6.5 13a5.5 5.5 0 0 0 11 0c0-2.4-1.6-4.6-2.9-6.1-.6 1.6-1.4 2.3-2.2 2.3.8-2.6.4-5-.4-6.7z"/></symbol>
+  <symbol id="s-bth" viewBox="0 0 24 24"><path d="M3 12h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M6 12V5.5A2.5 2.5 0 0 1 8.5 3c1.2 0 2.1.8 2.4 2"/><path d="M6.5 21l-1 1.5M17.5 21l1 1.5"/></symbol>
+  <symbol id="s-leak" viewBox="0 0 24 24"><path d="M10 3.5S4.5 9.5 4.5 13.2a5.5 5.5 0 0 0 7.8 5"/><circle cx="17" cy="15.5" r="4"/><path d="M20 18.5L22.5 21"/></symbol>
+  <symbol id="c-lic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="10" r="2.2"/><path d="M5 17c.4-1.8 1.8-2.8 3.5-2.8S11.6 15.2 12 17M14.5 9H19M14.5 13H19"/></symbol>
+  <symbol id="c-shd" viewBox="0 0 24 24"><path d="M12 2.8l7.5 2.8v6.1c0 4.4-3 7.8-7.5 9.5-4.5-1.7-7.5-5.1-7.5-9.5V5.6z"/><path d="M8.8 12l2.2 2.2 4.2-4.4"/></symbol>
+  <symbol id="c-clk" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.4 2"/></symbol>
+</defs></svg>
+
+<div class="alert">
+  <div class="wrap">
+    <span class="pulse" aria-hidden="true"></span>
+    <span><b>Burst pipe or no hot water?</b> We answer the phone 24/7, including public holidays.</span>
+    <a class="ph" href="tel:+61255500184">(02) 5550 0184</a>
+  </div>
+</div>
+
+<header>
+  <div class="wrap hd">
+    <a class="logo" href="#top">
+      <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5S5.5 9.2 5.5 14a6.5 6.5 0 0 0 13 0C18.5 9.2 12 2.5 12 2.5z"/></svg></span>
+      <span><b>FlowFix</b><small>Plumbing &amp; Gas</small></span>
+    </a>
+    <nav class="main" aria-label="Main">
+      <a href="#services">Services</a>
+      <a href="#about">About</a>
+      <a href="#areas">Service areas</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <div class="r">
+      <a class="btn btn-g btn-sm" href="#contact">Book online</a>
+      <a class="btn btn-o btn-sm" href="tel:+61255500184"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#phone"/></svg><span>(02) 5550 0184</span></a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <p class="eye">Newcastle &amp; Lake Macquarie</p>
+        <h1>Your Local Plumbing Experts</h1>
+        <p class="lede">Licensed plumbers and gas fitters on call <b>24 hours a day, 7 days a week</b> — blocked drains, burst pipes, dead hot water systems. Fixed price quoted before we start.</p>
+        <div class="acts">
+          <a class="btn btn-o" href="tel:+61255500184"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#phone"/></svg>Call now — (02) 5550 0184</a>
+          <a class="btn btn-g" href="#contact">Request a callback</a>
+        </div>
+        <p class="micro">Average arrival time last month: <strong>47 minutes</strong> across the Newcastle CBD.</p>
+        <ul class="ticks">
+          <li><svg><use href="#tick"/></svg>Same-day service, 7 days</li>
+          <li><svg><use href="#tick"/></svg>No call-out fee, Mon–Fri</li>
+          <li><svg><use href="#tick"/></svg>Fixed price before we start</li>
+          <li><svg><use href="#tick"/></svg>12-month workmanship guarantee</li>
+        </ul>
+      </div>
+
+      <div class="van">
+        <svg viewBox="0 0 420 210" role="img" aria-label="Illustration of a FlowFix Plumbing service van">
+          <rect x="14" y="188" width="392" height="5" rx="2.5" fill="#0C1E31"/>
+          <path d="M58 46h188v126H36V82c0-6 3-11 8-14l14-22z" fill="#F7FAFD"/>
+          <path d="M246 46h96c9 0 17 6 20 15l18 47v64H246z" fill="#FFFFFF"/>
+          <path d="M70 58h58v30H50l12-24a9 9 0 0 1 8-6z" fill="#1B3A5C" opacity=".2"/>
+          <rect x="140" y="58" width="96" height="30" rx="4" fill="#1B3A5C" opacity=".13"/>
+          <text x="313" y="90" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="16" font-weight="800" letter-spacing="-.2" fill="#1B3A5C">(02) 5550 0184</text>
+          <rect x="36" y="106" width="210" height="28" fill="#F47B20"/>
+          <rect x="246" y="106" width="134" height="28" fill="#F47B20"/>
+          <text x="58" y="126" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="17.5" font-weight="800" letter-spacing="-.5" fill="#FFFFFF">FLOWFIX PLUMBING &amp; GAS</text>
+          <text x="152" y="158" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="10.5" font-weight="700" letter-spacing="1.5" fill="#8FB2CE">LIC. 312487C</text>
+          <rect x="30" y="142" width="13" height="10" rx="3" fill="#F47B20"/>
+          <rect x="373" y="142" width="13" height="10" rx="3" fill="#C8443A"/>
+          <circle cx="100" cy="170" r="22" fill="#12283F"/><circle cx="100" cy="170" r="9" fill="#8FB2CE"/>
+          <circle cx="316" cy="170" r="22" fill="#12283F"/><circle cx="316" cy="170" r="9" fill="#8FB2CE"/>
+        </svg>
+        <p class="cap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F47B20" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><use href="#tick"/></svg><b>6 vans on the road</b> — Islington depot, out by 6:30am.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="trust">
+    <div class="wrap">
+      <div><b>Since 2009</b><span>17 years serving the Hunter</span></div>
+      <div><b>18,400+</b><span>Jobs completed</span></div>
+      <div><b>Lic. 312487C</b><span>NSW plumbing &amp; gasfitting</span></div>
+      <div><b>$20m</b><span>Public liability cover</span></div>
+    </div>
+  </div>
+
+  <section id="services">
+    <div class="wrap">
+      <div class="sec-hd">
+        <p class="eye">What we do</p>
+        <h2>Six things we are called out for most</h2>
+        <p>Every job is quoted as a fixed price before a spanner comes out of the van. Prices below include GST and the first 30 minutes on site.</p>
+      </div>
+      <div class="svcs">
+        <article class="svc">
+          <span class="ic"><svg><use href="#s-emg"/></svg></span>
+          <h3>Emergency repairs</h3>
+          <p>Burst pipes, overflowing toilets and failed mains isolated and repaired, any hour.</p>
+          <p class="price">From <b>$180</b> call-out, 24/7</p>
+        </article>
+        <article class="svc">
+          <span class="ic"><svg><use href="#s-drn"/></svg></span>
+          <h3>Blocked drains</h3>
+          <p>CCTV camera inspection then high-pressure jetting. Root cutting and pipe relining available.</p>
+          <p class="price">From <b>$250</b> inc. camera</p>
+        </article>
+        <article class="svc">
+          <span class="ic"><svg><use href="#s-hw"/></svg></span>
+          <h3>Hot water systems</h3>
+          <p>Rheem, Rinnai and Dux repairs. Same-day replacement held in stock for gas and electric.</p>
+          <p class="price">Repair from <b>$190</b></p>
+        </article>
+        <article class="svc">
+          <span class="ic"><svg><use href="#s-gas"/></svg></span>
+          <h3>Gas fitting</h3>
+          <p>Cooktop and heater installs, gas leak testing and compliance certificates issued on the day.</p>
+          <p class="price">From <b>$160</b> + parts</p>
+        </article>
+        <article class="svc">
+          <span class="ic"><svg><use href="#s-bth"/></svg></span>
+          <h3>Bathroom renovations</h3>
+          <p>Full rough-in and fit-off, waterproofing certified, tiler and electrician coordinated by us.</p>
+          <p class="price">From <b>$14,500</b> complete</p>
+        </article>
+        <article class="svc">
+          <span class="ic"><svg><use href="#s-leak"/></svg></span>
+          <h3>Leak detection</h3>
+          <p>Thermal imaging and acoustic tracing to find a slab or wall leak without opening the whole floor.</p>
+          <p class="price">From <b>$290</b> per site</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="wrap">
+      <div>
+        <p class="eye">About FlowFix</p>
+        <h2 style="font-size:clamp(26px,3.3vw,36px);color:var(--navy);font-weight:800;line-height:1.1;margin-bottom:18px">Started with one van and a 4am callout</h2>
+        <p>Gavin Ruddock finished his apprenticeship in Mayfield in 2004 and went out on his own five years later, working out of a Hiace with a second-hand drain camera. The first job was a burst riser in a Hamilton terrace at four in the morning.</p>
+        <p>FlowFix is now nine plumbers and two apprentices working out of a yard in Islington. Every tradesperson on the team is licensed in their own right — we don't subcontract a job out and hope it goes well.</p>
+        <ul class="creds">
+          <li><svg><use href="#c-lic"/></svg><span><b>NSW Plumbing &amp; Gasfitting Licence 312487C</b><span>Verifiable on the NSW Fair Trading register</span></span></li>
+          <li><svg><use href="#c-shd"/></svg><span><b>$20 million public liability, renewed annually</b><span>Certificate of currency supplied on request</span></span></li>
+          <li><svg><use href="#c-clk"/></svg><span><b>12-month guarantee on all workmanship</b><span>Manufacturer warranty on parts passed straight to you</span></span></li>
+        </ul>
+      </div>
+
+      <div class="map" id="areas">
+        <svg viewBox="0 0 460 320" role="img" aria-label="Service area map centred on the Islington depot, covering Newcastle and Lake Macquarie within about 25 kilometres">
+          <rect width="460" height="320" rx="8" fill="#F0F5F9"/>
+          <path d="M330 0c-14 44 8 78 4 118-4 42-38 64-30 110 5 30 30 60 44 92h112V0z" fill="#DCE9F2"/>
+          <path d="M296 128c-26 20-30 56-8 78s62 14 74-12-12-52-32-60-22-12-34-6z" fill="#DCE9F2"/>
+          <g stroke="#C6D6E3" stroke-width="5" fill="none" stroke-linecap="round">
+            <path d="M0 176h300M138 0v320M40 78h230M214 60l86 236"/>
+          </g>
+          <g stroke="#B0C6D8" stroke-width="2.4" fill="none">
+            <path d="M0 240h268M76 0v320M262 22L94 300"/>
+          </g>
+          <circle cx="138" cy="176" r="118" fill="none" stroke="#F47B20" stroke-width="2" stroke-dasharray="7 6" opacity=".85"/>
+          <g fill="#2C5580" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="650">
+            <circle cx="196" cy="104" r="5"/><text x="207" y="109">Newcastle CBD</text>
+            <circle cx="96" cy="112" r="5"/><text x="107" y="117">Mayfield</text>
+            <circle cx="72" cy="214" r="5"/><text x="83" y="219">Cardiff</text>
+            <circle cx="182" cy="252" r="5"/><text x="193" y="257">Charlestown</text>
+            <circle cx="58" cy="286" r="5"/><text x="69" y="291">Toronto</text>
+            <circle cx="248" cy="46" r="5"/><text x="259" y="51">Stockton</text>
+          </g>
+          <circle cx="138" cy="176" r="11" fill="#F47B20"/><circle cx="138" cy="176" r="4" fill="#fff"/>
+          <text x="154" y="181" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="13" font-weight="800" fill="#1B3A5C">Islington depot</text>
+        </svg>
+        <p class="lg"><span><i></i>Depot &amp; 25 km no-travel-fee zone</span><span class="b"><i></i>Suburbs we cover daily</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="sec-hd">
+        <p class="eye">Reviews</p>
+        <h2>What people say after we have been</h2>
+      </div>
+      <div class="revs">
+        <article class="rev">
+          <div class="stars" role="img" aria-label="Rated 5 out of 5"><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg></div>
+          <blockquote>Hot water died on the Saturday of a long weekend with a house full of people. Jordan was there by eleven, had the element replaced and didn't charge a weekend loading.</blockquote>
+          <p class="who"><b>Priya N.</b>New Lambton · Hot water repair</p>
+        </article>
+        <article class="rev">
+          <div class="stars" role="img" aria-label="Rated 5 out of 5"><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg></div>
+          <blockquote>Two other mobs wanted to dig up the driveway. FlowFix put a camera down, found the root ball at 6 metres, cut it out and relined the section. Half the quote and no concrete work.</blockquote>
+          <p class="who"><b>Dave &amp; Marion K.</b>Cardiff · Blocked sewer line</p>
+        </article>
+        <article class="rev">
+          <div class="stars" role="img" aria-label="Rated 4 out of 5"><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg><use href="#star"/></svg><svg style="fill:#DFE7EE"><use href="#star"/></svg></div>
+          <blockquote>Bathroom came out beautifully and the waterproofing certificate came through the same week. Took three days longer than quoted because of the tiler, which they were upfront about.</blockquote>
+          <p class="who"><b>Tom A.</b>Merewether · Bathroom renovation</p>
+        </article>
+      </div>
+      <p class="demo">Reviews shown are sample content for this demonstration site.</p>
+    </div>
+  </section>
+
+  <section class="contact" id="contact">
+    <div class="wrap">
+      <div>
+        <h2>Tell us what is going wrong</h2>
+        <p class="lede">We read every enquiry and call back within one business hour. If water is actively running, please ring instead — <a href="tel:+61255500184" style="color:#fff">(02) 5550 0184</a>.</p>
+        <form action="#contact" method="post" novalidate>
+          <div class="f">
+            <label for="nm">Your name <span class="req" aria-hidden="true">*</span></label>
+            <input id="nm" name="name" type="text" autocomplete="name" placeholder="Sam Whitlock" required>
+          </div>
+          <div class="f">
+            <label for="ph">Phone <span class="req" aria-hidden="true">*</span></label>
+            <input id="ph" name="phone" type="tel" autocomplete="tel" placeholder="0491 570 006" required>
+          </div>
+          <div class="f">
+            <label for="em">Email</label>
+            <input id="em" name="email" type="email" autocomplete="email" placeholder="sam@example.com">
+          </div>
+          <div class="f">
+            <label for="sb">Suburb</label>
+            <input id="sb" name="suburb" type="text" placeholder="Adamstown">
+          </div>
+          <div class="f wide">
+            <label for="ms">What is happening? <span class="req" aria-hidden="true">*</span></label>
+            <textarea id="ms" name="message" placeholder="Laundry drain backing up when the washing machine empties. Started Tuesday." required></textarea>
+          </div>
+          <button class="btn btn-o" type="submit">Request a callback</button>
+          <p class="fnote">We only use these details to get back to you about the job. No marketing lists.</p>
+        </form>
+      </div>
+
+      <div class="side">
+        <div class="blk">
+          <h3>Opening hours</h3>
+          <ul class="hrs">
+            <li><span>Monday – Friday</span><b>7:00am – 5:00pm</b></li>
+            <li><span>Saturday</span><b>8:00am – 2:00pm</b></li>
+            <li><span>Sunday</span><b>Emergency only</b></li>
+            <li><span>Emergency line</span><b class="em">24 / 7</b></li>
+          </ul>
+        </div>
+        <div class="blk">
+          <h3>Where we work</h3>
+          <p class="areas"><b>No travel fee within 25 km of Islington:</b><br>
+          Newcastle CBD, Hamilton, Mayfield, Islington, Adamstown, New Lambton, Merewether, Charlestown, Kotara, Cardiff, Warners Bay, Toronto, Stockton and Wallsend.<br><br>
+          <b>Outside that?</b> Still call — travel is quoted up front.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="logo" href="#top">
+      <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5S5.5 9.2 5.5 14a6.5 6.5 0 0 0 13 0C18.5 9.2 12 2.5 12 2.5z"/></svg></span>
+      <span><b>FlowFix</b><small>Plumbing &amp; Gas</small></span>
+    </a>
+    <div>
+      <a href="tel:+61255500184">(02) 5550 0184</a><br>
+      <a href="mailto:jobs@flowfix.example.com">jobs@flowfix.example.com</a><br>
+      Unit 4, 118 Maitland Road, Islington NSW 2296
+    </div>
+    <div class="legal">
+      <span>FlowFix Plumbing Pty Ltd</span>
+      <span>ABN 44 128 906 331</span>
+      <span>NSW Plumbing &amp; Gasfitting Licence 312487C</span>
+      <span>© 2026 — all quotes include GST</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

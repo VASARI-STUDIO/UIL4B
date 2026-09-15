@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Grounded — Brand Identity Sheet</title>
+<style>
+  :root{
+    --espresso:#3E2723;
+    --espresso-80:rgba(62,39,35,.80);
+    --espresso-55:rgba(62,39,35,.55);
+    --espresso-15:rgba(62,39,35,.15);
+    --cream:#FFF8E1;
+    --terracotta:#D4896A;
+    --sage:#8FBC8F;
+    --kraft:#B08968;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:Georgia,"Times New Roman",serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--cream);
+    color:var(--espresso);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .sheet{max-width:1120px;margin:0 auto;padding:40px 24px 72px}
+  @media(min-width:820px){.sheet{padding:56px 40px 96px}}
+
+  /* ---------- masthead ---------- */
+  .meta{
+    display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--espresso-55);
+  }
+  .rule{height:1px;background:var(--espresso);opacity:.85;margin:14px 0 40px}
+  .rule--thin{opacity:.18;margin:0 0 28px}
+
+  .masthead{display:grid;gap:28px;align-items:end}
+  .masthead>*{min-width:0}
+  @media(min-width:820px){.masthead{grid-template-columns:auto 1fr;gap:40px}}
+  .lockup{display:flex;align-items:center;gap:14px}
+  .lockup svg{display:block;flex:none;width:clamp(52px,13vw,76px);height:auto;aspect-ratio:1}
+  .wordmark{
+    font-family:var(--serif);font-size:clamp(40px,11vw,56px);line-height:.9;letter-spacing:-.02em;
+    margin:0;
+  }
+  @media(min-width:820px){.wordmark{font-size:72px}}
+  .positioning{
+    font-family:var(--serif);font-size:19px;line-height:1.5;max-width:40ch;
+    margin:0;color:var(--espresso-80);
+  }
+  .positioning em{color:var(--terracotta);font-style:italic}
+
+  /* ---------- sections ---------- */
+  section{margin-top:64px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+  .sec-num{font-family:var(--mono);font-size:12px;color:var(--terracotta);letter-spacing:.06em}
+  .sec-title{font-family:var(--serif);font-size:26px;margin:0;letter-spacing:-.01em}
+  .sec-note{font-size:13.5px;color:var(--espresso-55);max-width:56ch;margin:0 0 24px}
+
+  /* ---------- asset boxes ---------- */
+  .assets{display:grid;gap:16px;grid-template-columns:1fr}
+  @media(min-width:640px){.assets{grid-template-columns:repeat(3,1fr)}}
+  .asset{
+    border:1px solid var(--espresso-15);
+    background:#FFFCF0;
+    padding:28px 20px 16px;
+    display:flex;flex-direction:column;align-items:center;gap:22px;
+    min-height:186px;justify-content:space-between;
+  }
+  .asset--dark{background:var(--espresso);border-color:var(--espresso)}
+  .asset--dark .asset-cap{color:rgba(255,248,225,.62)}
+  .asset-art{flex:1;display:flex;align-items:center;justify-content:center;width:100%}
+  .asset-cap{
+    font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--espresso-55);text-align:center;
+  }
+  .lockup-h{display:flex;align-items:center;gap:11px}
+  .lockup-h .w{font-family:var(--serif);font-size:27px;letter-spacing:-.01em;line-height:1}
+  .lockup-v{display:flex;flex-direction:column;align-items:center;gap:9px}
+  .lockup-v .w{font-family:var(--serif);font-size:22px;letter-spacing:.02em;line-height:1}
+  .lockup-v .sub{
+    font-size:8.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--espresso-55);
+  }
+  .on-dark .w,.on-dark .sub{color:var(--cream)}
+  .on-dark .sub{color:rgba(255,248,225,.6)}
+
+  .specs{display:grid;gap:14px 32px;margin-top:20px;font-size:13px;color:var(--espresso-80)}
+  @media(min-width:640px){.specs{grid-template-columns:repeat(3,1fr)}}
+  .specs b{display:block;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--espresso-55);font-weight:600;margin-bottom:3px}
+
+  /* ---------- palette ---------- */
+  .palette{display:grid;gap:14px;grid-template-columns:repeat(2,1fr)}
+  @media(min-width:760px){.palette{grid-template-columns:repeat(4,1fr)}}
+  .swatch{border:1px solid var(--espresso-15);background:#FFFCF0}
+  .swatch .chip{height:118px;display:block;border-bottom:1px solid var(--espresso-15)}
+  .swatch .body{padding:12px 13px 14px}
+  .swatch .name{font-size:14px;font-weight:600;letter-spacing:-.01em}
+  .swatch .hex{font-family:var(--mono);font-size:12px;color:var(--espresso-80);margin-top:3px}
+  .swatch .role{font-size:11.5px;color:var(--espresso-55);margin-top:8px;line-height:1.4}
+
+  /* ---------- type specimen ---------- */
+  .specimen{border:1px solid var(--espresso-15);background:#FFFCF0;padding:26px 22px}
+  .spec-line{
+    font-family:var(--serif);font-size:clamp(30px,6.2vw,58px);line-height:1.04;
+    letter-spacing:-.025em;margin:0 0 6px;
+  }
+  .spec-glyphs{font-family:var(--serif);font-size:15px;letter-spacing:.06em;color:var(--espresso-55);word-break:break-word}
+  .ladder{margin-top:26px;border-top:1px solid var(--espresso-15)}
+  .rung{display:grid;grid-template-columns:1fr;gap:2px;padding:14px 0;border-bottom:1px solid var(--espresso-15)}
+  @media(min-width:700px){.rung{grid-template-columns:150px 1fr;gap:20px;align-items:baseline}}
+  .rung .lab{font-family:var(--mono);font-size:11px;color:var(--espresso-55);letter-spacing:.02em}
+  .r1{font-family:var(--serif);font-size:38px;line-height:1.1;letter-spacing:-.02em}
+  .r2{font-family:var(--serif);font-size:25px;line-height:1.2;letter-spacing:-.01em}
+  .r3{font-size:15px;font-weight:600;letter-spacing:.02em}
+  .r4{font-size:15px;line-height:1.6;color:var(--espresso-80);max-width:54ch}
+  .r5{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--espresso-55)}
+
+  /* ---------- applications ---------- */
+  .apps{display:grid;gap:16px;grid-template-columns:1fr}
+  @media(min-width:640px){.apps{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:960px){.apps{grid-template-columns:repeat(4,1fr)}}
+  .app{
+    border:1px solid var(--espresso-15);
+    background:linear-gradient(170deg,#FFFCF0,#F6ECD4);
+    padding:24px 18px 14px;
+    display:flex;flex-direction:column;align-items:center;gap:18px;
+  }
+  .app-stage{flex:1;display:flex;align-items:flex-end;justify-content:center;width:100%;min-height:200px}
+
+  /* cup */
+  .cup{width:118px;position:relative}
+  .cup .lid{
+    height:15px;background:var(--espresso);border-radius:7px 7px 3px 3px;
+    width:112%;margin-left:-6%;
+  }
+  .cup .body{
+    height:156px;background:var(--cream);
+    clip-path:polygon(4% 0,96% 0,86% 100%,14% 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    box-shadow:inset -14px 0 22px -18px rgba(62,39,35,.45);
+  }
+  .cup .sleeve{
+    position:absolute;left:1%;right:1%;top:62px;height:56px;background:var(--terracotta);
+    clip-path:polygon(3% 0,97% 0,94% 100%,6% 100%);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .cup .sleeve span{
+    font-family:var(--serif);font-size:15px;color:var(--cream);letter-spacing:.04em;
+  }
+  .cup .bean-top{margin-top:4px}
+
+  /* bag */
+  .bag{width:126px;height:172px;position:relative;display:flex;align-items:center;justify-content:center}
+  .bag .kraft{
+    position:absolute;inset:0;background:linear-gradient(90deg,#A87B5C 0%,#C19A76 22%,#B78A66 62%,#966B4E 100%);
+  }
+  .bag .fold{position:absolute;left:0;right:0;top:0;height:20px;background:rgba(62,39,35,.28)}
+  .bag .seam{position:absolute;top:0;bottom:0;right:22%;width:1px;background:rgba(62,39,35,.22)}
+  .bag .label{
+    position:relative;width:74px;padding:12px 6px 10px;background:var(--cream);
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    box-shadow:0 1px 0 rgba(62,39,35,.25);
+  }
+  .bag .label .w{font-family:var(--serif);font-size:14px;line-height:1}
+  .bag .label .t{font-size:7px;letter-spacing:.18em;text-transform:uppercase;color:var(--espresso-55);text-align:center;line-height:1.5}
+
+  /* cards */
+  .cards{position:relative;width:100%;max-width:200px;height:170px}
+  .card{
+    position:absolute;width:170px;height:100px;border:1px solid rgba(62,39,35,.18);
+    padding:12px 13px;display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .card--back{background:var(--espresso);top:0;left:0;align-items:center;justify-content:center}
+  .card--front{background:var(--cream);bottom:0;right:0;box-shadow:-6px -6px 0 rgba(62,39,35,.07)}
+  .card .nm{font-family:var(--serif);font-size:15px;line-height:1.1}
+  .card .rl{font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--espresso-55)}
+  .card .dt{font-size:9.5px;color:var(--espresso-80);line-height:1.5}
+
+  /* loyalty */
+  .loyal{
+    width:100%;max-width:186px;background:var(--cream);border:1px solid rgba(62,39,35,.18);
+    padding:14px 14px 16px;
+  }
+  .loyal .h{font-family:var(--serif);font-size:14px;line-height:1.2}
+  .loyal .s{font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--espresso-55);margin-top:3px}
+  .stamps{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:12px}
+  .stamp{
+    aspect-ratio:1;border-radius:50%;border:1px dashed rgba(62,39,35,.35);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .stamp.done{border:1px solid var(--terracotta);background:rgba(212,137,106,.18)}
+  .stamp.free{border:1px solid var(--espresso);}
+  .stamp .n{font-family:var(--mono);font-size:8px;color:var(--espresso-55)}
+  .stamp.free .n{font-size:7px;letter-spacing:.04em;color:var(--espresso)}
+
+  .app-cap{
+    font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--espresso-55);
+    text-align:center;
+  }
+
+  /* ---------- voice ---------- */
+  .voice{display:grid;gap:14px;grid-template-columns:1fr}
+  @media(min-width:700px){.voice{grid-template-columns:1fr 1fr}}
+  .voice div{border-left:2px solid var(--sage);padding:2px 0 2px 16px}
+  .voice .no{border-left-color:var(--terracotta)}
+  .voice b{display:block;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--espresso-55);margin-bottom:6px;font-weight:600}
+  .voice p{margin:0;font-family:var(--serif);font-size:17px;line-height:1.5}
+
+  footer{
+    margin-top:72px;padding-top:18px;border-top:1px solid var(--espresso);
+    display:flex;flex-wrap:wrap;gap:6px 24px;justify-content:space-between;
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--espresso-55);
+  }
+
+  @media(prefers-reduced-motion:no-preference){
+    .asset,.swatch,.app{transition:transform .35s ease, box-shadow .35s ease}
+    .asset:hover,.swatch:hover,.app:hover{transform:translateY(-2px)}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <symbol id="bean" viewBox="0 0 64 64">
+    <g transform="rotate(-11 32 32)" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M32 5.5c11.9 0 20.8 11.4 20.8 26.3C52.8 47 43.6 58.5 32 58.5S11.2 47 11.2 31.8C11.2 16.9 20.1 5.5 32 5.5Z"/>
+      <path d="M32.6 7.2c-6.9 7.6-7.2 15.7-.8 22.6 6.3 6.8 6.1 15.1-.6 23"/>
+    </g>
+  </symbol>
+</svg>
+<main class="sheet">
+
+  <div class="meta">
+    <span>Grounded Coffee Roasters — Brand identity</span>
+    <span>Version 1.2 · Fitzroy, Melbourne</span>
+  </div>
+  <div class="rule"></div>
+
+  <header class="masthead">
+    <div class="lockup">
+      <svg width="76" height="76" viewBox="0 0 64 64" role="img" aria-label="Grounded coffee bean mark"><use href="#bean"/></svg>
+      <h1 class="wordmark">Grounded</h1>
+    </div>
+    <p class="positioning">A neighbourhood roastery on Rose Street. Single-origin filter, a five-item food menu, and a bench you are welcome to sit at for an hour. <em>Crafted, not precious.</em></p>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">The mark</h2></div>
+    <p class="sec-note">One bean, one continuous groove, drawn with an uneven hand so it reads as made rather than generated. The horizontal lockup is the default. Use the stacked lockup only below 120&nbsp;px of width.</p>
+    <div class="assets">
+      <div class="asset">
+        <div class="asset-art">
+          <span class="lockup-h">
+            <svg width="38" height="38" viewBox="0 0 64 64" aria-hidden="true"><use href="#bean"/></svg>
+            <span class="w">Grounded</span>
+          </span>
+        </div>
+        <div class="asset-cap">Primary lockup</div>
+      </div>
+      <div class="asset">
+        <div class="asset-art">
+          <span class="lockup-v">
+            <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><use href="#bean"/></svg>
+            <span class="w">Grounded</span>
+            <span class="sub">Rose St · Est 2019</span>
+          </span>
+        </div>
+        <div class="asset-cap">Stacked lockup</div>
+      </div>
+      <div class="asset asset--dark">
+        <div class="asset-art">
+          <span class="lockup-h on-dark">
+            <svg width="38" height="38" viewBox="0 0 64 64" style="color:#FFF8E1" aria-hidden="true"><use href="#bean"/></svg>
+            <span class="w">Grounded</span>
+          </span>
+        </div>
+        <div class="asset-cap">Reversed, one colour</div>
+      </div>
+    </div>
+    <div class="specs">
+      <p><b>Clear space</b>The height of the bean on all four sides. Nothing crosses it — not a badge, not a rule.</p>
+      <p><b>Minimum size</b>Mark alone 16&nbsp;px / 6&nbsp;mm. Horizontal lockup 96&nbsp;px / 30&nbsp;mm.</p>
+      <p><b>Never</b>Re-draw the groove as a leaf, add a steam curl, outline the wordmark, or set it in anything but Georgia.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Colour</h2></div>
+    <p class="sec-note">Espresso and cream carry ninety per cent of everything. Terracotta is for one thing per surface. Sage never touches type — it is a background and a signal for the filter side of the menu.</p>
+    <div class="palette">
+      <div class="swatch">
+        <span class="chip" style="background:#3E2723"></span>
+        <div class="body">
+          <div class="name">Espresso</div>
+          <div class="hex">#3E2723</div>
+          <div class="role">Ink, base. All body copy. 12.4:1 on cream.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <span class="chip" style="background:#FFF8E1"></span>
+        <div class="body">
+          <div class="name">Cream</div>
+          <div class="hex">#FFF8E1</div>
+          <div class="role">Ground. Paper stock, cup, every light surface.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <span class="chip" style="background:#D4896A"></span>
+        <div class="body">
+          <div class="name">Terracotta</div>
+          <div class="hex">#D4896A</div>
+          <div class="role">Accent. Cup sleeve, stamps, one link per page. Not for small text.</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <span class="chip" style="background:#8FBC8F"></span>
+        <div class="body">
+          <div class="name">Sage</div>
+          <div class="hex">#8FBC8F</div>
+          <div class="role">Secondary. Filter menu, seasonal tags, fields on forms.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Type</h2></div>
+    <p class="sec-note">Georgia for anything anyone reads slowly — names, headings, the board above the counter. The system sans for anything anyone reads in a hurry — prices, labels, forms.</p>
+    <div class="specimen">
+      <p class="spec-line">Ten grams,<br>ninety seconds.</p>
+      <p class="spec-glyphs">AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz &amp; 0123456789 $ ° —</p>
+      <div class="ladder">
+        <div class="rung"><span class="lab">Display · 56/52</span><span class="r1">Rose Street filter</span></div>
+        <div class="rung"><span class="lab">Heading · 26/31</span><span class="r2">This week on the bar</span></div>
+        <div class="rung"><span class="lab">Subhead · 15/24 · +2%</span><span class="r3">Kieni AB, Nyeri — washed SL28</span></div>
+        <div class="rung"><span class="lab">Body · 15/24</span><span class="r4">Blackcurrant and cane sugar, with the sharp finish that makes Nyeri coffees worth the extra dollar. Roasted on Tuesday, on the bar by Thursday.</span></div>
+        <div class="rung"><span class="lab">Label · 11/16 · +20%</span><span class="r5">Batch 084 · Roasted 09.09.26</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">In use</h2></div>
+    <p class="sec-note">Four pieces carry the identity in the shop. Everything else borrows from them.</p>
+    <div class="apps">
+
+      <div class="app">
+        <div class="app-stage">
+          <div class="cup">
+            <div class="lid"></div>
+            <div class="body">
+              <svg width="26" height="26" viewBox="0 0 64 64" class="bean-top" aria-hidden="true"><use href="#bean"/></svg>
+            </div>
+            <div class="sleeve"><span>Grounded</span></div>
+          </div>
+        </div>
+        <div class="app-cap">12 oz takeaway cup</div>
+      </div>
+
+      <div class="app">
+        <div class="app-stage">
+          <div class="bag">
+            <span class="kraft"></span>
+            <span class="fold"></span>
+            <span class="seam"></span>
+            <div class="label">
+              <svg width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><use href="#bean"/></svg>
+              <span class="w">Grounded</span>
+              <span class="t">Kieni AB<br>250 g whole bean</span>
+            </div>
+          </div>
+        </div>
+        <div class="app-cap">250 g retail bag</div>
+      </div>
+
+      <div class="app">
+        <div class="app-stage">
+          <div class="cards">
+            <div class="card card--back">
+              <svg width="40" height="40" viewBox="0 0 64 64" style="color:#FFF8E1" aria-hidden="true"><use href="#bean"/></svg>
+            </div>
+            <div class="card card--front">
+              <div>
+                <div class="nm">Priya Raman</div>
+                <div class="rl">Head roaster</div>
+              </div>
+              <div class="dt">148 Rose Street, Fitzroy<br>priya@example.com</div>
+            </div>
+          </div>
+        </div>
+        <div class="app-cap">Business card, 90 × 55 mm</div>
+      </div>
+
+      <div class="app">
+        <div class="app-stage" style="align-items:center">
+          <div class="loyal">
+            <div class="h">Ten cups, then one on us</div>
+            <div class="s">Rose St · Filter or espresso</div>
+            <div class="stamps">
+              <span class="stamp done"><svg width="13" height="13" viewBox="0 0 64 64" style="color:#D4896A" aria-hidden="true"><use href="#bean"/></svg></span>
+              <span class="stamp done"><svg width="13" height="13" viewBox="0 0 64 64" style="color:#D4896A" aria-hidden="true"><use href="#bean"/></svg></span>
+              <span class="stamp done"><svg width="13" height="13" viewBox="0 0 64 64" style="color:#D4896A" aria-hidden="true"><use href="#bean"/></svg></span>
+              <span class="stamp done"><svg width="13" height="13" viewBox="0 0 64 64" style="color:#D4896A" aria-hidden="true"><use href="#bean"/></svg></span>
+              <span class="stamp"><span class="n">5</span></span>
+              <span class="stamp"><span class="n">6</span></span>
+              <span class="stamp"><span class="n">7</span></span>
+              <span class="stamp"><span class="n">8</span></span>
+              <span class="stamp"><span class="n">9</span></span>
+              <span class="stamp free"><span class="n">FREE</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="app-cap">Loyalty card, 85 × 55 mm</div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Voice</h2></div>
+    <p class="sec-note">Say the useful thing. The coffee is good enough that it does not need adjectives in front of it.</p>
+    <div class="voice">
+      <div>
+        <b>We write</b>
+        <p>“Kieni AB from Nyeri is on filter until Sunday. It is $6, and it is worth the extra dollar.”</p>
+      </div>
+      <div class="no">
+        <b>We do not write</b>
+        <p>“Embark on a curated sensory journey with our artisanal single-origin experience.”</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Grounded Coffee Roasters · 148 Rose Street, Fitzroy VIC 3065</span>
+    <span>Mon–Fri 6.30–15.00 · Sat–Sun 7.30–15.00</span>
+  </footer>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>14 Rosella Street, Coburg VIC 3058 — Northline Property</title>
+<style>
+  :root{
+    --paper:#FFFFFF; --wash:#F6F8FB; --wash-2:#EEF2F7;
+    --ink:#0F172A; --ink-2:#475569; --ink-3:#7A8699;
+    --line:#E2E8F0; --line-2:#EFF3F8;
+    --blue:#2563EB; --blue-d:#1D4FD8; --blue-t:#EAF0FE;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  svg{max-width:100%}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  :focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:5px}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  h1,h2,h3{margin:0;letter-spacing:-.025em;font-weight:650}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- header ---------- */
+  header{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95)}
+  .hd{display:flex;align-items:center;gap:26px;height:66px}
+  .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+  .logo .m{width:30px;height:30px;border-radius:7px;background:var(--ink);display:grid;place-items:center;flex:0 0 auto}
+  .logo .m svg{width:16px;height:16px;stroke:#fff;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .logo b{font-size:16px;font-weight:700;letter-spacing:-.03em;display:block;line-height:1.05}
+  .logo small{display:block;font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+  .hd nav{display:flex;gap:24px;margin-left:12px}
+  .hd nav a{font-size:14.5px;text-decoration:none;color:var(--ink-2);font-weight:500}
+  .hd nav a:hover{color:var(--ink)}
+  .hd .r{margin-left:auto;display:flex;gap:12px;align-items:center}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:9px;
+       font-size:15px;font-weight:650;text-decoration:none;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
+       transition:background .15s,border-color .15s,color .15s}
+  .btn:hover{background:var(--wash);border-color:#CBD5E1}
+  .btn-b{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn-b:hover{background:var(--blue-d);border-color:var(--blue-d);color:#fff}
+  .btn-sm{padding:9px 15px;font-size:14px}
+  .btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ---------- breadcrumb ---------- */
+  .crumb{font-size:13.5px;color:var(--ink-3);padding:16px 0 0}
+  .crumb a{text-decoration:none}
+  .crumb a:hover{color:var(--blue);text-decoration:underline}
+  .crumb span{margin:0 7px;opacity:.6}
+
+  /* ---------- gallery ---------- */
+  .gal{padding:14px 0 0}
+  .stage{position:relative;border-radius:14px;overflow:hidden;background:var(--wash-2);border:1px solid var(--line);
+         aspect-ratio:16/9}
+  .slide{position:absolute;inset:0;opacity:0;transition:opacity .35s ease}
+  .slide[data-on]{opacity:1}
+  .slide svg{width:100%;height:100%;display:block}
+  .stage .tagline{position:absolute;left:16px;top:16px;display:flex;gap:8px;flex-wrap:wrap;z-index:3}
+  .pill{background:rgba(15,23,42,.82);color:#fff;font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:7px;
+        backdrop-filter:blur(4px)}
+  .pill.blue{background:var(--blue)}
+  .navbtn{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;
+          background:rgba(255,255,255,.93);border:1px solid var(--line);display:grid;place-items:center;z-index:3;
+          box-shadow:0 2px 10px rgba(15,23,42,.14);transition:background .15s}
+  .navbtn:hover{background:#fff}
+  .navbtn svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .navbtn.p{left:14px}.navbtn.n{right:14px}
+  .counter{position:absolute;right:16px;bottom:16px;z-index:3;background:rgba(15,23,42,.82);color:#fff;
+           font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:7px;font-variant-numeric:tabular-nums}
+  .thumbs{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px}
+  .thumb{border-radius:9px;overflow:hidden;border:2px solid transparent;background:var(--wash-2);
+         aspect-ratio:16/10;padding:0;position:relative;transition:border-color .15s}
+  .thumb svg{width:100%;height:100%;display:block}
+  .thumb[aria-current=true]{border-color:var(--blue)}
+  .thumb:hover{border-color:#94A3B8}
+  .thumb .lb{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,rgba(15,23,42,.8),transparent);
+             color:#fff;font-size:11px;font-weight:600;padding:12px 8px 5px;text-align:left}
+
+  /* ---------- key bar ---------- */
+  .keybar{margin-top:26px;border:1px solid var(--line);border-radius:14px;background:var(--paper);overflow:hidden}
+  .keytop{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;padding:22px 24px 20px}
+  .keytop h1{font-size:clamp(23px,2.9vw,32px);line-height:1.15}
+  .keytop .sub{margin:6px 0 0;font-size:15.5px;color:var(--ink-2)}
+  .keytop .pr{margin-left:auto;text-align:right}
+  .keytop .pr b{display:block;font-size:clamp(22px,2.6vw,29px);font-weight:700;letter-spacing:-.03em;line-height:1.15}
+  .keytop .pr span{display:block;font-size:13.5px;color:var(--ink-3);margin-top:4px}
+  .keystats{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--line-2);background:var(--wash)}
+  .keystats div{padding:14px 20px;border-left:1px solid var(--line-2);display:flex;align-items:center;gap:10px}
+  .keystats div:first-child{border-left:0}
+  .keystats svg{width:19px;height:19px;flex:0 0 auto;stroke:var(--blue);stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .keystats b{display:block;font-size:16px;font-weight:650;line-height:1.2}
+  .keystats span{display:block;font-size:12px;color:var(--ink-3);margin-top:1px}
+
+  /* ---------- layout ---------- */
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:44px;padding:44px 0 0;align-items:start}
+  .blk{padding-bottom:40px;margin-bottom:40px;border-bottom:1px solid var(--line-2)}
+  .blk:last-child{border-bottom:0}
+  .blk h2{font-size:22px;margin-bottom:16px}
+  .blk p{font-size:16.5px;color:var(--ink-2);line-height:1.68;margin:0 0 16px;max-width:66ch}
+  .blk p b{color:var(--ink);font-weight:650}
+  .hl{list-style:none;margin:22px 0 0;padding:20px 0 0;border-top:1px solid var(--line-2);
+      display:flex;flex-direction:column;gap:12px}
+  .hl li{display:flex;gap:12px;font-size:15.5px;color:var(--ink-2);line-height:1.5}
+  .hl svg{width:18px;height:18px;flex:0 0 auto;margin-top:3px;stroke:var(--blue);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .hl b{color:var(--ink);font-weight:650}
+
+  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-2);border:1px solid var(--line-2);border-radius:12px;overflow:hidden}
+  .feats span{background:var(--paper);padding:13px 16px;font-size:14.5px;color:var(--ink-2);display:flex;gap:10px;align-items:center}
+  .feats span svg{width:15px;height:15px;flex:0 0 auto;stroke:var(--blue);stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  details.plan{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper)}
+  details.plan summary{display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;list-style:none;
+                       font-size:16px;font-weight:650;background:var(--wash)}
+  details.plan summary::-webkit-details-marker{display:none}
+  details.plan summary .ch{margin-left:auto;font-size:13.5px;color:var(--blue);font-weight:600}
+  details.plan summary .ch::after{content:" ▾"}
+  details.plan[open] summary .ch::after{content:" ▴"}
+  details.plan summary svg{width:18px;height:18px;stroke:var(--ink-2);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .planbody{padding:20px;border-top:1px solid var(--line)}
+  .planbody svg{width:100%;height:auto;display:block}
+  .planmeta{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2);
+            font-size:13.5px;color:var(--ink-3)}
+  .planmeta b{color:var(--ink);font-weight:650}
+
+  .mapwrap{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .mapwrap svg{width:100%;height:auto;display:block}
+  .amen{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-2);
+        border-top:1px solid var(--line-2)}
+  .amen li{background:var(--paper);padding:12px 16px;display:flex;align-items:center;gap:11px;font-size:14.5px}
+  .amen .ic{width:26px;height:26px;border-radius:7px;background:var(--blue-t);display:grid;place-items:center;flex:0 0 auto}
+  .amen .ic svg{width:14px;height:14px;stroke:var(--blue);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .amen b{font-weight:600}
+  .amen .d{margin-left:auto;font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  /* ---------- sidebar ---------- */
+  .side{position:sticky;top:86px;display:flex;flex-direction:column;gap:18px}
+  .card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--paper)}
+  .insp{padding:18px 20px}
+  .insp h3{font-size:12px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin-bottom:14px}
+  .insp .row{display:flex;gap:13px;padding:11px 0;border-top:1px solid var(--line-2)}
+  .insp .row:first-of-type{border-top:0;padding-top:0}
+  .insp .dt{width:44px;flex:0 0 auto;text-align:center;border:1px solid var(--line);border-radius:8px;padding:5px 0;background:var(--wash)}
+  .insp .dt b{display:block;font-size:17px;font-weight:700;line-height:1.1}
+  .insp .dt span{display:block;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
+  .insp .tx b{display:block;font-size:14.5px;font-weight:650}
+  .insp .tx span{display:block;font-size:13px;color:var(--ink-3);margin-top:1px}
+  .insp .btn{width:100%;margin-top:14px}
+
+  .agent{padding:20px}
+  .agent .top{display:flex;gap:14px;align-items:center}
+  .agent .av{width:58px;height:58px;border-radius:50%;flex:0 0 auto;overflow:hidden;background:var(--wash-2);border:1px solid var(--line)}
+  .agent .av svg{width:100%;height:100%;display:block}
+  .agent .top b{display:block;font-size:17px;font-weight:650;letter-spacing:-.02em}
+  .agent .top span{display:block;font-size:13.5px;color:var(--ink-3)}
+  .agency{display:flex;align-items:center;gap:9px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2)}
+  .agency .m{width:26px;height:26px;border-radius:6px;background:var(--ink);display:grid;place-items:center;flex:0 0 auto}
+  .agency .m svg{width:14px;height:14px;stroke:#fff;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .agency span{font-size:13px;color:var(--ink-3);line-height:1.35}
+  .agency b{display:block;color:var(--ink);font-size:13.5px;font-weight:650;letter-spacing:-.01em}
+  .contactlines{margin:16px 0 0;display:flex;flex-direction:column;gap:9px}
+  .contactlines a{display:flex;align-items:center;gap:10px;font-size:14.5px;text-decoration:none;color:var(--ink-2);word-break:break-word}
+  .contactlines a:hover{color:var(--blue)}
+  .contactlines svg{width:15px;height:15px;flex:0 0 auto;stroke:var(--ink-3);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .agent .btn{width:100%;margin-top:16px}
+
+  .costs{padding:18px 20px}
+  .costs h3{font-size:12px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin-bottom:12px}
+  .costs .row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-top:1px solid var(--line-2);font-size:14.5px;color:var(--ink-2)}
+  .costs .row:first-of-type{border-top:0}
+  .costs b{color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
+  .costs .note{margin:12px 0 0;font-size:12.5px;color:var(--ink-3);line-height:1.5}
+
+  /* ---------- similar ---------- */
+  .similar{background:var(--wash);border-top:1px solid var(--line);margin-top:54px;padding:52px 0 62px}
+  .similar h2{font-size:23px;margin-bottom:22px}
+  .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .lst{display:block;background:var(--paper);border:1px solid var(--line);border-radius:13px;overflow:hidden;text-decoration:none;
+       transition:box-shadow .16s,border-color .16s,transform .16s}
+  .lst:hover{border-color:#CBD5E1;box-shadow:0 8px 22px -12px rgba(15,23,42,.24);transform:translateY(-2px)}
+  .lst .pic{aspect-ratio:16/10;display:block;background:var(--wash-2)}
+  .lst .pic svg{width:100%;height:100%;display:block}
+  .lst .b{padding:15px 17px 17px}
+  .lst .b .p{display:block;font-size:17px;font-weight:700;letter-spacing:-.025em}
+  .lst .b .a{display:block;font-size:14.5px;color:var(--ink-2);margin-top:3px}
+  .lst .b .m{display:flex;gap:14px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line-2);
+             font-size:13.5px;color:var(--ink-3)}
+  .lst .b .m span{display:inline-flex;align-items:center;gap:5px}
+  .lst .b .m svg{width:14px;height:14px;stroke:var(--ink-3);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  footer{padding:28px 0 36px;font-size:13px;color:var(--ink-3);border-top:1px solid var(--line)}
+  footer .wrap{display:flex;gap:10px 26px;flex-wrap:wrap;align-items:center}
+  footer a{text-decoration:none}
+  footer a:hover{color:var(--blue)}
+  footer .r{margin-left:auto}
+
+  @media (max-width:1040px){
+    .cols{grid-template-columns:1fr;gap:34px}
+    .side{position:static}
+    .keystats{grid-template-columns:repeat(3,1fr)}
+    .keystats div:nth-child(4){border-left:0}
+    .keystats div:nth-child(n+4){border-top:1px solid var(--line-2)}
+    .sgrid{grid-template-columns:1fr 1fr}
+    .hd nav{display:none}
+  }
+  @media (max-width:680px){
+    .wrap{padding:0 16px}
+    .thumbs{grid-template-columns:repeat(3,1fr)}
+    .thumbs .thumb:nth-child(n+4){display:none}
+    .keystats{grid-template-columns:1fr 1fr}
+    .keystats div:nth-child(3){border-left:0}
+    .keystats div:nth-child(n+3){border-top:1px solid var(--line-2)}
+    .keytop .pr{margin-left:0;text-align:left}
+    .feats,.amen{grid-template-columns:1fr}
+    .sgrid{grid-template-columns:1fr}
+    .navbtn{width:38px;height:38px}
+    .navbtn.p{left:8px}.navbtn.n{right:8px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="bed" viewBox="0 0 24 24"><path d="M3 18v-7h18v7"/><path d="M3 18v2M21 18v2M3 11V6h7v5"/><circle cx="6.5" cy="8.5" r="1.6"/></symbol>
+  <symbol id="bath" viewBox="0 0 24 24"><path d="M3 12h18v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 12V6a2 2 0 0 1 4 0"/><path d="M6.5 19l-1 2M17.5 19l1 2"/></symbol>
+  <symbol id="car" viewBox="0 0 24 24"><path d="M4 16v3M20 16v3"/><path d="M3 16v-3.5L5 8h14l2 4.5V16z"/><circle cx="7" cy="16" r="1.4"/><circle cx="17" cy="16" r="1.4"/></symbol>
+  <symbol id="land" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M9 4v16"/></symbol>
+  <symbol id="floor" viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12z"/><path d="M4 14h16M12 14v6"/></symbol>
+  <symbol id="house" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></symbol>
+  <symbol id="ok" viewBox="0 0 24 24"><path d="M4 12.5l5.2 5.2L20 6.8"/></symbol>
+  <symbol id="ph" viewBox="0 0 24 24"><path d="M6.6 3h3l1.6 4-2 1.4a12.4 12.4 0 0 0 5.4 5.4l1.4-2 4 1.6v3a2 2 0 0 1-2.2 2A16.8 16.8 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3z"/></symbol>
+  <symbol id="mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></symbol>
+  <symbol id="sch" viewBox="0 0 24 24"><path d="M12 4L2 9l10 5 10-5z"/><path d="M6 11.5V17c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5"/></symbol>
+  <symbol id="trn" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 10h14M8 19l-2 2M16 19l2 2"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></symbol>
+  <symbol id="park" viewBox="0 0 24 24"><path d="M12 21v-6"/><path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M8 9h8M12 3v12"/></symbol>
+  <symbol id="shop" viewBox="0 0 24 24"><path d="M4 8h16l-1 12H5z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="cl" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.4 2"/></symbol>
+</defs></svg>
+
+<header>
+  <div class="wrap hd">
+    <a class="logo" href="#top">
+      <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/></svg></span>
+      <span><b>Northline</b><small>Property</small></span>
+    </a>
+    <nav aria-label="Main"><a href="#top">Buy</a><a href="#top">Rent</a><a href="#top">Sold</a><a href="#top">Appraisals</a></nav>
+    <div class="r">
+      <a class="btn btn-sm" href="#top">Save</a>
+      <a class="btn btn-b btn-sm" href="#enquire">Enquire now</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap">
+    <p class="crumb"><a href="#top">Buy</a><span>/</span><a href="#top">VIC</a><span>/</span><a href="#top">Coburg 3058</a><span>/</span>14 Rosella Street</p>
+
+    <!-- ---------- gallery ---------- -->
+    <div class="gal">
+      <div class="stage" id="stage">
+        <div class="tagline">
+          <span class="pill blue">Auction Sat 4 Oct</span>
+          <span class="pill">New to market</span>
+        </div>
+
+        <div class="slide" data-on data-label="Front elevation">
+          <svg viewBox="0 0 800 450" role="img" aria-label="Front elevation of a California bungalow with a red brick porch, tiled roof and established front garden">
+            <rect width="800" height="450" fill="#D9E6F2"/>
+            <circle cx="646" cy="86" r="42" fill="#F7E7C4" opacity=".75"/>
+            <rect y="326" width="800" height="124" fill="#9FBF87"/>
+            <path d="M120 326V196l180-96 180 96v130z" fill="#B9542F"/>
+            <path d="M100 206L300 92l200 114-10 18-190-108-190 108z" fill="#5E3A2B"/>
+            <rect x="150" y="238" width="300" height="88" fill="#A34827"/>
+            <g fill="#F2E6D2"><rect x="172" y="258" width="54" height="52" rx="2"/><rect x="380" y="258" width="54" height="52" rx="2"/></g>
+            <g stroke="#5E3A2B" stroke-width="2.2"><path d="M199 258v52M172 284h54M407 258v52M380 284h54"/></g>
+            <rect x="272" y="252" width="56" height="74" rx="2" fill="#2E4A3B"/>
+            <circle cx="318" cy="290" r="3" fill="#D9C48A"/>
+            <g fill="#8A4A2A"><rect x="140" y="230" width="14" height="96"/><rect x="446" y="230" width="14" height="96"/></g>
+            <rect x="130" y="222" width="340" height="12" fill="#5E3A2B"/>
+            <path d="M262 326h76v-4h-76z" fill="#C9C4BA"/>
+            <g fill="#4F7A46"><circle cx="90" cy="300" r="34"/><circle cx="128" cy="312" r="24"/><circle cx="520" cy="298" r="30"/><circle cx="558" cy="310" r="22"/></g>
+            <g fill="#3E6A3A"><circle cx="672" cy="272" r="46"/><rect x="666" y="300" width="12" height="32"/></g>
+            <rect x="0" y="326" width="800" height="10" fill="#8AAB74"/>
+            <path d="M270 450v-124h60v124z" fill="#C9C4BA"/>
+            <g stroke="#B4AFA5" stroke-width="2"><path d="M270 356h60M270 386h60M270 416h60"/></g>
+          </svg>
+        </div>
+
+        <div class="slide" data-label="Living &amp; kitchen">
+          <svg viewBox="0 0 800 450" role="img" aria-label="Open plan living and kitchen with a stone island bench, timber floors and north-facing glazing">
+            <rect width="800" height="450" fill="#F3EFE8"/>
+            <rect y="330" width="800" height="120" fill="#C79B67"/>
+            <g stroke="#B08655" stroke-width="2"><path d="M0 360h800M0 392h800M0 424h800"/></g>
+            <rect x="470" y="60" width="300" height="270" fill="#CFE2EE"/>
+            <g stroke="#8C99A3" stroke-width="5" fill="none"><rect x="470" y="60" width="300" height="270"/><path d="M620 60v270M470 190h300"/></g>
+            <g fill="#9FBF87" opacity=".8"><circle cx="540" cy="250" r="34"/><circle cx="700" cy="262" r="28"/></g>
+            <rect x="60" y="188" width="330" height="18" rx="4" fill="#3D4A4F"/>
+            <rect x="72" y="206" width="306" height="124" fill="#556169"/>
+            <g stroke="#3D4A4F" stroke-width="3"><path d="M175 206v124M275 206v124"/></g>
+            <g fill="#8E9AA2"><rect x="110" y="256" width="34" height="5" rx="2.5"/><rect x="208" y="256" width="34" height="5" rx="2.5"/><rect x="308" y="256" width="34" height="5" rx="2.5"/></g>
+            <rect x="130" y="84" width="230" height="86" fill="#E7DFD2"/>
+            <g stroke="#C6BBA8" stroke-width="3"><path d="M130 127h230"/></g>
+            <rect x="200" y="96" width="34" height="22" rx="2" fill="#B08655"/>
+            <rect x="262" y="138" width="42" height="22" rx="2" fill="#9FBF87"/>
+            <rect x="404" y="122" width="46" height="60" rx="3" fill="#6E7B84"/>
+            <path d="M420 122v-16a12 12 0 0 1 24 0" stroke="#6E7B84" stroke-width="5" fill="none"/>
+            <rect x="0" y="322" width="800" height="10" fill="#B08655"/>
+          </svg>
+        </div>
+
+        <div class="slide" data-label="Rear deck &amp; pool">
+          <svg viewBox="0 0 800 450" role="img" aria-label="Rear deck with a covered pergola overlooking a plunge pool and lawn">
+            <rect width="800" height="450" fill="#CFE2EE"/>
+            <rect y="212" width="800" height="238" fill="#9FBF87"/>
+            <rect x="0" y="120" width="330" height="188" fill="#EDE6DA"/>
+            <g fill="#CFE2EE"><rect x="44" y="160" width="86" height="110"/><rect x="176" y="160" width="86" height="110"/></g>
+            <g stroke="#9A8F7D" stroke-width="4" fill="none"><rect x="44" y="160" width="86" height="110"/><rect x="176" y="160" width="86" height="110"/></g>
+            <rect x="0" y="108" width="342" height="16" fill="#6E5F4C"/>
+            <g fill="#8A7A63"><rect x="330" y="120" width="12" height="188"/><rect x="474" y="120" width="12" height="188"/></g>
+            <rect x="322" y="108" width="176" height="14" fill="#6E5F4C"/>
+            <g stroke="#8A7A63" stroke-width="5"><path d="M346 122h130M346 142h130M346 162h130"/></g>
+            <rect x="0" y="292" width="500" height="34" fill="#B78E5E"/>
+            <g stroke="#9C7549" stroke-width="2"><path d="M0 300h500M0 310h500M0 320h500"/></g>
+            <rect x="540" y="278" width="230" height="118" rx="8" fill="#4FA3C7"/>
+            <rect x="554" y="290" width="202" height="94" rx="6" fill="#67BDDD"/>
+            <g stroke="#A8DCEE" stroke-width="4" fill="none" stroke-linecap="round"><path d="M578 322h154M578 348h154"/></g>
+            <rect x="540" y="268" width="230" height="12" rx="6" fill="#DED6C6"/>
+            <g fill="#3E6A3A"><circle cx="694" cy="176" r="52"/><rect x="688" y="208" width="13" height="42"/></g>
+            <g fill="#4F7A46"><circle cx="576" cy="206" r="30"/><circle cx="612" cy="218" r="20"/></g>
+            <rect x="96" y="256" width="118" height="10" rx="5" fill="#6E5F4C"/>
+            <g fill="#6E5F4C"><rect x="104" y="266" width="9" height="26"/><rect x="198" y="266" width="9" height="26"/></g>
+          </svg>
+        </div>
+
+        <div class="slide" data-label="Main bedroom">
+          <svg viewBox="0 0 800 450" role="img" aria-label="Main bedroom with a bay window, built-in robes and timber floors">
+            <rect width="800" height="450" fill="#EFEAE2"/>
+            <rect y="348" width="800" height="102" fill="#C79B67"/>
+            <g stroke="#B08655" stroke-width="2"><path d="M0 376h800M0 408h800"/></g>
+            <rect x="508" y="74" width="256" height="216" fill="#CFE2EE"/>
+            <g stroke="#94A0A8" stroke-width="5" fill="none"><rect x="508" y="74" width="256" height="216"/><path d="M636 74v216"/></g>
+            <rect x="494" y="60" width="284" height="16" fill="#DDD5C7"/>
+            <g fill="#9FBF87" opacity=".75"><circle cx="560" cy="234" r="26"/><circle cx="716" cy="244" r="22"/></g>
+            <rect x="96" y="200" width="330" height="148" rx="6" fill="#DCD3C4"/>
+            <rect x="110" y="126" width="302" height="86" rx="8" fill="#5C6B73"/>
+            <g fill="#EFEAE2"><rect x="140" y="212" width="112" height="46" rx="8"/><rect x="270" y="212" width="112" height="46" rx="8"/></g>
+            <rect x="96" y="258" width="330" height="60" rx="5" fill="#B0C4B1"/>
+            <rect x="96" y="310" width="330" height="38" rx="4" fill="#C9C0B0"/>
+            <g fill="#8A7A63"><rect x="88" y="320" width="10" height="28"/><rect x="424" y="320" width="10" height="28"/></g>
+            <rect x="452" y="278" width="44" height="70" rx="4" fill="#9A8F7D"/>
+            <circle cx="474" cy="258" r="16" fill="#E8DCC2"/>
+            <rect x="472" y="258" width="4" height="22" fill="#9A8F7D"/>
+          </svg>
+        </div>
+
+        <div class="slide" data-label="Floor plan">
+          <svg viewBox="0 0 800 450" role="img" aria-label="Floor plan of the ground floor showing four bedrooms, two bathrooms, open plan living and a rear deck">
+            <rect width="800" height="450" fill="#FBFCFD"/>
+            <g stroke="#E2E8F0" stroke-width="1"><path d="M0 50h800M0 100h800M0 150h800M0 200h800M0 250h800M0 300h800M0 350h800M0 400h800M50 0v450M100 0v450M150 0v450M200 0v450M250 0v450M300 0v450M350 0v450M400 0v450M450 0v450M500 0v450M550 0v450M600 0v450M650 0v450M700 0v450M750 0v450"/></g>
+            <g fill="#F1F5F9" stroke="#0F172A" stroke-width="5">
+              <rect x="92" y="60" width="616" height="330"/>
+            </g>
+            <g stroke="#0F172A" stroke-width="5" fill="none">
+              <path d="M330 60v146M330 250v140M92 206h238M478 60v330M478 224h230"/>
+            </g>
+            <g stroke="#0F172A" stroke-width="3.5" fill="none">
+              <path d="M210 206v184M92 300h118"/>
+            </g>
+            <g stroke="#FBFCFD" stroke-width="7"><path d="M330 150v42M330 296v40M406 206h44M478 128v42M478 300v40M210 254v38"/></g>
+            <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">
+              <g font-size="14" font-weight="650" fill="#0F172A">
+                <text x="211" y="126">BED 1</text><text x="404" y="120">BED 2</text>
+                <text x="151" y="248">BED 3</text><text x="151" y="346">BED 4</text>
+                <text x="270" y="300">LIVING</text><text x="594" y="140">KITCHEN / DINING</text><text x="594" y="310">DECK</text>
+                <text x="404" y="300">BATH</text>
+              </g>
+              <g font-size="10.5" fill="#7A8699">
+                <text x="211" y="144">4.2 × 3.8</text><text x="404" y="138">3.6 × 3.2</text>
+                <text x="151" y="266">3.4 × 3.0</text><text x="151" y="364">3.2 × 3.0</text>
+                <text x="270" y="318">7.1 × 4.4</text><text x="594" y="158">8.2 × 5.6</text><text x="594" y="328">6.0 × 3.4</text>
+                <text x="404" y="318">2.8 × 2.4</text>
+              </g>
+            </g>
+            <g stroke="#2563EB" stroke-width="1.6" fill="none">
+              <path d="M92 412h616M92 406v12M708 406v12"/>
+              <path d="M56 60v330M50 60h12M50 390h12"/>
+            </g>
+            <g font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#2563EB">
+              <text x="400" y="432" text-anchor="middle">18.4 m</text>
+              <text x="44" y="228" text-anchor="middle" transform="rotate(-90 44 228)">11.6 m</text>
+            </g>
+            <g fill="#2563EB" opacity=".1"><rect x="478" y="228" width="230" height="160"/></g>
+            <text x="742" y="82" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#7A8699">GROUND FLOOR · 214 m²</text>
+          </svg>
+        </div>
+
+        <button class="navbtn p" type="button" id="gp" aria-label="Previous photo"><svg viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></svg></button>
+        <button class="navbtn n" type="button" id="gn" aria-label="Next photo"><svg viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"/></svg></button>
+        <span class="counter" id="gc">1 / 5</span>
+      </div>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+
+    <!-- ---------- key bar ---------- -->
+    <div class="keybar">
+      <div class="keytop">
+        <div>
+          <h1>14 Rosella Street, Coburg VIC 3058</h1>
+          <p class="sub">California bungalow, extended 2019 · North-facing rear</p>
+        </div>
+        <div class="pr">
+          <b class="num">$1,285,000 – $1,360,000</b>
+          <span>Auction Sat 4 Oct, 12:00pm on site</span>
+        </div>
+      </div>
+      <div class="keystats">
+        <div><svg><use href="#bed"/></svg><span><b class="num">4</b><span>Bedrooms</span></span></div>
+        <div><svg><use href="#bath"/></svg><span><b class="num">2</b><span>Bathrooms</span></span></div>
+        <div><svg><use href="#car"/></svg><span><b class="num">2</b><span>Car spaces</span></span></div>
+        <div><svg><use href="#land"/></svg><span><b class="num">622 m²</b><span>Land</span></span></div>
+        <div><svg><use href="#floor"/></svg><span><b class="num">214 m²</b><span>Floor area</span></span></div>
+        <div><svg><use href="#house"/></svg><span><b>House</b><span>Built 1928</span></span></div>
+      </div>
+    </div>
+
+    <!-- ---------- body ---------- -->
+    <div class="cols">
+      <div>
+        <section class="blk">
+          <h2>About this property</h2>
+          <p>A 1928 California bungalow on the high side of Rosella Street, held by the same family since 1994 and extended across the rear in 2019 by Kettle &amp; Grange. The original four rooms off the central hall are intact — <b>leadlight, picture rails, Baltic pine floors</b> — and the new work sits behind them rather than through them.</p>
+          <p>The rear addition is a single 8.2 × 5.6 metre room facing due north, with a 3.4 metre raked ceiling and full-height glazing onto the deck. Double glazing throughout the extension, hydronic panels in the original rooms, and a 6.6 kW array that covered about two thirds of last year's electricity.</p>
+          <p>Rosella Street runs off Mackay, so through traffic is limited to residents. The 19 tram is a six-minute walk at the Moreland Road stop, and Coburg North Primary is directly across the reserve.</p>
+          <ul class="hl">
+            <li><svg><use href="#ok"/></svg><span><b>North-facing rear</b> — the living room takes direct sun from about 9am through to mid-afternoon in winter.</span></li>
+            <li><svg><use href="#ok"/></svg><span><b>Rear lane access</b> to a double garage off Wilkes Lane, with room for a workshop bench.</span></li>
+            <li><svg><use href="#ok"/></svg><span><b>Two separate living zones</b> — the original front lounge with the gas fireplace stays a quiet room.</span></li>
+            <li><svg><use href="#ok"/></svg><span><b>622 m² with a genuinely usable back yard</b>, 14 metres of lawn behind the pool fence.</span></li>
+            <li><svg><use href="#ok"/></svg><span><b>Neighbourhood Residential Zone</b> — the streetscape is protected, so the outlook is not going to change.</span></li>
+          </ul>
+        </section>
+
+        <section class="blk">
+          <h2>Features</h2>
+          <div class="feats">
+            <span><svg><use href="#ok"/></svg>Hydronic heating</span>
+            <span><svg><use href="#ok"/></svg>Ducted refrigerated cooling</span>
+            <span><svg><use href="#ok"/></svg>6.6 kW solar, 2021</span>
+            <span><svg><use href="#ok"/></svg>5,000 L rainwater tank</span>
+            <span><svg><use href="#ok"/></svg>Double glazing (extension)</span>
+            <span><svg><use href="#ok"/></svg>Gas fireplace, front lounge</span>
+            <span><svg><use href="#ok"/></svg>Butler's pantry</span>
+            <span><svg><use href="#ok"/></svg>Underfloor heating, both baths</span>
+            <span><svg><use href="#ok"/></svg>Plunge pool, solar heated</span>
+            <span><svg><use href="#ok"/></svg>Double garage, rear lane</span>
+            <span><svg><use href="#ok"/></svg>NBN fibre to the premises</span>
+            <span><svg><use href="#ok"/></svg>Monitored alarm</span>
+          </div>
+        </section>
+
+        <section class="blk" id="plan">
+          <h2>Floor plan</h2>
+          <details class="plan" open>
+            <summary><svg><use href="#floor"/></svg>Ground floor — 214 m² internal<span class="ch">Collapse</span></summary>
+            <div class="planbody">
+              <svg viewBox="0 0 800 450" role="img" aria-label="Ground floor plan: four bedrooms along the west and north, central living room, kitchen and dining across the east, bathroom between, and a rear deck">
+                <rect width="800" height="450" fill="#FBFCFD"/>
+                <g fill="#F1F5F9" stroke="#0F172A" stroke-width="5"><rect x="92" y="60" width="616" height="330"/></g>
+                <g stroke="#0F172A" stroke-width="5" fill="none"><path d="M330 60v146M330 250v140M92 206h238M478 60v330M478 224h230"/></g>
+                <g stroke="#0F172A" stroke-width="3.5" fill="none"><path d="M210 206v184M92 300h118"/></g>
+                <g stroke="#FBFCFD" stroke-width="7"><path d="M330 150v42M330 296v40M406 206h44M478 128v42M478 300v40M210 254v38"/></g>
+                <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">
+                  <g font-size="14" font-weight="650" fill="#0F172A">
+                    <text x="211" y="126">BED 1</text><text x="404" y="120">BED 2</text>
+                    <text x="151" y="248">BED 3</text><text x="151" y="346">BED 4</text>
+                    <text x="270" y="300">LIVING</text><text x="594" y="140">KITCHEN / DINING</text><text x="594" y="310">DECK</text>
+                    <text x="404" y="300">BATH</text>
+                  </g>
+                  <g font-size="10.5" fill="#7A8699">
+                    <text x="211" y="144">4.2 × 3.8</text><text x="404" y="138">3.6 × 3.2</text>
+                    <text x="151" y="266">3.4 × 3.0</text><text x="151" y="364">3.2 × 3.0</text>
+                    <text x="270" y="318">7.1 × 4.4</text><text x="594" y="158">8.2 × 5.6</text><text x="594" y="328">6.0 × 3.4</text>
+                    <text x="404" y="318">2.8 × 2.4</text>
+                  </g>
+                </g>
+                <g stroke="#2563EB" stroke-width="1.6" fill="none"><path d="M92 412h616M92 406v12M708 406v12"/><path d="M56 60v330M50 60h12M50 390h12"/></g>
+                <g font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#2563EB">
+                  <text x="400" y="432" text-anchor="middle">18.4 m</text>
+                  <text x="44" y="228" text-anchor="middle" transform="rotate(-90 44 228)">11.6 m</text>
+                </g>
+                <g fill="#2563EB" opacity=".1"><rect x="478" y="228" width="230" height="160"/></g>
+                <path d="M742 92v-28M736 70l6-8 6 8" stroke="#7A8699" stroke-width="2" fill="none"/>
+                <text x="742" y="106" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#7A8699">N</text>
+              </svg>
+              <p class="planmeta">
+                <span>Internal <b>214 m²</b></span><span>Deck <b>20 m²</b></span><span>Garage <b>36 m²</b></span>
+                <span>Ceilings <b>3.1 m original / 3.4 m raked</b></span><span>Plan indicative, not to scale</span>
+              </p>
+            </div>
+          </details>
+        </section>
+
+        <section class="blk">
+          <h2>Location</h2>
+          <div class="mapwrap">
+            <svg viewBox="0 0 800 340" role="img" aria-label="Local map showing 14 Rosella Street relative to Coburg North Primary, Merri Creek trail, Sydney Road shops and the number 19 tram">
+              <rect width="800" height="340" fill="#F2F5F8"/>
+              <path d="M0 0h260v120H0z" fill="#E6F0E3"/>
+              <path d="M556 0c-16 40-4 92-30 132-24 38-8 84 6 128v80H800V0z" fill="#E3EFF5"/>
+              <path d="M566 12c-14 38-2 84-26 122-22 36-8 78 4 120" stroke="#9CC6DC" stroke-width="7" fill="none" stroke-linecap="round"/>
+              <g stroke="#DCE3EB" stroke-width="16" fill="none"><path d="M0 188h800M300 0v340M0 84h560M110 0v340M660 0v340M0 272h560"/></g>
+              <g stroke="#FFFFFF" stroke-width="2.4" stroke-dasharray="12 10" fill="none"><path d="M0 188h800M300 0v340"/></g>
+              <rect x="292" y="0" width="16" height="340" fill="#F3D9A6"/>
+              <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#7A8699" letter-spacing="1.1">
+                <text x="16" y="182">MORELAND RD</text>
+                <text x="318" y="28" transform="rotate(90 318 28)">SYDNEY RD</text>
+                <text x="126" y="28" transform="rotate(90 126 28)">ROSELLA ST</text>
+                <text x="676" y="28" transform="rotate(90 676 28)">MERRI CREEK TRL</text>
+                <text x="16" y="78">MACKAY ST</text>
+                <text x="16" y="266">BELL ST</text>
+                <text x="16" y="112">COBURG NORTH RESERVE</text>
+              </g>
+              <g fill="#0F172A"><circle cx="72" cy="52" r="6"/><circle cx="240" cy="228" r="6"/><circle cx="300" cy="120" r="6"/><circle cx="600" cy="188" r="6"/><circle cx="300" cy="272" r="6"/></g>
+              <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#0F172A" font-weight="600">
+                <text x="84" y="56">Coburg North Primary</text>
+                <text x="252" y="232">Coburg Lake Reserve</text>
+                <text x="312" y="124">Tram 19 — Moreland Rd</text>
+                <text x="516" y="180">Merri Creek trail</text>
+                <text x="312" y="276">Sydney Rd shops</text>
+              </g>
+              <g><circle cx="110" cy="132" r="15" fill="#2563EB" opacity=".18"/><circle cx="110" cy="132" r="9" fill="#2563EB"/><circle cx="110" cy="132" r="3.4" fill="#fff"/></g>
+              <text x="128" y="136" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="700" fill="#2563EB">14 Rosella St</text>
+            </svg>
+            <ul class="amen">
+              <li><span class="ic"><svg><use href="#sch"/></svg></span><b>Coburg North Primary</b><span class="d">400 m</span></li>
+              <li><span class="ic"><svg><use href="#park"/></svg></span><b>Merri Creek trail</b><span class="d">250 m</span></li>
+              <li><span class="ic"><svg><use href="#trn"/></svg></span><b>Tram 19, Moreland Rd</b><span class="d">600 m</span></li>
+              <li><span class="ic"><svg><use href="#park"/></svg></span><b>Coburg Lake Reserve</b><span class="d">900 m</span></li>
+              <li><span class="ic"><svg><use href="#shop"/></svg></span><b>Sydney Rd shops</b><span class="d">1.4 km</span></li>
+              <li><span class="ic"><svg><use href="#trn"/></svg></span><b>Batman Station</b><span class="d">1.1 km</span></li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <!-- ---------- sidebar ---------- -->
+      <aside class="side" id="enquire">
+        <div class="card insp">
+          <h3>Inspections</h3>
+          <div class="row">
+            <span class="dt"><b class="num">20</b><span>Sep</span></span>
+            <span class="tx"><b>Saturday 11:00 – 11:30am</b><span>Open for inspection</span></span>
+          </div>
+          <div class="row">
+            <span class="dt"><b class="num">24</b><span>Sep</span></span>
+            <span class="tx"><b>Wednesday 5:30 – 6:00pm</b><span>Open for inspection</span></span>
+          </div>
+          <div class="row">
+            <span class="dt"><b class="num">4</b><span>Oct</span></span>
+            <span class="tx"><b>Saturday 12:00pm</b><span>Auction, on site</span></span>
+          </div>
+          <a class="btn" href="#enquire"><svg><use href="#cl"/></svg>Add to calendar</a>
+        </div>
+
+        <div class="card agent">
+          <div class="top">
+            <span class="av">
+              <svg viewBox="0 0 64 64" role="img" aria-label="Illustrated portrait of Priya Raman">
+                <rect width="64" height="64" fill="#DCE7F4"/>
+                <circle cx="32" cy="25" r="11" fill="#0F172A"/>
+                <path d="M11 60c2-13 10-19 21-19s19 6 21 19z" fill="#2563EB"/>
+                <path d="M23 24a9 9 0 0 1 18 0v2a9 9 0 0 1-18 0z" fill="#E4B896"/>
+                <path d="M21 22c1-8 6-11 11-11s10 3 11 11c-4-4-8-5-11-5s-7 1-11 5z" fill="#1A1A2E"/>
+              </svg>
+            </span>
+            <span><b>Priya Raman</b><span>Director, sales</span></span>
+          </div>
+          <div class="agency">
+            <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/></svg></span>
+            <span><b>Northline Property</b>482 Sydney Road, Coburg VIC 3058</span>
+          </div>
+          <div class="contactlines">
+            <a href="tel:+61491570110"><svg><use href="#ph"/></svg>0491 570 110</a>
+            <a href="mailto:priya.raman@northline.example.com"><svg><use href="#mail"/></svg>priya.raman@northline.example.com</a>
+          </div>
+          <a class="btn btn-b" href="#enquire">Enquire now</a>
+        </div>
+
+        <div class="card costs">
+          <h3>Running costs</h3>
+          <div class="row"><span>Council rates</span><b>$1,842 pa</b></div>
+          <div class="row"><span>Water rates</span><b>$1,116 pa</b></div>
+          <div class="row"><span>Owners corporation</span><b>None</b></div>
+          <div class="row"><span>Last sold</span><b>Mar 1994</b></div>
+          <p class="note">Figures supplied by the vendor and believed accurate. Buyers should make their own enquiries. Statement of Information available on request.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ---------- similar ---------- -->
+  <section class="similar">
+    <div class="wrap">
+      <h2>Similar listings in Coburg</h2>
+      <div class="sgrid">
+        <a class="lst" href="#top">
+          <span class="pic"><svg viewBox="0 0 320 200" aria-hidden="true">
+            <rect width="320" height="200" fill="#D9E6F2"/><rect y="146" width="320" height="54" fill="#9FBF87"/>
+            <path d="M58 146V84l102-52 102 52v62z" fill="#C9705A"/><path d="M44 90L160 30l116 60-6 12-110-56-110 56z" fill="#5E3A2B"/>
+            <rect x="84" y="102" width="152" height="44" fill="#B45B44"/>
+            <g fill="#F2E6D2"><rect x="100" y="112" width="30" height="26"/><rect x="190" y="112" width="30" height="26"/></g>
+            <rect x="146" y="106" width="28" height="40" fill="#2E4A3B"/>
+            <g fill="#4F7A46"><circle cx="34" cy="134" r="20"/><circle cx="288" cy="132" r="22"/></g>
+          </svg></span>
+          <span class="b"><span class="p num">$1,180,000 – $1,250,000</span><span class="a">27 Mackay Street, Coburg</span>
+            <span class="m"><span><svg><use href="#bed"/></svg>3</span><span><svg><use href="#bath"/></svg>1</span><span><svg><use href="#car"/></svg>2</span><span><svg><use href="#land"/></svg>548 m²</span></span></span>
+        </a>
+        <a class="lst" href="#top">
+          <span class="pic"><svg viewBox="0 0 320 200" aria-hidden="true">
+            <rect width="320" height="200" fill="#DCE7F4"/><rect y="152" width="320" height="48" fill="#9FBF87"/>
+            <rect x="44" y="52" width="232" height="100" fill="#E9E3D8"/><rect x="44" y="40" width="232" height="14" fill="#5C6B73"/>
+            <g fill="#8FB6CF"><rect x="62" y="68" width="46" height="34"/><rect x="128" y="68" width="46" height="34"/><rect x="194" y="68" width="46" height="34"/>
+              <rect x="62" y="114" width="46" height="30"/><rect x="194" y="114" width="46" height="30"/></g>
+            <rect x="136" y="110" width="30" height="42" fill="#2E4A3B"/>
+            <g fill="#4F7A46"><circle cx="296" cy="140" r="18"/></g>
+          </svg></span>
+          <span class="b"><span class="p num">$965,000</span><span class="a">8/112 Bell Street, Coburg</span>
+            <span class="m"><span><svg><use href="#bed"/></svg>2</span><span><svg><use href="#bath"/></svg>2</span><span><svg><use href="#car"/></svg>1</span><span><svg><use href="#floor"/></svg>96 m²</span></span></span>
+        </a>
+        <a class="lst" href="#top">
+          <span class="pic"><svg viewBox="0 0 320 200" aria-hidden="true">
+            <rect width="320" height="200" fill="#D9E6F2"/><rect y="150" width="320" height="50" fill="#9FBF87"/>
+            <path d="M52 150V72h96v78z" fill="#E4DACA"/><path d="M148 150V54h120v96z" fill="#C6BBA8"/>
+            <path d="M40 74l60-30 60 30" stroke="#5E3A2B" stroke-width="10" fill="none"/>
+            <path d="M136 56l72-30 72 30" stroke="#5E3A2B" stroke-width="10" fill="none"/>
+            <g fill="#8FB6CF"><rect x="70" y="92" width="28" height="26"/><rect x="172" y="76" width="34" height="28"/><rect x="224" y="76" width="34" height="28"/><rect x="172" y="116" width="34" height="28"/></g>
+            <rect x="102" y="112" width="26" height="38" fill="#2E4A3B"/>
+            <g fill="#4F7A46"><circle cx="24" cy="138" r="18"/><circle cx="298" cy="136" r="16"/></g>
+          </svg></span>
+          <span class="b"><span class="p num">$1,420,000 – $1,500,000</span><span class="a">5 Wilkes Street, Coburg North</span>
+            <span class="m"><span><svg><use href="#bed"/></svg>4</span><span><svg><use href="#bath"/></svg>2</span><span><svg><use href="#car"/></svg>2</span><span><svg><use href="#land"/></svg>701 m²</span></span></span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Northline Property Pty Ltd · Licensed estate agent 088 214 6</span>
+    <a href="#top">Privacy</a><a href="#top">Due diligence checklist</a>
+    <span class="r">Statement of Information available at every inspection</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('#stage .slide')),
+      thumbs=document.getElementById('thumbs'),
+      counter=document.getElementById('gc'), i=0;
+
+  slides.forEach(function(s,n){
+    var b=document.createElement('button');
+    b.type='button'; b.className='thumb';
+    b.setAttribute('aria-label','Show photo '+(n+1)+': '+s.dataset.label);
+    b.innerHTML=s.querySelector('svg').outerHTML+'<span class="lb">'+s.dataset.label+'</span>';
+    b.querySelector('svg').removeAttribute('role');
+    b.querySelector('svg').setAttribute('aria-hidden','true');
+    b.addEventListener('click',function(){go(n);});
+    thumbs.appendChild(b);
+  });
+
+  function go(n){
+    i=(n+slides.length)%slides.length;
+    slides.forEach(function(s,x){ if(x===i){s.setAttribute('data-on','');}else{s.removeAttribute('data-on');} });
+    [].forEach.call(thumbs.children,function(t,x){ t.setAttribute('aria-current',String(x===i)); });
+    counter.textContent=(i+1)+' / '+slides.length;
+  }
+  document.getElementById('gp').addEventListener('click',function(){go(i-1);});
+  document.getElementById('gn').addEventListener('click',function(){go(i+1);});
+  go(0);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tidewatch — sea surface temperature</title>
+<style>
+  :root{
+    --ink:#eaf0ff;
+    --dim:#93a3cc;
+    --faint:#5f6e96;
+    --line:rgba(139,156,255,.18);
+    --acc:#8B9CFF;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{overflow-x:clip}
+  body{
+    background:#060b1c;
+    background:
+      radial-gradient(130% 62% at 50% 47%,rgba(34,62,142,.55) 0%,rgba(12,22,58,.32) 42%,rgba(5,9,26,0) 76%),
+      linear-gradient(180deg,#04081a 0%,#070d24 38%,#060b1e 72%,#04071a 100%);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip;
+  }
+  a{color:inherit}
+  ::selection{background:rgba(139,156,255,.4)}
+  :where(a,button):focus-visible{outline:2px solid #b9c5ff;outline-offset:3px;border-radius:5px}
+
+  .hero{position:relative;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;overflow:hidden}
+  #wave{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block}
+  /* scrim: keeps the headline legible over the brightest part of the field */
+  .scrim{
+    position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:
+      linear-gradient(94deg,rgba(4,7,20,.84) 0%,rgba(4,7,20,.46) 26%,rgba(4,7,20,0) 48%),
+      linear-gradient(0deg,rgba(4,7,20,.5) 0%,rgba(4,7,20,0) 24%);
+  }
+
+  .nav{
+    position:relative;z-index:3;display:flex;align-items:center;gap:26px;
+    padding:22px clamp(18px,4vw,56px);
+  }
+  .mark{
+    display:flex;align-items:center;gap:10px;text-decoration:none;
+    font-size:13px;font-weight:700;letter-spacing:.2em;
+  }
+  .mark i{
+    display:block;width:9px;height:9px;border-radius:50%;
+    background:var(--acc);box-shadow:0 0 0 4px rgba(139,156,255,.18);
+  }
+  .nav nav{display:flex;gap:24px;margin-left:auto;font-size:13.5px}
+  .nav nav a{color:var(--dim);text-decoration:none}
+  .nav nav a:hover{color:var(--ink)}
+  .key{
+    text-decoration:none;font-size:13.5px;font-weight:600;padding:9px 16px;border-radius:999px;
+    border:1px solid var(--line);color:var(--ink);
+  }
+  .key:hover{background:rgba(139,156,255,.14);border-color:rgba(139,156,255,.45)}
+
+  main{
+    position:relative;z-index:2;flex:1;display:flex;align-items:center;
+    padding:clamp(16px,3vh,40px) clamp(18px,4vw,56px) clamp(70px,11vh,120px);
+  }
+  .copy{max-width:min(560px,62%)}
+  .eyebrow{
+    margin:0 0 20px;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);
+  }
+  h1{
+    margin:0;font-size:clamp(36px,4.6vw,62px);line-height:1.02;
+    letter-spacing:-.034em;font-weight:660;text-wrap:balance;
+  }
+  h1 span{color:var(--acc)}
+  .lede{margin:22px 0 0;max-width:44ch;color:var(--dim);font-size:clamp(15px,1.2vw,17px)}
+  .acts{display:flex;flex-wrap:wrap;gap:11px;margin-top:30px}
+  .btn{
+    display:inline-flex;align-items:center;gap:.5em;text-decoration:none;
+    font-size:14px;font-weight:600;padding:12px 20px;border-radius:999px;
+    background:var(--ink);color:#070c1e;transition:transform .16s ease,background .16s ease;
+  }
+  .btn:hover{background:#fff;transform:translateY(-1px)}
+  .btn.line{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.line:hover{background:rgba(139,156,255,.12);border-color:rgba(139,156,255,.45)}
+  .facts{
+    display:flex;flex-wrap:wrap;gap:8px 28px;margin:34px 0 0;padding:0;list-style:none;
+    font-size:12.5px;color:var(--faint);
+  }
+  .facts b{color:#c3cdf0;font-weight:600;font-variant-numeric:tabular-nums}
+
+  .hint{
+    position:absolute;z-index:3;left:clamp(18px,4vw,56px);bottom:clamp(22px,5vh,44px);
+    display:flex;align-items:center;gap:10px;
+    font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);
+  }
+  .hint i{display:block;width:34px;height:1px;background:currentColor}
+
+  @media (prefers-reduced-motion: reduce){
+    /* the canvas paints one seeded frame and stops; nothing here is mid-transition */
+    .hint{visibility:hidden}
+  }
+  @media (max-width:820px){
+    .nav nav{display:none}
+    .copy{max-width:100%}
+    main{align-items:flex-end;padding-bottom:clamp(74px,14vh,130px)}
+    .scrim{background:
+      linear-gradient(0deg,rgba(5,8,22,.92) 0%,rgba(5,8,22,.72) 34%,rgba(5,8,22,0) 74%)}
+    h1{font-size:clamp(32px,8.6vw,44px)}
+  }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <canvas id="wave" aria-hidden="true"></canvas>
+  <div class="scrim" aria-hidden="true"></div>
+
+  <header class="nav">
+    <a class="mark" href="#top"><i aria-hidden="true"></i>TIDEWATCH</a>
+    <nav aria-label="Primary">
+      <a href="#top">Data</a><a href="#top">API</a><a href="#top">Papers</a><a href="#top">Status</a>
+    </nav>
+    <a class="key" href="#top">Request access</a>
+  </header>
+
+  <main id="top">
+    <div class="copy">
+      <p class="eyebrow">Sea surface temperature · v4 grid</p>
+      <h1>Forty-three years of ocean temperature, in <span>one request.</span></h1>
+      <p class="lede">1.4 billion gridded readings from September 1982 to last Tuesday, served as CF-compliant NetCDF, Zarr, or plain JSON if that is all you need.</p>
+      <div class="acts">
+        <a class="btn" href="#top">Browse the grid</a>
+        <a class="btn line" href="#top">Read the API spec <span aria-hidden="true">→</span></a>
+      </div>
+      <ul class="facts">
+        <li><b>0.25°</b> resolution</li>
+        <li><b>6-hourly</b> cadence</li>
+        <li><b>1982–2026</b> coverage</li>
+        <li><b>±0.11 °C</b> stated uncertainty</li>
+      </ul>
+    </div>
+  </main>
+
+  <p class="hint"><i aria-hidden="true"></i>Move your cursor across the field</p>
+</section>
+
+<script>
+(function(){
+  var cv = document.getElementById('wave');
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext('2d');
+  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- grid ---------------------------------------------------------- */
+  var GW = 132, GH = 76, SP = 0.19;
+  var CAM_Y = 6.5, CAM_Z = 12.0, FOV = 52 * Math.PI / 180;
+  var pitch = Math.atan2(CAM_Y, CAM_Z), SIN = Math.sin(pitch), COS = Math.cos(pitch);
+
+  /* three wave layers, exactly as the brief's config describes them */
+  var L = [[0.30, 0.80, 0.50], [0.70, 0.30, 0.80], [1.20, 0.10, 1.20]];
+
+  /* colour ramp: deep water -> the brief's #8B9CFF -> white crest */
+  var PAL = [], N = 26;
+  for (var i = 0; i < N; i++){
+    var u = i / (N - 1), r, g, b;
+    if (u < 0.62){ var a = u / 0.62; r = 28 + (139 - 28) * a; g = 44 + (156 - 44) * a; b = 104 + (255 - 104) * a; }
+    else { var a2 = (u - 0.62) / 0.38; r = 139 + 116 * a2; g = 156 + 99 * a2; b = 255; }
+    PAL.push('rgb(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ')');
+  }
+
+  var W = 0, H = 0, cx = 0, cy = 0, f = 0, dpr = 1;
+  function resize(){
+    var r = cv.getBoundingClientRect();
+    W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
+    dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx = W / 2; cy = H * 0.52; f = (H / 2) / Math.tan(FOV / 2);
+  }
+
+  /* ---- pointer ------------------------------------------------------- */
+  var mx = 0, mz = 0, mStr = 0, target = 0;
+  function toWorld(px, py){
+    /* un-project the cursor onto the y = 0 plane */
+    var X = (px - cx) / f, Y = -(py - cy) / f;
+    var dy = Y * COS - SIN, dz = -Y * SIN - COS;
+    if (Math.abs(dy) < 1e-4) return false;
+    var s = -CAM_Y / dy;
+    if (s <= 0) return false;
+    mx = X * s; mz = CAM_Z + dz * s;
+    return true;
+  }
+  if (!still){
+    cv.style.pointerEvents = 'auto';
+    window.addEventListener('pointermove', function(e){
+      if (e.pointerType === 'touch') return;
+      if (toWorld(e.clientX, e.clientY)) target = 1;
+    }, { passive: true });
+    window.addEventListener('pointerleave', function(){ target = 0; }, { passive: true });
+  }
+
+  /* ---- draw ---------------------------------------------------------- */
+  function frame(t){
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalAlpha = 0.92;
+    mStr += (target - mStr) * 0.06;
+
+    var halfW = GW / 2, halfH = GH / 2, last = -1;
+    for (var gz = 0; gz < GH; gz++){                 /* far row first */
+      var z = (gz - halfH) * SP;
+      for (var gx = 0; gx < GW; gx++){
+        var x = (gx - halfW) * SP;
+
+        var y = 0;
+        for (var k = 0; k < 3; k++){
+          var l = L[k];
+          y += Math.sin(x * l[0] + t * l[2]) * Math.cos(z * l[0] * 0.82 + t * l[2] * 0.7) * l[1];
+        }
+
+        /* cursor ripple: a ring that radiates out of the pointer */
+        var glow = 0;
+        if (mStr > 0.01){
+          var dx = x - mx, dz = z - mz, d = Math.sqrt(dx * dx + dz * dz);
+          if (d < 3){
+            var fall = (1 - d / 3);
+            fall *= fall;
+            y += Math.sin(d * 2.4 - t * 2.0) * 1.35 * fall * mStr;
+            glow = fall * mStr;
+          }
+        }
+
+        /* camera transform, then perspective divide */
+        var vy = y - CAM_Y, vz = z - CAM_Z;
+        var y2 = vy * COS - vz * SIN, z2 = vy * SIN + vz * COS;
+        if (z2 > -0.6) continue;
+        var inv = f / -z2;
+        var sx = cx + x * inv, sy = cy - y2 * inv;
+        if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+
+        /* brightness: crest height, distance fade, and the cursor glow */
+        var b = 0.29 + y * 0.31 + (inv * 0.0026) + glow * 0.9;
+        if (b < 0) b = 0; else if (b > 1) b = 1;
+        var idx = (b * (N - 1)) | 0;
+        if (idx !== last){ ctx.fillStyle = PAL[idx]; last = idx; }
+
+        var s = inv * 0.0185;
+        if (s < 0.65) s = 0.65; else if (s > 3.1) s = 3.1;
+        ctx.fillRect(sx, sy, s, s);
+      }
+    }
+  }
+
+  resize();
+  frame(4.1);                      /* seeded mid-state, so the first paint is the good one */
+  if (!still){
+    var t0 = performance.now();
+    (function loop(now){ frame(4.1 + (now - t0) * 0.001); requestAnimationFrame(loop); })(t0);
+  }
+  var rt;
+  window.addEventListener('resize', function(){
+    clearTimeout(rt); rt = setTimeout(function(){ resize(); frame(4.1); }, 140);
+  });
+})();
+</script>
+</body>
+</html>
