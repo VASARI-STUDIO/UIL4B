@@ -186,3 +186,134 @@ test.describe('/create/tint · the swatch labels keep the contrast they were giv
     ).toEqual([])
   })
 })
+
+// ── The accessibility-state probe ───────────────────────────────────────────
+//
+// Chrome's own computed node for a given element, not the markup. A button can
+// carry aria-pressed in the DOM and still surface nothing — a bad value, a
+// conflicting role, an aria-hidden ancestor — so the only honest place to read
+// a choice is the tree a screen reader is handed. getPartialAXTree by
+// backendNodeId rather than filtering getFullAXTree, because the flat array is
+// not in document order and a filtered list reports a believable wrong order.
+async function axRows(page, selector) {
+  const count = await page.evaluate((sel) => {
+    const els = [...document.querySelectorAll(sel)]
+    els.forEach((el, i) => el.setAttribute('data-axprobe', String(i)))
+    return els.length
+  }, selector)
+
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Accessibility.enable')
+  await cdp.send('DOM.enable')
+  const rows = []
+  for (let i = 0; i < count; i += 1) {
+    const { result } = await cdp.send('Runtime.evaluate', { expression: `document.querySelector('[data-axprobe="${i}"]')` })
+    const { node } = await cdp.send('DOM.describeNode', { objectId: result.objectId })
+    const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { backendNodeId: node.backendNodeId, fetchRelatives: false })
+    const n = nodes[0]
+    if (!n) continue
+    const props = Object.fromEntries((n.properties || []).map((p) => [p.name, p.value?.value]))
+    rows.push({
+      role: n.role?.value || '',
+      name: (n.name?.value || '').trim(),
+      pressed: props.pressed,
+      selected: props.selected,
+      checked: props.checked,
+      current: props.current,
+    })
+  }
+  await cdp.detach()
+  await page.evaluate(() => document.querySelectorAll('[data-axprobe]').forEach((el) => el.removeAttribute('data-axprobe')))
+  return rows
+}
+
+/** How a reader is told this control is the chosen one, or `none`. */
+const stateOf = (r) => {
+  const hit = ['pressed', 'selected', 'checked', 'current']
+    .filter((k) => r[k] !== undefined && r[k] !== 'false' && r[k] !== false)
+  return hit.length ? hit.map((k) => `${k}=${r[k]}`).join(',') : 'none'
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// /create/gradient — a choice that was painted and never announced
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('/create/gradient · the chosen gradient type reaches the tree', () => {
+  // THE CONTROL. Every assertion below is about a property being PRESENT, and
+  // a probe that has stopped resolving properties reports `undefined` for all
+  // three buttons — which is exactly what the defect looked like. This hands
+  // the probe three buttons whose answers are known: pressed, not pressed, and
+  // a plain button with no state at all. It fails if the probe cannot tell
+  // them apart, and it is deliberately NOT a check that the page is correct.
+  test('the state probe can tell pressed from unpressed', async ({ page }) => {
+    watch(page, 'the probe checking itself')
+    await go(page, '/create/gradient')
+    await arrived(page, 'Gradient Generator')
+
+    await page.evaluate(() => {
+      const host = document.createElement('div')
+      host.innerHTML = '<button class="ax-probe-ctl" aria-pressed="true">on</button>'
+        + '<button class="ax-probe-ctl" aria-pressed="false">off</button>'
+        + '<button class="ax-probe-ctl">plain</button>'
+      document.body.appendChild(host)
+    })
+
+    const rows = await axRows(page, '.ax-probe-ctl')
+    expect(rows, 'the probe returned nothing for three buttons it was handed').toHaveLength(3)
+    expect(rows.map((r) => `${r.role} "${r.name}" ${stateOf(r)}`)).toEqual([
+      'button "on" pressed=true',
+      'button "off" none',
+      'button "plain" none',
+    ])
+  })
+
+  // MEASURED 2026-09-15 on the built preview at 1440x900, signed out, reading
+  // Accessibility.getFullAXTree:
+  //
+  //   button "Linear"  {invalid:false, focusable:true}
+  //   button "Radial"  {invalid:false, focusable:true}
+  //   button "Conic"   {invalid:false, focusable:true}
+  //
+  // Three buttons, one of them visibly the chosen one, and not one pressed,
+  // selected, checked or current between them. Thirty pixels below in the same
+  // inspector the export format group already read tab "CSS" {selected:true} |
+  // tab "Tailwind" {selected:false} | tab "SVG" {selected:false}.
+  //
+  // The assertion is deliberately not "Linear is pressed on arrival": that
+  // pins a default rather than the contract. It is that the paint and the tree
+  // agree — whichever button carries `is-on` is the one the tree calls
+  // pressed — which is the exact thing that was false.
+  //
+  // MUTATION: drop `aria-pressed={type === t}` from the button in
+  // GradientGenerator.jsx and this goes red on all three rows reading `none`.
+  test('the type carrying `is-on` is the type the tree calls pressed', async ({ page }) => {
+    watch(page, 'someone choosing a gradient type with a screen reader')
+    await go(page, '/create/gradient')
+    await arrived(page, 'Gradient Generator')
+
+    // The group itself, named from the "Type" label already beside it rather
+    // than from a sentence written for it. The name comes back UPPERCASE
+    // because `.ggn-label` sets text-transform:uppercase and an accessible
+    // name is computed from RENDERED text, not from the source — asserted as
+    // measured rather than as written, since asserting "Type" would be
+    // asserting something no browser reports.
+    const group = await axRows(page, '.ggn-seg')
+    expect(group, 'no .ggn-seg was found, so nothing below is being measured').toHaveLength(1)
+    expect(`${group[0].role}("${group[0].name}")`).toBe('group("TYPE")')
+
+    for (const want of ['Radial', 'Conic', 'Linear']) {
+      await page.locator('.ggn-seg-btn', { hasText: want }).click()
+
+      const painted = await page.locator('.ggn-seg-btn.is-on').innerText()
+      expect(painted.trim(), 'the click did not move the painted state').toBe(want)
+
+      const rows = await axRows(page, '.ggn-seg-btn')
+      // POSITIVE CONTROL: three buttons, or the loop below is asserting over
+      // an empty list and passing for it.
+      expect(rows, 'the gradient type group did not render three buttons').toHaveLength(3)
+      expect(rows.map((r) => `${r.name} ${stateOf(r)}`)).toEqual(
+        ['Linear', 'Radial', 'Conic'].map((t) => `${t} ${t === want ? 'pressed=true' : 'none'}`),
+      )
+    }
+  })
+})
