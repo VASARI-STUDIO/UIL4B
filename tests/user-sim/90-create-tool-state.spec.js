@@ -4,7 +4,8 @@
 //
 // Most of what was looked for was already clean, and that is recorded here so
 // the next pass does not re-measure it: a keyboard walk of all eight routes at
-// 1440 found 401 tab stops, every one visible and every one with an accessible
+// 1440 reached 561 tab stops (the emoji grid truncated at the walk’s own
+// 160-step cap), every one visible and every one with an accessible
 // name; no horizontal overflow at 390 or 1440; no heading-level jump on any of
 // them; and driving both catalogue tools to a search that matches nothing left
 // a named empty state and a live count on each (font gallery 77 → 0 families,
