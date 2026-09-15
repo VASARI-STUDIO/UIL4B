@@ -114,7 +114,21 @@ export const PAGE_DESCRIPTIONS = {
   // The replacement names the eight and claims nothing: no "best", no adjective
   // of quality, no urgency. 142 chars, inside what Google renders.
   '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, plus a page of external resources. Inspiration and Collections are marked Soon.',
-  '/discover/gradients': 'A curated library of the best gradient resources on the web. Preview, then bring a gradient straight into the UI L4B Gradient Generator.',
+  // THE SAME TWO FALSEHOODS AS THE LINE ABOVE, ON ITS OWN CHILD, LEFT BEHIND BY
+  // THE FIX THAT CAUGHT THE PARENT. It read "A curated library of the best
+  // gradient resources on the web" — but this route renders GALLERY_GRADIENTS,
+  // which is a hundred of UI L4B's OWN gradients (the page's live region says
+  // "100 gradients"), not links to resources elsewhere; that is /discover/
+  // resources, a different page. And "the best" is the quality superlative the
+  // /discover rewrite above removed by name, two lines away, on the same day.
+  //
+  // The replacement is its SIBLING'S sentence with the nouns changed — the
+  // palettes line below, which is already the accepted shape — so no new voice
+  // was written. Every claim in it is checked: filtering and copying the CSS
+  // are what gradientGallery.js documents the page as doing, and the hand-off
+  // is gradientToolUrl(). Awaiting the founder's word on the same terms as the
+  // line above: shipped so the false one is not live while he reads it.
+  '/discover/gradients': 'Browse curated gradients, copy the CSS, or open a complete gradient directly in the UI L4B Gradient Generator.',
   '/discover/palettes': 'Browse curated colour palettes, copy any swatch, or open a complete palette directly in the UI L4B Palette Builder.',
   '/learn': 'Reference guides on colour, typography and accessibility for people who build interfaces — the thresholds, the formulas and the standards they come from.',
   '/create/alt-text': 'Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.',
@@ -136,7 +150,18 @@ export const PAGE_DESCRIPTIONS = {
   // Pro actually buys was the part being cut. Front-loaded and trimmed to 154.
   '/plans': 'Honest pricing for UI L4B. The toolkit is free forever — palettes, type scales and exports. Pro adds AI capacity and watermark-free export.',
   '/checkout': 'Upgrade to UI L4B Pro for higher AI capacity, advanced colour controls, unlimited saved projects and watermark-free export.',
-  '/community': 'Join the UI L4B community. Share designs, discover inspiration, and connect with other designers and developers.',
+  // A CLAUSE DELETED, NOT A SENTENCE REWRITTEN. This ended "and connect with
+  // other designers and developers", and there is no connecting to do: no
+  // follow, no message, no profile, no comment anywhere on the page or in
+  // Community.jsx. The three matches for those words in that file are
+  // "follow you across devices", "follow the account" and "the message says
+  // so" — none of them a person reaching another person.
+  //
+  // The two claims that survive were checked rather than assumed. "Share
+  // designs" is real: the Submit a design dialog publishes to the shared review
+  // queue in utils/communityQueue.js. "Discover inspiration" is the twelve
+  // seeded entries the page renders and openly labels as seeded.
+  '/community': 'Join the UI L4B community. Share designs and discover inspiration.',
   '/feedback': 'Share your feedback, report bugs, or request features for UI L4B. We read every submission.',
   '/help': 'Start with any UI L4B tool without an account or setup. What each tool opens with, what the free plan covers, and where your work is stored.',
   '/principles': 'The rules UI L4B holds to when building an interface system, each one shown beside the tool that enforces it and the measurement that proves it.',
