@@ -22,6 +22,7 @@ import { EXPORT_FORMATS, unbuiltFormats } from '../../src/config/exportFormats.j
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { CREATE_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
+import { NEXT_TODO } from '../../src/data/pipeline.js'
 import { isSoonRoute } from '../../src/utils/routeMeta.js'
 
 // Comments here quote the sentences they explain — every deletion below is
@@ -145,6 +146,44 @@ test('/info links to no retired URL and to nothing without a title', () => {
       `/info links to ${route}, which legacyRoutes.js answers with a 301 — it used to send readers to /resources, which lands on /discover, not the resources page`)
     assert.ok(PAGE_TITLES[route],
       `/info links to ${route}, which has no routeMetaMap entry, so it is not a page`)
+  }
+})
+
+/* ── Settings: every "Settings → X" on /info must be a tab or heading X has ── */
+
+test('every Settings destination /info names exists under that name in Settings.jsx', () => {
+  const settings = stripComments(read('src/pages/Settings.jsx'))
+  const named = [...INFO.matchAll(/Settings → ([^<]+)<\/Link>/g)].map((m) => m[1].trim())
+  // POSITIVE CONTROL: the page sends readers into Settings at least three
+  // times (Account, Subscription, Your data).
+  assert.ok(named.length >= 3, `only ${named.length} "Settings → …" instructions found on /info`)
+  for (const name of named) {
+    // A tab is `label: 'X'` (or `|| 'X'` behind an i18n key); a section is
+    // an <h2>X</h2>. Either satisfies the instruction.
+    const asTab = settings.includes(`'${name}'`)
+    const asHeading = settings.includes(`>${name}<`)
+    assert.ok(asTab || asHeading,
+      `/info sends the visitor to "Settings → ${name}", and Settings.jsx has no tab labelled `
+      + `'${name}' and no <h2>${name}</h2>. It said "Support" for the tab labelled Subscription.`)
+  }
+})
+
+test('/info does not promise a Pro preview or a cancellation the product does not have', () => {
+  assert.ok(INFO.includes('Pro unlocks'), 'the Free vs Pro sentence is gone; this check is reading nothing')
+  assert.ok(!/advanced previews/i.test(INFO),
+    '/info says Pro unlocks "advanced previews" again. Nothing gates a preview on Pro — see the '
+    + 'Pro deltas Plans.jsx derives — and the phrase names a feature that does not exist.')
+
+  // The cancellation flow is an owner action in the Stripe dashboard, tracked
+  // as a pipeline row. While it is not done, the portal the Cancel plan button
+  // opens has nothing to cancel in it, and /plans deleted "cancel any time"
+  // on exactly that basis. Read the row so finishing it retires this.
+  const row = NEXT_TODO.find((t) => t.id === 'stripe-retention-config')
+  if (row && row.status !== 'done') {
+    assert.ok(!/\bcancel\b/i.test(INFO),
+      `/info tells the visitor they can cancel from Settings, and pipeline.js still has `
+      + `stripe-retention-config at '${row.status}' — the portal has no cancellation flow. `
+      + 'Finish the owner action (or mark the row done) before the sentence comes back.')
   }
 })
 
