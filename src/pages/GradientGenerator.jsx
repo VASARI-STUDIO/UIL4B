@@ -997,12 +997,35 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
             <div className="ggn-panel-body" tabIndex={0} role="group" aria-label="Inspector controls">
               <div className="ggn-field">
                 <div className="ggn-label-row">
-                  <span className="ggn-label">Type</span>
+                  <span className="ggn-label" id="ggn-type-label">Type</span>
                   <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked — unlock to randomise it' : 'Lock type when randomising'} />
                 </div>
-                <div className="ggn-seg">
+                {/* THE CHOSEN TYPE WAS IN A CSS CLASS AND NOWHERE ELSE.
+                    Measured 2026-09-15 on the built preview at 1440x900,
+                    reading Chrome's own accessibility tree over CDP
+                    (Accessibility.getFullAXTree) rather than the markup:
+
+                      button "Linear"  {invalid:false, focusable:true}
+                      button "Radial"  {invalid:false, focusable:true}
+                      button "Conic"   {invalid:false, focusable:true}
+
+                    No pressed, no selected, no checked on any of the three —
+                    `is-on` painted the choice and told no one. Thirty pixels
+                    below, in the same panel, the export format group already
+                    reported tab "CSS" {selected:true} | tab "Tailwind"
+                    {selected:false} | tab "SVG" {selected:false}, so the two
+                    adjacent choices on one panel disagreed about whether a
+                    choice is something a reader is told about.
+
+                    aria-pressed rather than a second tablist: these buttons
+                    select a gradient TYPE, not a panel, and the shape matches
+                    `.fpr-preset-switch` on /create/font-pair and `.rc-tab` on
+                    /create/aspect-ratio. The group takes its name from the
+                    "Type" label already beside it — aria-labelledby, so no
+                    sentence had to be written for it. */}
+                <div className="ggn-seg" role="group" aria-labelledby="ggn-type-label">
                   {GRAD_TYPES.map(t => (
-                    <button key={t} type="button" className={`ggn-seg-btn${type === t ? ' is-on' : ''}`} onClick={() => { if (guardEdit()) setType(t) }}>{t}</button>
+                    <button key={t} type="button" className={`ggn-seg-btn${type === t ? ' is-on' : ''}`} aria-pressed={type === t} onClick={() => { if (guardEdit()) setType(t) }}>{t}</button>
                   ))}
                 </div>
               </div>
