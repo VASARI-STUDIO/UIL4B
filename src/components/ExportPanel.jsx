@@ -4,6 +4,7 @@ import { getLenis } from '../hooks/useSmoothScroll'
 import { useProject } from '../contexts/ProjectContext'
 import { useProModal } from '../contexts/ProModalContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import useExportGate from '../hooks/useExportGate'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
 import { EXPORT_FORMATS } from '../config/exportFormats'
 import BrandLogoField from './BrandLogoField'
@@ -78,6 +79,8 @@ export default function ExportPanel({ onClose }) {
   const [error, setError] = useState('')
   const { design } = useProject()
   const { isPro } = useSubscription()
+  // A file needs an account; a copy never does. See useExportGate.js.
+  const requireExportAccount = useExportGate()
   const { openProModal } = useProModal()
   const activeFormat = FORMATS.find(f => f.id === format)
   const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', book: 'book', guidelines: 'guidelines' }
@@ -142,6 +145,21 @@ export default function ExportPanel({ onClose }) {
   const runExport = async () => {
     const projectName = design?.name || 'Design System'
     const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
+
+    // ── ACCOUNT GATE, BEFORE THE ENTITLEMENT ONE. ─────────────────────────
+    //
+    // Founder decision 2026-09-15: producing a FILE needs a free account;
+    // copying a value never does. See src/hooks/useExportGate.js for the map
+    // that put the line here — signed out, only two of the fourteen tools
+    // asked for an account before this.
+    //
+    // It sits above the Pro check and inside this function for the same reason
+    // that check does, argued directly below: nothing has been generated yet,
+    // so a visitor cannot reach the artefact by calling this directly either.
+    // Account first, then plan — you cannot hold Pro without an account, so
+    // asking in the other order would show a purchase wall to someone who has
+    // no account to attach it to.
+    if (!(await requireExportAccount('export this style guide'))) return
 
     // ── ENTITLEMENT GATE. FAILS CLOSED. ───────────────────────────────────
     // The check lives HERE, at the top of the function that builds the file,

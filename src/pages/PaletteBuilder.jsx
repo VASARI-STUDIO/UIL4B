@@ -41,6 +41,7 @@ import { boardDraftAge, consumeBoardDraft, readBoardDraft, resetGradientDraft, r
 // The adjust lens contract — see utils/paletteAdjust.js for why the base
 // colours and the slider values are persisted separately.
 import useModalDialog from '../hooks/useModalDialog'
+import useExportGate from '../hooks/useExportGate'
 import useMediaQuery from '../hooks/useMediaQuery'
 // The measured collapse for the action rail — the rule, the measurements that
 // found the band nobody had reported, and why one band is exempt.
@@ -669,6 +670,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     })
   ), [isPro])
   const { requireLogin } = useLoginPrompt()
+  // Producing a FILE needs a free account; copying never does.
+  const requireExportAccount = useExportGate()
   const { user, loading: authLoading } = useAuth()
   // Stable primitive so the community-gate effect doesn't re-run on every
   // AuthContext render (it rebuilds the `user` object each time).
@@ -1924,8 +1927,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         g.textBaseline = 'middle'
         g.fillText(label, bx + padX, by + bh / 2 + 1)
       }
-      canvas.toBlob((blob) => {
+      canvas.toBlob(async (blob) => {
         if (!blob) { toast?.('Couldn’t render the image'); return }
+        // The PNG is a file, so it needs a free account. The board itself,
+        // every hex on it and Copy CSS all stay free — see useExportGate.js.
+        if (!(await requireExportAccount('download this palette as an image'))) return
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
