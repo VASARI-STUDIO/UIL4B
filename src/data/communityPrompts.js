@@ -172,7 +172,7 @@ The overall feel should be artisanal without being pretentious — friendly, loc
 5. "Complete the Look" section: 3-4 complementary product suggestions.
 6. Recently viewed: Horizontal scroll of previously viewed items.
 
-Style: warm neutrals (cream, taupe) with gold accent (#B8860B) for premium feel. Generous spacing. Photography-focused layout.`,
+Style: warm neutrals (cream, taupe) with gold accent (#B8860B). Generous spacing. Photography-focused layout.`,
     tags: 'ecommerce, product, fashion, premium',
     img: '',
     author: 'UIL4B Team',
@@ -219,7 +219,7 @@ Style: Strong and professional. Dark navy (#0D1B2A), steel grey (#415A77), gold 
     id: 'c-12',
     free: false,
     title: 'Blog article layout',
-    text: `Design a long-form blog article layout optimised for reading. Include: a full-width hero image with overlay title, reading time and author byline below, a sticky table of contents in the left margin on desktop, body text set at 18px with a max-width of 680px for optimal line length, pull quotes styled with a left accent border, inline code blocks, and a "Related articles" grid at the bottom. Typography-focused, minimal distractions. The reading experience should feel like a premium publication.`,
+    text: `Design a long-form blog article layout optimised for reading. Include: a full-width hero image with overlay title, reading time and author byline below, a sticky table of contents in the left margin on desktop, body text set at 18px with a max-width of 680px for optimal line length, pull quotes styled with a left accent border, inline code blocks, and a "Related articles" grid at the bottom. Typography-focused, minimal distractions. The reading experience should hold up at a 65-75 character measure, the way a printed magazine column does.`,
     tags: 'blog, editorial, typography, content',
     img: '',
     author: 'UIL4B Team',
@@ -229,14 +229,24 @@ Style: Strong and professional. Dark navy (#0D1B2A), steel grey (#415A77), gold 
     id: 'c-13',
     free: true,
     title: '3D hero — floating product reveal',
-    text: `Design a hero section with a 3D product reveal animation for a tech product landing page. The product (a smart speaker or headphones) floats in the centre of the viewport, slowly rotating on the Y-axis. As the user scrolls, the product scales up and the camera orbits around it, revealing different angles.
+    text: `Design a hero section with a 3D product reveal for a tech product landing page. Invent the product and write its real copy — a named model, a real-sounding price, and four specifications a buyer would actually compare. Do not ship placeholder text.
 
-Animation sequence (use with Three.js / React Three Fiber):
-- Frame 0-30: Product fades in from below with a soft bounce easing
-- Frame 30-120: Continuous slow Y-axis rotation (0.003 rad/frame)
-- On scroll: Camera Z position interpolates from 5 to 2.5, product rotates to face the user
-- Background: Soft radial gradient from #0a0a1a to #1a1a3e with floating particle field (200 particles, drift speed 0.001)
-- Lighting: One key light (warm white, intensity 1.5) at top-right, one rim light (blue #4466ff, intensity 0.8) at back-left, ambient at 0.3
+Layout: headline and sub-headline on the left, the product centred, a specification list on the right. On narrow screens the product moves above the headline.
+
+The product — a smart speaker or a pair of headphones — floats in the centre of the viewport and rotates slowly on the Y axis. As the user scrolls, the camera pulls in and orbits a quarter turn.
+
+Animation sequence:
+- On load: the product settles up from below with a soft overshoot; the copy rises after it.
+- At rest: continuous slow Y-axis rotation, one turn every 25-30 seconds.
+- On scroll: the camera moves in (scale up about 20%) and orbits 90 degrees, bound to scroll position rather than to a timer.
+- Background: soft radial gradient from #0a0a1a to #1a1a3e with a drifting particle field.
+- Lighting: one warm key light (#fff5e6) from the top-right, one blue rim light (#4466ff) from the back-left, low ambient.
+
+Implementation: Three.js / React Three Fiber if a 3D library is available. If it is not — a single self-contained file, an email, a sandboxed embed — build it with CSS 3D transforms instead: a cylinder body assembled from rotated slats inside \`transform-style: preserve-3d\`, an elliptical top cap, and a fixed lighting overlay painted over the silhouette. A rotating cylinder has a constant silhouette, so this reads as genuinely three-dimensional. Say which route you took.
+
+Two requirements that override the animation spec:
+1. The hero must be a finished, photographable composition at scroll 0 and at frame 0. Nothing important may be invisible or mid-transform while it waits to animate.
+2. Under \`prefers-reduced-motion: reduce\`, the product holds a good three-quarter pose, the copy is fully visible, and every animation is off. It must look deliberately still, never broken.
 
 JSON config for scene setup:
 \`\`\`json
@@ -248,9 +258,9 @@ JSON config for scene setup:
     { "type": "ambient", "color": "#ffffff", "intensity": 0.3 }
   ],
   "animation": {
-    "autoRotate": { "axis": "y", "speed": 0.003 },
+    "autoRotate": { "axis": "y", "secondsPerTurn": 28 },
     "entrance": { "from": { "y": -2, "opacity": 0 }, "to": { "y": 0, "opacity": 1 }, "duration": 1.2, "easing": "easeOutBack" },
-    "scrollBound": { "cameraZ": [5, 2.5], "rotationY": [0, 1.57] }
+    "scrollBound": { "cameraZ": [5, 2.5], "rotationY": [0, 1.57], "range": "0 to 70vh" }
   },
   "particles": { "count": 200, "size": 0.02, "drift": 0.001, "color": "#ffffff", "opacity": 0.4 }
 }
@@ -264,43 +274,38 @@ JSON config for scene setup:
     id: 'c-14',
     free: true,
     title: '3D hero — morphing blob background',
-    text: `Create an animated hero background with a large morphing 3D blob shape, inspired by stripe.com and linear.app hero sections. The blob should smoothly deform using simplex noise, creating an organic, living feel.
+    text: `Create a hero section built around a large morphing organic shape — a blob that deforms continuously, so it reads as something alive rather than a static gradient.
 
-Technical approach (Three.js / GLSL):
-- Start with an IcosahedronGeometry (detail: 64) for smooth surface
-- In the vertex shader, displace vertices using 3D simplex noise: position += normal * noise(position * frequency + time * speed) * amplitude
-- Use a gradient material that shifts between 2-3 colours based on the vertex normal direction
-- Add a subtle Fresnel rim glow effect on the edges
+Write the hero itself, not just the background: an eyebrow, a headline of no more than nine words, one sub-line, two buttons, and one concrete detail that proves the product is real (a code snippet, a supported-regions line, a version note). Invent the company and give it a name and a specific job. No invented testimonials, logos or review counts.
 
-JSON config:
+The shape:
+- A rounded organic form, off-centre, bleeding toward one edge rather than sitting dead centre behind the text.
+- It deforms slowly and continuously, with no loop point you can spot.
+- Colour shifts across the form as it turns, with a bright rim where the light catches the edge and a soft bloom behind it.
+- It breathes: a scale oscillation of a couple of percent over about four seconds.
+
+Palette: choose one that suits the company you invented, and commit to it. Avoid the indigo to violet to pink three-stop gradient (#667eea / #764ba2 / #f093fb and its neighbours) unless the brand genuinely is that — it is the most over-used gradient on the web and it makes any output look generated. A dark ground with one luminous object reads as more expensive than a full-bleed colour wash either way.
+
+Implementation: a GLSL vertex shader displacing an icosahedron with 3D simplex noise if you have WebGL. Without it, get the same result with CSS and SVG: an element whose \`border-radius\` morphs through four keyframe states, filled with a layered gradient, carrying an inset \`box-shadow\` for the fresnel rim, run through an SVG \`feTurbulence\` + \`feDisplacementMap\` filter for an organic edge, with a blurred copy behind it for bloom. Say which route you took.
+
 \`\`\`json
 {
   "geometry": { "type": "icosahedron", "radius": 2.5, "detail": 64 },
-  "noise": {
-    "frequency": 0.8,
-    "amplitude": 0.6,
-    "speed": 0.15,
-    "octaves": 3
-  },
+  "noise": { "frequency": 0.8, "amplitude": 0.6, "speed": 0.15, "octaves": 3 },
   "material": {
-    "type": "custom-shader",
-    "colors": ["#667eea", "#764ba2", "#f093fb"],
     "colorBlend": "normal-based",
     "fresnel": { "power": 2.5, "color": "#ffffff", "opacity": 0.3 },
-    "roughness": 0.2,
-    "metalness": 0.1
+    "roughness": 0.2, "metalness": 0.1
   },
   "animation": {
     "rotation": { "y": 0.001, "x": 0.0005 },
     "breathe": { "scale": [0.98, 1.02], "duration": 4, "easing": "sine" }
   },
-  "postProcessing": {
-    "bloom": { "threshold": 0.6, "strength": 0.4, "radius": 0.8 }
-  }
+  "postProcessing": { "bloom": { "threshold": 0.6, "strength": 0.4, "radius": 0.8 } }
 }
 \`\`\`
 
-The overall effect should feel premium and mesmerising — a living, breathing shape that draws the eye without overwhelming the page content layered on top.`,
+Under \`prefers-reduced-motion: reduce\` the shape holds one good asymmetric state and every animation stops. The page must look composed, not paused. The hero copy is fully visible at first paint whether or not any animation has run.`,
     tags: '3d, blob, shader, glsl, motion, hero',
     img: '',
     author: 'UIL4B Team',
@@ -310,54 +315,30 @@ The overall effect should feel premium and mesmerising — a living, breathing s
     id: 'c-15',
     free: true,
     title: '3D hero — scroll-driven text extrusion',
-    text: `Design a scroll-driven 3D text animation where the company name extrudes from flat 2D to full 3D as the user scrolls down the hero section. Inspired by award-winning motion sites.
+    text: `Design a scroll-driven 3D text hero where a company name extrudes from near-flat to full depth as the user scrolls, then breaks apart into its letters.
 
-Animation breakdown:
-- At scroll 0%: Text is flat, sitting on a surface, viewed from straight above (orthographic feel)
-- At scroll 25%: Camera begins tilting to a 30° angle, text starts extruding
-- At scroll 50%: Full 3D extrusion visible, camera at 45° angle, dramatic perspective
-- At scroll 75%: Text begins to break apart into individual letter blocks that float away
-- At scroll 100%: Letters have scattered into a particle cloud, transitioning to the next section
+Use a real name. Invent a studio or a company, give it a name of six to ten letters, and write one line of positioning copy and a short list of real-sounding work below the hero. "YOUR BRAND" in the output is a failure.
 
-JSON config:
+The sequence, driven by scroll position:
+- 0%: the wordmark is already dimensional — a shallow chiselled extrusion, slight tilt, crisp. This is the state a screenshot will catch, so it has to be finished on its own.
+- 25-50%: the camera tips over the top of the letters, the extrusion deepens dramatically, and the surface they stand on comes into view.
+- 60-100%: the letters separate, rotate and drift apart, fading as the next section arrives.
+
+Pin the hero (\`position: sticky\`) for the length of the sequence so it plays in place. An unpinned hero scrolls out of frame before the animation has finished. Note that \`overflow-x: hidden\` on \`html\` or \`body\` silently breaks \`position: sticky\` — use \`overflow-x: clip\`.
+
 \`\`\`json
 {
-  "text": {
-    "content": "YOUR BRAND",
-    "font": "Inter Bold",
-    "size": 1.5,
-    "extrudeDepth": { "start": 0.01, "end": 0.8 },
-    "bevelEnabled": true,
-    "bevelSize": 0.02
-  },
-  "camera": {
-    "scrollKeyframes": [
-      { "at": 0, "position": [0, 8, 0.1], "rotation": [-1.5, 0, 0] },
-      { "at": 0.25, "position": [0, 5, 3], "rotation": [-0.8, 0, 0] },
-      { "at": 0.5, "position": [0, 3, 5], "rotation": [-0.5, 0, 0] },
-      { "at": 0.75, "position": [0, 2, 6], "rotation": [-0.3, 0.1, 0] }
-    ]
-  },
-  "scatter": {
-    "startAt": 0.6,
-    "endAt": 1.0,
-    "force": 3,
-    "rotationRandom": 2,
-    "gravity": -0.5
-  },
-  "material": {
-    "color": "#ffffff",
-    "roughness": 0.15,
-    "metalness": 0.9,
-    "envMapIntensity": 1.5
-  },
-  "environment": {
-    "background": "#0a0a0a",
-    "hdri": "studio-small",
-    "fog": { "color": "#0a0a0a", "near": 10, "far": 25 }
-  }
+  "text": { "font": "geometric sans, 700-800 weight", "extrudeDepth": { "start": 0.2, "end": 1.0 }, "bevel": true },
+  "camera": { "rotateX": [6, 46], "rotateY": [-9, -19], "scale": [1, 1.05] },
+  "scatter": { "startAt": 0.58, "endAt": 1.0, "force": 3, "rotationRandom": 2 },
+  "material": { "color": "#ffffff", "roughness": 0.15, "metalness": 0.9 },
+  "environment": { "background": "#0a0a0a", "floorGrid": "fades in with scroll", "fog": true }
 }
-\`\`\``,
+\`\`\`
+
+Implementation: Three.js \`TextGeometry\` if a 3D library is available. Without one, stack 14-18 absolutely positioned copies of each letter at increasing negative \`translateZ\` inside \`transform-style: preserve-3d\`, darkening with depth, with a gradient-filled front face. Drive the whole sequence from one scroll progress value: prefer a CSS scroll-driven animation (\`animation-timeline: scroll()\` on a registered \`@property\`), and fall back to a \`scroll\` listener that sets the same custom property. Do not put a \`filter\` on any element inside the 3D chain — it flattens the extrusion.
+
+Under \`prefers-reduced-motion: reduce\`, freeze the sequence at roughly 40% — full extrusion, camera tipped, nothing scattered and nothing faded — and remove the extra scroll length. That is the strongest single frame in the sequence and it must be what a reduced-motion visitor gets, not the flat start and not an empty screen.`,
     tags: '3d, text, scroll, animation, motion, hero',
     img: '',
     author: 'UIL4B Team',
@@ -367,48 +348,33 @@ JSON config:
     id: 'c-16',
     free: true,
     title: '3D hero — interactive particle wave',
-    text: `Create an interactive particle wave field for a website hero section. A grid of thousands of particles forms a wave surface that reacts to mouse movement and animates continuously.
+    text: `Create an interactive particle wave field for a website hero. A dense grid of points forms a wave surface in perspective, animating continuously and reacting to the pointer.
 
-Technical setup:
-- Create a PlaneGeometry grid (128x128 points = 16,384 particles)
-- Use BufferGeometry with custom position attribute
-- Animate Y position using: sin(x * freq + time) * cos(z * freq + time) * amplitude
-- On mouse move: create a displacement ripple radiating from the cursor position
-- Particles closer to the cursor glow brighter
+Write the hero over it: an eyebrow, a headline, one sub-line and two buttons for a company you invent, plus a short row of real specifications. A field of particles with no copy on it is a screensaver, not a hero. Add a soft scrim behind the text so it stays legible over the brightest part of the field.
 
-JSON config:
+The wave:
+- Sum three sine/cosine layers of different frequency, amplitude and speed, so the surface never visibly repeats.
+- Perspective camera above and in front, looking down at the plane; points shrink and dim with distance.
+- Brightness tracks crest height, so the wave reads as a surface and not as a starfield.
+- On pointer move, points within a radius of the cursor lift in a ring and glow. The strength decays when the pointer leaves.
+
 \`\`\`json
 {
-  "grid": { "width": 128, "height": 128, "spacing": 0.12 },
-  "wave": {
-    "frequency": 0.3,
-    "amplitude": 0.8,
-    "speed": 0.5,
-    "layers": [
-      { "freq": 0.3, "amp": 0.8, "speed": 0.5 },
-      { "freq": 0.7, "amp": 0.3, "speed": 0.8 },
-      { "freq": 1.2, "amp": 0.1, "speed": 1.2 }
-    ]
-  },
-  "mouse": {
-    "radius": 3,
-    "strength": 1.5,
-    "decay": 0.95,
-    "rippleSpeed": 2
-  },
-  "particle": {
-    "size": 2,
-    "color": "#8B9CFF",
-    "glowColor": "#ffffff",
-    "sizeAttenuation": true,
-    "opacity": 0.7
-  },
-  "camera": { "position": [0, 6, 10], "lookAt": [0, 0, 0], "fov": 55 },
-  "background": "transparent"
+  "grid": { "target": "4000-10000 points", "note": "reduce until it holds 60fps on a mid-range laptop" },
+  "wave": { "layers": [ { "freq": 0.3, "amp": 0.8, "speed": 0.5 }, { "freq": 0.7, "amp": 0.3, "speed": 0.8 }, { "freq": 1.2, "amp": 0.1, "speed": 1.2 } ] },
+  "mouse": { "radius": 3, "strength": 1.5, "decay": 0.94, "rippleSpeed": 2 },
+  "particle": { "color": "#8B9CFF", "glowColor": "#ffffff", "sizeAttenuation": true, "opacity": 0.7 },
+  "camera": { "position": [0, 6.5, 12], "lookAt": [0, 0, 0], "fov": 52 },
+  "background": "deep navy, painted explicitly — a hero cannot have a transparent background"
 }
 \`\`\`
 
-The effect should feel like a digital ocean — calming but dynamic, reactive but not chaotic.`,
+Implementation: \`THREE.BufferGeometry\` with a point cloud if WebGL is available. Without it, Canvas2D does this well — project each grid point by hand and draw it with \`fillRect\`, iterating rows from far to near so nearer points overdraw, and quantise the colour into a small palette so you are not building a fill string per point per frame. A 128 x 128 grid is a WebGL figure; in Canvas2D start lower and raise it only while the frame budget holds.
+
+Three requirements:
+1. Seed the animation clock at a non-zero time and draw one frame synchronously before the first \`requestAnimationFrame\`, so the first paint is a formed wave and not an empty box.
+2. Drive motion from elapsed time, not from a per-frame increment, or the wave runs at a different speed on a 144 Hz display.
+3. Under \`prefers-reduced-motion: reduce\`, draw exactly one frame and stop. Attach no pointer handlers. The still frame must be a composed image in its own right.`,
     tags: '3d, particles, interactive, wave, motion, hero',
     img: '',
     author: 'UIL4B Team',
@@ -418,54 +384,30 @@ The effect should feel like a digital ocean — calming but dynamic, reactive bu
     id: 'c-17',
     free: true,
     title: '3D hero — glass card carousel',
-    text: `Design a hero section featuring a 3D carousel of glassmorphic cards that orbit around a central point. Each card showcases a feature or product, and the user can click/drag to rotate the carousel.
+    text: `Design a hero section with a 3D carousel of glass cards orbiting a central point. Six cards, each carrying one feature, auto-rotating slowly, with drag to spin and snap-to-card on release.
 
-Setup:
-- 6 cards arranged in a circle (radius 4), each angled to face outward
-- Cards use a glass material: transparent with blur backdrop, subtle border, and refraction
-- The front-most card is larger and fully opaque; cards further away fade and scale down
-- Auto-rotates slowly; user drag overrides and snaps to nearest card on release
-- Each card contains: icon, title, short description, and a subtle inner glow
+Content: write six specific claims for a product you invent, each with a number in it. "Fast Setup — get started in under 5 minutes", "Secure — enterprise-grade security built in" and "Real-time — live updates across all devices" are the generic feature cards every generated page ships; replace them with claims a real engineer would write, one per card, each with a supporting figure underneath (a latency, a licence, a region count).
 
-JSON config:
+Geometry and material:
+- Six cards on a ring, 60 degrees apart, each facing outward, the ring tilted a few degrees.
+- Glass: translucent, a light border, a bright refraction edge down the leading side, an inner top highlight and a broad drop shadow.
+- The front card is largest and fully opaque; cards further round the ring scale down, fade, and darken.
+- \`backface-visibility: hidden\` on every card — without it the far cards paint their own mirrored text through the ring.
+- Use a perspective value high enough that the front card does not magnify past its container. The height you must actually fit is cardHeight x perspective / (perspective - radius).
+
+Controls: drag is not enough on its own. Ship previous/next buttons with visible focus rings and accessible labels, a position indicator, and keep every card in the DOM so a screen reader can read all six. Auto-rotation pauses on hover, on drag and after a button press.
+
 \`\`\`json
 {
-  "carousel": {
-    "radius": 4,
-    "cardCount": 6,
-    "autoRotateSpeed": 0.005,
-    "snapOnRelease": true,
-    "dragSensitivity": 0.003
-  },
-  "card": {
-    "width": 2.4,
-    "height": 3.2,
-    "cornerRadius": 0.2,
-    "glass": {
-      "opacity": 0.15,
-      "blur": 12,
-      "borderOpacity": 0.2,
-      "borderColor": "#ffffff",
-      "refraction": 0.02
-    },
-    "focusScale": 1.2,
-    "fadeRange": [0.4, 1.0]
-  },
-  "environment": {
-    "background": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
-    "ambientLight": 0.4,
-    "spotLight": { "position": [0, 5, 5], "intensity": 1.2, "color": "#e0e0ff" }
-  },
-  "content": [
-    { "icon": "rocket", "title": "Fast Setup", "desc": "Get started in under 5 minutes" },
-    { "icon": "shield", "title": "Secure", "desc": "Enterprise-grade security built in" },
-    { "icon": "zap", "title": "Real-time", "desc": "Live updates across all devices" },
-    { "icon": "globe", "title": "Global CDN", "desc": "Content delivered from 200+ edges" },
-    { "icon": "code", "title": "API First", "desc": "Full REST and GraphQL support" },
-    { "icon": "heart", "title": "Open Source", "desc": "Community-driven development" }
-  ]
+  "carousel": { "radius": 340, "cardCount": 6, "autoRotate": "4-5 degrees per second", "snapOnRelease": true, "dragSensitivity": 0.26 },
+  "card": { "width": 240, "height": 250, "cornerRadius": 20, "focusScale": 1.06, "fadeRange": [0.26, 1.0] },
+  "environment": { "background": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)", "lamps": "two or three soft radial lights for the glass to catch" }
 }
-\`\`\``,
+\`\`\`
+
+Express rotation speed in degrees per second and drive it from a frame delta. A per-frame increment runs at double speed on a 120 Hz display.
+
+Under \`prefers-reduced-motion: reduce\`: no auto-rotation, no easing. The ring sits at its rest angle with the front card square-on and readable, the neighbours legible at their angle, and the buttons still work — they jump straight to the next card. Six cards, still, is the finished composition.`,
     tags: '3d, carousel, glass, interactive, motion, hero',
     img: '',
     author: 'UIL4B Team',
@@ -475,74 +417,34 @@ JSON config:
     id: 'c-18',
     free: true,
     title: 'Lottie animation — loading states',
-    text: `Design a set of 5 micro-animation loading states for a web application. Each should be a short looping animation suitable for Lottie/After Effects export.
+    text: `Design a set of five looping micro-animations for loading states, and present them as a specimen sheet a developer could build from.
 
-1. Pulse dots: Three dots that scale up/down in sequence (like a typing indicator)
-2. Orbit spinner: A small circle orbiting a larger circle with a motion trail
-3. Skeleton shimmer: A gradient sweep animation across a placeholder rectangle
-4. Progress ring: A circular progress indicator that fills clockwise with a rounded cap
-5. Content loader: Three horizontal bars that fade in sequentially, simulating text loading
+Build them in CSS and inline SVG. Do not reach for an animation runtime. Every one of these is ten to fifteen lines of CSS, and shipping a player plus a JSON payload to draw three pulsing dots costs more than the wait it is covering. (If the project already loads a vector-animation runtime for illustration work, fine — but these five do not justify one on their own.)
 
-Design specs for each:
+The five:
+1. pulse-dots — three dots scaling in sequence, like a typing indicator.
+2. orbit-spinner — an indeterminate ring: a comet head with a trail fading out behind it, over a faint full-circle track.
+3. skeleton-shimmer — a light band sweeping diagonally across a placeholder block.
+4. progress-ring — a determinate ring that fills clockwise to a known percentage, with a rounded cap and a numeric label. Determinate and indeterminate are different components: if you cannot name the fraction honestly, use the spinner instead. Do not specify one and build the other.
+5. content-loader — three bars of decreasing width fading in sequence, standing in for text.
+
+Present them as a sheet: each specimen centred in its own well, with its name in monospace, its duration and size, and one line on when to reach for it. Put one specimen on a dark ground to prove that they inherit \`currentColor\`. Then show two of them in context — inside a real product panel and inside a pending button — because a loader is only correct in the layout it is covering.
+
 \`\`\`json
 {
   "animations": [
-    {
-      "name": "pulse-dots",
-      "duration": 1200,
-      "size": [48, 16],
-      "dots": 3,
-      "dotRadius": 4,
-      "gap": 12,
-      "scaleRange": [0.6, 1.0],
-      "stagger": 150,
-      "easing": "ease-in-out",
-      "color": "currentColor"
-    },
-    {
-      "name": "orbit-spinner",
-      "duration": 1000,
-      "size": [32, 32],
-      "orbitRadius": 10,
-      "dotRadius": 3,
-      "trailLength": 0.6,
-      "trailOpacity": [1.0, 0.1],
-      "color": "currentColor"
-    },
-    {
-      "name": "skeleton-shimmer",
-      "duration": 1500,
-      "gradientWidth": "40%",
-      "angle": -20,
-      "colors": ["transparent", "rgba(255,255,255,0.08)", "transparent"],
-      "easing": "linear"
-    },
-    {
-      "name": "progress-ring",
-      "duration": 2000,
-      "size": [40, 40],
-      "strokeWidth": 3,
-      "lineCap": "round",
-      "dashArray": [0.75, 0.25],
-      "rotation": 360,
-      "color": "currentColor"
-    },
-    {
-      "name": "content-loader",
-      "duration": 800,
-      "bars": [
-        { "width": "100%", "height": 12, "radius": 6 },
-        { "width": "80%", "height": 12, "radius": 6 },
-        { "width": "60%", "height": 12, "radius": 6 }
-      ],
-      "stagger": 100,
-      "fadeRange": [0.3, 1.0]
-    }
+    { "name": "pulse-dots", "duration": 1200, "size": [48, 16], "dots": 3, "dotRadius": 4, "gap": 12, "scaleRange": [0.6, 1.0], "stagger": 150, "easing": "ease-in-out", "color": "currentColor" },
+    { "name": "orbit-spinner", "duration": 1000, "size": [32, 32], "strokeWidth": 3, "trailLength": 0.8, "trailOpacity": [1.0, 0.0], "color": "currentColor" },
+    { "name": "skeleton-shimmer", "duration": 1500, "bandWidth": "40%", "angle": -20, "easing": "linear", "note": "keep the band over the block for most of the cycle" },
+    { "name": "progress-ring", "duration": 900, "size": [40, 40], "strokeWidth": 3, "lineCap": "round", "determinate": true, "label": true },
+    { "name": "content-loader", "duration": 800, "bars": [ { "width": "100%" }, { "width": "80%" }, { "width": "60%" } ], "barHeight": 12, "radius": 6, "stagger": 100, "fadeRange": [0.3, 1.0] }
   ],
-  "exportFormat": "lottie-json",
+  "color": "currentColor",
   "frameRate": 60
 }
-\`\`\``,
+\`\`\`
+
+The rule that decides whether this set is any good: author every specimen at its rest frame — the staggered dots at their three scales, the spinner as a three-quarter arc, the shimmer band parked over the block, the ring at its filled value, the bars at their three opacities — and add the motion inside \`@media (prefers-reduced-motion: no-preference)\`. Then switching motion off leaves five still, deliberate loaders rather than five empty boxes. A loading state that disappears for anyone with motion reduced is worse than no loading state at all.`,
     tags: 'animation, lottie, loading, micro, motion',
     img: '',
     author: 'UIL4B Team',
@@ -552,77 +454,35 @@ Design specs for each:
     id: 'c-19',
     free: true,
     title: 'Scroll-triggered section transitions',
-    text: `Design a series of scroll-triggered section transitions for a storytelling website. Each section uses a different reveal animation as it enters the viewport.
+    text: `Design a scroll-triggered storytelling page: five sections, each revealing with a different transition as it enters the viewport.
 
-Section transition configs (use with GSAP ScrollTrigger or Framer Motion):
+Write the story. Invent a business, pick something it actually makes, and write the piece — a headline, a standfirst, a byline, numbered sections, real figures, real materials. Five animated empty boxes demonstrate nothing. Label each section with its transition name in a small monospace chip, so the page doubles as the documentation for the set.
+
+The five transitions:
 \`\`\`json
 {
   "transitions": [
-    {
-      "name": "curtain-reveal",
-      "trigger": "top 80%",
-      "animation": {
-        "clipPath": ["inset(0 50% 0 50%)", "inset(0 0% 0 0%)"],
-        "duration": 1.2,
-        "easing": "power3.out"
-      }
-    },
-    {
-      "name": "parallax-stagger",
-      "trigger": "top 70%",
-      "children": {
-        "y": [60, 0],
-        "opacity": [0, 1],
-        "stagger": 0.1,
-        "duration": 0.8,
-        "easing": "power2.out"
-      }
-    },
-    {
-      "name": "scale-fade",
-      "trigger": "top 75%",
-      "animation": {
-        "scale": [0.85, 1],
-        "opacity": [0, 1],
-        "duration": 1.0,
-        "easing": "power2.out",
-        "transformOrigin": "center bottom"
-      }
-    },
-    {
-      "name": "horizontal-slide",
-      "trigger": "top 80%",
-      "animation": {
-        "x": [-100, 0],
-        "opacity": [0, 1],
-        "duration": 0.9,
-        "easing": "power3.out"
-      },
-      "alternateDirection": true
-    },
-    {
-      "name": "text-split-reveal",
-      "trigger": "top 70%",
-      "splitBy": "chars",
-      "animation": {
-        "y": [40, 0],
-        "opacity": [0, 1],
-        "rotateX": [-40, 0],
-        "stagger": 0.02,
-        "duration": 0.6,
-        "easing": "power2.out"
-      }
-    }
+    { "name": "curtain-reveal", "trigger": "top 80%", "animation": { "clipPath": ["inset(0 50% 0 50%)", "inset(0 0% 0 0%)"], "duration": 1.2, "easing": "power3.out" } },
+    { "name": "parallax-stagger", "trigger": "top 70%", "children": { "y": [60, 0], "opacity": [0, 1], "stagger": 0.1, "duration": 0.8 } },
+    { "name": "scale-fade", "trigger": "top 75%", "animation": { "scale": [0.85, 1], "opacity": [0, 1], "duration": 1.0, "transformOrigin": "center bottom" } },
+    { "name": "horizontal-slide", "trigger": "top 80%", "animation": { "x": [-84, 0], "opacity": [0, 1], "duration": 0.9 }, "alternateDirection": true },
+    { "name": "text-split-reveal", "trigger": "top 70%", "splitBy": "chars", "animation": { "y": [40, 0], "opacity": [0, 1], "rotateX": [-40, 0], "stagger": 0.02, "duration": 0.6 } }
   ],
-  "global": {
-    "once": true,
-    "markers": false,
-    "scrub": false
-  }
+  "global": { "once": true, "scrub": false }
 }
 \`\`\`
 
-These can be mixed and matched. Use curtain-reveal for hero images, parallax-stagger for feature grids, and text-split-reveal for headlines.`,
+Implementation: prefer CSS scroll-driven animations — \`animation-timeline: view()\` with an \`animation-range\`, which needs no JavaScript at all where it is supported — and fall back to an IntersectionObserver that adds a class. GSAP ScrollTrigger and Framer Motion both do this well if the project already carries them; neither is required for this.
+
+Three rules, and the first one is not optional:
+
+1. Author every element in its finished state. The hidden start state may only exist somewhere it is guaranteed to be undone: inside \`@supports (animation-timeline: view())\`, or behind a class that the IntersectionObserver script itself adds to \`<html>\` before it starts observing. If the script fails, the timeline is unsupported, or motion is reduced, the page renders complete. Writing \`opacity: 0\` into the base stylesheet and hoping an observer fires is how a page ships blank.
+
+2. Nothing above the fold animates in — or if something does, every frame of it is a finished composition (a curtain that opens from a wide centre band, never from nothing). The first screen is what a screenshot catches and what a visitor judges.
+
+3. Under \`prefers-reduced-motion: reduce\`, every section is shown complete, with no reveal and no scroll dependency. Say so on the page if it helps — a one-line note is honest and costs nothing.
+
+Elements already in view when the page loads are revealed immediately, not on the next scroll event. Give any horizontally sliding section \`overflow: hidden\` so the slide-in never creates a horizontal scrollbar.`,
     tags: 'scroll, animation, gsap, transitions, motion',
     img: '',
     author: 'UIL4B Team',

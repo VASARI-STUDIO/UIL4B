@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cronwright — Pricing</title>
+<style>
+  :root{
+    --paper:#FBFBF8; --card:#FFFFFF; --ink:#12161A; --ink-2:#4E5862; --ink-3:#7B8690;
+    --line:#E4E3DC; --line-2:#EFEEE8;
+    --pine:#0F5D4A; --pine-2:#0B4638; --tint:#E7F0EC;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--sans);
+    font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .num{font-variant-numeric:tabular-nums}
+  a{color:inherit}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  :focus-visible{outline:2.5px solid var(--pine);outline-offset:3px;border-radius:5px}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  /* ---------- header ---------- */
+  header{border-bottom:1px solid var(--line-2);background:rgba(251,251,248,.9)}
+  .hd{display:flex;align-items:center;gap:26px;height:62px}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;font-size:16.5px;text-decoration:none}
+  .logo svg{width:20px;height:20px;stroke:var(--pine);stroke-width:2;fill:none;stroke-linecap:round}
+  .hnav{display:flex;gap:22px;margin-left:8px}
+  .hnav a{font-size:14.5px;color:var(--ink-2);text-decoration:none;font-weight:500;padding:4px 0}
+  .hnav a:hover{color:var(--ink)}
+  .hnav a[aria-current]{color:var(--ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--pine)}
+  .hd .r{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .hd .r a{font-size:14.5px;color:var(--ink-2);text-decoration:none;font-weight:500}
+  .hd .r a:hover{color:var(--ink)}
+  .hd .r a.cta.solid{color:#fff}
+  .hd .r a.cta.solid:hover{color:#fff}
+
+  /* ---------- hero + gradient ---------- */
+  .top{position:relative;overflow:hidden;padding:56px 0 0}
+  .top::before{
+    content:"";position:absolute;inset:-160px 0 auto;height:620px;pointer-events:none;
+    background:
+      radial-gradient(760px 320px at 22% 32%,rgba(15,93,74,.10),transparent 68%),
+      radial-gradient(680px 300px at 82% 18%,rgba(196,168,96,.13),transparent 66%),
+      radial-gradient(1100px 500px at 50% 0%,#F1F3EE,transparent 72%);
+  }
+  .top>*{position:relative}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--pine);font-weight:700;margin:0 0 14px}
+  .hero{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:0 56px;align-items:end}
+  h1{margin:0;font-size:clamp(30px,4vw,46px);line-height:1.08;letter-spacing:-.033em;font-weight:680;max-width:20ch}
+  .sub{margin:0 0 5px;font-size:16.5px;color:var(--ink-2);line-height:1.58}
+
+  /* ---------- toggle ---------- */
+  .cycle{display:flex;align-items:center;gap:14px;margin:36px 0 38px;flex-wrap:wrap;
+         padding-top:22px;border-top:1px solid var(--line)}
+  .cycle .note{margin-left:auto}
+  .seg{position:relative;display:inline-flex;padding:4px;background:#F1F0EA;border:1px solid var(--line);border-radius:999px}
+  .seg .thumb{position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);
+              background:var(--card);border-radius:999px;box-shadow:0 1px 3px rgba(18,22,26,.14);
+              transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+  .seg button{position:relative;z-index:1;padding:7px 18px;border-radius:999px;font-size:14.5px;
+              font-weight:600;color:var(--ink-3);transition:color .2s;min-width:104px}
+  .seg button[aria-pressed=true]{color:var(--ink)}
+  .seg button:hover{color:var(--ink)}
+  [data-cycle=year] .seg .thumb{transform:translateX(100%)}
+  .save{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:650;color:var(--pine);
+        background:var(--tint);border-radius:999px;padding:5px 12px}
+  .note{font-size:13.5px;color:var(--ink-3)}
+
+  /* ---------- plans ---------- */
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;padding-bottom:12px}
+  .plan{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 24px 28px;
+        display:flex;flex-direction:column;position:relative}
+  .plan.pro{border:1.5px solid var(--pine);margin-block:-18px;padding:40px 26px 34px;
+            box-shadow:0 18px 44px -26px rgba(15,93,74,.5),0 2px 10px rgba(18,22,26,.05);z-index:1}
+  .flag{position:absolute;top:0;left:26px;transform:translateY(-50%);
+        background:var(--pine);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.07em;
+        text-transform:uppercase;padding:5px 12px;border-radius:999px}
+  .pname{margin:0;font-size:15px;font-weight:700;letter-spacing:-.005em}
+  .pfor{margin:4px 0 0;font-size:13.5px;color:var(--ink-3)}
+
+  .price{display:flex;align-items:baseline;gap:7px;margin:20px 0 0;
+         font-size:46px;font-weight:680;letter-spacing:-.045em;line-height:1.02}
+  .plan.pro .price{font-size:52px}
+  .price.word{font-size:34px;letter-spacing:-.03em}
+  .price .per{font-size:14.5px;font-weight:550;letter-spacing:0;color:var(--ink-3)}
+  .roll{display:inline-grid;overflow:hidden}
+  .roll>span{grid-area:1/1;transition:transform .36s cubic-bezier(.2,.85,.25,1),opacity .22s ease}
+  .roll>span:nth-child(2){transform:translateY(108%);opacity:0}
+  [data-cycle=year] .roll>span:nth-child(1){transform:translateY(-108%);opacity:0}
+  [data-cycle=year] .roll>span:nth-child(2){transform:translateY(0);opacity:1}
+  .billed{margin:9px 0 0;font-size:13px;color:var(--ink-3);min-height:20px}
+  .billed .roll>span{white-space:nowrap}
+
+  .blurb{margin:16px 0 0;font-size:14px;color:var(--ink-2);min-height:63px;line-height:1.5}
+  .cta{display:block;width:100%;text-align:center;margin-top:20px;padding:12px 16px;border-radius:9px;
+       font-size:14.5px;font-weight:650;text-decoration:none;
+       border:1.5px solid var(--line);color:var(--ink);background:var(--card);
+       transition:background .16s,border-color .16s,color .16s}
+  .cta:hover{background:#F4F3EE;border-color:#D4D3CA}
+  .cta.solid{background:var(--pine);border-color:var(--pine);color:#fff}
+  .cta.solid:hover{background:var(--pine-2);border-color:var(--pine-2)}
+
+  .incl{margin:24px 0 12px;padding-top:20px;border-top:1px solid var(--line-2);
+        font-size:12.5px;font-weight:650;color:var(--ink);letter-spacing:.005em}
+  ul.feat{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+  ul.feat li{display:flex;gap:10px;font-size:14px;color:var(--ink-2);line-height:1.42}
+  ul.feat svg{width:16px;height:16px;flex:0 0 auto;margin-top:2px;stroke-width:2.3;fill:none;
+              stroke-linecap:round;stroke-linejoin:round}
+  ul.feat .y svg{stroke:var(--pine)}
+  ul.feat .n{color:var(--ink-3)}
+  ul.feat .n svg{stroke:#B9BCB4}
+  ul.feat b{color:var(--ink);font-weight:650}
+
+  /* ---------- everything band ---------- */
+  .band{border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);margin-top:46px;
+        background:rgba(255,255,255,.55)}
+  .band .wrap{display:flex;gap:14px 34px;flex-wrap:wrap;padding-top:20px;padding-bottom:20px;
+              font-size:13.5px;color:var(--ink-2);align-items:center}
+  .band b{color:var(--ink);font-weight:650;font-size:13px;letter-spacing:.05em;text-transform:uppercase}
+  .band span{display:inline-flex;align-items:center;gap:8px}
+  .band span svg{width:14px;height:14px;stroke:var(--pine);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ---------- faq ---------- */
+  .faq{padding-block:62px 74px;padding-inline:24px}
+  .faq h2{margin:0 0 6px;font-size:clamp(23px,3vw,30px);letter-spacing:-.028em;font-weight:680}
+  .faq .lead{margin:0 0 30px;color:var(--ink-2);font-size:15.5px}
+  .faq .lead a{color:var(--pine);text-decoration-thickness:1px;text-underline-offset:3px}
+  .qs{column-count:2;column-gap:48px;border-top:1px solid var(--line)}
+  .qs details{break-inside:avoid}
+  details{border-bottom:1px solid var(--line)}
+  summary{display:flex;align-items:flex-start;gap:14px;padding:17px 0;cursor:pointer;
+          font-size:15.5px;font-weight:600;letter-spacing:-.008em;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"";margin-left:auto;margin-right:4px;flex:0 0 auto;width:11px;height:11px;margin-top:6px;
+                 border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);
+                 transform:rotate(45deg);transition:transform .2s}
+  details[open] summary::after{transform:rotate(225deg);border-color:var(--pine)}
+  summary:hover{color:var(--pine)}
+  details p{margin:0 0 19px;font-size:14.5px;color:var(--ink-2);line-height:1.6;max-width:56ch;padding-right:24px}
+  details p code{font-family:var(--mono);font-size:13px;background:#F2F1EB;padding:1px 5px;border-radius:4px}
+
+  footer{border-top:1px solid var(--line-2);padding:22px 0 30px;font-size:13px;color:var(--ink-3)}
+  footer .wrap{display:flex;gap:10px 22px;flex-wrap:wrap;align-items:center}
+  footer a{color:var(--ink-3);text-decoration:none}
+  footer a:hover{color:var(--ink);text-decoration:underline}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:940px){
+    .hero{grid-template-columns:1fr;gap:18px}
+    .sub{margin:0}
+    .plans{grid-template-columns:1fr;gap:18px;max-width:460px}
+    .plan.pro{margin-block:22px;padding:34px 24px 30px}
+    .plan.pro .price{font-size:46px}
+    .blurb{min-height:0}
+    .qs{column-count:1}
+    .faq{padding-block:46px 56px}
+    .qs details p{padding-right:0}
+  }
+  @media (max-width:680px){
+    .wrap{padding:0 16px}
+    .faq{padding-inline:16px}
+    .hnav{display:none}
+    .top{padding-top:38px}
+    .hero{grid-template-columns:1fr;gap:16px}
+    .sub{margin:0}
+    .cycle .note{margin-left:0}
+    .cycle{margin:24px 0 32px}
+    .seg button{min-width:0;padding:7px 14px;font-size:14px}
+    .plans{max-width:none}
+    details p{padding-right:0}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ok" viewBox="0 0 24 24"><path d="M4 12.5l5.2 5.2L20 6.8"/></symbol>
+  <symbol id="no" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+</defs></svg>
+
+<header>
+  <div class="wrap hd">
+    <a class="logo" href="#top">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.4 2"/></svg>
+      Cronwright
+    </a>
+    <nav class="hnav" aria-label="Main">
+      <a href="#top">Product</a>
+      <a href="#top">Integrations</a>
+      <a href="#top" aria-current="page">Pricing</a>
+      <a href="#top">Docs</a>
+    </nav>
+    <div class="r">
+      <a href="#top">Sign in</a>
+      <a class="cta solid" style="width:auto;margin:0;padding:8px 15px;font-size:14px" href="#top">Start free</a>
+    </div>
+  </div>
+</header>
+
+<main id="top" data-cycle="month">
+  <section class="top">
+    <div class="wrap">
+      <p class="eyebrow">Pricing</p>
+      <div class="hero">
+        <h1>Know a cron job failed before your customers do.</h1>
+        <p class="sub">Cronwright watches your scheduled tasks and pages someone when one runs late, exits non-zero, or stops checking in. Priced per monitored job and per seat — never per alert.</p>
+      </div>
+
+      <div class="cycle">
+        <div class="seg" role="group" aria-label="Billing period">
+          <span class="thumb" aria-hidden="true"></span>
+          <button type="button" id="b-month" aria-pressed="true">Monthly</button>
+          <button type="button" id="b-year" aria-pressed="false">Yearly</button>
+        </div>
+        <span class="save">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg>
+          Save 21% on yearly
+        </span>
+        <span class="note">Prices in AUD, excluding GST.</span>
+      </div>
+
+      <div class="plans">
+        <!-- FREE -->
+        <article class="plan">
+          <h2 class="pname">Free</h2>
+          <p class="pfor">Side projects and homelabs</p>
+          <div class="price"><span class="roll"><span>$0</span><span>$0</span></span><span class="per">forever</span></div>
+          <p class="billed"><span class="roll"><span>No card required</span><span>No card required</span></span></p>
+          <p class="blurb">Enough to cover the handful of jobs you actually lose sleep over, with e-mail alerts and a day of history.</p>
+          <a class="cta" href="#top">Create a workspace</a>
+          <p class="incl">Includes</p>
+          <ul class="feat">
+            <li class="y"><svg><use href="#ok"/></svg><span><b>5</b> monitored jobs</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span><b>1</b> seat</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>24-hour event history</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>Email alerts, 1-minute resolution</span></li>
+            <li class="n"><svg><use href="#no"/></svg><span>Slack, PagerDuty and webhooks</span></li>
+            <li class="n"><svg><use href="#no"/></svg><span>On-call schedules</span></li>
+          </ul>
+        </article>
+
+        <!-- PRO -->
+        <article class="plan pro" aria-labelledby="p-pro">
+          <span class="flag">Most popular</span>
+          <h2 class="pname" id="p-pro">Pro</h2>
+          <p class="pfor">Teams that carry a pager</p>
+          <div class="price"><span class="roll"><span>$24</span><span>$19</span></span><span class="per">per seat / month</span></div>
+          <p class="billed"><span class="roll"><span>Billed monthly, cancel any time</span><span>Billed $228 per seat, yearly</span></span></p>
+          <p class="blurb">Routing, escalation and a real audit trail — so a failed 03:00 job reaches the person who can fix it.</p>
+          <a class="cta solid" href="#top">Start 14-day trial</a>
+          <p class="incl">Everything in Free, plus</p>
+          <ul class="feat">
+            <li class="y"><svg><use href="#ok"/></svg><span><b>200</b> monitored jobs, then $0.30 each</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>Up to <b>25</b> seats</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>90-day event history and run logs</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>Slack, PagerDuty, Opsgenie, webhooks</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>On-call rotations and escalation</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>Status page on your own domain</span></li>
+            <li class="n"><svg><use href="#no"/></svg><span>SAML SSO and audit log</span></li>
+          </ul>
+        </article>
+
+        <!-- ENTERPRISE -->
+        <article class="plan">
+          <h2 class="pname">Enterprise</h2>
+          <p class="pfor">Regulated and high-volume estates</p>
+          <div class="price word"><span class="roll"><span>Custom</span><span>Custom</span></span></div>
+          <p class="billed"><span class="roll"><span>Annual agreement, from 25 seats</span><span>Annual agreement, from 25 seats</span></span></p>
+          <p class="blurb">For estates where the job list is in the thousands and someone will ask where the data is stored.</p>
+          <a class="cta" href="#top">Talk to sales</a>
+          <p class="incl">Everything in Pro, plus</p>
+          <ul class="feat">
+            <li class="y"><svg><use href="#ok"/></svg><span>Unlimited jobs and seats</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>3-year event history, exportable</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>SAML SSO, SCIM and audit log</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>Self-hosted runner inside your VPC</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>99.95% uptime SLA, named engineer</span></li>
+            <li class="y"><svg><use href="#ok"/></svg><span>Invoice billing, NET-30</span></li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <div class="band">
+    <div class="wrap">
+      <b>Every plan</b>
+      <span><svg><use href="#ok"/></svg>1-minute check resolution</span>
+      <span><svg><use href="#ok"/></svg>Unlimited alerts, never metered</span>
+      <span><svg><use href="#ok"/></svg>Data stored in ap-southeast-2</span>
+      <span><svg><use href="#ok"/></svg>Downgrade or cancel yourself</span>
+    </div>
+  </div>
+
+  <section class="faq wrap" aria-labelledby="faq-t">
+    <h2 id="faq-t">Billing questions</h2>
+    <p class="lead">Anything not covered here, email <a href="#top">billing@cronwright.example.com</a> — a person answers within a business day.</p>
+    <div class="qs">
+      <details open>
+        <summary>What counts as a monitored job?</summary>
+        <p>One scheduled task with one expected schedule. A job that runs every five minutes counts once, not 288 times a day. Paused jobs don't count against your limit until you resume them.</p>
+      </details>
+      <details>
+        <summary>How does per-seat billing work mid-month?</summary>
+        <p>Seats are prorated to the day. Add someone on the 20th of a 30-day month and you're charged a third of a seat. Remove a seat and the remainder is credited against your next invoice — we don't refund seats to a card.</p>
+      </details>
+      <details>
+        <summary>What happens if I go over the job limit?</summary>
+        <p>Nothing stops working. We keep monitoring every job you've added and email the workspace owner. On Pro, jobs past 200 are billed at $0.30 each on your next invoice; on Free, new jobs stop being accepted after 14 days.</p>
+      </details>
+      <details>
+        <summary>Can I move from monthly to yearly later?</summary>
+        <p>Yes, at any time. The unused part of your current month is credited against the annual invoice. Moving back to monthly takes effect at your renewal date rather than immediately.</p>
+      </details>
+      <details>
+        <summary>Which payment methods do you accept?</summary>
+        <p>Visa, Mastercard and Amex on Free and Pro. Enterprise can pay by invoice on NET-30 terms in AUD, USD, GBP or EUR. Purchase orders are fine; send them to <code>ap@cronwright.example.com</code>.</p>
+      </details>
+      <details>
+        <summary>Do you offer refunds?</summary>
+        <p>Cancel an annual plan within the first 30 days and we refund it in full. After that the plan runs to the end of its term — we don't do partial-year refunds. We email every workspace owner 14 days before a renewal charge.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Cronwright Pty Ltd · ABN 62 418 903 771</span>
+    <a href="#top">Terms</a><a href="#top">Privacy</a><a href="#top">Status</a><a href="#top">Security</a>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.getElementById('top'),
+      m=document.getElementById('b-month'),
+      y=document.getElementById('b-year');
+  function set(cycle){
+    root.setAttribute('data-cycle',cycle);
+    m.setAttribute('aria-pressed',String(cycle==='month'));
+    y.setAttribute('aria-pressed',String(cycle==='year'));
+  }
+  m.addEventListener('click',function(){set('month');});
+  y.addEventListener('click',function(){set('year');});
+})();
+</script>
+</body>
+</html>

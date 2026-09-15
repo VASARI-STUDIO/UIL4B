@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harbour — payout infrastructure</title>
+<style>
+  :root{
+    --bg:#07060f;
+    --ink:#f4f3fb;
+    --dim:#9fb9bd;
+    --faint:#5c7f86;
+    --line:rgba(180,170,255,.14);
+    --c1:#2fb8c6;
+    --c2:#17607a;
+    --c3:#7fe8d0;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{overflow-x:hidden}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  a{color:inherit}
+  ::selection{background:rgba(240,147,251,.32)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  .wrap{position:relative;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;overflow:hidden}
+
+  /* ---------- the blob ---------- */
+  .field{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .blob{
+    position:absolute;
+    right:1.5vw;top:50%;
+    width:min(70vh,620px);aspect-ratio:1;
+    transform:translateY(-50%);
+    filter:url(#organic);
+    will-change:transform;
+  }
+  .blob .skin,.blob .halo{position:absolute;inset:0}
+  .blob .skin{
+    border-radius:58% 42% 47% 53% / 46% 55% 45% 54%;
+    background:
+      radial-gradient(56% 52% at 30% 24%,rgba(255,255,255,.34) 0%,rgba(255,255,255,0) 58%),
+      radial-gradient(120% 120% at 22% 14%,var(--c1) 0%,rgba(47,184,198,0) 62%),
+      radial-gradient(110% 110% at 86% 82%,var(--c3) 0%,rgba(127,232,208,0) 58%),
+      linear-gradient(148deg,#2a93b5 0%,var(--c2) 46%,#3fc9b0 72%,var(--c3) 100%);
+    box-shadow:
+      inset 0 0 0 1.5px rgba(255,255,255,.26),
+      inset 14px -18px 90px rgba(10,6,26,.62),
+      inset -30px 26px 80px rgba(255,255,255,.14);
+  }
+  /* bloom pass: a blurred, scaled copy sitting behind the body */
+  .blob .halo{
+    border-radius:58% 42% 47% 53% / 46% 55% 45% 54%;
+    background:linear-gradient(148deg,var(--c1),var(--c2) 48%,var(--c3));
+    filter:blur(46px);opacity:.5;transform:scale(1.04);
+  }
+  /* a small satellite lobe keeps the silhouette from reading as a circle */
+  .lobe{
+    position:absolute;left:8%;bottom:6%;
+    width:26%;aspect-ratio:1;
+    border-radius:52% 48% 38% 62% / 56% 40% 60% 44%;
+    background:radial-gradient(70% 70% at 34% 28%,#b6f5e4 0%,var(--c2) 46%,#0e3a4a 100%);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),inset 8px -10px 34px rgba(8,4,22,.6);
+    opacity:.92;
+  }
+  .grain{
+    position:fixed;inset:0;width:100%;height:100%;z-index:6;
+    opacity:.05;mix-blend-mode:overlay;pointer-events:none;
+  }
+  .sv{position:absolute;width:0;height:0;overflow:hidden}
+
+  /* ---------- chrome ---------- */
+  .nav{
+    position:relative;z-index:3;display:flex;align-items:center;gap:28px;
+    padding:22px clamp(18px,4vw,60px);
+  }
+  .logo{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:660;letter-spacing:-.01em;text-decoration:none}
+  .logo svg{display:block}
+  .nav nav{display:flex;gap:24px;margin-left:12px;font-size:14px}
+  .nav nav a{color:var(--dim);text-decoration:none}
+  .nav nav a:hover{color:var(--ink)}
+  .nav .right{margin-left:auto;display:flex;align-items:center;gap:16px;font-size:14px}
+  .nav .right a:first-child{color:var(--dim);text-decoration:none}
+  .nav .right a:first-child:hover{color:var(--ink)}
+  .pill{
+    text-decoration:none;font-weight:600;font-size:14px;padding:9px 16px;border-radius:8px;
+    background:var(--ink);color:#0b0917;
+  }
+  .pill:hover{background:#fff}
+  :where(a,button):focus-visible{outline:2px solid #7fe8d0;outline-offset:3px;border-radius:4px}
+
+  /* ---------- hero ---------- */
+  main{position:relative;z-index:2;flex:1;display:flex;align-items:center;
+    padding:clamp(16px,3vh,44px) clamp(18px,4vw,60px) clamp(28px,5vh,64px)}
+  .copy{max-width:min(600px,56%)}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:9px;margin:0 0 26px;
+    font-size:12px;letter-spacing:.02em;color:var(--dim);
+    border:1px solid var(--line);border-radius:999px;padding:5px 13px 5px 8px;
+    background:rgba(255,255,255,.03);
+  }
+  .eyebrow b{
+    font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
+    background:linear-gradient(90deg,var(--c1),var(--c3));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  h1{
+    margin:0;font-size:clamp(36px,4.5vw,60px);line-height:1.04;
+    letter-spacing:-.035em;font-weight:660;text-wrap:balance;
+  }
+  .lede{margin:20px 0 0;max-width:46ch;color:var(--dim);font-size:clamp(15px,1.25vw,18px)}
+  .acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+  .btn{
+    display:inline-flex;align-items:center;gap:.55em;text-decoration:none;
+    font-size:14.5px;font-weight:600;padding:12px 20px;border-radius:10px;
+    background:var(--ink);color:#0b0917;transition:transform .16s ease,background .16s ease;
+  }
+  .btn:hover{background:#fff;transform:translateY(-1px)}
+  .btn.line{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.line:hover{background:rgba(255,255,255,.06);border-color:rgba(200,190,255,.34)}
+  .snippet{
+    margin-top:28px;max-width:min(500px,100%);overflow-x:auto;
+    border:1px solid var(--line);border-radius:12px;background:rgba(9,7,20,.72);
+    padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12.5px;line-height:1.7;color:#cfe2e0;white-space:pre;
+  }
+  .snippet .m{color:#9be7b0}
+  .snippet .k{color:#6fd8e0}
+  .snippet .s{color:#f0a9fb}
+  .note{margin:18px 0 0;font-size:12.5px;color:var(--faint);max-width:44ch}
+
+  /* ---------- motion ---------- */
+  @media (prefers-reduced-motion: no-preference){
+    .blob{animation:drift 26s ease-in-out infinite alternate;animation-delay:-7s}
+    .blob .skin{animation:morph 19s ease-in-out infinite;animation-delay:-5s}
+    .blob .halo{animation:morph 19s ease-in-out infinite reverse;animation-delay:-9s}
+    .lobe{animation:morph 13s ease-in-out infinite,bob 9s ease-in-out infinite alternate;animation-delay:-4s,-2s}
+    @keyframes morph{
+      0%  {border-radius:58% 42% 47% 53% / 46% 55% 45% 54%;transform:rotate(0deg) scale(1)}
+      25% {border-radius:42% 58% 62% 38% / 58% 42% 58% 42%;transform:rotate(3deg) scale(1.02)}
+      50% {border-radius:63% 37% 38% 62% / 40% 62% 38% 60%;transform:rotate(-2deg) scale(.985)}
+      75% {border-radius:46% 54% 55% 45% / 62% 40% 60% 38%;transform:rotate(2deg) scale(1.015)}
+      100%{border-radius:58% 42% 47% 53% / 46% 55% 45% 54%;transform:rotate(0deg) scale(1)}
+    }
+    @keyframes drift{
+      from{transform:translate(0,-50%) rotate(0deg)}
+      to  {transform:translate(-3.5%,-46%) rotate(9deg)}
+    }
+    @keyframes bob{from{translate:0 0}to{translate:6% -9%}}
+    .rise{animation:rise .9s cubic-bezier(.2,.9,.3,1) both}
+    @keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+    .r1{animation-delay:.04s}.r2{animation-delay:.12s}.r3{animation-delay:.2s}
+    .r4{animation-delay:.28s}.r5{animation-delay:.36s}
+  }
+  @media (prefers-reduced-motion: reduce){
+    /* everything already sits at its finished state; nothing to un-hide */
+    .blob,.blob .skin,.blob .halo,.lobe,.rise{animation:none}
+    .rise{opacity:1;transform:none}
+  }
+
+  @media (max-width:900px){
+    .nav nav{display:none}
+    .copy{max-width:100%}
+    .blob{right:-14vw;top:21%;width:min(88vw,520px);opacity:.92}
+    .lobe{left:2%;bottom:0}
+    main{align-items:flex-end;padding-top:34vh}
+    h1{font-size:clamp(34px,9vw,48px)}
+  }
+  @media (max-width:520px){
+    .snippet{font-size:11.5px}
+    .nav .right a:first-child{display:none}
+  }
+</style>
+</head>
+<body>
+
+<svg class="sv" aria-hidden="true" focusable="false">
+  <filter id="organic" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0075 0.011" numOctaves="3" seed="19" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="grain">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+</svg>
+
+<div class="wrap">
+  <div class="field" aria-hidden="true">
+    <div class="blob">
+      <div class="halo"></div>
+      <div class="skin"></div>
+      <div class="lobe"></div>
+    </div>
+  </div>
+
+  <header class="nav">
+    <a class="logo" href="#top">
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+        <circle cx="10" cy="10" r="9" fill="none" stroke="#7fe8d0" stroke-width="1.6"/>
+        <path d="M10 1a9 9 0 0 1 0 18" fill="none" stroke="#2fb8c6" stroke-width="1.6"/>
+        <circle cx="10" cy="10" r="2.6" fill="#f4f3fb"/>
+      </svg>
+      Harbour
+    </a>
+    <nav aria-label="Primary">
+      <a href="#top">Product</a><a href="#top">Docs</a><a href="#top">Pricing</a><a href="#top">Changelog</a>
+    </nav>
+    <div class="right">
+      <a href="#top">Sign in</a>
+      <a class="pill" href="#top">Get API keys</a>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="copy">
+      <p class="eyebrow rise r1"><b>New</b> SGD FAST rails, live since 2 September</p>
+      <h1 class="rise r2">Money that lands today, in the currency they asked for.</h1>
+      <p class="lede rise r3">One API for 42 currencies and local rails in 19 countries — with a double-entry ledger you can reconcile line by line instead of guessing.</p>
+      <div class="acts rise r4">
+        <a class="btn" href="#top">Read the docs</a>
+        <a class="btn line" href="#top">Talk to an engineer <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="snippet rise r5" role="img" aria-label="Example request: POST to slash v1 slash payouts, amount 482000 minor units, currency SGD, rail FAST.">
+<span class="m">POST</span> /v1/payouts
+{
+  <span class="k">"amount"</span>: <span class="s">482000</span>,
+  <span class="k">"currency"</span>: <span class="s">"SGD"</span>,
+  <span class="k">"rail"</span>: <span class="s">"FAST"</span>
+}</div>
+      <p class="note rise r5">Live in Australia, New Zealand, Singapore, the UK and the EEA. US rails in private beta.</p>
+    </div>
+  </main>
+</div>
+
+<svg class="grain" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+  <rect width="100%" height="100%" filter="url(#grain)"/>
+</svg>
+
+</body>
+</html>

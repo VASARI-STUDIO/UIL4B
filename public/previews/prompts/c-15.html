@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kestrel — motion direction</title>
+<style>
+  @property --p{syntax:'<number>';inherits:true;initial-value:0}
+
+  :root{
+    --bg:#0a0a0a;
+    --ink:#f2f2f0;
+    --dim:#8d8d88;
+    --faint:#5b5b57;
+    --line:rgba(255,255,255,.12);
+    --p:0;
+    /* scatter amount: nothing until 60% of the scroll, then all of it */
+    --s:clamp(0,calc((var(--p) - .58) * 2.4),1);
+    /* extrusion depth per layer — already visible at rest, dramatic on scroll */
+    --dz:calc((.2 + var(--p) * .8) * 2.4px);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{overflow-x:clip;background:var(--bg)}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:clip;
+  }
+  a{color:inherit}
+  ::selection{background:#f2f2f0;color:#0a0a0a}
+  :where(a,button):focus-visible{outline:2px solid #fff;outline-offset:4px}
+
+  /* ---------- chrome ---------- */
+  .nav{
+    position:fixed;top:0;left:0;right:0;z-index:20;
+    display:flex;align-items:baseline;gap:22px;
+    padding:20px clamp(16px,4vw,48px);
+    font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+    mix-blend-mode:difference;
+  }
+  .nav .mark{font-weight:700;letter-spacing:.22em}
+  .nav .set{margin-left:auto;display:flex;gap:22px}
+  .nav a{text-decoration:none;color:#fff}
+  .nav a:hover{opacity:.62}
+  .bar{
+    position:fixed;left:0;top:0;height:2px;z-index:21;
+    width:100%;transform-origin:0 50%;transform:scaleX(0);
+    background:linear-gradient(90deg,#4b4b4b,#f2f2f0);
+  }
+
+  /* ---------- hero ---------- */
+  /* the hero is pinned so the whole extrusion sequence plays in one place,
+     the way it would on the site this prompt describes */
+  .pin{position:relative;height:230vh}
+  .hero{
+    position:sticky;top:0;height:100vh;height:100svh;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+  }
+  /* the surface the type is sitting on — it only appears once the camera tips */
+  .floor{
+    position:absolute;left:50%;bottom:-4%;width:340%;height:165%;
+    transform:translateX(-50%) perspective(1400px) rotateX(66deg);
+    transform-origin:50% 100%;
+    background-image:
+      linear-gradient(90deg,rgba(255,255,255,.26) 1px,transparent 1px),
+      linear-gradient(0deg,rgba(255,255,255,.26) 1px,transparent 1px);
+    background-size:104px 104px;
+    -webkit-mask-image:linear-gradient(0deg,#000 2%,rgba(0,0,0,.42) 42%,transparent 82%);
+    mask-image:linear-gradient(0deg,#000 2%,rgba(0,0,0,.42) 42%,transparent 82%);
+    opacity:calc(var(--p) * 1.35);
+    pointer-events:none;
+  }
+  .fog{
+    position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(64% 54% at 50% 46%,rgba(150,150,160,.13) 0%,rgba(10,10,10,0) 62%),
+               radial-gradient(120% 60% at 50% 112%,rgba(10,10,10,.9) 0%,rgba(10,10,10,0) 58%);
+  }
+
+  .scene{
+    position:relative;z-index:2;
+    perspective:1000px;perspective-origin:50% 44%;
+    width:100%;padding:0 clamp(12px,3vw,40px);
+  }
+  .word{
+    display:flex;justify-content:center;align-items:center;
+    transform-style:preserve-3d;
+    transform:
+      rotateX(calc(6deg + var(--p) * 40deg))
+      rotateY(calc(-9deg + var(--p) * -10deg))
+      translateY(calc(var(--p) * -4vh))
+      scale(calc(1 + var(--p) * .05));
+    font-weight:800;
+    font-size:clamp(52px,14.4vw,184px);
+    letter-spacing:-.045em;
+    line-height:.86;
+  }
+  .ch{
+    position:relative;display:block;transform-style:preserve-3d;
+    transform:
+      translate3d(calc(var(--sx,0) * var(--s) * 1px),
+                  calc(var(--sy,0) * var(--s) * 1px),
+                  calc(var(--sz,0) * var(--s) * 1px))
+      rotate3d(var(--rx,1),var(--ry,1),.4,calc(var(--rot,0) * var(--s) * 1deg));
+    opacity:calc(1 - var(--s) * .86);
+    /* metal front face */
+    background:linear-gradient(168deg,#ffffff 0%,#e6e7ea 34%,#a8abb4 62%,#e9eaee 100%);
+    -webkit-background-clip:text;background-clip:text;
+    color:transparent;
+    -webkit-text-fill-color:transparent;
+  }
+  .ch .l{
+    position:absolute;left:0;top:0;
+    transform:translateZ(calc(var(--i) * var(--dz) * -1));
+    background:none;-webkit-text-fill-color:currentColor;color:inherit;
+    pointer-events:none;
+  }
+
+  .kicker{
+    position:absolute;z-index:3;left:50%;transform:translateX(-50%);
+    top:clamp(84px,14vh,150px);
+    font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);
+    text-align:center;white-space:nowrap;
+    opacity:calc(1 - var(--s));
+  }
+  .scrollcue{
+    position:absolute;z-index:3;left:50%;transform:translateX(-50%);
+    bottom:clamp(22px,5vh,48px);
+    font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);
+    display:flex;align-items:center;gap:10px;
+    opacity:calc(1 - var(--p) * 3);
+  }
+  .scrollcue span{display:block;width:44px;height:1px;background:currentColor}
+
+  /* ---------- work ---------- */
+  .work{
+    position:relative;z-index:4;background:var(--bg);
+    padding:clamp(48px,10vh,110px) clamp(16px,4vw,48px) clamp(60px,12vh,130px);
+    border-top:1px solid var(--line);
+  }
+  .work h2{
+    margin:0 0 6px;font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;
+  }
+  .work ul{list-style:none;margin:28px 0 0;padding:0}
+  .work li{border-top:1px solid var(--line)}
+  .work li:last-child{border-bottom:1px solid var(--line)}
+  .work a{
+    display:grid;grid-template-columns:1fr auto auto;gap:14px 24px;align-items:baseline;
+    padding:20px 2px;text-decoration:none;
+    transition:padding-left .25s cubic-bezier(.2,.9,.3,1),color .25s ease;
+  }
+  .work a:hover{padding-left:16px}
+  .work .t{font-size:clamp(20px,2.6vw,32px);font-weight:620;letter-spacing:-.02em}
+  .work .c{color:var(--dim);font-size:14px}
+  .work .y{color:var(--faint);font-size:12px;letter-spacing:.1em;font-variant-numeric:tabular-nums}
+  .foot{
+    padding:0 clamp(16px,4vw,48px) 40px;color:var(--faint);font-size:12px;
+    display:flex;flex-wrap:wrap;gap:6px 24px;background:var(--bg);position:relative;z-index:4;
+  }
+
+  /* ---------- motion ---------- */
+  @media (prefers-reduced-motion: no-preference){
+    @supports (animation-timeline: scroll()){
+      :root{
+        animation:prog linear both;
+        animation-timeline:scroll(root block);
+        animation-range:0 130vh;
+      }
+      @keyframes prog{from{--p:0}to{--p:1}}
+      .bar{
+        animation:barGrow linear both;
+        animation-timeline:scroll(root block);
+      }
+      @keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+    }
+    .work a:hover .t{color:#fff}
+  }
+  @media (prefers-reduced-motion: reduce){
+    /* frozen at the most legible point of the sequence: full extrusion, tipped,
+       nothing scattered and nothing faded out */
+    :root{--p:.42}
+    .pin{height:100svh}
+    .bar{display:none}
+    .scrollcue{display:none}
+    .work a{transition:none}
+  }
+
+  @media (max-width:760px){
+    .word{font-size:clamp(46px,17vw,96px)}
+    .kicker{white-space:normal;max-width:86vw;font-size:10px;letter-spacing:.16em;line-height:1.7}
+    .nav .set{gap:14px}
+    .work a{grid-template-columns:1fr auto}
+    .work .y{grid-column:2}
+    .work .c{grid-column:1;grid-row:2}
+  }
+  @media (max-width:420px){
+    .nav .set a:nth-child(2){display:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="mark" href="#top">Kestrel</a>
+  <div class="set">
+    <a href="#work">Work</a>
+    <a href="#work">Studio</a>
+    <a href="#work">Contact</a>
+  </div>
+</header>
+
+<section class="pin" id="top">
+<div class="hero">
+  <div class="fog" aria-hidden="true"></div>
+  <div class="floor" aria-hidden="true"></div>
+  <p class="kicker">Motion direction — Rotterdam &amp; Melbourne</p>
+
+  <div class="scene">
+    <h1 class="word" id="word" aria-label="Kestrel">
+      <span class="ch" data-c="K" style="--sx:-210;--sy:-120;--sz:180;--rot:-46;--rx:1;--ry:.4">K</span>
+      <span class="ch" data-c="E" style="--sx:-128;--sy:96;--sz:260;--rot:38;--rx:.6;--ry:1">E</span>
+      <span class="ch" data-c="S" style="--sx:-46;--sy:-168;--sz:120;--rot:52;--rx:1;--ry:.2">S</span>
+      <span class="ch" data-c="T" style="--sx:24;--sy:132;--sz:300;--rot:-30;--rx:.3;--ry:1">T</span>
+      <span class="ch" data-c="R" style="--sx:118;--sy:-104;--sz:150;--rot:44;--rx:1;--ry:.7">R</span>
+      <span class="ch" data-c="E" style="--sx:196;--sy:88;--sz:230;--rot:-58;--rx:.5;--ry:1">E</span>
+      <span class="ch" data-c="L" style="--sx:262;--sy:-64;--sz:90;--rot:34;--rx:1;--ry:.5">L</span>
+    </h1>
+  </div>
+
+  <p class="scrollcue"><span aria-hidden="true"></span>Scroll to extrude</p>
+</div>
+</section>
+
+<section class="work" id="work">
+  <h2>Selected work</h2>
+  <ul>
+    <li><a href="#work"><span class="t">Halogen</span><span class="c">Bowers Field — title sequence</span><span class="y">2025</span></a></li>
+    <li><a href="#work"><span class="t">Tesserae</span><span class="c">Northshore Ballet — stage projection</span><span class="y">2025</span></a></li>
+    <li><a href="#work"><span class="t">Slow Weather</span><span class="c">Met Office — data film</span><span class="y">2024</span></a></li>
+    <li><a href="#work"><span class="t">Ninety Nine Bridges</span><span class="c">Rijkswaterstaat — identity in motion</span><span class="y">2024</span></a></li>
+    <li><a href="#work"><span class="t">Cold Open</span><span class="c">Kestrel — self-initiated</span><span class="y">2023</span></a></li>
+  </ul>
+</section>
+
+<footer class="foot">
+  <span>Kestrel Motion BV</span>
+  <span>Schiedamsedijk 61, 3011 EC Rotterdam</span>
+  <span>studio@kestrel.example.com</span>
+</footer>
+
+<script>
+(function(){
+  var word = document.getElementById('word');
+  if (!word) return;
+  var LAYERS = 16;
+  var chars = word.querySelectorAll('.ch');
+  for (var c = 0; c < chars.length; c++){
+    var ch = chars[c];
+    var glyph = ch.getAttribute('data-c');
+    var frag = document.createDocumentFragment();
+    for (var i = LAYERS; i >= 1; i--){
+      var s = document.createElement('span');
+      s.className = 'l';
+      s.setAttribute('aria-hidden', 'true');
+      s.style.setProperty('--i', i);
+      /* the extruded side wall: bright where it meets the face, black at depth */
+      s.style.color = 'hsl(222 6% ' + Math.max(4, 46 - i * 2.7).toFixed(1) + '%)';
+      s.textContent = glyph;
+      frag.appendChild(s);
+    }
+    ch.insertBefore(frag, ch.firstChild);
+  }
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var native = window.CSS && CSS.supports && CSS.supports('animation-timeline', 'scroll()');
+  if (reduce || native) return;
+
+  /* fallback for engines without scroll-driven animations: same --p, set by hand */
+  var root = document.documentElement, queued = false, bar = document.querySelector('.bar');
+  function apply(){
+    queued = false;
+    var span = (window.innerHeight || 1) * 1.3;
+    var max = Math.max(1, root.scrollHeight - window.innerHeight);
+    var y = window.pageYOffset || root.scrollTop || 0;
+    root.style.setProperty('--p', Math.min(1, y / span).toFixed(4));
+    if (bar) bar.style.transform = 'scaleX(' + Math.min(1, y / max).toFixed(4) + ')';
+  }
+  function onScroll(){ if (!queued){ queued = true; requestAnimationFrame(apply); } }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+  apply();
+})();
+</script>
+</body>
+</html>

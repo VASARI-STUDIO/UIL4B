@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Relay — edge platform</title>
+<style>
+  :root{
+    --ink:#f0eefb;
+    --dim:#b4aede;
+    --faint:#7f78ad;
+    --line:rgba(255,255,255,.20);
+    --R:342px;          /* carousel radius */
+    --cw:240px;         /* card width */
+    --chh:244px;        /* card height */
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{overflow-x:clip}
+  body{
+    background:#181538;
+    background:linear-gradient(135deg,#0f0c29 0%,#302b63 52%,#24243e 100%);
+    background-attachment:fixed;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip;
+  }
+  a{color:inherit}
+  ::selection{background:rgba(190,175,255,.4)}
+  :where(a,button):focus-visible{outline:2px solid #cfc6ff;outline-offset:3px}
+
+  .hero{position:relative;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;overflow:hidden}
+  /* the light the glass has something to catch */
+  .lamp{position:absolute;border-radius:50%;pointer-events:none;filter:blur(10px)}
+  .lamp.a{left:50%;top:-14%;width:min(120vw,900px);aspect-ratio:1;transform:translateX(-50%);
+    background:radial-gradient(circle,rgba(224,224,255,.22) 0%,rgba(140,120,255,.10) 38%,transparent 66%)}
+  .lamp.b{left:-12%;bottom:-24%;width:min(90vw,620px);aspect-ratio:1;
+    background:radial-gradient(circle,rgba(120,90,220,.30) 0%,transparent 64%)}
+  .lamp.c{right:-10%;top:32%;width:min(80vw,520px);aspect-ratio:1;
+    background:radial-gradient(circle,rgba(94,196,232,.18) 0%,transparent 62%)}
+
+  .nav{
+    position:relative;z-index:4;display:flex;align-items:center;gap:26px;
+    padding:22px clamp(18px,4vw,56px);
+  }
+  .mark{display:flex;align-items:center;gap:9px;text-decoration:none;font-size:15px;font-weight:660;letter-spacing:-.01em}
+  .nav nav{display:flex;gap:24px;margin-left:auto;font-size:14px}
+  .nav nav a{color:var(--dim);text-decoration:none}
+  .nav nav a:hover{color:var(--ink)}
+  .pill{
+    text-decoration:none;font-size:14px;font-weight:600;padding:9px 17px;border-radius:999px;
+    background:rgba(255,255,255,.94);color:#1a1636;
+  }
+  .pill:hover{background:#fff}
+
+  .head{position:relative;z-index:3;text-align:center;padding:clamp(2px,1vh,14px) clamp(18px,4vw,56px) 0}
+  .eyebrow{margin:0 0 11px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+  h1{
+    margin:0 auto;max-width:21ch;
+    font-size:clamp(23px,2.7vw,34px);line-height:1.1;letter-spacing:-.026em;font-weight:660;
+  }
+  .sub{margin:10px auto 0;max-width:62ch;color:var(--dim);font-size:clamp(13px,.95vw,14.5px)}
+
+  /* ---------- carousel ---------- */
+  .stage{
+    position:relative;z-index:2;flex:1;
+    min-height:calc(var(--chh) + 100px);
+    display:flex;align-items:center;justify-content:center;
+    perspective:1650px;perspective-origin:50% 50%;
+    touch-action:pan-y;cursor:grab;
+  }
+  .stage.grabbing{cursor:grabbing}
+  .ring{
+    position:relative;width:0;height:0;
+    transform-style:preserve-3d;
+    transform:rotateX(-6deg) rotateY(0deg);
+  }
+  .card{
+    position:absolute;
+    width:var(--cw);height:var(--chh);
+    left:calc(var(--cw) / -2);top:calc(var(--chh) / -2);
+    transform:rotateY(calc(var(--i) * 60deg)) translateZ(var(--R));
+    transform-origin:50% 50%;
+    /* without this the far cards paint their own mirrored text through the ring */
+    backface-visibility:hidden;
+  }
+  .glass{
+    position:relative;width:100%;height:100%;
+    border-radius:20px;
+    padding:22px 20px;
+    display:flex;flex-direction:column;
+    border:1px solid rgba(255,255,255,.22);
+    background:
+      linear-gradient(150deg,rgba(255,255,255,.30) 0%,rgba(255,255,255,.14) 30%,rgba(255,255,255,.085) 62%,rgba(255,255,255,.17) 100%),
+      linear-gradient(180deg,rgba(38,28,86,.46),rgba(24,18,58,.56));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.42),
+      inset 0 -18px 40px rgba(20,12,60,.30),
+      0 26px 60px rgba(8,4,32,.46);
+    transform-origin:50% 50%;
+    will-change:transform,opacity;
+  }
+  /* the refraction edge — a bright sliver down the leading side */
+  .glass::before{
+    content:"";position:absolute;left:0;top:10%;bottom:10%;width:2px;border-radius:2px;
+    background:linear-gradient(180deg,transparent,rgba(255,255,255,.55),transparent);
+  }
+  /* cards further round the ring sink into the background */
+  .glass::after{
+    content:"";position:absolute;inset:-1px;border-radius:20px;pointer-events:none;
+    background:rgba(11,8,32,.72);opacity:var(--back,0);
+  }
+  .ico{
+    width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
+    background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);
+    color:#efeaff;margin-bottom:auto;
+  }
+  .ico svg{display:block}
+  .card h2{margin:16px 0 0;font-size:17.5px;line-height:1.2;letter-spacing:-.015em;font-weight:640}
+  .card p{margin:7px 0 0;font-size:12.5px;line-height:1.46;color:rgba(228,222,255,.82)}
+  .card .meta{
+    margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.16);
+    font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(214,206,255,.62);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* no-JS / first-paint depth, so the ring never paints flat */
+  .card:nth-child(1) .glass{--back:0}
+  .card:nth-child(2) .glass,.card:nth-child(6) .glass{--back:.46;opacity:.82}
+  .card:nth-child(3) .glass,.card:nth-child(5) .glass{--back:.8;opacity:.48}
+  .card:nth-child(4) .glass{--back:.92;opacity:.3}
+
+  .controls{
+    position:relative;z-index:4;
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    padding:2px clamp(18px,4vw,56px) clamp(22px,4vh,44px);
+  }
+  .controls button{
+    width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
+    border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--ink);
+    cursor:pointer;transition:background .16s ease,border-color .16s ease;
+  }
+  .controls button:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.44)}
+  .controls .dots{display:flex;gap:7px;margin:0 6px}
+  .controls .dots i{
+    display:block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.28);
+    transition:background .2s ease,transform .2s ease;
+  }
+  .controls .dots i.on{background:#fff;transform:scale(1.35)}
+  .drag{
+    margin:0 0 0 10px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    /* the ring sits still at its rest angle: six cards, front one readable,
+       every one of them already at full opacity. The buttons still work. */
+    .drag{visibility:hidden}
+    .controls button,.controls .dots i{transition:none}
+  }
+
+  @media (max-width:900px){
+    .nav nav{display:none}
+    :root{--R:262px;--cw:202px;--chh:256px}
+    h1{font-size:clamp(27px,5.4vw,36px)}
+  }
+  @media (max-width:560px){
+    :root{--R:190px;--cw:176px;--chh:274px}
+    .stage{perspective:900px}
+    .card h2{font-size:16.5px}
+    .card p{font-size:12px}
+    .card .meta{font-size:9.5px;letter-spacing:.1em}
+    .drag{display:none}
+  }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="lamp a" aria-hidden="true"></div>
+  <div class="lamp b" aria-hidden="true"></div>
+  <div class="lamp c" aria-hidden="true"></div>
+
+  <header class="nav">
+    <a class="mark" href="#top">
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+        <rect x="1.4" y="1.4" width="17.2" height="17.2" rx="5" fill="none" stroke="#cfc6ff" stroke-width="1.5"/>
+        <path d="M6.5 13.5L10 6l3.5 7.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+      Relay
+    </a>
+    <nav aria-label="Primary">
+      <a href="#top">Platform</a><a href="#top">Docs</a><a href="#top">Pricing</a><a href="#top">Status</a>
+    </nav>
+    <a class="pill" href="#top">Start a project</a>
+  </header>
+
+  <div class="head" id="top">
+    <p class="eyebrow">The edge platform</p>
+    <h1>Everything runs at the edge. Nothing needs operating.</h1>
+    <p class="sub">Relay builds, signs and ships your code to 214 points of presence, then stays out of the way.</p>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="ring" id="ring">
+      <div class="card" style="--i:0">
+        <article class="glass">
+          <span class="ico" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3c3 2.6 4.6 6.1 4.6 9.2L12 16.6 7.4 12.2C7.4 9.1 9 5.6 12 3Z"/>
+              <circle cx="12" cy="10" r="1.7"/><path d="M8.2 16.3 6 20.5l4.2-1.6M15.8 16.3 18 20.5l-4.2-1.6"/>
+            </svg>
+          </span>
+          <h2>Four minutes to first deploy</h2>
+          <p>Point Relay at a repository. It builds, signs the artefact and pushes it to every edge before the branch finishes merging.</p>
+          <p class="meta">Median cold start 41 ms</p>
+        </article>
+      </div>
+
+      <div class="card" style="--i:1">
+        <article class="glass">
+          <span class="ico" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3l7.2 2.9v5.2c0 4.6-3.1 7.7-7.2 9.2-4.1-1.5-7.2-4.6-7.2-9.2V5.9L12 3Z"/>
+              <path d="M9.3 11.8l1.9 1.9 3.6-3.7"/>
+            </svg>
+          </span>
+          <h2>Keys never leave the enclave</h2>
+          <p>Secrets are sealed to the node that runs them and decrypt nowhere else. Rotation is a thirty-second job, not a migration.</p>
+          <p class="meta">mTLS on every hop</p>
+        </article>
+      </div>
+
+      <div class="card" style="--i:2">
+        <article class="glass">
+          <span class="ico" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13.2 2.8 5.6 13.2h5l-1 8 7.8-10.6h-5l.8-7.8Z"/>
+            </svg>
+          </span>
+          <h2>Replicated before the response returns</h2>
+          <p>A write is acknowledged only once every region holds it. No queue to drain, and no eventual surprise on the read path.</p>
+          <p class="meta">p99 commit 40 ms</p>
+        </article>
+      </div>
+
+      <div class="card" style="--i:3">
+        <article class="glass">
+          <span class="ico" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.6-3.6-9S9.6 5.6 12 3Z"/>
+            </svg>
+          </span>
+          <h2>214 edges, 76 countries</h2>
+          <p>Anycast from Reykjavík to Hobart, with capacity planned per region rather than averaged across a continent.</p>
+          <p class="meta">Slowest p99: Perth, 38 ms</p>
+        </article>
+      </div>
+
+      <div class="card" style="--i:4">
+        <article class="glass">
+          <span class="ico" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 6.5 3.6 12 9 17.5M15 6.5 20.4 12 15 17.5"/>
+            </svg>
+          </span>
+          <h2>One spec, nine generated clients</h2>
+          <p>REST and GraphQL come from the same OpenAPI document, so the SDKs cannot drift. <code>relay tail</code> streams logs from any edge.</p>
+          <p class="meta">OpenAPI 3.1 · CLI v4.2</p>
+        </article>
+      </div>
+
+      <div class="card" style="--i:5">
+        <article class="glass">
+          <span class="ico" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20.3S4.6 15.9 4.6 11a3.9 3.9 0 0 1 7.4-1.8A3.9 3.9 0 0 1 19.4 11c0 4.9-7.4 9.3-7.4 9.3Z"/>
+            </svg>
+          </span>
+          <h2>Open source, MIT, in public</h2>
+          <p>The runtime, the CLI and the edge proxy are all developed in the open — issues, RFCs and the roadmap included.</p>
+          <p class="meta">MIT licence</p>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button type="button" id="prev" aria-label="Previous feature">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5 8 12l6.5 7"/></svg>
+    </button>
+    <span class="dots" id="dots" aria-hidden="true">
+      <i class="on"></i><i></i><i></i><i></i><i></i><i></i>
+    </span>
+    <button type="button" id="next" aria-label="Next feature">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5 16 12l-6.5 7"/></svg>
+    </button>
+    <p class="drag">Drag to spin</p>
+  </div>
+</section>
+
+<script>
+(function(){
+  var ring = document.getElementById('ring');
+  var stage = document.getElementById('stage');
+  if (!ring || !stage) return;
+  var cards = ring.querySelectorAll('.card');
+  var glass = ring.querySelectorAll('.glass');
+  var dots = document.getElementById('dots').querySelectorAll('i');
+  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var angle = 0;          /* current ring rotation, degrees */
+  var goal = null;        /* snap target while easing */
+  var drag = null;        /* {x, a} while a pointer is down */
+  var holdUntil = 0;      /* timestamp: auto-rotate resumes after this */
+  var SPEED = 4.6;        /* degrees per SECOND, not per frame */
+
+  function paint(){
+    ring.style.transform = 'rotateX(-6deg) rotateY(' + angle.toFixed(2) + 'deg)';
+    var front = 0, best = -2;
+    for (var i = 0; i < cards.length; i++){
+      var a = (angle + i * 60) * Math.PI / 180;
+      var face = Math.cos(a);                       /* 1 = facing the viewer */
+      if (face > best){ best = face; front = i; }
+      var t = (face + 1) / 2;                       /* 0 behind .. 1 in front */
+      glass[i].style.transform = 'scale(' + (0.84 + 0.22 * t).toFixed(3) + ')';
+      glass[i].style.opacity = (0.26 + 0.74 * t).toFixed(3);
+      glass[i].style.setProperty('--back', (0.92 * (1 - t)).toFixed(3));
+    }
+    for (var d = 0; d < dots.length; d++) dots[d].className = (d === front ? 'on' : '');
+  }
+
+  function snapTarget(dir){
+    var base = Math.round(angle / 60) * 60;
+    return base + dir * 60;
+  }
+  function pause(ms){ holdUntil = performance.now() + (ms || 2600); }
+  function goTo(t){ goal = t; pause(3200); }
+
+  document.getElementById('next').addEventListener('click', function(){ goTo(snapTarget(-1)); });
+  document.getElementById('prev').addEventListener('click', function(){ goTo(snapTarget(1)); });
+
+  if (!still){
+    stage.addEventListener('pointerdown', function(e){
+      if (e.button !== undefined && e.button !== 0) return;
+      drag = { x: e.clientX, a: angle };
+      goal = null; pause(4000);
+      stage.classList.add('grabbing');
+      if (stage.setPointerCapture) { try { stage.setPointerCapture(e.pointerId); } catch (err) {} }
+    });
+    stage.addEventListener('pointermove', function(e){
+      if (!drag) return;
+      angle = drag.a + (e.clientX - drag.x) * 0.26;
+      paint();
+    });
+    function release(){
+      if (!drag) return;
+      drag = null;
+      stage.classList.remove('grabbing');
+      goal = Math.round(angle / 60) * 60;     /* snap to the nearest card */
+      pause(3600);
+    }
+    stage.addEventListener('pointerup', release);
+    stage.addEventListener('pointercancel', release);
+    stage.addEventListener('pointerleave', function(){ if (drag) release(); });
+    stage.addEventListener('mouseenter', function(){ pause(1200); });
+    stage.addEventListener('mousemove', function(){ if (!drag) pause(1200); });
+  }
+
+  paint();   /* correct depth on the very first paint */
+
+  if (still){
+    /* motion off: no spin, no easing. The arrows jump straight to the card. */
+    var jump = function(){ if (goal !== null){ angle = goal; goal = null; paint(); } };
+    document.getElementById('next').addEventListener('click', jump);
+    document.getElementById('prev').addEventListener('click', jump);
+    return;
+  }
+
+  /* let the first paint sit on the front card long enough to be photographed */
+  holdUntil = performance.now() + 1400;
+  var prev = performance.now();
+  (function loop(now){
+    var dt = Math.min(0.05, (now - prev) / 1000);
+    prev = now;
+    if (!drag){
+      if (goal !== null){
+        angle += (goal - angle) * (1 - Math.pow(0.004, dt));
+        if (Math.abs(goal - angle) < 0.06){ angle = goal; goal = null; }
+        paint();
+      } else if (now >= holdUntil){
+        angle -= SPEED * dt;
+        paint();
+      }
+    }
+    requestAnimationFrame(loop);
+  })(prev);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Measure — Ligature</title>
+<style>
+  :root{
+    --paper:#FBFAF7;
+    --paper-2:#F2F0EA;
+    --ink:#17171A;
+    --ink-80:#3A3A3F;
+    --ink-60:#63636B;
+    --ink-40:#94949C;
+    --rule:#E2DFD7;
+    --accent:#8C2F26;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--serif);font-size:18px;line-height:1.75;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  svg{display:block}
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  /* ---------- masthead ---------- */
+  .masthead{border-bottom:1px solid var(--rule)}
+  .mast-in{
+    max-width:1200px;margin:0 auto;padding:0 20px;height:58px;
+    display:flex;align-items:center;justify-content:space-between;gap:20px;
+  }
+  .pub{font-family:var(--serif);font-size:19px;letter-spacing:.16em;text-transform:uppercase;text-decoration:none}
+  .mast-nav{display:none;gap:24px;font-family:var(--sans);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+  @media(min-width:760px){.mast-nav{display:flex}}
+  .mast-nav a{color:var(--ink-60);text-decoration:none}
+  .mast-nav a:hover{color:var(--ink)}
+  .mast-nav a[aria-current]{color:var(--ink);border-bottom:1px solid var(--accent);padding-bottom:2px}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;background:#16161A;color:#fff;overflow:hidden}
+  .hero-art{position:absolute;inset:0}
+  .hero-art svg{width:100%;height:100%}
+  .hero-art::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(96deg,#16161A 0%,rgba(22,22,26,.97) 40%,rgba(22,22,26,.72) 58%,rgba(22,22,26,.3) 76%,rgba(22,22,26,.08) 100%);
+  }
+  @media(max-width:759px){
+    .hero-art::after{background:linear-gradient(180deg,rgba(22,22,26,.92),rgba(22,22,26,.76))}
+  }
+  .hero-in{
+    position:relative;max-width:1000px;margin:0 auto;padding:72px 20px 40px;
+  }
+  @media(min-width:760px){.hero-in{padding:132px 32px 56px}}
+  .eyebrow{
+    font-family:var(--sans);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:#C9A29C;margin:0 0 16px;
+  }
+  .hero h1{
+    font-size:clamp(34px,6.4vw,62px);line-height:1.06;letter-spacing:-.022em;
+    margin:0;max-width:15ch;font-weight:400;
+  }
+  .hero .dek{
+    font-size:clamp(17px,2.2vw,21px);line-height:1.55;color:rgba(255,255,255,.72);
+    margin:18px 0 0;max-width:46ch;
+  }
+
+  /* ---------- byline ---------- */
+  .byline{
+    max-width:1000px;margin:0 auto;padding:20px;
+    display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;
+    border-bottom:1px solid var(--rule);
+  }
+  @media(min-width:760px){.byline{padding:22px 32px}}
+  .avatar{
+    width:42px;height:42px;border-radius:50%;background:var(--paper-2);color:var(--accent);
+    display:flex;align-items:center;justify-content:center;font-size:15px;letter-spacing:.04em;flex:none;
+    border:1px solid var(--rule);
+  }
+  .who{font-size:15.5px;line-height:1.35}
+  .who b{font-weight:400}
+  .who span{display:block;font-family:var(--sans);font-size:12.5px;color:var(--ink-60);letter-spacing:.01em}
+  .meta{
+    margin-left:auto;font-family:var(--sans);font-size:12.5px;color:var(--ink-60);
+    display:flex;flex-wrap:wrap;gap:6px 16px;
+  }
+  .meta span{white-space:nowrap}
+
+  /* ---------- layout ---------- */
+  .shell{max-width:1000px;margin:0 auto;padding:0 20px}
+  @media(min-width:980px){
+    .shell{
+      display:grid;grid-template-columns:200px minmax(0,680px);
+      gap:56px;justify-content:center;max-width:none;padding:0 32px;
+    }
+  }
+  /* table of contents */
+  .toc{display:none}
+  @media(min-width:980px){
+    .toc{display:block;position:sticky;top:34px;align-self:start;padding-top:56px;max-height:calc(100vh - 60px);overflow:auto}
+  }
+  .toc h2{
+    font-family:var(--sans);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--ink-40);margin:0 0 14px;font-weight:600;
+  }
+  .toc ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--rule)}
+  .toc li{margin:0}
+  .toc a{
+    display:block;padding:7px 0 7px 14px;margin-left:-1px;border-left:1px solid transparent;
+    font-family:var(--sans);font-size:13px;line-height:1.4;color:var(--ink-60);text-decoration:none;
+  }
+  .toc a:hover{color:var(--ink)}
+  .toc a[aria-current="true"]{color:var(--ink);border-left-color:var(--accent);font-weight:600}
+
+  /* ---------- article ---------- */
+  article{padding:44px 0 0;max-width:680px}
+  @media(min-width:980px){article{padding:56px 0 0}}
+  article > p{margin:0 0 26px}
+  .lede-p{font-size:21px;line-height:1.62;color:var(--ink-80)}
+  .lede-p:first-letter{
+    float:left;font-size:64px;line-height:.82;padding:6px 10px 0 0;color:var(--accent);
+  }
+  h2{
+    font-size:29px;line-height:1.2;letter-spacing:-.015em;margin:52px 0 16px;font-weight:400;
+    scroll-margin-top:24px;
+  }
+  h3{font-size:20px;line-height:1.3;margin:34px 0 10px;font-weight:700;letter-spacing:-.005em}
+  article ul{margin:0 0 26px;padding-left:22px}
+  article li{margin-bottom:10px}
+  article strong{font-weight:700}
+  article a:not(.rel){color:var(--accent);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+
+  code{
+    font-family:var(--mono);font-size:.82em;background:var(--paper-2);
+    padding:.14em .38em;border-radius:3px;color:#5A2B24;
+  }
+  pre{
+    background:#1B1B1F;color:#E8E6E0;border-radius:6px;padding:18px 20px;overflow-x:auto;
+    font-family:var(--mono);font-size:13.5px;line-height:1.65;margin:0 0 12px;
+  }
+  pre code{background:none;padding:0;color:inherit;font-size:inherit}
+  .tok-sel{color:#9CC7A6}.tok-prop{color:#8FB8DB}.tok-val{color:#E8C07D}.tok-com{color:#6F6F78;font-style:italic}
+  .code-cap{font-family:var(--sans);font-size:12.5px;color:var(--ink-60);margin:0 0 30px}
+
+  blockquote{
+    margin:34px 0;padding:4px 0 4px 26px;border-left:3px solid var(--accent);
+    font-size:24px;line-height:1.42;letter-spacing:-.012em;color:var(--ink);
+  }
+  blockquote p{margin:0}
+  blockquote cite{
+    display:block;font-family:var(--sans);font-style:normal;font-size:12.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-40);margin-top:14px;
+  }
+
+  figure{margin:34px 0;padding:0}
+  figure .art{background:var(--paper-2);border:1px solid var(--rule);padding:22px 20px}
+  figcaption{
+    font-family:var(--sans);font-size:12.5px;line-height:1.55;color:var(--ink-60);margin-top:10px;
+    max-width:56ch;
+  }
+  figcaption b{color:var(--ink-80);font-weight:600}
+
+  .note{
+    font-family:var(--sans);font-size:14.5px;line-height:1.6;color:var(--ink-80);
+    background:var(--paper-2);padding:18px 20px;margin:0 0 30px;border-radius:4px;
+  }
+  .note b{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-60);margin-bottom:6px}
+
+  .endmark{color:var(--accent);font-size:20px}
+
+  /* ---------- related ---------- */
+  .related{border-top:1px solid var(--rule);margin-top:64px;padding:44px 0 72px}
+  .related-in{max-width:1000px;margin:0 auto;padding:0 20px}
+  @media(min-width:760px){.related-in{padding:0 32px}}
+  .related h2{
+    font-family:var(--sans);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--ink-40);margin:0 0 22px;font-weight:600;
+  }
+  .rel-grid{display:grid;gap:26px;grid-template-columns:1fr}
+  @media(min-width:640px){.rel-grid{grid-template-columns:repeat(3,1fr);gap:32px}}
+  .rel{text-decoration:none;display:block}
+  .rel .k{font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+  .rel h3{font-size:20px;line-height:1.28;margin:8px 0 6px;font-weight:400;letter-spacing:-.01em}
+  .rel p{font-family:var(--sans);font-size:13.5px;line-height:1.55;color:var(--ink-60);margin:0}
+  .rel .t{font-family:var(--sans);font-size:12px;color:var(--ink-40);margin-top:8px;display:block}
+  .rel:hover h3{text-decoration:underline;text-underline-offset:3px}
+
+  footer{border-top:1px solid var(--rule);background:var(--paper-2)}
+  .foot{
+    max-width:1000px;margin:0 auto;padding:24px 20px;display:flex;flex-wrap:wrap;gap:8px 24px;
+    justify-content:space-between;font-family:var(--sans);font-size:12.5px;color:var(--ink-60);
+  }
+  @media(min-width:760px){.foot{padding:24px 32px}}
+
+  @media(prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="mast-in">
+    <a class="pub" href="#top">Ligature</a>
+    <nav class="mast-nav" aria-label="Sections">
+      <a href="#top" aria-current="page">Typography</a>
+      <a href="#top">Print</a>
+      <a href="#top">Interfaces</a>
+      <a href="#top">Archive</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero" id="top">
+  <div class="hero-art" aria-hidden="true">
+    <svg viewBox="0 0 1200 460" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="hg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#16161A"/>
+          <stop offset="0.55" stop-color="#1D1D22"/>
+          <stop offset="1" stop-color="#2A2429"/>
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="460" fill="url(#hg)"/>
+      <!-- ghosted text block: a narrow column and a too-wide column -->
+      <g fill="#FFFFFF" opacity=".07">
+        <rect x="726" y="96" width="250" height="9"/><rect x="726" y="118" width="250" height="9"/>
+        <rect x="726" y="140" width="250" height="9"/><rect x="726" y="162" width="250" height="9"/>
+        <rect x="726" y="184" width="250" height="9"/><rect x="726" y="206" width="188" height="9"/>
+        <rect x="726" y="250" width="418" height="9"/><rect x="726" y="272" width="418" height="9"/>
+        <rect x="726" y="294" width="418" height="9"/><rect x="726" y="316" width="330" height="9"/>
+      </g>
+      <g stroke="#8C2F26" stroke-width="2" fill="none" opacity=".85">
+        <path d="M726 78h250M726 70v16M976 70v16"/>
+      </g>
+      <g stroke="#FFFFFF" stroke-width="2" fill="none" opacity=".3">
+        <path d="M726 232h418M726 224v16M1144 224v16"/>
+      </g>
+      <!-- ruler ticks along the bottom -->
+      <g stroke="#FFFFFF" opacity=".16" stroke-width="1">
+        <path d="M0 430h1200"/>
+        <path d="M40 430v-9M80 430v-14M120 430v-9M160 430v-9M200 430v-14M240 430v-9M280 430v-9M320 430v-14M360 430v-9M400 430v-9M440 430v-14M480 430v-9M520 430v-9M560 430v-14M600 430v-9M640 430v-9M680 430v-14M720 430v-9M760 430v-9M800 430v-14M840 430v-9M880 430v-9M920 430v-14M960 430v-9M1000 430v-9M1040 430v-14M1080 430v-9M1120 430v-9M1160 430v-14"/>
+      </g>
+    </svg>
+  </div>
+  <div class="hero-in">
+    <p class="eyebrow">Typography · Craft</p>
+    <h1>The measure is the decision you make first</h1>
+    <p class="dek">Line length sets the leading, the type size, the grid and half of how a page feels. Most of us set it last, by accident, in a container.</p>
+  </div>
+</div>
+
+<div class="byline">
+  <span class="avatar" aria-hidden="true">NF</span>
+  <span class="who"><b>Nadia Ferris</b><span>Type director, Ligature</span></span>
+  <span class="meta">
+    <span>11 September 2026</span>
+    <span>9 min read</span>
+    <span>Issue 34</span>
+  </span>
+</div>
+
+<div class="shell">
+
+  <nav class="toc" aria-label="On this page">
+    <h2>On this page</h2>
+    <ol>
+      <li><a href="#s1">What the measure is</a></li>
+      <li><a href="#s2">Where 45 to 75 comes from</a></li>
+      <li><a href="#s3">Setting it in CSS</a></li>
+      <li><a href="#s4">Leading moves with it</a></li>
+      <li><a href="#s5">What breaks on a phone</a></li>
+      <li><a href="#s6">A checklist</a></li>
+    </ol>
+  </nav>
+
+  <article>
+    <p class="lede-p">Every argument about web typography eventually turns out to be an argument about the measure. Someone says the type is too small; it is not, the column is too wide. Someone says the page feels cramped; it is not, the leading is fighting a short line. The measure — the length of a line of text — is the first decision, and almost nobody makes it first.</p>
+
+    <h2 id="s1">What the measure is</h2>
+    <p>The measure is how far the eye travels before it has to come back. At the end of every line the reader performs a return sweep: a fast movement back to the left edge and down one line. It is the least conscious and most fragile part of reading. When the line is long, the sweep has further to go and lands less accurately, and the reader re-reads a line or loses one. When the line is short, the sweep happens so often that it becomes the rhythm of the page, and the reader feels hurried.</p>
+    <p>So the measure is not a matter of taste. It is a mechanical setting, like the gear on a bicycle, and it has a range where the machine runs well.</p>
+
+    <figure>
+      <div class="art">
+        <svg viewBox="0 0 600 430" role="img" aria-label="Three columns of text set at 38, 66 and 104 characters a line and drawn to the same scale. A red curve traces the return sweep the eye makes at the end of each line: short and frequent in the narrow column, long and shallow in the wide one.">
+          <text x="0" y="16" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" fill="#63636B">38 CH — the return becomes the rhythm</text>
+          <g fill="#C7C3B8">
+            <rect x="0" y="30" width="180" height="7" rx="1"/>
+            <rect x="0" y="54" width="180" height="7" rx="1"/>
+            <rect x="0" y="78" width="180" height="7" rx="1"/>
+            <rect x="0" y="102" width="104" height="7" rx="1"/>
+          </g>
+          <g stroke="#8C2F26" stroke-width="1.4" fill="none" stroke-linecap="round">
+            <path d="M180 38 Q90 55 3 53"/>
+            <path d="M180 62 Q90 79 3 77"/>
+            <path d="M180 86 Q90 103 3 101"/>
+          </g>
+
+          <text x="0" y="156" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" fill="#63636B">66 CH — the working range</text>
+          <g fill="#C7C3B8">
+            <rect x="0" y="170" width="313" height="7" rx="1"/>
+            <rect x="0" y="194" width="313" height="7" rx="1"/>
+            <rect x="0" y="218" width="313" height="7" rx="1"/>
+            <rect x="0" y="242" width="182" height="7" rx="1"/>
+          </g>
+          <g stroke="#8C2F26" stroke-width="1.4" fill="none" stroke-linecap="round">
+            <path d="M313 178 Q157 195 3 193"/>
+            <path d="M313 202 Q157 219 3 217"/>
+            <path d="M313 226 Q157 243 3 241"/>
+          </g>
+
+          <text x="0" y="296" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11.5" fill="#63636B">104 CH — the sweep lands on the wrong line</text>
+          <g fill="#C7C3B8">
+            <rect x="0" y="310" width="493" height="7" rx="1"/>
+            <rect x="0" y="334" width="493" height="7" rx="1"/>
+            <rect x="0" y="358" width="493" height="7" rx="1"/>
+            <rect x="0" y="382" width="286" height="7" rx="1"/>
+          </g>
+          <g stroke="#8C2F26" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-dasharray="6 4">
+            <path d="M493 318 Q247 335 3 333"/>
+            <path d="M493 342 Q247 359 3 357"/>
+            <path d="M493 366 Q247 383 3 381"/>
+          </g>
+
+        </svg>
+      </div>
+      <figcaption><b>The return sweep at three measures.</b> The red line is the movement the eye makes at the end of each line. Nothing about the type changes between these three columns — only the width of the container.</figcaption>
+    </figure>
+
+    <h2 id="s2">Where 45 to 75 comes from</h2>
+    <p>The number most often quoted — 45 to 75 characters, 66 as the ideal — comes from Robert Bringhurst, who was describing text set in a book, in a serif face, read by an adult who had chosen to read it. It is a good number. It is not a law, and the conditions matter.</p>
+    <p>Mid-century legibility research, most of it associated with Miles Tinker and Donald Paterson, had already established the shape of the finding: comprehension and reading speed hold steady across a band of line lengths and fall away at both ends. What the research did not give us is a single correct value, because the value moves with the size of the type, the leading, the face, and whether the reader is reading or scanning.</p>
+    <p>Treat 45–75 as the band, and then place yourself inside it deliberately:</p>
+    <ul>
+      <li><strong>Nearer 45</strong> for reference material that is scanned, for sidebars, for anything set in two columns, and for text a reader dips into.</li>
+      <li><strong>Around 66</strong> for continuous prose — an essay, a long documentation page, a story.</li>
+      <li><strong>Nearer 75</strong> only with generous leading and a face with a small x-height, and only when the reader is settled.</li>
+    </ul>
+
+    <h2 id="s3">Setting it in CSS</h2>
+    <p>The instinct is to reach for <code>max-width</code> in pixels, which is fine until the type size changes and the measure quietly changes with it. The <code>ch</code> unit ties the container to the type instead: one <code>ch</code> is the advance width of the digit zero in the current font, which is close enough to an average character to be useful.</p>
+
+<pre><code><span class="tok-com">/* The container is described in characters, not pixels. */</span>
+<span class="tok-sel">.prose</span> {
+  <span class="tok-prop">max-width</span>: <span class="tok-val">66ch</span>;
+  <span class="tok-prop">font-size</span>: <span class="tok-val">clamp(1rem, 0.94rem + 0.32vw, 1.125rem)</span>;
+  <span class="tok-prop">line-height</span>: <span class="tok-val">1.72</span>;
+  <span class="tok-prop">text-wrap</span>: <span class="tok-val">pretty</span>;
+}</code></pre>
+    <p class="code-cap">The measure is now a function of the type size. Grow the type and the column grows with it, so the line still holds about sixty-six characters.</p>
+
+    <p>Two cautions. First, <code>ch</code> is measured on the <em>zero</em> of the current font, so a face with wide figures gives you a wider column than you asked for — check the result, do not trust the unit. Second, <code>text-wrap: pretty</code> only tidies the last lines; it is not a substitute for a sensible width.</p>
+
+    <blockquote>
+      <p>A column that is too wide never looks wrong. It quietly costs the reader a line every few seconds, and they blame themselves for losing concentration.</p>
+      <cite>Nadia Ferris</cite>
+    </blockquote>
+
+    <h2 id="s4">Leading moves with it</h2>
+    <p>Line length and line height are one decision, not two. A longer line needs more leading, because the return sweep needs a clearer target to land on; a short line needs less, or the lines stop reading as a paragraph and start reading as a list.</p>
+    <p>A working rule: at 45 characters set <strong>1.5</strong>; at 66 set <strong>1.7</strong>; at 75 set <strong>1.8</strong> and check it in the worst light you can find. If you change the measure later — and you will, when the sidebar arrives — change the leading in the same commit.</p>
+
+    <div class="note">
+      <b>One test that catches almost everything</b>
+      Read three paragraphs of your own page on a phone, standing up, at the brightness you actually use outdoors. Every measure problem shows itself within about fifteen seconds, and nothing else you can do at a desk finds them as fast.
+    </div>
+
+    <h2 id="s5">What breaks on a phone</h2>
+    <p>On a narrow screen the measure is decided for you — a 390&nbsp;px viewport with sensible margins gives about 38 characters at 17&nbsp;px, which is at the short end of the band and perfectly readable. The failures are elsewhere.</p>
+    <h3>Padding eaten by a card</h3>
+    <p>A card inside a card inside a container leaves 22 characters a line. Text ends up in a gutter you did not design. Count characters, not nesting levels.</p>
+    <h3>Headings set at body measure</h3>
+    <p>A heading is scanned, not read, and it wants a shorter measure than the paragraph under it — around 20 to 30 characters. Give headings their own <code>max-width</code> and they stop breaking into three ragged lines.</p>
+    <h3>Code blocks that force a scroll</h3>
+    <p>A code block does not obey the measure and should not try to. Give it its own horizontal scroll, keep it inside the reading column, and never let it widen the page — a body that scrolls sideways is the one typographic failure a reader notices immediately.</p>
+
+    <h2 id="s6">A checklist</h2>
+    <ul>
+      <li>Set the measure in <code>ch</code>, in the same rule as the font size.</li>
+      <li>Count the characters on a line at your largest breakpoint — the actual characters, in a browser, not in the design file.</li>
+      <li>Move the leading whenever the measure moves.</li>
+      <li>Give headings, captions and pull quotes their own, shorter measures.</li>
+      <li>Let code blocks scroll inside the column; never let the page scroll sideways.</li>
+      <li>Read it on a phone, outdoors, standing up. <span class="endmark">■</span></li>
+    </ul>
+  </article>
+</div>
+
+<section class="related">
+  <div class="related-in">
+    <h2>Related reading</h2>
+    <div class="rel-grid">
+      <a class="rel" href="#top">
+        <span class="k">Craft</span>
+        <h3>Optical sizes are not a luxury any more</h3>
+        <p>Variable fonts made optical sizing free. Almost nobody uses it, and headings are the poorer for it.</p>
+        <span class="t">7 min read</span>
+      </a>
+      <a class="rel" href="#top">
+        <span class="k">Interfaces</span>
+        <h3>The tab bar is a typographic problem</h3>
+        <p>Eleven-pixel labels, three languages, and a container that cannot grow. What actually gives way.</p>
+        <span class="t">6 min read</span>
+      </a>
+      <a class="rel" href="#top">
+        <span class="k">Print</span>
+        <h3>What a book designer knows about scroll</h3>
+        <p>Pagination forced decisions that scrolling lets us avoid. The avoidance is the problem.</p>
+        <span class="t">11 min read</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot">
+    <span>Ligature — a quarterly on typography and the making of pages</span>
+    <span>Issue 34 · Melbourne</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.toc a'));
+  var heads = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+  if(!heads.length || !('IntersectionObserver' in window)) return;
+
+  function mark(i){
+    links.forEach(function(a, n){
+      if(n === i) a.setAttribute('aria-current','true');
+      else a.removeAttribute('aria-current');
+    });
+  }
+  mark(0);
+
+  var seen = heads.map(function(){ return false; });
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      seen[heads.indexOf(e.target)] = e.isIntersecting;
+    });
+    // the active section is the last heading whose top has passed the trigger line
+    var active = 0;
+    heads.forEach(function(h, i){
+      if(h.getBoundingClientRect().top < window.innerHeight * 0.35) active = i;
+    });
+    mark(active);
+  }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
+
+  heads.forEach(function(h){ io.observe(h); });
+
+  window.addEventListener('scroll', function(){
+    var active = 0;
+    heads.forEach(function(h, i){
+      if(h.getBoundingClientRect().top < window.innerHeight * 0.35) active = i;
+    });
+    mark(active);
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>

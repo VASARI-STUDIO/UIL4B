@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nocturne A3 — Halden Audio</title>
+<style>
+  :root{
+    --bg:#0a0a1a;
+    --ink:#eef0ff;
+    --dim:#9ba4cc;
+    --faint:#6a729c;
+    --line:rgba(140,158,255,.16);
+    --warm:#fff5e6;
+    --rim:#4466ff;
+    --r:124px;            /* cylinder radius */
+    --h:268px;            /* cylinder height */
+    --w:33px;             /* slat width = 2r*tan(pi/24) */
+    --cap:32px;           /* visual half-height of the end ellipses at this tilt */
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:#0a0a1a;
+    background:
+      radial-gradient(120% 86% at 50% 34%, #1e1e46 0%, #151533 38%, #0c0c22 68%, #0a0a1a 100%);
+    background-attachment:fixed;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  a{color:inherit}
+  ::selection{background:rgba(68,102,255,.45)}
+
+  /* ---------- nav ---------- */
+  .nav{
+    position:relative;z-index:6;
+    display:flex;align-items:center;gap:24px;
+    padding:20px clamp(18px,4vw,56px);
+  }
+  .brand{
+    font-size:13px;font-weight:700;letter-spacing:.20em;text-decoration:none;
+    display:flex;gap:.55em;align-items:baseline;
+  }
+  .brand span{color:var(--faint);font-weight:500}
+  .links{display:flex;gap:26px;margin-left:auto;font-size:13.5px}
+  .links a{color:var(--dim);text-decoration:none;padding:6px 2px;border-radius:4px}
+  .links a:hover{color:var(--ink)}
+  .cta{
+    font-size:13.5px;font-weight:600;text-decoration:none;
+    padding:9px 16px;border-radius:999px;
+    background:var(--ink);color:#0d0d22;white-space:nowrap;
+  }
+  .cta:hover{background:#fff}
+  :where(a,button):focus-visible{outline:2px solid #8fa4ff;outline-offset:3px}
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;
+    min-height:calc(100vh - 68px);
+    min-height:calc(100svh - 68px);
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(300px,40vmin) minmax(0,1fr);
+    align-items:center;
+    gap:clamp(20px,3vw,54px);
+    padding:clamp(12px,2vh,32px) clamp(18px,4vw,56px) clamp(40px,7vh,72px);
+    overflow:hidden;
+  }
+  .hero > *:not(#px){position:relative;z-index:1}
+  .eyebrow{
+    margin:0 0 18px;font-size:11.5px;letter-spacing:.17em;text-transform:uppercase;
+    color:var(--faint);
+  }
+  h1{
+    margin:0;
+    font-size:clamp(38px,5.2vw,68px);
+    line-height:.98;letter-spacing:-.033em;font-weight:680;
+    text-wrap:balance;
+  }
+  h1 em{font-style:normal;color:#9db0ff}
+  .lede{
+    margin:22px 0 0;max-width:34ch;color:var(--dim);font-size:clamp(14.5px,1.15vw,16.5px);
+  }
+  .acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+  .btn{
+    display:inline-flex;align-items:center;gap:.5em;
+    font-size:14px;font-weight:600;text-decoration:none;
+    padding:12px 20px;border-radius:999px;
+    background:var(--ink);color:#0d0d22;
+    transition:transform .18s ease,background .18s ease;
+  }
+  .btn:hover{background:#fff;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:rgba(140,158,255,.10);border-color:rgba(140,158,255,.4)}
+
+  .specs{list-style:none;margin:0;padding:0;justify-self:end;width:min(100%,290px)}
+  .specs li{
+    display:grid;grid-template-columns:1fr;gap:2px;
+    padding:13px 0;border-top:1px solid var(--line);
+  }
+  .specs li:last-child{border-bottom:1px solid var(--line)}
+  .specs dt,.specs .k{
+    font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);
+  }
+  .specs .v{font-size:14px;color:#dfe3ff}
+  .specs .v b{font-weight:600}
+
+  /* ---------- 3D stage ---------- */
+  .stage{
+    position:relative;
+    height:min(62vh,440px);
+    display:flex;align-items:center;justify-content:center;
+    isolation:isolate;
+  }
+  #px{
+    position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    -webkit-mask-image:radial-gradient(64% 76% at 52% 50%,#000 22%,rgba(0,0,0,.35) 62%,transparent 88%);
+    mask-image:radial-gradient(64% 76% at 52% 50%,#000 22%,rgba(0,0,0,.35) 62%,transparent 88%);
+  }
+  .glow{
+    position:absolute;z-index:0;left:50%;top:46%;
+    width:min(150%,520px);aspect-ratio:1;transform:translate(-50%,-50%);
+    background:radial-gradient(circle,rgba(68,102,255,.30) 0%,rgba(68,102,255,.10) 42%,transparent 68%);
+    filter:blur(6px);pointer-events:none;
+  }
+  .scene{
+    position:absolute;z-index:2;left:50%;top:50%;width:0;height:0;
+    perspective:1100px;perspective-origin:50% 44%;
+  }
+  .tilt,.orbit,.spin{transform-style:preserve-3d;position:absolute;left:0;top:0;width:0;height:0}
+  .tilt{transform:rotateX(-15deg)}
+  .orbit{transform:scale(1) rotateY(0deg)}
+  .spin{transform:rotateY(-16deg)}
+
+  .spin i{
+    position:absolute;display:block;
+    width:var(--w);height:var(--h);
+    left:calc(var(--w) / -2);top:calc(var(--h) / -2);
+    transform:rotateY(calc(var(--i) * 15deg)) translateZ(var(--r));
+    background:
+      /* walnut plinth at the foot */
+      linear-gradient(180deg,transparent 0 76%,#5f4228 76.5%,#7a5734 80%,#4a321e 92%,#2c1d11 100%),
+      /* woven felt */
+      repeating-linear-gradient(0deg,rgba(255,255,255,.055) 0 1px,rgba(0,0,0,.16) 1px 3px),
+      linear-gradient(180deg,#2b3049 0%,#242940 55%,#1b2033 100%);
+    backface-visibility:hidden;
+  }
+  /* a status LED riding the body — it orbits out of view and back, which is the
+     clearest possible tell that this really is a rotating solid */
+  .spin i.led::after{
+    content:"";position:absolute;left:50%;top:22%;width:5px;height:5px;margin-left:-2.5px;
+    border-radius:50%;background:#ffd9a8;
+    box-shadow:0 0 7px 2px rgba(255,200,140,.75);
+  }
+
+  /* top cap: charcoal disc with a control ring */
+  .cap{
+    position:absolute;z-index:1;
+    width:calc(var(--r) * 2);height:calc(var(--r) * 2);
+    left:calc(var(--r) * -1);top:calc(var(--r) * -1);
+    border-radius:50%;
+    transform:rotateX(90deg) translateZ(calc(var(--h) / 2));
+    background:
+      radial-gradient(circle at 62% 30%,#4b5379 0%,#343a5c 30%,#232840 62%,#171b2c 100%);
+    box-shadow:inset 0 0 0 1px rgba(178,194,255,.30),inset 0 0 26px rgba(0,0,0,.55);
+  }
+  .cap::after{
+    content:"";position:absolute;inset:24%;border-radius:50%;
+    border:1px solid rgba(140,168,255,.42);
+    background:radial-gradient(circle,rgba(68,102,255,.26) 0%,transparent 64%);
+  }
+  .cap::before{
+    content:"";position:absolute;inset:39%;border-radius:50%;
+    background:radial-gradient(circle,#dbe3ff 0%,rgba(130,158,255,.55) 42%,transparent 74%);
+    opacity:.9;
+  }
+
+  /* the 2D lighting overlays live in one wrapper so they scale with the product */
+  .ovl{position:absolute;z-index:3;left:50%;top:50%;width:0;height:0;pointer-events:none;transform:scale(1)}
+  /* the underside of the walnut plinth, so the foot reads as an ellipse not a cut */
+  .foot{
+    position:absolute;left:0;top:calc(var(--h) / 2);
+    width:calc(var(--r) * 2);height:calc(var(--cap) * 2);
+    transform:translate(-50%,-50%);border-radius:50%;
+    background:linear-gradient(180deg,#523720 0%,#3a2614 42%,#1d1309 100%);
+  }
+
+  /* fixed studio lighting, painted over the (constant) cylinder silhouette */
+  .sheen{
+    position:absolute;left:0;top:0;
+    width:calc(var(--r) * 2);height:calc(var(--h) + (var(--cap) * 2));
+    transform:translate(-50%,-50%);
+    border-radius:var(--r) / var(--cap);
+    background:
+      /* curvature: the body falls away at both edges */
+      linear-gradient(90deg,rgba(4,4,14,.72) 0%,rgba(4,4,14,.26) 11%,transparent 30%,
+                            transparent 70%,rgba(4,4,14,.34) 88%,rgba(4,4,14,.74) 100%),
+      /* rim light, blue, back-left */
+      linear-gradient(90deg,rgba(90,125,255,.80) 0%,rgba(68,102,255,.22) 4.5%,transparent 16%),
+      /* key light, warm white, top-right */
+      linear-gradient(212deg,rgba(255,245,230,.40) 0%,rgba(255,240,220,.16) 24%,rgba(255,245,230,0) 52%),
+      linear-gradient(270deg,rgba(255,245,230,.26) 0%,rgba(255,245,230,.06) 14%,transparent 34%),
+      /* the floor eats the light at the foot */
+      linear-gradient(180deg,transparent 62%,rgba(0,0,0,.50) 100%);
+  }
+  .shadow{
+    position:absolute;z-index:1;left:50%;top:calc(50% + (var(--h) / 2) + 26px);
+    width:calc(var(--r) * 2.5);height:52px;transform:translate(-50%,-50%);
+    background:radial-gradient(ellipse at center,rgba(0,0,0,.62) 0%,rgba(0,0,0,.28) 45%,transparent 72%);
+    filter:blur(7px);pointer-events:none;
+  }
+  .hint{
+    position:absolute;z-index:4;left:50%;bottom:-6px;transform:translateX(-50%);
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
+    white-space:nowrap;
+  }
+
+  /* ---------- band ---------- */
+  .band{
+    position:relative;z-index:5;
+    border-top:1px solid var(--line);
+    background:rgba(8,8,22,.72);
+    padding:clamp(34px,6vh,64px) clamp(18px,4vw,56px);
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:clamp(20px,3vw,44px);
+  }
+  .band h2{
+    grid-column:1/-1;margin:0 0 4px;font-size:12px;letter-spacing:.17em;
+    text-transform:uppercase;color:var(--faint);font-weight:600;
+  }
+  .band h3{margin:0 0 7px;font-size:16px;font-weight:620;letter-spacing:-.01em}
+  .band p{margin:0;color:var(--dim);font-size:14px;max-width:32ch}
+  .band .num{
+    display:block;font-size:11px;color:#7f8ecd;margin-bottom:12px;letter-spacing:.14em;
+  }
+  footer{
+    padding:22px clamp(18px,4vw,56px) 34px;border-top:1px solid var(--line);
+    color:var(--faint);font-size:12px;display:flex;flex-wrap:wrap;gap:6px 22px;
+    background:rgba(8,8,22,.72);position:relative;z-index:5;
+  }
+
+  /* ---------- motion ---------- */
+  @media (prefers-reduced-motion: no-preference){
+    .spin{animation:spin 30s linear infinite}
+    @keyframes spin{from{transform:rotateY(-16deg)}to{transform:rotateY(344deg)}}
+    .cap::before{animation:breathe 4.2s ease-in-out infinite}
+    @keyframes breathe{0%,100%{opacity:.62;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+    .glow{animation:breathe 6s ease-in-out infinite}
+    .lift{animation:lift 1.15s cubic-bezier(.22,1.3,.36,1) both}
+    @keyframes lift{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+    .d1{animation-delay:.05s}.d2{animation-delay:.14s}.d3{animation-delay:.23s}.d4{animation-delay:.32s}
+
+    /* scroll-bound orbit: camera pulls in and swings round (brief: cameraZ 5 -> 2.5) */
+    @supports (animation-timeline: scroll()){
+      .orbit,.ovl,.shadow,.hint{
+        animation-timeline:scroll(root block);
+        animation-range:0 70vh;
+        animation-timing-function:linear;
+        animation-fill-mode:both;
+      }
+      .orbit{animation-name:orbit}
+      .ovl{animation-name:zoom}
+      .shadow{animation-name:zoomShadow}
+      .hint{animation-name:hintOut}
+      @keyframes orbit{
+        from{transform:scale(1) rotateY(0deg)}
+        to{transform:scale(1.22) rotateY(90deg)}
+      }
+      @keyframes zoom{from{transform:scale(1)}to{transform:scale(1.22)}}
+      @keyframes zoomShadow{
+        from{transform:translate(-50%,-50%) scale(1)}
+        to{transform:translate(-50%,-50%) scale(1.22,1.1)}
+      }
+      @keyframes hintOut{from{opacity:1}30%,to{opacity:0}}
+    }
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    /* at rest the product is already in its best three-quarter pose */
+    .spin{transform:rotateY(-16deg);animation:none}
+    .lift{opacity:1;transform:none;animation:none}
+    .hint{visibility:hidden}
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1040px){
+    .hero{grid-template-columns:minmax(0,1fr) minmax(260px,34vmin);}
+    .specs{grid-column:1/-1;justify-self:stretch;width:100%;
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 28px}
+  }
+  @media (max-width:760px){
+    .nav{gap:14px}
+    .links{display:none}
+    .hero{
+      grid-template-columns:minmax(0,1fr);
+      text-align:left;padding-top:8px;gap:26px;
+      min-height:0;
+    }
+    .stage{order:-1;height:min(46vh,320px);--r:92px;--h:200px;--w:25px;--cap:24px}
+    .specs{grid-column:auto}
+    h1{font-size:clamp(34px,10vw,46px)}
+    .hint{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <a class="brand" href="#top">HALDEN <span>AUDIO</span></a>
+  <nav class="links" aria-label="Primary">
+    <a href="#tech">Technology</a>
+    <a href="#tech">Measurements</a>
+    <a href="#tech">Stockists</a>
+  </nav>
+  <a class="cta" href="#tech">Pre-order · £429</a>
+</header>
+
+<main class="hero" id="top">
+  <canvas id="px" aria-hidden="true"></canvas>
+  <div>
+    <p class="eyebrow lift d1">Nocturne series — third generation</p>
+    <h1 class="lift d2">It fills the room,<br>then <em>gets out of it.</em></h1>
+    <p class="lede lift d3">The A3 measures the room it is standing in four hundred times a second, and aims its eight drivers at the walls you actually have — not the ones in an anechoic chamber.</p>
+    <div class="acts lift d4">
+      <a class="btn" href="#tech">Pre-order · £429</a>
+      <a class="btn ghost" href="#tech">Read the measurements <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="scene" aria-hidden="true">
+      <div class="tilt"><div class="orbit"><div class="spin">
+        <i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i>
+        <i style="--i:4"></i><i class="led" style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i>
+        <i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i>
+        <i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i>
+        <i style="--i:16"></i><i style="--i:17"></i><i style="--i:18"></i><i style="--i:19"></i>
+        <i style="--i:20"></i><i style="--i:21"></i><i style="--i:22"></i><i style="--i:23"></i>
+        <div class="cap"></div>
+      </div></div></div>
+    </div>
+    <div class="shadow" aria-hidden="true"></div>
+    <div class="ovl" aria-hidden="true"><div class="foot"></div><div class="sheen"></div></div>
+    <p class="hint">Scroll to orbit</p>
+  </div>
+
+  <ul class="specs lift d4">
+    <li><span class="k">Drivers</span><span class="v"><b>1 × 120 mm</b> woofer, <b>4 × 19 mm</b> tweeters</span></li>
+    <li><span class="k">Room correction</span><span class="v">8-microphone array, 400 Hz sweep</span></li>
+    <li><span class="k">Wireless</span><span class="v">Wi-Fi 6E · 12 ms bus latency</span></li>
+    <li><span class="k">Finish</span><span class="v">Recycled merino felt, oiled walnut</span></li>
+    <li><span class="k">Size</span><span class="v">168 mm ⌀ × 240 mm · 3.1 kg</span></li>
+  </ul>
+</main>
+
+<section class="band" id="tech">
+  <h2>Inside the A3</h2>
+  <div>
+    <span class="num">01</span>
+    <h3>Eight drivers, one axis</h3>
+    <p>Tweeters sit at 90° intervals around the crown; the woofer fires down into the plinth and out through the felt.</p>
+  </div>
+  <div>
+    <span class="num">02</span>
+    <h3>It listens first</h3>
+    <p>A 400 Hz sweep on power-up maps first reflections, then trims each driver by up to 6 dB to suit the room.</p>
+  </div>
+  <div>
+    <span class="num">03</span>
+    <h3>Felt, not plastic</h3>
+    <p>The grille is 2.4 mm recycled merino — acoustically open, and it stops looking like a computer within a week.</p>
+  </div>
+  <div>
+    <span class="num">04</span>
+    <h3>Repairable to 2035</h3>
+    <p>Six screws to the driver bay. Amp board, PSU and each driver are sold separately for at least ten years.</p>
+  </div>
+</section>
+
+<footer>
+  <span>Halden Audio Ltd</span>
+  <span>Unit 4, Barrow Works, Sheffield S3 8DN</span>
+  <span>Ships from 14 March</span>
+</footer>
+
+<script>
+(function(){
+  var c = document.getElementById('px');
+  if(!c || !c.getContext) return;
+  var ctx = c.getContext('2d');
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 0, H = 0, N = 200, pts = [], seed = 20240314;
+  function rnd(){ seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
+  for (var i = 0; i < N; i++){
+    pts.push({ x: rnd(), y: rnd(), z: 0.25 + rnd() * 0.75, ph: rnd() * 6.283, sp: 0.3 + rnd() * 0.9 });
+  }
+  function resize(){
+    var r = c.getBoundingClientRect();
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function frame(t){
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < N; i++){
+      var p = pts[i];
+      var x = p.x * W + Math.sin(t * 0.00012 * p.sp + p.ph) * 16 * p.z;
+      var yy = (p.y - t * 0.0000075 * p.sp) % 1; if (yy < 0) yy += 1;
+      var y = yy * H;
+      var rad = 0.5 + p.z * 1.5;
+      var a = (0.10 + p.z * 0.34) * (0.45 + 0.55 * Math.sin(t * 0.0006 * p.sp + p.ph) * 0.5 + 0.275);
+      ctx.beginPath();
+      ctx.arc(x, y, rad, 0, 6.283);
+      ctx.fillStyle = 'rgba(' + (p.z > 0.72 ? '214,224,255' : '150,170,255') + ',' + a.toFixed(3) + ')';
+      ctx.fill();
+    }
+  }
+  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  resize();
+  frame(2400);                       /* seeded mid-state: never an empty box at first paint */
+  if (!still){
+    var t0 = performance.now();
+    (function loop(now){ frame(2400 + (now - t0)); requestAnimationFrame(loop); })(t0);
+  }
+  var rt;
+  window.addEventListener('resize', function(){
+    clearTimeout(rt); rt = setTimeout(function(){ resize(); frame(2400); }, 120);
+  });
+})();
+</script>
+</body>
+</html>
