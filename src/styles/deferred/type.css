@@ -203,7 +203,16 @@
 .rc-vis-diag{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .rc-vis-diag line{stroke:var(--accent);stroke-width:1;stroke-dasharray:4 4;opacity:.45}
 .rc-vis-ratio{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent-strong)}
-.rc-vis-dims{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--accent-strong);opacity:.7}
+/* NO OPACITY — --accent-strong is already the darkest accent the palette
+   offers, so there is nothing above it to fall back on.
+
+   This is the "1920 x 1080 ⤢ 23.9″ · 92 PPI" readout on the shape preview:
+   the page's actual answer, in 10px type. Measured 2026-09-15 with the
+   declared alpha composited: 8 nodes at 3.08:1 in light and 2.98:1 in dark,
+   against a 4.5:1 floor.
+   Undimmed, --accent-strong is chosen to clear AA on the surface it sits on,
+   which is why removing the opacity is the whole fix. */
+.rc-vis-dims{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--accent-strong)}
 .rc-vis-empty{color:var(--t3);font-size:13px}
 
 /* Aspect & Resolution Calculator — preset dropdowns, stats, ratio grid */
