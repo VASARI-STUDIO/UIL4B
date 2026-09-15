@@ -8,6 +8,7 @@ import { useExport } from '../contexts/ExportContext'
 // moves focus in, tabbing past either end closes). The Add-to-Project panel
 // below held none of it.
 import usePopover from '../hooks/usePopover'
+import useExportGate from '../hooks/useExportGate'
 // The free-tier cap's refusal, rendered where it was thrown. Shared with the
 // Palette Builder and /projects so one refusal cannot be worded — or styled —
 // two ways on two surfaces.
@@ -423,6 +424,9 @@ const COLOUR_TOOLS = [
 
 
 export default function ColorStudio({ onCopy, toast }) {
+  // downloadHTML and downloadCSS produce FILES and need a free account;
+  // copyCSS beside them stays free forever. See src/hooks/useExportGate.js.
+  const requireExportAccount = useExportGate()
   const { theme } = useTheme()
   const { rounding } = useAppearance()
   const { design, setPalette, setStates, setTints, setGradient, saveProject, projects, loadProject, overwriteProject, canSaveProjects } = useProject()
@@ -846,7 +850,8 @@ ${stateVars}
 
     registerExport({
       label: 'Colour System',
-      downloadHTML: () => {
+      downloadHTML: async () => {
+        if (!(await requireExportAccount('download the colour system'))) return
         const html = generateHTML()
         const blob = new Blob([html], { type: 'text/html' })
         const url = URL.createObjectURL(blob)
@@ -856,7 +861,8 @@ ${stateVars}
         a.click()
         URL.revokeObjectURL(url)
       },
-      downloadCSS: () => {
+      downloadCSS: async () => {
+        if (!(await requireExportAccount('download the colour system CSS'))) return
         const { colorVars, tintVars, stateVars } = buildVars()
         const css = `:root {\n${colorVars}\n\n${tintVars}\n\n${stateVars}\n}\n`
         const blob = new Blob([css], { type: 'text/css' })
