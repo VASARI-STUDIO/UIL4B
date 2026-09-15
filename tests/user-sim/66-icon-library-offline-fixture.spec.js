@@ -167,6 +167,105 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   await ctx.close()
 })
 
+// NARROWING TO A PACK THE FALLBACK DOES NOT COVER USED TO SAY NOTHING AT ALL.
+//
+// When the catalogue is unreachable the surface falls back to its built-in set
+// and says so in the notice above. That set does not cover every pack the
+// control offers, and until 2026-09-15 the empty state was suppressed for the
+// whole of a load error unless the visitor had typed something — so choosing
+// one of the uncovered packs emptied the grid and announced nothing.
+//
+// Measured at 1280 through all 24 selectable packs with the service refused:
+// 18 rendered an empty grid with NO message — ph, mdi, material-symbols, solar,
+// fa6-solid, bxs, logos, devicon, skill-icons, circle-flags, flag, flagpack,
+// cif, flat-color-icons, twemoji, noto, fluent-emoji, openmoji. Only all,
+// lucide, tabler, iconoir, heroicons and simple-icons drew anything. Three
+// quarters of that menu looked like a control that does nothing, under a banner
+// about a different problem.
+//
+// That is the same silence the search half of this defect was fixed for on
+// 2026-09-13, reached by a different route. Narrowing to a pack is a user
+// action like typing, so an empty result is an answer to it.
+test('choosing a pack the built-in set does not cover answers instead of emptying', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  // This walks every pack in the control, and the settle below is a bounded
+  // WAIT rather than an assertion — so the run that takes longest is the broken
+  // one, where no pack ever resolves and each pays the full timeout. The
+  // default 30s budget is not enough for that, and a test that dies on the
+  // clock reports "Target page closed" instead of naming the packs. Verified by
+  // mutation: at the default budget the regression failed here rather than at
+  // the assertion written for it.
+  test.setTimeout(120_000)
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  watch(page, REFUSED)
+  await refuseIconify(page)
+  await go(page, '/create/icons')
+
+  // Wait for the fallback to have settled, so what follows is measured against
+  // the built-in set rather than a grid still loading.
+  await expect(page.getByText(/Showing \d+ of \d+ · Built-in icons/)).toBeVisible({ timeout: 15000 })
+
+  const select = page.locator('select').first()
+  const packs = await select.locator('option').evaluateAll((os) => os.map((o) => o.value))
+  const selectable = packs.filter((p) => p && p !== 'custom' && p !== 'logodev' && p !== 'all')
+
+  // POSITIVE CONTROL. Everything below is per-pack, so an empty or broken pack
+  // control satisfies it while measuring nothing.
+  expect(selectable.length, 'the pack control offered almost nothing to choose from')
+    .toBeGreaterThan(10)
+
+  const silent = []
+  let emptied = 0
+  for (const pack of selectable) {
+    await select.selectOption(pack)
+    // The browse is debounced and then swaps the grid, so wait for it to settle
+    // into EITHER cells or an empty state — but do not assert on that wait.
+    //
+    // It was an expect.poll first, and that was wrong in a way worth recording:
+    // the defect under test is a pack that produces NEITHER, so the poll timed
+    // out and the test failed with "Received: 0" instead of reaching the
+    // assertion below and naming the packs. Verified by mutation — the failure
+    // was real, and told the reader nothing about what broke. A timeout here is
+    // now a measurement, not a verdict.
+    await page.waitForFunction(
+      () => document.querySelectorAll('.ic').length > 0 || !!document.querySelector('.pl-empty'),
+      null, { timeout: 1500 },
+    ).catch(() => {})
+    const seen = await page.evaluate(() => ({
+      cells: document.querySelectorAll('.ic').length,
+      answered: !!document.querySelector('.pl-empty'),
+    }))
+    if (seen.cells === 0) {
+      emptied += 1
+      if (!seen.answered) silent.push(pack)
+    }
+  }
+
+  // POSITIVE CONTROL FOR THE ASSERTION ITSELF. If the built-in set covered every
+  // pack, nothing would ever empty and the check below would be vacuous — which
+  // is also what a fixture that started answering would look like.
+  expect(emptied, 'no pack came back empty, so this test is guarding nothing. Either the '
+    + 'built-in set now covers every pack, or the refusal did not take.')
+    .toBeGreaterThan(0)
+
+  expect(silent, `${silent.length} pack(s) emptied the grid and said nothing. With the `
+    + 'catalogue unreachable the empty state is suppressed unless the visitor has acted; '
+    + 'choosing a pack IS acting — see the note on searchEmpty in IconLibrary.jsx.')
+    .toEqual([])
+
+  // And it is announced, not merely painted.
+  const empty = page.locator('.pl-empty')
+  await expect(empty).toHaveAttribute('aria-live', 'polite')
+  await expect(empty).toContainText('No icons to show')
+
+  // The cause is still on screen: this sentence explains the pack, the notice
+  // above explains the service, and neither has replaced the other.
+  await expect(page.getByRole('status').filter({ hasText: /Couldn.t reach the icon service/ }))
+    .toBeVisible()
+  await ctx.close()
+})
+
 for (const theme of ['light', 'dark']) {
   test(`the refused state reads at 390px in ${theme}`, async ({ browser }) => {
     test.skip(isLiveIconify(), LIVE)
