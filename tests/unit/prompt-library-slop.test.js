@@ -76,6 +76,54 @@ const VAGUE_QUALITY = [
   'state-of-the-art', 'luxurious', 'next-level', 'world-class',
 ]
 
+// INSTRUCTIONS TO FABRICATE. The category the first version of this filter
+// missed entirely, and the one that matters most.
+//
+// c-5 ("Fitness trainer landing page") mandated invented proof in THREE of its
+// seven sections — "Before/after transformation photos with stats", "Instagram
+// feed embed, and 5-star review count", and a final CTA "with urgency
+// ('Limited spots available')". No honest output could follow that brief. The
+// first pass caught none of it: "5-star" is hyphenated so it missed a rating
+// pattern written for "4.8 stars", "Limited spots" was not among the urgency
+// phrases, and there was no pattern at all for invented before/after results.
+//
+// These are about what a prompt ORDERS a model to invent. A page that shows
+// clearly-labelled sample quotes for a clearly fictional business is honest
+// demo content and is not what these match.
+const FABRICATION = [
+  {
+    // A PRE-SPECIFIED rating only. A ratings COMPONENT is ordinary commerce
+    // UI — c-9 asks for a 'Star rating summary' on a product page and a real
+    // shop fills it with real reviews, so that is not an instruction to
+    // fabricate. c-5 asked for a '5-star review count', which pre-decides the
+    // flattering answer before anyone has said anything. The number is the
+    // difference, and it is the whole difference.
+    re: /\b\d+(?:\.\d)?[-\s]?stars?\b|\b\d(?:\.\d)?\s*\/\s*5\b/i,
+    what: 'a star rating or review count',
+    why: 'a rating is a claim about what other people said; inventing one is inventing testimony',
+  },
+  {
+    re: /\bbefore\s*(?:\/|and|-)\s*after\b[^.]{0,60}\b(stat|result|number|figure|transformation)/i,
+    what: 'before/after results',
+    why: 'invented outcome figures are the most consequential fabrication on a health or money page',
+  },
+  {
+    re: /\b(limited|only)\s+(spots?|seats?|places?|slots?)\b|\boffer ends\b|\bcountdown\b|\bact now\b|\bhurry\b(?!\s+[-—,])/i,
+    what: 'manufactured scarcity',
+    why: 'urgency that is not an operational fact is pressure invented to convert',
+  },
+  {
+    re: /\b(instagram|twitter|facebook|tiktok)\s*(feed|embed)|\bsocial (feed|proof) embed\b/i,
+    what: 'an embedded social feed',
+    why: 'it can only be filled with a real account\'s content or a fake one',
+  },
+  {
+    re: /\b(trusted by|as seen (in|on)|featured in)\b|\b\d[\d,]*\+?\s*(happy|satisfied)\s*(customers|clients)/i,
+    what: 'borrowed or invented third-party endorsement',
+    why: 'names a third party who has not endorsed anything',
+  },
+]
+
 // Words that turn a mention into a prohibition. A term inside this window is
 // being named as the thing NOT to do.
 const NEGATORS = /\b(avoid|avoids|avoiding|never|not|no|don'?t|do not|rather than|instead of|except|unless|without|ban|banned|forbid|forbidden|we do not|refuse)\b/i
@@ -145,6 +193,56 @@ test('no prompt asks for vague quality instead of a concrete instruction', () =>
     '\n\n"premium feel" tells a model nothing it can act on and produces the ' +
     'average of its training data, which is the look being complained about. ' +
     'Say the thing instead — the palette, the measure, the reference class.')
+})
+
+test('no prompt INSTRUCTS a model to fabricate proof', () => {
+  const offences = []
+  for (const p of COMMUNITY_PROMPTS) {
+    for (const rule of FABRICATION) {
+      const m = rule.re.exec(p.text)
+      if (!m) continue
+      if (isProscribed(p.text, m.index)) continue // "Do not invent a review count"
+      offences.push(`${p.id} "${p.title}" asks for ${rule.what} ("${m[0].trim()}") — ${rule.why}`)
+    }
+  }
+  assert.deepEqual(offences, [],
+    'a prompt orders the model to invent proof, so no honest output can follow ' +
+    'it:\n  ' + offences.join('\n  ') +
+    '\n\nClearly-labelled sample content for a clearly fictional business is ' +
+    'fine and is not matched here. What is matched is a brief that REQUIRES ' +
+    'a rating, a result, a scarcity claim or a borrowed endorsement to exist.')
+})
+
+test('the fabrication rules actually fire — proved on the brief that failed them', () => {
+  // THE GUARD ON THE GUARD, and it is not hypothetical: this is c-5's real
+  // text as it shipped until 2026-09-15. If a future edit to the patterns
+  // stops catching this, the rules have decayed into decoration.
+  const OLD_C5 = [
+    '2. Problem/Solution: Before/after transformation photos with stats.',
+    '4. Social proof: Client transformations slider, Instagram feed embed, and 5-star review count.',
+    "7. Final CTA: Repeated booking CTA with urgency (\"Limited spots available\").",
+  ].join('\n')
+
+  const caught = FABRICATION.filter((r) => {
+    const m = r.re.exec(OLD_C5)
+    return m && !isProscribed(OLD_C5, m.index)
+  }).map((r) => r.what)
+
+  for (const expected of ['a star rating or review count', 'before/after results',
+    'manufactured scarcity', 'an embedded social feed']) {
+    assert.ok(caught.includes(expected),
+      `the rules no longer catch "${expected}" in c-5's original brief; caught: ${caught.join(', ')}`)
+  }
+
+  // …and the negation carve-out must not swallow them. The REFINED c-5 says
+  // "Do not invent a review count, a star rating, ..." and must stay clean.
+  const refined = COMMUNITY_PROMPTS.find((x) => x.id === 'c-5')
+  const stillFlagged = FABRICATION.filter((r) => {
+    const m = r.re.exec(refined.text)
+    return m && !isProscribed(refined.text, m.index)
+  }).map((r) => r.what)
+  assert.deepEqual(stillFlagged, [],
+    `the refined c-5 is being flagged for naming these as forbidden: ${stillFlagged.join(', ')}`)
 })
 
 test('the generated preview pages carry no signature palette either', () => {

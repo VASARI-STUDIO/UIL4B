@@ -25,17 +25,17 @@ export const COMMUNITY_PROMPTS = [
     id: 'c-1',
     free: true,
     title: 'Plumbing business website',
-    text: `Design a professional one-page website for a local plumbing business called "FlowFix Plumbing". Include these sections:
+    text: `Design a professional one-page website for a local plumbing business called "FlowFix Plumbing". Invent the specifics and commit to them - a real-sounding service area, a licence number, actual service prices, actual opening hours. Specific beats generic everywhere.
 
-1. Hero: Bold headline "Your Local Plumbing Experts", a subline about 24/7 emergency service, and a prominent "Call Now" button with phone number.
-2. Services grid: 6 service cards with icons — Emergency Repairs, Blocked Drains, Hot Water Systems, Gas Fitting, Bathroom Renovations, Leak Detection.
-3. Trust signals: Years in business, jobs completed, Google rating, fully licensed & insured badges.
-4. About: Photo of the team, brief story, service area map.
-5. Testimonials: 3 customer reviews with star ratings.
-6. Contact: Simple form (name, phone, email, message) plus business hours and service area.
-7. Footer: Logo, phone, email, ABN, licence number.
+1. Hero: Bold headline "Your Local Plumbing Experts", a subline about 24/7 emergency service, and a prominent "Call Now" button with the phone number. Add one concrete operational detail (typical arrival time, no call-out fee weekdays) and a short list of what is included as standard.
+2. Services grid: 6 service cards with icons - Emergency Repairs, Blocked Drains, Hot Water Systems, Gas Fitting, Bathroom Renovations, Leak Detection. Give each a one-line description of what actually happens and a real "from" price.
+3. Trust signals: years in business, jobs completed, licence number, insurance cover. Use facts the business can state about itself - do not invent a rating, a review count or a badge on a third-party platform such as Google.
+4. About: the founder's story with dates, the team as it stands today, and a service-area map. Draw the map and all imagery as SVG or CSS - no photographs.
+5. Testimonials: 3 customer reviews with star ratings, written as demonstration content for this fictional business and labelled as sample content.
+6. Contact: a form with visible labels (name, phone, email, suburb, message) plus business hours and the named suburbs covered.
+7. Footer: logo, phone, email, address, ABN, licence number.
 
-Colour scheme: navy blue (#1B3A5C) and orange (#F47B20) on white. Clean, trustworthy, mobile-first.`,
+Colour scheme: navy blue (#1B3A5C) and orange (#F47B20) on white. Clean, trustworthy, mobile-first. Every button needs a hover state and a visible focus ring.`,
     tags: 'business, local, plumbing, one-page',
     img: '',
     author: 'UIL4B Team',
@@ -45,17 +45,17 @@ Colour scheme: navy blue (#1B3A5C) and orange (#F47B20) on white. Clean, trustwo
     id: 'c-2',
     free: true,
     title: 'Restaurant website with menu',
-    text: `Design a website for a modern Italian restaurant called "Osteria Luna". Sections:
+    text: `Design a website for a modern Italian restaurant called "Osteria Luna". Write it as though the restaurant exists: a real-shaped street address, real opening hours, and a menu of actual dishes at actual prices.
 
-1. Hero: Full-screen background image of the restaurant interior, logo overlay, tagline "Authentic Italian, Modern Soul", and a "Reserve a Table" CTA.
-2. About: Side-by-side image and text telling the chef's story.
-3. Menu: Tabbed layout (Antipasti, Primi, Secondi, Dolci, Drinks) with dish name, short description, and price. Use elegant serif typography.
-4. Gallery: Grid of food and atmosphere photos with lightbox.
-5. Reservations: Embedded booking widget or a form with date, time, party size, name, phone.
-6. Location & Hours: Google Maps embed, address, parking info, weekly hours.
-7. Footer: Social links (Instagram, Facebook), phone, email.
+1. Hero: an evocative view of the room built from SVG and CSS rather than a photograph - warm light, the bar, the arches - with the logo, the tagline "Authentic Italian, Modern Soul" and a "Reserve a Table" CTA over it. Include tonight's service times.
+2. About: the chef's story with dates and places, beside a card carrying her name, role and a short timeline.
+3. Menu: tabbed (Antipasti, Primi, Secondi, Dolci, Drinks). This is the most important section on the page - set it as a typographic list rather than cards, each dish with a name, a one-line description of what is actually in it, and a price. Elegant serif headings, clean sans-serif body. Mark vegetarian dishes and note the surcharge policy.
+4. Gallery: four tiles drawn as line illustrations in the house style, each captioned with something true about the kitchen.
+5. Reservations: a form with visible labels - date, time, party size, name, phone - plus the policy for held tables and large groups.
+6. Location & hours: a drawn locality map showing the street and nearby parking, the address, parking and transport notes, and the weekly hours with the closed day shown.
+7. Footer: social links, phone, email, licence details.
 
-Style: warm and intimate — dark backgrounds (#1A1A1A), cream text (#F5F0E8), gold accents (#C9A96E). Serif headings, clean sans-serif body.`,
+Style: warm and intimate - dark backgrounds (#1A1A1A), cream text (#F5F0E8), gold accents (#C9A96E). Serif headings, clean sans-serif body. No photographs and no third-party embeds; everything must render offline.`,
     tags: 'restaurant, menu, booking, elegant',
     img: '',
     author: 'UIL4B Team',
@@ -65,7 +65,19 @@ Style: warm and intimate — dark backgrounds (#1A1A1A), cream text (#F5F0E8), g
     id: 'c-3',
     free: true,
     title: 'Dark mode analytics dashboard',
-    text: `Design a data dashboard interface with a dark theme. Use a sidebar navigation with icons, a top stats bar with 4 KPI cards (revenue, users, conversion rate, active sessions), a main chart area with a line graph, and a recent activity feed below. Colour palette: charcoal backgrounds (#1a1a2e, #16213e), electric blue accents (#0f3460, #53a8b6), and clean white text. Ensure strong visual hierarchy and clear data presentation.`,
+    text: `Design a data dashboard interface with a dark theme for a named analytics product measuring a named business - decide what it is (an online store, a support desk, a subscription app) and let that decision drive every label on the screen.
+
+Layout: a sidebar navigation with icons and real section names, a top stats bar with 4 KPI cards (revenue, users, conversion rate, active sessions), a main chart area with a line graph, and a recent activity feed below.
+
+The data is the design. Make it hold up:
+- Real metric names with units and an explicit date range, never "Metric 1".
+- Every KPI shows its comparison - the previous period's value or a delta - and at least one metric moves the wrong way, in a different colour from the good ones.
+- The line graph has a labelled y-axis with units, a labelled x-axis, a visible weekly rhythm rather than a smooth arc, and a second dashed series for the previous period. Annotate one point with a tooltip that is visible at rest.
+- Include a data table with real rows, right-aligned tabular figures, and an inline bar showing each row's share.
+- Make the numbers agree with each other - the table should total to the KPI above it.
+- The activity feed lists specific events with amounts, IDs and relative timestamps.
+
+Colour palette: charcoal backgrounds (#1a1a2e, #16213e), electric blue accents (#0f3460, #53a8b6), and clean white text. Strong visual hierarchy and clear data presentation. The page must look finished in a screenshot with no animation running.`,
     tags: 'dashboard, dark, analytics, ui',
     img: '',
     author: 'UIL4B Team',
@@ -75,16 +87,16 @@ Style: warm and intimate — dark backgrounds (#1A1A1A), cream text (#F5F0E8), g
     id: 'c-4',
     free: false,
     title: 'Freelancer portfolio',
-    text: `Design a personal portfolio website for a freelance graphic designer. Keep it minimal and let the work speak.
+    text: `Design a personal portfolio website for a freelance graphic designer. Keep it minimal and let the work speak. Give the designer a name and a city, and give them eight named projects for named clients - the specificity is the point.
 
-1. Header: Name/logo, nav (Work, About, Contact), with a "Let's Talk" button.
-2. Hero: Large statement — "I design brands that people remember." with a subtle animated background.
-3. Selected Work: Grid of 6-8 project thumbnails. On hover: project name and category appear over a dark overlay. Click opens a case study page.
-4. About: Photo, short bio, list of skills, tools used (Figma, Illustrator, etc.).
-5. Testimonials: Carousel with client quotes.
-6. Contact: Clean form + social links + email.
+1. Header: name/logo, nav (Work, About, Contact), with a "Let's Talk" button.
+2. Hero: a large statement - "I design brands that people remember." - over a subtle animated background that still reads as composed with motion switched off. Add a line stating current availability.
+3. Selected Work: a grid of 8 projects, filterable by discipline with counts. Render each thumbnail as the actual artefact - the logotype, the packaging, the poster, the masthead - in SVG and CSS rather than a photograph. Project name and category appear over a dark overlay on hover, and stay readable beneath the thumbnail at rest so the grid is never anonymous.
+4. About: an identity card with the designer's working details, a short bio with real dates, skills and tools.
+5. Testimonials: a carousel of client quotes with name and role, written as demonstration content and labelled as such.
+6. Contact: a form with visible labels and a budget selector, plus social links and an email address.
 
-Style: black and white with one accent colour. Lots of whitespace. Modern sans-serif typography. The portfolio should feel curated, not cluttered.`,
+Style: black and white with one accent colour that is neither purple nor blue. Lots of whitespace. Modern sans-serif typography. The portfolio should feel curated, not cluttered.`,
     tags: 'portfolio, freelancer, minimal, creative',
     img: '',
     author: 'UIL4B Team',
@@ -94,17 +106,17 @@ Style: black and white with one accent colour. Lots of whitespace. Modern sans-s
     id: 'c-5',
     free: false,
     title: 'Fitness trainer landing page',
-    text: `Design a landing page for a personal fitness trainer. Goal: get visitors to book a free consultation.
+    text: `Design a landing page for a personal fitness trainer. Goal: get visitors to book a free consultation. Give the trainer a name, a suburb, a gym and a real coaching philosophy - the page should sound like one person, not a franchise.
 
-1. Hero: High-energy photo background, headline "Transform Your Body in 12 Weeks", sub-headline about the program, CTA "Book Free Consultation".
-2. Problem/Solution: Before/after transformation photos with stats.
-3. Programs: 3 program cards — Fat Loss, Muscle Building, Sports Performance. Each with duration, sessions per week, and price.
-4. Social proof: Client transformations slider, Instagram feed embed, and 5-star review count.
-5. About the trainer: Photo, certifications, years of experience, specialities.
-6. FAQ: Expandable accordion with common questions.
-7. Final CTA: Repeated booking CTA with urgency ("Limited spots available").
+1. Hero: headline "Transform Your Body in 12 Weeks", a sub-headline about the programme, CTA "Book Free Consultation", and one line saying what the consultation actually involves. Build the imagery from CSS and SVG - no photographs.
+2. What the 12 weeks actually looks like: break the block into phases with week ranges and say what changes in each, then list the specific metrics that get measured and how often. Do not promise an outcome.
+3. Programs: 3 program cards - Fat Loss, Muscle Building, Sports Performance. Each with duration, sessions per week, what is included, and a real price.
+4. Credibility: 2-3 client quotes written as demonstration content for this fictional trainer and clearly labelled as sample content. Do not invent a review count, a star rating, a number of happy clients, or an embedded social feed.
+5. About the trainer: certifications by name, years coaching, specialities, and an honest line about who they are not the right coach for.
+6. FAQ: an expandable accordion answering the questions that actually stop someone booking - cost, current fitness level, missed sessions, and what is and is not guaranteed.
+7. Final CTA: repeat the booking CTA. If there is scarcity, make it a true operational fact - how many clients are taken at once, when the next slot opens. No countdown timers and no manufactured urgency.
 
-Colours: energetic — black (#111), lime green (#CDDC39), white. Bold, motivating typography.`,
+Colours: energetic - black (#111), lime green (#CDDC39), white. Bold, motivating typography. Wrap every animation in prefers-reduced-motion and make sure the page still looks finished with motion off.`,
     tags: 'fitness, landing, trainer, conversion',
     img: '',
     author: 'UIL4B Team',
@@ -114,7 +126,15 @@ Colours: energetic — black (#111), lime green (#CDDC39), white. Bold, motivati
     id: 'c-6',
     free: false,
     title: 'SaaS pricing page',
-    text: `Create a pricing comparison section with three tiers: Free, Pro, and Enterprise. Include a monthly/yearly toggle that animates the prices. The middle (Pro) plan should be visually elevated with a "Most popular" badge, a coloured border, and a slightly larger scale. Each plan card lists 5-6 features with check/cross icons. Use a clean layout with clear visual hierarchy. Add a subtle gradient background behind the section. Include a FAQ section below addressing common billing questions.`,
+    text: `Create a pricing page for a named SaaS product. Decide what it does and what it charges for - the unit of pricing is what makes a pricing page credible, so state it and use it consistently down the page.
+
+Three tiers: Free, Pro, and Enterprise. Include a monthly/yearly toggle that animates the prices and updates the "billed as" line beneath each one. The middle (Pro) plan is visually elevated with a "Most popular" badge, a coloured border, and slightly larger scale. Each plan card lists 5-6 features with check/cross icons, led by "Everything in <previous tier>, plus". Show the real limits - how many of the metered unit, how many seats, and what happens when you go past them.
+
+Use a clean layout with clear visual hierarchy and a subtle gradient background behind the section. Avoid a purple-to-blue gradient.
+
+Include a FAQ section below addressing common billing questions - what the metered unit is, going over the limit, mid-cycle proration when someone joins or leaves, switching between monthly and yearly, payment methods, and refunds. Answer each with a specific commitment rather than "contact us".
+
+Every price states its currency and tax treatment. Buttons get hover and visible focus states, and the price animation must be neutralised under prefers-reduced-motion while still showing the correct price for the selected period.`,
     tags: 'pricing, saas, component, cards',
     img: '',
     author: 'UIL4B Team',
@@ -124,18 +144,18 @@ Colours: energetic — black (#111), lime green (#CDDC39), white. Bold, motivati
     id: 'c-7',
     free: false,
     title: 'Real estate property listing',
-    text: `Design a property listing page for a real estate agency.
+    text: `Design a property listing page for a real estate agency. Invent one specific property and commit to every number: street address, price or price range, land and floor area, bedrooms, bathrooms, car spaces, year built, inspection times and the auction or sale date.
 
-1. Property gallery: Full-width image carousel with thumbnails below, floor plan button.
-2. Key details bar: Price, bedrooms, bathrooms, parking, land size, property type.
-3. Description: Well-formatted property description with highlights list.
-4. Features: Grid of feature badges (air conditioning, pool, solar, etc.).
-5. Floor plan: Expandable floor plan viewer.
-6. Map: Location map with nearby amenities (schools, shops, transport).
-7. Agent card: Photo, name, phone, email, agency logo, "Enquire Now" button.
-8. Similar listings: 3 related property cards at the bottom.
+1. Property gallery: a carousel with thumbnails below and the floor plan included as one of the views. Draw every view - front elevation, interiors, rear yard - as flat-vector SVG rather than photographs, in one consistent illustration style.
+2. Key details bar: price, bedrooms, bathrooms, parking, land size, floor area, property type.
+3. Description: three short paragraphs written more like a surveyor than a copywriter - what the house is, what was done to it and when, what the street is like - followed by a highlights list where every point states a fact rather than an adjective.
+4. Features: a grid of feature badges with real specifics (heating type, solar capacity, tank size, glazing).
+5. Floor plan: an expandable viewer showing a dimensioned plan with named rooms, room sizes, overall dimensions and a north arrow.
+6. Map: a drawn locality map with nearby amenities - school, transport, park, shops - each with a walking distance.
+7. Agent card: name, role, agency, phone, email and an "Enquire Now" button, with inspection times and running costs (council and water rates) alongside.
+8. Similar listings: 3 related property cards with price, address and key details.
 
-Style: clean and professional. White background, dark text, blue accent (#2563EB). Photos are the hero — make them large and prominent.`,
+Style: clean and professional. White background, dark text, blue accent (#2563EB). The imagery is the hero - make it large and prominent, and make the floor plan good enough to actually read.`,
     tags: 'real-estate, listing, property, business',
     img: '',
     author: 'UIL4B Team',
