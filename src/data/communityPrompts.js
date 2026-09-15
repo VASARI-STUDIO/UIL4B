@@ -165,15 +165,18 @@ Style: clean and professional. White background, dark text, blue accent (#2563EB
     id: 'c-8',
     free: false,
     title: 'Coffee shop brand identity',
-    text: `Design a brand identity and website for an artisan coffee shop called "Grounded". The brand should feel warm, crafted, and community-focused.
+    text: `Design a one-page brand identity sheet for an artisan coffee shop called "Grounded" — a neighbourhood roastery, warm and crafted without being precious. This is a brand sheet, not a website: the output should read like a page from a brand manual.
 
-1. Logo concept: Simple mark using a coffee bean or cup silhouette with hand-drawn quality.
-2. Colour palette: Warm espresso brown (#3E2723), cream (#FFF8E1), terracotta (#D4896A), sage green (#8FBC8F).
-3. Typography: Serif for headings (warm, slightly vintage feel), clean sans-serif for body.
-4. Website: Hero with store photo, menu section with coffee/food items, "Our Story" section, location and hours, Instagram gallery.
-5. Print materials: Business card, takeaway cup design, loyalty card.
+Lay it out as a single scrolling sheet with numbered sections:
 
-The overall feel should be artisanal without being pretentious — friendly, local, quality-focused.`,
+1. Masthead: the logo lockup at full size, plus a one-sentence positioning line that says what the shop actually is (where it is, what it sells, who it is for).
+2. The mark: draw a simple coffee-bean or cup mark in inline SVG with a slightly uneven, hand-drawn quality. Show three lockups in bordered asset boxes — horizontal, stacked, and reversed on the dark colour — then state the clear-space rule, the minimum size in px and mm, and three specific things nobody may do to it.
+3. Colour: espresso brown (#3E2723), cream (#FFF8E1), terracotta (#D4896A), sage green (#8FBC8F). Show each as a swatch with its name, hex, the role it plays, and where it is allowed to appear. Give at least one contrast ratio.
+4. Type: a serif for headings (warm, slightly vintage), a clean sans for body. Set a display specimen, a character set, and a scale ladder with real sizes and leading — display, heading, subhead, body, label — each rung showing real copy from the shop, not "The quick brown fox".
+5. In use: the mark applied to four things, drawn in CSS and SVG — a takeaway cup, a retail bag, a business card, a loyalty card. Label each with its real dimensions.
+6. Voice: one line the brand would write and one line it would not.
+
+Write real content throughout: a real-sounding street address, actual opening hours, an actual coffee on the bar this week with its origin and price. Draw every artefact in CSS/SVG — do not link to external images or fonts.`,
     tags: 'branding, coffee, identity, warm',
     img: '',
     author: 'UIL4B Team',
@@ -183,16 +186,16 @@ The overall feel should be artisanal without being pretentious — friendly, loc
     id: 'c-9',
     free: true,
     title: 'E-commerce product page',
-    text: `Design a product detail page for a high-end fashion e-commerce store. Include:
+    text: `Design a product detail page for a high-end fashion e-commerce store. Invent the label and the garment, and write the copy as if the piece really exists — fabric, mill, construction, care.
 
-1. Product images: Large main image with zoom-on-hover, thumbnail gallery, 360-degree view option.
-2. Product info: Name in refined serif, price with sale variant, colour swatches, size selector with size guide link, quantity picker, "Add to Bag" and "Save" buttons.
-3. Description tabs: Details, Size & Fit, Shipping & Returns, Reviews.
-4. Reviews section: Star rating summary, individual review cards with verified badge.
-5. "Complete the Look" section: 3-4 complementary product suggestions.
-6. Recently viewed: Horizontal scroll of previously viewed items.
+1. Product images: a large main image with zoom-on-hover anchored to the pointer, a thumbnail rail, and a rotate control that really works — a slider or thumbnail set that switches between front, three-quarter, side and back views. Draw the garment as a flat-sketch illustration in inline SVG on a soft gradient ground rather than linking to photography, so the page renders with no network.
+2. Product info: name in a refined serif, price with a sale variant and the original struck through, named colour swatches, a size selector with at least one sold-out size shown as unavailable rather than hidden, a size-guide link, a quantity picker, "Add to Bag" and a save action. Add one honest stock line ("four left in AU 10, ships in 1–2 days").
+3. Description tabs: Details, Size & Fit, Shipping & Returns, Reviews. Real tabs — arrow-key navigable, aria-selected, one panel visible at a time. Fill Size & Fit with actual measurements per size and the model's height.
+4. Reviews: a rating summary with a star distribution and two individual review cards with a verified badge, a size-purchased line and a date. Keep the average believable (4.4–4.7, a few dozen reviews), let one review be mildly critical, and state plainly on the page that the label is fictional and the reviews are sample content.
+5. "Complete the Look": 3–4 complementary pieces, each with a name, colourway and price.
+6. Recently viewed: a horizontal scroll rail with scroll-snap.
 
-Style: warm neutrals (cream, taupe) with gold accent (#B8860B). Generous spacing. Photography-focused layout.`,
+Style: warm neutrals (cream, taupe) with a gold accent (#B8860B). Generous spacing, quiet typography, no card shadows. Buttons get hover and visible focus states; every input has a label.`,
     tags: 'ecommerce, product, fashion, premium',
     img: '',
     author: 'UIL4B Team',
@@ -202,14 +205,16 @@ Style: warm neutrals (cream, taupe) with gold accent (#B8860B). Generous spacing
     id: 'c-10',
     free: false,
     title: 'Mobile app onboarding flow',
-    text: `Design a mobile app onboarding flow with 4 screens:
+    text: `Design a mobile onboarding flow of 4 screens for a specific app — name it, say what it does, and write every line of copy as if it shipped. Present the flow as a row of phone frames on a desktop-width canvas so the whole journey reads in one view, stacking to one column on narrow screens. Above each frame put its step number and name; below it, one sentence on the decision that screen makes.
 
-1. Welcome: App logo animation, "Welcome to [App]" headline, brief value proposition, "Get Started" button.
-2. Feature highlights: 3 swipeable cards each showing an illustration, feature title, and one-line description. Progress dots at the bottom.
-3. Permissions: Friendly request for notifications and location with clear explanations of why each is needed. "Allow" and "Maybe Later" options.
-4. Account creation: Sign up with Google/Apple, or email. Simple form with name, email, password. Or "Skip for now" link.
+1. Welcome: the mark, one headline that states a specific thing the app does (never "Welcome to…"), one supporting line with a real number or place in it, a primary action, and a separate door for people who already have an account.
+2. Feature highlights: show one card of three with progress dots. The illustration should be the real product surface — an actual card or chart the user will meet on the home screen, with real values — not a mascot or an abstract blob.
+3. Permissions: ask for notifications and location together, each with an icon, a concrete benefit, and a stated limit on how the data is used. Follow with a reassurance line saying where it can be changed later. "Allow" and a genuine "Not now" that is not greyed into invisibility.
+4. Account creation: continue with Apple or Google, a divider, then email and password with visible labels and the password rule shown before it can be broken. "Skip for now" must say what skipping costs.
 
-Style: Light and friendly. Soft gradients, rounded illustrations, generous padding. Use a consistent illustration style across all screens. Transitions between screens should be smooth horizontal swipes.`,
+Add a short notes block under the flow covering motion (horizontal push forward, 280 ms, and what happens instead when Reduce Motion is on), the exit route on every screen, and the copy rules you followed.
+
+Style: light and friendly — soft gradients, rounded illustrations, generous padding, a consistent illustration style across all four screens. Draw the phone chrome (status bar, home indicator) and every illustration in CSS/SVG. No screen may say "welcome", "get started" or "you're all set" as its headline.`,
     tags: 'mobile, onboarding, app, ux',
     img: '',
     author: 'UIL4B Team',
@@ -219,17 +224,17 @@ Style: Light and friendly. Soft gradients, rounded illustrations, generous paddi
     id: 'c-11',
     free: false,
     title: 'Construction company website',
-    text: `Design a website for a commercial construction company called "Apex Build Co."
+    text: `Design a website for a commercial construction company called "Apex Build Co." Invent the company's details and keep them consistent — registration number, ABN, head office, licence, insurance.
 
-1. Hero: Dramatic construction site photo or drone shot, headline "Building Tomorrow's Landmarks", subline about 25+ years of experience, CTA "Get a Quote".
-2. Services: Horizontal scrolling cards — Commercial Buildings, Infrastructure, Fit-Outs, Project Management, Design & Build.
-3. Project showcase: Filterable grid (by category) of completed projects with large images, project name, location, and value.
-4. Stats bar: Projects completed, years in business, team members, client satisfaction rate — with count-up animation.
-5. Process: 4-step visual timeline — Consult, Design, Build, Deliver.
-6. Certifications: Safety certifications, industry awards, insurance logos.
-7. Contact: Enquiry form + head office address + phone.
+1. Hero: an illustrated construction-site scene drawn in inline SVG — tower cranes with lattice masts, a steel frame mid-build, a skyline behind, a dark sky — with a readable scrim behind the text. Headline "Building Tomorrow's Landmarks", a subline about 25+ years, CTA "Get a Quote", and a small line of licence and accreditation numbers.
+2. Services: a horizontally scrolling, scroll-snapped row of cards — Commercial Buildings, Infrastructure, Fit-Outs, Project Management, Design & Build. Each card gets one sentence of real detail and a typical contract value or pre-qualification level.
+3. Project showcase: a grid filtered by category, each project drawn as a simple SVG elevation with its name, suburb, final contract sum and year. Six real-shaped projects, not three.
+4. Stats bar: projects delivered, years in business, people employed, and a delivery measure the company can state about itself (percentage delivered on programme) — never an invented customer-satisfaction or review score. Count up on scroll, but render the final figures in the markup so the page is correct before any script runs and in a screenshot.
+5. Process: a four-step timeline — Consult, Design, Build, Deliver — each with a real duration and what the client actually receives at that stage.
+6. Credentials: the company's own certifications and insurances set as typographic badges with their standard numbers. No third-party logos, no awards you have invented.
+7. Contact: an enquiry form with visible labels (name, company, email, phone, type of work, description), plus head office address, phone and site hours.
 
-Style: Strong and professional. Dark navy (#0D1B2A), steel grey (#415A77), gold accent (#DAA520). Bold sans-serif headings.`,
+Style: strong and professional. Dark navy (#0D1B2A), steel grey (#415A77), gold accent (#DAA520). Bold sans-serif headings, a mono face for numbers and reference codes. Visible focus rings on every control.`,
     tags: 'construction, business, corporate, professional',
     img: '',
     author: 'UIL4B Team',
@@ -239,7 +244,19 @@ Style: Strong and professional. Dark navy (#0D1B2A), steel grey (#415A77), gold 
     id: 'c-12',
     free: false,
     title: 'Blog article layout',
-    text: `Design a long-form blog article layout optimised for reading. Include: a full-width hero image with overlay title, reading time and author byline below, a sticky table of contents in the left margin on desktop, body text set at 18px with a max-width of 680px for optimal line length, pull quotes styled with a left accent border, inline code blocks, and a "Related articles" grid at the bottom. Typography-focused, minimal distractions. The reading experience should hold up at a 65-75 character measure, the way a printed magazine column does.`,
+    text: `Design a long-form blog article layout optimised for reading, and write the article — a real subject, real prose, roughly 900 words, with an author, a publication and a date. No lorem, no "Section One".
+
+Layout:
+- A full-width hero band with the title overlaid on a drawn background (inline SVG or CSS gradient — a typographic or diagrammatic motif related to the subject, not a photograph), with a scrim so the title stays legible.
+- A byline row under the hero: author avatar drawn as a monogram, name, role, date, reading time.
+- On desktop, a three-part grid: a sticky table of contents in the left margin, the article column, and margin space. The table of contents must have a working active state that follows the reader's position.
+- Body text at 18px with a max-width of 680px, and leading set to match that measure (about 1.7). Heading levels must differ by a real step, not by weight alone.
+- A pull quote with a left accent border and a shorter measure than the body.
+- A figure with a drawn diagram and a caption that explains what the diagram shows.
+- Inline code and one syntax-highlighted code block that scrolls inside the column rather than widening the page.
+- A "Related articles" grid of three at the bottom, each with a real title and standfirst.
+
+Typography-focused, minimal distractions, one accent colour used sparingly. The reading experience should feel like a printed magazine: quiet palette, generous margins, and nothing on the page that competes with the text.`,
     tags: 'blog, editorial, typography, content',
     img: '',
     author: 'UIL4B Team',
@@ -512,32 +529,43 @@ Elements already in view when the page loads are revealed immediately, not on th
     id: 'c-20',
     free: true,
     title: 'CSS-only image hover gallery',
-    text: `Create a responsive image gallery where each image has a unique hover animation — no JavaScript required. Perfect for portfolio or agency sites.
+    text: `Create a responsive image gallery where each tile has a different hover animation — no JavaScript at all. Perfect for portfolio or agency sites.
+
+Ground rules:
+- Every effect must be wired to \`:focus-within\` as well as \`:hover\`, and every tile must be a focusable element, so the gallery behaves identically for someone tabbing through it. A gallery whose content only exists on hover is one half your visitors cannot see.
+- The artwork is drawn: CSS gradients, CSS shapes and inline SVG. No photographs, no external image files.
+- The resting state must be the finished state. Put only the \`transition\` declarations inside \`@media (prefers-reduced-motion: no-preference)\`, so with motion reduced every state still changes — it just arrives at once. Replace the two travel effects (Ken Burns, tilt) with a static highlight under \`prefers-reduced-motion: reduce\` rather than letting them jump-cut.
+- Label each tile with the technique it demonstrates, and give it a real project name, discipline and year.
 
 6 hover effects using only CSS:
-1. Ken Burns: Slow zoom + pan on hover (transform: scale(1.1) translateX(-2%))
-2. Colour reveal: Image starts desaturated, gains full colour on hover (filter transition)
-3. Split reveal: Caption slides up from bottom behind a clip-path wipe
-4. Tilt shine: Perspective tilt with a diagonal light sweep (pseudo-element gradient)
-5. Blur focus: All images blur except the hovered one (use :has() or sibling selectors)
-6. Border frame: An inner border animates inward from the edges on hover
+1. Ken Burns: slow zoom + pan on hover (transform: scale(1.1) translateX(-2%)).
+2. Colour reveal: image starts desaturated, gains full colour on hover (filter transition). Make the artwork read as a composed piece in greyscale too, not just in colour.
+3. Split reveal: a caption slides up from the bottom behind a clip-path wipe. Do not hide anything essential there — the project name stays visible below the tile.
+4. Tilt shine: perspective tilt with a diagonal light sweep (pseudo-element gradient).
+5. Blur focus: when this tile is hovered or focused, every other tile blurs and dims. Scope it to this tile so it does not fight the other five — \`.gallery:has(.fx-blur:hover) .tile:not(:hover)\` and the matching \`:focus-within\` rule.
+6. Border frame: an inner border animates inward from the edges on hover.
 
 \`\`\`css
 /* Ken Burns */
-.gallery-item:hover img { transform: scale(1.1) translateX(-2%); transition: transform 8s ease; }
+.gallery-item:hover img, .gallery-item:focus-within img { transform: scale(1.1) translateX(-2%); }
 
 /* Colour reveal */
-.gallery-item img { filter: grayscale(1); transition: filter 0.6s; }
-.gallery-item:hover img { filter: grayscale(0); }
+.gallery-item img { filter: grayscale(1); }
+.gallery-item:hover img, .gallery-item:focus-within img { filter: grayscale(0); }
 
 /* Split reveal */
-.gallery-item .caption { clip-path: inset(100% 0 0 0); transition: clip-path 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-.gallery-item:hover .caption { clip-path: inset(0 0 0 0); }
+.gallery-item .caption { clip-path: inset(100% 0 0 0); }
+.gallery-item:hover .caption, .gallery-item:focus-within .caption { clip-path: inset(0 0 0 0); }
 
-/* Tilt shine */
-.gallery-item:hover { transform: perspective(800px) rotateY(4deg); }
-.gallery-item::after { background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 45%, transparent 50%); transform: translateX(-100%); }
-.gallery-item:hover::after { transform: translateX(100%); transition: transform 0.6s; }
+/* Blur focus, scoped to one tile */
+.gallery:has(.fx-blur:hover) .gallery-item:not(:hover),
+.gallery:has(.fx-blur:focus-within) .gallery-item:not(:focus-within) { filter: blur(4px); opacity: .5; }
+
+/* Motion is the only thing that is conditional */
+@media (prefers-reduced-motion: no-preference) {
+  .gallery-item img { transition: transform 8s ease-out, filter .6s; }
+  .gallery-item .caption { transition: clip-path .4s cubic-bezier(0.16, 1, 0.3, 1); }
+}
 \`\`\``,
     tags: 'css, gallery, hover, animation, no-js',
     img: '',
