@@ -130,6 +130,10 @@ export function LoginPromptProvider({ children }) {
         // underneath — on the four highest-traffic paths into the product.
         // Callers that pass nothing still get sign-in, so nothing else moves.
         signup: !!opts.signup,
+        // True only from the /login ROUTE, where this dialog is the whole page
+        // and its title is therefore the document title. See the note at the
+        // heading in LoginPopup.jsx.
+        isPageTitle: !!opts.isPageTitle,
       })
     })
     pendingPromiseRef.current = promise
@@ -154,6 +158,7 @@ export function LoginPromptProvider({ children }) {
           lockEmail={prompt.lockEmail}
           passwordOnly={prompt.passwordOnly}
           signup={prompt.signup}
+          isPageTitle={prompt.isPageTitle}
           onSuccess={(u) => finish(u || userRef.current || null)}
           onDismiss={() => finish(null)}
         />

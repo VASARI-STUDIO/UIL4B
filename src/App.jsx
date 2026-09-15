@@ -193,7 +193,10 @@ function LoginRoute() {
     // onboarding, which would otherwise discard it — QA Q1). The stash lives in
     // the provider now, so a nav-initiated sign-up that never touches this route
     // resumes correctly too.
-    openLogin({ reason: '', from, signup: wantsSignup }).then(() => {
+    // isPageTitle: this route renders null below, so the dialog is the only
+    // thing in the document and its title has to be the h1. Measured before:
+    // /login served zero h1 and an empty <main>.
+    openLogin({ reason: '', from, signup: wantsSignup, isPageTitle: true }).then(() => {
       navigate(from, { replace: true })
     })
   }, [loading, user, from, wantsSignup, navigate, openLogin])
