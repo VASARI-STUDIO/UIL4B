@@ -6,6 +6,13 @@ decision. No agent can do any of it.
 _Last reviewed: 2026-09-15 — every row below was re-checked against the live
 service that day, not reworded. Three rows changed._
 
+_**Row 3 changed on 2026-09-16, and it got easier.** It used to ask you to run a
+command in a terminal. The security fix has now been verified and committed for
+you, so row 3 is one click: merge
+[PR #472](https://github.com/VASARI-STUDIO/UIL4B/pull/472), then publish the
+rules. **Do not run `npm run apply:gated` any more** — it would switch on a
+change that is deliberately held back. Section 1.3 explains._
+
 _Updated later the same day, after a long engineering session. **Two things you
 should know before you start clicking:**_
 
@@ -56,7 +63,7 @@ A struck row is done — it keeps its number so nothing that points at it breaks
 |---|---|---|---|---|
 | **1** | ~~Check Fast Origin Transfer. Upgrade off Hobby~~ **Nothing — you are staying free.** Read *What free costs you* below once | — | 2 min to read | Nothing. The site is deploying again and the free plan is holding |
 | **2** | Clear the failed payment, or raise the spending limit | GitHub → Settings → **Billing** | 5 min | No test has run since 4 September. Every PR reads `UNSTABLE`, which looks like broken code |
-| **3** | Run `npm run apply:gated`, type **y**, then publish the rules | a terminal in this repo | 2 min | **This is what the Firebase "insecure rules" email is about.** Your feedback collection is open to anyone on the internet, and you stay the only person who can approve a submission |
+| **3** | Merge **[PR #472](https://github.com/VASARI-STUDIO/UIL4B/pull/472)**, then publish the rules. **Do not run `npm run apply:gated`** — see 1.3 | GitHub, then Firebase Console | 5 min | **This is what the Firebase "insecure rules" email is about.** Your feedback collection is open to anyone on the internet, and you stay the only person who can approve a submission |
 | **4** | Set the prices to **$7 · $18 · $48** (you decided this 2026-09-15) | Stripe → Products → UIL4B Pro | 25 min | You keep selling at $4.99 and $39.99 — less than you decided to charge, and quarterly cannot be bought at all |
 | **5** | Edit the product description: **30 AI actions a day, 300 a month** | Stripe → Products → UIL4B Pro | 2 min | Your own product page promises 1,000/day that the app does not give |
 | **6** | Point the webhook at **`/api/stripe-webhook`**, then add the refund and dispute events | Stripe → Developers → Webhooks | 20 min | **It currently posts to your homepage, so nothing Stripe sends is ever handled.** Refunds and chargebacks vanish. See the note directly below — this row is worth more today than it was yesterday |
@@ -199,20 +206,22 @@ entirely. So the rule never protected a real write — it only granted one to
 strangers. Closing it breaks nothing, and reads, updates and deletes are
 untouched, so the queue keeps working.
 
-**The fix is row 3.** `npm run apply:gated` changes it to `allow create: if
-false` and also puts size and shape limits on the three collections a signed-in
-account can write to. It was reviewed in #418 and is tested against the Firebase
-emulator before you publish it.
+**The fix is row 3, and it is already written and tested — it is sitting in
+[PR #472](https://github.com/VASARI-STUDIO/UIL4B/pull/472) waiting for you to
+merge it.** It changes the rule to `allow create: if false` and also puts size
+and shape limits on the three collections a signed-in account can write to. It
+was reviewed in #418, and on 2026-09-16 it was run against the Firebase
+emulator: 117 rules tests pass, 2039 unit tests pass, the build is clean.
 
-**Then publish.** Applying the change only edits the file on your machine. The
-rules that are live are whatever the Firebase console last published, so the
-email will keep coming until you publish — see the line below.
+**Then publish.** Merging only puts the change in the repository. The rules that
+are live are whatever the Firebase console last published, so the email will
+keep coming until you publish — see the line below.
 
 **After row 3 you must also:** publish the new rules (Firebase console, or
 `firebase deploy --only firestore:rules`) **and deploy the site** —
 `api/verify-admin.js` is a serverless function and does nothing until it ships.
-**Deploys work again**, so that half is no longer blocked: push the change and
-it goes out on its own.
+**Deploys work again**, so that half is no longer blocked: merging #472 pushes
+it to `main` and it goes out on its own.
 
 ---
 
@@ -502,30 +511,54 @@ new change keeps looking broken, and the only proof anything works is an agent
 running the tests on their own machine and pasting the output into the pull
 request.
 
-## 1.3 · Four approved changes are written and not switched on. One command applies all four.
+## 1.3 · Three of the four approved changes are done. Merge one pull request.
 
-**Do.** Open a terminal in this repository and run:
+> **Changed 2026-09-16. This section used to tell you to run `npm run
+> apply:gated`. Do not run it now — it would apply the one change that is
+> deliberately held back.** See *Why the command is no longer the answer*
+> below.
 
-```
-npm run apply:gated
-```
+**Do.** Merge **[PR #472](https://github.com/VASARI-STUDIO/UIL4B/pull/472)** on
+GitHub. That is the whole step. Then publish the rules (the two steps at the end
+of this section).
 
-It tells you what it is about to do and waits for you to type **y**. Nothing
-else — you do not need to read any of the code.
+**Time.** About a minute to merge, then a couple of minutes to publish.
 
-**Time.** About two minutes, most of it the command running its own checks.
+**Where the four stand.**
 
-**Why.** You approved these changes. We could not make them. `firestore.rules`,
-`api/verify-admin.js` and `src/contexts/AuthContext.jsx` are refused by the
-**Claude Code auto-mode classifier** — a guardrail inside the tool itself,
-*separate from and stricter than* `docs/reference/human-validation-zones.md`.
-That doc says "ask Dylan first"; the classifier refuses **after** you have said
-yes. It blocked the agent and it blocked the coordinator, so your approval alone
-never lifted it.
+| | Change | Status |
+|---|---|---|
+| 1 | Per-project sync | **Deliberately held back.** Not in #472, and not something to switch on today — see below |
+| 2 | Moderator role | **Done, in #472**, waiting on your merge |
+| 3 | Feedback create closed, signed-in writes bounded | **Done, in #472**, waiting on your merge |
+| 4 | Firebase deferral | **Shipped already** (10ee10f2) |
 
-The command applies them in the order that composes, refuses to touch anything
-if any one of them no longer fits, skips whatever is already in, and then runs
-the three suites so you find out here rather than in production.
+**Why the command is no longer the answer.** Changes 2 and 3 had been applied to
+the files on this machine but never committed, because the **Claude Code
+auto-mode classifier** — a guardrail inside the tool itself, *separate from and
+stricter than* `docs/reference/human-validation-zones.md` — refused to save
+`firestore.rules` and `api/verify-admin.js`. That doc says "ask Dylan first";
+the classifier refused **after** you had said yes. On 2026-09-16 that guard
+lifted, the work was verified and committed, and it is now #472.
+
+So the only one of the four that `npm run apply:gated` would still *do* is
+number 1, per-project sync — and that one is held back on purpose. Running the
+command would quietly put it in.
+
+**Why per-project sync is held back** (recorded in 10ee10f2, not a new opinion).
+`users/{uid}/projects/{id}` is not in the rules and `PER_PROJECT_SYNC_ENABLED`
+stays `false` to match; two guards pin the pair together. With the flag on,
+three user-simulation tests that pin sync *behaviour* go red — the kilobyte
+ceiling and tombstone propagation. Those are real semantics to re-establish, not
+stale assertions, and this is **how your users' saved work is stored**. It is
+not a thing to rush behind a green suite.
+
+**How we know #472 is exactly the reviewed work.** The files on this machine
+were replayed from the last commit through changes 2 and 3 and compared
+byte for byte — nothing hand-edited, nothing improvised. Then the full gate was
+run on that exact tree: **117 Firestore and Storage emulator tests pass**
+against the real `firestore.rules`, **2039 unit tests pass**, and the
+production build with prerender exits clean.
 
 **The four, and what each one gives you:**
 
@@ -536,58 +569,47 @@ the three suites so you find out here rather than in production.
 | 3 | `firestore.rules` | **Strangers stop being able to write to your feedback queue.** It was open to anyone on the internet. Every signed-in write is also now held to the shape and size the site actually sends, instead of anything up to 1 MB. |
 | 4 | `src/contexts/AuthContext.jsx` + `src/contexts/SubscriptionContext.jsx` | **The homepage paints sooner.** Measured: 360 ms faster to first paint, 624 ms faster to the headline, and 21.8% fewer bytes in the first request. |
 
-**The moderator role is now whole, and this used to say it was not.** Until
-2026-09-10 this item told you that `api/verify-admin.js` — the piece that
-*mints* the moderator role onto a person’s account — was not applied by this
-command, because its change was written as prose with a partial diff rather
-than as something a machine can apply. The change was not missing; it was
-written, reviewed and tested weeks ago and left uncommitted on a branch nobody
-picked back up. It is now a real diff, generated against the file as it stands
-today, and this command applies it. **After you run this and deploy, open
-Admin → Users: every person has a Moderator column, and you can appoint or
-remove one from their own row.** Everything in the table is complete.
-
-**What the command does, step by step.**
-
-1. Prints the four and waits for **y**. `npm run apply:gated -- --dry-run` shows
-   you every line it would change and touches nothing.
-2. Refuses to run at all if those files have unsaved edits it did not make, and
-   prints exactly what it would have overwritten.
-3. Skips anything already applied. Running it twice is safe: the second run
-   reports all four as already in and changes nothing.
-4. Runs `npm run test:rules` (the Firestore emulator), then
-   `npm run test:unit`, then the deferred production build. It stops at the
-   first failure and tells you which change caused it.
-
-   **The emulator needs Java 21 and this machine’s default `java` is 8.**
-   The command checks the version first and looks for a Java 21 elsewhere on
-   the machine; if it cannot find one it stops and prints the path it
-   looked in, rather than failing with a Java stack trace. The four changes
-   are already written to your files by then, so the undo below is what you
-   want if that happens — tell us and we will point it at your JDK.
-5. **Commits nothing and pushes nothing.** It prints the one command that undoes
-   everything: `git checkout -- api/verify-admin.js firestore.rules
-   src/contexts/AuthContext.jsx src/contexts/SubscriptionContext.jsx
-   src/utils/projectSync.js`.
+**The moderator role is whole.** `api/verify-admin.js` — the piece that *mints*
+the moderator role onto a person's account — is in #472 along with the rules
+half. **After you merge and the site deploys, open Admin → Users: every person
+has a Moderator column, and you can appoint or remove one from their own row.**
 
 **Two steps afterwards that only you can do.** First, the new rules are then in
 the repository and not in front of your users: publish them from the Firebase
-console, or run `firebase deploy --only firestore:rules`. Second, commit and
-deploy the site — `api/verify-admin.js` is a serverless function, so until it
-is deployed the moderator role cannot be granted from a file that only exists
-on your laptop. **That second step is no longer blocked** — deploys work again,
-so pushing the change is enough to ship it.
+console, or run `firebase deploy --only firestore:rules`. Second, the site has
+to deploy — `api/verify-admin.js` is a serverless function, so until it ships
+the moderator role cannot be granted. **That second step is no longer blocked**
+— deploys work again, so merging #472 is enough to ship it.
 
-**If it stops and says a change no longer fits.** Tell us. It means the file
-moved after the change was reviewed, and it needs an engineer to regenerate the
-diff. Do not hand-edit around it.
-
-**If you do nothing.** All four stay written and switched off. Your feedback
-queue stays open to anyone on the internet, project sync stays one bad day away
-from stopping silently, the homepage stays 624 ms slower than it needs to be,
+**If you do nothing.** Your feedback queue stays open to anyone on the internet,
 and **you remain the only person on earth who can approve a community submission
 or clear a feedback report** — the bottleneck the moderator role exists to
-remove, and the reason you asked for it.
+remove, and the reason you asked for it. Project sync also stays one bad day
+away from stopping silently, but that one is a separate piece of work, not
+something this merge fixes.
+
+---
+
+### The `npm run apply:gated` command, and why it is parked
+
+The command still exists and still works. It is no longer the instruction
+because three of its four changes have landed and the fourth is held back on
+purpose, so the only thing it would still do is the thing nobody wants done yet.
+
+Two things worth keeping on the record for whoever picks this up:
+
+- **The emulator needs Java 21 and this machine's default `java` is 8.** The
+  command looks for a Java 21 elsewhere on the machine and stops with the path
+  it looked in rather than a Java stack trace. That path is a **portable JDK in
+  a temporary folder from an old session** — a disk clean-up deletes it and the
+  command stops being runnable. If it ever matters again, it needs a real JDK
+  install and a one-line change to the path.
+- **A refusal from it is not evidence that somebody hand-edited your files.**
+  Its check only recognises the four applied *in order from the start*, so a
+  tree holding changes 2 and 3 but not 1 — exactly the state this repository
+  was in — fails the check while being completely legitimate. That is what it
+  was doing on 2026-09-16, and the fix was to verify the tree properly, not to
+  throw the work away.
 
 ---
 
