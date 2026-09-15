@@ -68,12 +68,12 @@ export const LOOKUP_KEYS = {
   lifetime: 'uil4b_pro_lifetime',
 }
 
-// Stripe's `recurring.interval`. Quarterly is a three-MONTH recurrence, so
+// Stripe’s `recurring.interval`. Quarterly is a three-MONTH recurrence, so
 // 'month' is only half of its definition — Stripe also needs
-// `recurring.interval_count: 3` (INTERVAL_COUNTS, below), which
-// api/setup-stripe.js does not currently send. Creating a quarterly price
-// without it would produce an $18-per-MONTH subscription. That is one of the
-// reasons quarterly is deliberately absent from BILLING_INTERVALS.
+// `recurring.interval_count: 3`, which is INTERVAL_COUNTS below. setup-stripe.js
+// DOES send it, for every recurring interval rather than as a quarterly special
+// case, since 2026-09-15; before that a quarterly price would have billed $18 a
+// MONTH. Quarterly joined BILLING_INTERVALS on the same date.
 export const INTERVAL_MAP = { monthly: 'month', quarterly: 'month', yearly: 'year' }
 export const INTERVAL_COUNTS = Object.freeze({ monthly: 1, quarterly: 3, yearly: 1 })
 

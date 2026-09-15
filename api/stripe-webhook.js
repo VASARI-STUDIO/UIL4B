@@ -215,17 +215,67 @@ async function revokeByPaymentIntent(stripe, {
 // SUBSCRIPTION's own metadata, which checkout does stamp and which Stripe
 // carries for the life of the subscription; the customer lookup stays as a
 // fallback for subscriptions created before that was true.
-async function subscriptionForPaymentIntent(stripe, paymentIntentId) {
+// BOTH HOPS THIS USED TO TAKE WERE DELETED FROM THE API, AND IT WENT INERT.
+//
+// Until 2026-09-15 this walked `intent.invoice` and then `invoice.subscription`.
+// Stripe's Basil release (2025-03-31) removed BOTH: "Removed the `invoice` field
+// from the PaymentIntent and Charge objects", and the Invoice lost its top-level
+// `subscription` in the same release. So `intent?.invoice` was undefined, the
+// `!invoiceId` guard returned null on every single call, and the whole
+// revocation path below it was unreachable — a chargeback or refund on a renewal
+// left Pro active while the money went back. Exactly the defect the paragraph
+// above describes as already fixed once.
+//
+// It was silent because it is INERT rather than wrong: nothing throws, nothing
+// logs, the catch is never reached, and the function returns the same `null` it
+// returns for a legitimate one-off payment. No test failed either —
+// tests/unit/billing.test.js covers the decision helpers downstream of this
+// lookup, not the lookup.
+//
+// CONFIRMED AGAINST THIS INSTALL, not just the changelog: node_modules/stripe is
+// 22.2.0 and pins `ApiVersion = '2026-05-27.dahlia'`, two release trains past
+// Basil, and api/_lib/stripe.js constructs `new Stripe(key)` with no apiVersion
+// — so the SDK's pinned version is what every request uses and the account's
+// dashboard default cannot rescue it.
+//
+// THE REPLACEMENT IS THE OBJECT BASIL ADDED FOR THIS. InvoicePayment is the
+// connection between a payment and an invoice, because an invoice may now be
+// paid by several payments. The filter shape is Stripe's own documented one,
+// `payment[type]=payment_intent` plus `payment[payment_intent]=<id>`, and the
+// subscription moved to `parent.subscription_details.subscription` — guarded on
+// `parent.type`, since an invoice can have a different parent entirely.
+//
+// The PaymentIntent retrieve is gone with it: the list takes the id directly, so
+// this is two API calls where it used to be three.
+//
+// Everything the paragraph above says about the USER link still holds and is
+// untouched — the subscription's own metadata is still the reliable link, and
+// this function still returns the Subscription for the caller to read it from.
+// Exported for tests/unit/chargeback-lookup.test.js, the same way
+// writeSubscription is. Vercel only ever reads the default export and `config`,
+// so a named export costs the handler nothing — and this function went dead for
+// months precisely because nothing could reach it to assert on.
+export async function subscriptionForPaymentIntent(stripe, paymentIntentId) {
   if (!paymentIntentId) return null
   try {
-    const intent = await stripe.paymentIntents.retrieve(paymentIntentId)
-    const invoiceId = typeof intent?.invoice === 'string' ? intent.invoice : intent?.invoice?.id
+    const payments = await stripe.invoicePayments.list({
+      payment: { type: 'payment_intent', payment_intent: paymentIntentId },
+      limit: 1,
+    })
+    const invoiceRef = payments?.data?.[0]?.invoice
+    const invoiceId = typeof invoiceRef === 'string' ? invoiceRef : invoiceRef?.id
     if (!invoiceId) return null   // a one-off payment, not a subscription charge
+
     const invoice = await stripe.invoices.retrieve(invoiceId)
-    const subId = typeof invoice?.subscription === 'string'
-      ? invoice.subscription
-      : invoice?.subscription?.id
+    const parent = invoice?.parent
+    // `subscription_details` is one of several parent types; an invoice raised
+    // for anything else is not a subscription charge and must not be guessed at.
+    const subRef = parent?.type === 'subscription_details'
+      ? parent?.subscription_details?.subscription
+      : undefined
+    const subId = typeof subRef === 'string' ? subRef : subRef?.id
     if (!subId) return null
+
     return await stripe.subscriptions.retrieve(subId)
   } catch (err) {
     console.error('stripe-webhook: could not trace a reversed charge to its subscription', {
