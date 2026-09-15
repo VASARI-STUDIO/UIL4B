@@ -19,17 +19,41 @@
 // NAMES — "Full HD 1080p" is worth more to a person than "1920 × 1080", and no
 // function can derive that.
 
-/** The widths a designer actually exports at, largest first. */
+/** The widths a designer actually exports at, largest first.
+ *
+ * TWO KINDS OF LABEL LIVE HERE, AND ONLY ONE OF THEM TRAVELS.
+ *
+ * A name like "Desktop" or "Thumbnail" describes a WIDTH, so it stays true
+ * whatever height the locked ratio asks for. A name like "4K" or "Full HD"
+ * describes a WHOLE RESOLUTION - 3840x2160, 1920x1080 - and those are 16:9.
+ * Printed beside a height that is not 16:9 the name is simply false, which is
+ * what shipped on 2026-09-15: at 19.5:9 the ladder read "1280 x 591 / 720p"
+ * and at 4:3 it read "1920 x 1440 / Full HD". A4 @ 300dpi was wrong at every
+ * ratio in the list, because 2480 is its SHORT side and the sheet is portrait,
+ * so "2480 x 1395 / A4 @ 300dpi" appeared even on the 16:9 the rest is cut for.
+ *
+ * That is the defect this whole page was reworked to remove - the founder
+ * asked for standard sizes so he would be "working in real sizes not partial
+ * ratios", and a ladder that prints a real name over an invented size is worse
+ * than one that prints no name at all.
+ *
+ * So an entry that denotes a resolution carries the SHAPE it denotes, and
+ * standardSizesForRatio() only attaches the name when the locked ratio is
+ * actually that shape. An entry with no `shape` names its width and is always
+ * safe.
+ */
 export const STANDARD_WIDTHS = [
-  { w: 7680, label: '8K' },
-  { w: 5120, label: '5K' },
-  { w: 3840, label: '4K' },
-  { w: 2560, label: '2K / QHD' },
-  { w: 2480, label: 'A4 @ 300dpi' },
-  { w: 1920, label: 'Full HD' },
+  { w: 7680, label: '8K', shape: [16, 9] },
+  { w: 5120, label: '5K', shape: [16, 9] },
+  { w: 3840, label: '4K', shape: [16, 9] },
+  { w: 2560, label: '2K / QHD', shape: [16, 9] },
+  // The one portrait entry: ISO A4 at 300dpi is 2480 x 3508, so 2480 is the
+  // SHORT side and the name is only true of a portrait 1:root-2 page.
+  { w: 2480, label: 'A4 @ 300dpi', shape: [2480, 3508] },
+  { w: 1920, label: 'Full HD', shape: [16, 9] },
   { w: 1600, label: 'Desktop' },
   { w: 1440, label: 'Laptop' },
-  { w: 1280, label: '720p' },
+  { w: 1280, label: '720p', shape: [16, 9] },
   { w: 1024, label: '1K' },
   { w: 800, label: 'Small' },
   { w: 640, label: 'Thumbnail' },
@@ -55,9 +79,12 @@ export function standardSizesForRatio(ratioW, ratioH, { max = 20000 } = {}) {
   if (!(rw > 0) || !(rh > 0)) return []
 
   return STANDARD_WIDTHS
-    .map(({ w, label }) => ({
+    .map(({ w, label, shape }) => ({
       name: `${w} × ${Math.round((w * rh) / rw)}`,
-      meta: label,
+      // A resolution name only travels to the ratio it denotes; a width name
+      // travels everywhere. Empty rather than approximate - the caller renders
+      // nothing for an empty meta, and no name is better than a wrong one.
+      meta: shape && !ratioMatches(rw, rh, shape[0], shape[1]) ? '' : label,
       w,
       h: Math.round((w * rh) / rw),
     }))
