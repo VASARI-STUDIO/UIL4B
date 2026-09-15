@@ -1,5 +1,6 @@
 import { parseTags } from '../../utils/promptStore'
 import { previewDuration } from '../../utils/promptPreview'
+import { hasPromptPreview, promptPosterSrc } from '../../data/promptPreviewAssets'
 import UserName from '../UserName'
 
 // A single prompt tile in the gallery. Presentational — all behaviour is wired
@@ -44,6 +45,25 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved }) {
   const text = p.text || ''
   const name = p.title || text.slice(0, 60)
 
+  // ── THE OUTPUT, WHERE THERE IS ONE ────────────────────────────────────────
+  //
+  // The founder, 2026-09-15: "instead of showing a code snippet we can show the
+  // actual output in a real preview style."
+  //
+  // So a prompt that has had its output BUILT shows the output. The rest keep
+  // the scrolling text, which is not a fallback so much as the right answer for
+  // them: a user-submitted prompt has no output to show, and a card that went
+  // blank for it would be worse than a card that shows the prompt.
+  //
+  // WHY A STILL AND NOT THE LIVE PAGE. Twenty live iframes in one grid is
+  // twenty documents, twenty style recalcs and — on c-16 — twenty canvases
+  // running a particle simulation. The running page is one click away in the
+  // modal, which is the founder's "even better" and is how component libraries
+  // do it. See scripts/prompt-posters.mjs for how the still is captured with
+  // motion reduced, so the poster is the page's FINISHED state rather than a
+  // frame caught mid-entrance.
+  const showsOutput = isCommunity && hasPromptPreview(p.id)
+
   const open = () => onOpen(p)
 
   return (
@@ -67,9 +87,31 @@ export default function PromptCard({ p, onOpen, isCommunity, isSaved }) {
           `data-preview` is the STABLE hook for tests. The class is a styling
           hook and CSS is free to rename it; what a gate test needs to assert is
           WHICH PROMPT'S TEXT IS ON THIS CARD, and that is this element. */}
-      <div className="pl-card-preview" data-preview aria-hidden="true">
-        <p className="pl-card-preview-text">{text}</p>
-      </div>
+      {showsOutput ? (
+        // `data-preview` stays on whichever element IS the preview, because
+        // that is what the gate tests assert against — they ask "which prompt's
+        // artefact is on this card", and the answer moved, it did not vanish.
+        //
+        // aria-hidden for the same reason the text version carries it: the card
+        // already has an explicit accessible name, and the alt text of a
+        // decorative screenshot inside a role="button" would be read as part of
+        // that name. The output is not withheld — it is one activation away,
+        // running, in the modal.
+        <div className="pl-card-preview pl-card-shot" data-preview data-preview-kind="output" aria-hidden="true">
+          <img
+            src={promptPosterSrc(p.id)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            width="960"
+            height="600"
+          />
+        </div>
+      ) : (
+        <div className="pl-card-preview" data-preview data-preview-kind="text" aria-hidden="true">
+          <p className="pl-card-preview-text">{text}</p>
+        </div>
+      )}
 
       <div className="pl-card-text-hero">
         <div className="pl-card-title">{name}</div>
