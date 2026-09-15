@@ -962,50 +962,84 @@ export default function FontGallery({ onCopy, toast }) {
         />
       </LibraryToolbar>
 
-      <p className="fg-count" aria-live="polite">
-        {filtered.length.toLocaleString()} famil{filtered.length === 1 ? 'y' : 'ies'}
-        {category !== 'all' ? ` in ${CATS.find(c => c.id === category)?.label}` : ''}
-        {query.trim() ? ` matching “${query.trim()}”` : ''}
-      </p>
+      {/* THE RESULTS WERE IN NO LANDMARK AT ALL.
 
-      {filtered.length === 0 ? (
-        <LibraryEmpty
-          className="fg-empty"
-          title="Nothing matches that yet."
-          detail={`${query.trim()
-            ? `No family in the loaded catalogue contains “${query.trim()}”.`
-            : 'No family in the loaded catalogue is in this category.'} Clear the filters to see everything again.`}
-          onClear={() => { setQuery(''); setCategory('all') }}
-        />
-      ) : (
-        <>
-          <LibraryGrid className="fg-grid">
-            {paged.map((font, i) => (
-              <GalleryCard
-                key={font.family}
-                font={font}
-                rank={i + 1}
-                onOpen={setSelected}
-                inCompare={compareIds.has(font.family)}
-                onToggleCompare={toggleCompare}
-                previewText={previewText}
-                previewSize={previewSize}
-              />
-            ))}
-          </LibraryGrid>
+          Measured 2026-09-15 on the built preview at 1440x900, signed out,
+          walking Chrome's accessibility tree from the root through childIds
+          (Accessibility.getFullAXTree; the flat array is not in document
+          order). /create/font-gallery reported exactly four landmarks —
+          navigation("Primary") | main | navigation("More typography tools") |
+          contentinfo | navigation("Footer") — with nothing naming content, on
+          a page carrying 24 result cards, 88 controls and ONE heading in the
+          whole document. A reader moving by landmark found the chrome and the
+          cross-links to other tools, and never the gallery.
 
-          {hasMore && (
-            <>
-              <div ref={sentinelRef} className="fg-sentinel" aria-hidden="true" />
-              <div className="fg-more">
-                <button type="button" className="fg-more-btn" onClick={() => setPage(p => p + 1)}>
-                  Show more families ({(filtered.length - paged.length).toLocaleString()} left)
-                </button>
-              </div>
-            </>
-          )}
-        </>
-      )}
+          It was also the odd one out among its own siblings: /create/tint
+          reports three regions, /create/font-pair two, /create/gradient two
+          and a complementary. Four of the eight Create tools named their
+          content and four did not.
+
+          THE SECTION WRAPS THE COUNT AND BOTH ARMS, not just the populated
+          one. A <section aria-labelledby> around only the grid vanishes from
+          the landmark list the moment a filter empties it — the exact fault
+          fixed on /discover/palettes — so the empty state would lose the only
+          landmark describing the results at precisely the moment a reader
+          needs to find out why there are none. Searching "zzzzqqq" now moves
+          the list from region("77 families") to region("0 families matching
+          “zzzzqqq”") instead of from one region to none.
+
+          NAMED FROM THE COUNT LINE THAT WAS ALREADY THERE. It is derived from
+          the filtered array, so the landmark states how many families are
+          inside it and stays true as the filters move; no sentence was
+          written for this. The page has no second heading to borrow, and
+          inventing one is the founder's call, not this lane's — filed in
+          pipeline.js. */}
+      <section className="fg-results" aria-labelledby="fg-count">
+        <p className="fg-count" id="fg-count" aria-live="polite">
+          {filtered.length.toLocaleString()} famil{filtered.length === 1 ? 'y' : 'ies'}
+          {category !== 'all' ? ` in ${CATS.find(c => c.id === category)?.label}` : ''}
+          {query.trim() ? ` matching “${query.trim()}”` : ''}
+        </p>
+
+        {filtered.length === 0 ? (
+          <LibraryEmpty
+            className="fg-empty"
+            title="Nothing matches that yet."
+            detail={`${query.trim()
+              ? `No family in the loaded catalogue contains “${query.trim()}”.`
+              : 'No family in the loaded catalogue is in this category.'} Clear the filters to see everything again.`}
+            onClear={() => { setQuery(''); setCategory('all') }}
+          />
+        ) : (
+          <>
+            <LibraryGrid className="fg-grid">
+              {paged.map((font, i) => (
+                <GalleryCard
+                  key={font.family}
+                  font={font}
+                  rank={i + 1}
+                  onOpen={setSelected}
+                  inCompare={compareIds.has(font.family)}
+                  onToggleCompare={toggleCompare}
+                  previewText={previewText}
+                  previewSize={previewSize}
+                />
+              ))}
+            </LibraryGrid>
+
+            {hasMore && (
+              <>
+                <div ref={sentinelRef} className="fg-sentinel" aria-hidden="true" />
+                <div className="fg-more">
+                  <button type="button" className="fg-more-btn" onClick={() => setPage(p => p + 1)}>
+                    Show more families ({(filtered.length - paged.length).toLocaleString()} left)
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </section>
 
       {compare.length > 0 && !showCompare && (
         <div className="fg-compare-tray">

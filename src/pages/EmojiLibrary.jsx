@@ -369,109 +369,139 @@ export default function EmojiLibrary({ onCopy }) {
         />
       </LibraryToolbar>
 
-      {/* Windowed list: a relative container at full scroll height; only rows
-          inside the viewport (± overscan) are mounted, absolutely positioned. */}
-      <div
-        className="emoji-virt"
-        ref={virtRef}
-        style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
-      >
-        {/* THE CATEGORY HEADINGS ARE h2, AND THEY WERE h3.
-            They are the only section headings under this page's h1, so every
-            rendered cell of this surface stepped h1 to h3 with no h2 between
-            it — measured 2026-09-11 at 320/390/430/768/1024/1097/1120/1136/
-            1280/1440/1920 in both themes and with reduced motion on and off:
-            30 of 30 cells reported the jump. A screen reader's heading list is
-            the fastest way through a 1,655-cell grid of unlabelled buttons,
-            and a skipped level tells that reader a level exists which they
-            have somehow missed. WCAG 1.3.1.
+      {/* THE 1,655-CELL GRID WAS IN NO LANDMARK.
 
-            Paint is unchanged: `.emoji-vhead h3` in global.css set the size,
-            weight and tracking explicitly and moves to h2 with the tag, and
-            the universal reset at the top of that file already zeroes the UA
-            margin either tag would otherwise carry. */}
-        {layout.rows.slice(range.start, range.end).map(row =>
-          row.type === 'head' ? (
-            <div key={row.key} className="emoji-vhead" style={{ top: row.top, height: row.h }}>
-              <h2>{row.cat}</h2>
-              <span className="emoji-section-count">{row.count}</span>
-            </div>
-          ) : (
-            <div key={row.key} className="emoji-vrow" style={{ top: row.top }}>
-              {row.items.map((item, i) => (
-                <EmojiCell
-                  key={i}
-                  emoji={item.char}
-                  shown={item.tone && skinTone ? toneOf(item.char, skinTone) : item.char}
-                  isCopied={copied === item.char}
-                  onCopy={handleCopy}
-                />
-              ))}
-            </div>
-          )
-        )}
-      </div>
+          Measured 2026-09-15 on the built preview, signed out, walking
+          Chrome's accessibility tree from the root through childIds
+          (Accessibility.getFullAXTree; the flat array is not in document
+          order). /create/emoji reported four landmarks —
+          navigation("Primary") | main | contentinfo | navigation("Footer") —
+          and none of them named content, on a surface that renders 391 cells
+          into the viewport out of 1,655 and offers 122 tab stops at 390px.
+          The tabpanel this component mounts inside is named ("Emoji"), but a
+          tabpanel is not a landmark, so it does not appear in the list a
+          reader navigates by region with.
 
-      {/* Always rendered so the input's aria-describedby always resolves, and
-          so a screen reader hears the result count — which the grid, being a
-          wall of unlabelled buttons, does not otherwise convey. */}
-      <p id="emoji-search-status" className="sr-only" role="status" aria-live="polite">
-        {!query
-          ? `Showing all ${results.count} emojis`
-          : index
-            ? `${results.count} ${results.count === 1 ? 'emoji' : 'emojis'} for ${query}`
-            // Without these two the region announced "Loading emoji names"
-            // underneath a visible failure alert, which contradicts it.
-            : indexState === 'offline'
-              ? 'Search unavailable while offline'
-              : indexState === 'error'
-                ? 'Emoji names could not be loaded'
-                : 'Loading emoji names'}
-      </p>
+          Same shape as the fix on /create/font-gallery in this commit, and
+          for the same reason it wraps the STATUS LINE AND EVERY ARM — grid,
+          loading, offline, empty. A region around the grid alone disappears
+          the moment a search matches nothing, which is the fault that was
+          fixed on /discover/palettes: the landmark describing the results
+          would vanish at exactly the moment a reader is trying to find out
+          why there are none. Searching "zzzzqqq" now moves the list from
+          region("Showing all 1655 emojis") to region("0 emojis for zzzzqqq")
+          rather than from one region to none.
 
-      {/* Loading — the index chunk is in flight. */}
-      {query && !index && indexState === 'loading' && (
-        <div className="lib-loading" role="status" aria-live="polite">
-          <div className="fg-loader" />
-          <strong>Looking up emoji names</strong>
-          <span>Searching {TOTAL_COUNT} emojis by name and keyword.</span>
-        </div>
-      )}
+          NAMED FROM THE STATUS LINE THAT WAS ALREADY THERE, which is derived
+          from the filtered set — no sentence was written for it. The h1 above
+          belongs to the shared Icon/Emoji wrapper and carries no id to point
+          at, and this component has no heading of its own except the category
+          bands inside the list. */}
+      <section className="emoji-results" aria-labelledby="emoji-search-status">
+        {/* Windowed list: a relative container at full scroll height; only rows
+            inside the viewport (± overscan) are mounted, absolutely positioned. */}
+        <div
+          className="emoji-virt"
+          ref={virtRef}
+          style={{ height: layout.height, '--emoji-cell': `${cellW}px` }}
+        >
+          {/* THE CATEGORY HEADINGS ARE h2, AND THEY WERE h3.
+              They are the only section headings under this page's h1, so every
+              rendered cell of this surface stepped h1 to h3 with no h2 between
+              it — measured 2026-09-11 at 320/390/430/768/1024/1097/1120/1136/
+              1280/1440/1920 in both themes and with reduced motion on and off:
+              30 of 30 cells reported the jump. A screen reader's heading list is
+              the fastest way through a 1,655-cell grid of unlabelled buttons,
+              and a skipped level tells that reader a level exists which they
+              have somehow missed. WCAG 1.3.1.
 
-      {/* Offline / error — browsing by category still works without the index,
-          so say that rather than implying the whole surface is broken. */}
-      {query && !index && (indexState === 'offline' || indexState === 'error') && (
-        <div className="pl-empty" role="alert">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <p>
-            {indexState === 'offline'
-              ? 'You are offline, so emoji names could not be loaded.'
-              : 'Emoji names could not be loaded, so search is unavailable.'}
-            {' '}Browsing by category still works.
-          </p>
-          <button type="button" className="emoji-retry-btn" onClick={requestIndex}>Try again</button>
-        </div>
-      )}
-
-      {/* Empty — the index is loaded and genuinely matched nothing. */}
-      {query && index && results.count === 0 && (
-        <div className="pl-empty">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <p>
-            No emoji found for &ldquo;{search.trim()}&rdquo;
-            {activeCat ? ` in ${activeCat}` : ''}
-          </p>
-          {activeCat && (
-            <button type="button" className="emoji-retry-btn" onClick={() => setActiveCat(null)}>
-              Search all categories
-            </button>
+              Paint is unchanged: `.emoji-vhead h3` in global.css set the size,
+              weight and tracking explicitly and moves to h2 with the tag, and
+              the universal reset at the top of that file already zeroes the UA
+              margin either tag would otherwise carry. */}
+          {layout.rows.slice(range.start, range.end).map(row =>
+            row.type === 'head' ? (
+              <div key={row.key} className="emoji-vhead" style={{ top: row.top, height: row.h }}>
+                <h2>{row.cat}</h2>
+                <span className="emoji-section-count">{row.count}</span>
+              </div>
+            ) : (
+              <div key={row.key} className="emoji-vrow" style={{ top: row.top }}>
+                {row.items.map((item, i) => (
+                  <EmojiCell
+                    key={i}
+                    emoji={item.char}
+                    shown={item.tone && skinTone ? toneOf(item.char, skinTone) : item.char}
+                    isCopied={copied === item.char}
+                    onCopy={handleCopy}
+                  />
+                ))}
+              </div>
+            )
           )}
         </div>
-      )}
+
+        {/* Always rendered so the input's aria-describedby always resolves, and
+            so a screen reader hears the result count — which the grid, being a
+            wall of unlabelled buttons, does not otherwise convey. */}
+        <p id="emoji-search-status" className="sr-only" role="status" aria-live="polite">
+          {!query
+            ? `Showing all ${results.count} emojis`
+            : index
+              ? `${results.count} ${results.count === 1 ? 'emoji' : 'emojis'} for ${query}`
+              // Without these two the region announced "Loading emoji names"
+              // underneath a visible failure alert, which contradicts it.
+              : indexState === 'offline'
+                ? 'Search unavailable while offline'
+                : indexState === 'error'
+                  ? 'Emoji names could not be loaded'
+                  : 'Loading emoji names'}
+        </p>
+
+        {/* Loading — the index chunk is in flight. */}
+        {query && !index && indexState === 'loading' && (
+          <div className="lib-loading" role="status" aria-live="polite">
+            <div className="fg-loader" />
+            <strong>Looking up emoji names</strong>
+            <span>Searching {TOTAL_COUNT} emojis by name and keyword.</span>
+          </div>
+        )}
+
+        {/* Offline / error — browsing by category still works without the index,
+            so say that rather than implying the whole surface is broken. */}
+        {query && !index && (indexState === 'offline' || indexState === 'error') && (
+          <div className="pl-empty" role="alert">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p>
+              {indexState === 'offline'
+                ? 'You are offline, so emoji names could not be loaded.'
+                : 'Emoji names could not be loaded, so search is unavailable.'}
+              {' '}Browsing by category still works.
+            </p>
+            <button type="button" className="emoji-retry-btn" onClick={requestIndex}>Try again</button>
+          </div>
+        )}
+
+        {/* Empty — the index is loaded and genuinely matched nothing. */}
+        {query && index && results.count === 0 && (
+          <div className="pl-empty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <p>
+              No emoji found for &ldquo;{search.trim()}&rdquo;
+              {activeCat ? ` in ${activeCat}` : ''}
+            </p>
+            {activeCat && (
+              <button type="button" className="emoji-retry-btn" onClick={() => setActiveCat(null)}>
+                Search all categories
+              </button>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
