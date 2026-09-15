@@ -373,7 +373,37 @@ export default function PromptLibrary({ onCopy, toast }) {
         </div>
       )}
 
-      {/* Gallery Grid */}
+      {/* THE RESULTS WERE THE ONE REGION ON THIS PAGE THAT NAMED NOTHING, and
+          the count they turn on was announced nowhere.
+
+          Its three sibling libraries — Palette, Gradient and Curated Resources
+          — all render DiscoverResultHead, which is a labelled <section> plus an
+          aria-live count. This page was the only one of the four without
+          either: the grid was a bare <div className="pl-gallery">, so a reader
+          navigating by landmark found the masthead and the closing CTA and
+          nothing naming the thing the page is for, and filtering from 20 to 0
+          changed the screen while saying nothing.
+
+          It does NOT adopt DiscoverResultHead, deliberately. That component
+          renders a VISIBLE eyebrow and h2, and the titles its siblings pass
+          ("Colours worth building with") are exactly the marketing lines the
+          re-score flagged as the founder's to write. Adding a visible heading
+          here would be a design change and a copy decision inside an
+          accessibility fix.
+
+          So this uses the pattern THIS PAGE already established forty lines
+          below, where the locked grid names itself with an sr-only h2: nothing
+          moves on screen, and the region, its name and its count all exist for
+          anyone reading the outline. The name is the tab the visitor is
+          standing in — their own choice, already rendered as the tab's label —
+          and the count is counted. No sentence was written. */}
+      <section aria-labelledby="pl-results-heading">
+        <h2 className="sr-only" id="pl-results-heading">
+          {isCommunity ? 'Community' : 'My Prompts'}
+        </h2>
+        <p className="sr-only" aria-live="polite">
+          {filtered.length} {filtered.length === 1 ? 'prompt' : 'prompts'}
+        </p>
       {filtered.length > 0 ? (
         <div className="pl-gallery">
           {filtered.map((p) => (
@@ -409,6 +439,7 @@ export default function PromptLibrary({ onCopy, toast }) {
           </div>
         )
       )}
+      </section>
 
       {/* The teased tail of the community library: three placeholders, then one
           wall. Shown only while BROWSING — under a search or a category filter

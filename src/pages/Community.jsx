@@ -319,19 +319,38 @@ export default function Community({ toast }) {
         </div>
       </div>
 
-      {visible.length > 0 ? (
-        <div className="ch-grid">
-          {visible.map(item => (
-            <CommunityCard key={item.id} item={item} saved={saves.has(item.id)} count={effectiveCount(item)} onToggle={toggleSave} />
-          ))}
-        </div>
-      ) : (
-        <div className="ch-empty">
-          {sort === 'saved'
-            ? 'No saved designs yet. Tap the heart on any design to save it here.'
-            : 'No designs in this category yet.'}
-        </div>
-      )}
+      {/* THE CARDS ARE WHAT THIS PAGE IS FOR, AND THEY SAT IN NO LANDMARK.
+          The grid was a bare <div className="ch-grid">, so a reader navigating
+          by region found the header and the footer and nothing naming the
+          twelve designs between them — and the seven category filters above
+          could take the count from twelve to zero without announcing it.
+
+          Same shape and same fix as the Prompt Library beside it: a labelled
+          section, named by the filter the visitor is standing in, with the
+          count in a polite live region. The name is their own selection, which
+          the filter button already renders, and the count is counted — nothing
+          here is a written sentence, and nothing moves on screen. */}
+      <section aria-labelledby="ch-results-heading">
+        <h2 className="sr-only" id="ch-results-heading">
+          {filter === 'All' ? 'Community designs' : `${filter} designs`}
+        </h2>
+        <p className="sr-only" aria-live="polite">
+          {visible.length} {visible.length === 1 ? 'design' : 'designs'}
+        </p>
+        {visible.length > 0 ? (
+          <div className="ch-grid">
+            {visible.map(item => (
+              <CommunityCard key={item.id} item={item} saved={saves.has(item.id)} count={effectiveCount(item)} onToggle={toggleSave} />
+            ))}
+          </div>
+        ) : (
+          <div className="ch-empty">
+            {sort === 'saved'
+              ? 'No saved designs yet. Tap the heart on any design to save it here.'
+              : 'No designs in this category yet.'}
+          </div>
+        )}
+      </section>
 
       {/* The closing line, below the last card. The submission entry is on this
           page, so the CTA calls `openSubmit` itself — the same function the
