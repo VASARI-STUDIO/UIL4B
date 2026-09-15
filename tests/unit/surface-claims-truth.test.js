@@ -270,6 +270,25 @@ test('/sitemap does not promise a Soon group in its Create lede or type a Discov
   }
 })
 
+/* ── /community: nothing "appears" until something renders the queue ───────── */
+
+test('/community does not promise a submission will appear while nothing shows the queue', () => {
+  // A public feed would call listQueue() outside the admin. Read the callers:
+  // the day one exists, the sentence is true and this check retires itself.
+  const files = ['src/pages/Community.jsx', 'src/pages/SurfaceLanding.jsx', 'src/components/discover/CommunityCard.jsx']
+  const publicFeed = files.some((f) => stripComments(read(f)).includes('listQueue('))
+  if (publicFeed) return
+  const community = stripComments(read('src/pages/Community.jsx'))
+  assert.ok(community.includes('publishToQueue('),
+    'Community.jsx no longer submits to the queue; this check is reading the wrong page')
+  for (const phrase of ['before it appears', 'appears publicly']) {
+    assert.ok(!community.includes(phrase),
+      `/community says a submission is reviewed "${phrase}" again, and no file outside `
+      + 'src/components/admin calls listQueue() — an approved design is shown to nobody but its '
+      + 'author (pipeline.js: community publishing deliberately unbuilt, #377).')
+  }
+})
+
 test('the superlative deleted from /discover is not on /info', () => {
   // "the best" was removed from '/discover' and '/discover/gradients' by
   // name (routeMetaMap.js). /info carried it for the same page.

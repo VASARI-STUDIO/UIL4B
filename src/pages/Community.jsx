@@ -96,9 +96,16 @@ function SubmitModal({ onClose, onSubmit, authorName, ownerId }) {
             {error && <div className="ui-modal-err">{error}</div>}
             {/* This note used to say submissions were saved to this browser
                 "for now". They now go to the review queue on your account, so
-                it says what actually happens — including that nothing appears
-                in the public library until a reviewer approves it. */}
-            <p className="ui-modal-note">Submissions are saved to your account and queued for review, so they follow you across devices. Nothing appears publicly until it has been reviewed.</p>
+                it says what actually happens.
+
+                A SECOND SENTENCE IS DELETED: "Nothing appears publicly until
+                it has been reviewed." Review is real — CommunityQueue.jsx in
+                the admin approves and rejects — but APPEARING is not: this
+                page renders [...mine, ...COMMUNITY_DESIGNS], listQueue() is
+                called from the admin queue and nowhere else, and pipeline.js
+                records that community publishing is deliberately unbuilt
+                (#377). "Until" promised an after that no code delivers. */}
+            <p className="ui-modal-note">Submissions are saved to your account and queued for review, so they follow you across devices.</p>
           </div>
           <div className="ui-modal-actions ui-modal-actions--row">
             <button className="btn" onClick={onClose}>Cancel</button>
@@ -360,7 +367,12 @@ export default function Community({ toast }) {
           a MODAL, which arrives where the user already is. */}
       <GalleryCloseCta
         className="ch-cta"
-        detail="Submit a design of your own — it is credited to you, and reviewed before it appears."
+        // ", and reviewed before it appears" is deleted — see the note in
+        // SubmitModal: nothing outside the admin reads the reviewed queue, so
+        // "appears" is a step with no code behind it. The same three promises
+        // still sit in COMMUNITY_SUBMIT_REASONS (utils/submitIntent.js), which
+        // is outside this lane and is filed in pipeline.js.
+        detail="Submit a design of your own — it is credited to you."
         action="Create and submit your own"
         onAction={openSubmit}
         busy={authLoading}
