@@ -42,6 +42,8 @@
 // tests/unit/admin-chunk-carries-no-backlog.test.js reading requireAdmin() into
 // serveBacklog(), and by the Authorization assertion in
 // 57-signed-in-session.spec.js.
+import fs from 'node:fs'
+import path from 'node:path'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../../src/data/pipeline.js'
@@ -79,6 +81,20 @@ for (const [board, rows] of [['pipeline', [...NEXT_TODO, ...PIPELINE_PROCESSES]]
     }
   }
 }
+
+// The board's own status vocabulary, read out of Admin.jsx rather than restated
+// here — exactly as tests/unit/pipeline-board-renderable.test.js reads it, and
+// for the same reason: a copy in this file would be one more list to keep in
+// step. The component renders `TODO_STATUS_LABEL[t.status] || t.status`, and
+// that fallback is mirrored below, so a status with no label is expected to
+// print as its own raw lowercase string. Flagging THAT is the unit guard's job;
+// this file only checks the board printed what the queue it was handed calls for.
+const TODO_STATUS_LABEL = (() => {
+  const src = fs.readFileSync(path.join('src', 'pages', 'Admin.jsx'), 'utf8')
+  const m = src.match(/TODO_STATUS_LABEL\s*=\s*\{([^}]*)\}/)
+  if (!m) throw new Error('could not find the TODO_STATUS_LABEL map in Admin.jsx — this spec is reading the wrong file')
+  return Object.fromEntries([...m[1].matchAll(/(\w[\w-]*)\s*:\s*'([^']*)'/g)].map((x) => [x[1], x[2]]))
+})()
 
 // One row of each board, chosen deterministically, whose prose is long enough
 // to be unmistakable on screen. Used by the render tests and nothing else.
@@ -130,11 +146,34 @@ test('the founder opens the Pipeline tab and gets the whole board — rows, note
   // THE STATUSES, read back as the labels the board prints rather than the raw
   // values, because an unmapped status renders as its own lowercase string and
   // that is the defect pipeline-board-renderable.test.js exists for.
+  //
+  // DERIVED FROM THE DATA, NOT NAMED HERE. This used to anchor on the literal
+  // 'Done' — never the property being guarded, only a value that happened to be
+  // present in every queue anyone had seen. Archiving the 172 finished rows to
+  // docs/backlog/ emptied that status out of the live queue, and the assertion
+  // went red while the board was perfectly correct: five distinct labels, every
+  // one of them right. A stale anchor, not a defect. Naming any other status
+  // instead would re-encode the same assumption and break on the next archive
+  // pass, so the expected set is computed from the same NEXT_TODO the stub
+  // served. That is also strictly stronger than the anchor was: it fails on a
+  // status collapsing to one value, on one being dropped in transit, AND on one
+  // being printed as something the data does not say.
+  const expectedLabels = [...new Set(NEXT_TODO.map((t) => TODO_STATUS_LABEL[t.status] || t.status))].sort()
   const labels = new Set(await page.locator('.adm-pipe-status').allInnerTexts())
   expect(
     [...labels].sort(),
-    'the board is printing one status for everything, so the statuses did not survive the trip',
-  ).toContain('Done')
+    'the labels on the board are not the ones the queue it was handed calls for — a status has '
+    + 'collapsed to a single value, been dropped on the way through JSON, or is being printed as '
+    + 'something src/data/pipeline.js does not say',
+  ).toEqual(expectedLabels)
+  // One label per distinct status, so two statuses cannot quietly share a word
+  // and still satisfy the set above — `deferred` reading as `Blocked` is the
+  // exact confusion TODO_STATUS_LABEL was split to prevent.
+  expect(
+    labels.size,
+    'the board printed fewer distinct labels than the queue has distinct statuses, so two statuses '
+    + 'render as the same word and cannot be told apart on the one board the founder reads',
+  ).toBe(new Set(NEXT_TODO.map((t) => t.status)).size)
   expect(labels.size, 'only one distinct status label rendered across the whole queue').toBeGreaterThan(2)
 
   // And it asked as somebody — a request without this is refused in production.
