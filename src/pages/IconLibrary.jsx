@@ -1918,8 +1918,28 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // So the suppression now applies only while the user has not searched. With a
   // query the block below explains which of the two things went wrong, in the
   // sentence it already carries.
+  //
+  // 2026-09-15: THE SAME SILENCE WAS STILL THERE FOR THE PACK AND COLLECTION
+  // FILTERS, which is the half the fix above did not reach.
+  //
+  // The fallback set is 259 built-in icons and it does not cover every pack the
+  // control offers. Measured at 1280 with the service unreachable, stepping
+  // through all 24 selectable packs: 18 of them rendered an EMPTY GRID WITH NO
+  // MESSAGE AT ALL — ph, mdi, material-symbols, solar, fa6-solid, bxs, logos,
+  // devicon, skill-icons, circle-flags, flag, flagpack, cif, flat-color-icons,
+  // twemoji, noto, fluent-emoji, openmoji. Only all, lucide, tabler, iconoir,
+  // heroicons and simple-icons drew anything. Three quarters of that menu was a
+  // control that appeared to do nothing, under a banner about a different
+  // problem — the exact state the note above says this empty state exists to
+  // end, reached by a different route.
+  //
+  // Narrowing to a pack or a collection is a user action, the same as typing,
+  // so an empty result is an answer to it and deserves one. NO NEW SENTENCE:
+  // the block below already carries "No icons to show — try another pack or
+  // search." for the query-less case, which is exactly true here and blames
+  // nobody. The outage notice stays above it and still explains the cause.
   const searchEmpty = !isMyIcons && !loading && icons.length === 0
-    && (!loadError || query.trim().length > 0)
+    && (!loadError || query.trim().length > 0 || !!pack || !!group)
 
   // Shared glyph renderer — one code path for custom (saved), CDN and embedded
   // icons, reused by the main grid and both My Icons sections.
