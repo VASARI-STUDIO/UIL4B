@@ -59,7 +59,15 @@ const downloadsSeen = (page) => page.evaluate(() => window.__dl || 0)
 const loginOpen = (page) => page.evaluate(() => !!document.querySelector('#ui-login-title'))
 
 test.describe('a file needs a free account', () => {
-  test('the palette Save / export control asks before it opens', async ({ page }) => {
+  test('the palette menu opens for anybody, and SAVE is what asks', async ({ page }) => {
+    // THE GATE IS ON THE SAVE, NOT ON THE MENU, and that is the decision.
+    //
+    // "Save / export" used to ask for an account before the menu would open.
+    // Behind it sat Copy link to this palette, Copy CSS variables and Copy hex
+    // values — so on this one surface copying was gated, while the board's own
+    // per-swatch Copy and the toolbar's Copy CSS were free the whole time. The
+    // page disagreed with itself, and with the rule: producing a FILE needs a
+    // free account, copying a value never does.
     watch(page, PERSONA)
     await go(page, '/create/palette')
     await page.waitForSelector('.plb-col', { timeout: 15000 })
@@ -71,9 +79,23 @@ test.describe('a file needs a free account', () => {
       'the palette board did not render').toBeGreaterThan(2)
 
     await page.getByRole('button', { name: 'Save / export' }).click()
+    const menu = page.locator('.plb-savemenu')
+    await expect(menu, 'the menu asked for an account before it would open. It holds three '
+      + 'Copy rows, and copying is free forever.').toBeVisible({ timeout: 10000 })
+    expect(await page.evaluate(() => !!document.querySelector('#ui-login-title')),
+      'opening the menu raised the sign-up gate').toBe(false)
+
+    // The three Copy rows are reachable signed out. That is the half that was
+    // broken, so it is asserted by name rather than by count.
+    const copyRows = await menu.locator('.plb-menu-item').filter({ hasText: /copy/i }).allTextContents()
+    expect(copyRows.length, `the menu exposes no Copy rows: ${JSON.stringify(copyRows)}`)
+      .toBeGreaterThanOrEqual(3)
+
+    // And Save is what asks.
+    await menu.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(page.locator('#ui-login-title'),
-      'Save / export handed over the panel without asking for an account')
-      .toBeVisible({ timeout: 10000 })
+      'Save did not ask for an account')
+      .toHaveText(/create your free account/i, { timeout: 10000 })
     expect(await downloadsSeen(page), 'a file was produced anyway').toBe(0)
   })
 

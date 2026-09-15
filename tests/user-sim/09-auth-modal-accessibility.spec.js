@@ -31,10 +31,18 @@ test('dismissing an in-place auth prompt restores its persistent opener', async 
   watch(page, PERSONA)
   await go(page, '/palette')
 
-  const save = page.getByTitle('Save, share or export this palette')
-  await expect(save).toBeVisible()
+  // THE GATE MOVED OFF THE MENU ONTO SAVE, 2026-09-15. The menu also holds
+  // Copy link, Copy CSS variables and Copy hex values, and copying is free
+  // forever — gating the menu gated those too. What this test is about is
+  // unchanged: dismissing an in-place prompt returns focus to the control that
+  // raised it. That control is now the Save button inside the menu.
+  const opener = page.getByTitle('Save, share or export this palette')
+  await expect(opener).toBeVisible()
+  await opener.click()
+  const save = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
+  await expect(save, 'the save menu did not open').toBeVisible()
   await save.click()
-  const dialog = page.getByRole('dialog', { name: /log in to continue/i })
+  const dialog = page.getByRole('dialog', { name: /create your free account/i })
   await expect(dialog).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
@@ -119,11 +127,15 @@ test.describe('on a phone', () => {
     watch(page, PERSONA)
     await go(page, '/palette')
 
-    const save = page.getByTitle('Save, share or export this palette')
-    await save.waitFor({ state: 'visible' })
+    // Same move as above: the opener opens the menu, Save raises the gate.
+    const opener = page.getByTitle('Save, share or export this palette')
+    await opener.waitFor({ state: 'visible' })
+    await opener.tap()
+    const save = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
+    await expect(save, 'the save menu did not open').toBeVisible()
     await save.tap()
 
-    const dialog = page.getByRole('dialog', { name: /log in to continue/i })
+    const dialog = page.getByRole('dialog', { name: /create your free account/i })
     await expect(dialog).toBeVisible()
     await expect(dialog).toContainText('You were about to')
     await expect(dialog).toContainText('save this palette')

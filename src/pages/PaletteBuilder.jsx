@@ -2056,7 +2056,40 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     }
   }
 
-  const doSave = () => {
+  // THE GATE MOVED OFF THE MENU AND ONTO THE SAVE, because the menu also holds
+  // three COPY items.
+  //
+  // "Save / export" used to ask for an account before it would OPEN, and behind
+  // it sat Copy link to this palette, Copy CSS variables and Copy hex values.
+  // So on this one surface copying was gated — which is the opposite of the rule
+  // the founder set on 2026-09-15: producing a FILE needs a free account,
+  // copying a value never does. The board's own per-swatch Copy and the
+  // toolbar's Copy CSS were free the whole time, so the product disagreed with
+  // itself inside a single page.
+  //
+  // Now the menu opens for anybody, the three Copy rows work signed out, and the
+  // account is asked for at the two things that actually keep or produce
+  // something: this save, and the PNG download (gated separately through
+  // useExportGate). `signup: true` matches the export gate — somebody who
+  // reaches this has no account, so "Log in to continue" is the wrong greeting.
+  const doSave = async () => {
+    // THE ACCOUNT IS ASKED FOR BEFORE THE NAME, and the order matters.
+    //
+    // The name check below is a silent `return` — the Save button is never
+    // disabled, so pressing it empty does nothing and says nothing. That was
+    // unreachable while the gate sat on the menu opener, because a signed-out
+    // visitor never got as far as the button. Moving the gate down here without
+    // moving it ABOVE the name check would have handed them that dead click
+    // instead of the gate, which is a worse first answer than being asked to
+    // sign up.
+    //
+    // Asked first, the flow reads the way it did before: press Save, get asked
+    // for an account. (The empty-name silence is a separate, older defect and is
+    // left alone here rather than fixed in passing.)
+    if (!canSaveProjects) {
+      const user = await requireLogin('save this palette', { free: true, signup: true })
+      if (!user) return
+    }
     const name = saveName.trim()
     if (!name) return
     try {
@@ -2508,11 +2541,11 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
               aria-expanded={saveOpen}
               aria-haspopup="dialog"
               title="Save, share or export this palette"
-              onClick={async () => {
-                if (!canSaveProjects) {
-                  const user = await requireLogin('save this palette', { free: true })
-                  if (!user) return
-                }
+              onClick={() => {
+                // No gate here — see the note on doSave. This menu holds three
+                // Copy rows, and copying is free forever; the account is asked
+                // for at the save and at the PNG, which are the two things that
+                // keep or produce something.
                 const n = !saveOpen; closeAllMenus(); setSaveOpen(n)
               }}
             >

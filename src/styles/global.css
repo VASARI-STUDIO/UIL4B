@@ -2989,6 +2989,36 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
 [data-reveal]{opacity:0;transform:translateY(16px);transition:opacity var(--dur-5) var(--ease-out),transform var(--dur-5) var(--ease-out)}
 [data-reveal].is-in{opacity:1;transform:none}
 
+/* REDUCED MOTION SHOWS EVERYTHING AT ONCE. THIS RULE WAS DOCUMENTED AND NEVER
+   WRITTEN.
+   src/hooks/useReveal.js has said, under "Resilience", that "Reduced motion →
+   the CSS forces `[data-reveal]` visible regardless; this still runs and is
+   harmless" — and no such CSS existed. The only rules on the attribute were the
+   two above, so the ONLY thing that ever cleared `opacity:0` was `.is-in`,
+   added by an IntersectionObserver when the element scrolls into view.
+   Founder report, 2026-09-15: "if people have animation off it looks broken".
+   Reproduced on the live site with prefers-reduced-motion set, measuring at
+   load before any scroll: /learn 13 of 14 blocks blank (1,659 characters
+   invisible), /create/color 5 of 6 (691), /discover 5 of 9 (640), /plans 1 of 1
+   (217). `<html>` carried `data-reduced-motion="true"` the whole time and
+   nothing keyed on it. The content was never lost — it all appears once you
+   scroll past it — but a visitor who has asked for no animation is the last
+   person who should have to scroll to make text exist.
+   The homepage was already correct and is why this took finding: it runs
+   useHomeMotion, which skips GSAP entirely under reduced motion and leaves all
+   eight sections revealed at load. Every OTHER surface runs useReveal —
+   /learn, /discover, /plans, /create/color, /help, /principles.
+   `transition:none` as well as the visible state, so nothing eases in on the
+   first paint. The selector convention is this file's own, used a few hundred
+   lines below on `.hstep`: the app setting wins outright, and the OS preference
+   wins unless the app has explicitly turned it off. */
+:where(html[data-reduced-motion="true"]) [data-reveal],
+:where(html[data-reduced-motion="true"]) [data-reveal-group]{opacity:1;transform:none;transition:none}
+@media(prefers-reduced-motion:reduce){
+  :where(html:not([data-reduced-motion="false"])) [data-reveal],
+  :where(html:not([data-reduced-motion="false"])) [data-reveal-group]{opacity:1;transform:none;transition:none}
+}
+
 /* Lenis smooth-scroll (home only). Lenis adds these classes to <html> while it is
    mounted and removes them on teardown, so every rule here is inert elsewhere. */
 html.lenis,html.lenis body{height:auto}
@@ -7662,6 +7692,25 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-login-aside-foot{display:none;margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border);font-size:11.5px;line-height:1.45;color:var(--t2);text-wrap:pretty}
 @media(max-width:780px){
   .ui-login--interrupt .ui-login-aside-foot{display:block;margin:8px 0 0;padding-top:6px}
+  /* THE INTERRUPT GATE GAINED A THIRD FIELD, AND THE WAY OUT WENT UNDER THE
+     FOLD BY 8px.
+     The measurement in the note above — "the gate runs y=36–808 of 844 … and
+     zero overflow" — was taken when this gate opened on the SIGN-IN pane, which
+     has two fields. On 2026-09-15 it began opening on CREATE ACCOUNT instead,
+     because everyone who reaches it has no account by definition; that adds the
+     Display Name field, 72px, and the dialog measured 8px of overflow at
+     390×844. Eight pixels is enough to put "Not now? Closing this changes
+     nothing" below the fold — which is the one sentence this whole block exists
+     to keep on screen, and a gate whose only visible exit is an unlabelled ✕ is
+     the shape of a dark pattern whatever the intent.
+     So the form tightens rather than the sentence moving. 2px off each gap,
+     across the fields, the submit and the switch, buys back more than the 8px
+     without changing a single type size or touch target — the fields stay 72px
+     and the compact spacing is what this block was already doing for
+     interrupts. Measured after: zero overflow at 390×844.
+     Held by tests/user-sim/72-flow-followups.spec.js, which fails if the gate
+     ever has to scroll to show its own way out. */
+  .ui-login--interrupt .auth-form{gap:10px}
 }
 
 /* The close button leaves .ui-modal-head, because at width the head is no
