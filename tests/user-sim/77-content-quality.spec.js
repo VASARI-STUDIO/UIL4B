@@ -59,8 +59,12 @@ const UNDER_24 = () => {
     if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false
     return el.getClientRects().length > 0
   }
+  // Inline-level display is required, not just "the parent holds more text".
+  // The looser form excused 23 block-level `.htool-head` measurements on the
+  // homepage for a day; 58-target-size-24 carries the full argument.
   const inlineInSentence = (el) => {
     if (el.tagName !== 'A') return false
+    if (!getComputedStyle(el).display.startsWith('inline')) return false
     const p = el.parentElement
     if (!p) return false
     return (p.innerText || '').trim().length > (el.innerText || '').trim().length + 3
