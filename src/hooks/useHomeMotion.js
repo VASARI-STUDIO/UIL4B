@@ -203,13 +203,37 @@ export function useHomeMotion(scopeRef, options = {}) {
           //    together with a stagger. `media` variants add a subtle scale
           //    burn-in; clearProps hands transform back to CSS afterwards so hover
           //    lifts keep working. ──
-          gsap.set('[data-reveal]', { autoAlpha: 0, y: 28 })
+          //
+          // opacity, NOT autoAlpha, AND THE DIFFERENCE IS THE WHOLE PAGE OUTLINE.
+          //
+          // autoAlpha is opacity plus visibility, and visibility:hidden removes an
+          // element from the accessibility tree outright - not dimmed, absent.
+          // Every section below the hero is a [data-reveal], so at load with motion
+          // on (the default) Chrome’s tree for / held 6 of the 17 headings and the
+          // outline read h1 then five h3s, with NOT ONE of the five h2s between
+          // them: a two-level skip, identical at 390 and 1440. A screen-reader user
+          // could not perceive the shape of the page until they had scrolled the
+          // whole of it, and the same blindness hit the suite - innerText cannot
+          // see a visibility:hidden subtree either, which is recorded in
+          // pipeline.js as the reason two earlier text sweeps went vacuous.
+          //
+          // Plain opacity animates identically and keeps the element in the tree.
+          // The usual objection - that opacity:0 leaves a control focusable while
+          // invisible - does not bite here: focusing an element scrolls it into
+          // view, and scrolling into view is exactly what fires these triggers, so
+          // a Tab into an unrevealed section reveals it. Measured after the change:
+          // 17 of 17 headings in the tree at load, and a full Tab sweep reaches no
+          // control that stays invisible.
+          //
+          // Recorded as handed-over on 2026-09-13 with these exact measurements
+          // ("the fix belongs to the homepage motion lane"); this is that fix.
+          gsap.set('[data-reveal]', { opacity: 0, y: 28 })
           gsap.set('[data-reveal="media"]', { scale: 1.04, transformOrigin: '50% 50%' })
           ScrollTrigger.batch('[data-reveal]', {
             start: 'top 86%',
             onEnter: (els) => {
               els.forEach((el) => el.classList.add('is-in'))
-              gsap.to(els, { autoAlpha: 1, y: 0, scale: 1, duration: 0.85, ease: 'power3.out', stagger: 0.12, overwrite: true, clearProps: 'transform' })
+              gsap.to(els, { opacity: 1, y: 0, scale: 1, duration: 0.85, ease: 'power3.out', stagger: 0.12, overwrite: true, clearProps: 'transform' })
             },
           })
 
@@ -218,17 +242,48 @@ export function useHomeMotion(scopeRef, options = {}) {
           gsap.utils.toArray('[data-reveal-group]').forEach((group) => {
             const kids = gsap.utils.toArray(group.children)
             if (!kids.length) return
-            gsap.set(kids, { autoAlpha: 0, y: 24 })
+            // opacity rather than autoAlpha, for the reason above the single-element
+            // reveal: the six .htool-title h3s are children of a [data-reveal-group].
+            gsap.set(kids, { opacity: 0, y: 24 })
             ScrollTrigger.create({
               trigger: group,
               start: 'top 86%',
               once: true,
               onEnter: () => {
                 group.classList.add('is-in')
-                gsap.to(kids, { autoAlpha: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.1, overwrite: true, clearProps: 'transform' })
+                gsap.to(kids, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out', stagger: 0.1, overwrite: true, clearProps: 'transform' })
               },
             })
           })
+
+          // ── A KEYBOARD USER REACHES A SECTION BEFORE SCROLL REVEALS IT ────────
+          //
+          // Animating opacity instead of autoAlpha keeps the page in the
+          // accessibility tree, and trades the outline defect for a smaller one:
+          // an opacity:0 element is still FOCUSABLE. Measured before this handler
+          // existed, a 45-stop Tab sweep landed on 21 invisible controls at 390
+          // and 17 at 1440 - .htool-head and .htool-link, the homepage tool grid -
+          // because focusing an element does not fire a ScrollTrigger. The
+          // assumption that it would was wrong, and measuring is what caught it.
+          //
+          // So focus reveals too. The whole group completes, not just the focused
+          // child: revealing one card of six and leaving five invisible is worse
+          // than either state. Set rather than tweened - the visitor is already
+          // there, so a 0.8s fade under the cursor is a delay, not an entrance.
+          const revealNow = (el) => {
+            const single = el.closest('[data-reveal]')
+            if (single && !single.classList.contains('is-in')) {
+              single.classList.add('is-in')
+              gsap.set(single, { opacity: 1, y: 0, scale: 1, clearProps: 'transform' })
+            }
+            const group = el.closest('[data-reveal-group]')
+            if (group && !group.classList.contains('is-in')) {
+              group.classList.add('is-in')
+              gsap.set(gsap.utils.toArray(group.children), { opacity: 1, y: 0, clearProps: 'transform' })
+            }
+          }
+          const onFocusIn = (e) => { if (e.target instanceof Element) revealNow(e.target) }
+          scope.addEventListener('focusin', onFocusIn)
 
           // The community strip is a `[data-reveal-group]`, so its cards are
           // already staggered by the grouped-reveal pass above. It used to get a
@@ -261,7 +316,10 @@ export function useHomeMotion(scopeRef, options = {}) {
           ScrollTrigger.refresh()
 
           // Returned cleanup runs on ctx.revert() — drop the magnet listeners.
-          return () => { if (removeMagnet) removeMagnet() }
+          return () => {
+            if (removeMagnet) removeMagnet()
+            scope.removeEventListener('focusin', onFocusIn)
+          }
         }, scope)
 
         teardown = () => {
