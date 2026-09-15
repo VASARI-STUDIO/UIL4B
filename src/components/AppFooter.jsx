@@ -40,6 +40,13 @@ const FOOTER_GROUPS = [
     links: [
       ['/discover', 'Discover'],
       ['/learn', 'Learn'],
+      // PROMOTED 2026-09-15, and this is a judgement call rather than a fix.
+      // /community and /info were already reachable — SiteMap.jsx lists both,
+      // and the Sitemap link is in the Explore column below. But Community is a
+      // whole public section of the product and /info is the searchable guide
+      // to every tool, and two clicks by way of a sitemap page is a poor way to
+      // meet either. Revert by deleting this row and the /info row in Support.
+      ['/community', 'Community'],
       ['/principles', 'Design principles'],
       ['/plans', 'Plans'],
       ['/sitemap', 'Sitemap'],
@@ -49,6 +56,7 @@ const FOOTER_GROUPS = [
     label: 'Support',
     links: [
       ['/help', 'Help centre'],
+      ['/info', 'Info centre'],
       ['/feedback', 'Send feedback'],
       ['/privacy', 'Privacy'],
       ['/terms', 'Terms'],
