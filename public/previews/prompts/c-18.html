@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ferrite UI — loading states</title>
+<style>
+  :root{
+    --paper:#f6f4ef;
+    --card:#fffefb;
+    --ink:#18170f;
+    --mid:#55524a;
+    --dim:#8b8779;
+    --rule:#e3dfd4;
+    --rule2:#efece3;
+    --acc:#1d5b4c;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{overflow-x:clip}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip;
+  }
+  ::selection{background:rgba(29,91,76,.2)}
+  :where(a,button):focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:4px}
+
+  .sheet{max-width:1240px;margin:0 auto;padding:clamp(28px,5vw,60px) clamp(18px,4vw,48px) 72px}
+
+  /* ---------- masthead ---------- */
+  .top{
+    display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px 32px;
+    padding-bottom:22px;border-bottom:2px solid var(--ink);
+  }
+  .brand{font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+  .brand b{color:var(--ink);font-weight:700}
+  h1{margin:0;font-size:clamp(30px,4.2vw,50px);line-height:1;letter-spacing:-.035em;font-weight:660}
+  .meta{
+    margin-left:auto;display:flex;gap:26px;font-family:var(--mono);font-size:11.5px;color:var(--dim);
+    text-align:right;
+  }
+  .meta b{display:block;color:var(--ink);font-weight:600;font-size:12.5px}
+  .standfirst{
+    margin:22px 0 0;max-width:72ch;color:var(--mid);font-size:clamp(14.5px,1.1vw,16.5px);
+  }
+  .standfirst code{
+    font-family:var(--mono);font-size:.88em;background:#eceadf;padding:1px 5px;border-radius:4px;
+  }
+
+  .rmnote{
+    display:none;margin:22px 0 0;padding:12px 15px;border-radius:8px;
+    background:#eef3f0;border:1px solid #cfdfd8;color:#1d4a3f;font-size:13.5px;
+  }
+  .rmnote b{font-weight:640}
+
+  /* ---------- specimen grid ---------- */
+  .grid{
+    display:grid;gap:1px;background:var(--rule);
+    grid-template-columns:repeat(auto-fit,minmax(214px,1fr));
+    margin:34px 0 0;border:1px solid var(--rule);border-radius:12px;overflow:hidden;
+  }
+  .spec{background:var(--card);padding:0;display:flex;flex-direction:column}
+  .well{
+    height:150px;display:grid;place-items:center;
+    background:
+      repeating-linear-gradient(45deg,#faf9f5 0 8px,#f3f1ea 8px 16px);
+    border-bottom:1px solid var(--rule2);
+    color:var(--acc);
+  }
+  .well.dark{
+    background:repeating-linear-gradient(45deg,#1b1a14 0 8px,#22211a 8px 16px);
+    color:#f0eee6;
+  }
+  .info{padding:15px 16px 17px;display:flex;flex-direction:column;flex:1}
+  .name{
+    margin:0;font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:-.01em;
+  }
+  .num{
+    margin:7px 0 0;display:flex;flex-wrap:wrap;gap:4px 12px;
+    font-family:var(--mono);font-size:10.5px;color:var(--dim);
+  }
+  .use{margin:11px 0 0;font-size:12.5px;line-height:1.45;color:var(--mid)}
+  .use b{color:var(--ink);font-weight:600}
+
+  /* ============ 1. pulse dots ============ */
+  .dots{display:flex;align-items:center;gap:11px;height:22px}
+  .dots i{
+    display:block;width:11px;height:11px;border-radius:50%;background:currentColor;
+    transform-origin:50% 50%;
+  }
+  /* rest frame = the stagger caught mid-cycle, never three dead dots */
+  .dots i:nth-child(1){transform:scale(1)}
+  .dots i:nth-child(2){transform:scale(.82);opacity:.8}
+  .dots i:nth-child(3){transform:scale(.62);opacity:.62}
+
+  /* ============ 2. orbit spinner ============ */
+  .orbit{
+    position:relative;width:48px;height:48px;border-radius:50%;
+    background:conic-gradient(from 0deg,rgba(0,0,0,0) 0 18%,currentColor 100%);
+    -webkit-mask:radial-gradient(farthest-side,#0000 calc(100% - 4px),#000 calc(100% - 4px));
+    mask:radial-gradient(farthest-side,#0000 calc(100% - 4px),#000 calc(100% - 4px));
+    transform:rotate(292deg);
+  }
+  .orbit::after{
+    content:"";position:absolute;left:50%;top:0;width:4px;height:4px;margin-left:-2px;
+    border-radius:50%;background:currentColor;
+  }
+  .orbit-wrap{position:relative;display:grid;place-items:center}
+  .orbit-wrap .track{
+    position:absolute;width:48px;height:48px;border-radius:50%;
+    border:4px solid currentColor;opacity:.13;
+  }
+
+  /* ============ 3. skeleton shimmer ============ */
+  .shim{
+    width:76%;max-width:172px;height:66px;border-radius:9px;
+    background:#dedbce;
+    position:relative;overflow:hidden;
+  }
+  .shim::after{
+    content:"";position:absolute;inset:-40% -30%;
+    background:linear-gradient(110deg,rgba(255,255,255,0) 30%,rgba(255,255,255,1) 50%,rgba(255,255,255,0) 70%);
+    transform:translateX(-6%);
+  }
+  .well.dark .shim{background:#312f26}
+  .well.dark .shim::after{
+    background:linear-gradient(110deg,rgba(255,255,255,0) 34%,rgba(255,255,255,.14) 50%,rgba(255,255,255,0) 66%);
+  }
+
+  /* ============ 4. progress ring ============ */
+  .ring{position:relative;display:grid;place-items:center}
+  .ring svg{display:block;transform:rotate(-90deg)}
+  .ring .bg{stroke:currentColor;opacity:.15}
+  .ring .fg{stroke:currentColor;stroke-dasharray:106.81;stroke-dashoffset:34.18}
+  .ring .pct{
+    position:absolute;font-family:var(--mono);font-size:12px;font-weight:600;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ============ 5. content loader ============ */
+  .bars{width:80%;max-width:174px;display:flex;flex-direction:column;gap:11px}
+  .bars i{display:block;height:14px;border-radius:7px;background:currentColor}
+  .bars i:nth-child(1){width:100%;opacity:1}
+  .bars i:nth-child(2){width:80%;opacity:.72}
+  .bars i:nth-child(3){width:60%;opacity:.46}
+  .well .bars i{background:#cbc7b8}
+  .well.dark .bars i{background:#55523f}
+
+  /* ---------- in context ---------- */
+  .ctx{
+    margin:42px 0 0;display:grid;gap:clamp(18px,2.4vw,30px);
+    grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);align-items:start;
+  }
+  .ctx h2{
+    grid-column:1/-1;margin:0;font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--dim);font-weight:700;
+  }
+  .panel{
+    background:var(--card);border:1px solid var(--rule);border-radius:12px;overflow:hidden;
+  }
+  .panel header{
+    display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--rule2);
+  }
+  .panel header .t{font-size:13.5px;font-weight:620}
+  .panel header .s{
+    margin-left:auto;display:flex;align-items:center;gap:8px;
+    font-size:12px;color:var(--mid);
+  }
+  .row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--rule2)}
+  .row:last-child{border-bottom:0}
+  .row .sq{width:34px;height:34px;border-radius:8px;background:#e3e0d3;flex:none;position:relative;overflow:hidden}
+  .row .stack{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0}
+  .row .ln{height:10px;border-radius:5px;background:#e3e0d3;position:relative;overflow:hidden}
+  .row .ln.a{width:52%}
+  .row .ln.b{width:30%;opacity:.7}
+  .row .chip{width:58px;height:22px;border-radius:999px;background:#e3e0d3;flex:none}
+  .sweep::after{
+    content:"";position:absolute;inset:-40% -30%;
+    background:linear-gradient(110deg,rgba(255,255,255,0) 30%,rgba(255,255,255,1) 50%,rgba(255,255,255,0) 70%);
+    transform:translateX(-6%);
+  }
+
+  .aside{display:flex;flex-direction:column;gap:14px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;
+    padding:11px 20px;border-radius:9px;border:1px solid var(--acc);
+    background:var(--acc);color:#f4faf7;font-size:14px;font-weight:600;font-family:inherit;
+    cursor:not-allowed;width:100%;
+  }
+  .btn .orbit{width:16px;height:16px;
+    -webkit-mask:radial-gradient(farthest-side,#0000 calc(100% - 2px),#000 calc(100% - 2px));
+    mask:radial-gradient(farthest-side,#0000 calc(100% - 2px),#000 calc(100% - 2px));}
+  .btn .orbit::after{width:2px;height:2px;margin-left:-1px}
+  .note{
+    margin:0;padding:14px 15px;border:1px solid var(--rule);border-radius:10px;background:var(--card);
+    font-size:12.5px;color:var(--mid);line-height:1.5;
+  }
+  .note b{color:var(--ink);font-weight:620;display:block;margin-bottom:4px;font-size:13px}
+  .note code{font-family:var(--mono);font-size:.9em;background:#f0eee4;padding:1px 4px;border-radius:3px}
+
+  footer{
+    margin:40px 0 0;padding-top:18px;border-top:1px solid var(--rule);
+    display:flex;flex-wrap:wrap;gap:6px 26px;font-size:12px;color:var(--dim);
+  }
+
+  /* ---------- motion ---------- */
+  @media (prefers-reduced-motion: no-preference){
+    .dots i{animation:pulse 1.2s ease-in-out infinite}
+    .dots i:nth-child(2){animation-delay:.15s}
+    .dots i:nth-child(3){animation-delay:.3s}
+    @keyframes pulse{
+      0%,100%{transform:scale(.6);opacity:.55}
+      50%{transform:scale(1);opacity:1}
+    }
+    .orbit{animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .shim::after,.sweep::after{animation:sweep 1.5s linear infinite;animation-delay:-.58s}
+    @keyframes sweep{from{transform:translateX(-46%)}to{transform:translateX(46%)}}
+    .ring .fg{animation:fill .9s cubic-bezier(.3,.9,.25,1) both}
+    @keyframes fill{from{stroke-dashoffset:106.81}}
+    .bars i{animation:bar .8s ease-in-out infinite alternate}
+    .bars i:nth-child(2){animation-delay:.1s}
+    .bars i:nth-child(3){animation-delay:.2s}
+    @keyframes bar{from{opacity:.3}to{opacity:1}}
+    .row .ln.b{animation:bar .8s ease-in-out infinite alternate;animation-delay:.1s}
+  }
+  @media (prefers-reduced-motion: reduce){
+    /* every specimen above is authored at its rest frame, so nothing needs
+       un-hiding here. This only tells the reader what they are looking at. */
+    .rmnote{display:block}
+  }
+
+  /* below five columns the fifth specimen would leave an empty rule-coloured
+     cell in the grid, so it takes the whole last row instead */
+  @media (max-width:1180px){
+    .grid > .spec:last-child{grid-column:1/-1}
+  }
+  @media (max-width:900px){
+    .ctx{grid-template-columns:minmax(0,1fr)}
+    .meta{margin-left:0;text-align:left}
+  }
+  @media (max-width:560px){
+    .grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+    .well{height:112px}
+    .meta{gap:18px}
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <header class="top">
+    <div>
+      <p class="brand"><b>Ferrite UI</b> — motion</p>
+      <h1>Loading states</h1>
+    </div>
+    <div class="meta">
+      <span>Version<b>2.4.0</b></span>
+      <span>Updated<b>11 Sep 2026</b></span>
+      <span>Runtime<b>CSS + SVG</b></span>
+    </div>
+  </header>
+
+  <p class="standfirst">Five looping micro-animations for waits under ten seconds. Each one is plain CSS and inline SVG — no animation runtime, no JSON payload, nothing to load before the loader can appear. All five inherit <code>currentColor</code>, so they take the colour of whatever they sit inside.</p>
+
+  <p class="rmnote"><b>Motion is reduced on this device.</b> Every specimen below is shown at its designed rest frame — the state each one holds when animation is switched off. None of them are blank or half-drawn.</p>
+
+  <div class="grid">
+
+    <div class="spec">
+      <div class="well" role="img" aria-label="Three dots pulsing in sequence">
+        <div class="dots"><i></i><i></i><i></i></div>
+      </div>
+      <div class="info">
+        <p class="name">pulse-dots</p>
+        <p class="num"><span>1200 ms</span><span>48 × 16</span><span>stagger 150</span></p>
+        <p class="use"><b>Someone is composing.</b> Typing indicators and short inline waits where a spinner would feel like an error.</p>
+      </div>
+    </div>
+
+    <div class="spec">
+      <div class="well" role="img" aria-label="A dot orbiting a ring, leaving a fading trail">
+        <div class="orbit-wrap">
+          <span class="track" aria-hidden="true"></span>
+          <span class="orbit"></span>
+        </div>
+      </div>
+      <div class="info">
+        <p class="name">orbit-spinner</p>
+        <p class="num"><span>1000 ms</span><span>32 × 32</span><span>trail 0.6</span></p>
+        <p class="use"><b>Work of unknown length.</b> The default indeterminate spinner: buttons, toolbars, anywhere 32 px is all you have.</p>
+      </div>
+    </div>
+
+    <div class="spec">
+      <div class="well" role="img" aria-label="A light band sweeping across a grey placeholder block">
+        <div class="shim"></div>
+      </div>
+      <div class="info">
+        <p class="name">skeleton-shimmer</p>
+        <p class="num"><span>1500 ms</span><span>fills parent</span><span>−20°</span></p>
+        <p class="use"><b>The shape is known, the content is not.</b> Lay it over placeholders that match the real layout, never over an empty box.</p>
+      </div>
+    </div>
+
+    <div class="spec">
+      <div class="well" role="img" aria-label="A circular progress ring filled to 68 per cent">
+        <div class="ring">
+          <svg width="58" height="58" viewBox="0 0 40 40" aria-hidden="true">
+            <circle class="bg" cx="20" cy="20" r="17" fill="none" stroke-width="3"/>
+            <circle class="fg" cx="20" cy="20" r="17" fill="none" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <span class="pct">68%</span>
+        </div>
+      </div>
+      <div class="info">
+        <p class="name">progress-ring</p>
+        <p class="num"><span>900 ms ease</span><span>40 × 40</span><span>cap round</span></p>
+        <p class="use"><b>You know the fraction.</b> Uploads and imports. If you cannot name the fraction honestly, use the spinner instead.</p>
+      </div>
+    </div>
+
+    <div class="spec">
+      <div class="well dark" role="img" aria-label="Three horizontal bars fading in sequence, shown on a dark ground">
+        <div class="bars"><i></i><i></i><i></i></div>
+      </div>
+      <div class="info">
+        <p class="name">content-loader</p>
+        <p class="num"><span>800 ms</span><span>100 / 80 / 60%</span><span>stagger 100</span></p>
+        <p class="use"><b>Text is coming.</b> Shown here on a dark ground to make the point: it is one rule, and the colour comes from the parent.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <section class="ctx">
+    <h2>In context</h2>
+
+    <div class="panel">
+      <header>
+        <span class="t">Runs</span>
+        <span class="s" role="status">
+          <span class="dots" aria-hidden="true" style="gap:5px"><i style="width:5px;height:5px"></i><i style="width:5px;height:5px"></i><i style="width:5px;height:5px"></i></span>
+          Restoring 240 runs
+        </span>
+      </header>
+      <div class="row">
+        <span class="sq sweep" aria-hidden="true"></span>
+        <span class="stack"><span class="ln a sweep"></span><span class="ln b"></span></span>
+        <span class="chip" aria-hidden="true"></span>
+      </div>
+      <div class="row">
+        <span class="sq sweep" aria-hidden="true"></span>
+        <span class="stack"><span class="ln a sweep" style="width:64%"></span><span class="ln b" style="width:24%"></span></span>
+        <span class="chip" aria-hidden="true"></span>
+      </div>
+      <div class="row">
+        <span class="sq sweep" aria-hidden="true"></span>
+        <span class="stack"><span class="ln a sweep" style="width:41%"></span><span class="ln b" style="width:33%"></span></span>
+        <span class="chip" aria-hidden="true"></span>
+      </div>
+    </div>
+
+    <div class="aside">
+      <button class="btn" type="button" disabled aria-live="polite">
+        <span class="orbit" aria-hidden="true"></span>
+        Saving changes
+      </button>
+      <p class="note">
+        <b>Why there is no runtime here</b>
+        These were specified for export to a vector animation format, but every one of them is reproducible in about ten lines of CSS. Shipping a player and a JSON file to draw three pulsing dots costs more than the wait it is covering.
+      </p>
+      <p class="note">
+        <b>The rule that matters</b>
+        Each specimen is authored at its <em>rest frame</em> and the animation is layered on inside <code>@media (prefers-reduced-motion: no-preference)</code>. Switch motion off and you get a still loader, never an empty box.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Ferrite UI · Motion 2.4.0</span>
+    <span>Five specimens · 0 KB of runtime</span>
+    <span>Tokens: <code style="font-family:var(--mono)">--motion-loop-fast</code>, <code style="font-family:var(--mono)">--motion-loop-slow</code></span>
+  </footer>
+
+</div>
+
+</body>
+</html>

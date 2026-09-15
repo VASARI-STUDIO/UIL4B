@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Swell — Onboarding Flow</title>
+<style>
+  :root{
+    --ink:#12262B;
+    --ink-70:rgba(18,38,43,.70);
+    --ink-50:rgba(18,38,43,.50);
+    --ink-12:rgba(18,38,43,.12);
+    --sea:#0E6E7C;
+    --sea-deep:#0A505A;
+    --aqua:#3FA3A8;
+    --sand:#F7EFE2;
+    --mist:#E4F0EF;
+    --board:#EFEBE4;
+    --card:#FFFFFF;
+    --coral:#E2725B;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--board);color:var(--ink);
+    font-family:var(--sans);font-size:15px;line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  svg{display:block}
+  .page{max-width:1240px;margin:0 auto;padding:36px 20px 64px}
+  @media(min-width:1000px){.page{padding:48px 28px 80px}}
+
+  /* ---------- board header ---------- */
+  .kicker{
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--sea);
+    margin:0 0 10px;
+  }
+  h1{font-size:30px;line-height:1.15;letter-spacing:-.02em;margin:0 0 10px;font-weight:650}
+  @media(min-width:1000px){h1{font-size:36px}}
+  .lede{margin:0;max-width:64ch;color:var(--ink-70);font-size:15.5px}
+  .divider{height:1px;background:var(--ink-12);margin:30px 0 26px}
+
+  /* ---------- flow board ---------- */
+  .board{display:grid;gap:26px;grid-template-columns:1fr}
+  @media(min-width:640px){.board{grid-template-columns:repeat(2,1fr);gap:28px 24px}}
+  @media(min-width:1040px){.board{grid-template-columns:repeat(4,1fr);gap:22px}}
+  .step{min-width:0;display:flex;flex-direction:column;gap:14px;position:relative}
+  .step-head{display:flex;align-items:center;gap:9px}
+  .step-no{
+    font-family:var(--mono);font-size:11px;color:var(--sea);border:1px solid rgba(14,110,124,.35);
+    border-radius:999px;padding:2px 8px;letter-spacing:.04em;
+  }
+  .step-name{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70)}
+  .step-note{font-size:13px;color:var(--ink-70);margin:0;line-height:1.5}
+  .step-note b{color:var(--ink);font-weight:600}
+
+  /* connector */
+  .step::after{content:none}
+  @media(min-width:1040px){
+    .step:not(:last-child)::after{
+      content:"";position:absolute;top:150px;right:-16px;width:10px;height:10px;
+      border-right:1.5px solid rgba(18,38,43,.28);border-top:1.5px solid rgba(18,38,43,.28);
+      transform:rotate(45deg);
+    }
+  }
+
+  /* ---------- device ---------- */
+  .phone{
+    background:#101E21;border-radius:34px;padding:8px;
+    box-shadow:0 22px 44px -26px rgba(16,30,33,.75),0 2px 0 rgba(255,255,255,.4) inset;
+  }
+  .screen{
+    position:relative;border-radius:27px;overflow:hidden;aspect-ratio:9/19.2;
+    display:flex;flex-direction:column;background:var(--card);
+  }
+  .status{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:9px 16px 2px;font-size:11px;font-weight:600;letter-spacing:.01em;flex:none;
+  }
+  .status .sig{display:flex;gap:3px;align-items:flex-end}
+  .status .sig i{display:block;width:3px;background:currentColor;border-radius:1px}
+  .status .sig i:nth-child(1){height:4px}.status .sig i:nth-child(2){height:6px}
+  .status .sig i:nth-child(3){height:8px}.status .sig i:nth-child(4){height:10px}
+  .status .bat{width:20px;height:10px;border:1px solid currentColor;border-radius:3px;position:relative;opacity:.9}
+  .status .bat::after{content:"";position:absolute;inset:1.5px;right:5px;background:currentColor;border-radius:1px}
+  .island{
+    position:absolute;top:9px;left:50%;transform:translateX(-50%);
+    width:52px;height:15px;border-radius:999px;background:#101E21;z-index:3;
+  }
+  .body{flex:1;display:flex;flex-direction:column;padding:14px 16px 10px;min-height:0}
+  .home{
+    flex:none;height:18px;display:flex;align-items:center;justify-content:center;
+  }
+  .home i{display:block;width:78px;height:4px;border-radius:99px;background:rgba(18,38,43,.28)}
+  .screen--dark .home i{background:rgba(255,255,255,.45)}
+  .screen--dark{color:#fff}
+
+  /* shared screen bits */
+  .s-title{font-size:19px;line-height:1.22;letter-spacing:-.015em;margin:0 0 7px;font-weight:650}
+  .s-sub{font-size:12.5px;line-height:1.5;margin:0;color:var(--ink-70)}
+  .screen--dark .s-sub{color:rgba(255,255,255,.76)}
+  .spacer{flex:1;min-height:8px}
+  .btn{
+    display:block;width:100%;border:0;border-radius:12px;padding:12px 12px;cursor:pointer;
+    font:inherit;font-size:13px;font-weight:600;text-align:center;
+  }
+  .btn--primary{background:var(--sea);color:#fff}
+  .btn--primary:hover{background:var(--sea-deep)}
+  .btn--light{background:#fff;color:var(--sea-deep)}
+  .btn--ghost{background:transparent;color:var(--ink-70);font-weight:500}
+  .screen--dark .btn--ghost{color:rgba(255,255,255,.8)}
+  .btn--out{background:#fff;border:1px solid var(--ink-12);color:var(--ink);display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn--out:hover{border-color:rgba(18,38,43,.3)}
+  .btn:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--coral);outline-offset:2px}
+  .stack{display:grid;gap:8px;flex:none}
+  .fine{font-size:10.5px;line-height:1.45;color:var(--ink-50);margin:9px 0 0;text-align:center}
+  .screen--dark .fine{color:rgba(255,255,255,.62)}
+
+  /* screen 1 */
+  .screen--1{background:linear-gradient(168deg,#0E6E7C 0%,#0A505A 52%,#07363E 100%)}
+  .mark{
+    width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.14);
+    display:flex;align-items:center;justify-content:center;margin-bottom:auto;
+  }
+  .wordmark{font-size:15px;letter-spacing:.32em;text-transform:uppercase;font-weight:600;margin:12px 0 0}
+  .hero-title{font-size:25px;line-height:1.12;letter-spacing:-.025em;margin:0 0 9px;font-weight:650}
+
+  /* screen 2 */
+  .screen--2{background:linear-gradient(170deg,#EAF4F3 0%,#FBF4E9 100%)}
+  .illus{
+    border-radius:16px;background:#fff;padding:12px 12px 10px;border:1px solid rgba(18,38,43,.07);
+    box-shadow:0 8px 20px -14px rgba(18,38,43,.4);
+  }
+  .illus-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .illus-spot{font-size:11.5px;font-weight:650}
+  .illus-verdict{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#1F7A3D;background:#E3F3E7;padding:2px 6px;border-radius:5px;font-weight:650}
+  .illus-line{font-size:10.5px;color:var(--ink-70);margin:8px 0 0;line-height:1.45}
+  .dots{display:flex;gap:6px;justify-content:center;margin:0 0 10px}
+  .dots i{width:6px;height:6px;border-radius:99px;background:rgba(18,38,43,.2);display:block}
+  .dots i.on{width:18px;background:var(--sea)}
+
+  /* screen 3 */
+  .screen--3{background:#fff}
+  .reason{display:flex;gap:11px;padding:11px 0}
+  .reason .ico{
+    width:34px;height:34px;border-radius:10px;background:var(--mist);flex:none;
+    display:flex;align-items:center;justify-content:center;color:var(--sea-deep);
+  }
+  .reason h3{font-size:12.5px;margin:0 0 2px;font-weight:650;line-height:1.3}
+  .reason p{font-size:11.5px;margin:0;color:var(--ink-70);line-height:1.45}
+  .assure{
+    font-size:10.5px;color:var(--ink-70);background:#F4F7F6;border-radius:10px;padding:9px 10px;
+    line-height:1.45;margin:2px 0 10px;
+  }
+
+  /* screen 4 */
+  .screen--4{background:linear-gradient(180deg,#FBF4E9 0%,#FFFFFF 38%)}
+  .or{display:flex;align-items:center;gap:9px;margin:11px 0;color:var(--ink-50);font-size:10.5px}
+  .or::before,.or::after{content:"";height:1px;flex:1;background:var(--ink-12)}
+  .field{margin-bottom:9px}
+  .field label{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-50);margin-bottom:3px}
+  .field input{
+    width:100%;border:1px solid var(--ink-12);border-radius:9px;padding:8px 9px;font:inherit;font-size:12px;
+    background:#fff;color:var(--ink);
+  }
+  .field input::placeholder{color:rgba(18,38,43,.36)}
+  .hint{font-size:9.5px;color:var(--ink-50);margin:3px 0 0}
+
+  /* ---------- notes ---------- */
+  .notes{margin-top:44px;border-top:1px solid var(--ink-12);padding-top:26px;display:grid;gap:22px}
+  @media(min-width:760px){.notes{grid-template-columns:repeat(3,1fr);gap:34px}}
+  .notes h2{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-50);margin:0 0 8px;font-weight:600}
+  .notes p{margin:0 0 10px;font-size:13.5px;color:var(--ink-70);line-height:1.6}
+  .notes b{color:var(--ink)}
+
+  @media(prefers-reduced-motion:no-preference){
+    .phone{transition:transform .4s cubic-bezier(.2,.7,.2,1),box-shadow .4s ease}
+    .step:hover .phone{transform:translateY(-4px)}
+    .btn{transition:background .2s ease,border-color .2s ease}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="wave" viewBox="0 0 48 48">
+    <path d="M4 30c5 0 5-6 10-6s5 6 10 6 5-6 10-6 5 6 10 6" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M4 40c5 0 5-6 10-6s5 6 10 6 5-6 10-6 5 6 10 6" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" opacity=".55"/>
+    <path d="M14 20c0-7 5-12 12-12 6 0 10 3 12 8" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" opacity=".8"/>
+  </symbol>
+  <symbol id="bell" viewBox="0 0 24 24">
+    <path d="M6 16V10a6 6 0 0 1 12 0v6l1.6 2.2H4.4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+    <path d="M10 20.2a2.2 2.2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="pin" viewBox="0 0 24 24">
+    <path d="M12 21.5s7-6.4 7-11.3A7 7 0 0 0 5 10.2c0 4.9 7 11.3 7 11.3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+    <circle cx="12" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.7"/>
+  </symbol>
+  <symbol id="apple" viewBox="0 0 24 24">
+    <path d="M16.2 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.5-.2-2.8.8-3.6.8-.7 0-1.9-.8-3.1-.8-1.6 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.9-2.3.9-1.3 1.2-2.6 1.3-2.6-.1 0-2.4-1-2.4-3.7Z" fill="currentColor"/>
+    <path d="M14.2 5.6c.6-.8 1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.9 1 .1 2-.5 2.7-1.3Z" fill="currentColor"/>
+  </symbol>
+  <symbol id="glogo" viewBox="0 0 24 24">
+    <path d="M21 12.2c0-.7-.1-1.3-.2-1.9H12v3.7h5.1a4.4 4.4 0 0 1-1.9 2.9v2.4h3.1c1.8-1.7 2.7-4.1 2.7-7.1Z" fill="currentColor" opacity=".9"/>
+    <path d="M12 21.5c2.5 0 4.6-.8 6.2-2.2l-3.1-2.4c-.8.6-1.9.9-3.1.9-2.4 0-4.4-1.6-5.2-3.8H3.6v2.4A9.5 9.5 0 0 0 12 21.5Z" fill="currentColor" opacity=".7"/>
+    <path d="M6.8 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.6H3.6A9.5 9.5 0 0 0 2.5 12c0 1.5.4 3 1.1 4.4L6.8 14Z" fill="currentColor" opacity=".55"/>
+    <path d="M12 6.2c1.4 0 2.6.5 3.5 1.4l2.7-2.7A9.2 9.2 0 0 0 12 2.5 9.5 9.5 0 0 0 3.6 7.6L6.8 10c.8-2.2 2.8-3.8 5.2-3.8Z" fill="currentColor" opacity=".8"/>
+  </symbol>
+  <symbol id="check" viewBox="0 0 24 24">
+    <path d="M5 12.6 9.6 17 19 7.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
+<main class="page">
+
+  <p class="kicker">Mobile onboarding · iOS · 4 screens</p>
+  <h1>Swell — first run</h1>
+  <p class="lede">A surf-forecast app for the east coast of Australia. The flow gets someone from install to a saved break in four screens, and every screen can be skipped. Transitions between screens are horizontal swipes; the back gesture works from screen two onward.</p>
+
+  <div class="divider"></div>
+
+  <div class="board">
+
+    <!-- ============ 01 WELCOME ============ -->
+    <section class="step">
+      <div class="step-head"><span class="step-no">01</span><span class="step-name">Welcome</span></div>
+      <div class="phone">
+        <div class="screen screen--1 screen--dark">
+          <span class="island"></span>
+          <div class="status">
+            <span>9:41</span>
+            <span style="display:flex;gap:5px;align-items:center">
+              <span class="sig"><i></i><i></i><i></i><i></i></span>
+              <span class="bat"></span>
+            </span>
+          </div>
+          <div class="body">
+            <div class="mark"><svg width="30" height="30" aria-hidden="true"><use href="#wave"/></svg></div>
+            <p class="wordmark">Swell</p>
+            <div class="spacer"></div>
+            <h2 class="hero-title">Know before you paddle out.</h2>
+            <p class="s-sub">Buoy height, wind and tide for 340 breaks between Noosa and Bermagui — read in one line at the traffic lights.</p>
+            <div class="spacer"></div>
+            <div class="stack">
+              <button class="btn btn--light" type="button">Get started</button>
+              <button class="btn btn--ghost" type="button">I already have an account</button>
+            </div>
+          </div>
+          <div class="home"><i></i></div>
+        </div>
+      </div>
+      <p class="step-note"><b>One promise, one way out.</b> The app is named and explained before anything is asked for. Returning users have their own door so they never meet the setup screens.</p>
+    </section>
+
+    <!-- ============ 02 HIGHLIGHTS ============ -->
+    <section class="step">
+      <div class="step-head"><span class="step-no">02</span><span class="step-name">Highlights · 2 of 3</span></div>
+      <div class="phone">
+        <div class="screen screen--2">
+          <span class="island"></span>
+          <div class="status">
+            <span>9:41</span>
+            <span style="display:flex;gap:5px;align-items:center">
+              <span class="sig"><i></i><i></i><i></i><i></i></span>
+              <span class="bat"></span>
+            </span>
+          </div>
+          <div class="body">
+            <div style="display:flex;justify-content:flex-end">
+              <button class="btn btn--ghost" type="button" style="width:auto;padding:4px 2px;font-size:12px">Skip</button>
+            </div>
+            <div class="spacer"></div>
+            <div class="illus">
+              <div class="illus-head">
+                <span class="illus-spot">Bronte · 6:20 am</span>
+                <span class="illus-verdict">Worth it</span>
+              </div>
+              <svg viewBox="0 0 200 74" style="width:100%;height:auto" role="img" aria-label="Forecast chart: swell rising through the morning">
+                <defs>
+                  <linearGradient id="sw" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#3FA3A8" stop-opacity=".45"/>
+                    <stop offset="1" stop-color="#3FA3A8" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <g stroke="rgba(18,38,43,.09)" stroke-width="1">
+                  <path d="M0 18h200M0 38h200M0 58h200"/>
+                </g>
+                <path d="M0 52C22 50 30 40 52 38s30 8 52 2 34-22 56-26 34 2 40 4v56H0Z" fill="url(#sw)"/>
+                <path d="M0 52C22 50 30 40 52 38s30 8 52 2 34-22 56-26 34 2 40 4" fill="none" stroke="#0E6E7C" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M0 64C20 62 34 66 54 66s36-6 56-6 34 4 50 4" fill="none" stroke="#E2725B" stroke-width="1.6" stroke-dasharray="4 4" opacity=".8"/>
+                <circle cx="160" cy="16" r="3.6" fill="#0E6E7C"/>
+              </svg>
+              <p class="illus-line">Swell 1.4 m at 11 s · Wind 6 kt offshore · Tide filling until 8:05</p>
+            </div>
+            <div class="spacer"></div>
+            <h2 class="s-title">One line, not a wall of numbers</h2>
+            <p class="s-sub">We read the buoy, the wind and the tide together, then say whether your break is worth the drive. Tap the card for the full forecast.</p>
+            <div class="spacer"></div>
+            <div class="dots" role="img" aria-label="Screen 2 of 3"><i></i><i class="on"></i><i></i></div>
+            <div class="stack"><button class="btn btn--primary" type="button">Next</button></div>
+          </div>
+          <div class="home"><i></i></div>
+        </div>
+      </div>
+      <p class="step-note"><b>Show the product, not a mascot.</b> The card in the illustration is the real forecast card the user meets on the home screen, with real values — so the promise and the product match.</p>
+    </section>
+
+    <!-- ============ 03 PERMISSIONS ============ -->
+    <section class="step">
+      <div class="step-head"><span class="step-no">03</span><span class="step-name">Permissions</span></div>
+      <div class="phone">
+        <div class="screen screen--3">
+          <span class="island"></span>
+          <div class="status">
+            <span>9:41</span>
+            <span style="display:flex;gap:5px;align-items:center">
+              <span class="sig"><i></i><i></i><i></i><i></i></span>
+              <span class="bat"></span>
+            </span>
+          </div>
+          <div class="body">
+            <div class="spacer" style="max-height:14px"></div>
+            <h2 class="s-title">Two things worth switching on</h2>
+            <p class="s-sub">Both are optional, and the app works without them.</p>
+            <div style="margin-top:12px">
+              <div class="reason">
+                <span class="ico"><svg width="18" height="18" aria-hidden="true"><use href="#bell"/></svg></span>
+                <div>
+                  <h3>Alerts when it's actually on</h3>
+                  <p>One push when your break crosses the swell and wind you set. No digests, no marketing.</p>
+                </div>
+              </div>
+              <div class="reason">
+                <span class="ico"><svg width="18" height="18" aria-hidden="true"><use href="#pin"/></svg></span>
+                <div>
+                  <h3>Your closest break first</h3>
+                  <p>So the app opens on Bronte at 6 am instead of asking where you are every morning.</p>
+                </div>
+              </div>
+            </div>
+            <div class="spacer"></div>
+            <p class="assure">Location is read only while Swell is open. Both can be changed later in Settings → Swell.</p>
+            <div class="stack">
+              <button class="btn btn--primary" type="button">Turn both on</button>
+              <button class="btn btn--ghost" type="button">Not now</button>
+            </div>
+          </div>
+          <div class="home"><i></i></div>
+        </div>
+      </div>
+      <p class="step-note"><b>Ask with the reason attached.</b> Each permission earns its place with a concrete benefit and a limit on how it is used. “Not now” is a real option, not grey-on-grey.</p>
+    </section>
+
+    <!-- ============ 04 ACCOUNT ============ -->
+    <section class="step">
+      <div class="step-head"><span class="step-no">04</span><span class="step-name">Account</span></div>
+      <div class="phone">
+        <div class="screen screen--4">
+          <span class="island"></span>
+          <div class="status">
+            <span>9:41</span>
+            <span style="display:flex;gap:5px;align-items:center">
+              <span class="sig"><i></i><i></i><i></i><i></i></span>
+              <span class="bat"></span>
+            </span>
+          </div>
+          <div class="body">
+            <div class="spacer" style="max-height:10px"></div>
+            <h2 class="s-title">Keep your breaks</h2>
+            <p class="s-sub">An account saves your spots and alert thresholds, so they follow you to a new phone.</p>
+            <div style="height:12px"></div>
+            <div class="stack">
+              <button class="btn btn--out" type="button"><svg width="16" height="16" aria-hidden="true"><use href="#apple"/></svg> Continue with Apple</button>
+              <button class="btn btn--out" type="button"><svg width="16" height="16" aria-hidden="true"><use href="#glogo"/></svg> Continue with Google</button>
+            </div>
+            <div class="or">or use email</div>
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" type="email" inputmode="email" placeholder="you@example.com" autocomplete="email">
+            </div>
+            <div class="field">
+              <label for="pw">Password</label>
+              <input id="pw" type="password" placeholder="At least 8 characters" autocomplete="new-password">
+              <p class="hint">Eight characters is the only rule.</p>
+            </div>
+            <div class="spacer"></div>
+            <div class="stack">
+              <button class="btn btn--primary" type="button">Create account</button>
+              <button class="btn btn--ghost" type="button">Skip for now</button>
+            </div>
+            <p class="fine">Skipping keeps everything on this phone.</p>
+          </div>
+          <div class="home"><i></i></div>
+        </div>
+      </div>
+      <p class="step-note"><b>Say what the account is for.</b> The value is stated before the form, the password rule is shown before it is broken, and skipping is honest about what it costs.</p>
+    </section>
+
+  </div>
+
+  <section class="notes">
+    <div>
+      <h2>Motion</h2>
+      <p>Screens move horizontally: forward pushes left, back pulls right, 280&nbsp;ms with a standard ease. The progress dots interpolate with the drag rather than snapping at the end, so a half-swipe reads as a half-step.</p>
+      <p>With <b>Reduce Motion</b> on, the horizontal push is replaced by a cross-fade and the dots snap. Nothing in the flow depends on an animation finishing.</p>
+    </div>
+    <div>
+      <h2>Exit routes</h2>
+      <p>Every screen after the first can be left: <b>Skip</b> on the highlights, <b>Not now</b> on permissions, <b>Skip for now</b> on the account. A user who taps past all three still lands on a working home screen set to their last-seen break.</p>
+    </div>
+    <div>
+      <h2>Copy rules</h2>
+      <p>No screen says “welcome”, “get started” or “you're all set” on its own. Each headline states one specific thing the app does, and each body line gives the limit as well as the benefit — the permission screen names exactly when location is read.</p>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

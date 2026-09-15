@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dev Aranda Strength — 12-week coaching, Brunswick East</title>
+<style>
+  :root{
+    --black:#111111; --black-2:#0A0A0A; --coal:#1A1A1A; --coal-2:#242424;
+    --white:#FFFFFF; --ash:#C5C5C2; --ash-2:#8B8B87; --ash-3:#7E7E7A;
+    --lime:#CDDC39; --lime-d:#A8B62A;
+    --line:rgba(255,255,255,.13); --line-2:rgba(255,255,255,.07);
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--black);color:var(--white);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  svg{max-width:100%}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  :focus-visible{outline:3px solid var(--lime);outline-offset:3px;border-radius:2px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+  h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.035em;line-height:1.02;text-transform:uppercase}
+  .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);font-weight:500}
+
+  /* ---------- header ---------- */
+  header{border-bottom:1px solid var(--line-2);position:sticky;top:0;z-index:20;background:rgba(17,17,17,.94)}
+  .hd{display:flex;align-items:center;gap:28px;height:70px}
+  .logo{display:flex;align-items:center;gap:11px;text-decoration:none}
+  .logo .m{width:32px;height:32px;background:var(--lime);display:grid;place-items:center;flex:0 0 auto}
+  .logo .m svg{width:19px;height:19px;stroke:var(--black);stroke-width:2.6;fill:none;stroke-linecap:round}
+  .logo b{display:block;font-size:15px;font-weight:800;letter-spacing:-.02em;text-transform:uppercase;line-height:1.05}
+  .logo small{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--ash-2);text-transform:uppercase}
+  .hd nav{display:flex;gap:26px;margin-left:auto}
+  .hd nav a{font-size:12.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;
+            text-decoration:none;color:var(--ash);padding:6px 0;transition:color .16s}
+  .hd nav a:hover{color:var(--lime)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
+       font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;
+       padding:16px 26px;text-decoration:none;border:2px solid var(--lime);
+       background:var(--lime);color:var(--black);transition:background .16s,color .16s,border-color .16s}
+  .btn:hover{background:var(--white);border-color:var(--white)}
+  .btn-o{background:transparent;color:var(--lime)}
+  .btn-o:hover{background:var(--lime);color:var(--black);border-color:var(--lime)}
+  .btn-sm{padding:11px 18px;font-size:11.5px}
+  .btn .arw{width:14px;height:14px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line-2)}
+  .rig{position:absolute;inset:0;pointer-events:none}
+  .rig svg{width:100%;height:100%;display:block}
+  .hero .wrap{position:relative;padding-top:78px;padding-bottom:70px}
+  .hero h1{font-size:clamp(46px,9.2vw,124px);letter-spacing:-.05em;max-width:11ch}
+  .hero h1 em{font-style:normal;color:var(--lime);display:block}
+  .hero .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.72fr);gap:48px;
+              margin-top:46px;padding-top:34px;border-top:1px solid var(--line);align-items:start}
+  .hero p{margin:0;font-size:17.5px;color:var(--ash);line-height:1.6;max-width:48ch}
+  .hero p b{color:var(--white);font-weight:700}
+  .hero .acts{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+  .hero .acts .note{font-family:var(--mono);font-size:11.5px;color:var(--ash-2);letter-spacing:.04em;line-height:1.6}
+
+  /* ---------- facts strip ---------- */
+  .facts{border-bottom:1px solid var(--line-2);background:var(--coal)}
+  .facts .wrap{display:grid;grid-template-columns:repeat(4,1fr);padding:0}
+  .facts div{padding:24px 24px;border-left:1px solid var(--line-2)}
+  .facts div:first-child{border-left:0}
+  .facts b{display:block;font-size:27px;font-weight:800;letter-spacing:-.04em;line-height:1.1}
+  .facts b .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--lime);margin-right:9px;vertical-align:middle}
+  .facts span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+              text-transform:uppercase;color:var(--ash-2);margin-top:6px}
+
+  section{padding:90px 0}
+  .sec-hd{margin-bottom:38px;max-width:62ch}
+  .sec-hd h2{font-size:clamp(28px,4vw,46px);letter-spacing:-.04em;margin-top:14px}
+  .sec-hd h2 em{font-style:normal;color:var(--lime)}
+  .sec-hd p{margin:16px 0 0;font-size:17px;color:var(--ash);line-height:1.62}
+
+  /* ---------- phases ---------- */
+  .phases{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--line-2);border:1px solid var(--line-2)}
+  .ph{background:var(--coal);padding:24px 22px 26px;position:relative}
+  .ph .wk{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--lime);text-transform:uppercase}
+  .ph h3{font-size:19px;margin:12px 0 10px;letter-spacing:-.02em}
+  .ph p{margin:0;font-size:14.5px;color:var(--ash);line-height:1.55}
+  .ph .bar{position:absolute;left:0;right:0;top:0;height:3px;background:var(--lime);opacity:.28}
+  .ph:nth-child(2) .bar{opacity:.5}.ph:nth-child(3) .bar{opacity:.75}.ph:nth-child(4) .bar{opacity:1}
+
+  .measure{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:48px;
+           margin-top:54px;padding-top:44px;border-top:1px solid var(--line-2);align-items:start}
+  .measure h3{font-size:22px;letter-spacing:-.025em;margin-bottom:14px}
+  .measure p{margin:0;font-size:16px;color:var(--ash);line-height:1.62}
+  .mlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-2);border:1px solid var(--line-2)}
+  .mlist li{background:var(--coal);padding:16px 18px}
+  .mlist b{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .mlist span{display:block;font-size:13px;color:var(--ash-2);margin-top:3px;line-height:1.45}
+
+  /* ---------- programs ---------- */
+  .progs{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
+  .prog{border:1px solid var(--line);background:var(--coal);padding:30px 26px 28px;display:flex;flex-direction:column;
+        transition:border-color .18s,background .18s}
+  .prog:hover{border-color:var(--lime);background:var(--coal-2)}
+  .prog.feat{border-color:var(--lime)}
+  .prog .tagrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px;min-height:24px}
+  .prog .tagrow span{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+                     border:1px solid var(--line);padding:4px 8px;color:var(--ash)}
+  .prog .tagrow span.hi{border-color:var(--lime);color:var(--lime)}
+  .prog h3{font-size:26px;letter-spacing:-.035em}
+  .prog .for{margin:10px 0 0;font-size:14.5px;color:var(--ash);line-height:1.5;min-height:66px}
+  .spec{list-style:none;margin:22px 0 0;padding:20px 0 0;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:10px}
+  .spec li{display:flex;justify-content:space-between;gap:16px;font-size:14px;color:var(--ash)}
+  .spec b{color:var(--white);font-weight:650;text-align:right}
+  .price{margin:24px 0 0;padding-top:20px;border-top:1px solid var(--line-2);display:flex;align-items:baseline;gap:8px}
+  .price b{font-size:36px;font-weight:800;letter-spacing:-.045em}
+  .price span{font-size:13.5px;color:var(--ash-2)}
+  .prog .btn{margin-top:20px;width:100%}
+  .progs-note{margin:26px 0 0;font-size:14px;color:var(--ash-2)}
+
+  /* ---------- quotes ---------- */
+  .quotes{background:var(--coal);border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+  .qgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .q{border:1px solid var(--line-2);background:var(--black);padding:30px 28px;display:flex;flex-direction:column}
+  .q blockquote{margin:0;font-size:19px;line-height:1.5;letter-spacing:-.018em;font-weight:500}
+  .q .who{margin-top:auto;padding-top:24px;display:flex;align-items:center;gap:13px}
+  .q .av{width:42px;height:42px;background:var(--lime);color:var(--black);display:grid;place-items:center;
+         font-size:14px;font-weight:800;flex:0 0 auto;letter-spacing:-.02em}
+  .q .who b{display:block;font-size:15px;font-weight:700}
+  .q .who span{display:block;font-family:var(--mono);font-size:11px;color:var(--ash-2);letter-spacing:.06em;margin-top:2px}
+  .demo{margin:22px 0 0;font-size:12.5px;color:var(--ash-3)}
+
+  /* ---------- coach ---------- */
+  .coach .wrap{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:56px;align-items:start}
+  .plate{border:1px solid var(--line);background:var(--coal);padding:0}
+  .plate .art{aspect-ratio:1/1;display:block;background:var(--black-2)}
+  .plate .body{padding:26px 24px}
+  .plate h3{font-size:24px;letter-spacing:-.03em}
+  .plate .role{margin:8px 0 0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--lime)}
+  .certs{list-style:none;margin:22px 0 0;padding:20px 0 0;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:11px}
+  .certs li{display:flex;gap:11px;font-size:13.5px;color:var(--ash);line-height:1.45}
+  .certs svg{width:15px;height:15px;flex:0 0 auto;margin-top:2px;stroke:var(--lime);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .coach h2{font-size:clamp(28px,3.8vw,42px);letter-spacing:-.04em;margin-bottom:20px;max-width:17ch}
+  .coach p{margin:0 0 17px;font-size:17px;color:var(--ash);line-height:1.66;max-width:58ch}
+  .coach p b{color:var(--white);font-weight:650}
+  .specs{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px;padding-top:24px;border-top:1px solid var(--line-2)}
+  .specs span{font-size:13.5px;padding:7px 13px;border:1px solid var(--line);color:var(--ash)}
+
+  /* ---------- faq ---------- */
+  .faq h2{font-size:clamp(26px,3.4vw,38px);letter-spacing:-.04em;margin-bottom:28px}
+  details{border-top:1px solid var(--line-2)}
+  details:last-of-type{border-bottom:1px solid var(--line-2)}
+  summary{display:flex;align-items:flex-start;gap:16px;padding:20px 0;cursor:pointer;list-style:none;
+          font-size:17px;font-weight:650;letter-spacing:-.018em}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"";margin-left:auto;flex:0 0 auto;width:14px;height:14px;margin-top:7px;
+    background:linear-gradient(var(--ash-2),var(--ash-2)) center/14px 2px no-repeat,
+               linear-gradient(var(--ash-2),var(--ash-2)) center/2px 14px no-repeat;
+    transition:transform .22s}
+  details[open] summary::after{
+    background:linear-gradient(var(--lime),var(--lime)) center/14px 2px no-repeat;
+    transform:rotate(180deg)}
+  summary:hover{color:var(--lime)}
+  details p{margin:0 0 22px;font-size:15.5px;color:var(--ash);line-height:1.68;max-width:70ch;padding-right:40px}
+
+  /* ---------- final ---------- */
+  .final{background:var(--lime);color:var(--black)}
+  .final .wrap{padding-top:72px;padding-bottom:72px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:48px;align-items:center}
+  .final h2{font-size:clamp(30px,4.8vw,58px);letter-spacing:-.045em;max-width:14ch}
+  .final p{margin:20px 0 0;font-size:17px;color:#2A2E0B;max-width:44ch;line-height:1.6}
+  .final p b{font-weight:800}
+  .final .btn{background:var(--black);color:var(--lime);border-color:var(--black);width:100%;padding:20px 24px;font-size:14px}
+  .final .btn:hover{background:var(--white);color:var(--black);border-color:var(--black)}
+  .final .cap{margin:14px 0 0;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:#3A400F;line-height:1.6}
+
+  footer{padding:36px 0 44px;font-size:13.5px;color:var(--ash-3);border-top:1px solid var(--line-2)}
+  footer .wrap{display:flex;gap:14px 36px;flex-wrap:wrap;align-items:center}
+  footer a{color:var(--ash-2);text-decoration:none}
+  footer a:hover{color:var(--lime)}
+  footer .r{margin-left:auto;text-align:right}
+
+  @media (max-width:980px){
+    .hero .cols,.measure,.coach .wrap,.final .wrap{grid-template-columns:1fr;gap:32px}
+    .progs,.phases{grid-template-columns:1fr 1fr}
+    .qgrid{grid-template-columns:1fr}
+    .facts .wrap{grid-template-columns:1fr 1fr}
+    .facts div:nth-child(3){border-left:0}
+    .facts div:nth-child(n+3){border-top:1px solid var(--line-2)}
+    .hd nav{display:none}
+    .rig{opacity:.4}
+    footer .r{margin-left:0;text-align:left}
+  }
+  @media (max-width:620px){
+    .wrap{padding:0 18px}
+    section{padding:58px 0}
+    .progs,.phases,.mlist{grid-template-columns:1fr}
+    .facts .wrap{grid-template-columns:1fr}
+    .facts div{border-left:0;border-top:1px solid var(--line-2);padding:18px}
+    .facts div:first-child{border-top:0}
+    .prog .for{min-height:0}
+    .hero .wrap{padding-top:50px;padding-bottom:48px}
+    .rig{display:none}
+    details p{padding-right:0}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media (prefers-reduced-motion:no-preference){
+    .facts b .dot,.final .dot{animation:pz 2.2s ease-in-out infinite}
+    @keyframes pz{0%,100%{box-shadow:0 0 0 0 rgba(205,220,57,.6)}60%{box-shadow:0 0 0 7px rgba(205,220,57,0)}}
+    .rig .drift{animation:dr 18s ease-in-out infinite}
+    @keyframes dr{0%,100%{transform:translateX(0)}50%{transform:translateX(26px)}}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="tk" viewBox="0 0 24 24"><path d="M4 12.6l5.4 5.4L20 7"/></symbol>
+  <symbol id="ar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</defs></svg>
+
+<header>
+  <div class="wrap hd">
+    <a class="logo" href="#top">
+      <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6M7 6v12M17 6v12M21 9v6M7 12h10"/></svg></span>
+      <span><b>Dev Aranda</b><small>Strength</small></span>
+    </a>
+    <nav aria-label="Main">
+      <a href="#programs">Programs</a><a href="#coach">The coach</a><a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-sm" href="#book" style="margin-left:24px">Book free consult</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- ---------- hero ---------- -->
+  <section class="hero">
+    <div class="rig" aria-hidden="true">
+      <svg viewBox="0 0 1440 620" preserveAspectRatio="xMaxYMid slice">
+        <rect width="1440" height="620" fill="#111111"/>
+        <g class="drift" opacity=".5">
+          <rect x="1010" y="0" width="2" height="620" fill="#CDDC39" opacity=".18"/>
+          <rect x="1180" y="0" width="2" height="620" fill="#CDDC39" opacity=".1"/>
+          <rect x="1320" y="0" width="2" height="620" fill="#CDDC39" opacity=".14"/>
+        </g>
+        <!-- barbell -->
+        <g opacity=".92">
+          <rect x="880" y="292" width="520" height="12" rx="6" fill="#2B2B2B"/>
+          <g fill="#1E1E1E" stroke="#333" stroke-width="1.5">
+            <rect x="940" y="228" width="30" height="140" rx="7"/>
+            <rect x="978" y="210" width="38" height="176" rx="8"/>
+            <rect x="1260" y="210" width="38" height="176" rx="8"/>
+            <rect x="1306" y="228" width="30" height="140" rx="7"/>
+          </g>
+          <rect x="1022" y="290" width="232" height="16" rx="8" fill="#CDDC39" opacity=".16"/>
+          <rect x="1022" y="290" width="92" height="16" rx="8" fill="#CDDC39" opacity=".8"/>
+        </g>
+        <g opacity=".2" stroke="#CDDC39" stroke-width="1.4" fill="none">
+          <path d="M880 430h520M880 460h380M880 490h460"/>
+        </g>
+      </svg>
+    </div>
+    <div class="wrap">
+      <p class="lbl">Brunswick East · 1-to-1 strength coaching</p>
+      <h1 style="margin-top:22px">Transform your body in <em>12 weeks</em></h1>
+      <div class="cols">
+        <p>Three sessions a week with me on the floor, a programme written for your body and your calendar, and a number to hit every single session. <b>No packs of ten. No app-only plans.</b> Twelve weeks is long enough to change how strong you are and short enough that you can actually see the end of it.</p>
+        <div class="acts">
+          <a class="btn" href="#book">Book free consultation<svg class="arw" viewBox="0 0 24 24" aria-hidden="true"><use href="#ar"/></svg></a>
+          <a class="btn btn-o" href="#programs">See the programs</a>
+          <p class="note">30 minutes, in person or on the phone.<br>No obligation, no sales pitch, no card.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="facts">
+    <div class="wrap">
+      <div><b>Since 2013</b><span>Coaching full time</span></div>
+      <div><b>8</b><span>1-to-1 clients at a time</span></div>
+      <div><b>Ironbark, Brunswick East</b><span>Where we train</span></div>
+      <div><b><span class="dot"></span>2 spots</b><span>Open from March</span></div>
+    </div>
+  </div>
+
+  <!-- ---------- what changes ---------- -->
+  <section>
+    <div class="wrap">
+      <div class="sec-hd">
+        <p class="lbl">The 12 weeks</p>
+        <h2>Most people quit in week three. <em>Here is what happens instead.</em></h2>
+        <p>Nobody gets a dramatic result in a fortnight, and anyone who tells you otherwise is selling something. The block is built so weeks one to three are deliberately easy to finish — that is the part where people normally fall off.</p>
+      </div>
+
+      <div class="phases">
+        <div class="ph"><span class="bar"></span>
+          <p class="wk">Weeks 1–3</p><h3>Assess &amp; groove</h3>
+          <p>Movement screen, a starting number on six lifts, and technique work at loads you can absolutely handle. Nothing here should be hard.</p>
+        </div>
+        <div class="ph"><span class="bar"></span>
+          <p class="wk">Weeks 4–7</p><h3>Build</h3>
+          <p>Volume climbs. Same six lifts, more sets, small jumps each week. This is where the work actually accumulates.</p>
+        </div>
+        <div class="ph"><span class="bar"></span>
+          <p class="wk">Weeks 8–10</p><h3>Intensify</h3>
+          <p>Fewer sets, heavier top sets, conditioning gets shorter and sharper. Sleep and food start mattering more than the programme.</p>
+        </div>
+        <div class="ph"><span class="bar"></span>
+          <p class="wk">Weeks 11–12</p><h3>Test &amp; deload</h3>
+          <p>Re-test the same six lifts and the same measurements, then a week backing off. You leave with a number, not a feeling.</p>
+        </div>
+      </div>
+
+      <div class="measure">
+        <div>
+          <h3>What we actually measure</h3>
+          <p>Every fortnight, the same five things, taken the same way, at the same time of day. You get the spreadsheet. If a number is not moving after six weeks, we change the programme rather than the story about the programme.</p>
+        </div>
+        <ul class="mlist">
+          <li><b>Six working lifts</b><span>Squat, hinge, press, pull, carry, row — load × reps</span></li>
+          <li><b>Waist and hip</b><span>Tape, morning, before food</span></li>
+          <li><b>Body weight trend</b><span>Weekly average, never a single day</span></li>
+          <li><b>Resting heart rate</b><span>On waking, from your own watch</span></li>
+          <li><b>Sessions completed</b><span>Out of 36. The one that predicts the rest</span></li>
+          <li><b>Sleep, self-reported</b><span>Hours and a 1–5 quality score</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- programs ---------- -->
+  <section id="programs" style="background:var(--coal-2);border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)">
+    <div class="wrap">
+      <div class="sec-hd">
+        <p class="lbl">Programs</p>
+        <h2>Three blocks. Pick the one that matches the goal.</h2>
+      </div>
+      <div class="progs">
+        <article class="prog">
+          <div class="tagrow"><span>Nutrition targets</span><span>Weekly check-in</span></div>
+          <h3>Fat loss</h3>
+          <p class="for">For people carrying more than they want to and sick of starting again every January.</p>
+          <ul class="spec">
+            <li><span>Duration</span><b>12 weeks</b></li>
+            <li><span>Sessions</span><b>2 / week with me</b></li>
+            <li><span>Own training</span><b>2 / week programmed</b></li>
+            <li><span>Included</span><b>Food targets + review</b></li>
+          </ul>
+          <p class="price"><b>$165</b><span>per week · $1,980 total</span></p>
+          <a class="btn btn-o" href="#book">Start with a consult</a>
+        </article>
+
+        <article class="prog feat">
+          <div class="tagrow"><span class="hi">Most booked</span><span>Lift video review</span></div>
+          <h3>Strength &amp; muscle</h3>
+          <p class="for">For people who can already train and want to be measurably stronger by the end of it.</p>
+          <ul class="spec">
+            <li><span>Duration</span><b>16 weeks</b></li>
+            <li><span>Sessions</span><b>3 / week with me</b></li>
+            <li><span>Own training</span><b>1 / week programmed</b></li>
+            <li><span>Included</span><b>Lift video review</b></li>
+          </ul>
+          <p class="price"><b>$215</b><span>per week · $3,440 total</span></p>
+          <a class="btn" href="#book">Start with a consult</a>
+        </article>
+
+        <article class="prog">
+          <div class="tagrow"><span>Force plate testing</span><span>Return to play</span></div>
+          <h3>Sports performance</h3>
+          <p class="for">For club and pre-season athletes, and for anyone coming back from a cleared injury.</p>
+          <ul class="spec">
+            <li><span>Duration</span><b>10 weeks</b></li>
+            <li><span>Sessions</span><b>3 / week with me</b></li>
+            <li><span>Testing</span><b>Weeks 1, 5 and 10</b></li>
+            <li><span>Included</span><b>Physio liaison</b></li>
+          </ul>
+          <p class="price"><b>$290</b><span>per week · $2,900 total</span></p>
+          <a class="btn btn-o" href="#book">Start with a consult</a>
+        </article>
+      </div>
+      <p class="progs-note">Paid fortnightly. Pause any block once for up to three weeks — illness, travel, life. Prices include GST.</p>
+    </div>
+  </section>
+
+  <!-- ---------- quotes ---------- -->
+  <section class="quotes">
+    <div class="wrap">
+      <div class="sec-hd"><p class="lbl">In their words</p><h2>What finishing a block feels like</h2></div>
+      <div class="qgrid">
+        <article class="q">
+          <blockquote>“I came in able to do exactly zero chin-ups and finished the block with four. Dev never once mentioned how I looked — it was always the number on the bar, and that turned out to be the thing that kept me coming back.”</blockquote>
+          <div class="who"><span class="av">HL</span><span><b>Hannah L.</b><span>Strength &amp; muscle · 16 weeks</span></span></div>
+        </article>
+        <article class="q">
+          <blockquote>“Two previous trainers gave me a printout and a thumbs up. This was the first time somebody watched every rep and changed the plan when my knee complained rather than telling me to push through.”</blockquote>
+          <div class="who"><span class="av">RO</span><span><b>Rob O.</b><span>Sports performance · 10 weeks</span></span></div>
+        </article>
+      </div>
+      <p class="demo">Client quotes are sample content written for this demonstration site.</p>
+    </div>
+  </section>
+
+  <!-- ---------- coach ---------- -->
+  <section class="coach" id="coach">
+    <div class="wrap">
+      <div class="plate">
+        <svg class="art" viewBox="0 0 300 300" role="img" aria-label="Illustrated portrait plate for coach Dev Aranda">
+          <rect width="300" height="300" fill="#0A0A0A"/>
+          <g stroke="#CDDC39" stroke-opacity=".12" stroke-width="1"><path d="M0 60h300M0 120h300M0 180h300M0 240h300M60 0v300M120 0v300M180 0v300M240 0v300"/></g>
+          <circle cx="150" cy="128" r="58" fill="#1A1A1A" stroke="#CDDC39" stroke-width="1.5"/>
+          <path d="M150 90a26 26 0 1 1 0 52 26 26 0 0 1 0-52z" fill="#CDDC39" opacity=".9"/>
+          <path d="M104 186c6-26 24-38 46-38s40 12 46 38z" fill="#CDDC39" opacity=".9"/>
+          <rect x="52" y="214" width="196" height="8" rx="4" fill="#2B2B2B"/>
+          <g fill="#1E1E1E" stroke="#3A3A3A" stroke-width="1.2">
+            <rect x="66" y="196" width="18" height="44" rx="5"/><rect x="88" y="188" width="22" height="60" rx="6"/>
+            <rect x="190" y="188" width="22" height="60" rx="6"/><rect x="216" y="196" width="18" height="44" rx="5"/>
+          </g>
+          <text x="150" y="278" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" letter-spacing="4" fill="#5E5E5B">ASCA L2 · CERT IV</text>
+        </svg>
+        <div class="body">
+          <h3>Dev Aranda</h3>
+          <p class="role">Strength coach &amp; owner</p>
+          <ul class="certs">
+            <li><svg><use href="#tk"/></svg><span>ASCA Level 2 Strength &amp; Conditioning Coach</span></li>
+            <li><svg><use href="#tk"/></svg><span>Cert IV Fitness, AIPT — registered with AUSactive</span></li>
+            <li><svg><use href="#tk"/></svg><span>Precision Nutrition Level 1</span></li>
+            <li><svg><use href="#tk"/></svg><span>Current first aid &amp; CPR, Working with Children check</span></li>
+            <li><svg><use href="#tk"/></svg><span>$20m public liability, certificate on request</span></li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <p class="lbl">The coach</p>
+        <h2 style="margin-top:14px">Thirteen years, one room, no franchise behind me</h2>
+        <p>I started on the floor of a 24-hour gym in Coburg in 2013 handing out free assessments nobody wanted. I now coach out of one room at Ironbark in Brunswick East, and I cap it at <b>eight one-to-one clients</b> because past that I stop remembering what happened in your last session.</p>
+        <p>Most of the people I work with are between 35 and 60, have trained on and off for years, and have something that hurts. The job is usually not motivation. It is picking the right five exercises and getting you to do them for long enough to matter.</p>
+        <p>If your goal is a stage, a photo shoot or a number on the scale by a fixed date, I am probably the wrong coach and I will say so in the consult.</p>
+        <div class="specs">
+          <span>Barbell strength</span><span>Return from injury</span><span>Over-50s training</span>
+          <span>Pre-season conditioning</span><span>Pre &amp; post-natal</span><span>Desk-bound backs</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- faq ---------- -->
+  <section class="faq" id="faq" style="background:var(--coal);border-top:1px solid var(--line-2)">
+    <div class="wrap">
+      <p class="lbl">Questions</p>
+      <h2 style="margin-top:14px">Before you book</h2>
+      <details open>
+        <summary>What actually happens in the free consultation?</summary>
+        <p>Thirty minutes. I ask what you have tried, what hurt, and what your week genuinely looks like — not what you wish it looked like. You do a short movement screen if we are in the gym. At the end I tell you which block fits, or that none of them do. Nobody is asked for a card.</p>
+      </details>
+      <details>
+        <summary>I have not trained in years. Am I too unfit to start?</summary>
+        <p>No. Weeks one to three exist precisely for this. The first month is loads you can do comfortably for the stated reps — if you finish a session feeling wrecked in the first fortnight, I have programmed it wrong.</p>
+      </details>
+      <details>
+        <summary>Will I lose a specific amount of weight?</summary>
+        <p>I will not put a number on it, and I would be suspicious of anyone who does. What I will commit to is that we measure the same six lifts and five metrics every fortnight and change the plan when they stall. What your body does with that depends on sleep, food, stress and genetics I do not control.</p>
+      </details>
+      <details>
+        <summary>What if I miss a session?</summary>
+        <p>Give me 12 hours and we move it, no charge. Less than 12 hours and it is used, because the slot is yours and I cannot fill it. Every block includes one pause of up to three weeks for illness or travel.</p>
+      </details>
+      <details>
+        <summary>Do I need a gym membership as well?</summary>
+        <p>Yes, for the days you train on your own. Ironbark is $22 a week on a month-to-month and there is no joining fee through me. Your sessions with me are covered by the block price.</p>
+      </details>
+      <details>
+        <summary>Can I claim it on private health?</summary>
+        <p>Personal training is not claimable. If a physio or exercise physiologist refers you under a care plan, that part may be — bring the paperwork to the consult and I will work with them directly.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- ---------- final ---------- -->
+  <section class="final" id="book">
+    <div class="wrap">
+      <div>
+        <h2>Start with a conversation, not a contract</h2>
+        <p>I take <b>eight one-to-one clients</b> at a time and two of those slots open in March. If they fill, the consult is still free and I will tell you honestly when the next one is — or point you at someone who has room now.</p>
+      </div>
+      <div>
+        <a class="btn" href="#book">Book free consultation<svg class="arw" viewBox="0 0 24 24" aria-hidden="true"><use href="#ar"/></svg></a>
+        <p class="cap">Ironbark Strength, 212 Lygon Street, Brunswick East VIC 3057<br>
+        Call or text <a href="tel:+61491570119" style="color:#2A2E0B;font-weight:700">0491 570 119</a> · <a href="mailto:dev@devaranda.example.com" style="color:#2A2E0B;font-weight:700">dev@devaranda.example.com</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Dev Aranda Strength · ABN 51 907 344 218</span>
+    <a href="#book">Book a consult</a>
+    <a href="#faq">FAQ</a>
+    <span class="r">AUSactive registered exercise professional</span>
+  </div>
+</footer>
+</body>
+</html>
