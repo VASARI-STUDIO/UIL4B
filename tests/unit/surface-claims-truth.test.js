@@ -20,7 +20,7 @@ import assert from 'node:assert/strict'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 import { EXPORT_FORMATS, unbuiltFormats } from '../../src/config/exportFormats.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
-import { CREATE_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { NEXT_TODO } from '../../src/data/pipeline.js'
 import { isSoonRoute } from '../../src/utils/routeMeta.js'
@@ -221,6 +221,22 @@ test('the /info Preview link goes to the tool that has a Preview control', () =>
   assert.equal(link[1], "{toolRoute('palette')}",
     `/info's Preview link points at ${link[1]}; the Preview control is PaletteBuilder's, and the route `
     + 'is read from the tool tree so it cannot name a page the control is not on')
+})
+
+/* ── the export gate: sign-in is no longer "only" for saving ───────────────── */
+
+test('/info stops calling sign-in optional while taking a file away needs an account', () => {
+  const panel = stripComments(read('src/components/ExportPanel.jsx'))
+  // Condition and positive control in one: the gate exists and the panel
+  // uses it (e2309608). Remove the gate and the old wording is true again,
+  // and this check should go with it.
+  assert.ok(panel.includes('useExportGate'),
+    'ExportPanel.jsx no longer uses useExportGate — file exports are ungated again, so retire this test')
+  for (const phrase of ['only if you want saved projects', 'is optional']) {
+    assert.ok(!INFO.includes(phrase),
+      `/info says sign-in "${phrase}" again, and taking a file away — the export panel, the icon `
+      + 'SVG, the converter downloads, the palette PNG — now needs a free account (useExportGate.js).')
+  }
 })
 
 test('the superlative deleted from /discover is not on /info', () => {

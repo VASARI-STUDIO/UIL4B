@@ -70,7 +70,13 @@ const SECTIONS = [
             what the product is. */}
         <p>UIL4B is a free, browser-based design toolkit.</p>
         <ul>
-          <li><strong>No account needed</strong> — open any tool and start working. Sign in with Google only if you want saved projects and synced settings.</li>
+          {/* "only" is deleted from the second sentence. Since e2309608
+              taking a FILE away — the export panel, the icon SVG, the
+              converter's downloads, the palette PNG — needs a free account
+              (src/hooks/useExportGate.js), so saving and syncing are no
+              longer the only things sign-in is for. Opening and using a tool,
+              and copying a value, still need nothing. */}
+          <li><strong>No account needed</strong> — open any tool and start working. Sign in with Google if you want saved projects and synced settings.</li>
           {/* THE PIN BULLET IS GONE, NOT REWORDED. It read "drag any tool from
               the sidebar onto the dashboard, or right-click it to pin", and the
               product has no sidebar, no dashboard and no pin control:
@@ -169,7 +175,10 @@ const SECTIONS = [
     title: 'Accounts & sign-in',
     body: (
       <>
-        <p>You can use every core tool without an account. Signing in (Google or email) is optional — it saves your projects and syncs your preferences across devices.</p>
+        {/* "is optional —" is deleted: the same e2309608 export gate as the
+            getting-started bullet above. Using a tool needs no account;
+            taking a file out of one does. */}
+        <p>You can use every core tool without an account. Signing in (Google or email) saves your projects and syncs your preferences across devices.</p>
         <p>Sign in from the top-right, or wherever you see a prompt. Manage your profile, email and password in <Link to="/settings">Settings → Account</Link>.</p>
       </>
     ),
