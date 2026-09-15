@@ -13,6 +13,7 @@ import {
 } from '../config/planLadder'
 import useModalDialog from '../hooks/useModalDialog'
 import ProHarmonyPreview from './ProHarmonyPreview'
+import { showsColourRail } from '../utils/proGateProof'
 
 // The Pro upgrade modal — a funnel surface, and the only one in the app.
 //
@@ -30,8 +31,61 @@ import ProHarmonyPreview from './ProHarmonyPreview'
 //     of this modal carried five filled stars and "Loved by designers who'd
 //     rather build than tab-hop" — fabricated social proof, guardrail 1, gone.
 //  3. The trial is stated plainly: which plan carries it, how long it runs, and
-//     the day money moves. src/pages/Checkout.jsx grants the trial on the
-//     YEARLY plan only, so only the yearly CTA may say "trial".
+//     the day money moves. WHICH plans carry it is no longer a fact this file
+//     knows — it reads `trialDays` off the resolved ladder, which mirrors
+//     api/_lib/pricing.js#TRIAL_DAYS, which is what Stripe is actually told.
+//     (This comment used to say "the YEARLY plan only". That stopped being
+//     true on 2026-09-15 when the founder made the trial earned by the
+//     CADENCE — monthly bills today, quarterly and yearly each get seven days.)
+//
+// ── 2026-09-15, founder ─────────────────────────────────────────────────────
+// "review its UI for AI slop feeling and pricing, and make it slightly unique
+//  for each different pro upgrade one, also include quarterly pricing, improve
+//  heigrachy, the 7 day free trial on the yearly needs to be more obvious."
+//
+// What that turned into, and why:
+//
+//  · THE PRICE WAS PRINTED THREE TIMES before the button — a 40px "from
+//    $X/month" headline, then the same number again on the tile below it, then
+//    a third time in the steps box. The headline is gone. It was the cheapest
+//    plan's per-month rate, which is now sitting in the plan rows a few
+//    centimetres lower, so it said nothing new while competing with the title
+//    for the top of the page. Removing it also retires a whole bug class: the
+//    long comment that used to live here is about a fallback price rendering
+//    on top of "we couldn't load current prices". A price that does not exist
+//    cannot contradict an error.
+//
+//  · THE PLANS WERE SIDE-BY-SIDE TILES, at minmax(180px,1fr) in a ~400px
+//    column. That fits two. Quarterly makes three, and three would have
+//    wrapped 2-then-1 — a broken-looking grid on the one surface that asks for
+//    money. They are stacked rows now, which is what Riverside, Adobe and
+//    Behance all do once there are three billing periods to choose between
+//    (mobbin.com/screens/725a3c3e-5c4f-455c-8d4c-8d4f2abb4b4b,
+//     .../28ac7aa0-7aca-4a92-9a6c-c8ab4272d103,
+//     .../c90bc8de-b312-4771-866e-93f6d002dbcb). A row also has somewhere to
+//    put the trial that is not a footnote.
+//
+//  · THE TRIAL WAS THE SMALLEST TEXT ON THE SURFACE — 11.5px, under the total,
+//    on one tile. It is the strongest thing on the offer and it read like a
+//    disclaimer. It is now a filled chip on the row AND the CTA says it, which
+//    is what all three references above do: the trial belongs in the button a
+//    person is about to press.
+//
+//    NOTE the guardrail this does NOT break. A previous pass put "Get started
+//    free" in this button and it was removed for implying the product is free.
+//    "Start your 7-day free trial" is not that claim: it is what the button
+//    does, the card is taken at checkout either way, and the line under it
+//    still says a free account is created first and when billing begins. The
+//    no-trial cadence still reads "Upgrade to Pro", because for monthly that
+//    is the truth.
+//
+//  · EVERY GATE SHOWED THE SAME COLOUR RAIL. The eyebrow, title and subtitle
+//    are already written per gate, but an icon gate, a type-system gate and a
+//    gradient gate all opened onto five rows of colour harmonies generated
+//    from a palette seed the user may never have touched — proof of a product
+//    they were not being sold, which is the most AI-slop thing on the surface:
+//    a panel that looks like evidence and is actually decoration. The rail now
+//    renders only where colour IS the product.
 //
 // Prices come from src/config/planLadder.js — the single module — never typed
 // into this file. Read its header before changing any amount.
@@ -71,7 +125,24 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     // degrades to the last palette this browser worked on, then to the brand
     // accent, so nothing breaks when a caller passes nothing.
     seed,
+    // Which wall fired. Already passed by every call site for analytics; read
+    // here to decide whether the colour rail is proof or decoration.
+    gate,
   } = opts
+
+  // THE RAIL IS PROOF, SO IT ONLY APPEARS WHERE IT PROVES SOMETHING.
+  //
+  // ProHarmonyPreview generates the colour systems the subscription buys from
+  // the user's own seed. On a palette wall that is the product. On
+  // `icon-outline`, `ui-system-*` or the type-system wall it is five rows of
+  // swatches about something else — and because resolvePaletteSeed always
+  // finds A seed (last palette → brand accent), it never degraded to nothing;
+  // it confidently drew the wrong evidence.
+  //
+  // Two signals, both already sent by the callers: a palette gate, or an
+  // explicit seed — which is how ExportPanel says "this export is about this
+  // palette" (it passes design.palette.colors[0]).
+  const showColourRail = showsColourRail({ seed, gate })
 
   const currency = useMemo(() => detectCurrency(), [])
   const ladder = useMemo(
@@ -116,7 +187,7 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
     <div className="ui-modal-overlay" onMouseDown={onClose}>
       <div
         ref={dialogRef}
-        className="ui-modal ui-pro"
+        className={'ui-modal ui-pro' + (showColourRail ? '' : ' ui-pro--norail')}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${uid}-title`}
@@ -146,42 +217,9 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
             (measured 2026-09-09 at 320/390/430 from the palette's colour-
             system gate). The rail has no focusable control, so the DOM order
             stays and only the paint order changes; see global.css. */}
-        <ProHarmonyPreview seed={seed} />
+        {showColourRail && <ProHarmonyPreview seed={seed} />}
 
         <div className="ui-pro-body">
-          {/* The headline rate. Computed from whichever plan is genuinely the
-              cheapest per month — never typed, so it cannot drift from the
-              tiles underneath it.
-
-              It is suppressed outright when the price service is down. Rendered
-              once against a dead /api/get-prices, this quoted the fallback
-              ladder's "from $4/month" directly above "We couldn't load current
-              prices just now" — two contradictory claims about money on the
-              same screen. If we cannot say the real number, we say nothing.
-
-              NOT RENDERED, rather than given the `hidden` attribute. It carried
-              `hidden={priceUnavailable}` from 2026-09-05 to 2026-09-09 and the
-              contradiction shipped anyway: .ui-pro-from is `display:flex` in
-              global.css, and an author-level display rule outranks the user
-              agent's `[hidden]{display:none}`, so the attribute was set and
-              the price painted regardless. Rendered against a dead
-              /api/get-prices on 2026-09-09: "FROM $4 /month" over the error
-              block, exactly the screen this comment says was fixed. A branch
-              cannot be overridden by a stylesheet. */}
-          {!priceUnavailable && (
-            <p className="ui-pro-from" aria-live="polite">
-              {settled && headline?.perMonthLabel ? (
-                <>
-                  <span className="ui-pro-from-lead">from</span>
-                  <span className="ui-pro-from-amount">{headline.perMonthLabel}</span>
-                  <span className="ui-pro-from-per">/month</span>
-                </>
-              ) : (
-                <span className="sk ui-pro-from-skel"><span className="sr-only">Loading prices…</span></span>
-              )}
-            </p>
-          )}
-
           <ul className="ui-pro-list">
             {features.map((f) => (
               <li className="ui-pro-li" key={f}>
@@ -223,20 +261,31 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                       checked={choice?.id === plan.id}
                       onChange={() => setChoiceId(plan.id)}
                     />
-                    <span className="ui-pro-plan-top">
-                      <span className="ui-pro-plan-name">{plan.label}</span>
-                      {save > 0 && <span className="ui-pro-plan-save">Save {save}%</span>}
-                    </span>
-                    <span className="ui-pro-plan-rate">
-                      <span className="ui-pro-plan-amount">{plan.perMonthLabel}</span>
-                      <span className="ui-pro-plan-per">/mo</span>
+                    {/* A ROW, not a tile. Identity on the left, money on the
+                        right, terms underneath — so a third cadence costs one
+                        more row instead of breaking a 2-up grid onto a second
+                        line. */}
+                    <span className="ui-pro-plan-main">
+                      <span className="ui-pro-plan-id">
+                        <span className="ui-pro-plan-name">{plan.label}</span>
+                        {save > 0 && <span className="ui-pro-plan-save">Save {save}%</span>}
+                        {/* THE TRIAL, PROMOTED. This was 11.5px of accent text
+                            under the total — the quietest thing in the tile,
+                            for the loudest thing in the offer. It is a filled
+                            chip on the identity line now, which is where the
+                            eye already is when it reads the plan's name. */}
+                        {plan.trialDays > 0 && (
+                          <span className="ui-pro-plan-trial">{plan.trialDays}-day free trial</span>
+                        )}
+                      </span>
+                      <span className="ui-pro-plan-rate">
+                        <span className="ui-pro-plan-amount">{plan.perMonthLabel}</span>
+                        <span className="ui-pro-plan-per">/mo</span>
+                      </span>
                     </span>
                     <span className="ui-pro-plan-total">
                       {plan.totalLabel} {plan.cadence}
                     </span>
-                    {plan.trialDays > 0 && (
-                      <span className="ui-pro-plan-trial">{plan.trialDays}-day free trial</span>
-                    )}
                   </label>
                 )
               })}
@@ -268,10 +317,16 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
           {!priceUnavailable && (
             <>
               {/* One primary action, labelled for what it does rather than
-                  for what it costs. "Get started free" used to sit here, which
-                  contradicted the whole surface: this is the upgrade path.
-                  The trial is stated in the steps above and again under the
-                  button, not smuggled into the button label. */}
+                  for what it costs.
+
+                  "Get started free" used to sit here and was removed for
+                  implying the product is free. The trial label is not a
+                  return to that: it names the action the button performs, on
+                  the cadences that genuinely carry a trial, and reverts to
+                  "Upgrade to Pro" on the one that bills today. The founder
+                  asked for the trial to be more obvious (2026-09-15); a
+                  disclaimer under a tile was not that, and the button is
+                  where Riverside, Adobe and Behance all put it. */}
               <div className="ui-pro-cta">
                 <button
                   type="button"
@@ -280,7 +335,11 @@ export default function ProUpgradeModal({ opts = {}, onClose }) {
                   disabled={!choice || !settled || starting}
                   aria-busy={starting}
                 >
-                  {starting ? 'Opening checkout…' : 'Upgrade to Pro'}
+                  {starting
+                    ? 'Opening checkout…'
+                    : hasTrial
+                      ? `Start your ${choice.trialDays}-day free trial`
+                      : 'Upgrade to Pro'}
                 </button>
                 {/* Declining must be exactly as easy as accepting —
                     growth-persuasion.md guardrail 3. A real button with a real
