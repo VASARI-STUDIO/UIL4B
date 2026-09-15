@@ -54,7 +54,7 @@
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
-import { PLAN_LADDER, resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
+import { resolvePlanLadder, cheapestPerMonth } from '../../src/config/planLadder.js'
 import { EXPORT_FORMATS } from '../../src/config/exportFormats.js'
 import { FIRST_WINS } from '../../src/utils/firstWin.js'
 
@@ -275,7 +275,11 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
       const modal = await raiseWall(page)
 
       await expect(modal.locator('.ui-pro-plans-err')).toContainText(/couldn.t load current prices/i)
-      // No "from $X/month" — rendered, hidden, or otherwise.
+      // No "from $X/month" — rendered, hidden, or otherwise. The element was
+      // deleted outright on 2026-09-15 (it repeated the cheapest plan row a few
+      // centimetres below it), so this now guards against its REINTRODUCTION:
+      // a headline rate outside the `priceUnavailable` branch is exactly how a
+      // fallback price painted on top of this error block twice before.
       await expect(modal.locator('.ui-pro-from')).toHaveCount(0)
       expect(await modal.locator('.ui-pro-body').innerText(), 'no currency amount may appear beside the error')
         .not.toMatch(/[$€£]\s?\d/)
@@ -344,21 +348,51 @@ test.describe('flow 2 — the Pro modal tells the truth about money', () => {
     const yearly = ladder.find((p) => p.id === 'yearly')
     const monthly = ladder.find((p) => p.id === 'monthly')
 
-    await expect(modal.locator('.ui-pro-from')).toContainText(headline.perMonthLabel)
-    await expect(modal.locator('.ui-pro-from')).toContainText('/month')
-    // Each purchasable tile: per-month, total and cadence from the same module.
+    // Each purchasable row: per-month, total and cadence from the same module.
     for (const plan of [monthly, yearly]) {
       const tile = modal.locator('.ui-pro-plan', { hasText: plan.label })
       await expect(tile).toContainText(plan.perMonthLabel)
       await expect(tile).toContainText(`${plan.totalLabel} ${plan.cadence}`)
     }
-    // The trial is stated on the tier that carries it and nowhere else.
-    const trialTier = PLAN_LADDER.find((p) => p.trialDays > 0)
-    await expect(modal.locator('.ui-pro-plan-trial')).toHaveCount(1)
-    await expect(modal.locator('.ui-pro-plan-trial')).toContainText(`${trialTier.trialDays}-day free trial`)
-    // The steps say the day money moves, with the real total.
-    await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${trialTier.trialDays}`)
-    await expect(modal.locator('.ui-pro-steps')).toContainText(yearly.totalLabel)
+
+    // THE TRIAL IS ON EVERY CADENCE THAT CARRIES ONE — counted off the ladder,
+    // not assumed to be one.
+    //
+    // This asserted toHaveCount(1) and passed for the wrong reason: the ladder
+    // lists monthly, quarterly, yearly, and PLAN_LADDER.find(trialDays > 0)
+    // returns QUARTERLY, whose 7 days happen to equal yearly's. Only yearly
+    // rendered, because quarterly has no checkoutPlan yet — so a test about
+    // "the tier that carries the trial" was reading quarterly's number off
+    // yearly's chip. The day the founder adds the Stripe price and quarterly
+    // becomes purchasable, the count becomes 2 and this goes red for a change
+    // that is entirely correct.
+    const trialPlans = ladder.filter((pl) => pl.purchasable && pl.trialDays > 0)
+    await expect(modal.locator('.ui-pro-plan-trial')).toHaveCount(trialPlans.length)
+    for (const plan of trialPlans) {
+      const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
+      await expect(row.locator('.ui-pro-plan-trial')).toContainText(`${plan.trialDays}-day free trial`)
+    }
+    // ...and a cadence that bills today says nothing about a trial.
+    for (const plan of ladder.filter((pl) => pl.purchasable && !pl.trialDays)) {
+      const row = modal.locator('.ui-pro-plan', { hasText: plan.label })
+      await expect(row.locator('.ui-pro-plan-trial')).toHaveCount(0)
+    }
+
+    // The steps say the day money moves, with the real total, for whichever
+    // plan is selected — which is the cheapest per month, i.e. the headline.
+    const chosen = ladder.find((pl) => pl.id === headline.id)
+    if (chosen.trialDays > 0) {
+      await expect(modal.locator('.ui-pro-steps')).toContainText(`Day ${chosen.trialDays}`)
+    }
+    await expect(modal.locator('.ui-pro-steps')).toContainText(chosen.totalLabel)
+
+    // THE CTA NAMES THE TRIAL. The founder asked for it to be more obvious than
+    // a line of small print, and the button is the last thing read before the
+    // decision. A cadence with no trial must NOT say it.
+    const cta = modal.locator('.ui-pro-cta .btn').first()
+    await expect(cta).toHaveText(
+      chosen.trialDays > 0 ? `Start your ${chosen.trialDays}-day free trial` : 'Upgrade to Pro',
+    )
 
     // Declining is a real button and it hands focus back to the wall's opener.
     await modal.getByRole('button', { name: 'Maybe later' }).click()

@@ -878,9 +878,25 @@ function PipelineBoard() {
   )
 }
 
-// Nearest psychological price ending in .99 (e.g. 7.40 → 7.99, 7.30 → 6.99),
-// never below 0.99.
-const round99 = (x) => Math.max(0.99, Math.round(x - 0.99) + 0.99)
+// Snap an auto-filled amount to the SHAPE OF ITS OWN DEFAULT, rather than to
+// .99 always.
+//
+// The .99 rule was right when every price ended in .99. The founder-approved
+// ladder is whole dollars for the recurring plans — $7 monthly, $18 quarterly,
+// $48 yearly — and .99 only on lifetime (api/_lib/pricing.js says exactly
+// this). Snapping $7 to $6.99 would have quietly overwritten an approved price
+// with a different one every time auto-fill ran.
+//
+// So the reference amount decides: a whole-number default keeps whole numbers,
+// a default with real cents keeps the .99 ending it already had.
+const roundLikeDefault = (x, reference) => {
+  const wantsWhole = Math.abs(reference - Math.round(reference)) < 0.005
+  if (wantsWhole) return Math.max(1, Math.round(x))
+  return Math.max(0.99, Math.round(x - 0.99) + 0.99)
+}
+
+// Human label for an interval key, derived so a new interval needs no edit here.
+const intervalLabel = (id) => id.charAt(0).toUpperCase() + id.slice(1)
 
 function StripeSetupPanel({ toast }) {
   const [config, setConfig] = useState(null)
@@ -904,12 +920,19 @@ function StripeSetupPanel({ toast }) {
     return data
   }, [])
 
+  // THE INTERVALS AND THEIR CURRENCIES COME FROM THE SERVER, not from a list
+  // typed here. `defaults` is api/_lib/pricing.js#DEFAULT_PRICES: its keys are
+  // the intervals /api/setup-stripe will validate against, and each interval's
+  // own keys are the currencies approved for it — which is how `lifetime`
+  // expresses that it is not sold in SGD or CHF. Reading the shape off the
+  // payload is what stops this panel drifting from the route again.
   const buildDraft = useCallback((data) => {
-    const out = { monthly: {}, yearly: {} }
-    for (const interval of ['monthly', 'yearly']) {
+    const out = {}
+    for (const interval of Object.keys(data.defaults || {})) {
+      out[interval] = {}
       const live = data.prices?.[interval]?.currencies
-      for (const c of data.currencies) {
-        out[interval][c.code] = (live && live[c.code] != null) ? live[c.code] : data.defaults[interval][c.code]
+      for (const code of Object.keys(data.defaults[interval])) {
+        out[interval][code] = (live && live[code] != null) ? live[code] : data.defaults[interval][code]
       }
     }
     return out
@@ -933,32 +956,48 @@ function StripeSetupPanel({ toast }) {
     return () => { cancelled = true }
   }, [authedFetch, buildDraft])
 
-  // #12 auto-fill: editing one cell scales every other currency (both
-  // intervals) off its default ratio, snapped to the nearest .99. The edited
-  // cell keeps the raw string so typing isn't fought mid-keystroke.
+  // #12 auto-fill: editing one cell scales every other currency, in every
+  // interval, off its default ratio. The edited cell keeps the raw string so
+  // typing isn't fought mid-keystroke.
+  //
+  // Only currencies the interval actually HAS are written — iterating the full
+  // currency list would have invented a lifetime price in SGD, which the route
+  // refuses ("Lifetime pricing is not approved for SGD") and which nobody
+  // approved.
   const handlePriceEdit = (interval, code, raw) => {
     setDraft(d => {
-      const next = { monthly: { ...d.monthly }, yearly: { ...d.yearly } }
+      const next = {}
+      for (const iv of Object.keys(d)) next[iv] = { ...d[iv] }
       next[interval][code] = raw
       const base = config?.defaults?.[interval]?.[code]
       const n = Number(raw)
       if (!autoFill || !raw || !isFinite(n) || n <= 0 || !base) return next
       const scale = n / base
-      for (const iv of ['monthly', 'yearly']) {
-        for (const c of config.currencies) {
-          if (iv === interval && c.code === code) continue
-          next[iv][c.code] = round99(config.defaults[iv][c.code] * scale).toFixed(2)
+      for (const iv of Object.keys(config.defaults)) {
+        for (const c of Object.keys(config.defaults[iv])) {
+          if (iv === interval && c === code) continue
+          const ref = config.defaults[iv][c]
+          const scaled = roundLikeDefault(ref * scale, ref)
+          next[iv][c] = Number.isInteger(scaled) ? String(scaled) : scaled.toFixed(2)
         }
       }
       return next
     })
   }
 
+  // The intervals this Stripe account sells, in the order api/_lib/pricing.js
+  // declares them. Derived, so adding an interval to the route adds a column
+  // here and needs no edit in this file.
+  const intervals = useMemo(() => Object.keys(config?.defaults || {}), [config])
+
   const save = async () => {
     setSaving(true); setError(''); setResult(null)
     try {
-      const prices = { monthly: {}, yearly: {} }
-      for (const interval of ['monthly', 'yearly']) {
+      // Every interval the route validates, or it answers 400 and nothing is
+      // created. This used to post monthly and yearly only.
+      const prices = {}
+      for (const interval of Object.keys(draft)) {
+        prices[interval] = {}
         for (const [code, amt] of Object.entries(draft[interval])) prices[interval][code] = Number(amt)
       }
       const data = await authedFetch({ method: 'POST', body: JSON.stringify({ prices }) })
@@ -991,19 +1030,23 @@ function StripeSetupPanel({ toast }) {
           <div className="adm-card" style={{ marginBottom: 16 }}>
             <div className="adm-card-body">
               <p className="adm-stripe-desc">
-                Set the monthly and yearly price for the <strong>UIL4B Pro</strong> plan per currency. Each customer is
+                Set the {intervals.map(intervalLabel).join(', ').toLowerCase()} price for the <strong>UIL4B Pro</strong> plan per currency. Each customer is
                 shown their local currency at checkout automatically (detected from their browser locale).
               </p>
+              {/* The ".99" tip that used to sit here was removed rather than
+                  reworded: the approved ladder is whole dollars on the
+                  recurring plans ($7 / $18 / $48) and .99 on lifetime only, so
+                  the tip argued against the prices it sat above. The sentence
+                  kept below is the half that is still true. */}
               <p className="adm-stripe-tip">
-                Tip: keep amounts ending in <strong>.99</strong>. Saving creates fresh Stripe prices and retires the old ones — existing subscribers keep their current rate.
+                Saving creates fresh Stripe prices and retires the old ones — existing subscribers keep their current rate.
               </p>
               <div style={{ overflowX: 'auto' }}>
                 <table className="adm-stripe-table">
                   <thead>
                     <tr>
                       <th>Currency</th>
-                      <th>Monthly</th>
-                      <th>Yearly</th>
+                      {intervals.map(iv => <th key={iv}>{intervalLabel(iv)}</th>)}
                     </tr>
                   </thead>
                   <tbody>
@@ -1014,14 +1057,37 @@ function StripeSetupPanel({ toast }) {
                           <span style={{ color: 'var(--t3)', marginLeft: 6 }}>{c.label}</span>
                           {c.code === config.baseCurrency && <span style={{ color: 'var(--accent-strong)', marginLeft: 6, fontSize: 10 }}>base</span>}
                         </td>
-                        {['monthly', 'yearly'].map(interval => (
-                          <td key={interval}>
-                            <div className="adm-stripe-input">
-                              <span>{c.symbol}</span>
-                              <input type="number" min="0" step="0.01" value={draft[interval][c.code]} onChange={e => handlePriceEdit(interval, c.code, e.target.value)} />
-                            </div>
-                          </td>
-                        ))}
+                        {intervals.map(interval => {
+                          // An interval does not necessarily sell in every
+                          // currency: lifetime has no approved SGD or CHF
+                          // amount, and the route refuses one. A cell with no
+                          // approved amount is stated as unavailable rather
+                          // than given an input that would post a number
+                          // nobody signed off.
+                          const value = draft[interval]?.[c.code]
+                          if (value == null) {
+                            return (
+                              <td key={interval}>
+                                <span className="adm-stripe-na" title={`${intervalLabel(interval)} is not sold in ${c.code.toUpperCase()}`}>—</span>
+                              </td>
+                            )
+                          }
+                          return (
+                            <td key={interval}>
+                              <div className="adm-stripe-input">
+                                <span>{c.symbol}</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  aria-label={`${intervalLabel(interval)} price in ${c.code.toUpperCase()}`}
+                                  value={value}
+                                  onChange={e => handlePriceEdit(interval, c.code, e.target.value)}
+                                />
+                              </div>
+                            </td>
+                          )
+                        })}
                       </tr>
                     ))}
                   </tbody>
@@ -1029,7 +1095,7 @@ function StripeSetupPanel({ toast }) {
               </div>
               <label className="adm-stripe-autofill">
                 <input type="checkbox" checked={autoFill} onChange={e => setAutoFill(e.target.checked)} />
-                Auto-fill other currencies — edit one price and every currency (monthly &amp; yearly) recalculates to the nearest .99
+                Auto-fill other currencies — edit one price and every currency, in every plan, recalculates from the approved ladder by the same ratio
               </label>
               <div className="adm-stripe-actions">
                 <button className="btn btn-accent" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save Prices to Stripe'}</button>
@@ -1053,8 +1119,9 @@ function StripeSetupPanel({ toast }) {
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ok)', marginBottom: 10 }}>Prices Saved</div>
                 <div style={{ fontSize: 12, fontFamily: 'var(--mono)', lineHeight: 2, color: 'var(--t0)' }}>
                   <div>Product: <strong>{result.product}</strong></div>
-                  <div>Monthly price: <strong>{result.prices?.monthly?.id}</strong></div>
-                  <div>Yearly price: <strong>{result.prices?.yearly?.id}</strong></div>
+                  {Object.entries(result.prices || {}).map(([iv, v]) => (
+                    <div key={iv}>{intervalLabel(iv)} price: <strong>{v?.id}</strong></div>
+                  ))}
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--t2)', marginTop: 10 }}>{result.note}</p>
               </div>
