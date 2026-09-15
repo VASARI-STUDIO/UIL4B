@@ -114,6 +114,17 @@ function TierIcon({ pro = false }) {
     : <svg {...props}><path d="M12 2 3 7l9 5 9-5-9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 17 9 5 9-5" /></svg>
 }
 
+// FOUNDER, 2026-09-15, on how AI usage is to be described — his sentence,
+// verbatim, with only the closing full stop added (the positioning.js
+// convention). It replaces "AI generation runs on free provider tiers" in the
+// two places this page said it: he does not want the product describing
+// itself as running on free provider plans. The shared-ceiling arithmetic
+// that follows it in each place is unchanged and still true — api/_lib/
+// plans.js derives every per-user limit from one site-wide bucket.
+// tests/unit/surface-claims-truth.test.js pins the string and bans the old
+// phrase on every surface in this lane.
+const AI_BETA_LINE = 'AI usage is lowered while in Beta, if there is enough support then we will upgrade plans, API and MCPs to improve the app.'
+
 const FAQ = [
   {
     q: 'Do I need a card to use Free?',
@@ -133,7 +144,11 @@ const FAQ = [
   },
   {
     q: 'Why are the AI limits not higher?',
-    a: `Because we would rather quote a number that always works than a big one that fails in month two. AI generation currently runs on free provider tiers, which are metered across the whole site rather than per person — so the honest per-user allowance is small. Pro raises it from ${AI.free.daily} to ${AI.pro.daily} a day and from ${AI.free.monthly} to ${AI.pro.monthly} a month. When paid capacity is funded, these go up, and you keep whatever plan you are on.`,
+    // "When paid capacity is funded, these go up, and you keep whatever plan
+    // you are on." went with the free-tier sentence: it restated the same
+    // idea in agent words, and the grandfathering promise in its tail is
+    // enforced by nothing.
+    a: `Because we would rather quote a number that always works than a big one that fails in month two. ${AI_BETA_LINE} Capacity is metered across the whole site rather than per person — so the honest per-user allowance is small. Pro raises it from ${AI.free.daily} to ${AI.pro.daily} a day and from ${AI.free.monthly} to ${AI.pro.monthly} a month.`,
   },
   {
     q: 'Does Pro use a better AI model?',
@@ -417,11 +432,11 @@ export default function Plans() {
         <div className="plans-note">
           <h3>AI capacity is small, and it is shared</h3>
           <p>
-            AI generation runs on free provider tiers, which meter across the whole site
-            rather than per person, so the honest per-user allowance is low: {AI.free.daily} a
-            day on Free and {AI.pro.daily} on Pro. We quote allowances we can actually honour
-            instead of large ones we cannot. Everything else in UIL4B runs in your browser and
-            is unmetered on both plans.
+            {AI_BETA_LINE} Capacity is metered across the whole site rather than per person,
+            so the honest per-user allowance is low: {AI.free.daily} a day on Free and
+            {' '}{AI.pro.daily} on Pro. We quote allowances we can actually honour instead of
+            large ones we cannot. Everything else in UIL4B runs in your browser and is
+            unmetered on both plans.
           </p>
         </div>
 
