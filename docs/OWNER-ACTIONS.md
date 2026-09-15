@@ -69,6 +69,50 @@ A struck row is done — it keeps its number so nothing that points at it breaks
 | **13** | ~~Make `www.uil4b.com` work~~ **Done — it works, 2026-09-15** | — | — | — |
 | **14** | Make the Google sign-in box say `uil4b.com` | Firebase + Google Cloud | 20 min | It says `uil4b-357c5.firebaseapp.com`, which looks fake |
 
+### The Vercel storage spike — what caused it and what only you can do
+
+**You saw deployment storage and function storage jump. That was us, and the
+cause is measured, not guessed.**
+
+**What happened.** 63 commits were pushed on 15 September. Vercel builds and
+**stores a separate deployment for every push**. Each one keeps its own copy of
+the site build (5.3 MB) *and* of all twelve serverless functions — ten of which
+bundle `firebase-admin` and its dependencies (`@google-cloud/firestore` 5.8 MB,
+`google-gax` 8.7 MB). Sixty-three of those adds up fast. Committing each change
+separately is the right habit and it costs one deployment each; nobody had
+counted what that meant on the free plan.
+
+**Three things are already fixed in the repo, no action needed from you:**
+
+1. **Docs-only pushes no longer deploy.** `vercel.json` now skips the build when
+   a commit changed nothing the site is made of. Replayed against all 63 of
+   today's commits it would have skipped 12 — every one of them tests or docs.
+2. **8.7 MB of screenshots left the repository.** The June portfolio archive was
+   27 tracked image files, eleven of them among the fifteen largest files in the
+   whole repo. They are still on your disk; they are just not in git any more.
+3. **Deploys stopped carrying dead weight.** There was no `.vercelignore`, so
+   every build uploaded the test suite, the engineering docs and the design
+   archive. None of it is read by the build.
+
+**Two things only you can do, in the Vercel dashboard:**
+
+| # | Do this | Where | Time | Why |
+|---|---|---|---|---|
+| **15** | **Delete old deployments.** Keep the current production one and a handful of recent ones; remove the rest | Vercel → your project → **Deployments** → ⋯ → Delete | 10 min | This is the one that actually frees the storage you have already used. The fixes above stop it growing; they cannot reclaim what is stored |
+| **16** | Check **Usage** afterwards and note the new number | Vercel → **Usage** | 2 min | So you can tell whether it is under control, rather than guessing again next month |
+
+**One thing worth knowing before you delete.** A deleted deployment's URL stops
+working. That only matters if you have shared a specific preview link with
+somebody; production is unaffected, and rolling back later is still possible
+from any deployment you keep.
+
+**Not done, because it is disruptive and it is your call.** The git *history*
+is about 175 MB and still holds every version of those screenshots — untracking
+them stops the growth but does not shrink the past. Cleaning history means
+rewriting every commit and force-pushing, which breaks every existing clone and
+open branch. It is worth doing only if GitHub itself starts complaining about
+repository size. Ask me and I will lay out the exact steps and the risks.
+
 ### Row 6 changed today — the webhook is now worth pointing at us
 
 **Until 2026-09-15, fixing row 6 would have done less than it looked like.**
