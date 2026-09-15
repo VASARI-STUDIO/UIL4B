@@ -1,26 +1,33 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
-import {
-  signInWithPopup,
-  signInWithCredential,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  getAdditionalUserInfo,
-  signOut,
-  onAuthStateChanged,
-  updateProfile as fbUpdateProfile,
-  updateEmail as fbUpdateEmail,
-  updatePassword as fbUpdatePassword,
-  EmailAuthProvider,
-  GoogleAuthProvider,
-  reauthenticateWithCredential,
-  reauthenticateWithPopup,
-  sendPasswordResetEmail,
-} from 'firebase/auth'
-import { auth as firebaseAuth, db } from '../utils/firebase'
+// FIREBASE ARRIVES THROUGH THE ACCESS BROKER, NOT AS A STATIC IMPORT.
+//
+// Nothing about the session machinery below changes. What changes is WHEN the
+// 116268-byte SDK chunk is fetched: a static import of it here put it in the
+// entry graph and in index.html's `modulepreload` list, so every visitor — the
+// overwhelming majority of whom never sign in — paid for it in the first
+// request wave, contending with the CSS and the entry bundle before anything
+// had painted (#402 measured it at 25% of that wave).
+//
+//   whenAuthSdk()  PATIENT. Used by the bootstrap listener ONLY. Waits for the
+//                  deferral gate — LCP, idle, first touch, or a signed-in hint,
+//                  whichever comes first. See src/utils/firebaseAccess.lazy.js.
+//   loadAuthSdk()  URGENT. Used by every action a person actually initiates:
+//   loadFirestore() sign in, sign up, sign out, reset, switch, profile writes,
+//                  delete. These open the gate rather than wait on it, so no
+//                  human ever waits on the optimisation.
+//   authNow()      Synchronous peek for the `currentUser` identity guards. Null
+//                  before the SDK lands, which every one of those guards already
+//                  treats as "not the current session" — the same answer they
+//                  give today when auth has not resolved yet.
+//
+// In an UNFLAGGED build the broker is `firebaseAccess.js`, where every promise
+// is already resolved and `authNow()` is never null, so this file behaves
+// exactly as it did before this change.
+//
 // deleteUser/deleteDoc are deliberately gone: deletion is now a single
 // server-side transaction (api/delete-account.js) that cancels billing and
 // reaches the subcollections a client never could.
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { whenAuthSdk, loadAuthSdk, loadFirestore, authNow } from '../utils/firebaseAccess'
 import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
 
 const AuthContext = createContext()
@@ -112,7 +119,8 @@ function upsertKnownAccount(account) {
 
 async function loadProfileFromFirestore(uid) {
   try {
-    const snap = await getDoc(doc(db, 'users', uid))
+    const fs = await loadFirestore()
+    const snap = await fs.getDoc(fs.doc(fs.db, 'users', uid))
     return snap.exists() ? snap.data() : null
   } catch { return null }
 }
@@ -127,7 +135,8 @@ async function loadProfileFromFirestore(uid) {
 // dropped connection.
 async function saveProfileToFirestore(uid, data) {
   try {
-    await setDoc(doc(db, 'users', uid), withoutServerOnlyFields(data), { merge: true })
+    const fs = await loadFirestore()
+    await fs.setDoc(fs.doc(fs.db, 'users', uid), withoutServerOnlyFields(data), { merge: true })
     return { ok: true }
   } catch (error) {
     const code = error?.code || 'unknown'
@@ -161,7 +170,13 @@ export function AuthProvider({ children }) {
   const authEpochRef = useRef(0)
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(firebaseAuth, (fbUser) => {
+    // The ONE patient caller. Subscribing is now asynchronous, so `cancelled`
+    // and the deferred `unsub` replace the direct return value: without them a
+    // provider unmounted before the SDK lands would leak a live listener that
+    // nothing could ever detach.
+    let cancelled = false
+    let unsub = null
+    const onAuthUser = (fbUser) => {
       const authEpoch = ++authEpochRef.current
       if (fbUser) {
         const expectedUid = fbUser.uid
@@ -191,7 +206,7 @@ export function AuthProvider({ children }) {
         // background and merge it in once it arrives.
         setLoading(false)
         loadProfileFromFirestore(fbUser.uid).then((fsProfile) => {
-          if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)) return
+          if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)) return
           if (fsProfile) {
             const merged = { ...initial, ...fsProfile, email: fbUser.email || fsProfile.email }
             setProfile(merged)
@@ -203,10 +218,10 @@ export function AuthProvider({ children }) {
               try { localStorage.setItem('vs-onboarded', '1') } catch {}
             }
           } else {
-            if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)) return
+            if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)) return
             setCachedProfile(fbUser.uid, initial)
             saveProfileToFirestore(fbUser.uid, initial).then((result) => {
-              if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, firebaseAuth.currentUser)) return
+              if (!isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)) return
               setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
             })
           }
@@ -218,8 +233,19 @@ export function AuthProvider({ children }) {
         setProfileSyncError(null)
         setLoading(false)
       }
+    }
+    whenAuthSdk().then((A) => {
+      if (cancelled) return
+      unsub = A.onAuthStateChanged(A.auth, onAuthUser)
+    }).catch(() => {
+      // The SDK could not be fetched at all — offline, or a chunk that no
+      // longer exists after a redeploy. Resolve as signed out rather than
+      // holding every RequireAuth spinner forever: it is the same answer this
+      // browser would get from a failed auth round trip, and `useSessionHint`
+      // is what stops that answer being written down as the truth.
+      if (!cancelled) setLoading(false)
     })
-    return unsub
+    return () => { cancelled = true; if (unsub) unsub() }
   }, [])
 
   const user = firebaseUser ? { email: firebaseUser.email, uid: firebaseUser.uid } : null
@@ -235,14 +261,18 @@ export function AuthProvider({ children }) {
     flair: profile.flair || '',
   } : null
 
+  // Every action below is URGENT: a person is waiting on it, so it opens the
+  // deferral gate instead of queueing behind it.
   const login = useCallback(async (email, password) => {
-    return signInWithEmailAndPassword(firebaseAuth, email, password)
+    const A = await loadAuthSdk()
+    return A.signInWithEmailAndPassword(A.auth, email, password)
   }, [])
 
   const signup = useCallback(async (email, password, displayName) => {
-    const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password)
+    const A = await loadAuthSdk()
+    const cred = await A.createUserWithEmailAndPassword(A.auth, email, password)
     if (displayName) {
-      await fbUpdateProfile(cred.user, { displayName })
+      await A.updateProfile(cred.user, { displayName })
     }
     const p = { ...DEFAULT_PROFILE, displayName: displayName || '', email }
     setCachedProfile(cred.user.uid, p)
@@ -256,19 +286,22 @@ export function AuthProvider({ children }) {
   const clearPendingOnboarding = useCallback(() => setPendingOnboarding(false), [])
 
   const logout = useCallback(async () => {
-    await signOut(firebaseAuth)
+    const A = await loadAuthSdk()
+    await A.signOut(A.auth)
   }, [])
 
   const resetPassword = useCallback(async (email) => {
-    await sendPasswordResetEmail(firebaseAuth, email)
+    const A = await loadAuthSdk()
+    await A.sendPasswordResetEmail(A.auth, email)
   }, [])
 
   const loginWithGoogle = useCallback(async () => {
     try {
-      const provider = new GoogleAuthProvider()
+      const A = await loadAuthSdk()
+      const provider = new A.GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
-      const result = await signInWithPopup(firebaseAuth, provider)
-      try { if (getAdditionalUserInfo(result)?.isNewUser) setPendingOnboarding(true) } catch { /* ignore */ }
+      const result = await A.signInWithPopup(A.auth, provider)
+      try { if (A.getAdditionalUserInfo(result)?.isNewUser) setPendingOnboarding(true) } catch { /* ignore */ }
       try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
       return result
     } catch (err) {
@@ -281,9 +314,10 @@ export function AuthProvider({ children }) {
 
   // Sign in with a Google ID token from Google Identity Services (One Tap).
   const loginWithGoogleCredential = useCallback(async (idToken) => {
-    const credential = GoogleAuthProvider.credential(idToken)
-    const result = await signInWithCredential(firebaseAuth, credential)
-    try { if (getAdditionalUserInfo(result)?.isNewUser) setPendingOnboarding(true) } catch { /* ignore */ }
+    const A = await loadAuthSdk()
+    const credential = A.GoogleAuthProvider.credential(idToken)
+    const result = await A.signInWithCredential(A.auth, credential)
+    try { if (A.getAdditionalUserInfo(result)?.isNewUser) setPendingOnboarding(true) } catch { /* ignore */ }
     try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
     return result
   }, [])
@@ -293,17 +327,18 @@ export function AuthProvider({ children }) {
   // is compared with the requested uid and reported honestly to the caller.
   const switchAccount = useCallback(async (target) => {
     if (!target?.uid) return authSwitchOutcome('error', { firebaseCode: 'auth/invalid-switch-target' })
-    if (target.uid === firebaseAuth.currentUser?.uid) {
-      return authSwitchOutcome('switched', { credential: null, user: firebaseAuth.currentUser })
+    const A = await loadAuthSdk()
+    if (target.uid === A.auth.currentUser?.uid) {
+      return authSwitchOutcome('switched', { credential: null, user: A.auth.currentUser })
     }
     const providerIds = accountProviderIds(target)
     if (!providerIds.includes('google.com')) {
       return authSwitchOutcome('requiresPassword', { email: target.email || '', uid: target.uid })
     }
     try {
-      const provider = new GoogleAuthProvider()
+      const provider = new A.GoogleAuthProvider()
       if (target.email) provider.setCustomParameters({ login_hint: target.email })
-      const credential = await signInWithPopup(firebaseAuth, provider)
+      const credential = await A.signInWithPopup(A.auth, provider)
       try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
       return accountSelectionOutcome(credential, target.uid)
     } catch (error) {
@@ -314,7 +349,9 @@ export function AuthProvider({ children }) {
 
   const removeKnownAccount = useCallback((uid) => {
     // The signed-in account stays listed — sign out first to forget it.
-    if (uid === firebaseAuth.currentUser?.uid) return
+    // `authNow()` is null only before the SDK lands, and the account switcher
+    // this is called from cannot be open until a session has resolved.
+    if (uid === authNow()?.auth?.currentUser?.uid) return
     const list = getKnownAccounts().filter((a) => a.uid !== uid)
     persistKnownAccounts(list)
     setKnownAccounts(list)
@@ -335,7 +372,7 @@ export function AuthProvider({ children }) {
       const fbFields = {}
       if (fields.displayName) fbFields.displayName = fields.displayName
       if (fields.photoURL) fbFields.photoURL = fields.photoURL
-      fbUpdateProfile(firebaseUser, fbFields).catch(() => {})
+      loadAuthSdk().then((A) => A.updateProfile(firebaseUser, fbFields)).catch(() => {})
     }
   }, [firebaseUser])
 
@@ -345,14 +382,16 @@ export function AuthProvider({ children }) {
 
   const reauthenticate = async (password) => {
     if (!firebaseUser?.email) throw { code: 'auth/requires-recent-login' }
-    const credential = EmailAuthProvider.credential(firebaseUser.email, password)
-    await reauthenticateWithCredential(firebaseUser, credential)
+    const A = await loadAuthSdk()
+    const credential = A.EmailAuthProvider.credential(firebaseUser.email, password)
+    await A.reauthenticateWithCredential(firebaseUser, credential)
   }
 
   const updateEmail = useCallback(async (newEmail, password) => {
     if (!firebaseUser) throw { code: 'auth/requires-recent-login' }
     await reauthenticate(password)
-    await fbUpdateEmail(firebaseUser, newEmail)
+    const A = await loadAuthSdk()
+    await A.updateEmail(firebaseUser, newEmail)
     const updated = { ...profileRef.current, email: newEmail }
     setProfile(updated)
     profileRef.current = updated
@@ -364,7 +403,8 @@ export function AuthProvider({ children }) {
   const updatePassword = useCallback(async (currentPassword, newPassword) => {
     if (!firebaseUser) throw { code: 'auth/requires-recent-login' }
     await reauthenticate(currentPassword)
-    await fbUpdatePassword(firebaseUser, newPassword)
+    const A = await loadAuthSdk()
+    await A.updatePassword(firebaseUser, newPassword)
   }, [firebaseUser])
 
   // True when this account can only sign in with Google, so the UI knows not to
@@ -397,8 +437,9 @@ export function AuthProvider({ children }) {
     if (!firebaseUser) return
     const uid = firebaseUser.uid
 
+    const A = await loadAuthSdk()
     if (isGoogleOnlyAccount()) {
-      await reauthenticateWithPopup(firebaseUser, new GoogleAuthProvider())
+      await A.reauthenticateWithPopup(firebaseUser, new A.GoogleAuthProvider())
     } else {
       await reauthenticate(password)
     }
@@ -421,7 +462,7 @@ export function AuthProvider({ children }) {
 
     // The auth user is already gone server-side, so this session is dead —
     // signOut just clears the local state and listeners tidily.
-    try { await signOut(firebaseAuth) } catch { /* the user no longer exists; nothing to sign out of */ }
+    try { await A.signOut(A.auth) } catch { /* the user no longer exists; nothing to sign out of */ }
     removeCachedProfile(uid)
     const remaining = getKnownAccounts().filter((a) => a.uid !== uid)
     persistKnownAccounts(remaining)

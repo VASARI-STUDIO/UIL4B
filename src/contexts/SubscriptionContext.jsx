@@ -1,8 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from './AuthContext'
-import { doc, onSnapshot } from 'firebase/firestore'
-import { db } from '../utils/firebase'
-import { auth as firebaseAuth } from '../utils/firebase'
+// Firebase through the access broker rather than as a static import — see the
+// header of src/contexts/AuthContext.jsx for why, and src/utils/firebaseAccess.js
+// for the contract. Every use below is URGENT (it opens the deferral gate
+// rather than waiting on it) because every one of them is behind a resolved
+// `user.uid`: by then a person is signed in and their billing state is what the
+// screen is waiting for.
+import { loadFirestore, loadAuthSdk } from '../utils/firebaseAccess'
 import { ADMIN_EMAILS } from '../utils/constants'
 import { detectCurrency } from '../utils/currency'
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../config/plans'
@@ -100,16 +104,29 @@ export function SubscriptionProvider({ children }) {
       return
     }
 
-    const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-      const data = snap.data()
-      setSubscription(data?.subscription || null)
-      setLifetimeEntitlement(data?.lifetimeEntitlement || null)
-      setLoading(false)
-    }, () => {
-      setLoading(false)
+    // Subscribing is now asynchronous, so the listener is detached through a
+    // ref-like closure. `cancelled` is what stops a snapshot for a PREVIOUS
+    // account arriving after a switch and writing that account's entitlements
+    // into this one's state.
+    let cancelled = false
+    let unsub = null
+    loadFirestore().then((fs) => {
+      if (cancelled) return
+      unsub = fs.onSnapshot(fs.doc(fs.db, 'users', user.uid), (snap) => {
+        const data = snap.data()
+        setSubscription(data?.subscription || null)
+        setLifetimeEntitlement(data?.lifetimeEntitlement || null)
+        setLoading(false)
+      }, () => {
+        setLoading(false)
+      })
+    }).catch(() => {
+      // The SDK never arrived. Free plan is the safe answer, and it is the same
+      // one a failed snapshot already produces above.
+      if (!cancelled) setLoading(false)
     })
 
-    return unsub
+    return () => { cancelled = true; if (unsub) unsub() }
   }, [user?.uid])
 
   // Founder/admin accounts get Pro entitlements without a Stripe subscription.
@@ -144,7 +161,7 @@ export function SubscriptionProvider({ children }) {
   // the /checkout page to mount Stripe's <EmbeddedCheckout />.
   const createCheckoutSession = useCallback(async (interval = 'monthly') => {
     if (!BILLING_INTERVALS.has(interval)) throw new Error('Invalid billing interval')
-    const token = await firebaseAuth.currentUser?.getIdToken()
+    const token = await (await loadAuthSdk()).auth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
     const res = await fetch('/api/create-checkout', {
       method: 'POST',
@@ -158,7 +175,7 @@ export function SubscriptionProvider({ children }) {
 
   // Reads the result of a completed embedded checkout (used by /checkout/return).
   const getCheckoutStatus = useCallback(async (sessionId) => {
-    const token = await firebaseAuth.currentUser?.getIdToken()
+    const token = await (await loadAuthSdk()).auth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
     const res = await fetch(`/api/checkout-status?session_id=${encodeURIComponent(sessionId)}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -171,7 +188,7 @@ export function SubscriptionProvider({ children }) {
   // opts.flow === 'cancel' deep-links into Stripe's portal cancellation flow,
   // where Stripe presents the configured retention coupon before cancelling.
   const openPortal = useCallback(async (opts = {}) => {
-    const token = await firebaseAuth.currentUser?.getIdToken()
+    const token = await (await loadAuthSdk()).auth.currentUser?.getIdToken()
     if (!token) throw new Error('Not authenticated')
     const res = await fetch('/api/create-portal', {
       method: 'POST',
