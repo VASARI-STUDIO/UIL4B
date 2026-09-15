@@ -6,6 +6,21 @@ decision. No agent can do any of it.
 _Last reviewed: 2026-09-15 — every row below was re-checked against the live
 service that day, not reworded. Three rows changed._
 
+_Updated later the same day, after a long engineering session. **Two things you
+should know before you start clicking:**_
+
+_**1. Row 6 is worth more than it was this morning.** The webhook handler's
+refund-and-chargeback path was dead against the current Stripe API — pointing
+the webhook at it would have changed nothing. That is fixed. See "Row 6 changed
+today" under the table before you do it._
+
+_**2. Exporting now needs a free account.** Producing a file — a converted
+image, an icon SVG, a palette PNG, a style guide — asks the visitor to sign up
+first. Copying a value (Copy CSS, a hex, an SVG snippet) stays free forever,
+and every tool is still fully usable signed out. This is your "make users have
+to make an account to use alot of the extra feature", and it is the reason
+signups should start moving before the prices in row 4 matter._
+
 > ## Can we release?
 >
 > **The site is live and current. The money side is not.**
@@ -44,7 +59,7 @@ A struck row is done — it keeps its number so nothing that points at it breaks
 | **3** | Run `npm run apply:gated`, type **y**, then publish the rules | a terminal in this repo | 2 min | **This is what the Firebase "insecure rules" email is about.** Your feedback collection is open to anyone on the internet, and you stay the only person who can approve a submission |
 | **4** | Set the prices to **$7 · $18 · $48** (you decided this 2026-09-15) | Stripe → Products → UIL4B Pro | 25 min | You keep selling at $4.99 and $39.99 — less than you decided to charge, and quarterly cannot be bought at all |
 | **5** | Edit the product description: **30 AI actions a day, 300 a month** | Stripe → Products → UIL4B Pro | 2 min | Your own product page promises 1,000/day that the app does not give |
-| **6** | Point the webhook at **`/api/stripe-webhook`**, then add the refund and dispute events | Stripe → Developers → Webhooks | 20 min | **It currently posts to your homepage, so nothing Stripe sends is ever handled.** Refunds and chargebacks vanish |
+| **6** | Point the webhook at **`/api/stripe-webhook`**, then add the refund and dispute events | Stripe → Developers → Webhooks | 20 min | **It currently posts to your homepage, so nothing Stripe sends is ever handled.** Refunds and chargebacks vanish. See the note directly below — this row is worth more today than it was yesterday |
 | **7** | Switch Storage on, publish `storage.rules` | Firebase Console → Storage | 10 min | Anything that uploads a file cannot work |
 | **8** | Verify a real sending domain (SPF, DKIM, return path) | Resend, or your provider | 20 min + DNS | **We cannot email a customer at all** — no welcome, no failed-payment notice |
 | **9** | Turn the Customer Portal on, then add a retention offer | Stripe → Customer Portal | 15 min | **A Pro subscriber cannot cancel at all.** The portal has never been set up |
@@ -53,6 +68,37 @@ A struck row is done — it keeps its number so nothing that points at it breaks
 | **12** | ~~Check legacy customers still match to accounts~~ **Done — checked 2026-09-15** | — | — | — |
 | **13** | ~~Make `www.uil4b.com` work~~ **Done — it works, 2026-09-15** | — | — | — |
 | **14** | Make the Google sign-in box say `uil4b.com` | Firebase + Google Cloud | 20 min | It says `uil4b-357c5.firebaseapp.com`, which looks fake |
+
+### Row 6 changed today — the webhook is now worth pointing at us
+
+**Until 2026-09-15, fixing row 6 would have done less than it looked like.**
+Even with the webhook correctly pointed, a chargeback or refund on a renewal
+would have left Pro switched on.
+
+**Why.** The code that traces a reversed charge back to the subscription it
+paid for walked two fields — `PaymentIntent.invoice`, then
+`Invoice.subscription`. Stripe deleted **both** in its Basil release
+(2025-03-31): *"Removed the `invoice` field from the PaymentIntent and Charge
+objects."* Our Stripe library is pinned two releases past that. So the lookup
+returned "not found" on every single call, silently — nothing threw, nothing
+was logged, and no test failed, because the code was inert rather than wrong.
+
+**It is fixed.** It now uses the object Stripe added to replace those fields,
+and it is held by seven tests; putting the old code back turns four of them
+red. So when you do row 6, revocation will actually happen.
+
+**What row 6 still needs from you, in this order:**
+
+1. Change the endpoint URL to `https://uil4b.com/api/stripe-webhook`
+2. Add these events, which are the ones that take money back:
+   `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`
+3. Copy the **signing secret** Stripe shows you and put it in Vercel as
+   `STRIPE_WEBHOOK_SECRET` — without it every delivery is rejected as unsigned
+
+**One thing to check after.** Stripe's webhook page has a "Send test webhook"
+button. Send a `charge.dispute.created`. You should get a **200**, not a 400 or
+a 500. A 400 almost always means the signing secret in Vercel does not match
+the one Stripe is showing you.
 
 ### What free costs you — Vercel stays on Hobby
 
