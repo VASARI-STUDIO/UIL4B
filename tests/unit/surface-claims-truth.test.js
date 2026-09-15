@@ -19,8 +19,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 import { EXPORT_FORMATS, unbuiltFormats } from '../../src/config/exportFormats.js'
-import { PAGE_DESCRIPTIONS } from '../../src/data/routeMetaMap.js'
-import { CREATE_GROUPS } from '../../src/data/toolTree.js'
+import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
+import { CREATE_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { isSoonRoute } from '../../src/utils/routeMeta.js'
 
 // Comments here quote the sentences they explain — every deletion below is
@@ -112,6 +113,48 @@ test('/info describes no Create group that is still Soon', () => {
         `/info has a section titled "${tool.label}", a tool toolTree.js marks Soon`)
     }
   }
+})
+
+/* ── guides: /info may only name a guide that is published ─────────────────── */
+
+test('/info reads its guide list from the registry rather than typing it', () => {
+  // The typed sentence named five topics; three were roadmap rows. The fix is
+  // not a corrected list — it is no list at all in this file, so a guide
+  // cannot be named here without existing in learnIndex.js.
+  assert.ok(INFO.includes('LEARN_ARTICLES.map('),
+    'InfoCentre.jsx no longer renders its guides from LEARN_ARTICLES, so it is free to name one that does not exist')
+  assert.ok(/TOPICS\b/.test(INFO),
+    'InfoCentre.jsx no longer derives its topic list from TOPICS in learnIndex.js')
+
+  // The roadmap rows it used to advertise as guides. Read the flag: when a
+  // row ships and flips to soon:false, its name is allowed back.
+  const roadmap = LEARN_GROUPS.filter((g) => g.soon)
+  assert.ok(roadmap.length >= 1, 'nothing on the Learn roadmap is Soon; retire this check')
+  const typed = /Reference guides on design principles|SEO, and marketing/
+  assert.ok(!typed.test(INFO),
+    '/info types a guide list again, and it named SEO and marketing — LEARN_GROUPS still has them soon:true')
+})
+
+test('/info links to no retired URL and to nothing without a title', () => {
+  const retired = new Set(LEGACY_REDIRECTS.map(([from]) => from))
+  const links = [...INFO.matchAll(/to="(\/[^"]*)"/g)].map((m) => m[1].split('#')[0])
+  // POSITIVE CONTROL: the page links out to Settings and Projects at least.
+  assert.ok(links.length >= 3, `only ${links.length} literal links found on /info — the extractor is broken`)
+  for (const route of links) {
+    assert.ok(!retired.has(route),
+      `/info links to ${route}, which legacyRoutes.js answers with a 301 — it used to send readers to /resources, which lands on /discover, not the resources page`)
+    assert.ok(PAGE_TITLES[route],
+      `/info links to ${route}, which has no routeMetaMap entry, so it is not a page`)
+  }
+})
+
+test('the superlative deleted from /discover is not on /info', () => {
+  // "the best" was removed from '/discover' and '/discover/gradients' by
+  // name (routeMetaMap.js). /info carried it for the same page.
+  assert.ok(INFO.length > 5000 && INFO.includes('Reference guides on'),
+    'InfoCentre.jsx has changed shape; this check may be reading the wrong file')
+  assert.ok(!/\bthe best\b/i.test(INFO),
+    'InfoCentre.jsx says "the best" again — the quality superlative the /discover description deleted by name')
 })
 
 test('the export clauses deleted on 2026-09-15 are not quietly back', () => {
