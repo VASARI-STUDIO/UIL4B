@@ -151,7 +151,32 @@
 
 .tt-cell-step{font-size:11px;font-weight:750;letter-spacing:.02em}
 
-.tt-cell-hex{font-family:var(--mono);font-size:9px;opacity:.84}
+/* NO OPACITY ON EITHER SWATCH LABEL. Both inherit `color:var(--tt-ink)`,
+   which TintTool.jsx sets per swatch to textColorForBg(colour) - black or
+   white, whichever carries more contrast on the colour the USER typed. That
+   is a contrast guarantee, and an opacity composites it away.
+
+   SWEPT over a 2-step grid of all 2,097,152 sRGB grounds, counting grounds
+   where the composited label falls under 4.5:1 (9px text, so AA normal):
+
+     alpha 1.00   0 grounds        worst 4.583:1   <- the guarantee itself
+     alpha 0.99   0 grounds        worst 4.505:1
+     alpha 0.84   311,254 (14.84%) worst 3.447:1   <- `.tt-cell-hex` shipped
+     alpha 0.80   428,271 (20.42%) worst 3.201:1   <- `.tt-role-sample span`
+
+   textColorForBg lands at 4.583:1 on its worst ground (#38860A), so there is
+   about one percent of headroom and no dimming value worth having. Measured
+   on the built preview with base #EC001A, which the tool accepts as typed:
+   `.tt-cell-hex` reading "#ee041b" painted 4.293:1 on its own swatch and the
+   "Primary" role label 4.410:1, against 4.669:1 and 6.452:1 undimmed - 2 of
+   17 labels under AA from one hex, 0 of 17 without the opacity.
+
+   Same fault and same fix as `.plb-role`, which spent an opacity of .6 on
+   readableInk and broke AA on 89.51% of grounds. Use size, weight or
+   tracking for hierarchy here - both labels already run at 9px against an
+   11px step and a 13px role name. Pinned by
+   tests/unit/tint-label-ink-not-dimmed.test.js. */
+.tt-cell-hex{font-family:var(--mono);font-size:9px}
 
 .tt-ramp--dense .tt-cell{min-width:6px;min-height:52px;padding:0}
 
@@ -229,7 +254,8 @@
 
 .tt-role-sample:focus-visible{position:relative;z-index:1;outline:2px solid var(--brand);outline-offset:-3px}
 
-.tt-role-sample span{font-size:9px;opacity:.8}
+/* No opacity - computed ink, see the note above `.tt-cell-hex`. */
+.tt-role-sample span{font-size:9px}
 
 .tt-role-sample strong{margin:6px 0 2px;font-size:13px}
 
