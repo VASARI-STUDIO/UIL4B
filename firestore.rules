@@ -26,6 +26,27 @@ service cloud.firestore {
         .hasAny(lockedUserFields());
     }
 
+    // A REVIEWER is the founder, or somebody he has put on the moderator roster.
+    //
+    // `admin` is minted by api/verify-admin.js from a Firebase-VERIFIED email
+    // checked against a server-side allowlist. `moderator` is minted by the same
+    // route from the `moderators` roster, which is Admin-SDK-only and has no
+    // rules block of its own — Firestore denies by default, so no browser can
+    // read the roster, enumerate who holds power here, or write itself into it.
+    //
+    // Neither claim is reachable from the client: setCustomUserClaims is a
+    // server call, and src/ is guarded by a test that fails if any file under it
+    // so much as names the roster collection.
+    //
+    // NOTE the deliberate limit: this widens who may REVIEW. It does not widen
+    // users/{uid}, which stays owner-only and still refuses every entitlement
+    // field, and it does not widen analytics-daily.
+    function isReviewer() {
+      return request.auth != null
+        && (request.auth.token.admin == true
+            || request.auth.token.moderator == true);
+    }
+
     // User profiles — only the owner can read/write, and never the billing fields
     match /users/{userId} {
       function isOwner() {
@@ -51,21 +72,90 @@ service cloud.firestore {
       }
     }
 
-    // Feedback — anyone can create, only admin can read/update/delete
+    // Feedback — anyone can create, only a reviewer can read/update/delete.
+    //
+    // The reporter's email address lives on these documents. Who may SEE it is a
+    // narrower question than who may triage, and a rule cannot express "this
+    // field but not that one" on a read — so it is answered on the client by
+    // canSeeReporterEmail (founder only). A moderator can read the document.
     match /feedback/{feedbackId} {
-      allow create: if true;
-      allow read, update, delete: if request.auth != null
-        && request.auth.token.admin == true;
+      // CLOSED. Nothing in src/ has ever written here: every report goes through
+      // fetch('/api/support') (FeedbackModal.jsx), which writes with the Admin
+      // SDK and bypasses these rules entirely. So this rule never guarded a real
+      // write — it only granted one. `if true` meant no auth, no field
+      // allowlist, no shape, no rate limit: a script could put unlimited
+      // documents of any shape, up to Firestore's 1 MiB ceiling, straight into
+      // the collection the admin queue renders, and the route's abuse limiter
+      // ([support-abuse-hardening]) does not apply because it lives in the
+      // route, not here.
+      //
+      // Reads, updates and deletes are UNCHANGED — the queue still works.
+      allow create: if false;
+      allow read, update, delete: if isReviewer();
     }
 
-    // Community prompts — signed-in users can create, admin can manage
+    // Community prompts — signed-in users can create, a reviewer can manage
     match /community-prompts/{promptId} {
+      // The shape buildCommunityPromptRecord + SubmitPromptPanel actually write.
+      // Before this, create checked authorUid and status and NOTHING else: one
+      // free account could write unlimited documents of any shape into a
+      // collection every signed-in user reads.
+      //
+      // hasOnly is the subset test (ownerId, mediaType and mediaUrl are
+      // conditional); hasAll pins the ones that are always present. Together
+      // they are an exact-shape check that still admits the optional fields.
+      function promptShapeOk() {
+        return request.resource.data.keys().hasOnly([
+                 'title', 'text', 'tags', 'authorName', 'authorUid', 'ownerId',
+                 'profileLink', 'status', 'createdAt', 'mediaType', 'mediaUrl'])
+          && request.resource.data.keys().hasAll([
+                 'title', 'text', 'tags', 'authorName', 'authorUid', 'status',
+                 'profileLink', 'createdAt'])
+          // These caps are DELIBERATELY generous, not tight. None of the four
+          // inputs in SubmitPromptPanel carries a maxLength, so whatever is set
+          // here becomes the product's limit, and a bound that refuses a real
+          // submission is a worse bug than the one being fixed. 20,000
+          // characters is several times the longest prompt anyone writes and
+          // still bounds a media-less document at ~21 KB instead of 1 MiB.
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 300
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 20000
+          && request.resource.data.tags is string
+          && request.resource.data.tags.size() <= 300
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() <= 120
+          && request.resource.data.createdAt is string
+          && request.resource.data.createdAt.size() <= 40
+          // buildCommunityPromptRecord writes null when there is no link, and a
+          // null field is still a PRESENT field — so this is a type union, not
+          // an optional key.
+          && (request.resource.data.profileLink == null
+              || (request.resource.data.profileLink is string
+                  && request.resource.data.profileLink.size() <= 2048))
+          && (!('ownerId' in request.resource.data)
+              || (request.resource.data.ownerId is string
+                  && request.resource.data.ownerId.size() <= 64))
+          && (!('mediaType' in request.resource.data)
+              || (request.resource.data.mediaType is string
+                  && request.resource.data.mediaType.size() <= 16))
+          // mediaUrl is the one field that is legitimately huge: when Firebase
+          // Storage is not enabled, SubmitPromptPanel falls back to inlining the
+          // image as base64 and guards it with `< 900_000` itself. This is that
+          // same guard, enforced where a client cannot skip it. Everything else
+          // above adds up to ~6 KB, so a prompt without media is bounded tightly
+          // and one with media is bounded by the client's own ceiling.
+          && (!('mediaUrl' in request.resource.data)
+              || (request.resource.data.mediaUrl is string
+                  && request.resource.data.mediaUrl.size() < 900000));
+      }
+
       allow create: if request.auth != null
         && request.resource.data.authorUid == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'pending'
+        && promptShapeOk();
       allow read: if request.auth != null;
-      allow update, delete: if request.auth != null
-        && request.auth.token.admin == true;
+      allow update, delete: if isReviewer();
     }
 
     // Community submissions — the shared review queue for gradients, designs
@@ -81,38 +171,125 @@ service cloud.firestore {
     // something from the queue, never promote it.
     match /community-submissions/{submissionId} {
       function isSignedIn() { return request.auth != null; }
-      function isAdmin() { return isSignedIn() && request.auth.token.admin == true; }
       function isOwner() { return isSignedIn() && resource.data.authorUid == request.auth.uid; }
+
+      // The exact seven keys buildQueueRecord writes — no more, no fewer.
+      //
+      // `payload` is the only free-form field, and it is where an unbounded
+      // write would go, so it is bounded on BOTH axes: an allowlist over the
+      // union of the three call sites' payload keys, and a length cap on every
+      // string in it. The three real payloads are a handful of hex codes, a
+      // category and a URL — hundreds of bytes.
+      function submissionPayloadOk() {
+        return request.resource.data.payload is map
+          && request.resource.data.payload.keys().hasOnly([
+               'type', 'angle', 'stops', 'author', 'category', 'url',
+               'c1', 'c2', 'colors'])
+          && (!('url' in request.resource.data.payload)
+              || (request.resource.data.payload.url is string
+                  && request.resource.data.payload.url.size() <= 2048))
+          && (!('author' in request.resource.data.payload)
+              || (request.resource.data.payload.author is string
+                  && request.resource.data.payload.author.size() <= 80))
+          && (!('category' in request.resource.data.payload)
+              || (request.resource.data.payload.category is string
+                  && request.resource.data.payload.category.size() <= 80))
+          && (!('type' in request.resource.data.payload)
+              || (request.resource.data.payload.type is string
+                  && request.resource.data.payload.type.size() <= 32))
+          && (!('c1' in request.resource.data.payload)
+              || (request.resource.data.payload.c1 is string
+                  && request.resource.data.payload.c1.size() <= 64))
+          && (!('c2' in request.resource.data.payload)
+              || (request.resource.data.payload.c2 is string
+                  && request.resource.data.payload.c2.size() <= 64))
+          // A gradient carries stops and a palette carries colours. Both are
+          // lists, and a list is the other way to make a document enormous.
+          && (!('stops' in request.resource.data.payload)
+              || (request.resource.data.payload.stops is list
+                  && request.resource.data.payload.stops.size() <= 32))
+          && (!('colors' in request.resource.data.payload)
+              || (request.resource.data.payload.colors is list
+                  && request.resource.data.payload.colors.size() <= 32));
+      }
+
+      function submissionShapeOk() {
+        return request.resource.data.keys().hasOnly([
+                 'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
+                 'createdAt'])
+          && request.resource.data.keys().hasAll([
+                 'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
+                 'createdAt'])
+          && request.resource.data.kind in ['gradient', 'design', 'palette']
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() <= 60
+          && request.resource.data.createdAt is string
+          && request.resource.data.createdAt.size() <= 40
+          && submissionPayloadOk();
+      }
 
       // A client may only ever create its OWN submission, and only as
       // 'pending'. 'approved' is a reviewer's word — reachable from nowhere on
       // the client, so nothing can put itself in the library.
       allow create: if isSignedIn()
         && request.resource.data.authorUid == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'pending'
+        && submissionShapeOk();
 
       allow read: if isSignedIn();
 
       // Reviewers decide. This is the write that never worked: the `admin`
       // claim was gated on here and NOTHING in the codebase ever called
       // setCustomUserClaims, so every moderation write was rejected.
-      // api/verify-admin.js now grants it, from a server-verified email.
-      allow update: if isAdmin()
+      // api/verify-admin.js now grants it from a server-verified email — and
+      // grants `moderator` from the roster, so the founder is no longer the only
+      // person who can clear this queue.
+      allow update: if isReviewer()
         || (isOwner() && request.resource.data.status == 'withdrawn'
             && request.resource.data.authorUid == resource.data.authorUid);
 
-      allow delete: if isAdmin() || isOwner();
+      allow delete: if isReviewer() || isOwner();
     }
 
     // Aggregate usage analytics — per-day counter docs ({YYYY-MM-DD}).
     // Any signed-in user may create/update (increment) the counters so the
     // admin dashboard can reflect ALL users' usage. Read is gated to the owner
-    // email (the Firebase `admin` custom claim is never set in this project).
+    // email. (The `admin` custom claim IS set — api/verify-admin.js has minted it
+    // since #241 — but this rule predates that and still matches on email. It is
+    // deliberately NOT widened to isReviewer(): reviewing submissions is not a
+    // reason to hand a volunteer site-wide usage analytics.)
     // Note: this cannot fully prevent a signed-in user inflating counters —
     // accepted limitation for an internal, non-billing dashboard.
     match /analytics-daily/{day} {
       allow read: if request.auth != null && request.auth.token.email == 'dylanjacob1100@gmail.com';
-      allow create, update: if request.auth != null;
+
+      // Two bounds this never had, and one it deliberately still does not.
+      //
+      // THE ID. `{day}` matched ANY document id, so a signed-in client could
+      // create analytics-daily/<anything>. The dashboard reads this collection
+      // and the founder's reset sweep (analytics.js resetPageAnalytics) orders
+      // by `day` — a document that is not a day is invisible to the sweep that
+      // is supposed to be able to clear it. The id must now be a date, and the
+      // `day` FIELD must agree with the id it is filed under, so the two can
+      // never disagree.
+      //
+      // THE FIELD COUNT. Field NAMES here are dynamic (`view__<path>`,
+      // `tool__<id>`), so no key allowlist is possible and no byte size is
+      // measurable in Firestore rules. The count of entries is the one bound
+      // that is: ~110 counters are in normal use (one per route, one per tool,
+      // plus icon and pack tallies), so 500 is roughly 4x headroom and still
+      // refuses a client trying to grow one document without limit.
+      //
+      // NOT WIDENED, and deliberately: counter INFLATION by a signed-in user
+      // stays possible. That was already recorded above as an accepted
+      // limitation for an internal, non-billing dashboard, and nothing here
+      // changes it — a rule cannot tell a real page view from a fake one.
+      allow create, update: if request.auth != null
+        && day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.day == day
+        && request.resource.data.size() <= 500;
     }
   }
 }
