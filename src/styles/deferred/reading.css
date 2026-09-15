@@ -383,9 +383,17 @@ html[data-reduced-motion="true"] .home-anim{animation:none!important;opacity:1!i
    and it is why these two are the only fixed grounds on either page. */
 .prn-th-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-3)}
 .prn-th-panel{display:flex;flex-direction:column;gap:var(--s-1);padding:var(--s-5);border:1px solid var(--border);border-radius:var(--radius-xl);min-width:0}
-.prn-th-theme{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+/* NO OPACITY on either of the two labels below. They are the "One name. Two
+   values." demo — the page's own proof that a token holds a value per theme —
+   and they were dimmed to .8 and .85. Measured 2026-09-15 after scroll, with
+   the alpha composited: .prn-th-theme 3.61:1 light and 4.28:1 dark,
+   .prn-th-hex 3.93:1, all under the 4.5:1 floor.
+
+   A page arguing for measured contrast should not fail it in its own
+   specimen. Same class as .plb-role, .tt-cell-hex and .stc-cell-hex. */
+.prn-th-theme{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase}
 .prn-th-token{font-family:var(--mono);font-size:var(--fs-body-s);font-weight:500;overflow-wrap:anywhere}
-.prn-th-hex{font-family:var(--mono);font-size:var(--fs-caption);opacity:.85}
+.prn-th-hex{font-family:var(--mono);font-size:var(--fs-caption)}
 .prn-th-ratio{font-family:var(--display);font-size:var(--fs-h3);font-weight:600;line-height:1.2;margin-top:var(--s-2)}
 
 /* Proof 3 — the ladder, at the sizes the arithmetic produces. */

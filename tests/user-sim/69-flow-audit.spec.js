@@ -89,11 +89,26 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
       expect(await page.locator('.plb-col').count(), 'the palette must be visible before the gate').toBeGreaterThanOrEqual(3)
 
       // Keyboard-only: the control is reached and pressed without a pointer.
+      // THE GATE MOVED, 2026-09-15, and this test moved with it rather than
+      // being relaxed. "Save / export" used to ask before the menu would open —
+      // but that menu also holds Copy link, Copy CSS variables and Copy hex
+      // values, so copying was gated on this one surface while the board's own
+      // Copy worked signed out. Copying is free forever; the account is asked
+      // for at the things that keep or produce something. So the opener now
+      // opens, and Save inside it is what asks.
       const opener = page.locator('button[aria-label="Save / export"]')
       await opener.focus()
       await page.keyboard.press('Enter')
 
-      const dialog = page.getByRole('dialog', { name: /Log in to continue/i })
+      // Still keyboard-only: Tab to Save inside the menu and press it.
+      const save = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
+      await expect(save, 'the save menu did not open').toBeVisible()
+      await save.focus()
+      await page.keyboard.press('Enter')
+
+      // "Create your free account", not "Log in to continue": everyone who
+      // reaches this has no account, which is why it fired.
+      const dialog = page.getByRole('dialog', { name: /Create your free account/i })
       await expect(dialog).toBeVisible()
       // Says WHAT was interrupted and WHAT HAPPENS NEXT, in that order.
       await expect(dialog).toContainText(/about to save this palette/i)
@@ -104,7 +119,13 @@ test.describe('flow 1 — the sign-in gate, at the moment of saving', () => {
       await page.keyboard.press('Escape')
       await expect(dialog).toHaveCount(0)
       // The restore lands a frame after the close (#436 follow-up 8), so poll.
-      await expect.poll(() => focused(page), 'closing must return focus to what opened it').toMatch(/Save \/ export/)
+      //
+      // "Save", not "Save / export": the gate moved onto the save action on
+      // 2026-09-15, so Save is now what opened the dialog and Save is what must
+      // get focus back. The PRINCIPLE this line tests is unchanged and is still
+      // the point — focus returns to whatever raised the interruption — only the
+      // control that raises it has moved.
+      await expect.poll(() => focused(page), 'closing must return focus to what opened it').toMatch(/Save/)
       // …and nothing was taken away.
       expect(await page.locator('.plb-col').count()).toBeGreaterThanOrEqual(3)
       await context.close()

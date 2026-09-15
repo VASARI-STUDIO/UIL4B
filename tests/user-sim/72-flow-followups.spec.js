@@ -377,7 +377,12 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
       watch(page, `a stranger meeting the sign-in gate on a phone (${theme})`)
       await go(page, '/create/palette')
       await page.locator('button[aria-label="Save / export"]').click()
-      const dialog = page.getByRole('dialog', { name: /Log in to continue/i })
+      // The gate moved off the menu opener onto Save, 2026-09-15 — the menu
+      // holds three Copy rows and copying is free. See PaletteBuilder's doSave.
+      const saveBtn = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
+      await expect(saveBtn, 'the save menu did not open').toBeVisible()
+      await saveBtn.click()
+      const dialog = page.getByRole('dialog', { name: /Create your free account/i })
       await expect(dialog).toBeVisible()
       const foot = dialog.locator('.ui-login-aside-foot')
       await expect(foot).toBeVisible()
@@ -398,7 +403,12 @@ test.describe('6 — "Not now? Closing this changes nothing" is on screen at 390
     watch(page, 'a first-time visitor on a phone: the gate, then the sign-up pane')
     await go(page, '/create/palette')
     await page.locator('button[aria-label="Save / export"]').click()
-    const gate = page.getByRole('dialog', { name: /Log in to continue/i })
+    // The gate moved off the menu opener onto Save, 2026-09-15 — the menu holds
+    // three Copy rows and copying is free forever. See PaletteBuilder's doSave.
+    const saveBtn = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
+    await expect(saveBtn, 'the save menu did not open').toBeVisible()
+    await saveBtn.click()
+    const gate = page.getByRole('dialog', { name: /Create your free account/i })
     await expect(gate).toBeVisible()
     await expect(gate).toHaveClass(/ui-login--interrupt/)
     await expect.poll(() => gate.evaluate((el) => el.scrollHeight - el.clientHeight), 'the gate must not scroll to show its own way out').toBe(0)
