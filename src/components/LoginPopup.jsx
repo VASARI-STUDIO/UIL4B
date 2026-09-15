@@ -52,7 +52,7 @@ function Tick() {
 // when a gated ACTION raised this popup (i.e. `reason` is set), because a
 // visitor who clicked "Log in" in the nav already knows why they're here.
 // Callers can replace the list; passing `unlocks={[]}` suppresses it.
-export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, onSuccess, onDismiss }) {
+export default function LoginPopup({ reason, reasons, unlocks, free = true, initialEmail = '', lockEmail = false, passwordOnly = false, signup: openAsSignup = false, isPageTitle = false, onSuccess, onDismiss }) {
   const { login, signup, resetPassword, loginWithGoogle } = useAuth()
   const { t } = useI18n()
   const [isSignup, setIsSignup] = useState(openAsSignup)
@@ -278,8 +278,22 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
           </aside>
         )}
 
+        {/* h1 WHEN THIS DIALOG *IS* THE PAGE, h2 WHEN IT IS OVER ONE.
+            On /login the route renders null once auth has resolved — the
+            comment in App.jsx says so outright, "the dialog IS the page" — so
+            <main> is an empty 501px box and this was the only heading in the
+            document. Measured 2026-09-15 at 1280: h1 count 0, main innerText 0
+            characters. A screen-reader user landing on the sign-in page was
+            handed a document with no title at all, on the surface the whole
+            funnel points at.
+            Everywhere else the popup opens OVER a page that has its own h1, and
+            there an h2 is correct — a dialog title is not a second page title.
+            So the level is the caller's to state and nothing else changes: the
+            class, the id and aria-labelledby are identical in both branches. */}
         <div className="ui-modal-head">
-          <h2 className="ui-modal-title" id="ui-login-title">{title}</h2>
+          {isPageTitle
+            ? <h1 className="ui-modal-title" id="ui-login-title">{title}</h1>
+            : <h2 className="ui-modal-title" id="ui-login-title">{title}</h2>}
         </div>
 
         <div className="ui-modal-body">

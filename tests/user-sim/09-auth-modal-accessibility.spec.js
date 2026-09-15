@@ -177,3 +177,72 @@ test.describe('on a phone', () => {
     expect(paint.border, 'and a border that is actually drawn').not.toBe('rgba(0, 0, 0, 0)')
   })
 })
+// THE /login ROUTE HAD NO h1, AND THE DIALOG IS THE ONLY THING ON IT.
+//
+// LoginRoute returns null once auth resolves — App.jsx says so in as many
+// words, "the dialog IS the page" — so <main> is an empty 501px box and the
+// popup's title was the only heading in the document. Measured 2026-09-15 at
+// 1280: h1 count 0, main innerText 0 characters. A screen-reader user landing
+// on the sign-in page got a document with no title at all, on the surface the
+// entire signup funnel points at.
+//
+// Both halves are asserted here because fixing one by breaking the other is the
+// easy mistake: promoting the title unconditionally would put a SECOND h1 on
+// every page the popup opens over, which is worse than the defect.
+test.describe('the sign-in dialog titles itself for the context it opens in', () => {
+  test('on /login it is the page h1, because nothing else on the route is', async ({ page }) => {
+    watch(page, PERSONA)
+    await go(page, '/login')
+    await page.waitForSelector('#ui-login-title', { timeout: 10000 })
+
+    const seen = await page.evaluate(() => ({
+      h1s: [...document.querySelectorAll('h1')].map((h) => (h.textContent || '').trim()),
+      titleTag: document.querySelector('#ui-login-title')?.tagName,
+      labelledBy: document.querySelector('[role="dialog"]')?.getAttribute('aria-labelledby'),
+      canSignIn: !!document.querySelector('.auth-google-btn'),
+    }))
+
+    // POSITIVE CONTROL: a route that failed to raise the dialog has no title
+    // element and no sign-in control, and every assertion about headings below
+    // would then be measuring an empty page.
+    expect(seen.canSignIn, 'the sign-in control never rendered, so this test is '
+      + 'measuring a route that did not open its dialog').toBe(true)
+
+    expect(seen.titleTag, 'the dialog title on /login is not an h1. That route renders '
+      + 'null once auth resolves, so this heading is the document outline — see the '
+      + 'isPageTitle note in LoginPopup.jsx').toBe('H1')
+    expect(seen.h1s, 'exactly one h1, and it is the dialog title').toEqual(['Welcome Back'])
+
+    // The promotion must not cost the dialog its accessible name.
+    expect(seen.labelledBy, 'the dialog lost its aria-labelledby').toBe('ui-login-title')
+  })
+
+  test('opened over a page it stays an h2, so that page keeps one h1', async ({ page }) => {
+    watch(page, PERSONA)
+    await go(page, '/create/palette')
+    await page.waitForTimeout(400)
+    const before = await page.evaluate(() => document.querySelectorAll('h1').length)
+    expect(before, '/create/palette should have its own single h1 before we start').toBe(1)
+
+    const opened = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('button, a')]
+        .find((n) => /log in|sign in|start for free/i.test(n.textContent || ''))
+      if (!el) return false
+      el.click()
+      return true
+    })
+    expect(opened, 'no control on /create/palette offered to open the sign-in dialog, '
+      + 'so the assertion below would pass without the dialog ever appearing').toBe(true)
+    await page.waitForSelector('#ui-login-title', { timeout: 10000 })
+
+    const seen = await page.evaluate(() => ({
+      h1Count: document.querySelectorAll('h1').length,
+      titleTag: document.querySelector('#ui-login-title')?.tagName,
+    }))
+    expect(seen.titleTag, 'the dialog title is an h1 while open OVER a page. A dialog '
+      + 'title is not a second page title; only the /login route passes isPageTitle')
+      .toBe('H2')
+    expect(seen.h1Count, 'the page now has more than one h1 because the dialog promoted '
+      + 'its own title').toBe(1)
+  })
+})
