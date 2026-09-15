@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Six Hover Effects — Halfday Studio</title>
+<style>
+  /* =========================================================
+     CSS-only hover gallery. This page carries no scripting at all.
+     Every effect is triggered by :hover AND by :focus-within,
+     so the gallery works from the keyboard as well as the mouse.
+     The at-rest state is the finished state; only the
+     transitions live inside prefers-reduced-motion: no-preference.
+     ========================================================= */
+  :root{
+    --bg:#0E0F11;
+    --bg-2:#16181B;
+    --line:rgba(255,255,255,.14);
+    --line-2:rgba(255,255,255,.08);
+    --fg:#F2EFE9;
+    --fg-70:rgba(242,239,233,.70);
+    --fg-45:rgba(242,239,233,.45);
+    --accent:#E0A03C;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--fg);
+    font-family:var(--sans);font-size:16px;line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:1240px;margin:0 auto;padding:40px 20px 60px}
+  @media(min-width:900px){.page{padding:56px 36px 80px}}
+
+  /* ---------- header ---------- */
+  header{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:34px}
+  .studio{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 14px;
+  }
+  h1{font-size:clamp(30px,5vw,46px);line-height:1.08;letter-spacing:-.03em;margin:0 0 14px;font-weight:700}
+  .lede{margin:0;max-width:62ch;color:var(--fg-70);font-size:16.5px}
+  .kbd-note{margin:20px 0 0;font-size:13.5px;color:var(--fg-45);max-width:60ch}
+  kbd{margin-right:7px;
+    font-family:var(--mono);font-size:11.5px;border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:4px;padding:2px 6px;color:var(--fg-70);background:var(--bg-2);
+  }
+
+  /* ---------- gallery ---------- */
+  .gallery{display:grid;gap:20px;grid-template-columns:1fr}
+  @media(min-width:620px){.gallery{grid-template-columns:repeat(2,1fr);gap:22px}}
+  @media(min-width:1000px){.gallery{grid-template-columns:repeat(3,1fr);gap:24px}}
+
+  .tile{
+    display:block;text-decoration:none;color:inherit;min-width:0;
+  }
+  .tile .label{
+    display:flex;justify-content:space-between;gap:10px;align-items:baseline;
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--fg-45);margin-bottom:9px;
+  }
+  .tile .label b{color:var(--accent);font-weight:400}
+  .media{
+    position:relative;display:block;aspect-ratio:4/3;overflow:hidden;
+    background:var(--bg-2);border:1px solid var(--line-2);
+  }
+  .art{position:absolute;inset:0;display:block}
+  .meta{display:block;padding-top:12px}
+  .meta .name{display:block;font-size:17px;letter-spacing:-.01em;line-height:1.3}
+  .meta .disc{display:block;font-size:13px;color:var(--fg-45);margin-top:2px}
+  .tile:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+  .tile:hover .meta .name,.tile:focus-within .meta .name{text-decoration:underline;text-underline-offset:4px}
+
+  /* ============ 01 · Ken Burns ============ */
+  .fx-ken .art{transform-origin:62% 38%}
+  .fx-ken:hover .art,.fx-ken:focus-within .art{transform:scale(1.12) translateX(-2%)}
+
+  /* ============ 02 · Colour reveal ============ */
+  .fx-colour .art{filter:grayscale(1) contrast(.94)}
+  .fx-colour:hover .art,.fx-colour:focus-within .art{filter:grayscale(0) contrast(1)}
+  .lede code{font-family:var(--mono);font-size:.84em;color:var(--fg);letter-spacing:-.01em}
+
+  /* ============ 03 · Split reveal ============ */
+  .fx-split .reveal{
+    position:absolute;left:0;right:0;bottom:0;
+    background:rgba(14,15,17,.88);
+    padding:14px 16px;
+    clip-path:inset(100% 0 0 0);
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    font-size:13.5px;color:var(--fg);
+  }
+  .fx-split .reveal span:last-child{color:var(--accent);font-family:var(--mono);font-size:12px}
+  .fx-split:hover .reveal,.fx-split:focus-within .reveal{clip-path:inset(0 0 0 0)}
+
+  /* ============ 04 · Tilt shine ============ */
+  .fx-tilt .media{transform-style:preserve-3d}
+  .fx-tilt:hover .media,.fx-tilt:focus-within .media{
+    transform:perspective(900px) rotateY(5deg) rotateX(2deg) scale(1.01);
+    box-shadow:-14px 14px 34px -20px rgba(0,0,0,.85);
+  }
+  .fx-tilt .shine{
+    position:absolute;inset:-20% -60%;pointer-events:none;
+    background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.26) 47%,rgba(255,255,255,.05) 52%,transparent 57%);
+    transform:translateX(-62%);
+  }
+  .fx-tilt:hover .shine,.fx-tilt:focus-within .shine{transform:translateX(62%)}
+
+  /* ============ 05 · Blur focus ============ */
+  /* The tile that demonstrates it drives the whole gallery, using :has(). */
+  .gallery:has(.fx-blur:hover) .tile:not(:hover),
+  .gallery:has(.fx-blur:focus-within) .tile:not(:focus-within){
+    filter:blur(4px) saturate(.55);opacity:.5;
+  }
+  .fx-blur .hint{
+    position:absolute;left:14px;top:14px;font-family:var(--mono);font-size:11px;
+    letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.72);
+    background:rgba(14,15,17,.55);padding:5px 8px;
+  }
+
+  /* ============ 06 · Border frame ============ */
+  .fx-frame .frame{
+    position:absolute;inset:0;pointer-events:none;
+    border:1px solid rgba(255,255,255,0);
+    clip-path:inset(0);
+  }
+  .fx-frame:hover .frame,.fx-frame:focus-within .frame{
+    inset:14px;border-color:rgba(242,239,233,.85);
+  }
+  .fx-frame .corner{
+    position:absolute;width:10px;height:10px;border:0 solid var(--accent);opacity:0;
+  }
+  .fx-frame .c1{left:14px;top:14px;border-left-width:2px;border-top-width:2px}
+  .fx-frame .c2{right:14px;bottom:14px;border-right-width:2px;border-bottom-width:2px}
+  .fx-frame:hover .corner,.fx-frame:focus-within .corner{opacity:1}
+
+  /* =========================================================
+     ARTWORK — CSS gradients only, no images of any kind.
+     ========================================================= */
+  .art-dune{
+    background:
+      repeating-linear-gradient(97deg,rgba(255,255,255,.055) 0 1px,transparent 1px 21px),
+      radial-gradient(circle at 72% 22%,#FBE0A6 0 5%,rgba(251,224,166,.35) 6%,transparent 26%),
+      radial-gradient(130% 80% at 76% 6%,#EFB268 0%,#D97F42 32%,transparent 66%),
+      linear-gradient(172deg,#2B1A12 0%,#6E3A22 44%,#B65E33 72%,#E2954F 100%);
+  }
+  .art-spectrum{
+    background:
+      linear-gradient(218deg,transparent 0 60%,#1F5E8A 60% 100%),
+      linear-gradient(146deg,transparent 0 52%,#3D8F79 52% 100%),
+      radial-gradient(closest-side circle at 69% 27%,#E3993A 0 32%,transparent 33%),
+      linear-gradient(28deg,#D9452B 0 30%,transparent 30%),
+      repeating-linear-gradient(90deg,rgba(20,18,16,.07) 0 1px,transparent 1px 26px),
+      linear-gradient(178deg,#DCC9A4,#C3AC82);
+  }
+  .art-disc{
+    background:
+      radial-gradient(closest-side circle at 63% 37%,#EDE4D0 0 40%,transparent 41%),
+      radial-gradient(closest-side circle at 63% 37%,transparent 0 55%,rgba(237,228,208,.22) 56%,transparent 57%),
+      linear-gradient(134deg,#0F3138 0 47%,#1A4C56 47% 100%);
+  }
+  .art-steel{
+    background:
+      radial-gradient(closest-side circle at 50% 50%,rgba(255,255,255,.16) 0 17%,rgba(0,0,0,.28) 18% 20%,transparent 21%),
+      linear-gradient(90deg,transparent 0 45%,rgba(255,255,255,.10) 45% 55%,transparent 55%),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 34px),
+      linear-gradient(112deg,#20272F 0%,#414D59 26%,#6F7E8C 45%,#39434E 62%,#1B2128 100%);
+  }
+  .art-field{
+    background:
+      radial-gradient(58% 66% at 26% 30%,#84AE72 0 38%,transparent 62%),
+      radial-gradient(50% 58% at 76% 70%,#E7DAA6 0 36%,transparent 60%),
+      radial-gradient(40% 46% at 62% 24%,rgba(46,84,58,.9) 0 40%,transparent 64%),
+      linear-gradient(162deg,#0F1D16 0%,#23402C 100%);
+  }
+  .art-grid{
+    background:
+      repeating-linear-gradient(0deg,rgba(255,255,255,.075) 0 1px,transparent 1px 30px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.075) 0 1px,transparent 1px 30px),
+      radial-gradient(closest-side circle at 36% 60%,#E0A03C 0 40%,transparent 41%),
+      linear-gradient(0deg,transparent 0 29%,rgba(224,160,60,.5) 29% 29.6%,transparent 29.6%),
+      linear-gradient(203deg,#43332B 0%,#1B1411 100%);
+  }
+
+  /* ---------- footer ---------- */
+  footer{
+    margin-top:44px;border-top:1px solid var(--line);padding-top:22px;
+    display:flex;flex-wrap:wrap;gap:10px 28px;justify-content:space-between;
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-45);
+  }
+
+  /* =========================================================
+     MOTION — transitions only. Every state above is already
+     correct with motion switched off; it simply arrives at once.
+     ========================================================= */
+  @media(prefers-reduced-motion:no-preference){
+    .fx-ken .art{transition:transform 7s ease-out}
+    .fx-ken:hover .art,.fx-ken:focus-within .art{transition:transform 8s ease-out}
+    .fx-colour .art{transition:filter .55s ease}
+    .fx-split .reveal{transition:clip-path .42s var(--ease)}
+    .fx-tilt .media{transition:transform .5s var(--ease),box-shadow .5s var(--ease)}
+    .fx-tilt .shine{transition:transform .75s var(--ease)}
+    .gallery .tile{transition:filter .4s ease,opacity .4s ease}
+    .fx-frame .frame{transition:inset .45s var(--ease),border-color .35s ease}
+    .fx-frame .corner{transition:opacity .35s ease .1s}
+  }
+
+  /* With motion reduced, the two travel effects are replaced by a
+     static highlight rather than a jump-cut; the reveals still work. */
+  @media(prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+    .fx-ken:hover .art,.fx-ken:focus-within .art{transform:none;filter:brightness(1.14)}
+    .fx-tilt:hover .media,.fx-tilt:focus-within .media{transform:none;box-shadow:none;border-color:var(--fg)}
+    .fx-tilt .shine{display:none}
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+
+  <header>
+    <p class="studio">Halfday Studio — Collingwood</p>
+    <h1>Six hover effects, no JavaScript</h1>
+    <p class="lede">A work grid where each tile answers the pointer differently. Every effect here is plain CSS — transforms, filters, clip-path and one <code>:has()</code> selector — and every one of them is wired to <code>:focus-within</code> as well as <code>:hover</code>, so the grid behaves the same for someone tabbing through it.</p>
+    <p class="kbd-note">
+      <kbd>Tab</kbd> <span>moves through the six tiles and fires the same states hovering does.</span>
+    </p>
+  </header>
+
+  <div class="gallery" id="gallery">
+
+    <!-- 01 -->
+    <a class="tile fx-ken" href="#gallery">
+      <span class="label"><b>01</b><span>Ken Burns</span></span>
+      <span class="media">
+        <span class="art art-dune"></span>
+      </span>
+      <span class="meta">
+        <span class="name">Rosslyn Terrace</span>
+        <span class="disc">Identity &amp; signage · 2026</span>
+      </span>
+    </a>
+
+    <!-- 02 -->
+    <a class="tile fx-colour" href="#gallery">
+      <span class="label"><b>02</b><span>Colour reveal</span></span>
+      <span class="media">
+        <span class="art art-spectrum"></span>
+      </span>
+      <span class="meta">
+        <span class="name">Kite Festival</span>
+        <span class="disc">Poster series · 2025</span>
+      </span>
+    </a>
+
+    <!-- 03 -->
+    <a class="tile fx-split" href="#gallery">
+      <span class="label"><b>03</b><span>Split reveal</span></span>
+      <span class="media">
+        <span class="art art-disc"></span>
+        <span class="reveal"><span>Eight labels, one press run</span><span>Case study →</span></span>
+      </span>
+      <span class="meta">
+        <span class="name">Ardent Coffee</span>
+        <span class="disc">Packaging · 2026</span>
+      </span>
+    </a>
+
+    <!-- 04 -->
+    <a class="tile fx-tilt" href="#gallery">
+      <span class="label"><b>04</b><span>Tilt shine</span></span>
+      <span class="media">
+        <span class="art art-steel"></span>
+        <span class="shine" aria-hidden="true"></span>
+      </span>
+      <span class="meta">
+        <span class="name">Meridian Tools</span>
+        <span class="disc">Product site · 2025</span>
+      </span>
+    </a>
+
+    <!-- 05 -->
+    <a class="tile fx-blur" href="#gallery">
+      <span class="label"><b>05</b><span>Blur focus</span></span>
+      <span class="media">
+        <span class="art art-field"></span>
+        <span class="hint">The other five blur</span>
+      </span>
+      <span class="meta">
+        <span class="name">Thornbury Library</span>
+        <span class="disc">Wayfinding · 2024</span>
+      </span>
+    </a>
+
+    <!-- 06 -->
+    <a class="tile fx-frame" href="#gallery">
+      <span class="label"><b>06</b><span>Border frame</span></span>
+      <span class="media">
+        <span class="art art-grid"></span>
+        <span class="frame" aria-hidden="true"></span>
+        <span class="corner c1" aria-hidden="true"></span>
+        <span class="corner c2" aria-hidden="true"></span>
+      </span>
+      <span class="meta">
+        <span class="name">Field Notes 07</span>
+        <span class="disc">Editorial · 2026</span>
+      </span>
+    </a>
+
+  </div>
+
+  <footer>
+    <span>No script tag · No dependency · No image file</span>
+    <span>Every effect also on :focus-within</span>
+  </footer>
+
+</main>
+</body>
+</html>

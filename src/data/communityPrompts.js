@@ -421,11 +421,11 @@ Controls: drag is not enough on its own. Ship previous/next buttons with visible
 {
   "carousel": { "radius": 340, "cardCount": 6, "autoRotate": "4-5 degrees per second", "snapOnRelease": true, "dragSensitivity": 0.26 },
   "card": { "width": 240, "height": 250, "cornerRadius": 20, "focusScale": 1.06, "fadeRange": [0.26, 1.0] },
-  "environment": { "background": "linear-gradient(135deg, #0f0c29, #302b63, #24243e)", "lamps": "two or three soft radial lights for the glass to catch" }
+  "environment": { "background": "a dark ground that suits the product you invented — see the note below", "lamps": "two or three soft radial lights for the glass to catch" }
 }
 \`\`\`
 
-Express rotation speed in degrees per second and drive it from a frame delta. A per-frame increment runs at double speed on a 120 Hz display.
+Palette: pick one that suits the product you invented and give it more than one hue. Avoid making every colour on the page a shade of indigo or violet — a dark indigo gradient behind glass cards is the default look of a generated page, and it is what makes an output read as templated no matter how good the geometry is. A near-neutral dark ground with one colour doing the work reads as more considered than a full-bleed violet wash.\n\nExpress rotation speed in degrees per second and drive it from a frame delta. A per-frame increment runs at double speed on a 120 Hz display.
 
 Under \`prefers-reduced-motion: reduce\`: no auto-rotation, no easing. The ring sits at its rest angle with the front card square-on and readable, the neighbours legible at their angle, and the buttons still work — they jump straight to the next card. Six cards, still, is the finished composition.`,
     tags: '3d, carousel, glass, interactive, motion, hero',
