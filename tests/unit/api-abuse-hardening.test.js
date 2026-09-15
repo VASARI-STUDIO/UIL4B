@@ -251,3 +251,73 @@ test('a signed-in caller is still told exactly which key the server is missing',
   assert.match(ai, /configError:[^\n]*OPENROUTER_API_KEY/,
     'generate-prompt no longer names the env vars an operator has to set')
 })
+// A CACHED DOCUMENT MAY NOT TAKE ITS URLS FROM A REQUEST HEADER.
+//
+// api/share.js built `origin` from `x-forwarded-host || host` and interpolated
+// it into og:url, og:image, twitter:image, the canonical and the redirect —
+// while setting `Cache-Control: s-maxage=604800, immutable` on the same
+// response. x-forwarded-host is client-supplied, so one crafted request to a
+// /p/<code> link could fill a shared, week-long cache entry with URLs pointing
+// at another host, including the image every unfurler fetches and the redirect
+// a human follows.
+//
+// The caching header is what makes it persistent rather than a single bad
+// response, which is why this is asserted about the pair rather than about the
+// header alone.
+test('no /api handler builds a URL out of a host header', () => {
+  const files = fs.readdirSync(API).filter(f => f.endsWith('.js'))
+  // POSITIVE CONTROL: an empty directory listing passes every check below.
+  assert.ok(files.length > 5, `only ${files.length} handlers found, so this scan is vacuous`)
+
+  for (const f of files) {
+    // Comments quote the header they explain — share.js documents this defect
+    // at length directly above the fix — so a raw search finds the explanation
+    // and the test passes on a file that reinstated the bug.
+    const code = stripJs(read(f))
+    for (const needle of ['x-forwarded-host', 'headers.host', "headers['host']"]) {
+      assert.ok(!code.includes(needle),
+        `api/${f} reads ${needle}. A request header cannot decide what a response says `
+        + 'about its own origin, and share.js caches that response for a week — see the '
+        + 'note above `origin` there.')
+    }
+  }
+})
+
+test('the share card names the canonical host whatever the caller claims', async () => {
+  const { default: handler } = await import('../../api/share.js')
+  let body = ''
+  const res = {
+    headers: {},
+    setHeader(k, v) { this.headers[k.toLowerCase()] = v },
+    status() { return this },
+    send(v) { body = String(v); return this },
+    json(v) { body = JSON.stringify(v); return this },
+  }
+  handler({
+    method: 'GET',
+    query: { c: '4338E0,7C6CF0' },
+    // Exactly the shape the defect took: a caller asserting someone else's host.
+    headers: {
+      'x-forwarded-host': 'evil.example',
+      'x-forwarded-proto': 'http',
+      host: 'evil.example',
+    },
+  }, res)
+
+  // POSITIVE CONTROL: an empty body satisfies every "does not contain" below.
+  assert.ok(body.length > 200, 'the handler returned no document to inspect')
+  assert.ok(body.includes('og:image'), 'the document is not the share card')
+
+  assert.ok(!body.includes('evil.example'),
+    'the attacker-supplied host reached the cached document')
+  assert.ok(!body.includes('http://'),
+    'the attacker-supplied scheme reached the cached document')
+  assert.ok(body.includes('https://uil4b.com/api/share'),
+    'the card no longer points its og:image at the canonical host')
+
+  // And the caching that makes this worth guarding is still on, so the test
+  // cannot quietly become about an uncached endpoint.
+  assert.match(String(res.headers['cache-control'] || ''), /s-maxage=\d+/,
+    'share.js stopped caching; if that is deliberate, this test needs rewriting rather '
+    + 'than deleting — the header is half of why the header-derived origin mattered.')
+})

@@ -93,9 +93,32 @@ export default function handler(req, res) {
     return res.status(200).send(palettePng(hexes))
   }
 
-  const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0]
-  const host = req.headers['x-forwarded-host'] || req.headers.host || 'uil4b.com'
-  const origin = `${proto}://${host}`
+  // THE ORIGIN COMES FROM THE ENVIRONMENT, NEVER FROM THE REQUEST.
+  //
+  // This read `x-forwarded-host || host` and interpolated it into every URL in
+  // the document below — og:url, og:image, twitter:image, the canonical and the
+  // redirect. Two lines above, the response is stamped
+  // `s-maxage=604800, immutable`, so whatever the FIRST request produced is
+  // what the CDN serves everyone else for a week.
+  //
+  // x-forwarded-host is a client-supplied header. A single crafted request to
+  // a /p/<code> link could therefore fill a cached, week-long, shared document
+  // with URLs pointing at somebody else's host — including the og:image every
+  // unfurler fetches and the redirect a human follows. That is the whole
+  // cache-poisoning shape, and the caching header is what turns it from one bad
+  // response into a persistent one.
+  //
+  // Whether a given platform forwards a client's x-forwarded-host is a
+  // deployment detail that can change under us; the value is not needed here
+  // either way. VERCEL_ENV and VERCEL_URL are set by the platform, not by the
+  // caller, so a preview deployment still links to itself and production always
+  // links to the canonical host. SITE_ORIGIN in src/utils/routeMeta.js holds the
+  // same literal — api/ is bundled separately and does not import from src/,
+  // which is why it is restated rather than shared, and api/ai.js already
+  // carries this exact fallback shape.
+  const origin = process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production' && process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'https://uil4b.com'
   const appUrl = `${origin}/create/palette?c=${code}`
   const imgUrl = `${origin}/api/share?c=${code}&img=1`
   const title = `${hexes.length}-colour palette — UIL4B`
