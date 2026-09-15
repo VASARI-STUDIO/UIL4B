@@ -287,23 +287,20 @@ test.describe('the marketing set exposes a usable landmark list', () => {
       for (const route of MARKETING_ROUTES) {
         await go(page, route)
         await page.waitForTimeout(140)
-        // MEASURED AFTER SCROLLING, AND THAT IS A FINDING IN ITSELF.
-        // The homepage's section headings are inside `[data-reveal]` blocks and
-        // useHomeMotion.js opens them with GSAP `autoAlpha:0`, which is
-        // `opacity:0` PLUS `visibility:hidden`. visibility:hidden takes an
-        // element out of the accessibility tree completely, so at load Chrome's
-        // tree on `/` holds h1 then five h3s and not one of the five h2s that
-        // separate them — a two-level skip in the rotor, measured at 390 and
-        // 1440: h1 "Build and export UI and brand design kits..." then h3
-        // "Start with a palette you can defend." with nothing between.
-        // It is NOT asserted as a defect here, deliberately. The headings fill
-        // in as each section scrolls into view, and with prefers-reduced-motion
-        // set — the setting a user who needs the outline is likeliest to have —
-        // all five are `visibility:visible` at load with no scrolling at all
-        // (verified separately). Changing it means changing the homepage motion
-        // system, which owns the hero's CLS budget and belongs to that lane.
-        // So this walks the page the way a reader does and then asserts the
-        // outline they end up with is correct.
+        // MEASURED AFTER SCROLLING, because this walks every marketing route
+        // and several of them reveal on scroll. It is no longer a workaround.
+        //
+        // Until 2026-09-15 it was one. useHomeMotion.js opened every
+        // `[data-reveal]` with GSAP `autoAlpha:0` — opacity PLUS
+        // `visibility:hidden` — and visibility:hidden takes an element out of
+        // the accessibility tree completely, so Chrome's tree on `/` held 6 of
+        // 17 headings and read h1 then five h3s with not one of the five h2s
+        // between them, a two-level skip at 390 and 1440 alike. This walked the
+        // page first so it could assert the outline a reader ENDS UP with, and
+        // recorded in this note that the load-time outline was wrong and was
+        // not asserted. The reveals animate plain opacity now, so the outline
+        // is correct before anything is scrolled and the new test below asserts
+        // that directly. The scroll walk stays: the other five routes need it.
         await page.evaluate(async () => {
           const step = Math.round(window.innerHeight * 0.8)
           for (let y = 0; y <= document.body.scrollHeight; y += step) {
@@ -539,6 +536,146 @@ test('/discover does not describe its own libraries as external', async ({ page 
 })
 
 // ── Reduced motion ──────────────────────────────────────────────────────────
+// THE HOMEPAGE OUTLINE, AT LOAD, WITH MOTION ON — which is the default, and so
+// is what almost every visitor is handed.
+//
+// The landmark test above walks the page before reading the tree. That is the
+// right measurement for "can a reader navigate this" and the wrong one for
+// "what does a screen reader get when the page opens", which is where this
+// defect lived: 6 of 17 headings, outline h1 then five h3s with no h2 at any
+// point. Asserting it needs a test that does NOT scroll first.
+//
+// reducedMotion is pinned to no-preference on purpose. Under `reduce` the
+// reveals never run and every heading is present anyway, so without this the
+// test would pass against the exact bug it exists to catch.
+test.describe('the homepage hands over a complete outline before anything is scrolled', () => {
+  for (const width of [390, 1440]) {
+    test(`at ${width}px every heading is in the tree at load`, async ({ browser }) => {
+      const ctx = await browser.newContext({
+        viewport: { width, height: 900 }, reducedMotion: 'no-preference',
+        isMobile: width <= 834, hasTouch: width <= 834,
+      })
+      const page = await ctx.newPage()
+      await go(page, '/')
+      // Long enough for the motion chunk to load and apply its opening state —
+      // what is guarded here is a resting state, not a frame mid-tween.
+      await page.waitForTimeout(1800)
+
+      const outline = await page.evaluate(() => {
+        const hs = [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')]
+        // display:none and visibility:hidden are precisely what remove a node
+        // from the accessibility tree, so this measures the mechanism itself
+        // rather than a proxy for it.
+        const inTree = hs.filter((h) => {
+          const cs = getComputedStyle(h)
+          return cs.display !== 'none' && cs.visibility !== 'hidden'
+        })
+        const levels = inTree.map((h) => Number(h.tagName[1]))
+        const skips = []
+        for (let i = 1; i < levels.length; i += 1) {
+          if (levels[i] > levels[i - 1] + 1) skips.push(`h${levels[i - 1]} -> h${levels[i]}`)
+        }
+        return {
+          dom: hs.length,
+          inTree: inTree.length,
+          skips,
+          missing: hs.filter((h) => !inTree.includes(h))
+            .map((h) => `${h.tagName} "${(h.textContent || '').trim().slice(0, 28)}"`),
+        }
+      })
+
+      // POSITIVE CONTROL. Both assertions below are satisfied by a page with no
+      // headings at all, which is what a failed render looks like.
+      expect(outline.dom, 'the homepage rendered almost no headings, so the assertions'
+        + ' below would pass on an empty page').toBeGreaterThan(10)
+
+      expect(outline.missing,
+        `${outline.dom - outline.inTree} of ${outline.dom} headings are outside the`
+        + ` accessibility tree at load at ${width}px. visibility:hidden removes a node`
+        + ' entirely — check that useHomeMotion.js still animates `opacity` and has not'
+        + ' gone back to `autoAlpha`.').toEqual([])
+
+      expect(outline.skips,
+        `the outline at ${width}px skips a level: ${outline.skips.join(', ')}`)
+        .toEqual([])
+      await ctx.close()
+    })
+  }
+
+  // Animating opacity instead of autoAlpha keeps the content in the tree, and
+  // leaves it FOCUSABLE while invisible. Measured before useHomeMotion.js grew
+  // its focusin handler: 21 of 45 Tab stops at 390 and 17 at 1440 landed on an
+  // invisible .htool-head or .htool-link, because focusing an element does not
+  // fire a ScrollTrigger. Both halves have to hold, or the fix has traded one
+  // defect for another.
+  test('tabbing into an unrevealed section reveals it', async ({ browser }) => {
+    const ctx = await browser.newContext({
+      viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference',
+    })
+    const page = await ctx.newPage()
+    await go(page, '/')
+    await page.waitForTimeout(1800)
+
+    const invisible = []
+    let stops = 0
+    for (let i = 0; i < 46; i += 1) {
+      await page.keyboard.press('Tab')
+      const at = await page.evaluate(() => {
+        const el = document.activeElement
+        if (!el || el === document.body) return null
+
+        // WHICH ancestor is holding this at zero, not merely whether one is.
+        //
+        // The first version of this test multiplied opacity down the whole
+        // ancestor chain and reported anything under 0.05. That reports a defect
+        // this test is not about: tabbing into the workbench switches its mode,
+        // which replays the `hw-panel-in` CSS entrance, and for the length of
+        // that keyframe `.hw-controls` and `.hw-foot` are at opacity 0 with
+        // their buttons still focusable. Measured: 20 stops, two distinct
+        // causes, and `closest('[data-reveal],[data-reveal-group]')` was null
+        // for both — nothing to do with the scroll reveals. A transient
+        // entrance that resolves on its own is also a different severity from a
+        // section that never reveals at all.
+        //
+        // So the culprit is identified. Only an element held down by a REVEAL
+        // unit counts here: the node itself carrying [data-reveal], or a direct
+        // child of a [data-reveal-group], which are exactly the two things
+        // useHomeMotion.js sets opacity on.
+        let n = el
+        let culprit = null
+        while (n && n !== document.documentElement) {
+          if (parseFloat(getComputedStyle(n).opacity) < 0.05) { culprit = n; break }
+          n = n.parentElement
+        }
+        const name = typeof el.className === 'string' && el.className
+          ? el.className.trim().split(' ')[0]
+          : el.tagName
+        if (!culprit) return { cls: name, held: false }
+        const isRevealUnit = culprit.hasAttribute('data-reveal')
+          || !!(culprit.parentElement && culprit.parentElement.hasAttribute('data-reveal-group'))
+        if (!isRevealUnit) return { cls: name, held: false }
+        const by = typeof culprit.className === 'string' && culprit.className
+          ? culprit.className.trim().split(' ')[0]
+          : culprit.tagName
+        return { cls: name, held: true, by }
+      })
+      if (!at) continue
+      stops += 1
+      if (at.held) invisible.push(`${at.cls}, held at opacity 0 by .${at.by}`)
+    }
+
+    expect(stops, 'the Tab sweep reached almost nothing, so the assertion below is vacuous')
+      .toBeGreaterThan(15)
+    expect([...new Set(invisible)],
+      `${invisible.length} keyboard stop(s) landed inside a section the scroll reveal has`
+      + ' not opened. The reveals animate opacity, so an unrevealed section is focusable —'
+      + ' useHomeMotion.js reveals on focusin to cover that, and this fails if that'
+      + ' handler goes.')
+      .toEqual([])
+    await ctx.close()
+  })
+})
+
 test('nothing on the marketing set is left invisible under reduced motion', async ({ browser }) => {
   // A reveal that animates opacity 0 -> 1 and is suppressed by a
   // prefers-reduced-motion block without its resting state being corrected
