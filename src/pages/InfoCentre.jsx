@@ -175,8 +175,24 @@ const SECTIONS = [
     title: 'Free vs Pro',
     body: (
       <>
-        <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits, premium exports, and advanced previews.</p>
-        <p>Compare the plans and upgrade whenever you&rsquo;re ready from <Link to="/settings">Settings → Support</Link>; manage or cancel from the same place.</p>
+        {/* ", and advanced previews" is deleted from the end of the first
+            sentence. Nothing in the product gates a preview on Pro: the Pro
+            deltas /plans derives are AI capacity, the two Pro export
+            documents, the colour systems and HCT editing, the brand palettes
+            and unlimited saves. The phrase appeared nowhere else in src/.
+
+            "Settings → Support" is corrected to "Settings → Subscription",
+            which is the label Settings.jsx gives that tab (`{ id: 'support',
+            label: 'Subscription' }`) — a visitor looking for "Support" would
+            not find it. And "or cancel" is deleted from the second sentence
+            on the same evidence /plans used to delete "cancel any time": the
+            Stripe portal has no cancellation flow enabled until the
+            [stripe-retention-config] owner action is done (pipeline.js,
+            status 'blocked'), so the Cancel plan button opens a portal with
+            nothing to cancel in it. The guard test reads that row's status,
+            so finishing the dashboard work retires the check. */}
+        <p>Everything you reach for day-to-day is free — building palettes, type scales, browsing icons, and saving projects. Pro unlocks higher AI limits and premium exports.</p>
+        <p>Compare the plans and upgrade whenever you&rsquo;re ready from <Link to="/settings">Settings → Subscription</Link>; manage from the same place.</p>
       </>
     ),
   },
