@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/reading.css'
+// The keys the app actually binds. Printed from here so this page cannot
+// document a chord the handlers ignore — which is exactly what it did.
+import { SEARCH_KEY, DOCUMENTED_SHORTCUTS } from '../config/shortcuts'
 
 // Information Centre — a single, fully indexable knowledge hub. Everything lives
 // on one page (good for search + AI citation), with a sticky table of contents,
@@ -38,8 +41,14 @@ const SECTIONS = [
         <p>UIL4B is a free, browser-based design toolkit. Every tool runs client-side, so your work never leaves your device unless you choose to sign in and sync.</p>
         <ul>
           <li><strong>No account needed</strong> — open any tool and start working. Sign in with Google only if you want saved projects and synced settings.</li>
-          <li><strong>Pin your favourites</strong> — drag any tool from the sidebar onto the dashboard, or right-click it to pin.</li>
-          <li><strong>Command palette</strong> — press <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>K</kbd> to jump to any tool instantly.</li>
+          {/* THE PIN BULLET IS GONE, NOT REWORDED. It read "drag any tool from
+              the sidebar onto the dashboard, or right-click it to pin", and the
+              product has no sidebar, no dashboard and no pin control:
+              WorkspaceContext exports pinned/togglePinned/addPinned/
+              reorderPinned and nothing under src/pages or src/components calls
+              any of them. Three instructions in one sentence, none performable.
+              Rewording it would need a feature to describe. */}
+          <li><strong>Command palette</strong> — press <kbd>{SEARCH_KEY}</kbd> to jump to any tool instantly.</li>
         </ul>
       </>
     ),
@@ -146,12 +155,24 @@ const SECTIONS = [
     id: 'shortcuts',
     emoji: '⌨️',
     title: 'Keyboard shortcuts',
+    // RENDERED FROM THE BINDINGS, NOT TYPED BESIDE THEM.
+    //
+    // This list said Ctrl/⌘ + K for the command palette when the key is `/` —
+    // which PillNav.jsx does not merely ignore but explicitly excludes, guarding
+    // the handler with `!e.metaKey && !e.ctrlKey` — and promised `?` would "show
+    // all shortcuts" when `?` is bound nowhere in src/. Two of the four rows
+    // were instructions that did nothing, on the page a visitor opens precisely
+    // because something did not work.
+    //
+    // The `?` row is deleted rather than corrected: there is no shortcut overlay
+    // for it to open. The three descriptions are the ones already here.
     body: (
       <ul className="ic-kbd-list">
-        <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>K</kbd> — command palette</li>
-        <li><kbd>Space</kbd> — random palette (Colour Studio)</li>
-        <li><kbd>?</kbd> — show all shortcuts</li>
-        <li><kbd>Esc</kbd> — close any modal or popup</li>
+        {DOCUMENTED_SHORTCUTS.map(({ keys, what }) => (
+          <li key={what}>
+            {keys.map((k) => <kbd key={k}>{k}</kbd>)} — {what}
+          </li>
+        ))}
       </ul>
     ),
   },

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { NAV_SECTIONS } from '../data/toolTree'
+import { SEARCH_KEY } from '../config/shortcuts'
 import { localiseTools } from '../data/tools'
 import { searchHints } from '../data/toolIndex'
 // The menu shows the product's real contents, so it reads the same gallery
@@ -601,8 +602,11 @@ export default function PillNav() {
         if (wasOpen) triggerRefs.current[wasOpen]?.focus()
         else if (wasSheet) mobileBtnRef.current?.focus()
       }
-      // "/" opens search — but never while the visitor is typing in a field.
-      if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      // SEARCH_KEY opens search — but never while the visitor is typing in a
+      // field. The literal used to live here and /info documented Ctrl/⌘ + K,
+      // a chord the guard below explicitly excludes; both now read the same
+      // constant so the page cannot describe a key this handler ignores.
+      if (e.key === SEARCH_KEY && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const el = e.target
         const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
         if (!typing) {
