@@ -245,6 +245,77 @@ test('the fabrication rules actually fire — proved on the brief that failed th
     `the refined c-5 is being flagged for naming these as forbidden: ${stillFlagged.join(', ')}`)
 })
 
+// ── THE GENERAL FORM OF THE c-14 DEFECT ────────────────────────────────────
+// Matching three exact hexes was never going to scale. c-17 prescribed
+// "linear-gradient(135deg, #0f0c29, #302b63, #24243e)" — not one of those
+// three, and the page it produced had NINE of its ten colours inside a
+// fifty-five degree band of indigo. Monochrome indigo is the register being
+// complained about whether or not the exact values match a list.
+//
+// So: a prompt that hardcodes THREE OR MORE colours, ALL of them in the
+// indigo-to-violet band, is prescribing that register rather than choosing a
+// palette. The threshold is three because two is a pairing and three is a ramp.
+//
+// CALIBRATED against the library's real palettes rather than guessed:
+//   flags   c-17  246 245 240   ·  c-14 (as shipped)  229 270 294
+//   passes  c-1   211 (navy) + 26 (orange)   ·  c-2  39 (gold)
+//           c-5   66 (lime)                  ·  c-9  43 (gold)
+// Near-greys are excluded, because #24243e is a colour and #1a1a1a is a ground.
+const VIOLET_BAND = [225, 305]
+
+function hueOf(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const mx = Math.max(r, g, b)
+  const mn = Math.min(r, g, b)
+  const d = mx - mn
+  if (d < 0.02) return null // a grey has no hue to judge
+  let h
+  if (mx === r) h = ((g - b) / d) % 6
+  else if (mx === g) h = (b - r) / d + 2
+  else h = (r - g) / d + 4
+  return Math.round(h * 60 + 360) % 360
+}
+
+test('no prompt prescribes a whole palette inside the indigo-violet band', () => {
+  const offences = []
+  for (const p of COMMUNITY_PROMPTS) {
+    const hexes = []
+    for (const m of p.text.matchAll(/#[0-9a-f]{6}\b/gi)) {
+      if (isProscribed(p.text, m.index)) continue
+      hexes.push(m[0])
+    }
+    const hues = hexes.map(hueOf).filter((h) => h !== null)
+    if (hues.length < 3) continue
+    const inBand = hues.filter((h) => h >= VIOLET_BAND[0] && h <= VIOLET_BAND[1])
+    if (inBand.length === hues.length) {
+      offences.push(
+        `${p.id} "${p.title}" specifies ${hues.length} colours and every one is ` +
+        `indigo-to-violet (${hues.join('°, ')}°)`)
+    }
+  }
+  assert.deepEqual(offences, [],
+    'a prompt hardcodes an all-indigo palette, which is the register the ' +
+    'founder has rejected by name:\n  ' + offences.join('\n  ') +
+    '\n\nA purple BRAND is fine — this fires only when every colour the prompt ' +
+    'names sits in the same violet band, i.e. the prompt is specifying the look ' +
+    'rather than a brand.')
+})
+
+test('the hue rule is calibrated, not just permissive', () => {
+  // Vacuity guard. If hueOf() or the band were wrong, the test above would
+  // pass on anything. These are the two real briefs it must separate.
+  const allViolet = 'Background: linear-gradient(135deg, #0f0c29, #302b63, #24243e).'
+  const realBrand = 'Colour scheme: navy blue (#1B3A5C) and orange (#F47B20) on white (#FFFFFF).'
+
+  const huesIn = (t) => [...t.matchAll(/#[0-9a-f]{6}\b/gi)].map((m) => hueOf(m[0])).filter((h) => h !== null)
+  const allIn = (hs) => hs.length >= 3 && hs.every((h) => h >= VIOLET_BAND[0] && h <= VIOLET_BAND[1])
+
+  assert.ok(allIn(huesIn(allViolet)), 'c-17\'s original gradient must be caught')
+  assert.ok(!allIn(huesIn(realBrand)), 'c-1\'s navy-and-orange brand must NOT be caught')
+})
+
 test('the generated preview pages carry no signature palette either', () => {
   if (!fs.existsSync(PAGES)) return // the pages are built separately
   const offences = []
