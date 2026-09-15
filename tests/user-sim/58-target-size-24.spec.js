@@ -46,10 +46,32 @@ function measureTargets(min) {
     return el.getClientRects().length > 0
   }
   // WCAG 2.5.8 "Inline": the target is in a sentence, or its size is otherwise
-  // constrained by the line-height of non-target text. Read as: the containing
-  // block holds meaningfully more text than the link itself.
+  // constrained by the line-height of non-target text.
+  //
+  // THE PARENT-HAS-MORE-TEXT TEST ALONE IS TOO GENEROUS, and it excused a real
+  // defect for a day. It was read as "the containing block holds meaningfully
+  // more text than the link itself", which is true of ANY link that shares a
+  // parent with other content - including a block-level card heading link.
+  // Measured 2026-09-15 on the built preview: the six `.htool-head` links on
+  // the homepage are 22.8px tall (23.3 on the Soon card) at 320, 390, 768 and
+  // 1440, every one of them display:flex, and every one of them exempted here
+  // because its <li> also holds a description and a row of tool pills. 23
+  // failing measurements across the four widths, silently waived.
+  //
+  // The criterion says the size must be CONSTRAINED BY LINE-HEIGHT, and only an
+  // inline-level box is. A flex or block link sets its own height, so if it is
+  // under 24px that is a decision, not a constraint. Requiring inline-level
+  // display is therefore the criterion rather than a proxy for it.
+  //
+  // Measured on the same run, this narrows the exemption and nothing else: the
+  // 16 genuinely inline waivers all survive - `.app-footer-attrib` on every
+  // surface, and the prose links on /privacy (privacy@uil4b.com, oaic.gov.au,
+  // "Settings -> Your data") - while all 23 block-level ones are now reported.
   const inlineInSentence = (el) => {
     if (el.tagName !== 'A') return false
+    // An inline-level box takes its height from the line box it sits in; a
+    // block, flex or grid box sets its own and cannot claim the exception.
+    if (!getComputedStyle(el).display.startsWith('inline')) return false
     const p = el.parentElement
     if (!p) return false
     return (p.innerText || '').trim().length > (el.innerText || '').trim().length + 3
