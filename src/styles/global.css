@@ -7550,44 +7550,61 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-sub{margin:8px 0 0;max-width:46ch;font-size:14px;line-height:1.55;color:var(--t2);text-wrap:pretty}
 
 /* The headline rate. */
-.ui-pro-from{display:flex;align-items:baseline;gap:6px;margin:18px 0 0}
-.ui-pro-from-lead{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
-.ui-pro-from-amount{font-size:clamp(30px,5vw,40px);font-weight:800;line-height:1;letter-spacing:-.04em;color:var(--t0)}
-.ui-pro-from-per{font-size:14px;font-weight:600;color:var(--t2)}
-.ui-pro-from-skel{display:inline-block;width:180px;height:34px}
+/* .ui-pro-from* removed 2026-09-15 with the element. It was a 40px repeat of
+   the cheapest plan's per-month rate, sitting directly above the plan rows
+   that state every rate — and it was the reason a stale fallback price could
+   paint on top of "we couldn't load current prices". */
 
 .ui-pro-list{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
 .ui-pro-li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--t1)}
 .ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-strong);color:var(--accent-fg)}
 
 /* The ladder. Two tiles at rest, stacking into Glide-style rows on a phone. */
-.ui-pro-plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:20px 0 0;padding:0;border:none;min-width:0}
-.ui-pro-plans-skel{grid-column:1/-1;height:112px;border-radius:var(--radius-l)}
-.ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:14px 15px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+/* STACKED ROWS. As a 2-up grid at minmax(180px,1fr) this held exactly two
+   cadences in a ~400px column; quarterly makes three and the third wrapped
+   onto its own line, half-width, under two full ones. A column of rows takes a
+   fourth without a layout decision, and gives the trial somewhere to sit that
+   is not a footnote. */
+.ui-pro-plans{display:flex;flex-direction:column;gap:8px;margin:20px 0 0;padding:0;border:none;min-width:0}
+.ui-pro-plans-skel{height:186px;border-radius:var(--radius-l)}
+.ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 /* The shared V2 card-hover language: border to ink AND a 3px lift, together. */
-.ui-pro-plan:hover{border-color:var(--t0);transform:translateY(-3px)}
+.ui-pro-plan:hover{border-color:var(--t0)}
 .ui-pro-plan.is-chosen{border-color:var(--accent);background:var(--accent-bg);box-shadow:inset 0 0 0 1px var(--accent)}
 /* The radio is the real control; the tile is its label. Focus has to be visible
    on the tile, because the input itself is screen-reader-only. */
 .ui-pro-plan:has(.ui-pro-plan-input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
-.ui-pro-plan-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+/* Identity left, money right, on one baseline-aligned line. */
+.ui-pro-plan-main{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
+.ui-pro-plan-id{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
 .ui-pro-plan-name{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
 .ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-strong)}
 /* The one --hi element on this surface, and the only place it appears in the
    whole modal - the marker-pen budget is one per viewport. */
 .ui-pro-plan-save{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:var(--radius-pill);background:var(--hi);color:var(--hi-fg)}
-.ui-pro-plan-rate{display:flex;align-items:baseline;gap:3px;margin-top:5px}
-.ui-pro-plan-amount{font-size:28px;font-weight:800;line-height:1;letter-spacing:-.035em;color:var(--t0)}
+.ui-pro-plan-rate{display:flex;align-items:baseline;gap:3px;margin-left:auto;flex:none}
+.ui-pro-plan-amount{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.035em;color:var(--t0)}
 .ui-pro-plan-per{font-size:13px;font-weight:600;color:var(--t2)}
 .ui-pro-plan-total{font-size:12px;line-height:1.4;color:var(--t2)}
-.ui-pro-plan-trial{margin-top:4px;font-size:11.5px;font-weight:650;color:var(--accent-strong)}
+/* THE TRIAL, as a filled chip rather than a line of small print.
+   It was 11.5px of accent text below the total — the least prominent element
+   in the tile, for the strongest thing in the offer. Filled, because the
+   outlined "Save N%" pill sits beside it and the trial must win that pairing:
+   a discount is a reason to prefer a cadence, a free trial is a reason to
+   start at all. */
+.ui-pro-plan-trial{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);background:var(--accent);color:var(--accent-fg);white-space:nowrap}
 
 .ui-pro-plans-err{margin:20px 0 0;padding:14px;border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius-l);background:color-mix(in srgb,var(--err) 8%,transparent)}
 .ui-pro-plans-err p{margin:0 0 10px;font-size:13px;color:var(--t1)}
 .ui-pro-plans-err-acts{display:flex;flex-wrap:wrap;gap:8px}
 
 /* "What happens next" - static, ordered, no clock anywhere near it. */
-.ui-pro-steps{list-style:none;margin:18px 0 0;padding:14px 15px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--cbg);display:flex;flex-direction:column;gap:7px;font-size:12.5px;line-height:1.5;color:var(--t2)}
+/* The terms, not a feature panel. This was a bordered, filled card with the
+   same visual weight as the plan rows above it and the CTA below it, which
+   made three competing blocks in a row. It is the small print for the choice
+   just made, so it reads as small print — indented off a rule instead of
+   boxed. */
+.ui-pro-steps{list-style:none;margin:16px 0 0;padding:0 0 0 13px;border:none;border-left:2px solid var(--border);border-radius:0;background:none;display:flex;flex-direction:column;gap:6px;font-size:12px;line-height:1.5;color:var(--t2)}
 .ui-pro-steps strong{color:var(--t0);font-weight:700}
 .ui-pro-cta{margin-top:16px}
 .ui-pro-cta .btn{width:100%;justify-content:center}
@@ -7598,9 +7615,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 @media(max-width:480px){
   .ui-pro-head{padding:16px 18px 0}
   .ui-pro-body{padding:6px 18px 20px}
-  .ui-pro-plans{grid-template-columns:1fr}
   .ui-pro-plan{padding:12px 13px}
-  .ui-pro-plan-amount{font-size:24px}
+  .ui-pro-plan-amount{font-size:23px}
 }
 
 /* -- Login-to-continue: the reason pane ------------------------------------
@@ -7849,6 +7865,10 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    promise -> proof -> price. grid-template-areas moves the rail to the right
    at width without moving any markup. */
 .ui-pro{max-width:900px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);grid-template-areas:"head rail" "body rail";align-items:start}
+/* No rail: the gate is not about colour, so there is no proof panel to put
+   beside the offer. A 900px dialog with one empty half would be worse than a
+   narrow one — the modal becomes a single focused column instead. */
+.ui-pro--norail{max-width:540px;grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "body"}
 .ui-pro-x{position:absolute;top:14px;right:14px;z-index:2}
 .ui-pro-head{grid-area:head;padding:26px 28px 0}
 .ui-pro-body{grid-area:body;padding:16px 28px 26px}
