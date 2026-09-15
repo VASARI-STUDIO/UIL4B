@@ -239,6 +239,37 @@ test('/info stops calling sign-in optional while taking a file away needs an acc
   }
 })
 
+/* ── /sitemap: its ledes name only what is live ─────────────────────────────── */
+
+test('/sitemap does not promise a Soon group in its Create lede or type a Discover blurb', () => {
+  const map = stripComments(read('src/pages/SiteMap.jsx'))
+  const lede = map.match(/<h2 id="smap-create">Create<\/h2>\s*(?:\{\}\s*)?<p>([^<]+)<\/p>/)
+  assert.ok(lede && /colour/.test(lede[1]), 'the Create lede on /sitemap is gone or has changed shape')
+  if (CREATE_GROUPS.some((g) => g.id === 'component' && g.soon)) {
+    assert.ok(!/\bcomponents\b/i.test(lede[1]),
+      `/sitemap's Create lede says "${lede[1].trim()}" — "components" while the component group is `
+      + 'soon:true, under a header that promises the map "only ever promises what\'s actually live"')
+  }
+  // The Discover column may not carry a TYPED description while any of its
+  // groups is Soon. The one it had read "Community systems, fonts, prompts and
+  // curated resources." with Inspiration — the community half — soon:true.
+  // Scoped to that column on purpose: the Learn column's typed lede names the
+  // roadmap honestly ("plus the topics still to be written") and is not the
+  // defect. Rows inside the column render `{g.desc}` from the registry, which
+  // is the positive control that the block was found.
+  const start = map.indexOf('data-sitemap-section="discover"')
+  const end = map.indexOf('data-sitemap-section="learn"')
+  assert.ok(start !== -1 && end > start, '/sitemap no longer marks its Discover and Learn columns; the extractor is blind')
+  const discover = map.slice(start, end)
+  assert.ok(discover.includes('note={g.desc}'), "the Discover column no longer renders each group's desc from the registry")
+  if (DISCOVER_GROUPS.some((g) => g.soon)) {
+    const typed = discover.match(/<p className="smap-cat-desc">[^{<][^<]*/)
+    assert.equal(typed, null,
+      `/sitemap types a Discover description again (${typed?.[0]}) while a Discover group is still Soon; `
+      + "the rows beneath already carry each group's own desc from toolTree.js")
+  }
+})
+
 test('the superlative deleted from /discover is not on /info', () => {
   // "the best" was removed from '/discover' and '/discover/gradients' by
   // name (routeMetaMap.js). /info carried it for the same page.
