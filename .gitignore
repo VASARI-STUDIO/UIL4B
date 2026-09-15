@@ -125,3 +125,18 @@ vite.config.trial.mjs
 # Impeccable live-mode session state and journal. Durable for the tool,
 # not project source, and it holds absolute machine paths.
 .impeccable/
+
+# Screenshots and image archives — LOCAL ONLY.
+#
+# Measured 2026-09-15: screenshots/ was 8.7 MB across 27 tracked files, and
+# eleven of the fifteen largest tracked files in the whole repository were the
+# June portfolio archive. Nothing under src/, scripts/, api/, tests/ or public/
+# reads any of them — the only references are three prose mentions in docs/,
+# which describe what the shots showed rather than embedding them.
+#
+# They are kept on disk and out of git: a design archive is worth having and is
+# not worth carrying in every clone, every CI checkout and every deploy.
+screenshots/
+*.psd
+*.sketch
+*.fig

@@ -1,0 +1,36 @@
+# WHAT VERCEL DOES NOT NEED IN ORDER TO BUILD THIS SITE.
+#
+# There was no .vercelignore until 2026-09-15, so every deploy carried the
+# whole repository into the build container — the test suite, the engineering
+# docs, the QA registers and the design archive — none of which any build step
+# opens. `npm run build` runs vite over src/ and index.html; `scripts/
+# prerender.mjs` reads src/data and writes into dist/. Nothing below is touched
+# by either.
+#
+# THIS DOES NOT AFFECT WHAT IS SERVED. Only files Vite emits into dist/ are
+# published, so excluding these changes nothing a visitor can reach; it changes
+# how much is uploaded and unpacked before the build starts.
+#
+# It is also NOT a security boundary. These files are public in the GitHub
+# repository regardless — this is about deploy weight, not secrecy.
+
+# The test suite. 94 MB on disk, and its report/ artifacts regenerate per run.
+tests/
+
+# Engineering documentation, proposals and QA registers — written for us.
+docs/
+
+# The design archive. Also gitignored; listed here so a local `vercel deploy`
+# from the working directory does not sweep it up.
+screenshots/
+brand/
+
+# Agent and editor state.
+.claude/
+.vscode/
+.idea/
+
+# Anything a previous run left behind.
+tmp/
+.cache/
+*.tmp.*
