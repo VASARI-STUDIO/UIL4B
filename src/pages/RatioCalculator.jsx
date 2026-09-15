@@ -262,7 +262,7 @@ function PresetSelect({ value, placeholder, options, onPick }) {
               <RatioThumb w={sel.w} h={sel.h} />
               <span className="arc-opt-text">
                 <span className="arc-opt-name">{sel.name}</span>
-                <span className="arc-opt-meta">{sel.meta}</span>
+                {sel.meta && <span className="arc-opt-meta">{sel.meta}</span>}
               </span>
             </span>
           )
@@ -284,7 +284,7 @@ function PresetSelect({ value, placeholder, options, onPick }) {
                 <RatioThumb w={o.w} h={o.h} />
                 <span className="arc-opt-text">
                   <span className="arc-opt-name">{o.name}</span>
-                  <span className="arc-opt-meta">{o.meta}</span>
+                  {o.meta && <span className="arc-opt-meta">{o.meta}</span>}
                 </span>
               </span>
             </button>
