@@ -317,3 +317,166 @@ test.describe('/create/gradient · the chosen gradient type reaches the tree', (
     }
   })
 })
+
+// ── The landmark walk ───────────────────────────────────────────────────────
+//
+// Walked from the ROOT through childIds, so the result is in TREE order.
+// `nodes.filter(...)` on the flat array reports a believable wrong order —
+// Accessibility.getFullAXTree does not return its nodes in document order.
+const LANDMARKS = new Set([
+  'region', 'banner', 'complementary', 'contentinfo', 'form', 'main', 'navigation', 'search',
+])
+
+async function landmarks(page) {
+  const client = await page.context().newCDPSession(page)
+  const { nodes } = await client.send('Accessibility.getFullAXTree')
+  await client.detach()
+  const byId = new Map(nodes.map((n) => [n.nodeId, n]))
+  const out = []
+  const seen = new Set()
+  ;(function walk(node) {
+    if (!node || seen.has(node.nodeId)) return
+    seen.add(node.nodeId)
+    if (node.role?.value && !node.ignored && LANDMARKS.has(node.role.value)) {
+      const name = (node.name?.value || '').trim()
+      out.push(`${node.role.value}${name ? `("${name}")` : ''}`)
+    }
+    for (const childId of node.childIds || []) walk(byId.get(childId))
+  })(nodes.find((n) => !n.parentId) || nodes[0])
+  return out
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The two catalogue tools — results that were in no landmark
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('the catalogue tools name the thing they are for', () => {
+  // THE CONTROL. Both tests below are shaped "the landmark list is exactly
+  // this", and a walk that had stopped resolving NAMES, or stopped resolving
+  // ROLES, would produce a consistent wrong answer rather than an error. This
+  // injects one named <section> — which is a landmark — one bare <section> —
+  // which computes to `generic` and is the whole reason this defect is
+  // invisible in the markup — and one named role=group, which is named but is
+  // not a landmark. It fails unless the walk reports the first and omits the
+  // other two.
+  test('the walk can tell a named region from a group and from an unnamed section', async ({ page }) => {
+    watch(page, 'the probe checking itself')
+    await go(page, '/create/font-gallery')
+
+    const before = await landmarks(page)
+    await page.evaluate(() => {
+      const main = document.querySelector('main')
+      const named = document.createElement('section')
+      named.setAttribute('aria-label', 'Probe region')
+      main.appendChild(named)
+      main.appendChild(document.createElement('section'))
+      const group = document.createElement('div')
+      group.setAttribute('role', 'group')
+      group.setAttribute('aria-label', 'Probe group')
+      main.appendChild(group)
+    })
+    const after = await landmarks(page)
+
+    expect(after.filter((l) => !before.includes(l))).toEqual(['region("Probe region")'])
+    expect(
+      after.join(' | '),
+      'a bare <section> was reported as a landmark; without a name it computes to generic',
+    ).not.toContain('region |')
+    expect(
+      after.join(' | '),
+      'a role=group was reported as a landmark; it is named but it is not one',
+    ).not.toContain('Probe group')
+  })
+
+  // MEASURED 2026-09-15 on the built preview at 1440x900, signed out. Before:
+  //
+  //   navigation("Primary") | main | navigation("More typography tools")
+  //     | contentinfo | navigation("Footer")
+  //
+  // Four landmarks, none naming content, on a page carrying 24 result cards,
+  // 88 controls and ONE heading in the entire document. Searching for
+  // something with no matches changed nothing about that list, because there
+  // was nothing there to lose.
+  //
+  // The name arrives UPPERCASE because `.fg-count` sets text-transform at this
+  // width and an accessible name is computed from RENDERED text. Asserted as
+  // the browser reports it, not as the source reads.
+  //
+  // MUTATION: drop aria-labelledby from `.fg-results` in FontGallery.jsx and
+  // both halves go red quoting the original four-landmark list back.
+  test('/create/font-gallery · the results are a region, in both states', async ({ page }) => {
+    watch(page, 'a screen-reader user looking for the gallery by landmark')
+    await go(page, '/create/font-gallery')
+
+    // POSITIVE CONTROL: the grid was populated before anything was measured.
+    // "The region is present" is worth nothing on a page that never rendered.
+    await expect(page.locator('.fg-card').first()).toBeVisible()
+    const cards = await page.locator('.fg-card').count()
+    expect(cards, 'the gallery rendered no cards at all').toBeGreaterThan(10)
+
+    expect(await landmarks(page)).toEqual([
+      'navigation("Primary")',
+      'main',
+      'region("77 FAMILIES")',
+      'navigation("More typography tools")',
+      'contentinfo',
+      'navigation("Footer")',
+    ])
+
+    // AND IT SURVIVES THE EMPTY STATE. A section wrapped around only the
+    // populated arm vanishes exactly when a reader most needs to find out why
+    // there are no results — the fault fixed on /discover/palettes.
+    await page.locator('.fg-controls input').first().fill('zzzzqqq')
+    await expect(page.locator('.fg-empty')).toBeVisible()
+    await expect(page.locator('.fg-card')).toHaveCount(0)
+
+    expect(await landmarks(page)).toEqual([
+      'navigation("Primary")',
+      'main',
+      'region("0 FAMILIES MATCHING “ZZZZQQQ”")',
+      'navigation("More typography tools")',
+      'contentinfo',
+      'navigation("Footer")',
+    ])
+  })
+
+  // MEASURED the same way. Before:
+  //
+  //   navigation("Primary") | main | contentinfo | navigation("Footer")
+  //
+  // on a surface that mounts 391 of 1,655 cells into the viewport and offers
+  // 122 tab stops at 390px. The tabpanel it lives in is named ("Emoji") but a
+  // tabpanel is not a landmark and never appears in this list.
+  //
+  // MUTATION: drop aria-labelledby from `.emoji-results` in EmojiLibrary.jsx
+  // and both halves go red on the four-landmark list.
+  test('/create/emoji · the grid is a region, in both states', async ({ page }) => {
+    watch(page, 'a screen-reader user looking for the emoji grid by landmark')
+    await go(page, '/create/emoji')
+
+    // POSITIVE CONTROL: cells are on screen before the landmark list is read.
+    await expect(page.locator('.emoji-virt')).toBeVisible({ timeout: 20000 })
+    const cells = await page.locator('.emoji-vrow button').count()
+    expect(cells, 'the emoji grid mounted no cells at all').toBeGreaterThan(50)
+
+    expect(await landmarks(page)).toEqual([
+      'navigation("Primary")',
+      'main',
+      'region("Showing all 1655 emojis")',
+      'contentinfo',
+      'navigation("Footer")',
+    ])
+
+    await page.locator('.emoji-toolbar input').first().fill('zzzzqqq')
+    await expect(page.locator('.pl-empty')).toBeVisible({ timeout: 20000 })
+    await expect(page.locator('.emoji-vrow button')).toHaveCount(0)
+
+    expect(await landmarks(page)).toEqual([
+      'navigation("Primary")',
+      'main',
+      'region("0 emojis for zzzzqqq")',
+      'contentinfo',
+      'navigation("Footer")',
+    ])
+  })
+})
