@@ -98,11 +98,18 @@ const HELPERS = `
 // is opaque, so the composited ink is the declared ink and the "nearest grey"
 // question is well posed.
 //
-// .plb-name (opacity .95) AND .plb-role (opacity .6) ARE DELIBERATELY ABSENT.
-// They carry their opacity from the SHARED Palette Builder component, so their
-// composited ink is not the value readableInk returned and the nearest-grey
-// oracle would be asking a different question. 8c records the same exclusion
-// for the same reason; they are swept for the AA floor below, not for search.
+// .plb-name AND .plb-role ARE STILL ABSENT, FOR A DIFFERENT REASON NOW.
+// Until 2026-09-15 they were excluded because they dimmed themselves - .95 and
+// .6 - so their composited ink was not the value readableInk returned and the
+// nearest-grey oracle would have been asking a different question. Both
+// opacities are gone, so that reason has expired.
+//
+// They stay out because adding them would measure nothing new. All three sit
+// in the same .plb-col on the same fill and ink through the same call, so the
+// ground and the answer are identical to the .plb-hex already swept beside
+// them; including them would triple the sample count and widen coverage by
+// zero grounds. They ARE gated below - for the AA floor, and for the alpha
+// whose loss is what this paragraph is about.
 const READABLE_INK_SEL = '.hw-board .plb-hex, .hw-ui-mark, .hw-ui-avatar'
 
 const SEARCH_SWEEP = `(() => {
@@ -243,12 +250,13 @@ test.describe('Workbench ink search direction', () => {
     const notNearest = []
     const belowFloor = []
     const gradients = []
-    const translucentBelow = new Set()
     const seenGrounds = new Set()
+    // The alpha each board label was actually painted at, which is the fact
+    // the deleted exemption below used to be about.
+    const labelAlpha = new Map()
     let searchSamples = 0
     let floorSamples = 0
     let walkReached = 0
-    let translucentSeen = 0
 
     for (const theme of ['light', 'dark']) {
       if (theme === 'dark') {
@@ -302,18 +310,19 @@ test.describe('Workbench ink search direction', () => {
         for (const s of floor) {
           if (s.gradient) { gradients.push(`[${theme}] .${s.cls}`); continue }
           floorSamples++
-          if (s.translucent) translucentSeen++
-          if (s.ratio >= s.floor) continue
-          // The two board labels carry opacity from the SHARED Palette Builder
-          // component. A hard gate on them would fail this build on a property
-          // of another tool that has always shipped, so they are recorded as an
-          // exact-match set instead and the two kinds cannot mask each other.
-          if (s.translucent) {
-            translucentBelow.add(`.${s.cls}`)
-            continue
+          if (s.cls === 'plb-name' || s.cls === 'plb-role') {
+            labelAlpha.set(`[${theme}] .${s.cls}`, s.alpha)
           }
+          if (s.ratio >= s.floor) continue
+          // NO TRANSLUCENCY EXEMPTION ANY MORE, and its removal is the point.
+          // This branch used to divert opacity-bearing labels into a separate
+          // allowlist so they could sit under the floor without failing the
+          // build. The two rules it existed for - .plb-name at .95 and
+          // .plb-role at .6 - no longer carry opacity, so every node the sweep
+          // reaches is now held to the same floor by the same assertion.
           belowFloor.push(`[${theme}] .${s.cls} "${s.text}" ${s.ink} on ${s.ground}`
-            + ` = ${s.ratio}:1 (floor ${s.floor})`)
+            + ` = ${s.ratio}:1 (floor ${s.floor})`
+            + (s.translucent ? ` - painted at alpha ${s.alpha}` : ''))
         }
 
         await page.getByRole('button', { name: 'Generate' }).click()
@@ -361,28 +370,34 @@ test.describe('Workbench ink search direction', () => {
       + ` contrast floor over ${floorSamples} rendered samples:${NL}${belowFloor.join(NL)}`)
       .toEqual([])
 
-    // A SUBSET assertion, NOT an exact-match one, and the difference is
-    // deliberate. Whether .plb-name (opacity .95) or .plb-role (opacity .6)
-    // actually lands under its floor depends on the palette the generator
-    // happened to roll, so pinning the exact set — it came back EMPTY on the
-    // run that wrote this line — would be a flake with a random trigger. What
-    // is stable is WHICH classes are allowed to be there at all: these two
-    // inherit their opacity from the shared Palette Builder component, so a
-    // hard gate on them would fail this build on a property of another tool
-    // that has always shipped and is not this change's to decide. Any other
-    // class appearing here is a new defect and fails.
-    const ALLOWED_TRANSLUCENT = ['.plb-name', '.plb-role']
-    expect([...translucentBelow].filter((c) => !ALLOWED_TRANSLUCENT.includes(c)).sort(),
-      'an opacity-bearing workbench label is below its contrast floor and is not one of'
-      + ` the two known Palette Builder inheritances (${ALLOWED_TRANSLUCENT.join(', ')}).`)
+    // THE OPACITY ITSELF IS THE GUARD NOW, not a tolerance for what it broke.
+    //
+    // readableInk's guarantee is EXACT rather than comfortable: swept over a
+    // 2-step grid of all 2,097,152 grounds, its ink clears 4.5:1 on every one
+    // and the worst case is 4.500:1 on #F03004. There is no headroom in that
+    // for an opacity to spend, so any value below 1 on a label inking through
+    // it drops straight under the floor - .95 on 10.41% of grounds, .6 on
+    // 89.51%. That is why the two rules were emptied rather than lowered, and
+    // why the floor assertion above no longer needs an exemption list.
+    //
+    // Asserting the ALPHA rather than the ratio is deliberate. Whether a given
+    // palette happens to expose the failure depends on the colours the
+    // generator rolled, so a contrast assertion here would pass on most runs
+    // even with the opacity restored; the alpha is true on every run. This is
+    // the regression that actually shipped twice, and it fails the moment a
+    // dimming property comes back to either rule.
+    expect([...labelAlpha.entries()].filter(([, alpha]) => alpha < 1).sort(),
+      "a Palette Builder board label is painted at less than full alpha. Its ink"
+      + " comes from readableInk, whose worst case is exactly 4.500:1, so dimming"
+      + " it cannot leave it passing - see the note on .plb-role in global.css.")
       .toEqual([])
 
-    // POSITIVE CONTROL FOR THE EXEMPTION ITSELF. If nothing translucent is ever
-    // measured, the branch above is dead and the exemption is hiding an empty
-    // set rather than a known one — which is how an allowlist quietly becomes a
-    // blanket skip.
-    expect(translucentSeen, 'no translucent ink was measured at all, so the allowlist'
-      + ' above is guarding nothing — .plb-name and .plb-role have stopped carrying'
-      + ' their opacity, or stopped being swept').toBeGreaterThan(0)
+    // POSITIVE CONTROL. The assertion above is an emptiness check over a map
+    // this run populated, so an empty map satisfies it - which is what a
+    // renamed class or a board that failed to render would produce.
+    expect([...labelAlpha.keys()].sort(),
+      "the board labels were never measured, so the alpha assertion above is"
+      + " guarding an empty map rather than the rendered labels")
+      .toEqual(['[dark] .plb-name', '[dark] .plb-role', '[light] .plb-name', '[light] .plb-role'])
   })
 })
