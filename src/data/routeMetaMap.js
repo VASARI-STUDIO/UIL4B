@@ -87,7 +87,17 @@ export const DEFAULT_DESCRIPTION = 'Free browser-based design toolkit. Colour pa
 export const PAGE_DESCRIPTIONS = {
   '/': DEFAULT_DESCRIPTION,
   '/home': DEFAULT_DESCRIPTION,
-  '/create/color': 'Build professional colour systems with palette generation, tint scales, gradient builder, and named colour libraries. Export CSS, Tailwind, PNG and SVG.',
+  // THE SAME DELETED CLAUSE AS DEFAULT_DESCRIPTION, LEFT BEHIND ON THE ONE
+  // ROUTE THAT RENDERS A CREATE HOME. This ended "Export CSS, Tailwind, PNG and
+  // SVG." Against src/config/exportFormats.js on 2026-09-15: `css` carries no
+  // live flag, `tailwind` carries no live flag, and the only SVG anywhere in
+  // the panel is inside `assets` ("SVG + PNG"), which carries no live flag
+  // either — three of the four named formats render a Soon badge over a
+  // disabled button. The fourth, PNG, is the style-guide sheet, which is real.
+  // ColorStudio.jsx's own "Tailwind" is a semantic-colour PRESET (`name:
+  // 'Tailwind'`), not an export. Deleted rather than reworded, as the two
+  // comments below already did for the sibling routes.
+  '/create/color': 'Build professional colour systems with palette generation, tint scales, gradient builder, and named colour libraries.',
   // The same deleted clause as DEFAULT_DESCRIPTION above: the CSS export is
   // not live, so the promise of one came out. The rest is what the page does.
   '/create/palette': 'Generate a professional colour palette from one seed colour. Harmony systems, tonal ramps and accessibility checks.',

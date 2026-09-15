@@ -59,7 +59,15 @@ const SECTIONS = [
     title: 'Colour Studio',
     body: (
       <>
-        <p>Build a complete colour system: generate palettes and harmonies, produce tint/shade scales, design gradients, and verify WCAG contrast — then export to CSS, Tailwind, PNG, or SVG.</p>
+        {/* "— then export to CSS, Tailwind, PNG, or SVG" is deleted from the
+            end of this sentence. exportFormats.js marks `css`, `tailwind` and
+            `assets` (the only SVG) as not live — each is a Soon badge over a
+            disabled button — so the page was telling a visitor to export three
+            files the panel cannot make. routeMetaMap.js deleted the identical
+            clause from /create/color's description on the same day and for
+            the same reason; tests/unit/surface-claims-truth.test.js holds
+            both to the flags. */}
+        <p>Build a complete colour system: generate palettes and harmonies, produce tint/shade scales, design gradients, and verify WCAG contrast.</p>
         <p>Press <kbd>Space</kbd> on the palette to roll a fresh random set. Use the live <Link to="/create/color">Preview</Link> to see your colours on real UI.</p>
       </>
     ),
@@ -85,16 +93,15 @@ const SECTIONS = [
       </>
     ),
   },
-  {
-    id: 'ui-builder',
-    emoji: '🧩',
-    title: 'UI Builder',
-    body: (
-      <>
-        <p>Design dashboard components — buttons, cards, tables, inputs — with live previews, and craft layered CSS box-shadows. Export production-ready CSS in a click.</p>
-      </>
-    ),
-  },
+  // THE "UI BUILDER" SECTION IS GONE, NOT REWORDED. It read "Design dashboard
+  // components — buttons, cards, tables, inputs — with live previews, and
+  // craft layered CSS box-shadows. Export production-ready CSS in a click."
+  // In toolTree.js the `component` group is `soon: true` and both of its tools
+  // (component-designer, box-shadow) are `soon: true`: the nav badges them
+  // Soon, the site map badges them Soon, route-matrix.mjs refuses to prerender
+  // them, and llms.txt lists them under "Not yet built". This was the one
+  // surface describing the group as a tool you could open. Rewording it would
+  // need a feature to describe; the section comes back with the tools.
   {
     id: 'docs',
     emoji: '📚',
