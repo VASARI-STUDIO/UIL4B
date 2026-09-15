@@ -419,3 +419,63 @@ test.describe('the icon and emoji libraries carry one masthead between them', ()
     })
   }
 })
+// EIGHTEEN BUTTONS CARRIED THEIR SELECTION IN A CSS CLASS AND NOWHERE ELSE.
+//
+// /create/aspect-ratio marks the chosen tab, ratio card and side toggle with an
+// `on` class. That is invisible to everything that is not an eye: measured
+// 2026-09-15 through Chrome's own accessibility tree, NOT ONE of the four
+// .rc-tab, eleven .arc-ratio-card or three .pt-t buttons exposed a pressed,
+// selected or current state. Pressing a shape confirmed nothing, and this was
+// the only one of the nine Create surfaces doing it.
+//
+// Asserted through CDP rather than off the attribute, because the attribute is
+// not the guarantee — a button can carry aria-pressed and still not surface it
+// if the role is overridden. The tree is what a screen reader is handed.
+test('every selection on /create/aspect-ratio is announced, not just painted', async ({ page }) => {
+  watch(page, 'someone choosing a ratio with a screen reader')
+  await go(page, '/create/aspect-ratio')
+  await page.waitForSelector('.arc-ratio-card', { timeout: 15000 })
+
+  const counts = await page.evaluate(() => ({
+    tabs: document.querySelectorAll('.rc-tab').length,
+    cards: document.querySelectorAll('.arc-ratio-card').length,
+    sides: document.querySelectorAll('.pt-t').length,
+  }))
+  // POSITIVE CONTROL: a page that rendered none of these satisfies every
+  // "nothing is unannounced" assertion below.
+  expect(counts.tabs + counts.cards + counts.sides,
+    'the selection controls did not render, so this test is guarding nothing')
+    .toBeGreaterThan(14)
+
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Accessibility.enable')
+  const { nodes } = await cdp.send('Accessibility.getFullAXTree')
+  await cdp.detach().catch(() => {})
+  const pressed = nodes.filter((n) => (n.properties || [])
+    .some((p) => p.name === 'pressed' || p.name === 'selected' || p.name === 'checked'))
+
+  expect(pressed.length, `only ${pressed.length} of the ${counts.tabs + counts.cards + counts.sides} `
+    + 'selection controls expose a state to the accessibility tree. The `on` class is '
+    + 'not a state — see the aria-pressed note in RatioCalculator.jsx.')
+    .toBe(counts.tabs + counts.cards + counts.sides)
+
+  // And exactly one of each group reads as chosen, which is what makes it a
+  // selection rather than a row of independent toggles that all happen to be on.
+  const on = await page.evaluate(() => ({
+    tabs: document.querySelectorAll('.rc-tab[aria-pressed="true"]').length,
+    cards: document.querySelectorAll('.arc-ratio-card[aria-pressed="true"]').length,
+    sides: document.querySelectorAll('.pt-t[aria-pressed="true"]').length,
+  }))
+  expect(on.tabs, 'exactly one tab reads as chosen').toBe(1)
+  expect(on.sides, 'exactly one side toggle reads as chosen').toBe(1)
+  expect(on.cards, 'at most one ratio card reads as chosen').toBeLessThanOrEqual(1)
+
+  // Pressing one moves the state, rather than the attribute being a constant.
+  const second = page.locator('.rc-tab').nth(1)
+  const label = (await second.textContent()).trim()
+  await second.click()
+  await expect(second, `pressing "${label}" did not move the pressed state`)
+    .toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.rc-tab[aria-pressed="true"]'),
+    'two tabs read as chosen at once').toHaveCount(1)
+})
