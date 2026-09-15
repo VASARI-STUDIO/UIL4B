@@ -330,3 +330,94 @@ test.describe('route metadata', () => {
     }
   })
 })
+// A NAMED REGION IS NOT THE SAME TEST AS "NO UNNAMED REGION", and the gap
+// between those two sentences is where this defect lived.
+//
+// 88-marketing-breakpoints walks the accessibility tree of every marketing
+// route and fails an unnamed region — but a page with NO region at all
+// satisfies that, vacuously. /community and /discover/prompts were both in that
+// state: the cards are what each page is for, and each grid was a bare <div>,
+// so a reader navigating by landmark found the header and the footer and
+// nothing naming the twelve items between them. Their three sibling libraries
+// (Palette, Gradient, Curated Resources) all render DiscoverResultHead, which
+// is a labelled section plus a live count; these two had neither.
+//
+// The count matters as much as the name: the category filters can take the grid
+// from twelve to zero, and until now that changed the screen and said nothing.
+//
+// This asserts the region EXISTS, is named, and announces — the half the
+// landmark sweep structurally cannot ask for.
+test.describe('the two library grids name themselves and announce their size', () => {
+  const CASES = [
+    { route: '/discover/prompts', noun: 'prompt', cards: '.pl-gallery > *' },
+    { route: '/community', noun: 'design', cards: '.ch-grid > *' },
+  ]
+  for (const { route, noun, cards } of CASES) {
+    test(`${route} exposes a named results region with a live count`, async ({ page }) => {
+      watch(page, 'someone browsing by landmark with a screen reader')
+      await go(page, route)
+      await page.waitForSelector(cards, { timeout: 15000 })
+
+      // POSITIVE CONTROL: a route that rendered nothing satisfies every
+      // assertion about what it announces.
+      const rendered = await page.locator(cards).count()
+      expect(rendered, `${route} rendered no cards, so the assertions below are vacuous`)
+        .toBeGreaterThan(0)
+
+      // THE REGION HOLDING THE CARDS, not any region on the page — and that
+      // distinction is the whole assertion.
+      //
+      // This first read `regions.length > 0` off the accessibility tree, and
+      // two of four mutations survived it: both pages carry a second named
+      // region further down (the closing "Can't find what you're looking for?"
+      // CTA), so stripping the label off the results section still left one.
+      // The test passed while the defect was back. Caught by mutation, which is
+      // the only thing that could have caught it.
+      //
+      // Asked of the cards' own ancestor instead, and by LABEL rather than by
+      // name text, so it stays true when the wording changes.
+      const holder = await page.evaluate((sel) => {
+        const card = document.querySelector(sel)
+        const section = card && card.closest('section')
+        if (!section) return { framed: false, label: '' }
+        const id = section.getAttribute('aria-labelledby')
+        const label = id
+          ? ((document.getElementById(id) || {}).textContent || '').trim()
+          : (section.getAttribute('aria-label') || '').trim()
+        return { framed: true, label }
+      }, cards)
+
+      expect(holder.framed, `${route}: the cards sit in no <section> at all. The grid is `
+        + 'the thing this page is for and it has to be reachable from the landmark list '
+        + '— see the note above the results section in the page component.').toBe(true)
+      expect(holder.label, `${route}: the section holding the cards has no accessible `
+        + 'name, so it is not a region — an unnamed section is `generic` in the tree and '
+        + 'never appears on the landmark list.').not.toBe('')
+
+      // And it really does surface as a named region, which is the fact a
+      // screen reader acts on. Chrome's own tree, not the markup.
+      const cdp = await page.context().newCDPSession(page)
+      await cdp.send('Accessibility.enable')
+      const { nodes } = await cdp.send('Accessibility.getFullAXTree')
+      await cdp.detach().catch(() => {})
+      const regions = nodes
+        .filter((n) => n.role?.value === 'region')
+        .map((n) => (n.name?.value || '').trim())
+        .filter(Boolean)
+
+      expect(regions, `${route}: "${holder.label}" labels the results section in the `
+        + 'markup but is not on the landmark list')
+        .toContain(holder.label)
+
+      // The count is announced politely, and it is the REAL count.
+      const live = page.locator('[aria-live="polite"]').filter({ hasText: new RegExp(`\\d+ ${noun}s?$`) })
+      await expect(live, `${route} announces no ${noun} count. Filtering can empty this `
+        + 'grid, and an empty grid that says nothing is the state this region exists to '
+        + 'prevent.').toHaveCount(1)
+      const announced = Number(((await live.first().textContent()) || '').trim().split(' ')[0])
+      expect(Number.isFinite(announced), 'the announced count is a number').toBe(true)
+      expect(announced, 'the announced count is not zero while cards are on screen')
+        .toBeGreaterThan(0)
+    })
+  }
+})
