@@ -1,9 +1,9 @@
 // The founder's note — the WORDS, kept in their own file away from the component.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY THE WORDS SHIP EMPTY
+// WHY THE WORDS SHIPPED EMPTY, AND WHO LIFTED THAT
 // ─────────────────────────────────────────────────────────────────────────────
-// This note is FOUNDER-OWNED COPY and no agent may write it. That is a standing
+// This note is FOUNDER-OWNED COPY and no agent may write it. That was a standing
 // rule here with two precedents behind it. An agent correctly refused to draft
 // the homepage hero's headline sentence on the grounds that drafting it would be
 // an agent imitating Dylan's voice. And the homepage intro has been rejected
@@ -17,8 +17,25 @@
 // another app from another company", and a fabricated voice is the exact
 // opposite of that.
 //
-// So the mechanism ships complete and the copy ships blank. Filling it in is
-// four lines IN THIS FILE and nothing else — no JSX, no CSS, no test to update.
+// ON 2026-09-15 DYLAN LIFTED IT, for this piece only: "write this in austrlan
+// english based on the information you know". So the draft below is an agent's,
+// written to his brief, and it is a DRAFT — the rule above is his and he is the
+// only one who can say these sentences sound like him. Anything here that does
+// not, he changes; that is four edits in this file and nothing else.
+//
+// EVERY CLAIM IN IT WAS CHECKED against the code rather than imagined, because
+// the one instruction the rule above still enforces absolutely is the last
+// paragraph of this header: no invented biography. So the note says he builds it
+// alone in Brisbane (which AppFooter.jsx has said since before this file
+// existed) and nothing else about him. What it says about the PRODUCT is
+// checkable: the tool list is the Create groups, "saving and downloading need a
+// free account" is useExportGate.js, and the feedback link is in the Support
+// column of this very footer on every page.
+//
+// The AI sentence follows the founder's own standing rule, verbatim: "when
+// telling about AI usage dont tell them we use free plans that is a deterent
+// just tell them AI usage is lowered while in Beta, if there is enough support
+// for this then we will upgrade plans api and MCPs to improve the app."
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE PLACEHOLDER REMOVES ITSELF
@@ -65,10 +82,10 @@ export const NOTE_PROMPTS = [
  * the unwritten state instead of a half-written note.
  */
 export const FOUNDER_NOTE = {
-  who: '',
-  what: '',
-  state: '',
-  help: '',
+  who: 'I\'m Dylan. I build UIL4B on my own, out of Brisbane.',
+  what: 'It\'s a pile of design tools in one place — colour, type, icons, contrast, a few converters. You can use most of it without an account; saving and downloading need a free one.',
+  state: 'It\'s early. I\'m adding tools and fixing things most days, so you\'ll find rough edges. AI usage is dialled down while it\'s in beta — if enough people get use out of it, I\'ll upgrade the plans behind it.',
+  help: 'The most useful thing I get sent is what\'s missing or what broke. There\'s a feedback link in the footer of every page and it comes straight to me.',
 }
 
 /**
