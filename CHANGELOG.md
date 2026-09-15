@@ -13,6 +13,66 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 
 ## Unreleased
 
+### Founder decisions — 2026-09-16
+
+| # | Decision | Ours? |
+|---|---|---|
+| 1 | **Claude Code may `git push`.** A permission rule was added to user settings after the founder was asked. It unblocked delivery: verified work could be committed but not pushed, so it was accumulating on one machine with no backup | Yes |
+| 2 | **He publishes the Firestore rules himself.** Offered the choice of an agent running `firebase deploy --only firestore:rules`; he kept the production change in his own hands. OWNER-ACTIONS row 3 is now the publish step and nothing else | **His call, against the faster option** |
+| 3 | **Finished backlog rows move to a local-only archive.** Asked in the context of "are we committing things that don't need to be on the live site". 172 of 211 rows moved to `docs/backlog/`, which is Vercel-ignored | Yes |
+
+### The gated security work was uncommitted, not unwritten
+
+`firestore.rules` and `api/verify-admin.js` were sitting **applied in the working
+tree and never committed** — the one state where reviewed, tested security work
+is lost to a stray `git checkout`. The auto-mode classifier that had refused to
+stage them since 2026-09-06 no longer does, so they were committed (#472).
+
+**`npm run apply:gated` refusing with "uncommitted edits that this command did
+not make" was a false alarm, and reading it as tampering would have thrown the
+work away.** Its dirty check only recognises the four patches applied as a
+*prefix in fixed order*, so a tree holding 2 and 3 but not 1 — exactly what
+10ee10f2 left behind — fails the check while being entirely legitimate. The tree
+was instead proved equal to `HEAD` + patch 2 + patch 3 byte for byte, by
+replaying both patches from the committed files into a scratch workspace and
+comparing all five target files.
+
+Gate on that exact tree: 117 Firestore/Storage emulator tests against the real
+`firestore.rules`, 2039 unit tests, build + prerender clean.
+
+**The command is now parked**, and OWNER-ACTIONS says so: three of its four
+changes are in, so the only one it would still apply is per-project sync, which
+10ee10f2 held back deliberately.
+
+### What "our files are so large" actually turned out to be
+
+The founder asked whether screenshots and internal reference material were being
+committed and shipped. Measured rather than assumed:
+
+- **Screenshots were already clean.** `screenshots/` is untracked and in
+  `.vercelignore`. Every tracked image in the repository totals **1 MB across 40
+  files**, largest 72 KB.
+- **No internal prose reaches users.** Backlog note text appears in **zero**
+  client chunks, proved with a positive control.
+- **The 177 MB is git history, not the live site** — `src/styles/global.css`
+  (644 revisions) and `src/data/pipeline.js` (303 revisions) are ~95% of it.
+- **The one real production cost was deliberate**: `vercel.json` bundles
+  `pipeline.js` into the `api/ai.js` function so the boards can be served behind
+  the admin gate instead of being a publicly downloadable 824 KB file, which is
+  what they used to be. Archiving the finished rows took **994 KB → 239 KB**,
+  755 KB off every deployment of that function (#475).
+
+**The admin Pipeline board now shows 39 live rows where it showed 211.** That is
+the intended consequence, not a regression.
+
+A Playwright spec caught what the unit suite and the build both missed:
+`78-backlog-not-public.spec.js` asserted the board renders a `Done` label, using
+a literal from the data as its anchor. With every `done` row archived the anchor
+was gone while the property it guarded was intact. It now derives the expected
+label set from the queue itself, with a per-status count that catches a rename
+inside the label map — which set equality alone cannot.
+
+
 ### Founder decisions — 2026-09-15
 
 | # | Decision | Ours? |
