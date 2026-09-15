@@ -4,6 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- src api public index.html vite.config.js vercel.json package.json package-lock.json scripts",
   "functions": {
     "api/ai.js": {
       "includeFiles": "src/data/{pipeline,moduleBoard}.js"
