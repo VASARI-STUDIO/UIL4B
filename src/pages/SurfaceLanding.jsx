@@ -9,7 +9,12 @@ import { LEARN_ARTICLES } from '../data/learnIndex'
 import { readCommunitySubmissions } from '../utils/communitySubmissions'
 import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
-import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
+// The count and three titles only — NOT the prompt data. This page is one of
+// the five App.jsx loads eagerly, so importing COMMUNITY_PROMPTS here put all
+// 27.7 KB of it in the main entry chunk, on every route, to render one card.
+// See the header of communityPromptsPreview.js for the measurement and for why
+// the values are a mirrored copy with a drift test rather than a `.length`.
+import { PROMPT_COUNT, PROMPT_PREVIEW_TITLES } from '../data/communityPromptsPreview'
 
 // ── Card previews: what is actually inside each library ─────────────────────
 // The eight cards on /discover were eight identical white rectangles carrying a
@@ -95,11 +100,11 @@ const PREVIEWS = {
     ),
   }),
   'community-prompts': () => ({
-    meta: `${COMMUNITY_PROMPTS.length} prompts`,
+    meta: `${PROMPT_COUNT} prompts`,
     node: (
       <div className="scp-lines" aria-hidden="true">
-        {COMMUNITY_PROMPTS.slice(0, 3).map((p, i) => (
-          <span className="scp-line" key={p.id || i}>{p.title || p.name || p.label}</span>
+        {PROMPT_PREVIEW_TITLES.map((title) => (
+          <span className="scp-line" key={title}>{title}</span>
         ))}
       </div>
     ),
