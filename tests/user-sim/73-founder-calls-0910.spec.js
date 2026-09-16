@@ -190,7 +190,15 @@ test.describe('a new account starts empty', () => {
         await expect(page.locator('.proj-card', { hasText: 'Default Project' })).toHaveCount(0)
 
         // The panel that had never been on a screen.
-        const empty = page.locator('.sec.uh .card').filter({ hasText: 'No projects yet' })
+        //
+        // Selected on `.uh-empty`, which is the panel's own class, rather than
+        // on the shared `.card`. It was a card until the 2026-09-16 overhaul —
+        // a centred, filled, rounded container with a circular tinted icon
+        // badge on it, which is the stock first-run screen and one of the
+        // reasons the founder called this surface AI-generated. `.card` was
+        // never what this test was about: everything below reads the panel's
+        // words, its two links and its control, and all of those are the same.
+        const empty = page.locator('.sec.uh .uh-empty').filter({ hasText: 'No projects yet' })
         await expect(empty).toBeVisible()
 
         // IT SAYS WHAT TO DO NEXT, and the two things it names are real routes
@@ -277,13 +285,29 @@ test.describe('a new account starts empty', () => {
       ).toBeLessThanOrEqual(1)
     }
 
-    // The decoration above it is decoration: it must not be announced.
-    const svgHidden = await page.evaluate(() => {
-      const card = [...document.querySelectorAll('.sec.uh .card')]
-        .find((c) => c.textContent.includes('No projects yet'))
-      return card.querySelector('svg')?.getAttribute('aria-hidden')
+    // THE PANEL ANNOUNCES ITS WORDS AND NOTHING ELSE.
+    //
+    // This read `card.querySelector('svg')?.getAttribute('aria-hidden')` and
+    // asserted 'true' — which pinned the folder mark's aria-hidden and, without
+    // meaning to, pinned the mark itself: delete the glyph and the expression
+    // is `undefined`, so the test went red for the decoration being GONE rather
+    // than for it being announced. The overhaul on 2026-09-16 deleted it (a
+    // tinted circle carrying a glyph that was hidden from assistive technology
+    // precisely because it said nothing), so the assertion is stated as the
+    // property it was always after, in a form that survives either answer:
+    // every graphic in this panel is hidden, however many there are.
+    //
+    // The count comes back with it so a selector that stops matching cannot
+    // report the panel clean by reading nothing.
+    const marks = await page.evaluate(() => {
+      const panel = [...document.querySelectorAll('.sec.uh div, .sec.uh section')]
+        .find((el) => el.className.includes('uh-empty') && el.textContent.includes('No projects yet'))
+      if (!panel) return null
+      const graphics = [...panel.querySelectorAll('svg, img, [role="img"]')]
+      return { found: graphics.length, announced: graphics.filter((g) => g.getAttribute('aria-hidden') !== 'true').length }
     })
-    expect(svgHidden, 'the empty state’s folder mark is announced as a graphic').toBe('true')
+    expect(marks, 'the empty state panel itself is not on the page').not.toBeNull()
+    expect(marks.announced, `${marks.announced} of the empty state’s ${marks.found} graphic(s) are announced`).toBe(0)
 
     await context.close()
   })
@@ -344,7 +368,7 @@ test.describe('a new account starts empty', () => {
     await expect(dialog).toHaveCount(0)
     await expect(page.locator('.uh-grid .proj-card', { hasText: 'Brand v1' })).toHaveCount(1)
     // The empty state is gone now that it is not true any more.
-    await expect(page.locator('.sec.uh .card').filter({ hasText: 'No projects yet' })).toHaveCount(0)
+    await expect(page.locator('.sec.uh .uh-empty').filter({ hasText: 'No projects yet' })).toHaveCount(0)
 
     await context.close()
   })
@@ -429,7 +453,7 @@ test.describe('an account that already has a Default Project keeps it', () => {
       await expect(card.locator('.uh-parts-label')).toHaveText('All four parts')
 
       // The empty state must NOT be on this page: it is not true here.
-      await expect(page.locator('.sec.uh .card').filter({ hasText: 'No projects yet' })).toHaveCount(0)
+      await expect(page.locator('.sec.uh .uh-empty').filter({ hasText: 'No projects yet' })).toHaveCount(0)
 
       await context.close()
     })
