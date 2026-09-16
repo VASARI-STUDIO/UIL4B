@@ -20,6 +20,60 @@ file layout would make it useless as a record.
 
 ## Unreleased
 
+### The repository went public, and what that cost
+
+**Two more decisions, later the same day.** The repo was made public so GitHub
+Actions would be free — public repositories get unlimited standard-runner
+minutes, which retires the billing block that had stopped CI since 4 September.
+
+| # | Decision | Ours? |
+|---|---|---|
+| 4 | **Anything sensitive moves to local-only.** Prompted by his own review: *"review whats in the public repo as this is now public, anything sensative should be stored locally."* Seven files untracked across #477 and #478 | Yes |
+| 5 | **Purge the history too**, after being told the notes had been public for months and nothing secret was ever exposed | **His call, against our recommendation** |
+
+**The audit came back clean where it counts.** No API keys, no tokens, no private
+keys, no customer data. Every `sk_live_` and `whsec_` hit was a literal `...`
+placeholder in `.env.example` or a checklist in the reviewer agent. The one real
+key — the Firebase web API key in `src/utils/firebase.js` — is public by design
+and correctly documented as such; the same key appears in a spec and was
+confirmed identical by hash rather than assumed.
+
+**What was genuinely exposed was prose**: the engineering backlog, the owner's
+to-do list, his proposals and marketing strategy. The effort that kept the
+backlog out of the browser — the admin gate, the dynamic import, the signed-out
+chunk walk — protected it from visitors to the site and never protected it from
+GitHub, where it had been readable since #170.
+
+### The history rewrite, and the storage spike it caused
+
+All 854 commits were rewritten with `git filter-repo` and force-pushed. Verified
+before pushing rather than after: the rewritten tip's **tree hash was identical**
+to the tip it replaced, so the rewrite changed history and not one byte of code.
+Content removal was proved at blob level with a working positive control — 16
+blobs in the backup carried the owner-actions text, 0 in the rewritten repo.
+
+**The force-push had a consequence nobody costed.** 262 branches were rewritten
+in one `git push --mirror`, GitHub sent Vercel a push event for each, and Vercel
+queued a preview deployment for every branch. Each deployment stores its own copy
+of the site build and all twelve serverless functions, which is the deployment
+and function storage spike that followed. **Deleting the stale branches first —
+which was the approved plan — would have avoided it.** Preserving them looked
+like the less destructive choice and was the more expensive one.
+
+**Two residues that cannot be fixed from here**, both now owner actions:
+`refs/pull/*` holds the pre-rewrite commits for all 478 pull requests and only
+GitHub can clear them; and the ~262 preview deployments have to be deleted in
+the Vercel dashboard.
+
+### Gitignored is not disposable
+
+The seven local-only files exist on disk and nowhere else, by design. Within an
+hour of being untracked, a subagent ran a clean that removes ignored files and
+deleted all seven — the engineering backlog and the owner's to-do list included.
+They were restored from the pre-purge backup mirror. `git clean -fdx` is now
+forbidden in this repository, and the reason is written where agents will read
+it before the cleanup, not after.
+
 ### Founder decisions — 2026-09-16
 
 | # | Decision | Ours? |
