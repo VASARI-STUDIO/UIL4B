@@ -1,7 +1,7 @@
 name: CI
 
-# Runs the project's real quality gates — the same commands documented in
-# docs/reference/build-and-verify.md, run the same way. No secrets required:
+# Runs the project's real quality gates — the same commands README.md's Verify
+# section documents, run the same way. No secrets required:
 # everything below runs offline against a throwaway "demo-uil4b" Firebase
 # project and a local Playwright-driven preview server.
 on:

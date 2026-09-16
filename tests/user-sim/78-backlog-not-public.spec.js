@@ -11,9 +11,9 @@
 //   GET /assets/Admin-*.js      200   names pipeline-DUbq1XL3.js
 //   GET /assets/pipeline-*.js   200   824,007 bytes / 319,711 gzip
 //
-// It carried the literal string `allow create: if true` — the unfixed Firestore
-// rule docs/OWNER-ACTIONS.md is still asking the founder to close — 23 mentions
-// of firestore.rules and 3 permission-denied diagnostics. #420 put it behind a
+// It carried the literal string `allow create: if true` — the feedback rule
+// that #472 has since closed in firestore.rules — 23 mentions of
+// firestore.rules and 3 permission-denied diagnostics. #420 put it behind a
 // dynamic import, which changed WHEN a browser fetched it and nothing about WHO
 // could. The board now reads GET /api/ai?backlog=1 behind requireAdmin().
 //

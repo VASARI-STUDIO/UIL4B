@@ -1,4 +1,0 @@
-interface:
-  display_name: "UIL4B Brand Design"
-  short_description: "Evolve UIL4B's distinctive product and sales identity"
-  default_prompt: "Use $uil4b-brand-design to strengthen this UIL4B experience without generic AI-SaaS styling."

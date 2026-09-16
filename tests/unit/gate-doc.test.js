@@ -2,6 +2,7 @@
 // gate requires, and for four years' worth of agents it is the FIRST thing read
 // when a run looks wrong. That gives it an unusual property: a false statement
 // in it does not merely fail to help, it actively manufactures a NO-GO.
+// (Local-only since 2026-09-16 — see NO_DOC below for what that does here.)
 //
 // WHAT THIS GUARDS. The gate table used to hardcode exact test totals, and it
 // drifted four separate times — 269/25, a projection of 520/240, 571/291 while
@@ -27,6 +28,18 @@ const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 
 const DOC = 'docs/reference/build-and-verify.md'
 const SUITE_README = 'tests/user-sim/README.md'
+
+// ── docs/reference/build-and-verify.md IS LOCAL-ONLY SINCE 2026-09-16 ───────
+// The repository is public and the gate document went out of it with the rest
+// of the engineering references (.gitignore carries the decision). Every test
+// below that reads it SKIPS WITH A STATED REASON where it is absent and runs in
+// full where it is present — it must not go quietly green, because "no row
+// declares a test total" is trivially true of a table that is not there. The
+// assertions that read only tests/user-sim/README.md or scripts/prerender.mjs
+// are code in every checkout and still run everywhere.
+const NO_DOC = !fs.existsSync(path.join(process.cwd(), DOC))
+  && `${DOC} is not in this checkout — it is local-only, by the founder decision of `
+  + '2026-09-16 recorded in .gitignore — so the gate it states cannot be checked here.'
 
 // The live part of the doc: everything a reader is meant to check a run against.
 function liveGateDoc() {
@@ -57,7 +70,7 @@ const rowFor = (command) => {
   return hit
 }
 
-test('every gate command is in the table — none has been dropped', () => {
+test('every gate command is in the table — none has been dropped', { skip: NO_DOC }, () => {
   const commands = ['npx eslint .', 'npm run build', 'npm run test:unit',
     'npm run test:rules', 'npm run test:users']
   const table = gateRows().map((r) => r.command).join('\n')
@@ -67,7 +80,7 @@ test('every gate command is in the table — none has been dropped', () => {
   }
 })
 
-test('THE ONE THAT MATTERS: no row declares an expected test total', () => {
+test('THE ONE THAT MATTERS: no row declares an expected test total', { skip: NO_DOC }, () => {
   // This is the drift, restated as a rule. "682 tests", "355 tests across 37
   // spec files", "342 pass, 13 skipped", "24 tests" — every one of those was in
   // this table at some point, and every one of them went stale without failing
@@ -85,7 +98,7 @@ test('THE ONE THAT MATTERS: no row declares an expected test total', () => {
   }
 })
 
-test('the unit row still demands zero failures AND zero skips', () => {
+test('the unit row still demands zero failures AND zero skips', { skip: NO_DOC }, () => {
   // Zero skips is not pedantry: a skip in the unit suite means dist/ is missing,
   // i.e. a bare `npx vite build` ran instead of `npm run build`, i.e. the
   // prerender never ran. Removing "0 skipped" would hide that entirely.
@@ -96,14 +109,14 @@ test('the unit row still demands zero failures AND zero skips', () => {
     'the unit gate must require 0 SKIPPED — a skipped unit test means dist/ is missing and the prerender never ran')
 })
 
-test('the rules and acceptance rows still demand zero failures', () => {
+test('the rules and acceptance rows still demand zero failures', { skip: NO_DOC }, () => {
   for (const command of ['npm run test:rules', 'npm run test:users']) {
     assert.match(rowFor(command).condition, /0 failures/,
       `\`${command}\` must state 0 failures as its pass condition`)
   }
 })
 
-test('THE OTHER ONE THAT MATTERS: the build row demands the prerender line', () => {
+test('THE OTHER ONE THAT MATTERS: the build row demands the prerender line', { skip: NO_DOC }, () => {
   // `npm run build` is vite build PLUS scripts/prerender.mjs. A bare
   // `npx vite build` writes dist/ and prints nothing, so the printed line is the
   // ONLY evidence the prerender ran at all — without it, a prerender that
@@ -115,20 +128,26 @@ test('THE OTHER ONE THAT MATTERS: the build row demands the prerender line', () 
     'the build gate must quote the prerender line verbatim enough to be recognised in a build log')
 })
 
-test('the prerender line the doc quotes is the line the script actually prints', () => {
+test('the prerender script still announces itself with the line the gate looks for', () => {
+  // Code, in every checkout, so it runs everywhere: README.md's Verify section
+  // and the gate doc both tell a reader to look for this line, and a build that
+  // stopped printing it would ship green with the prerender silently skipped.
+  const script = read('scripts/prerender.mjs')
+  assert.match(script, /prerender: wrote /,
+    'scripts/prerender.mjs must still announce itself — the gate tells readers to look for that line')
+  assert.match(script, /route shells \+ a noindex 404 shell/,
+    'scripts/prerender.mjs no longer prints the line the gate quotes')
+})
+
+test('the prerender line the doc quotes is the line the script actually prints', { skip: NO_DOC }, () => {
   // The doc quoting a line the build no longer emits would be worse than not
   // quoting one: an agent would go looking for it, not find it, and conclude the
   // build was broken. This pins the two together.
-  const script = read('scripts/prerender.mjs')
-  assert.match(script, /prerender: wrote /,
-    'scripts/prerender.mjs must still announce itself — the gate doc tells readers to look for that line')
-  assert.match(script, /route shells \+ a noindex 404 shell/,
-    'scripts/prerender.mjs no longer prints the line the gate doc quotes')
   assert.match(rowFor('npm run build').condition, /prerender: wrote /,
     'the gate doc must quote the prerender line as the script prints it')
 })
 
-test('the build gate does not pin a route-shell COUNT', () => {
+test('the build gate does not pin a route-shell COUNT', { skip: NO_DOC }, () => {
   // The line is load-bearing; the number in it is not. Which routes get a shell
   // is decided by the sitemap, and tests/unit/prerender-routes.test.js fails if
   // the sitemap, routeMetaMap.js and vercel.json stop agreeing. That is the
@@ -140,7 +159,7 @@ test('the build gate does not pin a route-shell COUNT', () => {
     'Quote the line with N unpinned — prerender-routes.test.js owns the route set.')
 })
 
-test('the lint ceiling is stated once and the prose agrees with the table', () => {
+test('the lint ceiling is stated once and the prose agrees with the table', { skip: NO_DOC }, () => {
   // The warning ceiling IS allowed to be a number: work may not raise it, and a
   // run that comes in under it is good news rather than a false alarm. But it is
   // written twice — in the table and in the paragraph that lists the rules — and
@@ -174,7 +193,10 @@ test('every spec file the live docs name actually exists', () => {
   // into a claim about a file that is not there.
   const present = new Set(fs.readdirSync(path.join(process.cwd(), 'tests/user-sim'))
     .filter((f) => f.endsWith('.spec.js')))
-  for (const [source, body] of [[DOC, liveGateDoc()], [SUITE_README, read(SUITE_README)]]) {
+  // The suite README is in every checkout; the gate doc is read only where it is.
+  const sources = [[SUITE_README, read(SUITE_README)]]
+  if (!NO_DOC) sources.push([DOC, liveGateDoc()])
+  for (const [source, body] of sources) {
     // `NN-name.spec.js` in the "adding a persona" instructions is a template,
     // not a claim about a file, so only real numbered filenames are checked.
     for (const named of body.match(/\b\d\d-[\w-]+\.spec\.js/g) ?? []) {

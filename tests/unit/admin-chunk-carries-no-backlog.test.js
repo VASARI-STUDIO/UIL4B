@@ -34,8 +34,8 @@
 //     GET /assets/pipeline-*.js   200   824,007 bytes / 319,711 gzip
 //
 // The last file contained the literal string `allow create: if true` — the
-// unfixed Firestore rule docs/OWNER-ACTIONS.md is still asking the founder to
-// close. The guard's own CONTROL was asserting the leak was present. Static
+// feedback rule that #472 has since closed in firestore.rules. The guard's own
+// CONTROL was asserting the leak was present. Static
 // edge or dynamic edge decides WHEN a browser fetches the bytes and has nothing
 // to say about WHO may fetch them; a static asset is served to everybody.
 //

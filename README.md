@@ -2,27 +2,28 @@
 
 The operating workspace for UI system creation — build, organize, validate, and export interface foundations without tab-hopping. Create colour palettes, generate tint scales, check contrast, build gradients, pair fonts, design UI components, convert images, extract video frames, and export production-ready CSS, all in the browser.
 
-The product is organised around three surfaces: **Create** (build), **Discover** (browse community + curated external resources), and **Learn** (understand). See [`docs/reference/positioning.md`](docs/reference/positioning.md) for the canonical story.
+The product is organised around three surfaces: **Create** (build), **Discover** (browse community + curated external resources), and **Learn** (understand). The canonical story is `docs/reference/positioning.md`, which is local-only (see below); `src/data/positioning.js` carries the same lines as code.
 
-Current direction lives in [`CLAUDE.md`](CLAUDE.md) (Direction). Active work,
-blockers and known-unfixed bugs live in `src/data/pipeline.js`; founder-only
-console and credential work lives in `docs/OWNER-ACTIONS.md`; shipped history and
-the founder decisions behind it live in [`CHANGELOG.md`](CHANGELOG.md). Do not
-use historical commits or closed audit prose as a parallel backlog.
+Current direction lives in `CLAUDE.md` (Direction). Active work, blockers and
+known-unfixed bugs live in `src/data/pipeline.js`; founder-only console and
+credential work lives in `docs/OWNER-ACTIONS.md`; shipped history and the
+founder decisions behind it live in `CHANGELOG.md`. All four are local-only
+(see below). Do not use historical commits or closed audit prose as a parallel
+backlog.
 
 > **Some of those files are deliberately not in this repository.** It went public
 > on 2026-09-16, and on the same day the founder decided that what had been
-> written for an internal audience should stay on his machine:
-> `docs/OWNER-ACTIONS.md`, `docs/PROPOSALS.md`, `docs/MARKETING.md`,
-> `docs/qa/defect-register-2026-08.md`, `src/data/pipeline.js` and
-> `src/data/moduleBoard.js`. The reason differs by file and is worth being
-> straight about. **`OWNER-ACTIONS.md` is a security call:** it is a live
-> inventory of what is not yet locked down — which rules are unpublished, which
-> keys are unrestricted, which webhook points at the wrong place — and publishing
-> that is publishing a worklist for somebody else. The rest is **commercial
-> caution**: an unreleased roadmap, a market plan and a list of bugs we know
-> about. Nothing in them is exploitable; he would just rather they were not the
-> first thing you read. `.gitignore` carries the decision in full. The project
+> written for an internal audience should stay on his machine — three cuts, each
+> recorded in `.gitignore` with its reason: the engineering boards
+> (`src/data/pipeline.js`, `src/data/moduleBoard.js`); his own documents
+> (`docs/OWNER-ACTIONS.md`, `docs/PROPOSALS.md`, `docs/MARKETING.md`,
+> `docs/qa/defect-register-2026-08.md`); and then the working notes, the agent
+> tooling and the release record (`CLAUDE.md`, `PRODUCT.md`, `DESIGN.md`,
+> `CHANGELOG.md`, `.claude/`, `docs/reference/`, the Markdown under
+> `docs/design/`, `docs/research/`, `docs/build-plan/`, `brand/email/`). The
+> application source is open; how the business is run, and the method behind
+> it, is his. Source comments still cite those documents by path — they are
+> citations of files on his machine, not links you can follow here. The project
 > builds, lints and tests green without any of them.
 
 **Live:** [uil4b.com](https://uil4b.com)
@@ -30,8 +31,8 @@ use historical commits or closed audit prose as a parallel backlog.
 ## Tools
 
 The canonical structure, routes and Soon-vs-live status live in
-[`docs/build-plan/tool-tree.md`](docs/build-plan/tool-tree.md). This is the short
-public summary.
+`src/data/toolTree.js`; the written tool tree, `docs/build-plan/tool-tree.md`,
+is local-only. This is the short public summary.
 
 ### Colour
 
@@ -64,7 +65,7 @@ The whole group carries `soon: true` in `src/data/toolTree.js`: it is badged
 ### Discover & Learn
 
 - **Prompt Library** — personal + community AI prompt library with Pro-gated community prompts, popular/new sorting, and contributor submissions (+25 AI generations for approved prompts)
-- **Discover** — the community & external-resource hub. Six of its eight groups are live (Palette Library, Gradient Library, Font Gallery, Icon Library, Prompt Library, Curated Resources); Inspiration and Collections are still Soon. Replaces the old "Library" framing — see [`docs/reference/discover.md`](docs/reference/discover.md)
+- **Discover** — the community & external-resource hub. Six of its eight groups are live (Palette Library, Gradient Library, Font Gallery, Icon Library, Prompt Library, Curated Resources); Inspiration and Collections are still Soon. Replaces the old "Library" framing (`docs/reference/discover.md`, local-only)
 - **Learn** — live, with five published reference guides at `/learn/<slug>`: colour contrast and the WCAG thresholds, modular type scales, colour spaces for interface work, dark and light themes, and choosing a brand colour. Neutral and factual by founder decision, not how-to guides for our own tools. Two of the eight roadmap topics are delivered; the old `/docs-*` URLs redirect to `/learn`. The live list is `src/data/learnIndex.js` — read it rather than this sentence
 
 ## Features
@@ -83,7 +84,7 @@ The whole group carries `soon: true` in `src/data/toolTree.js`: it is badged
   > marks the **design system book** and the **brand guidelines** `pro: true`,
   > `proOnlyFormats()` returns both, and `/plans` and the homepage price panel
   > both print them as what Pro adds. The claim here was founder-approved on
-  > 2026-08-20 (see `docs/reference/positioning.md`); the two Pro documents
+  > 2026-08-20 (see `docs/reference/positioning.md`, local-only); the two Pro documents
   > shipped afterwards. Three live surfaces now describe the entitlement one
   > way and two documents the other. `docs/OWNER-ACTIONS.md` §2.3 — that file is
   > local-only, so the question as it was put to the founder is on his machine;
@@ -107,8 +108,9 @@ The whole group carries `soon: true` in `src/data/toolTree.js`: it is badged
 
 ## Project Structure
 
-Canonical detail (pages, contexts, the `/api` function budget) lives in
-[`docs/reference/architecture.md`](docs/reference/architecture.md).
+Canonical detail (pages, contexts, the `/api` function budget) is in
+`docs/reference/architecture.md`, which is local-only; the tree below and
+`src/App.jsx` are what a clone has.
 
 ```
 api/                  Vercel serverless functions (Stripe, support, admin verification)
@@ -158,11 +160,12 @@ Use `npm run build`, not bare `npx vite build`: several unit tests in
 smaller test count. (This line used to say "four". It is six, and counting them
 here just means the number goes stale again — the files are the answer.)
 
-What each gate must satisfy is in
-[`docs/reference/build-and-verify.md`](docs/reference/build-and-verify.md) —
-that file is the only place it is recorded. It states the gate as a **property**
-(0 errors, 0 failures, 0 skipped) rather than an expected test count; #312
-removed the counts after they drifted four times.
+What each gate must satisfy: lint **0 errors**; build passes **and prints its
+prerender line** (`prerender: wrote N route shells + a noindex 404 shell`);
+unit **0 failures, 0 skipped**; rules and acceptance **0 failures**. The gate is
+stated as a **property** rather than an expected test count; #312 removed the
+counts after they drifted four times. The full gate document,
+`docs/reference/build-and-verify.md`, is local-only.
 
 ### Environment Variables
 
