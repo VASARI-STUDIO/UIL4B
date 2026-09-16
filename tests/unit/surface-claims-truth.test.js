@@ -17,13 +17,31 @@
 // need to know" is puffery, not a claim, and nothing here tries to score it.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 import { EXPORT_FORMATS, unbuiltFormats } from '../../src/config/exportFormats.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
-import { NEXT_TODO } from '../../src/data/pipeline.js'
 import { isSoonRoute } from '../../src/utils/routeMeta.js'
+
+// ── src/data/pipeline.js IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
+// The repository is public and the backlog's notes are candid prose written
+// for us, so the founder keeps the file on his machine and out of every clone.
+// .gitignore carries the decision. It is imported here rather than at the top
+// because a static import of an absent module takes the WHOLE file down, and
+// the other forty assertions in it have nothing to do with the backlog.
+//
+// The one test that reads it SKIPS WITH A REASON when it is not here, out
+// loud, rather than passing on an empty array — a queue with no rows in it
+// satisfies "no row contradicts the page" perfectly and means nothing.
+const PIPELINE = new URL('../../src/data/pipeline.js', import.meta.url)
+const HAS_PIPELINE = fs.existsSync(fileURLToPath(PIPELINE))
+const NO_PIPELINE = !HAS_PIPELINE
+  && 'src/data/pipeline.js is not in this checkout — it is local-only, by the founder decision of '
+  + '2026-09-16 recorded in .gitignore — so the backlog row this reads cannot be looked up here.'
+const NEXT_TODO = HAS_PIPELINE ? (await import('../../src/data/pipeline.js')).NEXT_TODO : []
 
 // Comments here quote the sentences they explain — every deletion below is
 // documented beside the place it happened — so an unstripped read would find
@@ -168,20 +186,33 @@ test('every Settings destination /info names exists under that name in Settings.
   }
 })
 
-test('/info does not promise a Pro preview or a cancellation the product does not have', () => {
+test('/info does not promise a Pro preview the product does not have', () => {
   assert.ok(INFO.includes('Pro unlocks'), 'the Free vs Pro sentence is gone; this check is reading nothing')
   assert.ok(!/advanced previews/i.test(INFO),
     '/info says Pro unlocks "advanced previews" again. Nothing gates a preview on Pro — see the '
     + 'Pro deltas Plans.jsx derives — and the phrase names a feature that does not exist.')
+})
+
+// Split from the assertion above when pipeline.js became local-only, so that
+// losing the backlog costs exactly the one check that needs it and the "Pro
+// unlocks" sweep keeps running everywhere.
+test('/info does not promise a cancellation the portal cannot do', { skip: NO_PIPELINE }, () => {
+  assert.ok(INFO.includes('Pro unlocks'), 'the Free vs Pro sentence is gone; this check is reading nothing')
 
   // The cancellation flow is an owner action in the Stripe dashboard, tracked
   // as a pipeline row. While it is not done, the portal the Cancel plan button
   // opens has nothing to cancel in it, and /plans deleted "cancel any time"
   // on exactly that basis. Read the row so finishing it retires this.
   const row = NEXT_TODO.find((t) => t.id === 'stripe-retention-config')
-  if (row && row.status !== 'done') {
+  // Not `if (row)`. The row being absent from a backlog that IS here means it
+  // was renamed or removed, and a check that quietly does nothing in that case
+  // is the failure mode this whole file is about.
+  assert.ok(row,
+    'stripe-retention-config is not in NEXT_TODO any more. If the owner action was finished and the '
+    + 'row archived, delete this test and the sentence may come back; if it was renamed, follow it.')
+  if (row.status !== 'done') {
     assert.ok(!/\bcancel\b/i.test(INFO),
-      `/info tells the visitor they can cancel from Settings, and pipeline.js still has `
+      '/info tells the visitor they can cancel from Settings, and pipeline.js still has '
       + `stripe-retention-config at '${row.status}' — the portal has no cancellation flow. `
       + 'Finish the owner action (or mark the row done) before the sentence comes back.')
   }
