@@ -10,8 +10,8 @@
 // transitive @google-cloud/firestore (5.8 MB) and google-gax (8.7 MB), and one
 // of which deliberately carries src/data/pipeline.js (992 KB) so the
 // engineering backlog stays behind admin auth instead of being served as a
-// public static asset. The founder is on Vercel's free plan and saw deployment
-// storage and function storage spike. Of those 63 commits, 12 touched only
+// public static asset. Deployment storage and function storage spiked against
+// the plan's limits. Of those 63 commits, 12 touched only
 // tests/, docs/, CHANGELOG.md or CLAUDE.md and changed nothing a visitor could
 // load.
 //

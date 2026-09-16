@@ -1,18 +1,20 @@
-// Firestore rules tests for the PENDING, FOUNDER-GATED diff.
+// Firestore rules tests for the two 2026-09-06 findings, run against the rules
+// WITH both fixes applied to an in-memory copy.
 //
 //   npm run test:rules
 //
-// firestore-rules.test.js runs against `firestore.rules` as published. This file
-// runs against the same file with the two pending security fixes applied to an
-// in-memory copy (tests/rules/pending-firestore-rules.mjs), because
-// `firestore.rules` is founder-gated AND the environment's classifier refuses to
-// stage it — so the diff ships in the pull request body and the founder applies
-// it by hand. Handing someone a rules diff nobody has ever run is not a fix, it
-// is a suggestion.
+// firestore-rules.test.js runs against `firestore.rules` as it stands. This file
+// runs against the same file with the two fixes applied to an in-memory copy
+// (tests/rules/pending-firestore-rules.mjs). It was written while they were
+// still a diff waiting on the founder — `firestore.rules` is founder-gated, so
+// the diff shipped in a pull request body for him to apply by hand — and it
+// stays because handing someone a rules diff nobody has ever run is not a fix,
+// it is a suggestion. Both fixes have since landed in `firestore.rules` itself
+// (the feedback rule in #472), so what this suite proves now is that they STAY.
 //
-// The two findings, from the 2026-09-06 engineering review:
-//   [firestore-feedback-create-open-to-anyone]  P1 — `allow create: if true`
-//   [firestore-signed-in-writes-unbounded]      P2 — no shape/size/id bounds
+// The two findings, from the 2026-09-06 engineering review, both closed:
+//   [firestore-feedback-create-open-to-anyone]  P1 — the feedback create rule
+//   [firestore-signed-in-writes-unbounded]      P2 — shape/size/id bounds
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // EVERY REFUSAL IS PAIRED WITH A POSITIVE CONTROL ON THE SAME SEEDED DOCUMENT

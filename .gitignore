@@ -72,7 +72,7 @@ __*.py
 #
 # Two concrete reasons, not a preference:
 #   1. `npx skills add` symlinks .claude/skills/<name> -> .agents/skills/<name>
-#      with an ABSOLUTE target (/d/00_Main_Workspace/...). Committed, those
+#      with an ABSOLUTE target (a path on one machine). Committed, those
 #      links resolve to nothing on any other machine and in CI.
 #   2. Git on Windows handles symlinks poorly — without core.symlinks=true they
 #      land as plain text files containing a path, which is worse than absent
@@ -190,17 +190,13 @@ docs/backlog/archive-done-2026-09-16.js
 #
 #   docs/OWNER-ACTIONS.md
 #
-#     THE ONE THAT MATTERS. It is not a plan. It is a current-state inventory of
-#     what is NOT yet secured, written to be actioned, and every row names the
-#     console page and the exact step: the feedback queue is open to anyone on
-#     the internet until the merged rules are published, Storage is switched off
-#     and `storage.rules` unpublished, the Stripe webhook posts to the homepage
-#     instead of `/api/stripe-webhook`, the Customer Portal has never been set
-#     up, the public Google Fonts key is unrestricted. It quotes the live
-#     `firestore.rules` diffs and it carries the founder's admin address.
-#
+#     THE ONE THAT MATTERS. It is not a plan. It is the founder's own console
+#     and credential worklist, row by row, with the exact step beside each.
 #     In a private repository that is a to-do list. In a public one it is a
 #     worklist, and nothing guarantees the founder is the first to read it.
+#     What its rows say is not repeated here, and that is the point of this
+#     block: an earlier version of this comment itemised them, which was the
+#     disclosure one level up, and it is gone.
 #
 #   docs/PROPOSALS.md
 #   docs/MARKETING.md
@@ -243,3 +239,95 @@ docs/OWNER-ACTIONS.md
 docs/PROPOSALS.md
 docs/MARKETING.md
 docs/qa/defect-register-2026-08.md
+
+# THE WORKING NOTES, THE AGENT TOOLING AND THE RELEASE RECORD — LOCAL ONLY.
+# On disk, out of git.
+#
+# The same repository, the same day, the third and widest cut. The founder,
+# 2026-09-16, verbatim: "can we remove claude files from the repo? and other
+# files that expose the full innerworkings of our business. yes the app can be
+# open source but the know how and usage of it in the UIL4B web format is
+# owned by us" — and, of the Markdown: "these are in the app for our usage but
+# dont need to be in the deployed files, review every deployed file and make
+# sure the only ones that are publicly visable is whatever needs to be for the
+# actual running of the app."
+#
+# That is the line, and it is a simple one: the SOURCE is public; how the
+# business is run, how he works, and the method behind the design are not.
+# Everything below fails the "needed to run the app" test — the build, the
+# lint and the unit suite were run against a fresh clone without any of it.
+#
+#   CLAUDE.md                     how he works, in his words; the agent contract
+#   PRODUCT.md                    the Impeccable product record
+#   DESIGN.md                     the generated token mirror Impeccable reads,
+#                                 and the design reasoning around it
+#   CHANGELOG.md                  the release record — his decision, over
+#                                 keeping it public: it carries his verbatim
+#                                 quotes, the pricing calls and the commercial
+#                                 reasoning behind every release
+#   .mcp.json                     which MCP servers the agents run
+#   .claude/                      the five agent roles and the seven project
+#                                 skills — the method itself. The whole
+#                                 directory, which also covers the third-party
+#                                 skill lines above and the worktrees.
+#   docs/reference/               the fifteen engineering and process references
+#   docs/design/*.md              the homepage spec, the hero review, the
+#                                 founder's motion reference, the deferral design
+#   docs/research/                the homepage pattern research
+#   docs/build-plan/              the tool tree
+#   brand/email/                  the mailbox kit — his signature, the unsent
+#                                 templates, and a README that named what the
+#                                 mail path still lacked
+#   scripts/design-md.mjs         the DESIGN.md generator; its prose IS the file
+#   tests/unit/claude-md-external-assets.test.js
+#   tests/unit/design-md-mirrors-css.test.js
+#                                 two tests whose whole subject is a file above;
+#                                 neither can run where the file is not
+#
+# WHAT STAYS, AND WHY. docs/design/*.patch stay tracked: scripts/gated-patches.mjs,
+# tests/rules/ and three unit tests read them, so without them the rules suite
+# does not run. They are code, not notes. tests/ stays whole: the suite is the
+# product's contract and is what proves the app works. README.md stays because
+# a public repository needs one. package.json keeps `design:md`; the generator
+# it names is on the founder's machine.
+#
+# THEY ARE STILL ON DISK AND MUST STAY THERE. `git rm --cached` untracked every
+# one of them byte-identical (SHA-256 checked before and after), and a second
+# copy of each sits outside the repository. Deleting them is not what these
+# lines mean.
+#
+# WHAT HAPPENS WITHOUT THEM: tests/unit/gate-doc.test.js reads
+# docs/reference/build-and-verify.md and tests/unit/moderation-role.test.js
+# reads docs/reference/human-validation-zones.md — each SKIPS WITH A STATED
+# REASON where the document is absent and runs in full where it is present,
+# exactly as the three OWNER-ACTIONS tests above do. The halves of those tests
+# that read code rather than the document still run everywhere.
+# tests/unit/doc-file-references.test.js scans the documents a clone has, which
+# is now README.md, and its controls were re-baselined to that set — not
+# loosened: every name below is held in LOCAL_ONLY_DOCS and proved ignored.
+#
+# SOURCE COMMENTS STILL CITE THESE FILES BY PATH — `Docs: design-language-v2.md`
+# in global.css, `human-validation-zones.md` beside the founder-gated files, and
+# so on, in some sixty files. Those are citations of documents on the founder's
+# machine, left as they are: rewriting a hundred comments to say "local-only"
+# says nothing this block does not already say, and a reader who does not have
+# the file should ask him rather than reconstruct it.
+#
+# THIS DOES NOT REMOVE THEM FROM GIT HISTORY. Every commit up to this one still
+# carries all of them. The history rewrite is a separate operation, approved,
+# and scheduled to run after this lands; the full path list it needs is in the
+# pull request that made this change.
+CLAUDE.md
+PRODUCT.md
+DESIGN.md
+CHANGELOG.md
+.mcp.json
+.claude/
+docs/reference/
+docs/design/*.md
+docs/research/
+docs/build-plan/
+brand/email/
+scripts/design-md.mjs
+tests/unit/claude-md-external-assets.test.js
+tests/unit/design-md-mirrors-css.test.js

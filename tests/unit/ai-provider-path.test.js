@@ -515,8 +515,8 @@ const { describeProvider, providerBadgeStyle } = await import('../../src/utils/a
 const srcFile = (f) => stripJs(fs.readFileSync(path.join(process.cwd(), 'src', f), 'utf8'))
 
 // ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
-// The repository is public and that document is the current-state list of what
-// is not yet secured, so the founder keeps it on his machine and out of every
+// The repository is public and that document is the founder's own console and
+// credential worklist, so he keeps it on his machine and out of every
 // clone (.gitignore carries the decision and the reason). The one test below
 // that reads it SKIPS WITH A REASON where it is absent and runs in full where
 // it is present — it must not go quietly green, because "the document does not

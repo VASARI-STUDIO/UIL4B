@@ -159,11 +159,11 @@ function refuseDirty(verdict) {
 
 /* ── 3 · Java, before the emulator fails obscurely ──────────────────────── */
 
-const PORTABLE_JDK = path.join(
-  'C:', 'Users', 'dylan', 'AppData', 'Local', 'Temp', 'claude',
-  'd--00-Main-Workspace-01-projects-01-active-04-uil4b-com',
-  'e47983ef-6d41-48d3-9e04-bda7d53d1272', 'scratchpad', 'jdk21', 'jdk-21.0.12.1+1',
-)
+// A JDK 21 that is not on PATH, named through the environment rather than
+// written here: where a JDK sits is a fact about one machine, and this file is
+// in a public repository. UIL4B_JDK21_HOME is read first, then JAVA_HOME, and
+// neither is required — a Java 21 on PATH wins outright.
+const PORTABLE_JDK = process.env.UIL4B_JDK21_HOME || process.env.JAVA_HOME || ''
 
 /** The major version of whatever `java` is on PATH, or null if there is none. */
 function javaMajor(javaHome) {
@@ -179,14 +179,14 @@ function javaMajor(javaHome) {
 }
 
 /**
- * The emulator needs a JDK 21, and this machine's `java` is 8. Left alone that
- * surfaces as a Java stack trace about an unsupported class file version, which
- * says nothing about what to do. So it is checked here, by name.
+ * The emulator needs a JDK 21, and the `java` on PATH may be older. Left alone
+ * that surfaces as a Java stack trace about an unsupported class file version,
+ * which says nothing about what to do. So it is checked here, by name.
  */
 function resolveJavaHome() {
   const onPath = javaMajor(null)
   if (onPath !== null && onPath >= 21) return { ok: true, home: null, version: onPath }
-  const portable = existsSync(PORTABLE_JDK) ? javaMajor(PORTABLE_JDK) : null
+  const portable = PORTABLE_JDK && existsSync(PORTABLE_JDK) ? javaMajor(PORTABLE_JDK) : null
   if (portable !== null && portable >= 21) {
     return { ok: true, home: PORTABLE_JDK, version: portable, borrowed: true, found: onPath }
   }
@@ -420,9 +420,8 @@ async function main() {
     out()
     out(`${v.why}.`)
     out()
-    out('There is a Java 21 sitting on this machine already. Point at it and run')
-    out('the command again:')
-    out(`   JAVA_HOME="${java.portable}" npm run apply:gated -- --yes`)
+    out('Point JAVA_HOME (or UIL4B_JDK21_HOME) at a JDK 21 and run the command again:')
+    out(`   JAVA_HOME="${java.portable || '<path to a JDK 21>'}" npm run apply:gated -- --yes`)
     out()
     out('The changes ARE in your files. To undo them:')
     out(`   ${undoCommand()}`)

@@ -1038,12 +1038,12 @@ function timingSafeEqual(a, b) {
 //   GET /assets/Admin-*.js        200   names pipeline-DUbq1XL3.js
 //   GET /assets/pipeline-*.js     200   824,007 bytes, 319,711 gzip, no auth
 //
-// That file contained the literal string `allow create: if true` — the exact
-// unfixed Firestore rule docs/OWNER-ACTIONS.md is still asking the founder to
-// close (that register followed the boards out of the repository on 2026-09-16,
-// for the same reason one level up: it is a list of what is NOT yet secured, and
-// this paragraph is the argument for why such a list must not ship to a client
-// or sit in a public tree — see .gitignore) — 23 mentions of firestore.rules,
+// That file contained the literal string `allow create: if true` — the feedback
+// rule that #472 has since closed in firestore.rules (docs/OWNER-ACTIONS.md,
+// the founder's own worklist, followed the boards out of the repository on
+// 2026-09-16 for the same reason one level up: this paragraph is the argument
+// for why a worklist must not ship to a client or sit in a public tree — see
+// .gitignore) — 23 mentions of firestore.rules,
 // 3 permission-denied diagnostics and
 // 246 mentions of the founder. #420 moved it behind a dynamic import, which
 // fixed WHEN it was fetched and did nothing at all about WHO could fetch it.

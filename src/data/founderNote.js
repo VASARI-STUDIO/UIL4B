@@ -32,10 +32,10 @@
 // free account" is useExportGate.js, and the feedback link is in the Support
 // column of this very footer on every page.
 //
-// The AI sentence follows the founder's own standing rule, verbatim: "when
-// telling about AI usage dont tell them we use free plans that is a deterent
-// just tell them AI usage is lowered while in Beta, if there is enough support
-// for this then we will upgrade plans api and MCPs to improve the app."
+// The AI sentence follows the founder's own standing instruction on how AI
+// usage is described to a reader: lowered while the product is in beta, lifted
+// if there is enough support. The instruction is his, recorded in a local-only
+// document, and is not reproduced here.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE PLACEHOLDER REMOVES ITSELF

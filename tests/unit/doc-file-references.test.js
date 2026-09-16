@@ -17,19 +17,21 @@
 //      `tokens.css` or `Node.js` in backticks is a generic noun, an aspiration
 //      or another project's file, and guessing which is which is how a guard
 //      turns into noise that gets deleted.
-//   2. TOMBSTONES ARE ALLOWED, ONE BY ONE. `CHANGELOG.md` names seven deleted
-//      files *correctly*, because it is the record of their deletion — the
-//      authority map says in as many words not to repair those. So a document
-//      may name a file that is gone when naming it is the point; every such
-//      pair is listed below with the reason, and a NEW dangling path still
-//      fails. The list is the honest cost of the rule.
+//   2. TOMBSTONES ARE ALLOWED, ONE BY ONE. A document may name a file that is
+//      gone when naming it is the point — the record of a deletion, the row
+//      explaining why a branch cannot be rebased — and the authority map says in
+//      as many words not to repair those. Every such pair is listed below with
+//      the reason, and a NEW dangling path still fails. The list is the honest
+//      cost of the rule.
 //
 // ── AND IT ASKS GIT, NOT THE DISK. Changed 2026-09-16 ───────────────────────
 //
 // Some files this repository is responsible for are deliberately NOT in it. The
-// internal boards went first (2026-09-16, #477) and the founder's own documents
-// followed the same day; .gitignore carries both decisions and the reasons.
-// They are on the founder's machine and in no clone.
+// internal boards went first (2026-09-16, #477), the founder's own documents
+// followed the same day (#478), and then the working notes, the agent tooling
+// and the release record — CLAUDE.md, CHANGELOG.md and every Markdown file
+// under docs/ — in a third cut; .gitignore carries all three decisions and the
+// reasons. They are on the founder's machine and in no clone.
 //
 // That splits "does this file exist?" in two, and the two answers disagree for
 // exactly those files: on his disk they are there, on a public runner they are
@@ -189,16 +191,45 @@ const TOMBSTONES = new Map(Object.entries({
 // ── The documents that are on one machine and in no clone ───────────────────
 //
 // Local-only by founder decision, 2026-09-16; .gitignore carries which and why.
-// Listed here BY NAME so the exemption below is four documents rather than a
-// rule of the shape "anything absent is forgiven", which would quietly excuse
-// the next document somebody deletes by accident. The test under it asserts
-// that git really does ignore each one, so a name left here after its
+// Listed here BY NAME so the exemption below is a named set of documents rather
+// than a rule of the shape "anything absent is forgiven", which would quietly
+// excuse the next document somebody deletes by accident. The test under it
+// asserts that git really does ignore each one, so a name left here after its
 // .gitignore line went would fail rather than sit dormant.
+//
+// The third cut took CLAUDE.md and every Markdown document under docs/, so in a
+// clone the scan is README.md alone. That is the honest state of the public
+// tree, and the controls below are sized to it rather than to the twenty-three
+// documents the walk used to reach.
 const LOCAL_ONLY_DOCS = new Set([
+  // #478 — the founder's own documents.
   'docs/OWNER-ACTIONS.md',
   'docs/PROPOSALS.md',
   'docs/MARKETING.md',
   'docs/qa/defect-register-2026-08.md',
+  // The third cut — the working notes and the engineering references.
+  'CLAUDE.md',
+  'docs/build-plan/tool-tree.md',
+  'docs/design/anti-slop-and-hero-2026-08.md',
+  'docs/design/firebase-deferral.md',
+  'docs/design/homepage-spec-2026-08.md',
+  'docs/design/motion-reference-2026-08-23.md',
+  'docs/reference/architecture.md',
+  'docs/reference/build-and-verify.md',
+  'docs/reference/color-system-m3.md',
+  'docs/reference/constants-and-config.md',
+  'docs/reference/css-conventions.md',
+  'docs/reference/design-language-v2.md',
+  'docs/reference/director.md',
+  'docs/reference/discover.md',
+  'docs/reference/doc-authority-map.md',
+  'docs/reference/git-workflow.md',
+  'docs/reference/growth-persuasion.md',
+  'docs/reference/human-validation-zones.md',
+  'docs/reference/murphys-law.md',
+  'docs/reference/positioning.md',
+  'docs/reference/tech-stack.md',
+  'docs/research/homepage-patterns-2026-08.md',
 ])
 
 // A path git IGNORES is not a claim about the tree, and there are now two kinds
@@ -262,19 +293,22 @@ test('every repo path a document names in backticks is in the repository', () =>
 // would leave the test above green and meaningless.
 test('the scan actually reaches the documents — positive control', () => {
   const docs = ourDocs()
-  assert.ok(docs.includes('docs/reference/doc-authority-map.md'),
-    'the walk missed docs/reference/doc-authority-map.md')
   assert.ok(docs.includes('README.md'), 'the walk missed README.md')
-  assert.ok(docs.length >= 20, `only ${docs.length} documents scanned; the tree holds more`)
+  // Since the third cut of 2026-09-16 a clone holds one scannable document,
+  // README.md, and the ignore-filter test below holds the scanned set EQUAL to
+  // the tracked set. So this is a floor against an empty walk, not a count.
+  assert.ok(docs.length >= 1, `only ${docs.length} documents scanned; the tree holds more`)
 
   const rows = referencedPaths()
-  assert.ok(rows.length >= 200,
+  // README.md alone names some twenty repo-rooted paths in backticks. Ten is
+  // the floor: an extractor that has stopped seeing prose returns none.
+  assert.ok(rows.length >= 10,
     `only ${rows.length} path references found; the extractor has stopped seeing them`)
-  // A path several documents certainly name. It is itself local-only since
+  // A path README.md certainly names. It is itself local-only since
   // 2026-09-16, which is the point: this asserts the EXTRACTOR still reads
   // prose, and prose is present in every checkout whether the file is or not.
   assert.ok(rows.some((r) => r.ref === 'src/data/pipeline.js'),
-    'no document was seen naming `src/data/pipeline.js`, which several do')
+    'no document was seen naming `src/data/pipeline.js`, which README.md does')
 })
 
 // The ignore filter is the one thing standing between this file and scanning
@@ -332,7 +366,9 @@ test('every tombstone is still needed and still named', () => {
 // a check-ignore that answers yes to everything, and every dangling path in
 // every document would be excused at once. Added 2026-09-16.
 test('git check-ignore still says NO to tracked files — negative control', () => {
-  const controls = ['README.md', 'CLAUDE.md', 'tests/unit/doc-file-references.test.js']
+  // Three tracked files, one of them Markdown under tests/. CLAUDE.md used to be
+  // a control and is local-only since the third cut of 2026-09-16.
+  const controls = ['README.md', 'tests/user-sim/README.md', 'tests/unit/doc-file-references.test.js']
   const wrongly = [...ignoredByGit(controls)]
   assert.deepEqual(wrongly, [],
     'check-ignore reports a TRACKED file as ignored, so "deliberately absent" has '

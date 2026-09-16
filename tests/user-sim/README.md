@@ -27,7 +27,8 @@ sign-off line — *use the next free number, `15-`* — pointed at a number that
 been taken for months. A hand-maintained inventory of a directory has no
 feedback loop: nothing fails when a file is added and the list is not, so
 eventually nothing matches. Same fault, and the same fix, as the test counts
-that used to be in `docs/reference/build-and-verify.md`.
+that used to be in `docs/reference/build-and-verify.md` (local-only since
+2026-09-16).
 
 Two files share the `11-` prefix. That is untidy but harmless — Playwright keys
 on the path, not the number. **For a new file, take the next number after the
@@ -36,7 +37,8 @@ is a rule that stays true rather than a number that goes stale.
 
 There is no test count recorded anywhere, here or in the gate doc. The gate is
 **0 failures**, and the only skips are `12-ui-system-builder.spec.js` — see
-`docs/reference/build-and-verify.md`.
+`docs/reference/build-and-verify.md` (local-only since 2026-09-16; the gate is
+restated in the top-level `README.md`, under *Verify*).
 
 ## Run it
 

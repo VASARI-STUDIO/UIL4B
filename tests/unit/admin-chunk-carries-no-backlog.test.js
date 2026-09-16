@@ -34,8 +34,8 @@
 //     GET /assets/pipeline-*.js   200   824,007 bytes / 319,711 gzip
 //
 // The last file contained the literal string `allow create: if true` — the
-// unfixed Firestore rule docs/OWNER-ACTIONS.md is still asking the founder to
-// close. The guard's own CONTROL was asserting the leak was present. Static
+// feedback rule that #472 has since closed in firestore.rules. The guard's own
+// CONTROL was asserting the leak was present. Static
 // edge or dynamic edge decides WHEN a browser fetches the bytes and has nothing
 // to say about WHO may fetch them; a static asset is served to everybody.
 //
@@ -511,7 +511,7 @@ test('THE ONE THAT MATTERS: no file in the build output carries any internal boa
     'an internal board is in the build output, which means it is served to anyone who asks — no '
     + 'login, no cookie, no Authorization header. These modules hold permission-denied diagnostics, '
     + 'unshipped plans, security findings, per-module health and instructions addressed to the '
-    + 'owner, including the literal text of an unfixed Firestore rule. They must not be client '
+    + 'owner, including the literal text of a Firestore rule as it stood before it was closed. They must not be client '
     + 'modules at ALL: not a static import, not a dynamic one. Admin.jsx reads them from '
     + 'GET /api/ai?backlog=1 through useInternalBoards(); if you need the data in the browser, add '
     + 'it to that response.')

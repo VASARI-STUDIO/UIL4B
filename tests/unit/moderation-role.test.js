@@ -390,15 +390,30 @@ test('the triage vocabulary has exactly one definition', () => {
   assert.deepEqual([...FEEDBACK_STATUSES], ['new', 'in-progress', 'done'])
 })
 
-test('the two founder-gated files stay founder-gated, and AuthContext stays untouched', () => {
+// ── docs/reference/human-validation-zones.md IS LOCAL-ONLY SINCE 2026-09-16 ──
+// The gate list went out of the public repository with the other engineering
+// references (.gitignore carries the decision). The test that reads it SKIPS
+// WITH A STATED REASON where it is absent and runs in full where it is present;
+// the AuthContext half below it is code, in every checkout, and runs everywhere.
+const GATED_DOC = 'docs/reference/human-validation-zones.md'
+const NO_GATED_DOC = !fs.existsSync(path.join(process.cwd(), GATED_DOC))
+  && `${GATED_DOC} is not in this checkout — it is local-only, by the founder decision `
+  + 'of 2026-09-16 recorded in .gitignore — so the gate list it states cannot be checked here.'
+
+test('the two founder-gated files stay founder-gated', { skip: NO_GATED_DOC }, () => {
   // Approving a change does not un-gate the file. api/verify-admin.js and
   // firestore.rules are both applied by `npm run apply:gated` now, and the next
   // agent to reach for either one still needs the founder's say-so, so the doc
   // must still list all three.
-  const gated = read('docs/reference/human-validation-zones.md')
+  const gated = read(GATED_DOC)
+  assert.ok(gated.length > 1000,
+    `${GATED_DOC} read as ${gated.length} bytes — an empty document cannot be the gate list`)
   assert.match(gated, /api\/verify-admin\.js/, 'verify-admin is no longer founder-gated')
   assert.match(gated, /firestore\.rules/, 'firestore.rules is no longer founder-gated')
   assert.match(gated, /src\/contexts\/AuthContext\.jsx/, 'AuthContext is no longer founder-gated')
+})
+
+test('AuthContext stays untouched by the role', () => {
   // AuthContext was NOT part of the role at all: it is read through a hook that
   // goes straight to auth.currentUser, exactly so this file did not have to
   // change and no branch would ever have to try to stage it.
