@@ -140,3 +140,40 @@ screenshots/
 *.psd
 *.sketch
 *.fig
+
+# THE INTERNAL BOARDS AND THEIR ARCHIVE — LOCAL ONLY. On disk, out of git.
+#
+# This repository went PUBLIC on 2026-09-16, to use free GitHub Actions minutes.
+# That made the engineering backlog world-readable, and the backlog is not a
+# feature list: its `note` fields are candid internal prose written for us —
+# security findings that are still open, instructions addressed to the owner,
+# plans that were rejected and the reason, and the founder's own decisions in
+# his own words.
+#
+# The founder chose, 2026-09-16, to KEEP THE REPOSITORY PUBLIC and take the
+# notes out of it, rather than take the repository private. He accepted the cost
+# in the same breath: the admin Pipeline and Board tabs have no data in
+# production, because these three files are what they read.
+#
+#   src/data/pipeline.js                     the live backlog, 39 rows
+#   src/data/moduleBoard.js                  per-module health and owner actions
+#   docs/backlog/archive-done-2026-09-16.js  the 172 archived finished rows
+#
+# THEY ARE STILL ON DISK AND MUST STAY THERE. `git rm --cached` untracked them
+# byte-identical; the founder's local checkout still serves both boards from
+# them, and several tests still run in full wherever they are present. Deleting
+# them is not what these lines mean.
+#
+# WHAT HAPPENS WITHOUT THEM: serveBacklog() in api/ai.js catches
+# ERR_MODULE_NOT_FOUND for exactly these two specifiers and answers 501 with
+# `localOnly: true`, and both Admin tabs render that as a plain sentence saying
+# the boards are local-only — never as an empty board, which would read as "no
+# work left". Tests that need them SKIP WITH A STATED REASON rather than passing
+# quietly on nothing.
+#
+# THIS DOES NOT REMOVE THEM FROM GIT HISTORY. Every commit up to this one still
+# carries them, and they stay readable to anyone who clones. Rewriting history
+# is a separate decision and has not been taken.
+src/data/pipeline.js
+src/data/moduleBoard.js
+docs/backlog/archive-done-2026-09-16.js

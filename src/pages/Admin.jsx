@@ -580,6 +580,18 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
 // passing quietly. Its previous form walked the chunk graph and asserted the
 // backlog was reachable only by a dynamic edge; it was green through both
 // disclosures above, because the edge kind was never the question.
+//
+// ── AND SINCE 2026-09-16, IN PRODUCTION, THERE IS NOTHING TO FETCH ─────────
+//
+// The repository went public for free GitHub Actions minutes, so the founder
+// took both modules out of it and kept them on his machine (.gitignore carries
+// the decision and its cost). serveBacklog() cannot import what is not there,
+// so it answers 501 with `localOnly: true`, and BoardGate below prints that as
+// a sentence. THE SHAPE OF THE FIX IS THE POINT: the two states this page must
+// never collapse together are "the queue is empty" and "the data is somewhere
+// else", and every branch from the route down to the paragraph keeps them
+// apart. On the founder's own checkout the files are present and both tabs
+// render exactly as they always did.
 let internalBoardsPromise = null
 function loadInternalBoards() {
   if (!internalBoardsPromise) {
@@ -591,6 +603,14 @@ function loadInternalBoards() {
       if (!token) throw new Error('not signed in')
       const res = await fetch('/api/ai?backlog=1', { headers: { Authorization: `Bearer ${token}` } })
       const data = await res.json().catch(() => ({}))
+      // ── NOT DEPLOYED IS NOT REFUSED, AND NEITHER IS AN ERROR ─────────────
+      // 501 + `localOnly` is serveBacklog() saying the two modules are not in
+      // this deployment: the founder took them out of the public repository on
+      // 2026-09-16 and kept them on his machine. Nothing failed, so it is
+      // returned rather than thrown — the tabs render it as a sentence of its
+      // own, because "could not load" would send the reader to look for a
+      // fault and an empty board would say the backlog is finished.
+      if (res.status === 501 && data.localOnly) return { localOnly: true, reason: data.error || '' }
       // 404 is what requireAdmin answers a caller who is not the administrator
       // — deliberately, so a prober learns nothing — so it is reported here as
       // the refusal it is rather than as a missing page.
@@ -607,7 +627,13 @@ function useInternalBoards() {
   useEffect(() => {
     let alive = true
     loadInternalBoards().then(
-      (data) => { if (alive) setBoards(data) },
+      (data) => {
+        // The endpoint's own sentence goes to the console. The tab prints the
+        // short version; this is where the detail lands for whoever is looking
+        // at devtools wondering why their board is a paragraph.
+        if (data?.localOnly) console.info('[admin] /api/ai?backlog=1:', data.reason || 'the internal boards are local-only')
+        if (alive) setBoards(data)
+      },
       (err) => {
         // Named in words rather than swallowed, and the ENDPOINT is named too.
         // A board that silently rendered zero rows would read as "there is
@@ -620,21 +646,38 @@ function useInternalBoards() {
     )
     return () => { alive = false }
   }, [])
-  return { boards, loadError }
+  // `localOnly` is lifted out of the payload rather than left for each tab to
+  // find, so neither of them can render `boards` as data by forgetting it was
+  // a state rather than a board.
+  return { boards, loadError, localOnly: Boolean(boards?.localOnly) }
 }
 
-/** Shared waiting / refusal states, so the two boards cannot drift apart. */
-function BoardGate({ loadError, what }) {
+/** Shared waiting / refusal / not-deployed states, so the two boards cannot drift apart. */
+function BoardGate({ loadError, localOnly, what }) {
+  // THREE STATES, AND THE ORDER IS THE POINT. "Not deployed" is read first
+  // because it is neither a wait nor a failure, and rendering it as either
+  // would be wrong in a different direction each time: a spinner that never
+  // resolves, or an error that sends the reader hunting for a fault that is
+  // not there. The fourth possibility — an empty board — is deliberately not
+  // offered anywhere in this component: zero rows reads as "there is no work
+  // left", which is the one thing these two tabs must never say.
+  const subject = what.charAt(0).toUpperCase() + what.slice(1)
   return (
     <div className="adm-section">
       <div className="adm-card">
         <div className="adm-empty">
-          {loadError
-            ? <>Could not load {what} ({loadError}). This data is no longer shipped to the
-                browser — it was readable by anyone — so it reads GET /api/ai?backlog=1, which
-                only a verified administrator may call. Check you are signed in as the founder;
-                `vite preview` and `vite dev` serve no functions, so it cannot answer there.</>
-            : <>Loading {what}…</>}
+          {localOnly
+            ? <>{subject} is not deployed. src/data/pipeline.js and src/data/moduleBoard.js are
+                kept on the founder&rsquo;s machine and out of this public repository, because their
+                notes are candid prose written for us — so this build has nothing to read. This is
+                NOT an empty backlog: the rows exist, on the checkout that has the files. Founder
+                decision, 2026-09-16; .gitignore records it.</>
+            : loadError
+              ? <>Could not load {what} ({loadError}). This data is no longer shipped to the
+                  browser — it was readable by anyone — so it reads GET /api/ai?backlog=1, which
+                  only a verified administrator may call. Check you are signed in as the founder;
+                  `vite preview` and `vite dev` serve no functions, so it cannot answer there.</>
+              : <>Loading {what}…</>}
         </div>
       </div>
     </div>
@@ -652,7 +695,7 @@ const HEALTH_COLOR = { good: 'var(--ok)', watch: 'var(--warn)', blocked: 'var(--
 function ModuleBoard() {
   const [area, setArea] = useState('all')
   const [search, setSearch] = useState('')
-  const { boards, loadError } = useInternalBoards()
+  const { boards, loadError, localOnly } = useInternalBoards()
 
   // Defaulted, because this arrives as a JSON body rather than a module whose
   // exports the bundler proved exist.
@@ -667,7 +710,7 @@ function ModuleBoard() {
 
   // After the hooks, never before them — an early return above useState would
   // change the hook order between renders.
-  if (!boards || loadError) return <BoardGate loadError={loadError} what="the module board" />
+  if (!boards || loadError || localOnly) return <BoardGate loadError={loadError} localOnly={localOnly} what="the module board" />
 
   return (
     <div className="adm-section">
@@ -770,10 +813,10 @@ const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', par
 // component renders, so the board and its guard still read one source.
 function PipelineBoard() {
   const [todoFilter, setTodoFilter] = useState('all')
-  const { boards, loadError } = useInternalBoards()
+  const { boards, loadError, localOnly } = useInternalBoards()
   const todoFilters = ['all', 'doing', 'todo', 'review', 'partial', 'blocked', 'deferred', 'done']
 
-  if (!boards || loadError) return <BoardGate loadError={loadError} what="the backlog" />
+  if (!boards || loadError || localOnly) return <BoardGate loadError={loadError} localOnly={localOnly} what="the backlog" />
 
   // Defaulted, because this arrives as a JSON body rather than a module whose
   // exports the bundler proved exist. A response missing a block renders an
