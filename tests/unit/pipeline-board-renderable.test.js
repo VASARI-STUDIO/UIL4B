@@ -18,8 +18,28 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-import { PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../../src/data/pipeline.js'
+// ── src/data/pipeline.js IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
+// The repository is public and the backlog's notes are candid prose written
+// for us, so the founder keeps the file on his machine and out of every clone
+// (.gitignore carries the decision). Imported conditionally rather than at the
+// top, because a static import of an absent module takes the whole file down
+// and two of the four tests below read nothing but Admin.jsx.
+//
+// The DATA-SIDE tests skip WITH A REASON when it is absent. They must not run
+// on empty arrays: "no workstream belongs to a stage the board has no column
+// for" is trivially true of no workstreams, and a green line that asserts
+// nothing is worse here than a missing one, because this file exists precisely
+// because a row silently disappeared from the board once.
+const PIPELINE = new URL('../../src/data/pipeline.js', import.meta.url)
+const HAS_PIPELINE = fs.existsSync(fileURLToPath(PIPELINE))
+const NO_PIPELINE = !HAS_PIPELINE
+  && 'src/data/pipeline.js is not in this checkout — it is local-only, by the founder decision of '
+  + '2026-09-16 recorded in .gitignore — so there are no rows here to check the board against.'
+const { PIPELINE_STAGES = [], PIPELINE_PROCESSES = [], NEXT_TODO = [] } = HAS_PIPELINE
+  ? await import('../../src/data/pipeline.js')
+  : {}
 
 const ADMIN = fs.readFileSync(path.join(process.cwd(), 'src/pages/Admin.jsx'), 'utf8')
 
@@ -38,7 +58,10 @@ function objectKeys(name) {
   return [...m[1].matchAll(/(\w[\w-]*)\s*:/g)].map(x => x[1])
 }
 
-test('every workstream sits in a stage the board actually renders a column for', () => {
+test('every workstream sits in a stage the board actually renders a column for', { skip: NO_PIPELINE }, () => {
+  assert.ok(PIPELINE_PROCESSES.length > 5,
+    `only ${PIPELINE_PROCESSES.length} workstreams were read — the board data is not being loaded, `
+    + 'so "none of them is orphaned" is true of nothing')
   const columns = new Set(PIPELINE_STAGES.map(s => s.id))
   const orphans = PIPELINE_PROCESSES
     .filter(p => !columns.has(p.stage))
@@ -48,7 +71,10 @@ test('every workstream sits in a stage the board actually renders a column for',
     + `${orphans.join('\n  ')}\n  valid stages: ${[...columns].join(', ')}`)
 })
 
-test('every queue item carries a status the board can label AND filter to', () => {
+test('every queue item carries a status the board can label AND filter to', { skip: NO_PIPELINE }, () => {
+  assert.ok(NEXT_TODO.length > 5,
+    `only ${NEXT_TODO.length} queue items were read — the board data is not being loaded, so `
+    + '"every status is labelled and filterable" is true of no statuses at all')
   const labels = new Set(objectKeys('TODO_STATUS_LABEL'))
   const filters = new Set(arrayLiteral('todoFilters').filter(f => f !== 'all'))
 

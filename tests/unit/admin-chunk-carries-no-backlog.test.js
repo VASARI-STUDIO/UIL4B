@@ -139,6 +139,33 @@
 //   · MODULE_BOARD dropped from the /api/ai?backlog=1 payload -> the
 //     still-has-a-source control red, which is the half that stops this file
 //     being satisfied by deleting the founder's board.
+//
+// ═══════════════════════════════════════════════════════════════════════════
+// SINCE 2026-09-16 THE BOARDS ARE NOT IN EVERY CHECKOUT, AND THAT IS HANDLED
+// EXPLICITLY RATHER THAN QUIETLY
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// The repository went public for free GitHub Actions minutes, so the founder
+// took both modules out of it and kept them on his own machine; .gitignore
+// carries the decision, its date and its cost.
+//
+// EVERY NEEDLE IN THIS FILE IS DERIVED FROM THOSE MODULES. With them absent the
+// classifier finds no internal boards, the extractor produces no needles, and
+// "no file in the build output carries any internal board text" becomes true of
+// a search for nothing — a green line asserting the absence of an empty set.
+// That is the precise failure this file was rewritten twice to stop, so where a
+// test cannot be run it is SKIPPED WITH A REASON and says so in the output.
+//
+// WHAT STILL RUNS WITH THEM ABSENT, and it is not nothing: the threshold band,
+// the "every module is classified or declared unreadable" sweep, the build
+// being real, the Admin chunk's size ceiling, and — the load-bearing one — the
+// control that the founder still HAS both boards, which reads Admin.jsx and
+// api/ai.js as source and needs no data at all. A src/ module importing an
+// absent board would also fail `vite build` outright in the build control
+// below, so the graph-level statement is not lost either, only relocated.
+//
+// ON THE FOUNDER'S OWN CHECKOUT NOTHING ABOUT THIS FILE CHANGES: the files are
+// there, every skip is off, and the guarantee is exactly the one it was.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -169,6 +196,18 @@ const INTERNAL_THRESHOLD = 3
 
 // The boards this change knows about. The detector must find exactly these.
 const DECLARED_INTERNAL = ['moduleBoard.js', 'pipeline.js']
+
+// ...unless they are not in this checkout at all. Local-only since 2026-09-16 —
+// see the block at the top of this file. Any of them missing is enough: a run
+// that could see one board and not the other would report partial coverage as
+// full, so the skip is all-or-nothing and names what it could not find.
+const ABSENT_BOARDS = DECLARED_INTERNAL.filter((rel) => !fs.existsSync(path.join(DATA_DIR, rel)))
+const NO_BOARDS = ABSENT_BOARDS.length > 0
+  && `the internal boards are not in this checkout (missing: ${ABSENT_BOARDS.map((r) => `src/data/${r}`).join(', ')}). `
+  + 'They are local-only, by the founder decision of 2026-09-16 recorded in .gitignore. Every needle '
+  + 'in this test is derived from their rows, so with them gone this would search the build output '
+  + 'for nothing and pass — which is the exact shape of the two misses this file was rewritten for. '
+  + 'Run it on a checkout that has them to get the guarantee.'
 
 // Modules the classifier cannot import, with the reason. `.jsx` is a blanket
 // rule rather than nine filenames — Node cannot load JSX without a transform,
@@ -320,7 +359,7 @@ const adminChunk = (all) => all.find((c) => /(^|\/)Admin-[^/]+\.js$/.test(c.file
 // THE CONTROLS
 // ═══════════════════════════════════════════════════════════════════════════
 
-test('CONTROL: the classifier finds every internal board in src/data, and nothing else', async () => {
+test('CONTROL: the classifier finds every internal board in src/data, and nothing else', { skip: NO_BOARDS }, async () => {
   const { internal, product, scores } = await classify()
   const found = internal.map((m) => m.rel).sort()
 
@@ -369,7 +408,7 @@ test('CONTROL: every module under src/data is either classified or declared unre
     + 'Remove the exception so they are actually classified.')
 })
 
-test('CONTROL: the scanner finds every needle in the file its needles came from', async () => {
+test('CONTROL: the scanner finds every needle in the file its needles came from', { skip: NO_BOARDS }, async () => {
   const { internal } = await classify()
   const found = await needles()
 
@@ -423,13 +462,39 @@ test('CONTROL: the founder still has both boards, and they are behind the admin 
     assert.match(route, new RegExp(`${name}:`),
       `serveBacklog() does not return ${name}, so the tab that renders it shows nothing.`)
   }
+
+  // ── AND THAT A DEPLOYMENT WITHOUT THE MODULES SAYS SO ────────────────────
+  // This runs even where the boards themselves are absent, and it is the half
+  // that keeps this file honest there. The most convenient way to make every
+  // skip above disappear is to answer 200 with `NEXT_TODO: []` — every test in
+  // this file would go green while the founder's own board read "Next to do
+  // (0)", which is a claim that the work is finished.
+  assert.match(route, /ERR_MODULE_NOT_FOUND/,
+    'api/ai.js no longer tells "the boards are not in this deployment" apart from a real failure. '
+    + 'Since 2026-09-16 the two modules are local-only, so in production the imports throw — and '
+    + 'the only two honest answers are the one it gives (501 + localOnly) or a 500. An empty '
+    + 'backlog is not one of them.')
+  assert.match(route, /localOnly: true/,
+    'serveBacklog() does not answer with `localOnly`, which is the flag both Admin tabs branch on '
+    + 'to print a sentence instead of an empty board.')
+  assert.match(admin, /res\.status === 501 && data\.localOnly/,
+    'Admin.jsx no longer recognises the not-deployed answer, so it falls through to the generic '
+    + '"could not load" path and tells the founder to check he is signed in — for a state that has '
+    + 'nothing to do with his session.')
+  assert.match(admin, /function BoardGate\([^)]*localOnly[^)]*\)/,
+    'BoardGate no longer takes the not-deployed state, so it cannot render it as its own sentence '
+    + 'and the two tabs either spin forever or report a fault that is not there.')
+  assert.equal((admin.match(/localOnly=\{localOnly\}/g) || []).length, 2,
+    'the not-deployed state is passed to BoardGate by fewer than both tabs. PipelineBoard and '
+    + 'ModuleBoard read one payload and must degrade the same way — the module board was the one '
+    + 'the first pass missed, and it is the one a second pass will miss again.')
 })
 
 // ═══════════════════════════════════════════════════════════════════════════
 // THE ASSERTIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
-test('THE ONE THAT MATTERS: no file in the build output carries any internal board text', async () => {
+test('THE ONE THAT MATTERS: no file in the build output carries any internal board text', { skip: NO_BOARDS }, async () => {
   const { files } = await build()
   const all = await needles()
 
@@ -452,7 +517,7 @@ test('THE ONE THAT MATTERS: no file in the build output carries any internal boa
     + 'it to that response.')
 })
 
-test('and the bundler was never even told about them', async () => {
+test('and the bundler was never even told about them', { skip: NO_BOARDS }, async () => {
   // The graph-level statement of the same fact, kept because it names the cause
   // rather than the symptom: a module id is the thing a person greps for when
   // the assertion above goes red and they need to know WHO imported it.
