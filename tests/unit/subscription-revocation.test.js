@@ -131,9 +131,17 @@ test('the client mirror checks the same flag, before the same grace window', () 
 
 test('the webhook does not cancel the Stripe subscription behind the founder', () => {
   // Deliberate: cancelling is an irreversible outward action on a live billing
-  // account, taken off the back of one webhook, and Stripe already cancels on a
-  // chargeback under its own rules. Access stops either way. If this ever
-  // becomes wanted it is a founder decision, not a drive-by.
+  // account, taken off the back of one webhook. If this ever becomes wanted it
+  // is a founder decision, not a drive-by.
+  //
+  // CORRECTION, 2026-09-16: this comment used to add "and Stripe already cancels
+  // on a chargeback under its own rules". It does not. Cancel-on-dispute is a
+  // Billing dashboard SETTING, off unless the account turns it on
+  // (docs.stripe.com/billing/subscriptions/cancel). A disputed subscription
+  // therefore keeps cycling and keeps firing customer.subscription.updated —
+  // which is what made the deleted-user-document wash repeatable rather than a
+  // one-off. Access still stops here, because accessRevoked is what plans.js
+  // reads; the subscription record simply outlives it.
   const hook = fs.readFileSync(path.join(process.cwd(), 'api/stripe-webhook.js'), 'utf8')
     .replace(/\r\n/g, '\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   assert.doesNotMatch(hook, /subscriptions\.(cancel|del)\(/, 'the webhook now cancels subscriptions in Stripe')

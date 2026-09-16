@@ -251,8 +251,15 @@ test('only a healthy status may clear the failure flags', () => {
   // The behavioural counterpart — what writeSubscription actually writes for a
   // past_due subscription — is tests/unit/subscription-period-end.test.js,
   // which calls the webhook's own function with a fake Firestore.
+  // The two statuses moved behind a NAME (subscriptionStatusGrantsAccess) when
+  // the chargeback-wash fix gave them a second caller — the charge check only
+  // spends Stripe calls on a write that could grant. Same two statuses, same
+  // gate; this asserts the predicate's definition and the gate that uses it, so
+  // widening either is still caught.
   const shape = read('api/_lib/billing.js')
-  assert.ok(/const healthy = sub\?\.status === 'active' \|\| sub\?\.status === 'trialing'/.test(shape),
+  assert.ok(/export function subscriptionStatusGrantsAccess\(sub\)\s*\{\s*return sub\?\.status === 'active' \|\| sub\?\.status === 'trialing'/.test(shape),
+    'the healthy-status predicate must still be exactly active|trialing')
+  assert.ok(/const healthy = subscriptionStatusGrantsAccess\(sub\)/.test(shape),
     'subscriptionDocFields must gate the clear on a healthy status')
   assert.ok(/const recovery = healthy/.test(shape),
     'the cleared fields must be conditional on that gate')

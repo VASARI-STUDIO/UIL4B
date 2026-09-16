@@ -56,15 +56,46 @@ service cloud.firestore {
       allow read: if isOwner();
       allow create: if isOwner() && createsNoLockedField();
       allow update: if isOwner() && leavesLockedFieldsUntouched();
-      // Real account deletion now runs server-side (api/delete-account.js) with
-      // the Admin SDK, because it also has to cancel Stripe and reach the sync
-      // subcollection, which a client rule can never delete with its parent.
+      // CLOSED. Real account deletion runs server-side (api/delete-account.js)
+      // with the Admin SDK, because it also has to cancel Stripe and reach the
+      // sync subcollection, which a client rule can never delete with its
+      // parent. Nothing in src/ deletes this document — AuthContext.jsx says so
+      // in as many words ("deleteUser/deleteDoc are deliberately gone") and
+      // every other client path only reads it or merges profile fields onto it.
+      // So this rule never guarded a real delete; it only granted one.
       //
-      // This permission is kept anyway: dropping your own profile can only ever
-      // lose you access, never grant it — every entitlement path re-verifies a
-      // paid Stripe session server-side — and it leaves the owner a way to
-      // clear their own document if the endpoint is ever unavailable.
-      allow delete: if isOwner();
+      // IT WAS KEPT ON A CLAIM THAT IS FALSE FOR SUBSCRIPTIONS. The old comment
+      // here said dropping your own profile "can only ever lose you access,
+      // never grant it". That holds for the one-off LIFETIME entitlement, which
+      // api/checkout-status.js re-proves from the Stripe CHARGE every time. It
+      // does not hold for a subscription:
+      //
+      //   `subscription.accessRevoked` — written by api/stripe-webhook.js when a
+      //   charge is refunded or charged back, and the only thing keeping that
+      //   customer on Free (api/_lib/plans.js) — HAS NO OTHER HOME. It is sticky
+      //   only because every later write is a { merge: true } onto the document
+      //   that carries it. Delete the document and there is nothing to merge
+      //   onto, so the next subscription write recreates it clean.
+      //
+      // The wash: subscribe → dispute the charge (money back, webhook revokes) →
+      // deleteDoc(users/<own uid>) from a browser console with the public
+      // Firebase config → the next renewal webhook, or one GET of
+      // /api/checkout-status with your own session id, rebuilds the document
+      // without the flag and Pro is back. Stripe does NOT cancel a disputed
+      // subscription unless the dashboard's cancel-on-dispute setting is on, so
+      // it keeps cycling and the wash repeats every period.
+      //
+      // WHAT THIS DENIES: a client removing its own users/{uid} document, which
+      // no feature uses. WHAT IT STILL GRANTS: everything else here — read,
+      // create, profile updates, and full read/write (including delete) over the
+      // sync subcollection below. Deleting an ACCOUNT is unaffected; it goes
+      // through /api/delete-account, which holds the Admin SDK and bypasses
+      // these rules entirely.
+      //
+      // The server paths were hardened in the same change and do not rely on
+      // this rule alone: api/_lib/billing.js now reads the subscription's latest
+      // charge before writing a document that grants access.
+      allow delete: if false;
 
       // Sync data subcollection — only the owner
       match /sync/{docId} {

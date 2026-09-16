@@ -239,8 +239,18 @@ export function subscriptionPeriodEnd(sub) {
 // in our favour), and these fields are merged — so a revocation survives every
 // subsequent subscription write, which is the entire point of it being separate
 // from `status`.
+/**
+ * The two Stripe statuses that hand out Pro (api/_lib/plans.js). One
+ * definition, because two callers now branch on it: the document builder below,
+ * which only clears the failure flags on a healthy status, and the charge check
+ * further down, which only spends Stripe calls on a write that could grant.
+ */
+export function subscriptionStatusGrantsAccess(sub) {
+  return sub?.status === 'active' || sub?.status === 'trialing'
+}
+
 export function subscriptionDocFields(sub, now = Date.now()) {
-  const healthy = sub?.status === 'active' || sub?.status === 'trialing'
+  const healthy = subscriptionStatusGrantsAccess(sub)
   const recovery = healthy
     ? { paymentFailed: false, paymentFailedAt: null, hostedInvoiceUrl: null }
     : {}
@@ -257,11 +267,165 @@ export function subscriptionDocFields(sub, now = Date.now()) {
   }
 }
 
-/** Merge the subscription document onto users/{uid}. The one writer. */
-export function writeSubscriptionDoc(db, uid, sub, now = Date.now()) {
+/**
+ * Merge the subscription document onto users/{uid}. The one writer.
+ *
+ * `extra` is how a caller adds the sticky revocation fields that
+ * subscriptionDocFields deliberately refuses to know about. It is null on every
+ * ordinary write, so the document this produces is unchanged for them.
+ */
+export function writeSubscriptionDoc(db, uid, sub, now = Date.now(), extra = null) {
   return db.collection('users').doc(uid).set({
-    subscription: subscriptionDocFields(sub, now),
+    subscription: { ...subscriptionDocFields(sub, now), ...(extra || {}) },
   }, { merge: true })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE MONEY BEHIND A SUBSCRIPTION — asked of Stripe, not of our own document
+// ─────────────────────────────────────────────────────────────────────────────
+// `subscription.accessRevoked` is sticky ONLY because every later write is a
+// { merge: true } onto the document that carries it. That made users/{uid} the
+// flag's single point of failure: while firestore.rules allowed the owner to
+// delete their own profile, a customer could charge back, delete the document,
+// and have the next subscription write rebuild it clean — on Free-to-Pro terms,
+// with the money already returned. The rule is closed now; this is the half
+// that does not depend on it.
+//
+// WHY THE LATEST INVOICE'S CHARGE. It is the same question the one-off LIFETIME
+// path has always asked (lifetimeGrantHealth → chargeIsClean): a Checkout
+// Session's `status` and a Subscription's `status` are both frozen or lagging
+// with respect to the money. Stripe commonly keeps reporting `active` right
+// through a dispute — and, unless the dashboard's cancel-on-dispute setting is
+// switched on, keeps CYCLING the subscription too. The charge is the only object
+// that says where the money actually is.
+//
+// TWO HOPS, and both were chosen against this install rather than from memory.
+// Stripe's Basil release removed `Invoice.charge` and `Invoice.payment_intent`;
+// stripe@22.2.0 pins 2026-05-27.dahlia, two trains past it. What replaced them
+// is `Invoice.payments`, an expandable ApiList<InvoicePayment> whose
+// `payment.payment_intent` is the link (node_modules/stripe/cjs/resources/
+// Invoices.d.ts:353 and InvoicePayments.d.ts). Expanding
+// `latest_invoice.payments` on the subscription and `latest_charge` on the
+// intent keeps every expansion two levels deep — the five-segment path a single
+// expand would need is past Stripe's limit, and a silently unexpanded field here
+// is exactly how the old invoice walk went inert for months.
+export const SUBSCRIPTION_CHARGE_EXPAND = ['latest_invoice.payments']
+
+/**
+ * The payment ids an expanded invoice points at. Pure, so the shape above can be
+ * asserted without Stripe. `is_default` is preferred because Stripe creates that
+ * InvoicePayment when the invoice is finalised and keeps it in step with the
+ * amount due; the others are partial payments.
+ */
+export function invoicePaymentRefs(invoice) {
+  const payments = Array.isArray(invoice?.payments?.data) ? invoice.payments.data : []
+  const chosen = payments.find((p) => p?.is_default) || payments[0] || null
+  const payment = chosen?.payment || null
+  const intent = payment?.payment_intent
+  const charge = payment?.charge
+  return {
+    paymentIntentId: typeof intent === 'string' ? intent : intent?.id || null,
+    chargeId: typeof charge === 'string' ? charge : charge?.id || null,
+    intent: intent && typeof intent === 'object' ? intent : null,
+  }
+}
+
+/** The Charge behind a subscription's latest invoice, or null if there is none. */
+export async function latestSubscriptionCharge(stripe, sub) {
+  const ref = sub?.latest_invoice
+  if (!ref) return null
+  let invoice = ref && typeof ref === 'object' ? ref : null
+  const invoiceId = typeof ref === 'string' ? ref : ref?.id || null
+  if (!invoice?.payments && invoiceId) {
+    invoice = await stripe.invoices.retrieve(invoiceId, { expand: ['payments'] })
+  }
+  const { paymentIntentId, chargeId, intent } = invoicePaymentRefs(invoice)
+  // Already expanded by the caller's own expand — no second round trip.
+  const expanded = chargeForSession({ payment_intent: intent })
+  if (expanded) return expanded
+  // InvoicePayment.payment.charge is only surfaced when the charge has no
+  // PaymentIntent behind it (Stripe's own note on the field).
+  if (chargeId) return await stripe.charges.retrieve(chargeId)
+  if (!paymentIntentId) return null
+  const fresh = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ['latest_charge'] })
+  return chargeForSession({ payment_intent: fresh })
+}
+
+/**
+ * Whether a subscription charge is money we still hold. Pure.
+ *
+ * `chargeIsClean` is the shared definition of a clean charge and is asked first.
+ * What it CANNOT be used for on its own here is the dirty verdict: it also
+ * refuses a partial refund, and on a subscription a partial refund is routinely
+ * a goodwill credit to a customer who is still paying. Revoking Pro over one
+ * would be a worse bug than the one this closes, so only the two conditions the
+ * revocation webhooks themselves act on — a dispute, or a FULL refund
+ * (api/stripe-webhook.js `charge.amount_refunded >= charge.amount`) — count as
+ * dirty.
+ *
+ * The reasons are the webhook's own vocabulary on purpose: a refund writes
+ * `full_refund`, which is the exact string restoreSubscriptionAfterDisputeWon
+ * refuses to lift, so a customer who is refunded AND wins a dispute does not get
+ * access back on a technicality.
+ */
+export function subscriptionMoneyHealth(charge) {
+  if (!charge) return { ok: true, dirty: false, reason: 'no_charge_to_inspect' }
+  if (chargeIsClean(charge)) return { ok: true, dirty: false, reason: null }
+  if (charge.disputed === true) return { ok: false, dirty: true, reason: 'charge_disputed' }
+  const refunded = Number(charge.amount_refunded) || 0
+  const amount = Number(charge.amount) || 0
+  if (charge.refunded === true || (refunded > 0 && refunded >= amount)) {
+    return { ok: false, dirty: true, reason: 'full_refund' }
+  }
+  return { ok: true, dirty: false, reason: 'partial_refund_only' }
+}
+
+/**
+ * The async wrapper. `dirty` and `ok` are separate answers on purpose, and the
+ * two callers treat the gap between them differently:
+ *
+ *   · dirty  — Stripe positively says the money went back. Both callers stamp
+ *              the revocation.
+ *   · !ok and !dirty — the charge could not be read at all. The RECONCILE path
+ *              refuses to write (it is about to grant access on an unverified
+ *              charge, and the webhook remains the primary grant path), while
+ *              the WEBHOOK path writes the ordinary document and logs. Stamping
+ *              a revocation on a Stripe hiccup would drop a paying customer to
+ *              Free, which is the worse of the two errors.
+ */
+export async function subscriptionChargeHealth(stripe, sub) {
+  let charge = null
+  try {
+    charge = await latestSubscriptionCharge(stripe, sub)
+  } catch (err) {
+    return { ok: false, dirty: false, reason: 'charge_unreadable', charge: null, error: err?.message || String(err) }
+  }
+  return { ...subscriptionMoneyHealth(charge), charge }
+}
+
+/**
+ * The sticky fields a charge-driven revocation adds to a subscription write.
+ *
+ * `accessRevokedAt` is deliberately absent. api/stripe-webhook.js stamps it ONCE
+ * inside a transaction, on the transition, because it keys the customer's banner
+ * and re-stamping re-surfaces a notice they have already read — and this write
+ * happens on every subscription event, so it is exactly the caller that must not
+ * touch it. A merge leaves any existing value alone.
+ *
+ * `accessRevokedPaymentIntentId` is only included when the charge names one, for
+ * the same reason: it is what restoreSubscriptionAfterDisputeWon matches on, and
+ * writing null over a good value would strand a customer who later wins.
+ */
+export function subscriptionRevocationStamp(sub, health, now = Date.now()) {
+  const intent = health?.charge?.payment_intent
+  const paymentIntentId = typeof intent === 'string' ? intent : intent?.id || null
+  return {
+    accessRevoked: true,
+    accessRevokedReason: health?.reason || 'charge_disputed',
+    accessRevokedSubscriptionId: sub?.id || null,
+    ...(paymentIntentId ? { accessRevokedPaymentIntentId: paymentIntentId } : {}),
+    updatedAt: now,
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -312,7 +476,7 @@ export async function reconcileSubscriptionCheckout({ stripe, db, uid, session, 
   }
   let sub
   try {
-    sub = await stripe.subscriptions.retrieve(decision.subscriptionId)
+    sub = await stripe.subscriptions.retrieve(decision.subscriptionId, { expand: SUBSCRIPTION_CHARGE_EXPAND })
   } catch (err) {
     // A paid subscription we could not confirm is a customer on Free with money
     // gone — never silent. (The founder's standing rule on empty catches.)
@@ -328,8 +492,43 @@ export async function reconcileSubscriptionCheckout({ stripe, db, uid, session, 
     })
     return { reconciled: false, reason: 'customer_mismatch', isPro: false }
   }
-  await writeSubscriptionDoc(db, uid, sub, now)
-  const isPro = planForSubscription(subscriptionDocFields(sub, now)).id === 'pro'
+  // THE MONEY, not just our own flag. `subscriptionReconcileDecision` above
+  // refuses on `stored.accessRevoked`, and until now that was the ONLY
+  // revocation guard on this path — a flag read off the very document the
+  // customer was allowed to delete. Deleting it made `stored` null, which made
+  // the guard vacuous, and a Stripe subscription that keeps reporting `active`
+  // through a dispute did the rest. So ask Stripe what happened to the charge,
+  // which no client can delete.
+  //
+  // Only for a status that would GRANT: an `incomplete` or `canceled`
+  // subscription reconciles to Free on its own and is not worth two API calls.
+  let health = { ok: true, dirty: false, reason: 'status_grants_nothing', charge: null }
+  if (subscriptionStatusGrantsAccess(sub)) {
+    health = await subscriptionChargeHealth(stripe, sub)
+  }
+  if (!health.ok && !health.dirty) {
+    // Could not read the charge. Refusing leaves a paying customer on Free until
+    // the webhook lands, which is recoverable and loud; writing would grant Pro
+    // on money nobody has verified, which is not.
+    console.error('checkout-status: subscription reconcile refused — the charge behind this subscription could not be read', {
+      uid, sessionId: session?.id, subscriptionId: sub?.id, reason: health.reason, error: health.error || null,
+    })
+    return { reconciled: false, reason: health.reason, isPro: false }
+  }
+
+  // A dirty charge is still WRITTEN DOWN, with the revocation stamped, rather
+  // than skipped. Skipping would leave the document absent and let the next
+  // renewal try again; writing puts the sticky flag back where every later
+  // merge preserves it.
+  const stamp = health.dirty ? subscriptionRevocationStamp(sub, health, now) : null
+  await writeSubscriptionDoc(db, uid, sub, now, stamp)
+  const isPro = planForSubscription({ ...subscriptionDocFields(sub, now), ...(stamp || {}) }).id === 'pro'
+  if (stamp) {
+    console.error('checkout-status: a reconcile rebuilt a subscription whose money had gone back — access stays REVOKED', {
+      uid, sessionId: session?.id, subscriptionId: sub?.id, stripeStatus: sub?.status, reason: health.reason,
+    })
+    return { reconciled: false, reason: health.reason, isPro }
+  }
   console.warn('checkout-status: reconciled a paid subscription the webhook had not applied', {
     uid, sessionId: session?.id, subscriptionId: sub?.id, stripeStatus: sub?.status, reason: decision.reason, isPro,
   })
