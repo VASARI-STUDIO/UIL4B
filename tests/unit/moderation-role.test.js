@@ -911,8 +911,24 @@ test('the founder can actually assign the role from the Users tab', () => {
   assert.match(src, /moderatorAction: 'list'/, 'the roster is never read')
   assert.match(src, /moderatorAction: grant \? 'grant' : 'revoke', targetUid: u\.uid/,
     'the grant/revoke call is gone — the role cannot be handed out')
-  assert.match(src, /\{canAssignModerators\(role\) && <th>Moderator<\/th>\}/,
-    'the Moderator column is no longer gated on the role')
+  // ── THE GATE IS ONE NAMED FACT, AND EVERY SURFACE READS IT ───────────────
+  // This used to pin the literal `{canAssignModerators(role) && <th>Moderator</th>}`,
+  // which is a spelling rather than a property: it went red on 2026-09-16 when
+  // the per-row Moderator column became an Access column with the assignment
+  // moved into the row's detail panel, while the founder-only gating it exists
+  // to guard was intact throughout. The gate is now derived once and read by
+  // name, so what is asserted is that every founder-only surface reads THAT —
+  // which a rename of any of them cannot satisfy by accident.
+  assert.match(src, /const founderView = canAssignModerators\(role\)/,
+    'the founder-only gate is no longer derived from canAssignModerators, so the surfaces below '
+    + 'are gated on something weaker than the signed claim')
+  assert.equal((src.match(/\{founderView && /g) || []).length, 4,
+    'the Access header, the Access cell, the roster line and the moderator-role panel must each sit '
+    + 'behind the founder gate. A count other than four means one of them renders for a moderator, '
+    + 'or one of them was removed')
+  assert.match(src, /founderView && roleEnabled !== false && \(\s*<section className="adm-detail-sec adm-detail-access">/,
+    'the control that hands out the role is rendered without the founder gate, without the probe that '
+    + 'says the route can honour it, or both')
   // The controls are offered to a founder only. A moderator reaching this tab
   // must not even see the affordance, and must not request the roster.
   assert.match(src, /if \(!canAssignModerators\(role\)\) return/,
@@ -937,12 +953,65 @@ test('the surface states what the role withholds, not only what it grants', () =
   assert.match(src, /up to an hour/, 'the revocation delay is hidden from the person doing the revoking')
 })
 
-test('revoking asks first, and the founder is never offered the role', () => {
+test('BOTH directions ask first, and the founder is never offered the role', () => {
+  // ── GRANTING USED TO BE THE UNCONFIRMED ONE ──────────────────────────────
+  // Until 2026-09-16 only revocation asked: "Make moderator" was a single
+  // click that handed somebody the delete button on the feedback and community
+  // queues, and removing them again asked twice. That is backwards. Revoking a
+  // role you granted by mistake does not un-delete what they deleted with it,
+  // and a moderator's ID token stays valid for up to an hour after the
+  // revocation — so the cheap moment to be careful is the grant.
+  //
+  // Both directions now route through one `pendingRole` decision, and this
+  // asserts that neither can be re-wired straight to the write.
   const src = read('src/pages/Admin.jsx')
-  assert.match(src, /setConfirmRevoke\(u\.uid\)/, 'removing a moderator no longer asks for confirmation')
+  assert.match(src, /setPendingRole\(\{ uid: u\.uid, grant: false \}\)/,
+    'removing a moderator no longer asks for confirmation')
+  assert.match(src, /setPendingRole\(\{ uid: u\.uid, grant: true \}\)/,
+    'GRANTING the role no longer asks for confirmation, which is the half that cannot be undone '
+    + 'by clicking again')
+  assert.equal((src.match(/setModerator\(u, /g) || []).length, 1,
+    'the write is reachable from somewhere other than the confirmation step — a row button wired '
+    + 'straight to setModerator() is exactly the defect this test was rewritten for')
+  assert.match(src, /onClick=\{\(\) => setModerator\(u, pending\.grant\)\}/,
+    'the one call site is no longer the confirmation button')
   assert.match(src, /isFounderRow\(u\)/, 'the founder is offered a role that is less than he already has')
   assert.match(src, /const isFounderRow = \(u\) => isAdminEmail\(u\?\.email\)/,
     'the founder row is decided by something other than the shared allowlist helper')
+})
+
+test('the confirmation says what the role reaches, in the words the predicates use', () => {
+  // ── THE DISCLOSURE IS THE FEATURE ────────────────────────────────────────
+  // A confirmation step that asks "are you sure?" and names nothing has only
+  // delayed the click. These three sentences are the prose form of the
+  // predicates in utils/moderation.js, and they are constants precisely so the
+  // paragraph above the table and the dialog at the moment of decision cannot
+  // say two different things about the same grant.
+  const src = read('src/pages/Admin.jsx')
+  for (const [name, needle] of [
+    ['MODERATOR_GRANTS', /const MODERATOR_GRANTS = '[^']*triage and delete feedback[^']*'/],
+    ['MODERATOR_DENIES', /const MODERATOR_DENIES = '[^']*appoint another moderator[^']*'/],
+    ['MODERATOR_REVOKE_LAG', /const MODERATOR_REVOKE_LAG = '[^']*up to an hour[^']*'/],
+  ]) {
+    assert.match(src, needle, `${name} is gone or no longer says what it is named for`)
+  }
+  // ── AND EACH ONE IS READ IN THE CONFIRMATION ITSELF ─────────────────────
+  // Scoped to the <ul> inside the confirmation, not to the whole file. Two of
+  // these three also appear elsewhere on the tab — the roster paragraph above
+  // the table states what the role grants, and an ordinary account's row
+  // states what it does not — so a whole-file search stays green while the
+  // sentence is taken out of the one place the decision is actually taken.
+  // That is not hypothetical: it is the mutation this assertion was rewritten
+  // for, and it passed the file-wide version.
+  const start = src.indexOf('<ul className="adm-confirm-list">')
+  assert.ok(start > -1, 'the confirmation no longer lists anything — this test is reading nothing')
+  const list = src.slice(start, src.indexOf('</ul>', start))
+  assert.ok(list.length > 100, `the confirmation list is ${list.length} bytes — it has been emptied`)
+  for (const name of ['MODERATOR_GRANTS', 'MODERATOR_DENIES', 'MODERATOR_REVOKE_LAG']) {
+    assert.match(list, new RegExp(`\\{${name}\\}`),
+      `the confirmation does not state ${name} at the moment of the decision. A confirmation that `
+      + 'names nothing has not confirmed anything, it has only delayed the click.')
+  }
 })
 
 test('a refused grant is reported rather than assumed', () => {

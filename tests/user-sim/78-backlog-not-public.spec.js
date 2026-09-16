@@ -1,10 +1,10 @@
-// THE ENGINEERING BACKLOG: VISIBLE TO THE FOUNDER, UNREACHABLE BY ANYONE ELSE.
+// THE ENGINEERING BACKLOG: UNREACHABLE BY ANYONE, FROM ANYWHERE IN THE APP.
 //
-// src/data/pipeline.js is the internal backlog — 184 queued items and 23
-// processes whose note, title and summary fields are candid prose written for
-// us. It was a client module, so `vite build` emitted it and the deploy served
-// it from /assets. Walked anonymously against a real build, no login, no
-// cookie, no Authorization header:
+// src/data/pipeline.js is the internal backlog — queued items and processes
+// whose note, title and summary fields are candid prose written for us. It was
+// a client module, so `vite build` emitted it and the deploy served it from
+// /assets. Walked anonymously against a real build, no login, no cookie, no
+// Authorization header:
 //
 //   GET /admin                  200   the HTML names the entry chunk
 //   GET /assets/index-*.js      200   names Admin-rjGyizH8.js
@@ -15,94 +15,66 @@
 // that #472 has since closed in firestore.rules — 23 mentions of
 // firestore.rules and 3 permission-denied diagnostics. #420 put it behind a
 // dynamic import, which changed WHEN a browser fetched it and nothing about WHO
-// could. The board now reads GET /api/ai?backlog=1 behind requireAdmin().
+// could. The board then read GET /api/ai?backlog=1 behind requireAdmin().
 //
-// ── WHAT EACH HALF IS FOR ──────────────────────────────────────────────────
+// ── 2026-09-16: THE BOARDS LEFT THE DASHBOARD ──────────────────────────────
 //
-// tests/unit/admin-chunk-carries-no-backlog.test.js proves the ABSENCE, over a
-// real production build, by reading every emitted file for row text. It cannot
-// prove the founder can still read the board — a fix that deleted the Pipeline
-// tab would pass it perfectly.
+// The repository went public to use free GitHub Actions minutes, which made
+// this backlog world-readable, so the founder took both modules out of it and
+// kept them on his machine (.gitignore carries the decision and its date).
+// From that moment /api/ai?backlog=1 answered 501 `localOnly` in every
+// deployment and the Pipeline and Board tabs rendered a paragraph explaining
+// why they were empty. He then asked for the pipeline to go, and it went, with
+// the module board beside it: no tab, no request, no component.
 //
-// This file drives the browser for both halves:
-//   · the founder opens the tab and gets rows, notes and statuses;
-//   · the board says so out loud when the endpoint refuses it;
+// This file used to drive those two tabs — rows, notes, statuses, the refusal
+// state and the not-deployed state. Every one of those tests had a subject
+// that no longer exists, so they are not here any more. What IS here is the
+// half that outlives the tabs:
+//
+//   · the founder's dashboard, toured tab by tab, makes no request for the
+//     boards at all — the property the tabs' removal was supposed to buy;
 //   · a SIGNED-OUT visitor walks the real chunk graph over the real preview
-//     server and reaches no note text anywhere.
+//     server and reaches no note text anywhere — the acceptance test that
+//     found the 824,007 bytes, unchanged.
 //
-// ── WHY THE ENDPOINT IS STUBBED ────────────────────────────────────────────
+// tests/unit/admin-chunk-carries-no-backlog.test.js proves the same absence
+// over every emitted file of a real build, and its CONTROL now asserts the
+// dashboard has no code path to the boards — the source-level twin of the tour
+// below.
 //
-// `vite preview` serves dist/ as static files and runs no Vercel functions, so
-// every request under /api answers 404 in this suite — helpers.js says so where it
-// that as expected noise, and 57-brand-starter.spec.js stubs /api/ai for the
-// same reason. The stub answers with the REAL exports of src/data/pipeline.js,
-// read here in Node, so what the board renders is the founder's actual backlog
-// and not a fixture that could drift away from it. What the stub cannot prove —
-// that the server refuses a non-admin — is proved by
-// tests/unit/admin-chunk-carries-no-backlog.test.js reading requireAdmin() into
-// serveBacklog(), and by the Authorization assertion in
-// 57-signed-in-session.spec.js.
+// ── WHY THE ANONYMOUS WALK NEEDS THE BOARDS PRESENT ────────────────────────
+//
+// Its needles are long printable runs taken from the REAL rows of both boards,
+// read here in Node, so what is searched for is the founder's actual backlog
+// and not a fixture that could drift away from it. Without the rows it has
+// nothing to search for and it SKIPS WITH A REASON, loudly, rather than
+// walking the chunk graph for nothing and reporting that as proof. The tour
+// needs no rows and runs everywhere.
 import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 
-// ── THE TWO BOARDS ARE LOCAL-ONLY SINCE 2026-09-16 ─────────────────────────
-//
-// The repository went public to use free GitHub Actions minutes, which made
-// this backlog world-readable, so the founder took both modules out of it and
-// kept them on his machine. .gitignore carries the decision, its date and the
-// cost he accepted with it.
-//
-// They are imported conditionally rather than at the top of the file, because a
-// static import of an absent module fails the WHOLE spec file at collection
-// time — including the two tests below that never touch the data.
-//
-// THREE OF THE FIVE TESTS HERE STUB THE ENDPOINT WITH THE REAL ROWS, on purpose:
-// what the board renders is then the founder's actual backlog rather than a
-// fixture that could drift away from it. Without the rows they have nothing to
-// assert and they SKIP WITH A REASON, loudly, rather than driving a browser
-// over an empty array and reporting that as proof. The other two — the refusal
-// state and the not-deployed state — need no rows at all and run everywhere,
-// which is deliberate: the not-deployed state is the ONLY state production has
-// now, so it is the one that must never be skipped.
 const HAS_BOARDS = ['pipeline.js', 'moduleBoard.js']
   .every((f) => fs.existsSync(path.join('src', 'data', f)))
 const NO_BOARDS = !HAS_BOARDS
   && 'src/data/pipeline.js and src/data/moduleBoard.js are not in this checkout — they are '
-  + 'local-only, by the founder decision of 2026-09-16 recorded in .gitignore — so the stub has no '
-  + 'real rows to serve and this test would be measuring an empty board.'
-if (NO_BOARDS) console.warn(`\n[78-backlog-not-public] SKIPPING the three data-driven tests: ${NO_BOARDS}\n`)
+  + 'local-only, by the founder decision of 2026-09-16 recorded in .gitignore — so there are no '
+  + 'real rows to take needles from and the anonymous walk would be searching for nothing.'
+if (NO_BOARDS) console.warn(`\n[78-backlog-not-public] SKIPPING the anonymous walk: ${NO_BOARDS}\n`)
 
-const { APP_CONDITION = [], PIPELINE_STAGES = [], PIPELINE_PROCESSES = [], NEXT_TODO = [] } = HAS_BOARDS
+// Imported conditionally rather than at the top of the file, because a static
+// import of an absent module fails the WHOLE spec file at collection time —
+// including the tour below, which never touches the data.
+const { PIPELINE_PROCESSES = [], NEXT_TODO = [] } = HAS_BOARDS
   ? await import('../../src/data/pipeline.js')
   : {}
 const { MODULE_BOARD = [] } = HAS_BOARDS ? await import('../../src/data/moduleBoard.js') : {}
 
-// Exactly the payload api/ai.js builds in serveBacklog(). BOTH internal boards:
-// the module board was the one the first pass missed, because it was a plain
-// static import that landed inside Admin-*.js rather than a chunk of its own.
-const BOARD = { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO, MODULE_BOARD }
-
-// And the payload it builds when the modules are not in the deployment, which
-// since 2026-09-16 is every deployment. Kept beside BOARD so the two shapes are
-// read together: this one has NO board keys at all, because a key holding an
-// empty array is the lie the whole endpoint is arranged to avoid.
-const NOT_DEPLOYED = {
-  localOnly: true,
-  since: '2026-09-16',
-  modules: ['src/data/pipeline.js', 'src/data/moduleBoard.js'],
-  error: 'The internal boards are not part of this deployment.',
-}
-
-// The endpoint, matched on the URL object rather than a glob: a glob has to
-// spell the query string, and `?` is a wildcard in Playwright's matcher, so
-// a query-string glob would silently also claim /api/aiXbacklog=1.
-const isBacklogEndpoint = (url) => url.pathname === '/api/ai' && url.searchParams.has('backlog')
-
-// Declared as a skip rather than calling test.skip() inside each body: the body
-// form boots a browser and a signed-in session only to throw them away, three
-// times. The reason is printed once at collection, above.
+// Declared as a skip rather than calling test.skip() inside the body: the body
+// form boots a browser only to throw it away. The reason is printed once at
+// collection, above.
 const boardTest = NO_BOARDS ? test.skip : test
 
 // Long printable-ASCII runs out of the real rows of BOTH boards, used as
@@ -128,230 +100,53 @@ for (const [board, rows] of [['pipeline', [...NEXT_TODO, ...PIPELINE_PROCESSES]]
   }
 }
 
-// The board's own status vocabulary, read out of Admin.jsx rather than restated
-// here — exactly as tests/unit/pipeline-board-renderable.test.js reads it, and
-// for the same reason: a copy in this file would be one more list to keep in
-// step. The component renders `TODO_STATUS_LABEL[t.status] || t.status`, and
-// that fallback is mirrored below, so a status with no label is expected to
-// print as its own raw lowercase string. Flagging THAT is the unit guard's job;
-// this file only checks the board printed what the queue it was handed calls for.
-const TODO_STATUS_LABEL = (() => {
-  const src = fs.readFileSync(path.join('src', 'pages', 'Admin.jsx'), 'utf8')
-  const m = src.match(/TODO_STATUS_LABEL\s*=\s*\{([^}]*)\}/)
-  if (!m) throw new Error('could not find the TODO_STATUS_LABEL map in Admin.jsx — this spec is reading the wrong file')
-  return Object.fromEntries([...m[1].matchAll(/(\w[\w-]*)\s*:\s*'([^']*)'/g)].map((x) => [x[1], x[2]]))
-})()
+test('the founder tours every admin tab and nothing asks for the boards', async ({ page }) => {
+  // THE CONTROL IS THE TOUR. "No backlog request" is also what a dashboard
+  // that never rendered looks like, and what an empty tab bar looks like. So
+  // every tab is clicked and proven to take the selection, and the bar is
+  // proven to have a real number of tabs, before either absence counts.
+  watch(page, 'the founder touring the admin dashboard')
 
-// One row of each board, chosen deterministically, whose prose is long enough
-// to be unmistakable on screen. Used by the render tests and nothing else.
-const SAMPLE = NEXT_TODO.find((t) => typeof t.note === 'string' && t.note.length > 120)
-const SAMPLE_MODULE = MODULE_BOARD.find((m) => m.nextSteps?.some((s) => s.length > 48))
-
-boardTest('the founder opens the Pipeline tab and gets the whole board — rows, notes and statuses', async ({ page }) => {
-  watch(page, 'the founder reading the backlog')
-
-  let sawAuthorization = null
-  await page.route(isBacklogEndpoint, (route) => {
-    sawAuthorization = route.request().headers()['authorization'] || null
-    return route.fulfill({ json: BOARD })
+  const boardRequests = []
+  const boardChunks = []
+  page.on('request', (r) => {
+    const url = r.url()
+    if (url.includes('backlog=1')) boardRequests.push(url)
+    if (/\/assets\/(pipeline|moduleBoard)-[^/]*\.js/.test(url)) boardChunks.push(url)
   })
 
-  await signIn(page, { admin: true })
-  await go(page, '/admin')
-  // CONTROL: this session must really be the founder, or everything below is
-  // measuring a page that was never admitted.
-  await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
-
-  await page.getByRole('tab', { name: 'Pipeline' }).click()
-
-  // The three bands the board is made of.
-  await expect(page.getByText('App condition')).toBeVisible()
-  await expect(page.getByText(`Pipeline (${PIPELINE_PROCESSES.length} processes)`)).toBeVisible()
-  await expect(page.getByText(`Next to do (${NEXT_TODO.length})`)).toBeVisible()
-
-  // Every queued item is on screen — not "some rows rendered", which is also
-  // true of a board that dropped nine tenths of the backlog on the way through
-  // JSON.
-  await expect(page.locator('.adm-pipe-todo').first()).toBeVisible()
-  expect(
-    await page.locator('.adm-pipe-todo').count(),
-    'the queue rendered a different number of rows than the endpoint returned, so something is being '
-    + 'lost between the route and the board',
-  ).toBe(NEXT_TODO.length)
-
-  // THE NOTES, which are the whole reason this board is worth keeping. A row
-  // with ids and a status and no note would pass every count above.
-  const sampleRow = page.locator('.adm-pipe-todo').filter({ hasText: SAMPLE.title }).first()
-  await expect(sampleRow).toBeVisible()
-  expect(
-    (await sampleRow.innerText()).replace(/\s+/g, ' '),
-    `the row for ${SAMPLE.id} is on the board without its note, so the founder has a list of titles `
-    + 'rather than the record — which is what stripping the notes at build time would have given them',
-  ).toContain(SAMPLE.note.replace(/\s+/g, ' ').slice(0, 80))
-
-  // THE STATUSES, read back as the labels the board prints rather than the raw
-  // values, because an unmapped status renders as its own lowercase string and
-  // that is the defect pipeline-board-renderable.test.js exists for.
-  //
-  // DERIVED FROM THE DATA, NOT NAMED HERE. This used to anchor on the literal
-  // 'Done' — never the property being guarded, only a value that happened to be
-  // present in every queue anyone had seen. Archiving the 172 finished rows to
-  // docs/backlog/ emptied that status out of the live queue, and the assertion
-  // went red while the board was perfectly correct: five distinct labels, every
-  // one of them right. A stale anchor, not a defect. Naming any other status
-  // instead would re-encode the same assumption and break on the next archive
-  // pass, so the expected set is computed from the same NEXT_TODO the stub
-  // served. That is also strictly stronger than the anchor was: it fails on a
-  // status collapsing to one value, on one being dropped in transit, AND on one
-  // being printed as something the data does not say.
-  const expectedLabels = [...new Set(NEXT_TODO.map((t) => TODO_STATUS_LABEL[t.status] || t.status))].sort()
-  const labels = new Set(await page.locator('.adm-pipe-status').allInnerTexts())
-  expect(
-    [...labels].sort(),
-    'the labels on the board are not the ones the queue it was handed calls for — a status has '
-    + 'collapsed to a single value, been dropped on the way through JSON, or is being printed as '
-    + 'something src/data/pipeline.js does not say',
-  ).toEqual(expectedLabels)
-  // One label per distinct status, so two statuses cannot quietly share a word
-  // and still satisfy the set above — `deferred` reading as `Blocked` is the
-  // exact confusion TODO_STATUS_LABEL was split to prevent.
-  expect(
-    labels.size,
-    'the board printed fewer distinct labels than the queue has distinct statuses, so two statuses '
-    + 'render as the same word and cannot be told apart on the one board the founder reads',
-  ).toBe(new Set(NEXT_TODO.map((t) => t.status)).size)
-  expect(labels.size, 'only one distinct status label rendered across the whole queue').toBeGreaterThan(2)
-
-  // And it asked as somebody — a request without this is refused in production.
-  expect(
-    sawAuthorization,
-    'the board fetched the backlog with no Authorization header, so the real endpoint would answer it 404',
-  ).toMatch(/^Bearer .+/)
-})
-
-boardTest('the Board tab renders the module board from the same one request', async ({ page }) => {
-  // THE SECOND BOARD, and the one the first pass missed. src/data/moduleBoard.js
-  // was a plain STATIC import in Admin.jsx, so its 20,332 bytes were inlined
-  // into Admin-*.js — no chunk of its own, nothing for a pipeline-shaped guard
-  // to notice — and dist/assets/Admin-*.js carried, fetchable with no auth:
-  //   nextSteps: ["Owner: verify aggregate analytics and Feedback reads after
-  //   the published Firestore rules", ...]
-  //
-  // It now comes from the SAME payload as the backlog, so this also proves the
-  // shared cache: one request serves both tabs.
-  watch(page, 'the founder reading the module board')
-
-  const requests = []
-  await page.route(isBacklogEndpoint, (route) => { requests.push(route.request().url()); return route.fulfill({ json: BOARD }) })
-
-  await signIn(page, { admin: true })
+  await signIn(page, { admin: true, claims: { admin: true } })
   await go(page, '/admin')
   await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
 
-  await page.getByRole('tab', { name: 'Pipeline' }).click()
-  await expect(page.getByText('App condition')).toBeVisible()
+  const tabs = page.getByRole('tab')
+  const names = await tabs.allInnerTexts()
+  expect(names.length, 'the tab bar is empty, so touring it proves nothing').toBeGreaterThanOrEqual(5)
+  expect(names.join(' | '), 'a Pipeline tab is back in the admin nav').not.toMatch(/Pipeline/i)
+  expect(names.join(' | '), 'a Board tab is back in the admin nav').not.toMatch(/\bBoard\b/)
 
-  await page.getByRole('tab', { name: 'Board' }).click()
-  await expect(page.getByText(`Module Board (${MODULE_BOARD.length})`)).toBeVisible()
+  for (let i = 0; i < names.length; i++) {
+    await tabs.nth(i).click()
+    await expect(tabs.nth(i)).toHaveAttribute('aria-selected', 'true')
+  }
 
-  // The owner-facing prose, on screen, in its own card — the exact class of
-  // string that was public. A card with a name and a status would pass a count.
-  const card = page.locator('.adm-section').filter({ hasText: SAMPLE_MODULE.name }).first()
-  const step = SAMPLE_MODULE.nextSteps.find((s) => s.length > 48)
+  // Nothing that reads "the boards are not deployed" or "Next to do" either —
+  // the two sentences the removed tabs used to print. A component can outlive
+  // its tab if a branch still renders it.
+  const text = (await page.locator('.adm').innerText()).replace(/\s+/g, ' ')
+  expect(text, 'the not-deployed paragraph is still being rendered somewhere on the dashboard').not.toMatch(/is not deployed/i)
+  expect(text, 'the backlog queue heading is still being rendered somewhere on the dashboard').not.toMatch(/Next to do \(/)
+
   expect(
-    (await card.innerText()).replace(/\s+/g, ' '),
-    `the card for ${SAMPLE_MODULE.id} rendered without its next steps, so the founder has a kanban of `
-    + 'names rather than the board',
-  ).toContain(step.replace(/\s+/g, ' ').slice(0, 60))
-
-  // ONE request for both tabs. Two would mean the cache is per-component and
-  // the founder pays for 800 KB again on every tab switch.
+    boardRequests,
+    'a tab on the dashboard asked /api/ai?backlog=1 — the founder removed both tabs that did, and '
+    + 'nothing left on this page has a reason to',
+  ).toEqual([])
   expect(
-    requests.length,
-    `the endpoint was called ${requests.length} times for two tabs — the shared cache in `
-    + 'loadInternalBoards() is not shared, so moving between Pipeline and Board refetches everything',
-  ).toBe(1)
-})
-
-test('when the endpoint refuses, the board says so instead of showing an empty backlog', async ({ page }) => {
-  // A board that silently rendered zero rows would read as "there is nothing in
-  // the backlog", which is the most misleading thing this surface could say —
-  // and 404 is exactly what requireAdmin answers a caller it does not recognise,
-  // so this is the state a session with a stale token actually lands in.
-  watch(page, 'the founder whose session no longer proves it')
-
-  await page.route(isBacklogEndpoint, (route) => route.fulfill({ status: 404, json: { error: 'Not found' } }))
-
-  await signIn(page, { admin: true })
-  await go(page, '/admin')
-  await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
-
-  await page.getByRole('tab', { name: 'Pipeline' }).click()
-
-  await expect(page.getByText(/Could not load the backlog/i)).toBeVisible()
-  expect(
-    await page.locator('.adm-pipe-todo').count(),
-    'the board rendered rows on a refused request, so this failure state is not the one that ships',
-  ).toBe(0)
-
-  // BOTH tabs degrade, not just the one that was fixed first. The module board
-  // shared the static import and now shares the gate, so it has to share the
-  // honest failure too.
-  await page.getByRole('tab', { name: 'Board' }).click()
-  await expect(page.getByText(/Could not load the module board/i)).toBeVisible()
-})
-
-test('when the boards are not deployed, the tabs say THAT — not "empty", and not "failed"', async ({ page }) => {
-  // THE STATE PRODUCTION IS IN SINCE 2026-09-16, and the reason this test does
-  // not skip with the three above: it needs no rows, and it is the only thing
-  // anyone who is not the founder will ever see on these two tabs.
-  //
-  // There are three wrong answers and the test rules out all three. AN EMPTY
-  // BOARD would say the work is finished. A SPINNER would say wait, forever.
-  // "COULD NOT LOAD — check you are signed in" would send the founder to debug
-  // his own session over a decision he took himself. The right answer names the
-  // files, says where they are, and says in as many words that this is not an
-  // empty backlog.
-  watch(page, 'an administrator on a deployment that carries no boards')
-
-  await page.route(isBacklogEndpoint, (route) => route.fulfill({ status: 501, json: NOT_DEPLOYED }))
-
-  await signIn(page, { admin: true })
-  await go(page, '/admin')
-  await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
-
-  await page.getByRole('tab', { name: 'Pipeline' }).click()
-
-  // Scoped by its own text rather than taken as the first `.adm-empty` on the
-  // page: the dashboard has several empty-state cards, and a hidden or
-  // unrelated one would answer innerText() just as readily.
-  const gate = page.locator('.adm-empty').filter({ hasText: /is not deployed/i }).first()
-  await expect(gate).toBeVisible()
-  await expect(page.getByText(/The backlog is not deployed/i)).toBeVisible()
-  const sentence = (await gate.innerText()).replace(/\s+/g, ' ')
-  expect(sentence, 'the sentence does not name the files it is talking about').toMatch(/src\/data\/pipeline\.js/)
-  expect(
-    sentence,
-    'the sentence does not say this is not an empty backlog, which is the one reading it has to rule out',
-  ).toMatch(/NOT an empty backlog/i)
-
-  // NOT a spinner, and NOT a fault. Both are states this component can render,
-  // and both would be wrong here.
-  expect(sentence, 'the tab is still reporting a load failure for a deliberate absence').not.toMatch(/Could not load/i)
-  expect(sentence, 'the tab is still waiting on a request that already answered').not.toMatch(/Loading/i)
-
-  // NOT an empty board, which is the whole point.
-  expect(
-    await page.locator('.adm-pipe-todo').count(),
-    'the board rendered queue rows on a payload that carries none, so something is inventing them',
-  ).toBe(0)
-  await expect(page.getByText(/Next to do \(0\)/)).toHaveCount(0)
-
-  // BOTH tabs, for the reason the refusal test gives: the module board shared
-  // the leak, shares the gate, and has to share every honest failure.
-  await page.getByRole('tab', { name: 'Board' }).click()
-  await expect(page.getByText(/The module board is not deployed/i)).toBeVisible()
-  await expect(page.getByText(/Module Board \(0\)/)).toHaveCount(0)
+    boardChunks,
+    'a board module is a client chunk again and is being served to anyone who asks — see '
+    + 'tests/unit/admin-chunk-carries-no-backlog.test.js',
+  ).toEqual([])
 })
 
 boardTest('a signed-out visitor walking the real chunk graph reaches no backlog text at all', async ({ page }) => {
@@ -362,10 +157,10 @@ boardTest('a signed-out visitor walking the real chunk graph reaches no backlog 
   watch(page, 'a stranger reading /admin')
 
   const fetched = []
-  async function grab(path) {
-    const res = await page.request.get(path)
+  async function grab(p) {
+    const res = await page.request.get(p)
     const body = await res.text()
-    fetched.push({ path, status: res.status(), bytes: body.length })
+    fetched.push({ path: p, status: res.status(), bytes: body.length })
     return { status: res.status(), body }
   }
 

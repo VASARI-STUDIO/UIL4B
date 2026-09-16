@@ -380,63 +380,60 @@ test('signing out from a signed-in session really signs out', async ({ page }) =
  * question can be answered by reading source.
  */
 
-test('the Pipeline tab asks an admin-gated endpoint, and there is no backlog chunk left to fetch', async ({ page }) => {
-  // THIS TEST USED TO ASSERT THE OPPOSITE, AND IT WAS RIGHT AT THE TIME.
+test('the admin dashboard has no backlog tab, asks no backlog endpoint, and fetches no backlog chunk', async ({ page }) => {
+  // THIS TEST HAS ASSERTED THREE DIFFERENT THINGS, AND EACH WAS RIGHT AT THE TIME.
   //
-  // It watched for /assets/pipeline-*.js, required it ABSENT before the Pipeline
-  // tab was opened and PRESENT after — which is exactly what #420's deferral
-  // bought, and it drove the real page to prove it. What nobody asked was who
-  // ELSE could fetch that URL. The answer was everybody: 824,007 bytes of
-  // engineering notes, 319,711 gzip, served from /assets with no login, no
-  // cookie and no Authorization header, including the literal text of a
-  // Firestore rule as it stood before #472 closed it. The chunk was the
-  // defect, not its schedule.
+  // First it required /assets/pipeline-*.js ABSENT before the Pipeline tab was
+  // opened and PRESENT after — #420's deferral, driven for real. What nobody
+  // asked was who ELSE could fetch that URL: everybody. 824,007 bytes of
+  // engineering notes, served from /assets with no login, including the text
+  // of a Firestore rule as it stood before #472 closed it.
   //
-  // src/data/pipeline.js is not a client module at all now. PipelineBoard reads
-  // GET /api/ai?backlog=1, gated on a verified administrator by requireAdmin()
-  // in api/_lib/admin.js.
+  // Then it required the tab to ask GET /api/ai?backlog=1 with a Bearer token
+  // and fetch no chunk at all — the data had moved behind requireAdmin().
   //
-  // THE TWO HALVES ARE STILL EACH OTHER'S CONTROL, the other way round. "No
-  // chunk request" is also what a URL matcher that matches nothing looks like —
-  // so the endpoint request, watched by a different matcher, has to fire. And
-  // "the endpoint was asked" would stay true even if a chunk were fetched
-  // alongside it, so the chunk watcher has to stay empty.
+  // Since 2026-09-16 the two board modules are local-only and not deployed, so
+  // that endpoint answered 501 everywhere and both tabs rendered a paragraph
+  // saying so. The founder asked for the pipeline to go, and it went, with the
+  // module board beside it. So the property is now the strongest of the three:
+  // the dashboard has NO TAB for the backlog, and touring every tab it does
+  // have makes NO request for it — by endpoint or by chunk.
   //
-  // 78-backlog-not-public.spec.js is where the board is proven to RENDER. It has
-  // to stub the endpoint: `vite preview` serves dist/ as static files and runs
-  // no Vercel functions, so nothing in this suite can answer /api/*.
-  watch(page, 'the founder opening the backlog board')
+  // THE CONTROL IS THE TOUR. "No backlog request" is also what a dashboard
+  // that never rendered looks like, and what a tab bar with nothing in it
+  // looks like. So every tab is clicked and proven to be selected, and the
+  // count of tabs is asserted, before either absence means anything.
+  watch(page, 'the founder touring the admin dashboard')
 
   const backlogChunk = []
   const backlogRequests = []
   page.on('request', (r) => {
     if (/\/assets\/pipeline-[^/]*\.js/.test(r.url())) backlogChunk.push(r.url())
-    if (r.url().includes('/api/ai?backlog=1')) backlogRequests.push(r)
+    if (r.url().includes('backlog=1')) backlogRequests.push(r.url())
   })
 
-  await signIn(page, { admin: true })
+  await signIn(page, { admin: true, claims: { admin: true } })
   await go(page, '/admin')
   await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
 
-  await page.getByRole('tab', { name: 'Pipeline' }).click()
+  const tabs = page.getByRole('tab')
+  const names = await tabs.allInnerTexts()
+  expect(names.length, 'the tab bar is empty, so touring it proves nothing').toBeGreaterThanOrEqual(5)
+  expect(names.join(' | '), 'a Pipeline tab is back in the admin nav').not.toMatch(/Pipeline/i)
+  expect(names.join(' | '), 'a Board tab is back in the admin nav').not.toMatch(/\bBoard\b/)
 
-  // CONTROL: the tab really opened and really ran its effect. Without this every
-  // absence below would also be true of a click that did nothing.
-  await expect.poll(() => backlogRequests.length, {
-    message: 'the Pipeline tab never asked /api/ai?backlog=1, so it has no source of data at all — '
-      + 'or this matcher no longer matches the URL Admin.jsx builds, in which case everything below '
-      + 'passes for free',
-  }).toBeGreaterThan(0)
+  // Open every tab there is, and prove each one took the selection.
+  for (let i = 0; i < names.length; i++) {
+    await tabs.nth(i).click()
+    await expect(tabs.nth(i)).toHaveAttribute('aria-selected', 'true')
+  }
 
-  // It asks as SOMEBODY. An anonymous GET is answered 404 by requireAdmin, which
-  // is the whole point of the data having moved behind it.
   expect(
-    await backlogRequests[0].headerValue('authorization'),
-    'the backlog request carried no Authorization header, so the board is asking an admin-gated '
-    + 'endpoint anonymously and would be refused in production',
-  ).toMatch(/^Bearer .+/)
-
+    backlogRequests,
+    'a tab on the dashboard asked for the internal boards — the founder removed both tabs that did, '
+    + 'and nothing left on this page has a reason to',
+  ).toHaveLength(0)
   expect(
     backlogChunk,
     'a /assets/pipeline-*.js request was made, so the engineering backlog is a client module again '
