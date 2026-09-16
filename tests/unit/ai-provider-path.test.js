@@ -514,6 +514,20 @@ const { describeProvider, providerBadgeStyle } = await import('../../src/utils/a
 // because the comment above the fetch still named the old URL.
 const srcFile = (f) => stripJs(fs.readFileSync(path.join(process.cwd(), 'src', f), 'utf8'))
 
+// ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
+// The repository is public and that document is the current-state list of what
+// is not yet secured, so the founder keeps it on his machine and out of every
+// clone (.gitignore carries the decision and the reason). The one test below
+// that reads it SKIPS WITH A REASON where it is absent and runs in full where
+// it is present — it must not go quietly green, because "the document does not
+// contain the wrong sentence" is trivially true of a document that is not
+// there, and the wrong sentence is the entire subject of the test.
+const OWNER_ACTIONS = path.join(process.cwd(), 'docs/OWNER-ACTIONS.md')
+const NO_OWNER_ACTIONS = !fs.existsSync(OWNER_ACTIONS)
+  && 'docs/OWNER-ACTIONS.md is not in this checkout — it is local-only, by the founder '
+  + 'decision of 2026-09-16 recorded in .gitignore — so the founder procedure this '
+  + 'reads cannot be checked here.'
+
 // ── the badge ────────────────────────────────────────────────────────────────
 
 test('the two providers are visually distinguishable, or the badge proves nothing', () => {
@@ -712,13 +726,16 @@ test('the Admin overview renders the verdict, and never on a page a non-admin ca
   assert.match(admin, /aiHealth\.summary/, 'the card shows a status light with no sentence explaining it')
 })
 
-test('the owner action does not tell the founder the diagnostic can close it', () => {
+test('the owner action does not tell the founder the diagnostic can close it', { skip: NO_OWNER_ACTIONS }, () => {
   // SOURCE ASSERTION over a document, which is the artefact. The previous
   // wording said "confirm the diagnostic now reports OpenRouter as available".
   // It cannot: it reports presence, which was already confirmed on 2026-08-07.
   // Following that instruction would have recorded a PASS for a check that
   // never ran — the silent failover reproduced in the runbook.
-  const doc = fs.readFileSync(path.join(process.cwd(), 'docs/OWNER-ACTIONS.md'), 'utf8')
+  const doc = fs.readFileSync(OWNER_ACTIONS, 'utf8')
+  assert.ok(doc.length > 1000,
+    `docs/OWNER-ACTIONS.md read as ${doc.length} bytes — an empty or truncated document `
+    + 'satisfies every doesNotMatch below without satisfying anything')
   assert.doesNotMatch(doc, /diagnostic now reports OpenRouter as available/,
     'OWNER-ACTIONS.md asks for a confirmation the diagnostic is incapable of giving')
   assert.match(doc, /provider: "openrouter"/,

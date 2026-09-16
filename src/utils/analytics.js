@@ -311,7 +311,8 @@ export function trackColourPick(hex) {
 }
 
 // ── P-001: the two events that make the funnel answerable ───────────────────
-// Both are APPROVED in docs/PROPOSALS.md. Until they existed there was no way
+// Both are APPROVED in docs/PROPOSALS.md - local-only since 2026-09-16 and not
+// in this repository, per .gitignore. Until they existed there was no way
 // to answer "did this user build something?", "what did they do before
 // upgrading?" or "where do people stop?" — which is why nearly every other
 // proposal in that file is 'inferred' rather than 'measured'.

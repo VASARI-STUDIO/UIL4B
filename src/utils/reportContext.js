@@ -1,7 +1,9 @@
 // What the user was looking at when something went wrong.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY (docs/PROPOSALS.md P-002, APPROVED)
+// WHY (docs/PROPOSALS.md P-002, APPROVED - that queue is local-only since
+// 2026-09-16 and is not in this repository; see .gitignore. The proposal itself
+// is quoted below, so nothing here depends on reading it.)
 // ─────────────────────────────────────────────────────────────────────────────
 // The proposal: "When a tool misbehaves, a user's only options are to leave or
 // to email. Most leave. We then learn nothing, and silent churn leaves no
