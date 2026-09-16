@@ -150,12 +150,21 @@
   overflow:visible;
   display:grid;
   align-items:center;
-  /* Two flexible columns rather than one flexible and one fixed. A 20rem parts
-     column pinned to the right left ~470px of nothing between the values and
-     the reading at 1440; sharing the slack 2:1.4 keeps the two text columns in
-     the same eyeline at every desktop width. */
-  grid-template-columns:auto minmax(0,2fr) minmax(0,1.4fr) auto auto;
-  grid-template-areas:"art body parts foot acts" "confirm confirm confirm confirm confirm";
+  /* ONE FLEXIBLE COLUMN, AND IT IS THE ONE WHOSE CONTENT VARIES.
+     Two proportional columns (2fr / 1.4fr) put slack inside BOTH text columns,
+     so at 1440 the row read as three loose clusters with a hole after the
+     values and a second hole before the timestamp. The row only holds about
+     900px of content; no arrangement makes that fill 1348px, so the choice is
+     where the space goes, and the answer is ONE division — what the project
+     is, then how it stands and what you can do to it.
+
+     So: body takes the slack (it is left-aligned, so the space trails it), and
+     parts/when/foot/acts are fixed or content-sized and pack against the right
+     as one group. Fixed rather than `auto` on purpose — every row is its own
+     grid, so an `auto` track would size to ITS OWN content and Load would land
+     at a different x on every row. */
+  grid-template-columns:auto minmax(0,1fr) 18rem 7rem auto auto;
+  grid-template-areas:"art body parts when foot acts" "confirm confirm confirm confirm confirm confirm";
   column-gap:var(--s-5);
   row-gap:0;
   padding:var(--s-3) var(--s-2);
@@ -175,6 +184,13 @@
    the whole of the AI-dashboard reading: three untouched projects used to render
    as three identical full-bleed blocks of the default blue. */
 .uh-card-art{grid-area:art;width:64px;height:40px;border:1px solid var(--border);border-radius:var(--radius-xs)}
+/* No palette chosen: the outline stays so the rows keep their left edge, the
+   fill goes. Nothing is added to say "empty" — the absence says it, which is
+   the same answer Ditto draws for a project slot with nothing in it
+   (mobbin.com/screens/5becd4a2-666d-4d2e-abab-4a9cbee67f48) and Zillow for a
+   tour that has not been uploaded
+   (mobbin.com/screens/ee541e38-a931-451d-bd51-ec557632a4ce). */
+.uh-card-art.is-unset{background:none}
 .uh-card-body{grid-area:body;display:flex;flex-direction:column;gap:3px;min-width:0}
 .uh-card-top{display:flex;align-items:center;gap:var(--s-2)}
 .uh-card-icon{width:20px;height:20px;border-radius:var(--radius-xs);object-fit:contain;flex:0 0 auto}
@@ -211,7 +227,10 @@
 
 .uh-parts-label{flex:1 1 auto;min-width:0;font-family:var(--mono);font-weight:600;letter-spacing:.03em;line-height:1.6;color:var(--t2)}
 
-.uh-card-when{flex:0 0 auto;font-family:var(--mono);letter-spacing:.02em;line-height:1.6;color:var(--t3);white-space:nowrap}
+/* Right-aligned in its own fixed column, so "1 day ago" and "25 minutes ago"
+   line up at their right edge down the list instead of starting at whatever x
+   the reading beside them happens to end on. */
+.uh-card-when{grid-area:when;justify-self:end;font-size:var(--fs-micro);font-family:var(--mono);letter-spacing:.02em;line-height:1.6;color:var(--t3);white-space:nowrap}
 
 .uh-card-foot{grid-area:foot;display:flex;align-items:center;gap:var(--s-2);justify-self:end}
 
@@ -338,11 +357,20 @@
   .uh-card{
     align-items:start;
     grid-template-columns:auto minmax(0,1fr) auto;
-    grid-template-areas:"art body acts" "parts parts foot" "confirm confirm confirm";
+    /* Load shares the parts line and `when` gets the thin line under it — which
+       is exactly where both already rendered before `when` became a column, so
+       the desktop fix costs the phone nothing. Putting Load on the `when` line
+       instead added a full button's height to every row: measured, 20px each,
+       60px on a free account at the cap. */
+    grid-template-areas:"art body acts" "parts parts foot" "when when when" "confirm confirm confirm";
     column-gap:var(--s-3);
   }
   .uh-card-art{width:44px;height:28px;margin-top:2px}
   .uh-parts{margin-top:var(--s-2)}
+  /* Back to the left of its own line down here, on the line it shares with
+     Load — which is where it already rendered before it became a column, so
+     the phone layout is unchanged by the desktop fix. */
+  .uh-card-when{justify-self:start;align-self:center}
   .uh-card-foot{margin-top:var(--s-2);align-self:start}
 }
 
@@ -359,5 +387,4 @@
      end of line one, where a wrap actually is. */
   .uh-stats li + li{padding-left:0;border-left:none}
   .uh-stats li:not(:last-child)::after{content:'·';margin-left:.55em;color:var(--t3)}
-  .uh-card-when{flex:1 0 100%}
 }

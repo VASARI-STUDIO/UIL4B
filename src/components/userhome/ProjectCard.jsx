@@ -58,6 +58,16 @@ export default function ProjectCard({
   const digest = projectDigest(project)
   const when = relativeTime(digest.updatedAt)
 
+  // HAS ANYBODY CHOSEN THESE COLOURS? Not "are there colours" — every saved
+  // project has a palette, because ProjectContext snapshots the whole working
+  // design on save, so an untouched one carries the single default seed.
+  //
+  // This is the SAME read the four dots use (utils/userHome.js, partsPresent),
+  // deliberately: the chip and the dots are now one fact drawn twice rather
+  // than two facts that can disagree. A project whose dots say "Nothing built
+  // yet" cannot render a palette, because it does not have one.
+  const hasPalette = digest.parts.some((p) => p.id === 'palette' && p.done)
+
   return (
     <article className={`proj-card uh-card${isCurrent ? ' proj-card-active' : ''}${project.archived ? ' is-archived' : ''}`}>
       {/* The palette, as a specimen chip at the head of the row. Hard stops, so
@@ -66,8 +76,26 @@ export default function ProjectCard({
           set the project name in white over a two-colour blend, so its contrast
           depended entirely on which colours the user had picked. Any palette
           could make the name unreadable. It was 40px tall and full-bleed until
-          2026-09-16 — see the note at the top of this file for why it is not. */}
-      <div className="uh-card-art" style={{ background: paletteBands(digest.colors) }} aria-hidden="true" />
+          2026-09-16 — see the note at the top of this file for why it is not.
+
+          AND IT IS ONLY FILLED IF SOMEBODY FILLED IT. Shrinking the slab was
+          half a fix: three untouched projects still rendered three identical
+          saturated blue squares — the first thing the eye landed on, on the
+          three projects that contained nothing, every one of them meaning "the
+          default, which nobody chose". A project with no palette gets the chip
+          as an outline: same size, so the rows still align, no fill, so it
+          carries no weight it has not earned. Colour on this page now means
+          somebody picked a colour.
+
+          The inline background is OMITTED rather than overridden, because an
+          inline style outranks the stylesheet and `background:none` fighting
+          `background:<gradient>` is a rule that breaks the moment either side
+          is edited. */}
+      <div
+        className={`uh-card-art${hasPalette ? '' : ' is-unset'}`}
+        style={hasPalette ? { background: paletteBands(digest.colors) } : undefined}
+        aria-hidden="true"
+      />
 
       <div className="uh-card-body">
         <div className="uh-card-top">
@@ -132,8 +160,20 @@ export default function ProjectCard({
           ))}
         </span>
         <span className={`uh-parts-label${digest.missing.length ? '' : ' is-complete'}`}>{partsLabel(digest)}</span>
-        {when && <span className="uh-card-when">{when}</span>}
       </div>
+
+      {/* "When" left the parts group and became its own column on 2026-09-16.
+          It was the cause of the dead air mid-row at 1440: inside the parts
+          flex it was pushed to that column's far right, so the row read as
+          THREE loose clusters with two holes between them rather than as a
+          row. Out here it right-aligns into the same group as Load and ⋯ —
+          what the project is on the left, how it stands and what you can do to
+          it on the right, one division. It is also the arrangement Descript
+          (mobbin.com/screens/98e5fb4b-da68-40dc-a473-d08dbd12aa6a) and
+          Squarespace (mobbin.com/screens/383a3ad2-fcdb-407a-a708-0f6d23a1ca44)
+          both use: the time column sits beside the row's actions, not beside
+          its contents. */}
+      {when && <span className="uh-card-when">{when}</span>}
 
       {/* BOTH WAYS TO ACT ON THIS PROJECT NOW LIVE AT THE END OF ITS ROW. The ⋯
           used to sit immediately after the name while the primary control sat at
