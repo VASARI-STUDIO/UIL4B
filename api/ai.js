@@ -1077,13 +1077,53 @@ function timingSafeEqual(a, b) {
 // The same reason the client's comment gave before it: a generator can go
 // stale. An agent who edits pipeline.js and forgets to re-run it would leave
 // the founder's board showing yesterday's backlog with every check green.
-// import() of a literal path cannot go stale — and @vercel/nft traces literal
-// dynamic imports into the function bundle, with vercel.json's includeFiles as
-// belt-and-braces. It is INSIDE this branch rather than at module scope so the
-// hot POST path never parses 832 KB of prose on a cold start.
+// import() of a literal path cannot go stale. It is INSIDE this branch rather
+// than at module scope so the hot POST path never parses a quarter of a
+// megabyte of prose on a cold start — and, since 2026-09-16, so that a
+// deployment WITHOUT the modules still serves every other route on this
+// function instead of failing to load at all.
+//
+// ── SINCE 2026-09-16 THE MODULES ARE NOT IN THE DEPLOYMENT AT ALL ──────────
+//
+// The repository went PUBLIC to use free GitHub Actions minutes, which made
+// this backlog world-readable. The founder chose to keep the repository public
+// and take the notes out of it instead: src/data/pipeline.js and
+// src/data/moduleBoard.js are gitignored, byte-identical on his machine and in
+// no clone. .gitignore carries the decision, its date and its cost.
+//
+// vercel.json's `functions["api/ai.js"].includeFiles` named both files as
+// belt-and-braces behind @vercel/nft's trace of the literal imports below. It
+// named two paths that no longer exist in a checkout, so it went with them, and
+// the `functions` block was empty afterwards and went too.
+//
+// SO IN PRODUCTION BOTH IMPORTS BELOW THROW, AND THAT IS THE EXPECTED STATE
+// RATHER THAN A FAULT. It is caught by specifier and said out loud. WHAT IT
+// MUST NEVER DO IS ANSWER 200 WITH EMPTY ARRAYS: an empty board is
+// indistinguishable from "there is no work left", and a surface that cannot
+// tell those two apart is the exact class of lie the comments above argue
+// against. A REAL failure — a syntax error in the module, a dependency of it
+// missing — is still a 500, because it is still a fault; the two are told apart
+// by the error's own `code` and the specifier it names, not by the wording of
+// its message.
 //
 // pipeline.js DOES NOT MOVE. Every agent's composition scripts and several
-// tests/unit/*.test.js files import it by that exact path.
+// tests/unit/*.test.js files import it by that exact path, and they still run
+// in full wherever it is present.
+
+// The two specifiers serveBacklog() asks for, recognised in Node's own
+// ERR_MODULE_NOT_FOUND. `err.url` is the resolved file: URL of the module that
+// could not be found, which is the unambiguous half; the message is read as a
+// fallback for a runtime that sets no `url`, and only the quoted specifier out
+// of it, because matching the whole message would also match a missing
+// DEPENDENCY of a board and report a real defect as a founder decision.
+const BOARD_MODULE = /[/\\]src[/\\]data[/\\](?:pipeline|moduleBoard)\.js$/
+function isBoardModuleMissing(err) {
+  if (err?.code !== 'ERR_MODULE_NOT_FOUND') return false
+  if (err.url) return BOARD_MODULE.test(decodeURIComponent(String(err.url)))
+  const named = /Cannot find module '([^']+)'/.exec(String(err?.message || ''))
+  return Boolean(named && BOARD_MODULE.test(named[1]))
+}
+
 async function serveBacklog(req, res) {
   const admin = await requireAdmin(req)
   // 404, not 403 — see requireAdmin. A caller who is not the administrator
@@ -1106,10 +1146,28 @@ async function serveBacklog(req, res) {
       MODULE_BOARD: modules.MODULE_BOARD,
     })
   } catch (err) {
+    // ── THE BOARDS ARE NOT DEPLOYED. THAT IS A DECISION, NOT A FAULT ────────
+    // 501 rather than 200, so a caller that does not know about this state
+    // fails loudly instead of rendering nothing and calling it a backlog; and
+    // rather than 500, because nothing here is broken. `localOnly` is the flag
+    // the Admin tabs branch on, and the sentence says which files, where they
+    // are and why — an administrator reading this should not have to guess
+    // whether the queue is empty or the data is elsewhere.
+    if (isBoardModuleMissing(err)) {
+      return res.status(501).json({
+        localOnly: true,
+        since: '2026-09-16',
+        modules: ['src/data/pipeline.js', 'src/data/moduleBoard.js'],
+        error: 'The internal boards are not part of this deployment. They are kept on the founder\'s '
+          + 'machine and out of this public repository, because their notes are candid prose written '
+          + 'for us, so this build has nothing to read. THIS IS NOT AN EMPTY BACKLOG — the rows exist, '
+          + 'on the checkout that has the files.',
+      })
+    }
     // Named in words rather than swallowed. A board that silently rendered zero
     // rows would read as "the backlog is empty", which is the most misleading
     // thing this surface could say.
-    console.error('ai: could not load the internal boards', { error: err?.message })
+    console.error('ai: could not load the internal boards', { error: err?.message, code: err?.code })
     return res.status(500).json({ error: `Could not load the boards: ${err?.message || 'unknown error'}` })
   }
 }

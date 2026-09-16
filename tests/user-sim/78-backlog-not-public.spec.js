@@ -46,18 +46,64 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
-import { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO } from '../../src/data/pipeline.js'
-import { MODULE_BOARD } from '../../src/data/moduleBoard.js'
+
+// ── THE TWO BOARDS ARE LOCAL-ONLY SINCE 2026-09-16 ─────────────────────────
+//
+// The repository went public to use free GitHub Actions minutes, which made
+// this backlog world-readable, so the founder took both modules out of it and
+// kept them on his machine. .gitignore carries the decision, its date and the
+// cost he accepted with it.
+//
+// They are imported conditionally rather than at the top of the file, because a
+// static import of an absent module fails the WHOLE spec file at collection
+// time — including the two tests below that never touch the data.
+//
+// THREE OF THE FIVE TESTS HERE STUB THE ENDPOINT WITH THE REAL ROWS, on purpose:
+// what the board renders is then the founder's actual backlog rather than a
+// fixture that could drift away from it. Without the rows they have nothing to
+// assert and they SKIP WITH A REASON, loudly, rather than driving a browser
+// over an empty array and reporting that as proof. The other two — the refusal
+// state and the not-deployed state — need no rows at all and run everywhere,
+// which is deliberate: the not-deployed state is the ONLY state production has
+// now, so it is the one that must never be skipped.
+const HAS_BOARDS = ['pipeline.js', 'moduleBoard.js']
+  .every((f) => fs.existsSync(path.join('src', 'data', f)))
+const NO_BOARDS = !HAS_BOARDS
+  && 'src/data/pipeline.js and src/data/moduleBoard.js are not in this checkout — they are '
+  + 'local-only, by the founder decision of 2026-09-16 recorded in .gitignore — so the stub has no '
+  + 'real rows to serve and this test would be measuring an empty board.'
+if (NO_BOARDS) console.warn(`\n[78-backlog-not-public] SKIPPING the three data-driven tests: ${NO_BOARDS}\n`)
+
+const { APP_CONDITION = [], PIPELINE_STAGES = [], PIPELINE_PROCESSES = [], NEXT_TODO = [] } = HAS_BOARDS
+  ? await import('../../src/data/pipeline.js')
+  : {}
+const { MODULE_BOARD = [] } = HAS_BOARDS ? await import('../../src/data/moduleBoard.js') : {}
 
 // Exactly the payload api/ai.js builds in serveBacklog(). BOTH internal boards:
 // the module board was the one the first pass missed, because it was a plain
 // static import that landed inside Admin-*.js rather than a chunk of its own.
 const BOARD = { APP_CONDITION, PIPELINE_STAGES, PIPELINE_PROCESSES, NEXT_TODO, MODULE_BOARD }
 
+// And the payload it builds when the modules are not in the deployment, which
+// since 2026-09-16 is every deployment. Kept beside BOARD so the two shapes are
+// read together: this one has NO board keys at all, because a key holding an
+// empty array is the lie the whole endpoint is arranged to avoid.
+const NOT_DEPLOYED = {
+  localOnly: true,
+  since: '2026-09-16',
+  modules: ['src/data/pipeline.js', 'src/data/moduleBoard.js'],
+  error: 'The internal boards are not part of this deployment.',
+}
+
 // The endpoint, matched on the URL object rather than a glob: a glob has to
 // spell the query string, and `?` is a wildcard in Playwright's matcher, so
 // a query-string glob would silently also claim /api/aiXbacklog=1.
 const isBacklogEndpoint = (url) => url.pathname === '/api/ai' && url.searchParams.has('backlog')
+
+// Declared as a skip rather than calling test.skip() inside each body: the body
+// form boots a browser and a signed-in session only to throw them away, three
+// times. The reason is printed once at collection, above.
+const boardTest = NO_BOARDS ? test.skip : test
 
 // Long printable-ASCII runs out of the real rows of BOTH boards, used as
 // needles for the anonymous walk. Quotes, backticks, backslashes and dollars
@@ -101,7 +147,7 @@ const TODO_STATUS_LABEL = (() => {
 const SAMPLE = NEXT_TODO.find((t) => typeof t.note === 'string' && t.note.length > 120)
 const SAMPLE_MODULE = MODULE_BOARD.find((m) => m.nextSteps?.some((s) => s.length > 48))
 
-test('the founder opens the Pipeline tab and gets the whole board — rows, notes and statuses', async ({ page }) => {
+boardTest('the founder opens the Pipeline tab and gets the whole board — rows, notes and statuses', async ({ page }) => {
   watch(page, 'the founder reading the backlog')
 
   let sawAuthorization = null
@@ -183,7 +229,7 @@ test('the founder opens the Pipeline tab and gets the whole board — rows, note
   ).toMatch(/^Bearer .+/)
 })
 
-test('the Board tab renders the module board from the same one request', async ({ page }) => {
+boardTest('the Board tab renders the module board from the same one request', async ({ page }) => {
   // THE SECOND BOARD, and the one the first pass missed. src/data/moduleBoard.js
   // was a plain STATIC import in Admin.jsx, so its 20,332 bytes were inlined
   // into Admin-*.js — no chunk of its own, nothing for a pipeline-shaped guard
@@ -255,7 +301,60 @@ test('when the endpoint refuses, the board says so instead of showing an empty b
   await expect(page.getByText(/Could not load the module board/i)).toBeVisible()
 })
 
-test('a signed-out visitor walking the real chunk graph reaches no backlog text at all', async ({ page }) => {
+test('when the boards are not deployed, the tabs say THAT — not "empty", and not "failed"', async ({ page }) => {
+  // THE STATE PRODUCTION IS IN SINCE 2026-09-16, and the reason this test does
+  // not skip with the three above: it needs no rows, and it is the only thing
+  // anyone who is not the founder will ever see on these two tabs.
+  //
+  // There are three wrong answers and the test rules out all three. AN EMPTY
+  // BOARD would say the work is finished. A SPINNER would say wait, forever.
+  // "COULD NOT LOAD — check you are signed in" would send the founder to debug
+  // his own session over a decision he took himself. The right answer names the
+  // files, says where they are, and says in as many words that this is not an
+  // empty backlog.
+  watch(page, 'an administrator on a deployment that carries no boards')
+
+  await page.route(isBacklogEndpoint, (route) => route.fulfill({ status: 501, json: NOT_DEPLOYED }))
+
+  await signIn(page, { admin: true })
+  await go(page, '/admin')
+  await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Pipeline' }).click()
+
+  // Scoped by its own text rather than taken as the first `.adm-empty` on the
+  // page: the dashboard has several empty-state cards, and a hidden or
+  // unrelated one would answer innerText() just as readily.
+  const gate = page.locator('.adm-empty').filter({ hasText: /is not deployed/i }).first()
+  await expect(gate).toBeVisible()
+  await expect(page.getByText(/The backlog is not deployed/i)).toBeVisible()
+  const sentence = (await gate.innerText()).replace(/\s+/g, ' ')
+  expect(sentence, 'the sentence does not name the files it is talking about').toMatch(/src\/data\/pipeline\.js/)
+  expect(
+    sentence,
+    'the sentence does not say this is not an empty backlog, which is the one reading it has to rule out',
+  ).toMatch(/NOT an empty backlog/i)
+
+  // NOT a spinner, and NOT a fault. Both are states this component can render,
+  // and both would be wrong here.
+  expect(sentence, 'the tab is still reporting a load failure for a deliberate absence').not.toMatch(/Could not load/i)
+  expect(sentence, 'the tab is still waiting on a request that already answered').not.toMatch(/Loading/i)
+
+  // NOT an empty board, which is the whole point.
+  expect(
+    await page.locator('.adm-pipe-todo').count(),
+    'the board rendered queue rows on a payload that carries none, so something is inventing them',
+  ).toBe(0)
+  await expect(page.getByText(/Next to do \(0\)/)).toHaveCount(0)
+
+  // BOTH tabs, for the reason the refusal test gives: the module board shared
+  // the leak, shares the gate, and has to share every honest failure.
+  await page.getByRole('tab', { name: 'Board' }).click()
+  await expect(page.getByText(/The module board is not deployed/i)).toBeVisible()
+  await expect(page.getByText(/Module Board \(0\)/)).toHaveCount(0)
+})
+
+boardTest('a signed-out visitor walking the real chunk graph reaches no backlog text at all', async ({ page }) => {
   // THE ACCEPTANCE TEST, in a browser, against the real preview server: the
   // same walk that found 824,007 bytes of notes before this change. Nothing is
   // signed in and page.request carries no credentials, so these are the exact
