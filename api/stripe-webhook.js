@@ -7,6 +7,9 @@ import {
   lifetimeGrantHealth,
   retrieveSessionWithCharge,
   revocationUpdate,
+  subscriptionChargeHealth,
+  subscriptionRevocationStamp,
+  subscriptionStatusGrantsAccess,
   writeSubscriptionDoc,
 } from './_lib/billing.js'
 
@@ -18,14 +21,14 @@ async function buffer(readable) {
   return Buffer.concat(chunks)
 }
 
-async function upsertSubscription(subscription) {
+async function upsertSubscription(stripe, subscription) {
   const uid = subscription.metadata?.firebaseUid
   if (!uid) {
     const userUid = await uidForCustomer(subscription.customer)
     if (!userUid) return
-    return writeSubscription(userUid, subscription)
+    return writeSubscription(userUid, subscription, null, stripe)
   }
-  return writeSubscription(uid, subscription)
+  return writeSubscription(uid, subscription, null, stripe)
 }
 
 // The subscription document's SHAPE lives in _lib/billing.js, not here, for two
@@ -43,8 +46,47 @@ async function upsertSubscription(subscription) {
 //
 // `db` is injectable so tests/unit/subscription-period-end.test.js can assert
 // what THIS CALL SITE writes, not merely what the helper returns.
-export async function writeSubscription(uid, sub, db = null) {
-  await writeSubscriptionDoc(db || adminDb(), uid, sub)
+//
+// `stripe` is injectable for the same reason, and it is what makes a RENEWAL
+// safe. Every customer.subscription.* delivery lands here, and the write is a
+// { merge: true } — which is the only thing that ever made `accessRevoked`
+// sticky. Merge onto a document that is not there and the flag is simply gone:
+// a charged-back customer whose profile had been deleted was handed Pro back by
+// the next renewal, with no action on their part at all. firestore.rules no
+// longer lets a client delete that document, and this is the half that does not
+// depend on the rule being published.
+//
+// Only a status that would GRANT access is checked, so an ordinary cancellation
+// or past_due delivery costs nothing extra. A clean charge writes exactly the
+// document it always wrote — byte for byte, which
+// tests/unit/subscription-period-end.test.js pins.
+export async function writeSubscription(uid, sub, db = null, stripe = null) {
+  const database = db || adminDb()
+  if (!stripe || !subscriptionStatusGrantsAccess(sub)) {
+    await writeSubscriptionDoc(database, uid, sub)
+    return
+  }
+
+  const health = await subscriptionChargeHealth(stripe, sub)
+  if (health.ok) {
+    await writeSubscriptionDoc(database, uid, sub)
+    return
+  }
+  if (!health.dirty) {
+    // The charge could not be read. Write the document as before — stamping a
+    // revocation on a Stripe hiccup would drop a paying customer to Free, which
+    // is worse than the gap this closes — but never silently.
+    console.error('stripe-webhook: could not read the charge behind a subscription — written WITHOUT a revocation check', {
+      uid, subscriptionId: sub?.id, reason: health.reason, error: health.error || null,
+    })
+    await writeSubscriptionDoc(database, uid, sub)
+    return
+  }
+
+  console.warn('stripe-webhook: subscription written with access REVOKED — its latest charge has gone back', {
+    uid, subscriptionId: sub?.id, stripeStatus: sub?.status, reason: health.reason,
+  })
+  await writeSubscriptionDoc(database, uid, sub, Date.now(), subscriptionRevocationStamp(sub, health))
 }
 
 // Resolves the Firebase uid for a Stripe customer id (used by invoice events
@@ -297,10 +339,23 @@ export async function subscriptionForPaymentIntent(stripe, paymentIntentId) {
 //
 // Stripe's own subscription is deliberately NOT cancelled here. Cancelling is
 // an irreversible outward action on a live billing account taken off the back
-// of one webhook, and Stripe already cancels on a chargeback under its own
-// rules. Access stops either way; what happens to the subscription record is
-// the founder's call, and the log line below is what tells them there is one to
-// make.
+// of one webhook, so what happens to the subscription RECORD stays the founder's
+// call and the log line below is what tells them there is one to make.
+//
+// CORRECTION, 2026-09-16. This comment used to add "and Stripe already cancels
+// on a chargeback under its own rules". THAT IS FALSE, and it was load-bearing
+// — it is why nobody worried that a disputed subscription keeps running.
+// Stripe's own documentation (docs.stripe.com/billing/subscriptions/cancel,
+// "Configure automatic cancellation after a dispute") describes
+// cancel-on-dispute as a SETTING in the Billing dashboard, off unless the
+// account turns it on. Until the founder switches it on, a disputed
+// subscription keeps cycling:
+// it renews, it invoices, and it fires customer.subscription.updated at this
+// webhook every period. That is what turned a deleted user document into a
+// repeatable wash rather than a one-off — see writeSubscription above, which now
+// re-checks the charge instead of trusting the merge to carry the flag.
+//
+// Access stops either way, because the flag below is what plans.js reads.
 async function revokeSubscriptionAccess(stripe, { paymentIntentId, customerId = null, chargeId = null, disputeId = null, reason }) {
   const sub = await subscriptionForPaymentIntent(stripe, paymentIntentId)
   if (!sub) return false
@@ -520,14 +575,14 @@ export default async function handler(req, res) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted': {
-      await upsertSubscription(event.data.object)
+      await upsertSubscription(stripe, event.data.object)
       break
     }
     case 'checkout.session.completed': {
       const session = event.data.object
       if (session.subscription) {
         const sub = await stripe.subscriptions.retrieve(session.subscription)
-        await upsertSubscription(sub)
+        await upsertSubscription(stripe, sub)
       } else {
         await grantLifetimeEntitlement(stripe, session)
       }

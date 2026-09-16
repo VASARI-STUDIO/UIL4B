@@ -118,10 +118,58 @@ test('owner can write the onboarding answers block', async () => {
   )
 })
 
-test('owner can read their own profile and delete their account document', async () => {
+test('owner can read their own profile', async () => {
   await seedAsServer(ALICE, PROFILE)
   await assertSucceeds(getDoc(userDoc(aliceDb())))
-  await assertSucceeds(deleteDoc(userDoc(aliceDb())))
+})
+
+// ── THE CHARGEBACK WASH ──────────────────────────────────────────────────────
+//
+// This test used to be its own opposite: "owner can ... delete their account
+// document", asserting the delete SUCCEEDED, on the strength of a rules comment
+// that said dropping your own profile "can only ever lose you access, never
+// grant it". For a subscription that is false. `subscription.accessRevoked` —
+// written by the webhook on a refund or chargeback, the only thing keeping that
+// customer on Free — lives on this document and nowhere else. It is sticky only
+// because every later write is a { merge: true } onto it. Delete the document
+// and the next subscription write (a renewal webhook, or one GET of
+// /api/checkout-status) rebuilds it without the flag.
+//
+// Both halves are asserted on the SAME seeded document, so a refused delete and
+// a broken emulator cannot be confused: the revocation is still there afterwards
+// AND an ordinary profile edit on it still goes through.
+test('owner CANNOT delete their own user document, so a revocation cannot be washed', async () => {
+  const REVOKED = { id: 'sub_1', status: 'active', accessRevoked: true, accessRevokedReason: 'dispute_created' }
+  await seedAsServer(ALICE, { ...PROFILE, subscription: REVOKED })
+
+  await assertFails(deleteDoc(userDoc(aliceDb())))
+
+  // The flag survived the attempt.
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await getDoc(doc(ctx.firestore(), 'users', ALICE))
+    assert.equal(snap.exists(), true, 'the document was deleted despite the refusal')
+    assert.equal(snap.data().subscription.accessRevoked, true)
+  })
+
+  // Positive control on the same document: the owner is still the owner.
+  await assertSucceeds(getDoc(userDoc(aliceDb())))
+  await assertSucceeds(setDoc(userDoc(aliceDb()), { bio: 'still mine' }, { merge: true }))
+})
+
+test('a delete is refused whether or not the document carries billing state', async () => {
+  // The rule is unconditional — it is not "deny when revoked", which a client
+  // could not be trusted to evaluate anyway. A plain profile is just as
+  // undeletable, so there is no shape of document that reopens the path.
+  await seedAsServer(ALICE, PROFILE)
+  await assertFails(deleteDoc(userDoc(aliceDb())))
+})
+
+test('the owner can still delete inside their sync subcollection', async () => {
+  // What the closed rule does NOT touch: the subcollection grants `write`,
+  // which includes delete, and the client's sync path relies on it.
+  const ref = doc(aliceDb(), 'users', ALICE, 'sync', 'data')
+  await assertSucceeds(setDoc(ref, { projects: [] }))
+  await assertSucceeds(deleteDoc(ref))
 })
 
 test('owner can still read and write their sync subcollection', async () => {
