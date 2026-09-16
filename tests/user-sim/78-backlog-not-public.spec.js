@@ -421,8 +421,8 @@ boardTest('a signed-out visitor walking the real chunk graph reaches no backlog 
     leaks,
     'a file an anonymous visitor can fetch contains text from the engineering backlog — notes, '
     + 'titles or process summaries. src/data/pipeline.js holds permission-denied diagnostics, '
-    + 'unshipped plans, security findings and founder decisions, including the literal text of an '
-    + 'unfixed Firestore rule.',
+    + 'unshipped plans, security findings and founder decisions, including the literal text of a '
+    + 'Firestore rule as it stood before it was closed.',
   ).toEqual([])
 
   // And the chunk that used to hold them is not on disk under any name.

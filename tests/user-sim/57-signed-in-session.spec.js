@@ -388,8 +388,9 @@ test('the Pipeline tab asks an admin-gated endpoint, and there is no backlog chu
   // bought, and it drove the real page to prove it. What nobody asked was who
   // ELSE could fetch that URL. The answer was everybody: 824,007 bytes of
   // engineering notes, 319,711 gzip, served from /assets with no login, no
-  // cookie and no Authorization header, including the literal text of an
-  // unfixed Firestore rule. The chunk was the defect, not its schedule.
+  // cookie and no Authorization header, including the literal text of a
+  // Firestore rule as it stood before #472 closed it. The chunk was the
+  // defect, not its schedule.
   //
   // src/data/pipeline.js is not a client module at all now. PipelineBoard reads
   // GET /api/ai?backlog=1, gated on a verified administrator by requireAdmin()

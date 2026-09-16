@@ -3,14 +3,12 @@
 // checkout. Every surface that quotes a plan price imports from here.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// ⚠️  FLAG FOR THE FOUNDER — these display amounts are still NOT the amounts
-//     Stripe will charge.
+// THE AMOUNTS BELOW ARE DISPLAY FALLBACKS. THEY ARE NOT WHAT STRIPE CHARGES.
 //
-//     `approvedTotal` below is the ladder recorded in
+//     `approvedTotal` below is the founder-approved ladder — recorded in
 //     docs/reference/design-language-v2.md ("Deviations from the mock",
-//     founder-approved 2026-08-16) and re-approved as decision 2 of
-//     2026-08-20, recorded in CHANGELOG.md: $7 monthly · $18 quarterly ·
-//     $48 yearly.
+//     2026-08-16) and re-approved as decision 2 of 2026-08-20 in CHANGELOG.md,
+//     both local-only since 2026-09-16: $7 monthly · $18 quarterly · $48 yearly.
 //
 //     SETTLED 2026-08-20: api/_lib/pricing.js used to disagree with this file —
 //     its DEFAULT_PRICES read monthly.usd 4.99 and yearly.usd 39.99 with no
@@ -19,14 +17,12 @@
 //     DEFAULT_PRICES row, LOOKUP_KEYS entry and INTERVAL_MAP entry.
 //     tests/unit/price-ladder.test.js fails the build if they drift again.
 //
-//     STILL OPEN, and the reason this flag stays: both files hold DISPLAY
-//     fallbacks. The amounts Stripe charges live in Stripe price objects
-//     (STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY, or the lookup keys), which
-//     are founder-configured in the dashboard and are not in this repository.
-//     Creating/confirming $7/$18/$48 there — a RISE on yearly, $39.99 → $48 —
-//     is tracked in docs/OWNER-ACTIONS.md — local-only since 2026-09-16 and not
-//     in this repository, per .gitignore. The ladder below is the part a reader
-//     needs and it is all here.
+//     Both files hold DISPLAY fallbacks. The amounts Stripe charges live in
+//     Stripe price objects (STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY, or the
+//     lookup keys), which are founder-configured in the dashboard and are not
+//     in this repository. Keeping the two in step is the founder's, tracked in
+//     docs/OWNER-ACTIONS.md — local-only since 2026-09-16, per .gitignore. The
+//     ladder below is the part a reader needs and it is all here.
 //
 //     Consequences, by design rather than by accident:
 //       1. Live prices WIN. When /api/get-prices returns an amount for an

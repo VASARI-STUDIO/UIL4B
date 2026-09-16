@@ -511,7 +511,7 @@ test('THE ONE THAT MATTERS: no file in the build output carries any internal boa
     'an internal board is in the build output, which means it is served to anyone who asks — no '
     + 'login, no cookie, no Authorization header. These modules hold permission-denied diagnostics, '
     + 'unshipped plans, security findings, per-module health and instructions addressed to the '
-    + 'owner, including the literal text of an unfixed Firestore rule. They must not be client '
+    + 'owner, including the literal text of a Firestore rule as it stood before it was closed. They must not be client '
     + 'modules at ALL: not a static import, not a dynamic one. Admin.jsx reads them from '
     + 'GET /api/ai?backlog=1 through useInternalBoards(); if you need the data in the browser, add '
     + 'it to that response.')

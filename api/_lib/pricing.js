@@ -30,11 +30,9 @@ export const BASE_CURRENCY = 'usd'
 //     this repository. Editing this table changes the number a visitor is
 //     SHOWN when /api/get-prices cannot answer. It changes no charge.
 //
-//     Making the charge match the display is an open owner action — see
+//     Keeping the charge and the display in step is the founder's, tracked in
 //     docs/OWNER-ACTIONS.md, which is local-only since 2026-09-16 and is not in
-//     this repository; .gitignore records the decision. The action is open
-//     whether or not you can read it. Note that yearly is a RISE from the
-//     previous $39.99 default to $48.
+//     this repository; .gitignore records the decision.
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // USD follows the founder-approved ladder — $7 monthly · $18 quarterly ·
