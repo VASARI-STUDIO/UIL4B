@@ -50,9 +50,18 @@ are not.
 ## Proposing
 
 The Director proposes; Dylan approves or denies. Proposals live in
-[`PROPOSALS.md`](../PROPOSALS.md) — one queue, one format, an explicit verdict
-line per item. Dylan is never blocked by the queue: ordinary requested work
-proceeds while proposals sit unanswered.
+`docs/PROPOSALS.md` — one queue, one format, an explicit verdict line per item.
+Dylan is never blocked by the queue: ordinary requested work proceeds while
+proposals sit unanswered.
+
+**That file is local-only since 2026-09-16** — on Dylan's machine, and in no
+clone of this repository. It holds unreleased product direction and he would
+rather it were not public; commercial caution rather than a security matter,
+unlike `docs/OWNER-ACTIONS.md`, which left for a harder reason the same day. The
+queue still works exactly as described below when you are running where the file
+is. Where you are not, **propose in the PR body or to Dylan directly and say the
+queue was unreachable** — do not start a second queue somewhere public, which is
+the "one queue, one format" rule failing in the way it was written to prevent.
 
 **Every proposal states its evidence class, honestly:**
 

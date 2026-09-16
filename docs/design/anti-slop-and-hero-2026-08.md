@@ -25,6 +25,11 @@
 > the same commit that closes the last of them — and `docs/research/
 > homepage-patterns-2026-08.md` goes with it, as its only remaining consumer.
 >
+> **`PROPOSALS.md` is local-only since 2026-09-16** — the founder keeps the
+> unreleased roadmap off a public repository, and `.gitignore` records it. So
+> the three verdicts this file is being held for cannot be checked from a clone.
+> That is a reason to leave the file alone, not a reason to assume they closed.
+>
 > **What is authoritative instead:** the live copy is `src/data/positioning.js`
 > and the surfaces that read it; the vocabulary is
 > `.claude/skills/uil4b-brand-design/references/anti-slop-quality-bar.md`; the

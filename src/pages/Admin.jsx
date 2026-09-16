@@ -535,6 +535,10 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
 // It carried the literal string `allow create: if true` — the unfixed Firestore
 // rule docs/OWNER-ACTIONS.md is still asking the founder to close — 23 mentions
 // of firestore.rules, 3 permission-denied diagnostics and 246 of "founder".
+// (That register left the repository itself on 2026-09-16, one level up from
+// this fix and for the same reason: a list of what is not yet secured does not
+// belong in a client chunk, and it does not belong in a public tree either.
+// .gitignore carries the decision.)
 //
 // THE MODULE BOARD, src/data/moduleBoard.js, WAS MISSED BY THE FIRST PASS, and
 // that is the more instructive half. It was a plain STATIC import here, so its

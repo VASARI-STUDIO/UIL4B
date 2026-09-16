@@ -31,8 +31,10 @@ export const BASE_CURRENCY = 'usd'
 //     SHOWN when /api/get-prices cannot answer. It changes no charge.
 //
 //     Making the charge match the display is an open owner action — see
-//     docs/OWNER-ACTIONS.md. Note that yearly is a RISE from the previous
-//     $39.99 default to $48.
+//     docs/OWNER-ACTIONS.md, which is local-only since 2026-09-16 and is not in
+//     this repository; .gitignore records the decision. The action is open
+//     whether or not you can read it. Note that yearly is a RISE from the
+//     previous $39.99 default to $48.
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // USD follows the founder-approved ladder — $7 monthly · $18 quarterly ·
@@ -136,7 +138,8 @@ export function trialDaysFor(interval) {
 // repository. Until it exists, resolvePrice returns null and create-checkout
 // answers 503 with "the quarterly price is temporarily unavailable" rather
 // than charging anyone anything — see docs/OWNER-ACTIONS.md for the test-mode
-// steps the founder asked to run first.
+// steps the founder asked to run first. That register is local-only since
+// 2026-09-16 and is not in this repository; .gitignore says why.
 export const BILLING_INTERVALS = Object.freeze(['monthly', 'quarterly', 'yearly', 'lifetime'])
 export const LIFETIME_CURRENCY_CODES = Object.freeze(Object.keys(DEFAULT_PRICES.lifetime))
 

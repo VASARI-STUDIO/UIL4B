@@ -7,7 +7,9 @@
 // `firestore.rules` is founder-gated (docs/reference/human-validation-zones.md)
 // AND the Claude Code auto-mode classifier refuses to stage it regardless of
 // approval — the same block recorded against the moderator role in
-// docs/OWNER-ACTIONS.md §1.3, which stopped an agent and the Director both. So
+// docs/OWNER-ACTIONS.md §1.3 (local-only since 2026-09-16 and not in this
+// repository; .gitignore carries why), which stopped an agent and the Director
+// both. So
 // the two rules findings from the 2026-09-06 engineering review
 // ([firestore-feedback-create-open-to-anyone], [firestore-signed-in-writes-unbounded])
 // ship as a diff in the pull request body for the founder to apply by hand.

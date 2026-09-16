@@ -85,7 +85,9 @@ import { addRecentColor, getRecentColors } from '../utils/recentColors'
 //   from here either. Note the shape of the call sites: two of them ARE gradient
 //   stops, and a stop cannot itself be a gradient. Which surface should take a
 //   gradient or image fill is product direction, not a defect, so it is raised
-//   in docs/PROPOSALS.md rather than guessed at.
+//   in docs/PROPOSALS.md rather than guessed at. That queue is local-only
+//   since 2026-09-16 and is not in this repository (see .gitignore); if you
+//   cannot open it, raise the question with the founder rather than deciding.
 //
 // tests/user-sim/35-colour-picker.spec.js asserts the ABSENCE of both — by
 // visible text AND by role, so neither a tab strip nor a bare alpha track can

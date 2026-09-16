@@ -192,7 +192,9 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
   // "Back to sign in", "Already have an account? Sign in"). That inconsistency
   // is real and predates this workstream. Fixing it means moving the nav, the
   // buttons, this title and the tests together — a proposal in docs/PROPOSALS.md,
-  // not a one-line edit here. Do not half-do it again.
+  // not a one-line edit here. Do not half-do it again. (That queue is local-only
+  // since 2026-09-16 and is not in this repository — see .gitignore. The
+  // inconsistency described above is visible in this file either way.)
   const title = resetMode ? (t('auth.resetPassword') || 'Reset your password')
     : isSignup ? (t('auth.createAccount') || 'Create your free account')
       : passwordOnly ? 'Switch account'

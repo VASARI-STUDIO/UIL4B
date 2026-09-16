@@ -31,7 +31,7 @@ consistent controls. Three surfaces:
 - **Discover** — browse community systems and curated resources. Six of eight
   groups are live; Inspiration and Collections are still Soon, and community
   *publishing* is deliberately deferred behind the approval queue (§3.9 of
-  `OWNER-ACTIONS.md`).
+  `OWNER-ACTIONS.md`, which is local-only — see the canonical map below).
 - **Learn** — understand the methods behind the tools. **Live**, with five
   published guides; two of the eight roadmap topics are delivered. Neutral and
   factual, not how-to guides for our own tools — founder decision, 2026-09-05.
@@ -49,7 +49,9 @@ tendencies) — **pull them apart, regroup, and re-sequence before acting.**
 
 The main thread is the **Director**: it executes what I ask, and it also brings me
 ideas. Full operating model: [`director.md`](docs/reference/director.md).
-Proposals for me to approve or deny: [`PROPOSALS.md`](docs/PROPOSALS.md).
+Proposals for me to approve or deny: `docs/PROPOSALS.md`, which is **local-only**
+— on my machine, not in this repository. See the canonical map below for what
+that means and why.
 
 **Writing anything I have to read.** 2026-09-05, verbatim: *“when leaving
 information for me or questions make sure to make them easy to understand as i
@@ -155,16 +157,34 @@ Read the relevant one before working in that area.
 | Fact | Canonical home |
 |---|---|
 | Product direction and the goal | **This file** (see Direction, above) |
-| Ideas awaiting founder approve/deny, and their verdicts | [`PROPOSALS.md`](docs/PROPOSALS.md) |
+| Ideas awaiting founder approve/deny, and their verdicts | `docs/PROPOSALS.md` — **local-only** |
 | **What the gate requires** (and the lint-warning ceiling) | [`build-and-verify.md`](docs/reference/build-and-verify.md) |
-| Founder-only console / credential / live-service work | [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) |
-| How we take this to market, and which half of each campaign is the founder’s to write | [`MARKETING.md`](docs/MARKETING.md) |
-| **Can we release?** — what is done, on him, or on an outside service | [`OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md), the box at the top. `RELEASE-READINESS.md` was retired 2026-09-14: it restated that page's rows with a second set of numbers that could disagree, and did |
-| Execution order, blockers, known-unfixed bugs | `src/data/pipeline.js` |
-| Per-module product status | `src/data/moduleBoard.js` |
+| Founder-only console / credential / live-service work | `docs/OWNER-ACTIONS.md` — **local-only** |
+| How we take this to market, and which half of each campaign is the founder’s to write | `docs/MARKETING.md` — **local-only** |
+| **Can we release?** — what is done, on him, or on an outside service | `docs/OWNER-ACTIONS.md` — **local-only** — the box at the top. `RELEASE-READINESS.md` was retired 2026-09-14: it restated that page's rows with a second set of numbers that could disagree, and did |
+| Execution order, blockers, known-unfixed bugs | `src/data/pipeline.js` — **local-only** |
+| Per-module product status | `src/data/moduleBoard.js` — **local-only** |
+| Known-unfixed defects from the August QA sweep | `docs/qa/defect-register-2026-08.md` — **local-only** |
 | Shipped release history, and the record of founder decisions already made | [`CHANGELOG.md`](CHANGELOG.md) |
 | Tool structure, routes, Soon-vs-live | [`tool-tree.md`](docs/build-plan/tool-tree.md) |
 | Homepage behaviour contract | `tests/user-sim/10-home-chaos-to-calm.spec.js` (the tests are the contract) |
+
+**“Local-only” means on Dylan's machine and in no clone of this repository** —
+founder decision, 2026-09-16: *"review whats in the public repo as this is now
+public, anything sensative should be stored locally."* This repository went
+public that day to use free GitHub Actions minutes, and these files were written
+for us rather than for a reader. `OWNER-ACTIONS.md` is the sharpest of them: it
+is a current-state inventory of what is **not yet secured**, console page by
+console page, which in a public repository is a worklist for whoever finds it
+first. The other four are commercial rather than sensitive — an unreleased
+roadmap, a market plan, a bug list — and the distinction is worth keeping.
+
+They are still authoritative, and they are still where these facts live. If you
+are running on Dylan's machine you have them; read them as you always did. If
+you do not have them, **you cannot reconstruct them and must not try** — say the
+fact is in a local-only document and ask him, rather than re-deriving a stale
+version of it somewhere public. `.gitignore` carries the full decision and the
+list. Removing them from git *history* is a separate operation and is scheduled.
 
 If a fact appears in two places, the table above wins and the other copy is a
 bug — delete it and link instead. Git history is the archive; do not create

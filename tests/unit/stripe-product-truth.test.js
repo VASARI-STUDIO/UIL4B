@@ -37,6 +37,8 @@
 //     after the constant was fixable.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
 import { read, stripComments, assertStripperWorks } from './helpers/source-text.js'
 import { PLANS, dailyLimitFor, monthlyLimitFor, proProductDescription } from '../../api/_lib/plans.js'
 import { AI_LIMITS } from '../../src/config/plans.js'
@@ -198,13 +200,33 @@ test('findOrCreateProduct leaves a correct product completely alone', async () =
 // ─────────────────────────────────────────────────────────────────────────────
 // 4 · The founder's half is written down, and written down CORRECTLY
 // ─────────────────────────────────────────────────────────────────────────────
-test('docs/OWNER-ACTIONS.md carries the exact sentence, not a paraphrase of it', () => {
+// ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
+// Public repository; that document is the current-state list of what is not yet
+// secured, so the founder keeps it on his machine and out of every clone
+// (.gitignore carries why). Only the founder's HALF of this file needs it. The
+// derivation itself — that proProductDescription() matches what the server
+// enforces, and that findOrCreateProduct writes that exact string — is code on
+// both sides and still runs everywhere, which is the half that protects a
+// paying customer. What skips is the check that the runbook still quotes the
+// derived sentence, and it skips WITH A REASON: an absent document trivially
+// satisfies nothing, and a green line there would say the founder's copy had
+// been verified when it had not been read at all.
+const OWNER_ACTIONS = path.join(process.cwd(), 'docs/OWNER-ACTIONS.md')
+const NO_OWNER_ACTIONS = !fs.existsSync(OWNER_ACTIONS)
+  && 'docs/OWNER-ACTIONS.md is not in this checkout — it is local-only, by the founder '
+  + 'decision of 2026-09-16 recorded in .gitignore — so the sentence it is supposed to '
+  + 'quote cannot be compared here. The derivation either side of it still runs.'
+
+test('docs/OWNER-ACTIONS.md carries the exact sentence, not a paraphrase of it', { skip: NO_OWNER_ACTIONS }, () => {
   // The live Stripe product keeps the old description until someone saves over
   // it — a deploy does not rewrite a Stripe product. So the owner action asks
   // for a specific string, and a string in a document is exactly the thing that
   // goes stale silently. This is the only reason it is safe to write it there.
   const doc = read('docs/OWNER-ACTIONS.md')
   const description = proProductDescription()
+  assert.ok(doc.length > 1000,
+    `docs/OWNER-ACTIONS.md read as ${doc.length} bytes — too short to be the register, `
+    + 'and an empty string would make the two matches below meaningless')
   assert.match(doc, /4\.12/, 'the Stripe product description owner action is missing from the register')
   // The doc wraps the quote across lines; compare on collapsed whitespace.
   const flat = doc.replace(/\s+/g, ' ')

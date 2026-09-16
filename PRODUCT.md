@@ -62,8 +62,16 @@ them.
 | What is queued, blocked or known-broken | `src/data/pipeline.js` |
 | The verify gate and how to run it | `docs/reference/build-and-verify.md` |
 | Founder-gated auth / Stripe files | `docs/reference/human-validation-zones.md` |
-| Founder-only console and credential work | `docs/OWNER-ACTIONS.md` |
-| Ideas awaiting a founder verdict | `docs/PROPOSALS.md` |
+| Founder-only console and credential work | `docs/OWNER-ACTIONS.md` — **local-only** |
+| Ideas awaiting a founder verdict | `docs/PROPOSALS.md` — **local-only** |
+
+**Local-only** means the file is on the founder's machine and in no clone of this
+repository — his decision of 2026-09-16, the day it went public. `OWNER-ACTIONS.md`
+is the security one: it lists what is not yet secured, step by step, and that is
+not a thing to publish. `PROPOSALS.md` and `docs/MARKETING.md` are commercial
+caution rather than security — an unreleased roadmap and a market plan. The rows
+above are still where those facts live; if you do not have the file, say so and
+ask, rather than re-deriving it here. `.gitignore` carries the full decision.
 
 ## Brand Commitments
 

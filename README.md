@@ -6,10 +6,24 @@ The product is organised around three surfaces: **Create** (build), **Discover**
 
 Current direction lives in [`CLAUDE.md`](CLAUDE.md) (Direction). Active work,
 blockers and known-unfixed bugs live in `src/data/pipeline.js`; founder-only
-console and credential work lives in
-[`docs/OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md); shipped history and the founder
-decisions behind it live in [`CHANGELOG.md`](CHANGELOG.md). Do not use historical
-commits or closed audit prose as a parallel backlog.
+console and credential work lives in `docs/OWNER-ACTIONS.md`; shipped history and
+the founder decisions behind it live in [`CHANGELOG.md`](CHANGELOG.md). Do not
+use historical commits or closed audit prose as a parallel backlog.
+
+> **Some of those files are deliberately not in this repository.** It went public
+> on 2026-09-16, and on the same day the founder decided that what had been
+> written for an internal audience should stay on his machine:
+> `docs/OWNER-ACTIONS.md`, `docs/PROPOSALS.md`, `docs/MARKETING.md`,
+> `docs/qa/defect-register-2026-08.md`, `src/data/pipeline.js` and
+> `src/data/moduleBoard.js`. The reason differs by file and is worth being
+> straight about. **`OWNER-ACTIONS.md` is a security call:** it is a live
+> inventory of what is not yet locked down — which rules are unpublished, which
+> keys are unrestricted, which webhook points at the wrong place — and publishing
+> that is publishing a worklist for somebody else. The rest is **commercial
+> caution**: an unreleased roadmap, a market plan and a list of bugs we know
+> about. Nothing in them is exploitable; he would just rather they were not the
+> first thing you read. `.gitignore` carries the decision in full. The project
+> builds, lints and tests green without any of them.
 
 **Live:** [uil4b.com](https://uil4b.com)
 
@@ -71,7 +85,9 @@ The whole group carries `soon: true` in `src/data/toolTree.js`: it is badged
   > both print them as what Pro adds. The claim here was founder-approved on
   > 2026-08-20 (see `docs/reference/positioning.md`); the two Pro documents
   > shipped afterwards. Three live surfaces now describe the entitlement one
-  > way and two documents the other. `docs/OWNER-ACTIONS.md` §2.3.
+  > way and two documents the other. `docs/OWNER-ACTIONS.md` §2.3 — that file is
+  > local-only, so the question as it was put to the founder is on his machine;
+  > what you can check here is the contradiction itself, in the code named above.
 - **Accounts** — Firebase auth with Google One Tap, profile management, cross-device Firestore sync
 - **Admin Dashboard** — Analytics, feedback triage, community prompt review with inline editing, design analytics (most copied fonts / picked colours), server-verified admin access
 - **Admin Style Guide** — Internal design system reference at `/style-guide` (tokens, type scale, components, patterns). Admin-only: it was behind sign-in alone, so every account on the site could read it

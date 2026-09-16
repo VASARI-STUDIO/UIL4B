@@ -92,7 +92,9 @@ the unrouted pages — `Dashboard`, `CategoryDashboard`, `ExternalResources`,
   > **`AiPromptGenerator.jsx` is still unrouted and was deliberately kept.** It
   > is the only caller of the OpenRouter path, and `docs/OWNER-ACTIONS.md §4.5`
   > asks the founder to choose between wiring it up and cancelling OpenRouter.
-  > Deleting it would have made that decision by default.
+  > Deleting it would have made that decision by default. (That document is
+  > local-only since 2026-09-16 and is not in this repository — the open
+  > decision it records is real, you simply cannot read the entry here.)
 
 > **`IconLibrary.jsx` and `EmojiLibrary.jsx` are unrouted.** Both files still
 > exist and neither is imported anywhere. `CreateTool.jsx` maps **both**

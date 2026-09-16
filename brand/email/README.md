@@ -48,7 +48,11 @@ Only mail the product does not already send is in `templates/`.
 ## Why `payment-failed.html` is the one that matters
 
 `docs/OWNER-ACTIONS.md` records that the in-app billing banner *"only ever
-reaches someone who already came back on their own."* So today, a customer whose
+reaches someone who already came back on their own."* (That register is
+local-only since 2026-09-16 — the founder keeps it off this public repository
+because it lists what is not yet secured; `.gitignore` carries the decision. The
+quote is reproduced here so the argument below still stands on its own.) So
+today, a customer whose
 card fails finds out by returning to the app and noticing. That template is the
 half that goes and tells them. It is the only file here with money attached.
 
@@ -60,8 +64,9 @@ trouble.
 
 ## Still blocked, and this folder does not unblock it
 
-**A verified sending domain** — `OWNER-ACTIONS.md` §4.10. Until SPF, DKIM and a
-return path exist on `uil4b.com`, none of this can be sent to a customer:
+**A verified sending domain** — `OWNER-ACTIONS.md` §4.10 (local-only, see above).
+Until SPF, DKIM and a return path exist on `uil4b.com`, none of this can be sent
+to a customer:
 
 - `api/support.js:194` and `api/ai.js:609` both still send from
   **`onboarding@resend.dev`**, the Resend sandbox. That address is not

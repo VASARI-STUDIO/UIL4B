@@ -6,8 +6,15 @@ This file is the canonical shipped-release history, and it carries the standing
 record of the **founder decisions** behind each release — cite it when a document
 needs to point at where a call was actually made. Current product direction lives
 in [`CLAUDE.md`](CLAUDE.md) (Direction); ideas still awaiting a founder verdict
-live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
+live in `docs/PROPOSALS.md`; open engineering work lives in
 `src/data/pipeline.js`. Don't use this file as a backlog.
+
+Both of those, and several documents named in the entries below, are **local-only
+since 2026-09-16** — on the founder's machine and in no clone of this repository.
+See the 2026-09-16 decisions immediately below, and `.gitignore`. **Entries older
+than that date are left exactly as they were written:** this file is a record of
+what was true when each release shipped, and editing its history to match today's
+file layout would make it useless as a record.
 
 ---
 
@@ -20,6 +27,7 @@ live in [`docs/PROPOSALS.md`](docs/PROPOSALS.md); open engineering work lives in
 | 1 | **Claude Code may `git push`.** A permission rule was added to user settings after the founder was asked. It unblocked delivery: verified work could be committed but not pushed, so it was accumulating on one machine with no backup | Yes |
 | 2 | **He publishes the Firestore rules himself.** Offered the choice of an agent running `firebase deploy --only firestore:rules`; he kept the production change in his own hands. OWNER-ACTIONS row 3 is now the publish step and nothing else | **His call, against the faster option** |
 | 3 | **Finished backlog rows move to a local-only archive.** Asked in the context of "are we committing things that don't need to be on the live site". 172 of 211 rows moved to `docs/backlog/`, which is Vercel-ignored | Yes |
+| 4 | **The owner's own documents come out of the public repository.** Verbatim: *"review whats in the public repo as this is now public, anything sensative should be stored locally."* Four files untracked and kept on disk — `docs/OWNER-ACTIONS.md`, `docs/PROPOSALS.md`, `docs/MARKETING.md`, `docs/qa/defect-register-2026-08.md`. **One of those is a security call and three are not**, and they are recorded apart for that reason: OWNER-ACTIONS is a current-state inventory of what is *not yet secured* — unpublished rules, an unrestricted key, a misrouted webhook, a portal never configured — which in a public repository is a worklist for whoever finds it. The other three are commercial caution: an unreleased roadmap, a market plan, a known-bug register. Nothing in them is exploitable | Yes |
 
 ### The gated security work was uncommitted, not unwritten
 
@@ -227,9 +235,10 @@ gate.
 ### Still open after that interview — 2026-09-05
 
 Two questions and one writing task, all on one screen each in
-[`docs/OWNER-ACTIONS.md`](docs/OWNER-ACTIONS.md) §2. Listed here because this
-file is the record of where a call was **asked for** as well as where one was
-made.
+`docs/OWNER-ACTIONS.md` §2 (local-only since 2026-09-16; the link is removed
+rather than the reference, so the record still says where they were asked).
+Listed here because this file is the record of where a call was **asked for** as
+well as where one was made.
 
 1. **The hero shape** — A, B or C, at `/?hero=a|b|c`. Note that direction C is
    rendered at 45% opacity **as a placeholder marker**; the shape is what is being

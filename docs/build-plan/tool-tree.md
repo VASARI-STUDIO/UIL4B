@@ -147,7 +147,10 @@ carries the flags; check there rather than trusting the bolding here.
 
 Community **publishing** is a separate thing from these browse surfaces and is
 deliberately not built yet: #377 re-scoped it, and §3.9 of `OWNER-ACTIONS.md`
-records the founder's decision that nothing publishes without his approval.
+records the founder's decision that nothing publishes without his approval. That
+document is local-only since 2026-09-16 and is not in this repository, so the
+decision is cited here rather than linked; the behaviour it describes is what
+ships.
 
 ### LEARN (understand — all documentation)
 

@@ -24,7 +24,9 @@
 //     (STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY, or the lookup keys), which
 //     are founder-configured in the dashboard and are not in this repository.
 //     Creating/confirming $7/$18/$48 there — a RISE on yearly, $39.99 → $48 —
-//     is tracked in docs/OWNER-ACTIONS.md.
+//     is tracked in docs/OWNER-ACTIONS.md — local-only since 2026-09-16 and not
+//     in this repository, per .gitignore. The ladder below is the part a reader
+//     needs and it is all here.
 //
 //     Consequences, by design rather than by accident:
 //       1. Live prices WIN. When /api/get-prices returns an amount for an
@@ -87,8 +89,9 @@ export const PLAN_LADDER = Object.freeze([
     //
     // He chose test-mode-first. So: create the price in Stripe TEST mode, run a
     // checkout through it, then change this one field to 'quarterly'.
-    // docs/OWNER-ACTIONS.md carries the steps; tests/unit/price-ladder.test.js
-    // holds the line until then.
+    // docs/OWNER-ACTIONS.md carries the steps (local-only since 2026-09-16, not
+    // in this repository); tests/unit/price-ladder.test.js holds the line until
+    // then, and that test is here.
     checkoutPlan: null,
     approvedTotal: 18,
     trialDays: 7,
