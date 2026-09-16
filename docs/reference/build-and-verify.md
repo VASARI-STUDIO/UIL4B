@@ -435,7 +435,11 @@ While that is true, **the only evidence a change is green is a local run of the
 four commands above, pasted into the PR body** — and the reviewer has to be told
 to look there, because the honest signal is invisible on the PR itself. The live
 state is on the App condition board (`ci` and `deploy` in `src/data/pipeline.js`);
-clearing it is §1 of `docs/OWNER-ACTIONS.md` and needs the account owner.
+clearing it is §1 of `docs/OWNER-ACTIONS.md` and needs the account owner. Both of
+those files are local-only since 2026-09-16 — on the founder's machine, out of
+this public repository, `.gitignore` carries why — so if you are not on his
+checkout you cannot read either, and the honest thing to report is that the
+board state is unknown here rather than that it is clear.
 
 ## Commands
 

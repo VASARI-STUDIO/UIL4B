@@ -40,6 +40,21 @@ import { RULE_MATCHER } from '../../scripts/per-project-rules-patch.mjs'
 
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8')
 
+// ── docs/OWNER-ACTIONS.md IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
+// Public repository, and that document is the current-state list of what is not
+// yet secured — including the diffs this very command applies — so it is kept on
+// the founder's machine and out of every clone (.gitignore carries why). Guard
+// 4 above is the one that reads it; it SKIPS WITH A REASON where the file is
+// absent rather than passing on nothing. The half of guard 4 that lives in
+// package.json does NOT skip, because the script entry is in every checkout:
+// losing the command is still caught everywhere, and only "the document still
+// tells him the command" needs the document.
+const OWNER_ACTIONS = path.join(ROOT, 'docs/OWNER-ACTIONS.md')
+const NO_OWNER_ACTIONS = !fs.existsSync(OWNER_ACTIONS)
+  && 'docs/OWNER-ACTIONS.md is not in this checkout — it is local-only, by the founder '
+  + 'decision of 2026-09-16 recorded in .gitignore — so whether it still names the '
+  + 'command and shows the diffs cannot be checked here.'
+
 /** The four, by id, in the order the applier applies them. */
 const EXPECTED_IDS = [
   'per-project-sync',
@@ -223,11 +238,14 @@ test('package.json still carries the apply:gated script', () => {
   assert.ok(fs.existsSync(path.join(ROOT, 'scripts/apply-gated-patches.mjs')))
 })
 
-test('the owner document names the command and still shows the diffs', () => {
+test('the owner document names the command and still shows the diffs', { skip: NO_OWNER_ACTIONS }, () => {
   // The document is the artefact: a founder who cannot find the command cannot
   // run it, and a document that only names the command has taken away the
   // diffs he was told to review.
   const doc = read('docs/OWNER-ACTIONS.md')
+  assert.ok(doc.length > 1000,
+    `docs/OWNER-ACTIONS.md read as ${doc.length} bytes — an empty document cannot fail `
+    + 'the four matches below for the reason they are written')
   assert.match(doc, /npm run apply:gated/,
     'docs/OWNER-ACTIONS.md no longer names the one command that applies these')
   assert.match(doc, /firestore\.rules/)

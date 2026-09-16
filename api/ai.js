@@ -1040,7 +1040,11 @@ function timingSafeEqual(a, b) {
 //
 // That file contained the literal string `allow create: if true` — the exact
 // unfixed Firestore rule docs/OWNER-ACTIONS.md is still asking the founder to
-// close — 23 mentions of firestore.rules, 3 permission-denied diagnostics and
+// close (that register followed the boards out of the repository on 2026-09-16,
+// for the same reason one level up: it is a list of what is NOT yet secured, and
+// this paragraph is the argument for why such a list must not ship to a client
+// or sit in a public tree — see .gitignore) — 23 mentions of firestore.rules,
+// 3 permission-denied diagnostics and
 // 246 mentions of the founder. #420 moved it behind a dynamic import, which
 // fixed WHEN it was fetched and did nothing at all about WHO could fetch it.
 //

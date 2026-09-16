@@ -1,7 +1,9 @@
 // Is this the real site, or a copy of it?
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHY (docs/PROPOSALS.md P-001, APPROVED)
+// WHY (docs/PROPOSALS.md P-001, APPROVED - that queue is local-only since
+// 2026-09-16 and is not in this repository; see .gitignore. The reasoning is
+// reproduced in full below, so nothing here depends on reading it.)
 // ─────────────────────────────────────────────────────────────────────────────
 // Every environment — localhost, every Vercel preview deploy, every branch
 // build — points at the SAME Firebase project, and the client writes shared

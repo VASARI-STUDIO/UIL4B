@@ -20,7 +20,10 @@
 > (`OWNER-ACTIONS.md` §3.11).
 >
 > **Why it is not deleted.** It is the cited evidence for **P-011**, still open
-> in `PROPOSALS.md`. Delete it in the same commit that closes P-011.
+> in `PROPOSALS.md`. Delete it in the same commit that closes P-011. Both
+> `PROPOSALS.md` and `OWNER-ACTIONS.md` are local-only since 2026-09-16 — kept
+> on the founder's machine and out of this public repository, per `.gitignore` —
+> so from a clone you cannot confirm P-011's state. Leave the file until you can.
 >
 > **What is authoritative instead:** `src/pages/Home.jsx` and the components it
 > mounts, for what the homepage is; `src/data/positioning.js` for every
@@ -1512,7 +1515,8 @@ evidence any of it was verified.
 captures in either research pass, and the 641–980px range currently inherits
 whichever of the two neighbours the breakpoint happens to catch. Nothing about
 tablet here is evidenced — treat it as the starting hypothesis for the responsive
-audit (batch item B2, now `docs/qa/defect-register-2026-08.md`) and verify before
+audit (batch item B2, now `docs/qa/defect-register-2026-08.md`, which is
+local-only since 2026-09-16 and not in this repository) and verify before
 committing.
 
 ---

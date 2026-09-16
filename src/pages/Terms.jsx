@@ -13,6 +13,8 @@
 // item (3). That row is the backlog of record and ships in the same commit as
 // this file. It is the lane's own minute of a conversation, not a PROPOSALS.md
 // verdict - so if you need the stronger form, ask him to confirm it there.
+// PROPOSALS.md is local-only since 2026-09-16 and is not in this repository
+// (.gitignore carries why), which is one more reason to ask rather than assume.
 // .legal-h--sm went with it: Terms was its only caller.
 import { useI18n } from '../contexts/I18nContext'
 

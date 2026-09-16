@@ -14,7 +14,9 @@
 //
 // The founder created admin@uil4b.com on 2026-09-14, and a mailbox is not a
 // verified sending domain. Until SPF, DKIM and a return path exist on uil4b.com
-// (OWNER-ACTIONS.md §4.10), Resend REFUSES to send as admin@uil4b.com — the API
+// (docs/OWNER-ACTIONS.md §4.10 — that register is local-only since 2026-09-16
+// and is not in this repository; see .gitignore for the decision and the
+// reason), Resend REFUSES to send as admin@uil4b.com — the API
 // returns an error and the mail is simply lost. Hard-coding the new address
 // today would therefore silently break the founder's own feedback notifications,
 // which currently work.

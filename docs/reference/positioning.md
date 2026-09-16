@@ -216,4 +216,6 @@ sits in which sub-area is read from `tool-tree.md`.
 > watermark model it describes still holds exactly where it was written about:
 > `html`, `md`, `png` and `jpeg` are `pro: false` and still pass
 > `watermark: !isPro`. Nothing on a page moved. See `docs/OWNER-ACTIONS.md`
-> §2.3 for the question as it was put to him.**
+> §2.3 for the question as it was put to him — that file is local-only since
+> 2026-09-16 and is not in this repository, so the wording of the question is on
+> his machine; the decision it produced is the paragraph you are reading.**

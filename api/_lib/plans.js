@@ -209,7 +209,10 @@ export function modelFor(plan, toolId) {
 // The remaining half is not code: findOrCreateProduct now calls
 // stripe.products.update when a live product's description differs, but nothing
 // runs that until the founder POSTs /api/setup-stripe. That is logged in
-// docs/OWNER-ACTIONS.md.
+// docs/OWNER-ACTIONS.md, which is local-only since 2026-09-16 and is not in this
+// repository (.gitignore carries why). The DERIVATION below is the half that
+// protects a customer and it is all here; only the founder's runbook entry is
+// elsewhere.
 export function proProductDescription(plan = PLANS.pro) {
   const daily = dailyLimitFor(plan, 'ai-default')
   const monthly = monthlyLimitFor(plan, 'ai-default')
