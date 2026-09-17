@@ -349,7 +349,13 @@ const DISCOVER_SPEC = [
   // Emoji Library is deliberately not a second entry — it is the other tab of
   // this same page, one click away inside the hero #306 shipped.
   { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search 200,000+ icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
-  { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/discover', soon: true },
+  // /community has been live since #472 and this row was still pointing at
+  // /discover — the surface the visitor is already standing on — with a Soon
+  // badge on it. The mega menu, the mobile sheet and the visual sitemap all
+  // render this one row, so the site said "Soon" for a page it was serving 200
+  // for in three places at once. Route and flag both corrected; the desc was
+  // already written for the live page and is untouched.
+  { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: false },
   { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
   // Live as of this change. The 22 curated resources in discoverResources.js
   // have existed since Slice 2; only the page was missing, so this entry

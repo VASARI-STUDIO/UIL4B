@@ -255,6 +255,11 @@
       "source": "/faq",
       "destination": "/help#faq",
       "permanent": true
+    },
+    {
+      "source": "/create",
+      "destination": "/create/color",
+      "permanent": true
     }
   ],
   "rewrites": [
