@@ -256,3 +256,54 @@ export const MOOD_LABELS = {
   light: 'Light',
   monochrome: 'Monochrome',
 }
+
+// ── Hue names, for search ───────────────────────────────────────────────────
+//
+// MEASURED 2026-09-16 on the live /discover/palettes at 1280: "blue" 0,
+// "green" 0, "warm" 0, "pastel" 0, while /discover/gradients answered all
+// four. The Palette Library's haystack was name + kind + hex, and nobody types
+// a hex to find a blue palette. These are the same HCT hues the classifier
+// above reads, behind the same HUE_MIN_CHROMA gate, so a grey never says
+// "blue" and the hue a search matches is the hue a mood was judged on.
+//
+// THE ANCHORS ARE MEASURED IN THIS IMPLEMENTATION'S HUE, not copied from a
+// CAM16 table: here #FF0000 sits at 27°, #FFFF00 at 111°, #00A000 at 142° and
+// #0000FF at 283°, and the twelve were placed by running the named web colours
+// through hexToHct and reading where each family lands (pink 354–6, red 16–34,
+// orange 49–76, gold 85–97, yellow 106–111, lime 126–136, green 142–157, teal
+// 172–200, sky 226–248, blue 259–285, violet 292–315, magenta 318–335).
+// Nearest anchor wins.
+//
+// A term is a phrase where the bucket is a sub-hue of a word people actually
+// type: "gold yellow" so that "yellow" finds gold, "lime green" so that "green"
+// finds lime, "violet purple" and "magenta purple" so that "purple" finds both
+// sides of it, "sky blue" so that "blue" finds sky. The finer word still works
+// on its own.
+export const HUE_TERMS = Object.freeze([
+  [2, 'pink'], [25, 'red'], [60, 'orange'], [88, 'gold yellow'], [110, 'yellow'],
+  [130, 'lime green'], [150, 'green'], [192, 'teal cyan'], [235, 'sky blue'],
+  [275, 'blue'], [305, 'violet purple'], [334, 'magenta purple'],
+])
+
+/** The hue term of one hex, or null below the classifier's chroma gate. */
+export function hueTerm(hex) {
+  const [hue, chroma] = hexToHct(hex)
+  if (chroma < HUE_MIN_CHROMA) return null
+  let best = null
+  let bestDistance = Infinity
+  for (const [anchor, term] of HUE_TERMS) {
+    const distance = hueDistance(hue, anchor)
+    if (distance < bestDistance) { bestDistance = distance; best = term }
+  }
+  return best
+}
+
+/** Every hue term a palette's swatches carry, each once, in swatch order. */
+export function hueTerms(hexes) {
+  const seen = new Set()
+  for (const hex of hexes) {
+    const term = hueTerm(hex)
+    if (term) seen.add(term)
+  }
+  return [...seen]
+}

@@ -32,7 +32,11 @@ import {
   VIVID_MIN_SPREAD,
   WARM_MIN_SHARE,
   MONO_HUE_TOLERANCE,
+  hueTerm,
+  hueTerms,
+  HUE_TERMS,
 } from '../../src/utils/paletteMood.js'
+import { paletteHaystack } from '../../src/utils/paletteSearch.js'
 import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 import { splitLockedLibrary } from '../../src/utils/lockedPreview.js'
 
@@ -234,6 +238,77 @@ test('nothing about a palette except its colours can change the answer', () => {
 test('classifying an empty palette is an error, not a silent answer', () => {
   assert.throws(() => classifyPalette([]), /at least one hex/)
   assert.throws(() => classifyPalette(null), /at least one hex/)
+})
+
+// ── What the search field matches ───────────────────────────────
+//
+// THE DEFECT THESE EXIST FOR. MEASURED 2026-09-16 on the live
+// /discover/palettes at 1280: "blue" returned 0 palettes, "green" 0, "warm" 0,
+// "pastel" 0 — while the Gradient Library next door answered all four. The
+// haystack was name + kind + hex, so the moods classified one line above it
+// were never indexed, and a colour was reachable only by typing a hex, which
+// is not a thing anybody does. Same rule as the rest of this file: no count is
+// asserted, only that the words a person actually types select something.
+
+test('a hue term is the hue the classifier judged, or nothing at all', () => {
+  // The anchors are measured in THIS implementation's hue rather than copied
+  // from a CAM16 table, so these pin the families those anchors claim.
+  assert.equal(hueTerm('#FF0000'), 'red')
+  assert.equal(hueTerm('#0000FF'), 'blue')
+  assert.equal(hueTerm('#00A000'), 'green')
+  assert.equal(hueTerm('#FFFF00'), 'yellow')
+
+  // Below the classifier's chroma gate there is no honest hue to report, and
+  // inventing one would let a grey palette answer a search for "blue".
+  for (const grey of ['#000000', '#FFFFFF', '#808080', '#1A1A1C']) {
+    assert.equal(hueTerm(grey), null, `${grey} claimed a hue`)
+  }
+  assert.deepEqual(hueTerms(['#111111', '#EEEEEE']), [])
+
+  // Each term once, in swatch order, however many swatches carry it.
+  assert.deepEqual(hueTerms(['#FF0000', '#FE0202', '#0000FF']), ['red', 'blue'])
+})
+
+test('every hue term is reachable by the word a person would type', () => {
+  // A phrase anchor ("sky blue") exists so the coarse word finds the sub-hue.
+  // If one stopped carrying its family word, searching "blue" would quietly
+  // stop finding sky palettes with nothing else failing.
+  const words = new Set(HUE_TERMS.flatMap(([, term]) => term.split(' ')))
+  for (const plain of ['pink', 'red', 'orange', 'yellow', 'green', 'blue', 'purple']) {
+    assert.ok(words.has(plain), `no hue term contains the word "${plain}"`)
+  }
+})
+
+test('the words people type select palettes on the library that ships', () => {
+  const haystacks = LIBRARY_PALETTES.map((p) => paletteHaystack(p, classifyPalette(p.colors)))
+  const hits = (q) => haystacks.filter((h) => h.includes(q.toLowerCase())).length
+  const report = []
+  // The four measured zeroes, plus three more of the same shape.
+  for (const q of ['blue', 'green', 'warm', 'pastel', 'red', 'dark', 'monochrome']) {
+    const n = hits(q)
+    assert.ok(n > 0, `"${q}" still selects no palette — the haystack has stopped carrying moods or hues`)
+    report.push(`  ${q.padEnd(11)} ${String(n).padStart(3)}`)
+  }
+  // The positive control: a query that should find nothing must still find
+  // nothing, or `includes` is matching everything and the asserts above are free.
+  assert.equal(hits('zzzznotacolour'), 0)
+  console.log(`\npalette search, derived from ${LIBRARY_PALETTES.length} palettes:\n${report.join('\n')}\n`)
+})
+
+test('a haystack carries the name, the hexes and the hues', () => {
+  const palette = LIBRARY_PALETTES[0]
+  const hay = paletteHaystack(palette, classifyPalette(palette.colors))
+  assert.ok(hay.includes(palette.name.toLowerCase()), 'the name is not searchable')
+  for (const hex of palette.colors) {
+    assert.ok(hay.includes(hex.toLowerCase()), `${hex} is not searchable`)
+  }
+  for (const term of hueTerms(palette.colors)) {
+    assert.ok(hay.includes(term), `the hue "${term}" is not searchable`)
+  }
+  assert.equal(hay, hay.toLowerCase(), 'the haystack must be lower-cased or a capitalised query misses')
+  // Classifying is optional so the page does not run CAM16 per swatch twice;
+  // the default must reach the same answer as handing the mood in.
+  assert.equal(paletteHaystack(palette), hay)
 })
 
 // ── The report the founder asked for, derived rather than typed ─────────────

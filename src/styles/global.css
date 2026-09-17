@@ -2502,6 +2502,17 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    buying anything — it was only ever paid to keep the row narrow enough to
    float there. 4px between adjacent 27-29px targets is thin for a finger. */
 @media(hover:none){.pgal-card .lbry-card-actions{gap:8px}}
+/* STOPGAP, touch only, 641px and up. MEASURED 2026-09-16 on the live
+   /discover/palettes at 834 (iPad portrait): the five labelled actions want
+   391px of row in a 388px card, so every swatch carried a 62px two-row block
+   with "Hex" orphaned on the second line. One row that scrolls the last few
+   pixels instead. Hover devices keep the overlay untouched: at 1024/1280/1440
+   the same five fit one row (375px in 385–467px), and a scroller inside an
+   absolutely positioned overlay would only add a scrollbar to a row that
+   already fits. The real fix — two labelled actions and an overflow menu,
+   matching the gradient card — is queued; this buys a single row until then. */
+@media(hover:none) and (min-width:641px){
+  .pgal-card .lbry-card-actions{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}}
 .pgal-act{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:var(--radius-pill);border:1px solid rgba(255,255,255,.16);background:rgba(10,10,14,.72);color:#fff;font-family:var(--font);font-size:11px;font-weight:600;line-height:1;cursor:pointer;text-decoration:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 /* The foot used to need `position:relative;z-index:4` to stay above the
    actions layer. It no longer does, and the rule is gone rather than kept
@@ -6888,6 +6899,19 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 @media(max-width:480px){
   .dgh-action .btn{width:100%;justify-content:center}}
 
+/* Two lines, then an ellipsis. MEASURED 2026-09-16 on the live site at 390:
+   the Icon Library masthead was 453px, the Font Gallery's 379px and Curated
+   Resources' 357px — the first result past a full 844px screen on all three —
+   and the paragraph was the variable: 6, 4 and 5 lines (140/96/116px) of a
+   sentence written for a 630px measure. The h1, the action and the
+   Icon/Emoji tablist are the masthead's job; a description that runs to a
+   third of the screen is not. The clamp is the whole fix: the sentences are
+   the founder's to shorten, not an agent's. The Font Gallery's masthead is
+   its own component with the same paragraph in the same place, so it takes
+   the same cap. */
+@media(max-width:640px){
+  .dgh-copy>p,.fg-hero-intro>p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}}
+
 
 /* Palette Library */
 .pgl-page{padding-bottom:72px}
@@ -7036,8 +7060,15 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
      instead of themselves — `H1`, the hero `<p>` and `.dgh-copy`, which is
      `position:relative; z-index:1` and so won against a context that had
      forfeited its 45. Restoring the z-index costs no layout: a relative box
-     with no offsets occupies exactly the space a static one did. */
-  .lbry-toolbar{position:relative;gap:8px;padding:8px}
+     with no offsets occupies exactly the space a static one did.
+     `top:auto` — a relative box with an offset is NOT a box with no offsets.
+     This rule never reset the base rule's `top:calc(var(--nav-clear) + 8px)`,
+     and a relative box honours `top`: MEASURED 2026-09-16 on the live site at
+     320/360/390/414, light and dark, on all six libraries, computed top 68px,
+     a 92px hole above the toolbar and the toolbar sitting 40px over the
+     results heading under it ("Colours worth building with" clipped). With
+     the offset gone it is 24px above and 28px clear below. */
+  .lbry-toolbar{position:relative;top:auto;gap:8px;padding:8px}
   .lbry-toolbar-filters{width:100%}
   .lbry-filters{width:100%}
   .lbry-toolbar-action{width:100%;margin-left:0}

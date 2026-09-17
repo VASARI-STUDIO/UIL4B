@@ -280,7 +280,12 @@ test.describe('Discover libraries share one header', () => {
       ].join('/')
     })
 
-    for (const label of ['Cool', 'Dark', 'All']) {
+    // The TYPE tray. Mood became a menu at every width on 2026-09-16 (eight
+    // options beside this tray wrapped the toolbar to two rows at 1024), so
+    // the one expanded tray on this page is the type group, and a plain click
+    // on it still replaces the selection — the indicator has one box to land
+    // on.
+    for (const label of ['Radial', 'Conic', 'All types']) {
       await tray.getByRole('button', { name: label, exact: true }).click()
       // "0/0/1" = zero offset error, zero width error, fully visible.
       await expect.poll(settled, { timeout: 2000 }).toBe('0/0/1')
@@ -394,7 +399,7 @@ test.describe('the Palette Library carries the brand systems', () => {
     watch(page, 'designer searching the library for a specific brand')
     await go(page, '/discover/palettes')
 
-    const search = page.getByPlaceholder('Search by name or hex…')
+    const search = page.getByPlaceholder('Search by name, hex, colour or mood…')
     await search.fill('Netflix')
     await expect(page.locator('.pgal-card')).toHaveCount(1)
     await expect(page.locator('.pgal-name')).toHaveText('Netflix')

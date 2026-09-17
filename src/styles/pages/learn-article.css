@@ -109,13 +109,13 @@
 
 /* ── Formula ── */
 .lart-formula{margin:var(--s-5) 0}
-.lart-formula pre{overflow-x:auto;padding:var(--s-4);border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border)}
+.lart-formula pre{overflow-x:auto;scrollbar-width:thin;padding:var(--s-4);border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border)}
 .lart-formula code{font-family:var(--mono);font-size:13px;line-height:1.75;color:var(--t0);white-space:pre;display:block}
 .lart-formula figcaption{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
 
 /* ── Tables ── */
 .lart-table-wrap{margin:var(--s-5) 0}
-.lart-table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius)}
+.lart-table-scroll{overflow-x:auto;scrollbar-width:thin;border:1px solid var(--border);border-radius:var(--radius)}
 .lart-table-scroll:focus-visible{outline:2px solid var(--accent-strong);outline-offset:2px}
 .lart-table{width:100%;border-collapse:collapse;font-size:14px}
 .lart-table th,.lart-table td{padding:10px 14px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--border)}
@@ -130,6 +130,43 @@
 .lart-table [data-nowrap]{white-space:nowrap}
 .lart-table-cap{margin-top:var(--s-2);font-size:12.5px;line-height:1.55;color:var(--t3)}
 .lart-table-cap code{font-family:var(--mono);font-size:.92em}
+
+/* ── The sideways-scroll cue, for the tables and the formula block ──
+   MEASURED 2026-09-16 on the live /learn/colour-contrast: at 320/390/414 the
+   two contrast tables overflow their scroller by 111/41/17px and 138/68/44px
+   and the OKLCH formula block by 204/134/110px, and every one of them clipped
+   mid-word with nothing on screen to say it scrolls — touch paints no
+   scrollbar until you drag. At 834 and above none of them overflows.
+
+   A 24px fade on the edge that has more behind it, and ONLY that edge, ONLY
+   while there is more. The mask is driven by the scroller's own scroll
+   position: a table that fits gets no fade, a table scrolled to its end fades
+   on the left instead of still promising more on the right, and nothing
+   measures anything. `mask-image` sits inside the keyframes rather than on
+   the element because a scroll timeline with nothing to scroll is inactive
+   and the animation then applies nothing at all — which is exactly the "no
+   overflow, no cue" case, for one declaration instead of a ResizeObserver.
+
+   Off while the scroller has keyboard focus: a mask clips the outline
+   (mask-clip is the border box), and a fade that ate the focus ring's right
+   edge would trade a scroll cue for WCAG 2.4.7. The keyboard user who has
+   just tabbed onto it scrolls with the arrow keys and has the ring instead. */
+@keyframes lart-scroll-cue{
+  from{mask-image:linear-gradient(to right,transparent,#000 24px,#000 calc(100% - 24px),transparent);mask-size:calc(100% + 24px) 100%;mask-repeat:no-repeat;mask-position:-24px 0}
+  to{mask-image:linear-gradient(to right,transparent,#000 24px,#000 calc(100% - 24px),transparent);mask-size:calc(100% + 24px) 100%;mask-repeat:no-repeat;mask-position:0 0}
+}
+@supports (animation-timeline:scroll()){
+  .lart-table-scroll,.lart-formula pre{animation:lart-scroll-cue linear both;animation-timeline:scroll(self inline)}
+  .lart-table-scroll:focus-visible,.lart-formula pre:focus-visible{animation:none}
+}
+/* Without scroll-driven animations the cue is the static right fade, on the
+   phone widths where every scroller here was measured to overflow. */
+@supports not (animation-timeline:scroll()){
+  @media(max-width:640px){
+    .lart-table-scroll,.lart-formula pre{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 24px),transparent)}
+    .lart-table-scroll:focus-visible,.lart-formula pre:focus-visible{-webkit-mask-image:none;mask-image:none}
+  }
+}
 
 .lart-swatch{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;border-radius:var(--radius-xs);border:1px solid var(--border);font-size:12px;font-weight:600;margin-right:10px;vertical-align:middle}
 .lart-swatch--wide{width:56px}
