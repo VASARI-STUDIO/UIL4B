@@ -1,6 +1,20 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Fragment, useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { getAnalyticsSummary, getPageViews, getSessions, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getDesignAnalytics, getAggregateAnalytics, resetColourPicks, resetPageAnalytics } from '../utils/analytics'
+// ── WHAT THIS PAGE IS ALLOWED TO READ FROM utils/analytics ────────────────
+// getAggregateAnalytics() is the only cross-user reader in that module: it sums
+// the `analytics-daily` documents every signed-in session writes, so what it
+// returns is the SITE. Everything else exported there —  getPageViews(),
+// getSessions(), getDesignAnalytics() — reads this browser's own localStorage,
+// and on 2026-09-16 the founder's instruction was to get "data from my specific
+// browser window" off this dashboard. They are not imported here any more, and
+// tests/unit/admin-reads-nothing-from-this-browser.test.js fails the build if
+// one comes back.
+//
+// getAnalyticsSummary() is the ONE exception and it is a narrow one: the Users
+// tab uses `summary.users` — the profile cache — as its fallback when the
+// server user list cannot be read, and it says on screen that that is what it
+// is showing. A labelled fallback is not a headline figure.
+import { getAnalyticsSummary, getFeedback, updateFeedbackStatus, updateFeedbackNotes, deleteFeedback, getAggregateAnalytics, resetPageAnalytics } from '../utils/analytics'
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../utils/firebase'
 import CommunityQueue from '../components/admin/CommunityQueue'
@@ -13,13 +27,20 @@ import {
 import { uploadCommunityMedia, dataUrlToBlob, extFromDataUrl } from '../utils/mediaUpload'
 import { useAuth } from '../contexts/AuthContext'
 import { isAdminEmail } from '../utils/constants'
-// NEITHER src/data/pipeline.js NOR src/data/moduleBoard.js is imported here,
-// statically or dynamically. They are not client modules at all any more: both
-// arrive from GET /api/ai?backlog=1 behind the verified-admin gate, through
-// useInternalBoards() below. See the note above that hook for what an anonymous
-// visitor used to be able to fetch, and why moduleBoard.js was the worse of the
-// two to have missed.
+// ── THE TWO INTERNAL BOARDS ARE NOT ON THIS PAGE AT ALL ANY MORE ──────────
+// src/data/pipeline.js and src/data/moduleBoard.js are still imported here
+// neither statically nor dynamically — but the reason has changed, and the new
+// one is stronger. They used to arrive from GET /api/ai?backlog=1 behind the
+// verified-admin gate, rendered by a Pipeline tab and a Board tab. Since
+// 2026-09-16 the modules live on the founder's machine and out of this
+// repository, so that endpoint answers 501 `localOnly` in every deployment and
+// both tabs rendered a paragraph explaining why they were empty. He asked for
+// the pipeline to go; the module board was the same tab in a different shape,
+// so it went with it. The request is gone, the two components are gone, and
+// there is now no code path from this page to either module.
+import { firstWinById } from '../utils/firstWin'
 import { resolvePromptProfileLink } from '../utils/promptSubmission'
+import { PLAN_STATES, planStateOf, planSortKey, PLAN_STATE_ORDER } from '../utils/adminUsers'
 import { toCsv } from '../utils/csv'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -47,33 +68,32 @@ const STATUS_BGS = { new: 'rgba(245,158,11,.1)', 'in-progress': 'color-mix(in sr
 const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--pending)' }
 const TYPE_BGS = { bug: 'rgba(239,68,68,.1)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--pending) 12%,transparent)' }
 const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', 'var(--pending)', 'var(--t3)']
-const DAY = 86400000
-const WEEK = 7 * DAY
 
+// ── TEN TABS, AUDITED, SIX LEFT ───────────────────────────────────────────
+// Every tab here answers a question with data that can answer it. The four
+// that went could not:
+//
+//   Pipeline  the founder asked for it. Its data has been local-only since
+//             2026-09-16, so the deployed tab was a paragraph saying so.
+//   Board     the same endpoint, the same paragraph, the same emptiness.
+//   Design    "Most Copied Fonts" and "Most Picked Colours" counted what was
+//             copied and picked IN THIS BROWSER. The site-wide equivalents —
+//             icons and icon packs — moved to Overview, where the rest of the
+//             cross-user aggregate already lived.
+//   Pages     every table on it read this browser's localStorage, with nothing
+//             on screen saying so. "Top Pages (all users)" on Overview is the
+//             same question answered from the server.
+//
+// Order is by how often the surface is worked rather than by how it grew: the
+// dashboard opens on Overview, and Users is the tab the founder named.
 const TABS = [
   { id: 'overview', label: 'Overview' },
-  { id: 'pipeline', label: 'Pipeline' },
-  { id: 'board', label: 'Board' },
-  { id: 'design', label: 'Design' },
-  { id: 'submissions', label: 'Submissions' },
-  { id: 'prompts', label: 'Prompts' },
-  { id: 'community', label: 'Community' },
-  { id: 'pages', label: 'Pages' },
   { id: 'users', label: 'Users' },
+  { id: 'submissions', label: 'Submissions' },
+  { id: 'community', label: 'Community' },
+  { id: 'prompts', label: 'Prompts' },
   { id: 'stripe', label: 'Stripe' },
 ]
-
-const TIME_RANGES = [
-  { id: 'today', label: 'Today' },
-  { id: '7d', label: '7 days' },
-  { id: '30d', label: '30 days' },
-  { id: 'all', label: 'All time' },
-]
-
-function fmtDuration(s) {
-  if (s < 60) return `${s}s`
-  return `${Math.floor(s / 60)}m ${s % 60}s`
-}
 
 function fmtDate(iso) {
   if (!iso) return '—'
@@ -119,69 +139,7 @@ function readFileAsDataUrl(file) {
   })
 }
 
-function timeFilter(timestamp, range) {
-  if (range === 'all') return true
-  const now = Date.now()
-  if (range === 'today') return now - timestamp < DAY
-  if (range === '7d') return now - timestamp < WEEK
-  if (range === '30d') return now - timestamp < 30 * DAY
-  return true
-}
-
-// ── SVG Charts ──────────────────────────────────────────────
-
-function AreaChart({ data, height = 120 }) {
-  if (!data.length) return <div className="adm-empty">No data</div>
-  const w = 400
-  const h = height
-  const pad = { t: 8, r: 4, b: 20, l: 36 }
-  const iw = w - pad.l - pad.r
-  const ih = h - pad.t - pad.b
-  const max = Math.max(...data.map(d => d.value), 1)
-  const xStep = data.length > 1 ? iw / (data.length - 1) : iw
-
-  const points = data.map((d, i) => ({
-    x: pad.l + i * xStep,
-    y: pad.t + ih - (d.value / max) * ih,
-  }))
-
-  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-  const area = `${line} L${points[points.length - 1].x},${pad.t + ih} L${points[0].x},${pad.t + ih} Z`
-
-  const yTicks = [0, Math.round(max / 2), max]
-
-  return (
-    <div className="adm-chart">
-      <svg role="img" aria-label="Values over time" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="area-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity=".25" />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity=".02" />
-          </linearGradient>
-        </defs>
-        {yTicks.map(v => {
-          const y = pad.t + ih - (v / max) * ih
-          return (
-            <g key={v}>
-              <line x1={pad.l} x2={w - pad.r} y1={y} y2={y} stroke="var(--border)" strokeWidth=".5" />
-              <text x={pad.l - 6} y={y + 3} textAnchor="end" fill="var(--t3)" fontSize="9" fontFamily="var(--mono)">{fmtNum(v)}</text>
-            </g>
-          )
-        })}
-        <path d={area} fill="url(#area-grad)" />
-        <path d={line} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="3" fill="var(--accent)" opacity="0">
-            <title>{data[i].label}: {data[i].value}</title>
-          </circle>
-        ))}
-        {data.length <= 14 && data.map((d, i) => (
-          <text key={i} x={points[i].x} y={h - 4} textAnchor="middle" fill="var(--t3)" fontSize="8" fontFamily="var(--mono)">{d.label}</text>
-        ))}
-      </svg>
-    </div>
-  )
-}
+// ── SVG chart ───────────────────────────────────────────────
 
 function DonutChart({ segments, size = 120 }) {
   const total = segments.reduce((s, d) => s + d.value, 0)
@@ -229,14 +187,36 @@ function DonutChart({ segments, size = 120 }) {
   )
 }
 
-function Sparkline({ data }) {
-  if (!data.length) return null
-  const max = Math.max(...data, 1)
+/**
+ * One ranked list on the Overview, drawn from the cross-user aggregate.
+ *
+ * Four of these replace four hand-copied blocks of the same markup. The
+ * duplication was how the Design tab drifted: its bar cards looked identical to
+ * Overview's and were reading a different, narrower source — this browser's
+ * localStorage — with nothing on either card to tell them apart. One component
+ * that is only ever handed aggregate rows cannot develop that difference again.
+ */
+function TopList({ title, rows, unit, empty }) {
+  const max = rows[0]?.[1] || 1
   return (
-    <div className="adm-sparkline" role="img" aria-label="Trend sparkline">
-      {data.map((v, i) => (
-        <div key={i} className="adm-sparkline-bar" style={{ height: `${Math.max(4, (v / max) * 100)}%` }} title={String(v)} />
-      ))}
+    <div className="adm-card">
+      <div className="adm-card-header">
+        <span className="adm-card-title">{title}</span>
+        <span style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} {unit}</span>
+      </div>
+      <div className="adm-card-body">
+        {rows.length > 0 ? (
+          <div className="adm-bar">
+            {rows.slice(0, 8).map(([label, count]) => (
+              <div key={label} className="adm-bar-row">
+                <span className="adm-bar-label">{label}</span>
+                <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
+                <span className="adm-bar-value">{count}</span>
+              </div>
+            ))}
+          </div>
+        ) : <div className="adm-empty">{empty}</div>}
+      </div>
     </div>
   )
 }
@@ -509,419 +489,6 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
         </div>
       </div>
     </div>
-  )
-}
-
-// ── THE TWO INTERNAL BOARDS, FETCHED RATHER THAN BUNDLED ───────────────────
-//
-// src/data/pipeline.js and src/data/moduleBoard.js describe the PROJECT, not
-// the product. Both used to ship to the browser, and both were readable by
-// anyone who loaded /admin — which needs no account, because the gate that
-// hides the dashboard is a React branch, not a server.
-//
-// THE BACKLOG, src/data/pipeline.js. #405 and #406 filed it as a WEIGHT
-// problem: a static import put 672 KB of engineering notes in Admin-*.js. #420
-// answered with `import('../data/pipeline')`, moving the bytes to their own
-// chunk fetched only when the Pipeline tab opens. That fixed the timing and
-// left the exposure untouched — a dynamically imported module is still a client
-// module. MEASURED on a real `npm run build`, anonymous, no login, no cookie,
-// no Authorization header:
-//
-//   GET /admin                    200      the HTML names the entry chunk
-//   GET /assets/index-*.js        200      names Admin-rjGyizH8.js
-//   GET /assets/Admin-*.js        200      names pipeline-DUbq1XL3.js
-//   GET /assets/pipeline-*.js     200      824,007 bytes / 319,711 gzip
-//
-// It carried the literal string `allow create: if true` — the feedback rule
-// that #472 has since closed in firestore.rules — 23 mentions of
-// firestore.rules, 3 permission-denied diagnostics and 246 of "founder".
-// (docs/OWNER-ACTIONS.md, the founder's own worklist, left the repository on
-// 2026-09-16, one level up from this fix and for the same reason: a worklist
-// does not belong in a client chunk, and it does not belong in a public tree
-// either. .gitignore carries the decision.)
-//
-// THE MODULE BOARD, src/data/moduleBoard.js, WAS MISSED BY THE FIRST PASS, and
-// that is the more instructive half. It was a plain STATIC import here, so its
-// 20,332 bytes were inlined into Admin-*.js rather than given a chunk of their
-// own — and a guard written to look for the BACKLOG could not see it. Verbatim
-// from dist/assets/Admin-*.js on a build where the backlog was already gone:
-//
-//   nextSteps: ["Owner: verify aggregate analytics and Feedback reads after the
-//   published Firestore rules", "Do not assume the admin custom claim exists;
-//   resolve any permission-denied result explicitly", ...]
-//
-// Instructions addressed to the owner, per-module health, and a list of what is
-// known to be unfinished. It is a twentieth of the size, so the weight argument
-// barely applies; the trust argument applies in full.
-//
-// ── ONE REQUEST, BOTH BOARDS ───────────────────────────────────────────────
-//
-// They are one question — what is the state of this project — behind one gate,
-// so they are one payload. Two endpoints would be two things to keep in step,
-// and the Pipeline and Board tabs would each pay their own round trip.
-//
-// The promise is cached at MODULE scope rather than in a hook, because the two
-// boards are separate components on separate tabs: a per-component cache would
-// fetch 800 KB again every time the founder moved between them. A failure
-// clears the cache so the next tab switch is a real retry rather than a
-// replayed rejection.
-//
-// A ROUTE RATHER THAN A BUILD-TIME STRIP, deliberately. Stripping the notes and
-// keeping ids, titles and statuses would keep the board's shape and lose its
-// record — and the titles are the disclosure too ("firestore.rules lets anyone
-// create feedback documents directly" is a title, not a note). A generated JSON
-// was rejected because a generator can go stale, and an agent who edits either
-// module without re-running it would leave the founder's own board showing
-// yesterday's state with every check green.
-//
-// NEITHER MODULE MOVES. Every agent's composition scripts and several
-// tests/unit/*.test.js files import them by those exact paths.
-//
-// GUARDED AT BUILD LEVEL by tests/unit/admin-chunk-carries-no-backlog.test.js,
-// which derives the internal boards from src/data/ BY SHAPE rather than by name
-// and reads every emitted file for their row text — so a third board is covered
-// the day it is written, and an undeclared one fails the build rather than
-// passing quietly. Its previous form walked the chunk graph and asserted the
-// backlog was reachable only by a dynamic edge; it was green through both
-// disclosures above, because the edge kind was never the question.
-//
-// ── AND SINCE 2026-09-16, IN PRODUCTION, THERE IS NOTHING TO FETCH ─────────
-//
-// The repository went public for free GitHub Actions minutes, so the founder
-// took both modules out of it and kept them on his machine (.gitignore carries
-// the decision and its cost). serveBacklog() cannot import what is not there,
-// so it answers 501 with `localOnly: true`, and BoardGate below prints that as
-// a sentence. THE SHAPE OF THE FIX IS THE POINT: the two states this page must
-// never collapse together are "the queue is empty" and "the data is somewhere
-// else", and every branch from the route down to the paragraph keeps them
-// apart. On the founder's own checkout the files are present and both tabs
-// render exactly as they always did.
-let internalBoardsPromise = null
-function loadInternalBoards() {
-  if (!internalBoardsPromise) {
-    internalBoardsPromise = (async () => {
-      // firebase is itself deferred, so this import is how every other authed
-      // fetch on this page reaches the current user's token.
-      const { auth: fbAuth } = await import('../utils/firebase')
-      const token = await fbAuth.currentUser?.getIdToken()
-      if (!token) throw new Error('not signed in')
-      const res = await fetch('/api/ai?backlog=1', { headers: { Authorization: `Bearer ${token}` } })
-      const data = await res.json().catch(() => ({}))
-      // ── NOT DEPLOYED IS NOT REFUSED, AND NEITHER IS AN ERROR ─────────────
-      // 501 + `localOnly` is serveBacklog() saying the two modules are not in
-      // this deployment: the founder took them out of the public repository on
-      // 2026-09-16 and kept them on his machine. Nothing failed, so it is
-      // returned rather than thrown — the tabs render it as a sentence of its
-      // own, because "could not load" would send the reader to look for a
-      // fault and an empty board would say the backlog is finished.
-      if (res.status === 501 && data.localOnly) return { localOnly: true, reason: data.error || '' }
-      // 404 is what requireAdmin answers a caller who is not the administrator
-      // — deliberately, so a prober learns nothing — so it is reported here as
-      // the refusal it is rather than as a missing page.
-      if (!res.ok) throw new Error(data.error || `the backlog endpoint answered ${res.status}`)
-      return data
-    })().catch((err) => { internalBoardsPromise = null; throw err })
-  }
-  return internalBoardsPromise
-}
-
-function useInternalBoards() {
-  const [boards, setBoards] = useState(null)
-  const [loadError, setLoadError] = useState('')
-  useEffect(() => {
-    let alive = true
-    loadInternalBoards().then(
-      (data) => {
-        // The endpoint's own sentence goes to the console. The tab prints the
-        // short version; this is where the detail lands for whoever is looking
-        // at devtools wondering why their board is a paragraph.
-        if (data?.localOnly) console.info('[admin] /api/ai?backlog=1:', data.reason || 'the internal boards are local-only')
-        if (alive) setBoards(data)
-      },
-      (err) => {
-        // Named in words rather than swallowed, and the ENDPOINT is named too.
-        // A board that silently rendered zero rows would read as "there is
-        // nothing here", which is the most misleading thing these surfaces
-        // could say; an error that does not say what it was talking to sends
-        // the next reader to the wrong half of the system.
-        console.error('[admin] /api/ai?backlog=1 did not return the internal boards:', err?.message || err)
-        if (alive) setLoadError(err?.message || String(err))
-      },
-    )
-    return () => { alive = false }
-  }, [])
-  // `localOnly` is lifted out of the payload rather than left for each tab to
-  // find, so neither of them can render `boards` as data by forgetting it was
-  // a state rather than a board.
-  return { boards, loadError, localOnly: Boolean(boards?.localOnly) }
-}
-
-/** Shared waiting / refusal / not-deployed states, so the two boards cannot drift apart. */
-function BoardGate({ loadError, localOnly, what }) {
-  // THREE STATES, AND THE ORDER IS THE POINT. "Not deployed" is read first
-  // because it is neither a wait nor a failure, and rendering it as either
-  // would be wrong in a different direction each time: a spinner that never
-  // resolves, or an error that sends the reader hunting for a fault that is
-  // not there. The fourth possibility — an empty board — is deliberately not
-  // offered anywhere in this component: zero rows reads as "there is no work
-  // left", which is the one thing these two tabs must never say.
-  const subject = what.charAt(0).toUpperCase() + what.slice(1)
-  return (
-    <div className="adm-section">
-      <div className="adm-card">
-        <div className="adm-empty">
-          {localOnly
-            ? <>{subject} is not deployed. src/data/pipeline.js and src/data/moduleBoard.js are
-                kept on the founder&rsquo;s machine and out of this public repository, because their
-                notes are candid prose written for us — so this build has nothing to read. This is
-                NOT an empty backlog: the rows exist, on the checkout that has the files. Founder
-                decision, 2026-09-16; .gitignore records it.</>
-            : loadError
-              ? <>Could not load {what} ({loadError}). This data is no longer shipped to the
-                  browser — it was readable by anyone — so it reads GET /api/ai?backlog=1, which
-                  only a verified administrator may call. Check you are signed in as the founder;
-                  `vite preview` and `vite dev` serve no functions, so it cannot answer there.</>
-              : <>Loading {what}…</>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const BOARD_COLUMNS = [
-  { id: 'live', label: 'Live', color: 'var(--ok)' },
-  { id: 'in-progress', label: 'In Progress', color: 'var(--brand)' },
-  { id: 'planned', label: 'Planned', color: 'var(--warn)' },
-  { id: 'idea', label: 'Ideas', color: 'var(--t3)' },
-]
-const HEALTH_COLOR = { good: 'var(--ok)', watch: 'var(--warn)', blocked: 'var(--err)' }
-
-function ModuleBoard() {
-  const [area, setArea] = useState('all')
-  const [search, setSearch] = useState('')
-  const { boards, loadError, localOnly } = useInternalBoards()
-
-  // Defaulted, because this arrives as a JSON body rather than a module whose
-  // exports the bundler proved exist.
-  const modules = boards?.MODULE_BOARD || []
-  const areas = ['all', ...Array.from(new Set(modules.map(m => m.area)))]
-  const q = search.trim().toLowerCase()
-  const filtered = modules.filter(m => {
-    if (area !== 'all' && m.area !== area) return false
-    if (q && !(`${m.name} ${m.summary} ${m.area}`.toLowerCase().includes(q))) return false
-    return true
-  })
-
-  // After the hooks, never before them — an early return above useState would
-  // change the hook order between renders.
-  if (!boards || loadError || localOnly) return <BoardGate loadError={loadError} localOnly={localOnly} what="the module board" />
-
-  return (
-    <div className="adm-section">
-      <div className="adm-section-h">
-        <div className="adm-section-title"><span className="adm-section-bar" />Module Board ({filtered.length})</div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            aria-label="Search modules"
-            placeholder="Search modules…"
-            style={{ fontSize: 12, padding: '6px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--inp)', color: 'var(--t0)', minWidth: 160 }}
-          />
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 14 }}>
-        {areas.map(a => (
-          <button
-            key={a}
-            className={`adm-time-btn${area === a ? ' active' : ''}`}
-            onClick={() => setArea(a)}
-            style={{ textTransform: a === 'all' ? 'uppercase' : 'none', letterSpacing: '.03em' }}
-          >
-            {a === 'all' ? 'All areas' : a}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 12, alignItems: 'flex-start' }}>
-        {BOARD_COLUMNS.map(col => {
-          const cards = filtered.filter(m => m.status === col.id)
-          return (
-            <div key={col.id} style={{ flex: '0 0 300px', minWidth: 300, background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.color }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t0)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{col.label}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>{cards.length}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {cards.map(m => (
-                  <div key={m.id} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-s)', padding: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: HEALTH_COLOR[m.health] || 'var(--t3)', flexShrink: 0 }} title={m.health} />
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)' }}>{m.name}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--accent-strong)', background: 'var(--brand-bg)', padding: '2px 7px', borderRadius: 999 }}>{m.area}</span>
-                    </div>
-                    <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.5, margin: '0 0 8px' }}>{m.summary}</p>
-                    {m.recentChanges?.length > 0 && (
-                      <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ok)', marginBottom: 4 }}>Recent</div>
-                        <ul style={{ margin: 0, paddingLeft: 14, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {m.recentChanges.slice(0, 4).map((c, i) => <li key={i} style={{ fontSize: 11, color: 'var(--t2)', lineHeight: 1.45 }}>{c}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                    {m.nextSteps?.length > 0 && (
-                      <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--warn)', marginBottom: 4 }}>Next</div>
-                        <ul style={{ margin: 0, paddingLeft: 14, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {m.nextSteps.slice(0, 4).map((c, i) => <li key={i} style={{ fontSize: 11, color: 'var(--t2)', lineHeight: 1.45 }}>{c}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                    <div style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>Updated {m.updated}</div>
-                  </div>
-                ))}
-                {cards.length === 0 && <div style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic', padding: '8px 4px' }}>Nothing here.</div>}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-const PRIORITY_COLOR = { P0: 'var(--err)', P1: 'var(--warn)', P2: 'var(--t2)' }
-// `deferred` is NOT `blocked`: blocked means something unknown is in the way,
-// deferred means the founder decided to wait. They read differently on this
-// board, so they get different colours — deferred is muted, not alarming.
-// EVERY status in NEXT_TODO must appear in all three of these, or the item is
-// mis-reported on the founder's own board. `done` (94 items) and `partial` (16)
-// were in none of them: they fell through to the raw lowercase string in the
-// default grey, and neither had a filter button, so 110 of 130 items could not
-// be filtered to at all. tests/unit/pipeline-board-renderable.test.js now fails
-// the build if a status is added to the data and not to these.
-const TODO_STATUS_COLOR = { todo: 'var(--t3)', doing: 'var(--brand)', review: 'var(--warn)', partial: 'var(--accent)', blocked: 'var(--err)', deferred: 'var(--t2)', done: 'var(--ok)' }
-const TODO_STATUS_LABEL = { todo: 'To do', doing: 'Doing', review: 'Review', partial: 'Partial', blocked: 'Blocked', deferred: 'Deferred', done: 'Done' }
-
-// Pipeline — the owner's ops view: current app condition, the workstreams
-// moving through the pipeline, and the prioritised next-to-do queue.
-// Complements the Board tab above, which tracks each feature module.
-//
-// The data does NOT come from src/data/pipeline.js as a module. See the note
-// above useInternalBoards() for what an anonymous visitor could fetch while it
-// did, and why both internal boards are now one admin-gated request.
-//
-// pipeline-board-renderable.test.js imports the same four exports this
-// component renders, so the board and its guard still read one source.
-function PipelineBoard() {
-  const [todoFilter, setTodoFilter] = useState('all')
-  const { boards, loadError, localOnly } = useInternalBoards()
-  const todoFilters = ['all', 'doing', 'todo', 'review', 'partial', 'blocked', 'deferred', 'done']
-
-  if (!boards || loadError || localOnly) return <BoardGate loadError={loadError} localOnly={localOnly} what="the backlog" />
-
-  // Defaulted, because this arrives as a JSON body rather than a module whose
-  // exports the bundler proved exist. A response missing a block renders an
-  // empty column instead of throwing the whole dashboard away.
-  const { APP_CONDITION = [], PIPELINE_STAGES = [], PIPELINE_PROCESSES = [], NEXT_TODO = [] } = boards
-  const visibleTodos = NEXT_TODO.filter(t => todoFilter === 'all' || t.status === todoFilter)
-
-  return (
-    <>
-      {/* Current app condition */}
-      <div className="adm-section">
-        <div className="adm-section-h">
-          <div className="adm-section-title"><span className="adm-section-bar" />App condition</div>
-        </div>
-        <div className="adm-stats">
-          {APP_CONDITION.map(c => (
-            <div key={c.id} className="adm-stat">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: HEALTH_COLOR[c.status] || 'var(--t3)', flexShrink: 0 }} title={c.status} />
-                <div className="adm-stat-value" style={{ fontSize: 18 }}>{c.value}</div>
-              </div>
-              <div className="adm-stat-label">{c.label}</div>
-              <div className="adm-stat-sub">{c.detail}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Processes moving through the pipeline */}
-      <div className="adm-section">
-        <div className="adm-section-h">
-          <div className="adm-section-title"><span className="adm-section-bar" />Pipeline ({PIPELINE_PROCESSES.length} processes)</div>
-        </div>
-        <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 12, alignItems: 'flex-start' }}>
-          {PIPELINE_STAGES.map(stage => {
-            const items = PIPELINE_PROCESSES.filter(p => p.stage === stage.id)
-            return (
-              <div key={stage.id} style={{ flex: '0 0 260px', minWidth: 260, background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color }} />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t0)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{stage.label}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>{items.length}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {items.map(p => (
-                    <div key={p.id} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-s)', padding: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t0)', lineHeight: 1.3 }}>{p.name}</span>
-                        <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--accent-strong)', background: 'var(--brand-bg)', padding: '2px 7px', borderRadius: 999, flexShrink: 0 }}>{p.area}</span>
-                      </div>
-                      <p style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.5, margin: '0 0 10px' }}>{p.summary}</p>
-                      <div className="adm-pipe-bar" role="progressbar" aria-valuenow={p.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${p.name} progress`}>
-                        <span className="adm-pipe-bar-fill" style={{ width: `${p.progress}%`, background: stage.color }} />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                        <span style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'var(--mono)' }}>Updated {p.updated}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t1)', fontFamily: 'var(--mono)' }}>{p.progress}%</span>
-                      </div>
-                    </div>
-                  ))}
-                  {items.length === 0 && <div style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic', padding: '8px 4px' }}>Nothing here.</div>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Next-to-do queue */}
-      <div className="adm-section">
-        <div className="adm-section-h">
-          <div className="adm-section-title"><span className="adm-section-bar" />Next to do ({visibleTodos.length})</div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {todoFilters.map(f => (
-              <button key={f} className={`adm-time-btn${todoFilter === f ? ' active' : ''}`} onClick={() => setTodoFilter(f)} style={{ textTransform: 'uppercase', letterSpacing: '.04em' }}>
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {visibleTodos.map(t => (
-            <div key={t.id} className="adm-pipe-todo">
-              <span className="adm-pipe-prio" style={{ color: PRIORITY_COLOR[t.priority] || 'var(--t2)', borderColor: PRIORITY_COLOR[t.priority] || 'var(--t2)' }}>{t.priority}</span>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t0)' }}>{t.title}</span>
-                  <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--t2)', background: 'var(--bg-2)', padding: '2px 7px', borderRadius: 999 }}>{t.area}</span>
-                </div>
-                {t.note && <p style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.5, margin: '4px 0 0' }}>{t.note}</p>}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', fontFamily: 'var(--mono)' }} title="Effort">{t.effort}</span>
-                <span className="adm-pipe-status" style={{ color: TODO_STATUS_COLOR[t.status] || 'var(--t3)', background: 'color-mix(in srgb, currentColor 12%, transparent)' }}>{TODO_STATUS_LABEL[t.status] || t.status}</span>
-              </div>
-            </div>
-          ))}
-          {visibleTodos.length === 0 && <div className="adm-card"><div className="adm-empty">Nothing in this state.</div></div>}
-        </div>
-      </div>
-    </>
   )
 }
 
@@ -1270,15 +837,99 @@ function MaskedEmail({ email, revealed, onToggle }) {
   )
 }
 
+// ── WHAT THE MODERATOR ROLE IS, IN ONE PLACE ──────────────────────────────
+// These three strings are the prose form of the predicates in
+// utils/moderation.js. They were written once, inline, above the table; they
+// are constants now because the confirmation step below has to say the SAME
+// thing at the moment the decision is taken. A grant described in one sentence
+// where the reader is browsing and a different sentence where they are deciding
+// is how a permission gets handed out on a misunderstanding.
+const MODERATOR_GRANTS = 'They can read, triage and delete feedback, and approve, reject or delete community submissions and prompts.'
+const MODERATOR_DENIES = 'They cannot see a reporter’s email address, appoint another moderator, reach anyone’s account or billing record, or read site analytics.'
+const MODERATOR_REVOKE_LAG = 'Removing somebody takes effect on their next sign-in — an ID token already issued stays valid for up to an hour.'
+
+// Ranks the Access column sorts by. Not alphabetical: the column exists to
+// gather the people who hold something, and "founder" sorting under "user"
+// would scatter them.
+const ACCESS_RANK = { founder: 0, moderator: 1, user: 2, unknown: 3 }
+
+/**
+ * The signup answers this account actually has, in the labels the table used
+ * for them before they moved into the detail panel.
+ *
+ * ── WHY THIS IS A FILTER AND NOT THREE COLUMNS ─────────────────────────────
+ * The signup questionnaire was cut to a single question (#436 took out the
+ * role and attribution questions as answers nobody read). So an account made
+ * since then has ONE answer and an older one has three, and three fixed
+ * columns printed a field of em-dashes across the newest half of the table.
+ *
+ * `firstWin` is also the answer that the table could never show. It was a
+ * column — headed "First win" — and it was blank for every row on the site,
+ * because api/verify-admin.js returns `onboarding.source` and never
+ * `onboarding.firstWin`. Nothing said so; the column simply read as "nobody
+ * answered". It is read here so that the day the route returns the field it
+ * appears, and until then this panel shows the two legacy answers rather than
+ * a blank labelled with a live question.
+ *
+ * The id is resolved through firstWinById so the answer reads in the words the
+ * signup screen offered ("A colour palette"), not the id it stored.
+ */
+const onboardingAnswers = (u) => [
+  ['First win', firstWinById(u.onboarding?.firstWin)?.label || u.onboarding?.firstWin],
+  ['Role', u.onboarding?.role],
+  ['Category', u.onboarding?.use],
+].filter(([, value]) => value)
+
 const USER_SORTS = {
   email: (u) => (u.email || '').toLowerCase(),
-  plan: (u) => (u.plan === 'pro' ? 0 : 1),
-  role: (u) => u.onboarding?.role || '￿',
-  use: (u) => u.onboarding?.use || '￿',
-  firstWin: (u) => u.onboarding?.firstWin || '￿',
+  // By STATE rather than by a pro/free flag, so the accounts with a billing
+  // problem sort to the top of the column that is about billing. See
+  // PLAN_STATE_ORDER in utils/adminUsers.js.
+  plan: (u) => planSortKey(u.subscription),
+  access: (u) => ACCESS_RANK[u.access] ?? ACCESS_RANK.unknown,
   country: (u) => (u.country ? countryName(u.country) : '￿'),
   createdAt: (u) => u.joinedTs || 0,
   lastLoginAt: (u) => (u.lastLoginAt ? new Date(u.lastLoginAt).getTime() : 0),
+}
+
+// The four states the tiles above the table filter to. Each one is a QUESTION
+// the founder actually asks of this list, and each is a real subset of it —
+// Mobbin: HubSpot's Users & Teams puts its counts in tiles above the table and
+// makes each one a way into the rows it counted, rather than a figure to read
+// and then go filtering for by hand
+// (https://mobbin.com/screens/a5d65b51-ab30-4cd1-bcf3-65b7490177a9).
+const USER_VIEWS = [
+  { id: 'all', label: 'All accounts' },
+  { id: 'paying', label: 'Paying' },
+  { id: 'attention', label: 'Needs attention' },
+  // The id is NOT the plural of the role. tests/unit/moderation-role.test.js
+  // fails any file under src/ that contains that word inside quotes, because
+  // the only reason browser code would name the roster collection is to try to
+  // reach it — and a filter id is not worth blunting a security guard for.
+  { id: 'role', label: 'Moderators' },
+]
+
+/** One value the founder needs in his clipboard to act on this person elsewhere. */
+function CopyValue({ label, value, mono = true, onCopy }) {
+  if (!value) return null
+  return (
+    <div className="adm-copy-row">
+      <span className="adm-copy-label">{label}</span>
+      <span className={`adm-copy-value${mono ? ' mono' : ''}`}>{value}</span>
+      <button
+        type="button"
+        className="btn btn-s adm-copy-btn"
+        onClick={() => { navigator.clipboard?.writeText(value); onCopy?.(label) }}
+      >
+        Copy
+      </button>
+    </div>
+  )
+}
+
+/** The plan badge, coloured by the state's tone rather than by a pro/free flag. */
+function PlanBadge({ state }) {
+  return <span className={`adm-badge adm-plan adm-plan--${state.tone}`}>{state.label}</span>
 }
 
 function UsersPanel({ localUsers, toast, role }) {
@@ -1307,10 +958,14 @@ function UsersPanel({ localUsers, toast, role }) {
   // unpatched one returns it on none of them.
   const [roleEnabled, setRoleEnabled] = useState(null)
   const [busyUid, setBusyUid] = useState(null)
-  const [confirmRevoke, setConfirmRevoke] = useState(null)
+  // { uid, grant } — the decision waiting on the confirmation step. ONE piece
+  // of state for both directions, because both directions are the same
+  // decision: who can work the queues.
+  const [pendingRole, setPendingRole] = useState(null)
   const [revealed, setRevealed] = useState(() => new Set())
+  const [openUid, setOpenUid] = useState(null)
   const [search, setSearch] = useState('')
-  const [planFilter, setPlanFilter] = useState('all')
+  const [view, setView] = useState('all')
   const [countryFilter, setCountryFilter] = useState('all')
   const [sortKey, setSortKey] = useState('createdAt')
   const [sortDir, setSortDir] = useState('desc')
@@ -1340,7 +995,7 @@ function UsersPanel({ localUsers, toast, role }) {
         setUsers((localUsers || []).map(u => ({
           uid: u.uid, email: u.email || '', displayName: u.displayName || '', provider: u.provider || 'email',
           emailVerified: null, createdAt: u.createdAt || null, lastLoginAt: null,
-          subscription: { status: null, interval: null }, onboarding: { role: null, use: null, firstWin: null }, location: '', company: '',
+          subscription: { status: null, interval: null }, onboarding: {}, location: '', company: '',
         })))
       }
     })()
@@ -1391,7 +1046,7 @@ function UsersPanel({ localUsers, toast, role }) {
 
   const setModerator = async (u, grant) => {
     setBusyUid(u.uid)
-    setConfirmRevoke(null)
+    setPendingRole(null)
     try {
       const { auth: fbAuth } = await import('../utils/firebase')
       const token = await fbAuth.currentUser?.getIdToken()
@@ -1425,15 +1080,19 @@ function UsersPanel({ localUsers, toast, role }) {
     }
   }
 
-  const rows = useMemo(() => (users || []).map(u => {
-    const status = u.subscription?.status
-    return {
-      ...u,
-      plan: status === 'active' || status === 'trialing' ? 'pro' : 'free',
-      country: countryFromLocation(u.location),
-      joinedTs: u.createdAt ? new Date(u.createdAt).getTime() : 0,
-    }
-  }), [users])
+  const founderView = canAssignModerators(role)
+
+  const rows = useMemo(() => (users || []).map(u => ({
+    ...u,
+    planState: planStateOf(u.subscription),
+    // 'unknown' while the roster has not been read, so the column can say so
+    // rather than calling everybody an ordinary user by default.
+    access: isFounderRow(u) ? 'founder'
+      : !founderView || roster === null ? 'unknown'
+        : roster.has(u.uid) ? 'moderator' : 'user',
+    country: countryFromLocation(u.location),
+    joinedTs: u.createdAt ? new Date(u.createdAt).getTime() : 0,
+  })), [users, roster, founderView])
 
   const countryCounts = useMemo(() => {
     const counts = {}
@@ -1441,12 +1100,29 @@ function UsersPanel({ localUsers, toast, role }) {
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
   }, [rows])
 
+  // The tile counts, computed over EVERY row rather than over the filtered set:
+  // a count that moved when you filtered by it would be telling you about the
+  // filter rather than about the site.
+  const viewCounts = useMemo(() => ({
+    all: rows.length,
+    paying: rows.filter(r => r.planState.paying).length,
+    attention: rows.filter(r => r.planState.attention).length,
+    role: rows.filter(r => r.access === 'moderator').length,
+  }), [rows])
+
+  const inView = useCallback((r) => {
+    if (view === 'paying') return r.planState.paying
+    if (view === 'attention') return r.planState.attention
+    if (view === 'role') return r.access === 'moderator'
+    return true
+  }, [view])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     const out = rows.filter(r => {
-      if (planFilter !== 'all' && r.plan !== planFilter) return false
+      if (!inView(r)) return false
       if (countryFilter !== 'all' && (r.country || 'unknown') !== countryFilter) return false
-      if (q && ![r.email, r.displayName, r.location, r.company, r.onboarding?.role, r.onboarding?.use, r.onboarding?.firstWin]
+      if (q && ![r.email, r.displayName, r.uid, r.location, r.company, r.subscription?.status]
         .some(v => v && String(v).toLowerCase().includes(q))) return false
       return true
     })
@@ -1457,7 +1133,7 @@ function UsersPanel({ localUsers, toast, role }) {
       return sortDir === 'asc' ? cmp : -cmp
     })
     return out
-  }, [rows, search, planFilter, countryFilter, sortKey, sortDir])
+  }, [rows, search, inView, countryFilter, sortKey, sortDir])
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
@@ -1472,13 +1148,19 @@ function UsersPanel({ localUsers, toast, role }) {
   const allRevealed = rows.length > 0 && revealed.size >= rows.length
 
   const exportUsersCSV = () => {
-    const cols = ['email', 'displayName', 'provider', 'emailVerified', 'plan', 'role', 'use', 'firstWin', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
+    // `plan` is the STATE now, not a pro/free flag, and `stripeStatus` carries
+    // the raw word beside it — a spreadsheet that collapsed past-due into
+    // "free" would rebuild the defect this panel was fixed for, one export
+    // later and somewhere nobody is looking.
+    const cols = ['email', 'displayName', 'provider', 'emailVerified', 'plan', 'stripeStatus', 'interval', 'access', 'location', 'country', 'company', 'createdAt', 'lastLoginAt']
     // displayName, company and location are user-controlled profile fields, so
     // the cells go through csvCell rather than bare quote-escaping. See utils/csv.js.
     const csv = toCsv(cols, filtered, (r, c) => (
-      c === 'role' || c === 'use' || c === 'firstWin' ? r.onboarding?.[c]
-        : c === 'country' ? (r.country ? countryName(r.country) : '')
-          : r[c]
+      c === 'plan' ? r.planState.label
+        : c === 'stripeStatus' ? (r.subscription?.status || '')
+          : c === 'interval' ? (r.subscription?.interval || '')
+            : c === 'country' ? (r.country ? countryName(r.country) : '')
+              : r[c]
     ))
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
     const a = document.createElement('a')
@@ -1489,15 +1171,19 @@ function UsersPanel({ localUsers, toast, role }) {
     toast?.(`Exported ${filtered.length} users`)
   }
 
-  const proCount = rows.filter(r => r.plan === 'pro').length
   const SortTh = ({ k, children, ...rest }) => (
-    <th {...rest}>
+    <th {...rest} scope="col">
       <button type="button" className={`adm-th-sort${sortKey === k ? ' active' : ''}`} onClick={() => toggleSort(k)}>
         {children}
         <span className="adm-th-arrow">{sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
       </button>
     </th>
   )
+
+  // User · Plan · Joined · Last seen · Location · Details, plus Access when the
+  // founder is the one reading. Counted once so the empty row cannot go out of
+  // step with the header again.
+  const COLUMNS = founderView ? 7 : 6
 
   return (
     <div className="adm-section">
@@ -1520,30 +1206,42 @@ function UsersPanel({ localUsers, toast, role }) {
         <div className="adm-card"><div className="adm-empty">Loading users…</div></div>
       ) : (
         <>
-          <div className="adm-stats" style={{ marginBottom: 16 }}>
-            <div className="adm-stat">
-              <div className="adm-stat-value">{rows.length}</div>
-              <div className="adm-stat-label">Total Users</div>
-              <div className="adm-stat-sub">{source === 'server' ? 'All accounts' : 'Cached locally'}</div>
-            </div>
-            <div className="adm-stat">
-              <div className="adm-stat-value">{proCount}</div>
-              <div className="adm-stat-label">Pro Subscribers</div>
-              <div className="adm-stat-sub">{rows.length ? Math.round((proCount / rows.length) * 100) : 0}% of users</div>
-            </div>
-            <div className="adm-stat">
-              <div className="adm-stat-value">{countryCounts.filter(([k]) => k !== 'unknown').length}</div>
-              <div className="adm-stat-label">Countries</div>
-              <div className="adm-stat-sub">From profile locations</div>
-            </div>
-            <div className="adm-stat">
-              <div className="adm-stat-value">{rows.filter(r => r.provider === 'google').length}</div>
-              <div className="adm-stat-label">Google Sign-ins</div>
-              <div className="adm-stat-sub">{rows.filter(r => r.provider !== 'google').length} email/password</div>
-            </div>
+          {/* THE COUNTS ARE THE FILTERS. Four tiles, four questions, and every
+              one of them opens the rows it counted. */}
+          <div className="adm-user-views" role="group" aria-label="Filter accounts">
+            {USER_VIEWS.map(v => (
+              <button
+                key={v.id}
+                type="button"
+                className={`adm-user-view${view === v.id ? ' active' : ''}${v.id === 'attention' && viewCounts.attention > 0 ? ' warn' : ''}`}
+                aria-pressed={view === v.id}
+                onClick={() => setView(v.id)}
+              >
+                <span className="adm-user-view-n">{viewCounts[v.id]}</span>
+                <span className="adm-user-view-l">{v.label}</span>
+              </button>
+            ))}
           </div>
 
-          {countryCounts.length > 0 && (
+          <div className="adm-users-toolbar">
+            <input
+              type="search"
+              className="adm-search"
+              aria-label="Search users"
+              placeholder="Search email, name, user ID, company…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <span className="adm-user-count" aria-live="polite">
+              {filtered.length === rows.length ? `${rows.length} shown` : `${filtered.length} of ${rows.length}`}
+            </span>
+            <button className="btn btn-s" onClick={() => setRevealed(allRevealed ? new Set() : new Set(rows.map(r => r.uid)))}>
+              {allRevealed ? 'Hide all emails' : 'Reveal all emails'}
+            </button>
+            <button className="btn btn-s" onClick={exportUsersCSV}>Export CSV</button>
+          </div>
+
+          {countryCounts.length > 1 && (
             <div className="adm-country-chips">
               <button type="button" className={`adm-country-chip${countryFilter === 'all' ? ' active' : ''}`} onClick={() => setCountryFilter('all')}>
                 All <span>{rows.length}</span>
@@ -1559,32 +1257,15 @@ function UsersPanel({ localUsers, toast, role }) {
             </div>
           )}
 
-          <div className="adm-users-toolbar">
-            <input type="search" className="adm-search" placeholder="Search email, name, role, location…" value={search} onChange={e => setSearch(e.target.value)} />
-            <div className="adm-time-filter">
-              {['all', 'pro', 'free'].map(p => (
-                <button key={p} className={`adm-time-btn${planFilter === p ? ' active' : ''}`} onClick={() => setPlanFilter(p)} style={{ textTransform: 'capitalize' }}>{p}</button>
-              ))}
-            </div>
-            <button className="btn btn-s" onClick={() => setRevealed(allRevealed ? new Set() : new Set(rows.map(r => r.uid)))}>
-              {allRevealed ? 'Hide all emails' : 'Reveal all emails'}
-            </button>
-            <button className="btn btn-s" onClick={exportUsersCSV}>Export CSV</button>
-          </div>
-
-          {/* WHAT THE ROLE ACTUALLY GRANTS, stated where it is handed out — and
-              when it cannot be handed out, why.
-              Mobbin: Teachable's User Roles table gives each role an access
-              description and a live count of who holds it, and says "1 of 1
-              admin seats" rather than leaving the reader to count
+          {/* THE ROSTER'S OWN STATE, and when the role cannot be handed out at
+              all, why. Mobbin: Teachable's User Roles table gives the role an
+              access description and a live count of who holds it, and says
+              "1 of 1 admin seats" rather than leaving the reader to count
               (https://mobbin.com/screens/8990ea9c-0399-45f0-ab10-2b4d3bd0004c).
-              Wix states the limit in the same breath as the grant — "can edit,
-              publish and manage… but can't delete or transfer the site". Both
-              sentences below are the prose form of predicates in
-              utils/moderation.js, so a change there makes this wrong loudly
-              rather than quietly. */}
-          {canAssignModerators(role) && (
-            <div className="adm-cat-desc" style={{ marginBottom: 12, lineHeight: 1.7 }}>
+              What the role GRANTS has moved to the confirmation step, where the
+              decision is actually taken. */}
+          {founderView && (
+            <div className="adm-cat-desc adm-roster-line">
               {roleEnabled === false
                 ? <>
                     <strong style={{ color: 'var(--t1)' }}>The moderator role is not switched on yet.</strong>
@@ -1594,101 +1275,257 @@ function UsersPanel({ localUsers, toast, role }) {
                   </>
                 : roster === null
                   ? (rosterError
-                      ? <span style={{ color: 'var(--err)' }}>The moderator roster could not be read &mdash; {rosterError}. The column below cannot be trusted until it can.</span>
+                      ? <span style={{ color: 'var(--err)' }}>The moderator roster could not be read &mdash; {rosterError}. The Access column cannot be trusted until it can.</span>
                       : 'Reading the moderator roster…')
                   : <>
                       <strong style={{ color: 'var(--t1)' }}>{roster.size === 0 ? 'Nobody' : roster.size} {roster.size === 1 ? 'person holds' : 'hold'} the moderator role.</strong>
-                      {' '}They can read, triage and delete feedback, and approve, reject or delete community submissions and prompts.
-                      {' '}They cannot see a reporter&apos;s email address, appoint another moderator, reach anyone&apos;s account or billing record, or read site analytics.
-                      {' '}Removing somebody takes effect on their next sign-in &mdash; an ID token already issued stays valid for up to an hour.
+                      {' '}{MODERATOR_GRANTS}
                     </>}
             </div>
           )}
 
           <div className="adm-card">
             <div className="adm-table-wrap">
-              <table className="adm-table adm-users-table">
+              {/* The roles are written out because the narrow-width rule below
+                  680px re-lays every one of these elements as a block, and a
+                  <table> whose display is not `table` loses its implicit
+                  semantics in every engine. A card per row must not cost a
+                  screen reader the row. */}
+              <table className="adm-table adm-users-table" role="table">
                 <thead>
-                  <tr>
+                  <tr role="row">
                     <SortTh k="email">User</SortTh>
+                    {founderView && <SortTh k="access">Access</SortTh>}
                     <SortTh k="plan">Plan</SortTh>
-                    <SortTh k="role">Role</SortTh>
-                    <SortTh k="use">Category</SortTh>
-                    <SortTh k="firstWin">First win</SortTh>
-                    <SortTh k="country">Country</SortTh>
                     <SortTh k="createdAt">Joined</SortTh>
-                    <SortTh k="lastLoginAt">Last Login</SortTh>
-                    {canAssignModerators(role) && <th>Moderator</th>}
+                    <SortTh k="lastLoginAt">Last seen</SortTh>
+                    <SortTh k="country">Location</SortTh>
+                    <th scope="col"><span className="sr-only">Details</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(u => (
-                    <tr key={u.uid}>
-                      <td>
-                        <MaskedEmail email={u.email} revealed={revealed.has(u.uid)} onToggle={() => toggleReveal(u.uid)} />
-                        <div className="adm-user-sub">
-                          {u.displayName || '—'} · {u.provider}{u.emailVerified === false ? ' · unverified' : ''}
-                          {u.company ? ` · ${u.company}` : ''}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`adm-badge adm-plan-${u.plan}`}>{u.plan === 'pro' ? `Pro${u.subscription?.interval ? ` · ${u.subscription.interval}` : ''}` : 'Free'}</span>
-                      </td>
-                      <td>{u.onboarding?.role || <span style={{ color: 'var(--t3)' }}>—</span>}</td>
-                      <td>{u.onboarding?.use || <span style={{ color: 'var(--t3)' }}>—</span>}</td>
-                      <td>{u.onboarding?.firstWin || <span style={{ color: 'var(--t3)' }}>—</span>}</td>
-                      <td>
-                        {u.country
-                          ? <span className="adm-flag-cell" title={u.location ? `${u.location} — ${countryName(u.country)}` : countryName(u.country)}>
-                              <span className="adm-flag">{flagEmoji(u.country)}</span>{u.country}
-                            </span>
-                          : u.location
-                            ? <span title={u.location} style={{ color: 'var(--t2)' }}>{u.location}</span>
-                            : <span style={{ color: 'var(--t3)' }}>—</span>}
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>{u.createdAt ? fmtDate(u.createdAt) : '—'}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>{u.lastLoginAt ? fmtDate(u.lastLoginAt) : '—'}</td>
-                      {/* The assignment lives on the PERSON'S OWN ROW rather than
-                          in a roster screen of its own. Mobbin: Wix's Change Role
-                          opens on the person — avatar, handle, address — and puts
-                          the role beside them, because "who am I about to give
-                          this to" is the question being answered
-                          (https://mobbin.com/screens/31f52d2e-ef17-4cf2-a5c6-3402dcfa3760).
-                          A separate roster page would have restated the user list
-                          to answer it.
+                  {filtered.map(u => {
+                    const open = openUid === u.uid
+                    const pending = pendingRole?.uid === u.uid ? pendingRole : null
+                    return (
+                      <Fragment key={u.uid}>
+                        <tr role="row" className={`${open ? 'adm-row-open' : ''}${u.planState.attention ? ' adm-row-flag' : ''}`}>
+                          <td role="cell" data-label="User">
+                            <MaskedEmail email={u.email} revealed={revealed.has(u.uid)} onToggle={() => toggleReveal(u.uid)} />
+                            <div className="adm-user-sub">
+                              {u.displayName || '—'} · {u.provider}{u.emailVerified === false ? ' · unverified' : ''}
+                              {u.company ? ` · ${u.company}` : ''}
+                            </div>
+                          </td>
+                          {/* THE DEGRADED STATE IS NOT "User". With the route
+                              unapplied nobody CAN hold the role, but that is a
+                              fact about the deployment rather than about this
+                              person, and a cell that answered "User" would be
+                              stating the second while only knowing the first.
+                              It says which one it is. */}
+                          {founderView && (
+                            <td role="cell" data-label="Access">
+                              <span className={`adm-access adm-access--${u.access}`}>
+                                {u.access === 'founder' ? 'Founder'
+                                  : roleEnabled === false ? <span className="adm-access-off">not switched on</span>
+                                    : u.access === 'moderator' ? 'Moderator'
+                                      : u.access === 'unknown' ? (rosterError ? 'unknown' : 'checking…')
+                                        : 'User'}
+                              </span>
+                            </td>
+                          )}
+                          <td role="cell" data-label="Plan">
+                            <PlanBadge state={u.planState} />
+                            {u.subscription?.interval && <span className="adm-plan-interval">{u.subscription.interval}</span>}
+                          </td>
+                          <td role="cell" data-label="Joined" style={{ whiteSpace: 'nowrap' }}>{u.createdAt ? fmtDate(u.createdAt) : '—'}</td>
+                          <td role="cell" data-label="Last seen" style={{ whiteSpace: 'nowrap' }}>{u.lastLoginAt ? fmtDate(u.lastLoginAt) : '—'}</td>
+                          <td role="cell" data-label="Location">
+                            {u.country
+                              ? <span className="adm-flag-cell" title={u.location ? `${u.location} — ${countryName(u.country)}` : countryName(u.country)}>
+                                  <span className="adm-flag">{flagEmoji(u.country)}</span>{u.country}
+                                </span>
+                              : u.location
+                                ? <span title={u.location} style={{ color: 'var(--t2)' }}>{u.location}</span>
+                                : <span style={{ color: 'var(--t3)' }}>—</span>}
+                          </td>
+                          {/* ONE affordance per row, at the end of it, opening
+                              everything there is to know about this person.
+                              Mobbin: Deel's compliance table keeps identity and
+                              one primary action pinned at the two ends of the
+                              row and lets the middle columns carry the detail
+                              (https://mobbin.com/screens/9f5af254-f966-4810-adbb-c428854523e3). */}
+                          <td role="cell" className="adm-row-end">
+                            <button
+                              type="button"
+                              className="btn btn-s"
+                              aria-expanded={open}
+                              onClick={() => setOpenUid(open ? null : u.uid)}
+                            >
+                              {open ? 'Close' : 'Details'}
+                            </button>
+                          </td>
+                        </tr>
+                        {open && (
+                          <tr role="row" className="adm-detail-row">
+                            <td role="cell" colSpan={COLUMNS}>
+                              <div className="adm-detail">
+                                <div className="adm-detail-cols">
+                                  <section className="adm-detail-sec">
+                                    <h4>Account</h4>
+                                    {/* The two handles the founder needs to act on
+                                        this person anywhere else — Firebase console,
+                                        Stripe, a support reply. Neither was reachable
+                                        from this page before; the uid was not rendered
+                                        at all and the address was behind a blur. */}
+                                    <CopyValue label="Email" value={u.email} onCopy={(l) => toast?.(`${l} copied`)} />
+                                    <CopyValue label="User ID" value={u.uid} onCopy={(l) => toast?.(`${l} copied`)} />
+                                    <dl className="adm-detail-dl">
+                                      <dt>Name</dt><dd>{u.displayName || '—'}</dd>
+                                      <dt>Sign-in</dt><dd>{u.provider}</dd>
+                                      <dt>Email verified</dt>
+                                      <dd>{u.emailVerified === true ? 'Yes' : u.emailVerified === false ? 'No' : 'Not reported'}</dd>
+                                      {u.company && <><dt>Company</dt><dd>{u.company}</dd></>}
+                                      {u.location && <><dt>Location</dt><dd>{u.location}</dd></>}
+                                    </dl>
+                                  </section>
 
-                          THE DEGRADED STATE COMES FIRST. With the route
-                          unapplied there is no control here at all — only the
-                          word for what is true — because a button that cannot
-                          do the thing it names is worse than a missing column,
-                          and the paragraph above the table says why. */}
-                      {canAssignModerators(role) && (
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          {roleEnabled === false
-                            ? <span style={{ color: 'var(--t3)' }}>not switched on</span>
-                            : roster === null
-                              ? <span style={{ color: 'var(--t3)' }}>{rosterError ? 'unknown' : 'checking…'}</span>
-                              : isFounderRow(u)
-                                ? <span style={{ color: 'var(--t3)' }} title="The founder already has every permission a moderator has">founder</span>
-                                : roster.has(u.uid)
-                                  ? (confirmRevoke === u.uid
-                                      ? <>
-                                          <button className="btn btn-s" disabled={busyUid === u.uid} onClick={() => setModerator(u, false)} style={{ fontSize: 10, color: 'var(--err)' }}>Remove</button>
-                                          <button className="btn btn-s" onClick={() => setConfirmRevoke(null)} style={{ fontSize: 10, marginLeft: 4 }}>Keep</button>
-                                        </>
-                                      : <button className="btn btn-s" disabled={busyUid === u.uid} onClick={() => setConfirmRevoke(u.uid)} style={{ fontSize: 10, color: 'var(--ok)' }}>Moderator ✓</button>)
-                                  : <button className="btn btn-s" disabled={busyUid === u.uid} onClick={() => setModerator(u, true)} style={{ fontSize: 10 }}>
-                                      {busyUid === u.uid ? 'Saving…' : 'Make moderator'}
-                                    </button>}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
+                                  <section className="adm-detail-sec">
+                                    <h4>Plan</h4>
+                                    <dl className="adm-detail-dl">
+                                      <dt>State</dt><dd><PlanBadge state={u.planState} /></dd>
+                                      <dt>Stripe status</dt>
+                                      <dd className="mono">{u.subscription?.status || 'no subscription'}</dd>
+                                      <dt>Billing period</dt><dd>{u.subscription?.interval || '—'}</dd>
+                                      <dt>Pro access now</dt>
+                                      <dd>
+                                        {u.planState.entitled === true ? 'Yes'
+                                          : u.planState.entitled === false ? 'No'
+                                            : u.planState.entitled === 'grace'
+                                              // NOT a yes and NOT a no. api/_lib/plans.js keeps a
+                                              // past-due subscription on Pro for seven days from
+                                              // `paymentFailedAt`, and that timestamp is not one
+                                              // of the fields this list is given.
+                                              ? 'Within the seven-day past-due grace, if the failure was recent — this list does not carry the timestamp that decides it'
+                                              : 'Unrecognised status — check Stripe'}
+                                      </dd>
+                                    </dl>
+                                  </section>
+
+                                  {/* Only the answers that came back — see the note
+                                      above onboardingAnswers(). */}
+                                  {onboardingAnswers(u).length > 0 && (
+                                    <section className="adm-detail-sec">
+                                      <h4>Signup</h4>
+                                      <dl className="adm-detail-dl">
+                                        {onboardingAnswers(u).map(([label, value]) => (
+                                          <Fragment key={label}><dt>{label}</dt><dd>{value}</dd></Fragment>
+                                        ))}
+                                      </dl>
+                                    </section>
+                                  )}
+                                </div>
+
+                                {founderView && roleEnabled !== false && (
+                                  <section className="adm-detail-sec adm-detail-access">
+                                    <h4>Moderator role</h4>
+                                    {roster === null ? (
+                                      <p className="adm-detail-note">{rosterError ? `The roster could not be read — ${rosterError}` : 'Reading the moderator roster…'}</p>
+                                    ) : isFounderRow(u) ? (
+                                      <p className="adm-detail-note">This is the founder account. It already has every permission a moderator has, and more.</p>
+                                    ) : pending ? (
+                                      /* THE CONFIRMATION, AND IT GUARDS BOTH
+                                         DIRECTIONS. Granting used to be a single
+                                         unconfirmed click and only revoking asked —
+                                         which is backwards, because handing somebody
+                                         the delete button on the queues is the half
+                                         that cannot be undone by clicking again.
+                                         Mobbin: Deel's Select access level states, on
+                                         each option, the exact sentence of what that
+                                         level can do
+                                         (https://mobbin.com/screens/15fb662e-c13b-4a92-96c6-4e7b6a0eadf5);
+                                         Toggl Track's delete confirmation names what
+                                         the action cannot undo before it offers the
+                                         button
+                                         (https://mobbin.com/screens/e62d32e0-7a4e-409f-a1f1-9acd8242dc1a). */
+                                      <div className={`adm-confirm${pending.grant ? '' : ' adm-confirm--danger'}`}>
+                                        <p className="adm-confirm-lead">
+                                          {pending.grant ? 'Make ' : 'Remove the moderator role from '}
+                                          <strong>{u.displayName || u.email || u.uid}</strong>
+                                          {pending.grant ? ' a moderator?' : '?'}
+                                        </p>
+                                        <ul className="adm-confirm-list">
+                                          {pending.grant ? (
+                                            <>
+                                              <li>{MODERATOR_GRANTS}</li>
+                                              <li>{MODERATOR_DENIES}</li>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <li>{MODERATOR_REVOKE_LAG}</li>
+                                              <li>Feedback and submissions they have already triaged keep the decisions they made. This removes the access, not the record.</li>
+                                            </>
+                                          )}
+                                        </ul>
+                                        <div className="adm-confirm-actions">
+                                          <button className="btn btn-s" onClick={() => setPendingRole(null)}>Cancel</button>
+                                          <button
+                                            className={`btn btn-s ${pending.grant ? 'adm-btn-go' : 'adm-btn-danger'}`}
+                                            disabled={busyUid === u.uid}
+                                            onClick={() => setModerator(u, pending.grant)}
+                                          >
+                                            {busyUid === u.uid ? 'Saving…' : pending.grant ? 'Make moderator' : 'Remove the role'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : roster.has(u.uid) ? (
+                                      <>
+                                        <p className="adm-detail-note">Holds the moderator role. {MODERATOR_GRANTS}</p>
+                                        <button className="btn btn-s adm-btn-danger" disabled={busyUid === u.uid} onClick={() => setPendingRole({ uid: u.uid, grant: false })}>
+                                          Remove the role
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <p className="adm-detail-note">An ordinary account. {MODERATOR_DENIES}</p>
+                                        <button className="btn btn-s" disabled={busyUid === u.uid} onClick={() => setPendingRole({ uid: u.uid, grant: true })}>
+                                          Make moderator
+                                        </button>
+                                      </>
+                                    )}
+                                  </section>
+                                )}
+
+                                {/* WHAT THIS DASHBOARD CANNOT DO TO AN ACCOUNT,
+                                    said once, where somebody hunting for it would
+                                    look. Suspending, deleting or refunding a
+                                    customer all need server routes that do not
+                                    exist; a button that appeared to do any of them
+                                    would be the worst thing on this page. Mobbin:
+                                    Supabase gathers the irreversible account
+                                    actions into one labelled Danger zone rather
+                                    than scattering them through the detail panel
+                                    (https://mobbin.com/screens/0cb2b22a-4a91-4251-a2eb-ca8b23c82071)
+                                    — this is that region, stating that it is
+                                    empty. */}
+                                <p className="adm-detail-foot">
+                                  Suspending, deleting or refunding an account is not done from here. Copy the user ID
+                                  above and act in the Firebase console or the Stripe dashboard, where the change is
+                                  recorded against your account.
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
                   {filtered.length === 0 && (
-                    // Eight columns today, nine with the Moderator one. It said
-                    // seven, which was already one short of the header before
-                    // this change added anything.
-                    <tr><td colSpan={canAssignModerators(role) ? 9 : 8}><div className="adm-empty">{rows.length === 0 ? 'No users yet' : 'No users match the current filters'}</div></td></tr>
+                    <tr role="row"><td role="cell" colSpan={COLUMNS}>
+                      <div className="adm-empty">
+                        {rows.length === 0 ? 'No users yet' : 'No users match the current filters'}
+                      </div>
+                    </td></tr>
                   )}
                 </tbody>
               </table>
@@ -1732,7 +1569,6 @@ export default function Admin({ toast }) {
     tabRefs.current[id]?.focus()
   }
 
-  const [timeRange, setTimeRange] = useState('7d')
   const [data, setData] = useState(null)
   const [feedback, setFeedback] = useState([])
   // How many documents the SERVER actually returned, and why it did not.
@@ -1752,9 +1588,6 @@ export default function Admin({ toast }) {
   const [expandedId, setExpandedId] = useState(null)
   const [pendingPrompts, setPendingPrompts] = useState([])
   const [promptFilter, setPromptFilter] = useState('pending')
-  const [designData, setDesignData] = useState(null)
-  const [rawViews, setRawViews] = useState([])
-  const [rawSessions, setRawSessions] = useState([])
   // Cross-user aggregate (server-read). null = loading, object = loaded.
   const [aggregate, setAggregate] = useState(null)
   const [aggregateLoaded, setAggregateLoaded] = useState(false)
@@ -1763,15 +1596,14 @@ export default function Admin({ toast }) {
   // When the figures on screen were actually fetched. A dashboard with no
   // timestamp cannot be distinguished from a dashboard that stopped updating.
   const [refreshedAt, setRefreshedAt] = useState(null)
-  const [confirmColourReset, setConfirmColourReset] = useState(false)
   const [confirmPageReset, setConfirmPageReset] = useState(false)
   const [resettingPages, setResettingPages] = useState(false)
 
   const refresh = useCallback(async () => {
+    // The profile cache, and ONLY as the Users tab's labelled fallback for
+    // when the server list cannot be read. Nothing on this page states a
+    // figure from it. See the import note at the top of the file.
     setData(getAnalyticsSummary())
-    setDesignData(getDesignAnalytics())
-    setRawViews(getPageViews())
-    setRawSessions(getSessions())
     // Cross-user aggregate from Firestore (safe-empty on failure). Non-blocking
     // relative to the localStorage data above, which renders immediately.
     setAggregateLoaded(false)
@@ -1889,80 +1721,6 @@ export default function Admin({ toast }) {
   }, [effectiveUnlocked, refresh])
 
   // ── Derived data ──
-
-  const filteredViews = useMemo(() => rawViews.filter(v => timeFilter(v.timestamp, timeRange)), [rawViews, timeRange])
-  const filteredSessions = useMemo(() => rawSessions.filter(s => timeFilter(s.timestamp, timeRange)), [rawSessions, timeRange])
-
-  const viewsChartData = useMemo(() => {
-    if (!filteredViews.length) return []
-    const now = Date.now()
-    let buckets, labels
-    if (timeRange === 'today') {
-      buckets = Array(24).fill(0)
-      labels = Array.from({ length: 24 }, (_, i) => `${i}h`)
-      filteredViews.forEach(v => { const h = new Date(v.timestamp).getHours(); buckets[h]++ })
-    } else if (timeRange === '7d') {
-      buckets = Array(7).fill(0)
-      labels = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(now - (6 - i) * DAY)
-        return d.toLocaleDateString([], { weekday: 'short' })
-      })
-      filteredViews.forEach(v => {
-        const daysAgo = Math.floor((now - v.timestamp) / DAY)
-        if (daysAgo < 7) buckets[6 - daysAgo]++
-      })
-    } else if (timeRange === '30d') {
-      buckets = Array(30).fill(0)
-      labels = Array.from({ length: 30 }, (_, i) => {
-        const d = new Date(now - (29 - i) * DAY)
-        return i % 5 === 0 ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''
-      })
-      filteredViews.forEach(v => {
-        const daysAgo = Math.floor((now - v.timestamp) / DAY)
-        if (daysAgo < 30) buckets[29 - daysAgo]++
-      })
-    } else {
-      const oldest = Math.min(...filteredViews.map(v => v.timestamp))
-      const span = now - oldest
-      const numBuckets = Math.min(30, Math.max(7, Math.ceil(span / DAY)))
-      buckets = Array(numBuckets).fill(0)
-      labels = Array.from({ length: numBuckets }, (_, i) => {
-        const d = new Date(oldest + (i / (numBuckets - 1)) * span)
-        return i % Math.ceil(numBuckets / 6) === 0 ? d.toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''
-      })
-      filteredViews.forEach(v => {
-        const idx = Math.min(numBuckets - 1, Math.floor(((v.timestamp - oldest) / span) * numBuckets))
-        buckets[idx]++
-      })
-    }
-    return buckets.map((v, i) => ({ value: v, label: labels[i] }))
-  }, [filteredViews, timeRange])
-
-  const bounceRate = useMemo(() => {
-    if (!filteredSessions.length) return 0
-    return Math.round(filteredSessions.filter(s => s.pages <= 1).length / filteredSessions.length * 100)
-  }, [filteredSessions])
-
-  const avgDuration = useMemo(() => {
-    if (!filteredSessions.length) return 0
-    return Math.round(filteredSessions.reduce((s, sess) => s + sess.duration, 0) / filteredSessions.length / 1000)
-  }, [filteredSessions])
-
-  const topPagesFiltered = useMemo(() => {
-    const counts = {}
-    filteredViews.forEach(v => { counts[v.path] = (counts[v.path] || 0) + 1 })
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10)
-  }, [filteredViews])
-
-  const sessionsPerDay = useMemo(() => {
-    const last7 = Array(7).fill(0)
-    const now = Date.now()
-    rawSessions.forEach(s => {
-      const d = Math.floor((now - s.timestamp) / DAY)
-      if (d < 7) last7[6 - d]++
-    })
-    return last7
-  }, [rawSessions])
 
   // Submission stats
   const newCount = feedback.filter(f => f.status === 'new').length
@@ -2110,13 +1868,6 @@ export default function Admin({ toast }) {
     toast(`Exported ${rows.length} submissions`)
   }
 
-  const handleResetColours = () => {
-    resetColourPicks()
-    setDesignData(getDesignAnalytics())
-    setConfirmColourReset(false)
-    toast('Colour pick data reset')
-  }
-
   const handleResetPages = async () => {
     setResettingPages(true)
     const ok = await resetPageAnalytics()
@@ -2173,11 +1924,6 @@ export default function Admin({ toast }) {
           <h1>Dashboard</h1>
         </div>
         <div className="adm-actions">
-          <div className="adm-time-filter">
-            {TIME_RANGES.map(t => (
-              <button key={t.id} className={`adm-time-btn${timeRange === t.id ? ' active' : ''}`} onClick={() => setTimeRange(t.id)}>{t.label}</button>
-            ))}
-          </div>
           <Link to="/style-guide" className="btn btn-s">Style Guide</Link>
           {/* When these figures were actually fetched. Without it, a dashboard
               that quietly stopped updating looks exactly like one that is
@@ -2237,109 +1983,49 @@ export default function Admin({ toast }) {
       {/* ═══════ OVERVIEW TAB ═══════ */}
       {tab === 'overview' && (
         <>
-          {/* Category — traffic & engagement (this device only) */}
-          <div className="adm-cat">
-            <div className="adm-cat-head">
-              <div className="adm-cat-title"><span className="adm-section-bar" />Traffic &amp; Engagement</div>
-              {/* Loud, because these are the biggest numbers on the page and
-                  they are NOT site traffic — they are this admin's own browser.
-                  A quiet grey caption under a four-figure "Page views" is read
-                  as a footnote, not as the scope of the figure. */}
-              <span className="adm-cat-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ padding: '2px 7px', borderRadius: 999, background: 'color-mix(in srgb,var(--warn) 16%,transparent)', color: 'var(--warn-strong)', fontWeight: 700, fontSize: 10, letterSpacing: '.04em', textTransform: 'uppercase' }}>
-                  This device only
-                </span>
-                not site-wide · from this browser&apos;s localStorage
-              </span>
-            </div>
-            <div className="adm-stats">
-              <div className="adm-stat">
-                <div className="adm-stat-value">{fmtNum(filteredViews.length)}</div>
-                <div className="adm-stat-label">Page Views</div>
-                <div className="adm-stat-sub">{timeRange === 'all' ? 'All time' : TIME_RANGES.find(t => t.id === timeRange)?.label}</div>
-              </div>
-              <div className="adm-stat">
-                <div className="adm-stat-value">{fmtNum(filteredSessions.length)}</div>
-                <div className="adm-stat-label">Sessions</div>
-                <Sparkline data={sessionsPerDay} />
-              </div>
-              <div className="adm-stat">
-                <div className="adm-stat-value">{bounceRate}%</div>
-                <div className="adm-stat-label">Bounce Rate</div>
-                <div className="adm-stat-sub">Single-page sessions</div>
-              </div>
-              <div className="adm-stat">
-                <div className="adm-stat-value">{fmtDuration(avgDuration)}</div>
-                <div className="adm-stat-label">Avg Duration</div>
-                <div className="adm-stat-sub">Per session</div>
-              </div>
-              <div className="adm-stat">
-                <div className="adm-stat-value">{data.users.length}</div>
-                <div className="adm-stat-label">Registered Users</div>
-                <div className="adm-stat-sub">Profile cache</div>
-              </div>
-              <div className="adm-stat">
-                <div className="adm-stat-value">{feedback.length}</div>
-                <div className="adm-stat-label">Submissions</div>
-                <div className="adm-stat-sub">
-                  <span style={{ color: 'var(--warn)' }}>{newCount} new</span>{' / '}
-                  <span style={{ color: 'var(--accent-strong)' }}>{inProgressCount} open</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="adm-grid-2">
-              <div className="adm-card">
-                <div className="adm-card-header">
-                  <span className="adm-card-title">Page Views</span>
-                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{filteredViews.length} total</span>
-                </div>
-                <div className="adm-card-body">
-                  <AreaChart data={viewsChartData} />
-                </div>
-              </div>
-
-              <div className="adm-card">
-                <div className="adm-card-header">
-                  <span className="adm-card-title">Top Pages</span>
-                </div>
-                <div className="adm-card-body">
-                  {topPagesFiltered.length > 0 ? (
-                    <div className="adm-bar">
-                      {(() => {
-                        const max = topPagesFiltered[0]?.[1] || 1
-                        return topPagesFiltered.slice(0, 8).map(([page, count]) => (
-                          <div key={page} className="adm-bar-row">
-                            <span className="adm-bar-label">{page.replace(/^\//, '') || '/'}</span>
-                            <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-                            <span className="adm-bar-value">{count}</span>
-                          </div>
-                        ))
-                      })()}
-                    </div>
-                  ) : <div className="adm-empty">No page data yet</div>}
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Category — audience (all users, server aggregate) */}
           <div className="adm-cat">
             <div className="adm-cat-head">
               <div className="adm-cat-title"><span className="adm-section-bar" />Audience</div>
               <span className="adm-cat-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 All users · server totals · last 30 days
-                {confirmPageReset ? (
-                  <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, color: 'var(--err)', fontWeight: 600 }}>Wipe page views?</span>
-                    <button className="btn btn-s" disabled={resettingPages} onClick={handleResetPages} style={{ fontSize: 10, color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>{resettingPages ? 'Resetting…' : 'Yes'}</button>
-                    <button className="btn btn-s" disabled={resettingPages} onClick={() => setConfirmPageReset(false)} style={{ fontSize: 10 }}>No</button>
-                  </span>
-                ) : (
+                {!confirmPageReset && (
                   <button className="btn btn-s" onClick={() => setConfirmPageReset(true)} style={{ fontSize: 10 }}>Reset page analytics</button>
                 )}
               </span>
             </div>
+
+            {/* ── THE RESET SAYS WHAT IT REACHES ───────────────────────────
+                It read "Wipe page views? Yes / No" on one line beside the
+                heading, which describes a local button. It is not one:
+                resetPageAnalytics() deletes the `views` field and every
+                `view__<path>` field from up to 400 documents in
+                `analytics-daily`, which is the record every administrator
+                reads and the only copy of it. What it does NOT touch is worth
+                as much as what it does — the tool, icon and pack counters in
+                the same documents survive, and the three lists below it stay
+                exactly as they are.
+                Mobbin: Pipedrive's delete confirmation spends its whole body
+                on what else goes and what stays, and ends with where a
+                recovery would come from
+                (https://mobbin.com/screens/6e7cb815-5a01-481b-b0c2-6781feb3acde).
+                Here there is no recovery, so that is the sentence. */}
+            {confirmPageReset && (
+              <div className="adm-confirm adm-confirm--danger" role="group" aria-label="Reset page analytics">
+                <p className="adm-confirm-lead"><strong>Reset page analytics for everyone?</strong></p>
+                <ul className="adm-confirm-list">
+                  <li>Clears the page-view totals and the per-page counts from every daily document in <span className="mono">analytics-daily</span>, for every administrator — not just this browser.</li>
+                  <li>Leaves the tool, icon and icon-pack counts alone, so Top Tools, Top Icons and Top Icon Packs below are unaffected.</li>
+                  <li>There is no undo and no backup. Deleted counts are gone.</li>
+                </ul>
+                <div className="adm-confirm-actions">
+                  <button className="btn btn-s" disabled={resettingPages} onClick={() => setConfirmPageReset(false)}>Cancel</button>
+                  <button className="btn btn-s adm-btn-danger" disabled={resettingPages} onClick={handleResetPages}>
+                    {resettingPages ? 'Resetting…' : 'Reset page analytics'}
+                  </button>
+                </div>
+              </div>
+            )}
             {!aggregateLoaded ? (
               <div className="adm-card"><div className="adm-empty">Loading aggregate analytics…</div></div>
             ) : aggregateError ? (
@@ -2390,52 +2076,24 @@ export default function Admin({ toast }) {
                     <div className="adm-stat-sub">In last 30 days</div>
                   </div>
                 </div>
+                {/* THE FOUR RANKED LISTS, ALL FROM THE SAME AGGREGATE.
+                    Icons and icon packs arrived here from the Design tab: they
+                    were the only two cards on it whose numbers were the site's
+                    rather than this browser's, because they already preferred
+                    aggregate.byIcon / aggregate.byPack and fell back to
+                    localStorage when those were empty. The fallback is gone
+                    with the rest of it — a card that silently swaps the whole
+                    site for one browser is the defect, not the remedy. */}
                 <div className="adm-grid-2" style={{ marginBottom: 0 }}>
-                  <div className="adm-card">
-                    <div className="adm-card-header">
-                      <span className="adm-card-title">Top Pages (all users)</span>
-                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>{aggregate.byPath.length} pages</span>
-                    </div>
-                    <div className="adm-card-body">
-                      {aggregate.byPath.length > 0 ? (
-                        <div className="adm-bar">
-                          {(() => {
-                            const max = aggregate.byPath[0]?.[1] || 1
-                            return aggregate.byPath.slice(0, 8).map(([path, count]) => (
-                              <div key={path} className="adm-bar-row">
-                                <span className="adm-bar-label">{path === 'root' ? '/' : path.replace(/_/g, '/')}</span>
-                                <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-                                <span className="adm-bar-value">{count}</span>
-                              </div>
-                            ))
-                          })()}
-                        </div>
-                      ) : <div className="adm-empty">No page data yet</div>}
-                    </div>
-                  </div>
-
-                  <div className="adm-card">
-                    <div className="adm-card-header">
-                      <span className="adm-card-title">Top Tools (all users)</span>
-                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>{aggregate.byTool.length} tools</span>
-                    </div>
-                    <div className="adm-card-body">
-                      {aggregate.byTool.length > 0 ? (
-                        <div className="adm-bar">
-                          {(() => {
-                            const max = aggregate.byTool[0]?.[1] || 1
-                            return aggregate.byTool.slice(0, 8).map(([tool, count]) => (
-                              <div key={tool} className="adm-bar-row">
-                                <span className="adm-bar-label">{tool}</span>
-                                <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-                                <span className="adm-bar-value">{count}</span>
-                              </div>
-                            ))
-                          })()}
-                        </div>
-                      ) : <div className="adm-empty">No tool usage yet</div>}
-                    </div>
-                  </div>
+                  <TopList
+                    title="Top Pages"
+                    unit="pages"
+                    empty="No page data yet"
+                    rows={aggregate.byPath.map(([path, n]) => [path === 'root' ? '/' : path.replace(/_/g, '/'), n])}
+                  />
+                  <TopList title="Top Tools" unit="tools" empty="No tool usage yet" rows={aggregate.byTool} />
+                  <TopList title="Top Icons" unit="icons" empty="No icon copies yet" rows={aggregate.byIcon} />
+                  <TopList title="Top Icon Packs" unit="packs" empty="No pack copies yet" rows={aggregate.byPack} />
                 </div>
               </>
             )}
@@ -2601,192 +2259,6 @@ export default function Admin({ toast }) {
         </>
       )}
 
-      {/* ═══════ DESIGN ANALYTICS TAB ═══════ */}
-      {tab === 'design' && designData && (
-        <>
-          <div className="adm-grid-2" style={{ marginBottom: 32 }}>
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Most Copied Fonts</span>
-                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{Object.keys(designData.fontCopies || {}).length} fonts</span>
-              </div>
-              <div className="adm-card-body">
-                {(() => {
-                  const entries = Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
-                  if (!entries.length) return <div className="adm-empty">No font copy data yet</div>
-                  const max = entries[0][1]
-                  return (
-                    <div className="adm-bar">
-                      {entries.map(([font, count]) => (
-                        <div key={font} className="adm-bar-row">
-                          <span className="adm-bar-label" style={{ fontFamily: 'inherit' }}>{font}</span>
-                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-                          <span className="adm-bar-value">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Font Copy Distribution</span>
-              </div>
-              <div className="adm-card-body">
-                {(() => {
-                  const entries = Object.entries(designData.fontCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 8)
-                  if (!entries.length) return <div className="adm-empty">No data yet</div>
-                  return <AreaChart data={entries.map(([font, count]) => ({ label: font.split(' ')[0], value: count }))} height={100} />
-                })()}
-              </div>
-            </div>
-          </div>
-
-          <div className="adm-grid-2" style={{ marginBottom: 32 }}>
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Most Picked Colours</span>
-                {confirmColourReset ? (
-                  <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ fontSize: 10, color: 'var(--err)', fontWeight: 600 }}>Reset?</span>
-                    <button className="btn btn-s" onClick={handleResetColours} style={{ fontSize: 10, color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>Yes</button>
-                    <button className="btn btn-s" onClick={() => setConfirmColourReset(false)} style={{ fontSize: 10 }}>No</button>
-                  </span>
-                ) : (
-                  <button className="btn btn-s" onClick={() => setConfirmColourReset(true)} style={{ fontSize: 10 }}>Reset</button>
-                )}
-              </div>
-              <div className="adm-card-body">
-                {(() => {
-                  const entries = Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
-                  if (!entries.length) return <div className="adm-empty">No colour pick data yet</div>
-                  return (
-                    <div className="adm-list">
-                      {entries.map(([hex, count]) => (
-                        <div key={hex} className="adm-swatch-row">
-                          <div className="adm-swatch" style={{ background: hex }} />
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--t0)', flex: 1 }}>{hex}</span>
-                          <span className="adm-list-value">{count}x</span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Colour Palette Overview</span>
-              </div>
-              <div className="adm-card-body">
-                {(() => {
-                  const entries = Object.entries(designData.colourPicks || {}).sort((a, b) => b[1] - a[1]).slice(0, 30)
-                  if (!entries.length) return <div className="adm-empty">No data yet</div>
-                  return (
-                    <div className="adm-swatch-grid">
-                      {entries.map(([hex, count]) => (
-                        <div key={hex} className="adm-swatch" title={`${hex} — ${count} picks`} style={{
-                          background: hex,
-                          width: Math.max(24, Math.min(48, count * 6)),
-                          height: Math.max(24, Math.min(48, count * 6)),
-                        }} />
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-
-          <div className="adm-grid-2" style={{ marginBottom: 32 }}>
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Most Copied Icons</span>
-                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{aggregate?.byIcon?.length ? 'all users · 30 days' : 'this device'}</span>
-              </div>
-              <div className="adm-card-body">
-                {(() => {
-                  const agg = aggregate?.byIcon || []
-                  const entries = agg.length
-                    ? agg.slice(0, 10)
-                    : Object.entries(designData.iconCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
-                  if (!entries.length) return <div className="adm-empty">No icon copy data yet</div>
-                  const max = entries[0][1]
-                  return (
-                    <div className="adm-bar">
-                      {entries.map(([key, count]) => (
-                        <div key={key} className="adm-bar-row">
-                          <span className="adm-bar-label">{key}</span>
-                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-                          <span className="adm-bar-value">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-
-            <div className="adm-card">
-              <div className="adm-card-header">
-                <span className="adm-card-title">Most Copied Icon Packs</span>
-                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{aggregate?.byPack?.length ? 'all users · 30 days' : 'this device'}</span>
-              </div>
-              <div className="adm-card-body">
-                {(() => {
-                  const agg = aggregate?.byPack || []
-                  const entries = agg.length
-                    ? agg.slice(0, 10)
-                    : Object.entries(designData.packCopies || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
-                  if (!entries.length) return <div className="adm-empty">No pack copy data yet</div>
-                  const max = entries[0][1]
-                  return (
-                    <div className="adm-bar">
-                      {entries.map(([pack, count]) => (
-                        <div key={pack} className="adm-bar-row">
-                          <span className="adm-bar-label">{pack}</span>
-                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-                          <span className="adm-bar-value">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-
-          <div className="adm-section">
-            <div className="adm-section-h">
-              <div className="adm-section-title"><span className="adm-section-bar" />Tool Usage</div>
-            </div>
-            <div className="adm-card">
-              <div className="adm-card-body">
-                {(() => {
-                  const entries = Object.entries(designData.toolUsage || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
-                  if (!entries.length) return <div className="adm-empty">No tool usage data yet</div>
-                  const max = entries[0][1]
-                  return (
-                    <div className="adm-bar">
-                      {entries.map(([tool, count]) => (
-                        <div key={tool} className="adm-bar-row">
-                          <span className="adm-bar-label">{tool}</span>
-                          <div className="adm-bar-track"><div className="adm-bar-fill" style={{ width: `${(count / max) * 100}%` }} /></div>
-                          <span className="adm-bar-value">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* ═══════ SUBMISSIONS TAB ═══════ */}
       {tab === 'submissions' && (
         <div className="adm-section">
@@ -2910,102 +2382,12 @@ export default function Admin({ toast }) {
         </div>
       )}
 
-      {/* ═══════ PAGES TAB ═══════ */}
-      {tab === 'pages' && (
-        <>
-          <div className="adm-section">
-            <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Most Visited Pages</div></div>
-            <div className="adm-card">
-              <div className="adm-table-wrap">
-                <table className="adm-table">
-                  <thead><tr><th>Page</th><th>Views</th><th>% of Total</th></tr></thead>
-                  <tbody>
-                    {data.topPages.map(([page, count]) => (
-                      <tr key={page}>
-                        <td className="mono bold">{page || '/'}</td>
-                        <td>{count}</td>
-                        <td className="accent">{data.totalViews > 0 ? `${Math.round((count / data.totalViews) * 100)}%` : '0%'}</td>
-                      </tr>
-                    ))}
-                    {data.topPages.length === 0 && <tr><td colSpan={3}><div className="adm-empty">No data</div></td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div className="adm-section">
-            <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Bounce Rate by Entry Page</div></div>
-            <div className="adm-card">
-              <div className="adm-table-wrap">
-                <table className="adm-table">
-                  <thead><tr><th>Entry Page</th><th>Entries</th><th>Bounces</th><th>Rate</th></tr></thead>
-                  <tbody>
-                    {data.bounceByPage.map(b => (
-                      <tr key={b.page}>
-                        <td className="mono bold">{b.page || '/'}</td>
-                        <td>{b.total}</td>
-                        <td>{b.bounces}</td>
-                        <td className="accent">{b.rate}%</td>
-                      </tr>
-                    ))}
-                    {data.bounceByPage.length === 0 && <tr><td colSpan={4}><div className="adm-empty">No data</div></td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div className="adm-grid-2">
-            <div className="adm-section">
-              <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Top Exit Pages</div></div>
-              <div className="adm-card">
-                <div className="adm-table-wrap">
-                  <table className="adm-table">
-                    <thead><tr><th>Exit Page</th><th>Exits</th></tr></thead>
-                    <tbody>
-                      {data.topExitPages.map(([page, count]) => (
-                        <tr key={page}><td className="mono bold">{page || '/'}</td><td>{count}</td></tr>
-                      ))}
-                      {data.topExitPages.length === 0 && <tr><td colSpan={2}><div className="adm-empty">No data</div></td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <div className="adm-section">
-              <div className="adm-section-h"><div className="adm-section-title"><span className="adm-section-bar" />Top Entry Pages</div></div>
-              <div className="adm-card">
-                <div className="adm-table-wrap">
-                  <table className="adm-table">
-                    <thead><tr><th>Entry Page</th><th>Entries</th></tr></thead>
-                    <tbody>
-                      {data.topEntryPages.map(([page, count]) => (
-                        <tr key={page}><td className="mono bold">{page || '/'}</td><td>{count}</td></tr>
-                      ))}
-                      {data.topEntryPages.length === 0 && <tr><td colSpan={2}><div className="adm-empty">No data</div></td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* ═══════ USERS TAB ═══════ */}
       {/* `role` is the SERVER-VERIFIED role from the ID token, not the bundled
           email check. Only a founder is offered the assignment controls, and the
           route refuses the action with a 403 regardless — the UI hides what the
           server would refuse rather than being the thing that decides it. */}
       {tab === 'users' && <UsersPanel localUsers={data.users} toast={toast} role={role} />}
-
-      {/* ═══════ PIPELINE TAB ═══════ */}
-      {tab === 'pipeline' && <PipelineBoard />}
-
-      {/* ═══════ BOARD TAB ═══════ */}
-      {tab === 'board' && <ModuleBoard />}
 
       {/* ═══════ PROMPTS TAB ═══════ */}
       {/* ═══════ COMMUNITY REVIEW QUEUE ═══════ */}

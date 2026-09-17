@@ -97,11 +97,29 @@
 // distinction, which is the thing worth keeping: A MODULE THAT DESCRIBES THE
 // PRODUCT SHIPS; A MODULE THAT DESCRIBES THE PROJECT DOES NOT.
 //
-// The boards still work: PipelineBoard and ModuleBoard both read
-// GET /api/ai?backlog=1 through useInternalBoards(), gated on a verified
-// administrator by requireAdmin() in api/_lib/admin.js. That is asserted below
-// too — otherwise "no board data in the build" is also what deleting both tabs
-// looks like.
+// ── 2026-09-16: THE BOARDS LEFT THE PRODUCT, AND THE CONTROL CHANGED SIDES ─
+//
+// Until this date the control below asserted that the founder STILL HAD both
+// boards — that Admin.jsx asked GET /api/ai?backlog=1 and rendered what came
+// back. It had to: "no board data in the build" is also exactly what deleting
+// the Pipeline tab looks like, and a guard that a deletion satisfies is not a
+// guard.
+//
+// The founder then deleted the Pipeline tab. "the pipeline probably can be
+// removed too", 2026-09-16, the same instruction that took the browser-local
+// analytics off the dashboard. Board went with it: same endpoint, same 501,
+// same paragraph where a board used to be.
+//
+// So the control is inverted rather than dropped, and the property it now
+// holds is STRICTLY STRONGER than the one it held before. It used to say: the
+// boards reach the browser only through an admin-gated fetch. It now says: no
+// code path from this page reaches them at all. The absence the rest of this
+// file measures in the build output is, from here, structural.
+//
+// The SERVER half is unchanged and still asserted. api/ai.js still answers
+// ?backlog=1 behind requireAdmin(), because the founder's own checkout has the
+// modules and that is where he reads them; what must never happen is that
+// endpoint losing its gate while nothing in the browser is watching it.
 //
 // ── THE POSITIVE CONTROLS ──────────────────────────────────────────────────
 //
@@ -118,8 +136,9 @@
 //      — would otherwise make every assertion below pass for free.
 //   3. THE BUILD IS PROVEN REAL: more than ten chunks, an Admin-*.js that
 //      contains the dashboard's own marker.
-//   4. THE BOARDS ARE PROVEN TO STILL HAVE A SOURCE: the client asks the route
-//      for both, and the route is behind the admin gate.
+//   4. THE ROUTE IS PROVEN TO STILL BE GATED, and the dashboard is proven to
+//      have no path to it — the two halves that together mean the absence
+//      measured below cannot be reintroduced quietly from either side.
 //
 // ── WHERE IT BUILDS ────────────────────────────────────────────────────────
 //
@@ -438,56 +457,74 @@ test('CONTROL: the build is real, and the Admin dashboard is in it', async () =>
     'the Admin chunk was found but does not contain the dashboard, so it is not the chunk this test means')
 })
 
-test('CONTROL: the founder still has both boards, and they are behind the admin gate', () => {
-  // "No board data in the build" is ALSO what deleting the Pipeline and Board
-  // tabs looks like. These reads are what stop this file being satisfied by the
-  // boards simply ceasing to exist.
-  const admin = fs.readFileSync(path.join(ROOT, 'src/pages/Admin.jsx'), 'utf8')
-  assert.match(admin, /\/api\/ai\?backlog=1/,
-    'src/pages/Admin.jsx no longer asks for the boards anywhere, so the founder\'s Pipeline and Board '
-    + 'tabs have no source of data at all and the assertions below are passing on a deleted feature.')
-  assert.match(admin, /boards\?\.MODULE_BOARD/,
-    'the Board tab no longer reads MODULE_BOARD out of the fetched payload, so it renders nothing.')
+test('CONTROL: the dashboard asks for no internal board, by any route', () => {
+  // ── THE HALF THAT USED TO SAY THE OPPOSITE ──────────────────────────────
+  // See the note at the top of this file. Until 2026-09-16 this asserted that
+  // Admin.jsx still FETCHED the boards, because a deletion would otherwise
+  // satisfy every absence below. The founder then made the deletion, so the
+  // same worry is served by proving there is no path left rather than by
+  // proving the path is gated: a fetch that does not exist cannot be
+  // reintroduced by accident, and if somebody reintroduces it on purpose this
+  // goes red and they have to say why here.
+  //
+  // COMMENTS ARE STRIPPED FIRST, and that is load-bearing rather than tidy.
+  // Admin.jsx carries a paragraph explaining that the boards are gone, and it
+  // names both modules and the endpoint to do so. A raw substring search would
+  // read that explanation as the thing it is explaining the absence of, and
+  // the only way to make it pass would be to delete the explanation.
+  const raw = fs.readFileSync(path.join(ROOT, 'src/pages/Admin.jsx'), 'utf8')
+  const admin = raw
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+  assert.ok(admin.length > 20_000,
+    `Admin.jsx stripped to ${admin.length} bytes of code — the comment stripper ate the file and every `
+    + 'absence below is passing on an empty string')
 
+  assert.ok(!/backlog=1/.test(admin),
+    'src/pages/Admin.jsx asks GET /api/ai?backlog=1 again. That endpoint answers the two internal '
+    + 'boards, whose notes are candid prose written for us, and the founder removed both tabs on '
+    + '2026-09-16. Bringing the request back puts the rows in the browser again — behind the admin '
+    + 'gate, but in the browser.')
+
+  for (const symbol of ['MODULE_BOARD', 'NEXT_TODO', 'PIPELINE_STAGES', 'PIPELINE_PROCESSES', 'APP_CONDITION']) {
+    assert.ok(!admin.includes(symbol),
+      `Admin.jsx reads ${symbol}, so one of the internal boards is being rendered again.`)
+  }
+  for (const mod of ['data/pipeline', 'data/moduleBoard']) {
+    assert.ok(!admin.includes(mod),
+      `Admin.jsx names ${mod} in code — as an import, static or dynamic, it is the exact edge this `
+      + 'whole file exists to keep out of the bundle.')
+  }
+  // And neither tab is back in the bar. The components could be gone while a
+  // tab that renders nothing stays in the nav, which is two of the ten tabs
+  // doing what the founder asked to have removed.
+  const tabs = admin.match(/const TABS = \[([\s\S]*?)\n\]/)
+  assert.ok(tabs, 'the TABS array is unreadable, so this assertion is checking nothing')
+  for (const dead of ['pipeline', 'board']) {
+    assert.ok(!new RegExp(`id:\\s*'${dead}'`).test(tabs[1]), `the "${dead}" tab is back in the admin nav`)
+  }
+
+  // ── THE SERVER HALF IS UNCHANGED, AND IT IS THE HALF NOBODY IS WATCHING ──
+  // Nothing in the browser calls this route now, so nothing in the browser
+  // would notice it losing its gate. On the founder's own checkout the two
+  // modules are present and serveBacklog() reads them, so the route is live
+  // there and an ungated version of it would serve the backlog to anyone who
+  // found the query string.
   const route = fs.readFileSync(path.join(ROOT, 'api/ai.js'), 'utf8')
   assert.match(route, /'backlog' in \(req\.query \|\| \{\}\)/,
-    'api/ai.js does not answer ?backlog=1, so the boards the client asks for do not exist.')
+    'api/ai.js no longer answers ?backlog=1 — which may be correct now that no client calls it, but '
+    + 'it is a deliberate change: delete this assertion and the two below in the same commit, and say '
+    + 'so, rather than letting them be satisfied by a route that quietly stopped existing.')
   assert.match(route, /async function serveBacklog[\s\S]*?requireAdmin\(req\)/,
     'serveBacklog() in api/ai.js does not call requireAdmin() before it reads the boards — they '
     + 'would be served to anyone who asked, which is the disclosure this file exists for, moved '
     + 'from a static asset to an endpoint.')
-  // Both boards, by name, in the payload — a route that quietly stopped
-  // returning one would leave that tab empty with everything else green.
-  for (const name of ['APP_CONDITION', 'PIPELINE_STAGES', 'PIPELINE_PROCESSES', 'NEXT_TODO', 'MODULE_BOARD']) {
-    assert.match(route, new RegExp(`${name}:`),
-      `serveBacklog() does not return ${name}, so the tab that renders it shows nothing.`)
-  }
-
-  // ── AND THAT A DEPLOYMENT WITHOUT THE MODULES SAYS SO ────────────────────
-  // This runs even where the boards themselves are absent, and it is the half
-  // that keeps this file honest there. The most convenient way to make every
-  // skip above disappear is to answer 200 with `NEXT_TODO: []` — every test in
-  // this file would go green while the founder's own board read "Next to do
-  // (0)", which is a claim that the work is finished.
   assert.match(route, /ERR_MODULE_NOT_FOUND/,
     'api/ai.js no longer tells "the boards are not in this deployment" apart from a real failure. '
     + 'Since 2026-09-16 the two modules are local-only, so in production the imports throw — and '
     + 'the only two honest answers are the one it gives (501 + localOnly) or a 500. An empty '
     + 'backlog is not one of them.')
-  assert.match(route, /localOnly: true/,
-    'serveBacklog() does not answer with `localOnly`, which is the flag both Admin tabs branch on '
-    + 'to print a sentence instead of an empty board.')
-  assert.match(admin, /res\.status === 501 && data\.localOnly/,
-    'Admin.jsx no longer recognises the not-deployed answer, so it falls through to the generic '
-    + '"could not load" path and tells the founder to check he is signed in — for a state that has '
-    + 'nothing to do with his session.')
-  assert.match(admin, /function BoardGate\([^)]*localOnly[^)]*\)/,
-    'BoardGate no longer takes the not-deployed state, so it cannot render it as its own sentence '
-    + 'and the two tabs either spin forever or report a fault that is not there.')
-  assert.equal((admin.match(/localOnly=\{localOnly\}/g) || []).length, 2,
-    'the not-deployed state is passed to BoardGate by fewer than both tabs. PipelineBoard and '
-    + 'ModuleBoard read one payload and must degrade the same way — the module board was the one '
-    + 'the first pass missed, and it is the one a second pass will miss again.')
 })
 
 // ═══════════════════════════════════════════════════════════════════════════

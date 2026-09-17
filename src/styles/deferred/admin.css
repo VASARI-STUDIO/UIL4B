@@ -190,8 +190,6 @@
 .adm-users-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .adm-search{flex:1 1 220px;min-width:180px;font-size:12px}
 .adm-users-table td{vertical-align:top}
-.adm-plan-pro{background:rgba(16,185,129,.12);color:var(--ok-strong)}
-.adm-plan-free{background:var(--bg-2);color:var(--t2)}
 
 /* Submissions toolbar */
 .adm-sub-summary{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:11px;font-weight:600}
@@ -242,3 +240,161 @@
    with the rest rather than left for someone to notice. */
 .adm-tabs{flex-wrap:nowrap}
 .adm-tab{flex:0 0 auto}
+/* ── Admin: the Users tab ───────────────────────────────────────────────────
+ *
+ * The founder's instruction of 2026-09-16 was for better UX "in terms of
+ * managing user resources". Everything below serves one of four questions he
+ * has to answer about a person — who are they, what are they paying, what can
+ * they reach, and is anything wrong — and nothing below is here for texture.
+ *
+ * It borrows the dashboard's existing vocabulary rather than introducing a
+ * second one: .adm-card's border and radius, .btn/.btn-s, the signal tokens
+ * (--ok / --warn / --err / --pending) that the Submissions badges already use,
+ * and the left-rule-on-a-panel shape that .adm-submission and .adm-verify-error
+ * already carry. A new colour or a new radius here would make the Users tab a
+ * different product from the tab beside it. */
+
+/* ── The counts, which are the filters ─────────────────────────────────────
+ * Number first and large, label under it small — the figure is what is being
+ * scanned and the label only qualifies it. Mobbin: Deel's compliance dashboard
+ * reads 155 / 249 workers this way round
+ * (https://mobbin.com/screens/9f5af254-f966-4810-adbb-c428854523e3). */
+.adm-user-views{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:8px;margin-bottom:14px}
+.adm-user-view{display:flex;flex-direction:column;gap:2px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card-grad);font-family:var(--font);text-align:left;cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.adm-user-view:hover{border-color:var(--bh)}
+.adm-user-view.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card-grad))}
+.adm-user-view-n{font-size:22px;font-weight:600;line-height:1.1;color:var(--t0);font-family:var(--display,var(--font));letter-spacing:-.02em}
+.adm-user-view-l{font-size:11px;font-weight:600;color:var(--t2)}
+/* Colour only when there is something to colour. A "Needs attention" tile that
+ * is amber at zero teaches the founder to ignore amber. */
+.adm-user-view.warn .adm-user-view-n{color:var(--warn-strong)}
+.adm-user-view.warn.active{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--card-grad))}
+
+.adm-user-count{font-size:11px;color:var(--t3);font-family:var(--mono);white-space:nowrap}
+.adm-roster-line{margin-bottom:12px;line-height:1.7}
+
+/* ── Plan and access ────────────────────────────────────────────────────── */
+.adm-plan{border-radius:var(--radius-xs,4px)}
+.adm-plan--ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok-strong)}
+.adm-plan--warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn-strong)}
+.adm-plan--err{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err-strong)}
+.adm-plan--pending{background:color-mix(in srgb,var(--pending) 14%,transparent);color:var(--pending)}
+.adm-plan--neutral{background:var(--bg-2);color:var(--t2)}
+.adm-plan-interval{margin-left:6px;font-size:10px;color:var(--t3);font-family:var(--mono)}
+
+/* "User" is the ordinary case and gets no badge — a chip on every row for the
+ * state most rows are in is noise that hides the two rows that are not. */
+.adm-access{font-size:11px;color:var(--t2)}
+.adm-access--founder,.adm-access--moderator{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-xs,4px);white-space:nowrap}
+.adm-access--founder{background:var(--accent-bg);color:var(--accent-strong)}
+.adm-access-off{color:var(--t3);font-style:italic}
+.adm-access--moderator{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok-strong)}
+
+/* ── Rows ──────────────────────────────────────────────────────────────────
+ * The zebra stripe is off on this table specifically: a detail row is a
+ * tbody child too, so opening one inverted the banding of everything under
+ * it. Borders carry the separation instead, which is also what the card
+ * layout below needs. */
+.adm-users-table tbody tr:nth-child(even){background:transparent}
+.adm-users-table tbody tr:hover{background:var(--hvr)}
+.adm-users-table .adm-row-open{background:var(--bg-2)}
+.adm-users-table .adm-row-open td{border-bottom-color:transparent}
+/* A row whose billing needs looking at is marked on the row, not only in its
+ * badge — the Plan column can be scrolled past at tablet width. */
+.adm-users-table .adm-row-flag td:first-child{box-shadow:inset 2px 0 0 var(--warn)}
+.adm-row-end{text-align:right;white-space:nowrap}
+
+/* ── The detail panel ──────────────────────────────────────────────────────
+ * In the row rather than in a drawer. The dashboard already expands a
+ * submission in place (.adm-submission), and a second disclosure idiom on the
+ * next tab along would be two answers to the same question. Mobbin: Supabase
+ * keeps the selected account's whole record — identity, then the actions, then
+ * a labelled danger zone — in one reading column
+ * (https://mobbin.com/screens/0cb2b22a-4a91-4251-a2eb-ca8b23c82071). */
+.adm-detail-row td{padding:0!important;background:var(--bg-2)}
+.adm-detail{padding:16px 18px 18px;border-left:2px solid var(--accent);display:flex;flex-direction:column;gap:16px}
+.adm-detail-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:18px}
+.adm-detail-sec h4{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:0 0 8px}
+.adm-detail-dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:12px;align-items:baseline}
+.adm-detail-dl dt{color:var(--t3);white-space:nowrap}
+.adm-detail-dl dd{margin:0;color:var(--t0);min-width:0;overflow-wrap:anywhere}
+.adm-detail-note{font-size:12px;color:var(--t1);line-height:1.6;margin:0 0 10px}
+.adm-detail-access{border-top:1px solid var(--border);padding-top:14px}
+.adm-detail-foot{font-size:11px;color:var(--t3);line-height:1.6;margin:0;border-top:1px solid var(--border);padding-top:12px}
+
+/* The two handles that let the founder act on this person somewhere else. */
+.adm-copy-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.adm-copy-label{color:var(--t3);flex:0 0 auto;min-width:58px}
+.adm-copy-value{flex:1 1 auto;min-width:0;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-copy-btn{flex:0 0 auto}
+
+/* ── Confirmations ─────────────────────────────────────────────────────────
+ * Used by the moderator grant, the moderator revocation and the analytics
+ * reset. The list is the point: an irreversible action that does not say what
+ * it reaches has not been confirmed, it has only been delayed. */
+.adm-confirm{border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:var(--radius-s);background:var(--card);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.adm-confirm--danger{border-left-color:var(--err)}
+.adm-confirm-lead{margin:0;font-size:13px;color:var(--t0);line-height:1.5}
+.adm-confirm-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--t1);line-height:1.6}
+.adm-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
+.adm-btn-danger{border-color:var(--err);color:var(--err-strong)}
+.adm-btn-danger:hover:not(:disabled){background:var(--err);border-color:var(--err);color:var(--err-fg,#fff)}
+.adm-btn-go{border-color:var(--accent);color:var(--accent-strong)}
+.adm-btn-go:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--accent-fg,#fff)}
+
+/* ── 980px and under: drop the column the filter chips already answer ───────
+ * Seven columns do not fit a tablet without the horizontal scroll taking the
+ * identity column off screen with them, and the column worth losing is the one
+ * that has a second route to the same answer: the country chips above the
+ * table filter by exactly this field, and the full location string is in the
+ * detail panel. */
+@media(max-width:980px){
+  .adm-users-table th:nth-last-child(2),
+  .adm-users-table td:nth-last-child(2){display:none}
+}
+
+/* ── 680px and under: one card per row ─────────────────────────────────────
+ *
+ * THE CHOICE, AND WHY IT IS NOT HORIZONTAL SCROLL. A user table narrowed to a
+ * phone has three honest options. Horizontal scroll keeps every column and
+ * pushes the identity column off the left edge, so the founder scrolls a plan
+ * badge he cannot attribute to anybody. A reduced column set has to drop
+ * either who someone is or what state they are in, and both of those are the
+ * reason he opened the tab. A card per row keeps all of it, labelled, and
+ * costs vertical space — which on a phone is the cheap axis.
+ *
+ * It is the SAME DOM. No second rendering is mounted and hidden, because a
+ * hidden duplicate is how a test ends up measuring the 0x0 copy, and how the
+ * two renderings drift. The roles are written into the markup because
+ * display:block on a <table> discards its implicit semantics in every engine —
+ * a card per row must not cost a screen reader the row. */
+@media(max-width:680px){
+  .adm-users-table,
+  .adm-users-table tbody,
+  .adm-users-table tr,
+  .adm-users-table td{display:block;width:auto}
+  .adm-users-table thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .adm-users-table tbody tr{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);margin-bottom:8px;padding:12px 14px}
+  .adm-users-table .adm-row-open{background:var(--bg-2);border-color:var(--accent)}
+  .adm-users-table .adm-row-flag{border-left:2px solid var(--warn)}
+  .adm-users-table .adm-row-flag td:first-child{box-shadow:none}
+  .adm-users-table tbody td{border-bottom:none;padding:0;display:flex;align-items:baseline;gap:10px;min-height:22px}
+  /* Every cell names itself, since the header it belonged to is gone. */
+  .adm-users-table tbody td[data-label]::before{content:attr(data-label);flex:0 0 74px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+  /* …except the first, which IS the card's heading. */
+  .adm-users-table tbody td[data-label="User"]{display:block;margin-bottom:10px}
+  .adm-users-table tbody td[data-label="User"]::before{content:none}
+  /* The dropped column comes back: there is room for it down the card, and
+     the 980px rule was about horizontal space it no longer costs. */
+  .adm-users-table th:nth-last-child(2),
+  .adm-users-table td:nth-last-child(2){display:flex}
+  .adm-row-end{display:block;text-align:left;margin-top:12px}
+  .adm-row-end .btn{width:100%;justify-content:center}
+  .adm-detail-row{padding:0!important;border:none!important;background:none!important;margin-bottom:8px!important}
+  .adm-detail-row td{display:block}
+  .adm-detail{border-left-width:2px;border-radius:0 var(--radius) var(--radius) 0;padding:14px}
+  .adm-detail-dl{grid-template-columns:1fr;gap:0 0}
+  .adm-detail-dl dt{margin-top:8px}
+  .adm-copy-row{flex-wrap:wrap}
+  .adm-copy-value{flex-basis:100%;order:3;font-size:11px}
+}

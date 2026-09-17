@@ -206,57 +206,56 @@ test.describe('projects states only quotas the product enforces', () => {
   })
 })
 
-test.describe('admin state colour survives the theme', () => {
-  test('the this-device-only badge is readable in dark as well as light', async ({ page }) => {
+test.describe('the admin overview states nothing it read from this browser', () => {
+  // ── THE BADGE THIS DESCRIBE USED TO MEASURE IS GONE, AND SO IS ITS SUBJECT ─
+  // Until 2026-09-16 this measured the contrast of a "This device only" badge
+  // over four headline figures — Page Views, Sessions, Bounce Rate, Avg
+  // Duration — that were this browser's localStorage. The badge was correct
+  // and the figures were the defect: the largest numbers on the founder's
+  // dashboard described his own browsing, and a caption does not change what
+  // a four-figure "Page views" reads as. His instruction was to take "data
+  // from my specific browser window" off the dashboard, so the band went,
+  // with the Pages and Design tabs that read the same two blobs.
+  //
+  // What replaces the contrast check is the stronger claim it was standing
+  // in front of: nothing on the overview is a reading of this browser. The
+  // test seeds the localStorage blob with figures no site has, renders the
+  // dashboard, and requires none of them on screen — while the server
+  // aggregate, which the page IS allowed to show, is proven present.
+  test('seeded local page views never reach the overview, and the server aggregate does', async ({ page }) => {
     watch(page, 'founder reading the admin dashboard')
-    await signIn(page, { admin: true })
+
+    // A figure that cannot occur by accident: 7,777 page views of one path,
+    // written the way utils/analytics.js writes them.
+    const SENTINEL_PATH = '/never-a-real-route-7777'
+    await page.addInitScript(({ p }) => {
+      const now = Date.now()
+      const views = Array.from({ length: 7777 }, (_, i) => ({ path: p, timestamp: now - i * 1000, referrer: null }))
+      try { localStorage.setItem('vs-analytics', JSON.stringify(views)) } catch { /* the app survives a blocked store */ }
+    }, { p: SENTINEL_PATH })
+
+    await signIn(page, { admin: true, claims: { admin: true } })
     await go(page, '/admin')
+    await expect(page.getByText(/ADMIN MODE/i).first()).toBeVisible()
 
-    const badge = page.locator('span', { hasText: /^This device only$/ }).first()
-    await expect(badge).toBeVisible()
+    // CONTROL: the overview rendered its server-side band. Without this an
+    // empty page passes every absence below.
+    const audience = page.locator('.adm-cat').filter({ hasText: /Audience/ }).first()
+    await expect(audience).toBeVisible()
+    await expect(audience.getByText(/server totals/i)).toBeVisible()
 
-    for (const theme of ['light', 'dark']) {
-      await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme)
-      // Let the 0.2s colour transitions finish. A reading taken mid-transition
-      // is a reading of a colour that is never on screen at rest.
-      await page.waitForFunction(() => true)
-      await page.waitForTimeout(600)
-
-      // Measured off the pixels Chromium painted, not off getComputedStyle:
-      // the background is a colour-mix over a card over the page, and only the
-      // composite is what a reader's eye receives.
-      const shot = await badge.screenshot()
-      const ratio = await page.evaluate(async (b64) => {
-        const img = new Image()
-        img.src = 'data:image/png;base64,' + b64
-        await img.decode()
-        const c = document.createElement('canvas')
-        c.width = img.width; c.height = img.height
-        const g = c.getContext('2d', { willReadFrequently: true })
-        g.drawImage(img, 0, 0)
-        const d = g.getImageData(0, 0, c.width, c.height).data
-        const lum = (r, gg, b) => {
-          const f = (v) => { const s = v / 255; return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4 }
-          return 0.2126 * f(r) + 0.7152 * f(gg) + 0.0722 * f(b)
-        }
-        // The most common pixel is the fill; the farthest from it in luminance
-        // is the ink.
-        const counts = new Map()
-        const px = []
-        for (let i = 0; i < d.length; i += 4) {
-          if (d[i + 3] < 250) continue
-          const k = `${d[i]},${d[i + 1]},${d[i + 2]}`
-          counts.set(k, (counts.get(k) || 0) + 1)
-          px.push(lum(d[i], d[i + 1], d[i + 2]))
-        }
-        const ground = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
-        const gl = lum(...ground.split(',').map(Number))
-        const cr = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)
-        return Math.max(...px.map((l) => cr(l, gl)))
-      }, shot.toString('base64'))
-
-      // 10px, font-weight 700 — not large text by any definition, so 4.5:1.
-      expect(ratio, `"This device only" contrast in ${theme}`).toBeGreaterThanOrEqual(4.5)
+    const text = (await page.locator('.adm').innerText()).replace(/\s+/g, ' ')
+    expect(text, 'the seeded localStorage path is on the dashboard, so the page is reading this browser again')
+      .not.toContain('never-a-real-route')
+    expect(text, 'the seeded localStorage count (7,777 views, formatted 7.8k) is on the dashboard')
+      .not.toMatch(/7\.8k|7777|7,777/)
+    for (const gone of [/This device only/i, /Bounce Rate/i, /Avg Duration/i, /\bSessions\b/]) {
+      expect(text, `${gone} is back on the overview — that figure was this browser's own`).not.toMatch(gone)
     }
+
+    // And the two tabs that read the same blobs are not in the bar.
+    const names = (await page.getByRole('tab').allInnerTexts()).join(' | ')
+    expect(names, 'the Pages tab is back — every table on it read this browser').not.toMatch(/\bPages\b/)
+    expect(names, "the Design tab is back — its fonts and colours were this browser's picks").not.toMatch(/\bDesign\b/)
   })
 })
