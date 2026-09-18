@@ -412,3 +412,52 @@ test.describe('the projects empty state puts its control on the first screen', (
     })
   }
 })
+
+/* ── The dashboard's date and time ────────────────────────────────────────── */
+
+test.describe('the dashboard says what day it is, from the viewer\u2019s own machine', () => {
+  // Founder request, 2026-09-18: "in the dashboard page lets show a date and
+  // time make it connect to their browser / computer."
+  test('the clock renders a real local date and time, and does not announce itself', async ({ page }) => {
+    watch(page, 'a returning user glancing at the dashboard')
+    await go(page, FIXTURE)
+    await expectRendered(page, FIXTURE)
+
+    const clock = page.locator('.uh-clock')
+    await expect(clock, 'the dashboard shows no date or time').toBeVisible()
+
+    const read = await clock.evaluate((el) => ({
+      tag: el.tagName,
+      text: el.textContent,
+      dt: el.getAttribute('datetime'),
+      live: el.getAttribute('aria-live'),
+      tabular: getComputedStyle(el).fontVariantNumeric,
+    }))
+
+    // A <time> with a machine-readable value, not a styled <span>.
+    expect(read.tag).toBe('TIME')
+    expect(read.dt, 'no machine-readable datetime').toMatch(/^\d{4}-\d{2}-\d{2}T/)
+
+    // The rendered value must be THIS machine's, not the build's. Parsing the
+    // dateTime and comparing it to the runner's own clock is what proves the
+    // component read the browser rather than a timestamp baked in at build
+    // time — the failure this design exists to prevent, because 39 route
+    // shells are prerendered and a formatted date would have been frozen into
+    // them.
+    const skewMs = Math.abs(Date.now() - Date.parse(read.dt))
+    expect(skewMs, `the clock is ${Math.round(skewMs / 1000)}s from this machine's time`)
+      .toBeLessThan(5 * 60 * 1000)
+
+    // It says both halves.
+    expect(read.text.trim().length, 'the clock rendered empty').toBeGreaterThan(6)
+    expect(read.text).toMatch(/\d/)
+
+    // NO LIVE REGION, deliberately. A live region here would interrupt a screen
+    // reader every minute to deliver something the reader did not ask for and
+    // already has from their own OS.
+    expect(read.live, 'the clock announces itself to screen readers every minute').toBeNull()
+
+    // Tabular figures, so the line does not reflow as the minute ticks over.
+    expect(read.tabular).toContain('tabular-nums')
+  })
+})

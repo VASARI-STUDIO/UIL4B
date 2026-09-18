@@ -13,6 +13,7 @@ import DailyBand from '../components/userhome/DailyBand'
 import StarterRow from '../components/userhome/StarterRow'
 import ProjectCard from '../components/userhome/ProjectCard'
 import SaveRefusal from '../components/SaveRefusal'
+import LocalClock from '../components/LocalClock'
 // The `projects` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
@@ -610,6 +611,12 @@ export default function Projects({ toast }) {
     <div className="sec uh">
       <header className="sec-h uh-head">
         <div className="uh-head-main">
+          {/* The viewer's own date and time — see LocalClock.jsx for why it
+              renders nothing until the browser has answered, and why it ticks
+              on the minute rather than the second. It sits ABOVE the h1 rather
+              than beside it because it is context for the page, not a second
+              title competing with "Projects" for the first line. */}
+          <LocalClock className="uh-clock" />
           <h1>Projects</h1>
           <p className="uh-sub">Your saved design systems — palette, fonts, type scale, and tints.</p>
           {/* QUICK DATA TRACKING, and every figure countable.

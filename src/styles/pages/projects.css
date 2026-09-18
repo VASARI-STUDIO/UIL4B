@@ -79,6 +79,12 @@
    and the first row of projects below the fold on a laptop. */
 .uh-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-5);flex-wrap:wrap;margin-bottom:var(--s-5)}
 .uh-head-main{min-width:0}
+/* The viewer's own date and time, above the h1. Mono because it is a VALUE
+   read at a glance, which is what --mono means everywhere else in this product,
+   and tabular figures stop the line reflowing as the minute ticks over. It is
+   deliberately quiet (--t3, small, wide tracking): it is orientation, not a
+   heading, and it must never compete with "Projects" for first read. */
+.uh-clock{display:block;margin-bottom:6px;font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .uh-sub{max-width:56ch;font-size:var(--fs-body-s);line-height:1.6;color:var(--t2)}
 .uh-head-actions{display:flex;gap:var(--s-2);flex-wrap:wrap}
 
