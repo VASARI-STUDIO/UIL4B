@@ -3181,35 +3181,68 @@ html.lenis{scroll-behavior:auto!important}
 /* ── "Soon" badge (public, honest TBD marker) ── */
 .soon-badge{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);border:1px solid var(--border);color:var(--t2);background:var(--bg-2);line-height:1;flex:0 0 auto}
 
-/* ══ Top nav — fixed, full-width standard-SaaS bar ══
-   Logo + section triggers on the left, the search field flexing in the centre,
-   actions/avatar on the right, hairline border-bottom. No hover morphing — the
-   bar is always fully revealed; scrolling only adds the separating shadow.
+/* ══ Top nav — THE APP HEADER, built to `UIL4B App.dc.html` line 100 ══
+   Spectrum redesign, 2026-09-18. The bar is one flex row, in the design's own
+   order: wordmark · search · theme cycle · section triggers · [auto] the right
+   cluster. It replaces a `1fr auto 1fr` grid that centred the three section
+   menus, which is not what the design does and which cost the 40-line comment
+   below about `1fr` tracks splitting evenly. Flex has no track to misallocate.
 
-   SOLID, NOT GLASS — founder direction, 2026-08-08. The bar used to be a
-   translucent blurred pane that firmed up from .82 to .92 alpha on scroll, so
-   page content (most visibly the Palette Builder's colour board) showed through
-   it and its colour changed as you scrolled. It is now an opaque --bg-1 fill in
-   both themes: one surface colour that never varies, sitting one step off the
-   --bg-0 page so the hairline border and the scrolled shadow do the separating.
-   Do not reintroduce alpha or backdrop-filter here. */
-.pnav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:120;background:var(--bg-1);border-bottom:1px solid var(--border);transition:box-shadow var(--dur-3) var(--ease-inout)}
+   --pnav-ctl IS THE ROW. Every control in the bar — the search field, the
+   theme cycle, the two icon buttons, the meatball, the avatar, the hamburger
+   and the action pills — is exactly this tall, because
+   52-header-optical-alignment.spec.js measures them as INK and fails when one
+   of them paints a different mass from its neighbours. 38px inside a 60px bar
+   is the design's own 11px of vertical padding. It is a property on .pnav
+   rather than a token because it is this component's row height, not a scale
+   step; the token block stays where it is.
+
+   GLASS AGAIN, WITH THE 2026-08-08 FAULT FIXED RATHER THAN RE-SHIPPED.
+   The founder's direction that year was "solid, not glass", and the reason was
+   specific and correct: the bar was translucent with NO blur and its alpha
+   changed from .82 to .92 on scroll, so the Palette Builder's colour board
+   showed through it and the bar's own colour moved as you scrolled. The design
+   (line 100) ships `rgba(page,.88)` WITH `backdrop-filter:blur(24px)`, which is
+   a different material — a frosted pane diffuses what is behind it instead of
+   compositing it legibly.
+
+   Two guards stop the old fault coming back. The alpha is FIXED: .is-scrolled
+   changes the shadow and nothing else, so the bar never changes colour under a
+   scroll, and `background` is deliberately absent from the transition list.
+   And where backdrop-filter is unsupported the @supports block hands back the
+   opaque fill, so a browser that cannot frost never gets the see-through
+   version. */
+.pnav{--pnav-ctl:38px;position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:120;background:color-mix(in srgb,var(--bg-1) 88%,transparent);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);transition:box-shadow var(--dur-3) var(--ease-inout)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .pnav{background:var(--bg-1)}
+}
 .pnav.is-scrolled{box-shadow:var(--shadow-s)}
 /* Dark mode: --bg-1 already resolves per theme, so only the border and the
    scrolled shadow need the darker treatment. */
 [data-theme="dark"] .pnav{border-bottom-color:var(--bh)}
 [data-theme="dark"] .pnav.is-scrolled{box-shadow:0 2px 10px rgba(0,0,0,.55)}
-/* Flex row: [logo + triggers] [search, flexing to centre] [actions]. Content is
-   width-capped and centred so ultra-wide screens don't fling the clusters apart. */
-/* 1fr auto 1fr keeps the three section menus dead-centre in the bar; the
-   logo+search and actions clusters flex within the equal side columns. */
-.pnav-inner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;height:100%;width:100%;margin:0 auto;padding:0 var(--page-inline)}
-.pnav-lead{display:flex;align-items:center;gap:18px;min-width:0;justify-self:start}
+/* One flex row, gapped the way the design gaps it (App line 101,
+   `gap:clamp(10px,1.6vw,20px)`). The content is still inset on --page-inline so
+   the bar, the page and the footer share one gutter. */
+.pnav-inner{display:flex;align-items:center;gap:clamp(10px,1.6vw,20px);height:100%;width:100%;margin:0 auto;padding:0 var(--page-inline)}
+.pnav-lead{display:flex;align-items:center;gap:clamp(10px,1.4vw,16px);min-width:0;flex:0 1 auto}
 .pnav-logo{display:flex;align-items:center;gap:10px;color:var(--t0);text-decoration:none}
 .pnav-logo:hover{text-decoration:none}
-.pnav-word{font-size:var(--fs-h5);font-weight:700;letter-spacing:-.03em;color:var(--t0)}
+/* 19px / 600 / -.035em is the design's wordmark (App line 102). */
+.pnav-word{font-size:19px;font-weight:600;letter-spacing:-.035em;color:var(--t0);white-space:nowrap}
+/* THE "4" IS THE ACCENT, AND IT IS THE PLAIN --accent TOKEN.
+   Both design sources set it (`color:{{ accent }}` / `{{ accentMid }}`), and a
+   premium theme template works by moving --accent alone — so this has to be
+   the variable and never a blue. It is a 19px glyph, i.e. large text, so
+   --accent rather than --accent-strong is the right member of the family: the
+   4.5:1 floor that forces --accent-strong applies to small text, and a wordmark
+   is not small. */
+.pnav-word-mark{color:var(--accent)}
 .pnav-items{display:flex;align-items:center;gap:2px}
-.pnav-trigger{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 14px;border:none;background:none;font-family:var(--font);font-size:var(--fs-body-s);font-weight:560;color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+/* 12px radius, not a pill: the design's section triggers are soft rectangles
+   (App line 113, `border-radius:12px`), which is what lets them sit in a row
+   with the 12px search field and the 12px icon buttons and read as one set. */
+.pnav-trigger{display:inline-flex;align-items:center;gap:7px;height:var(--pnav-ctl);padding:0 13px;border:none;background:none;font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;color:var(--t1);border-radius:var(--radius);cursor:pointer;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 /* The open state is a real state and paints on every device. The HOVER half is
    scoped to pointers that can actually hover: on a phone or tablet a tap leaves
    :hover stuck on the trigger until you tap elsewhere, so the bar showed two
@@ -3219,7 +3252,7 @@ html.lenis{scroll-behavior:auto!important}
 @media(hover:hover){
   .pnav-trigger:hover{background:var(--hvr);color:var(--t0)}
 }
-.pnav-chev{width:10px;height:10px;transition:transform var(--dur-2) var(--ease-out)}
+.pnav-chev{width:11px;height:11px;opacity:.65;transition:transform var(--dur-2) var(--ease-out)}
 .pnav-trigger[aria-expanded="true"] .pnav-chev{transform:rotate(180deg)}
 /* min-width:max-content is what actually buys the actions cluster its space, and
    it has to be here rather than on the pill. .pnav-inner is `1fr auto 1fr`, and
@@ -3239,7 +3272,10 @@ html.lenis{scroll-behavior:auto!important}
    exceeds max-content, so this changes nothing there; below it, the lead track
    yields instead — the right victim, and .pnav-lead keeps min-width:0 so the logo
    can still compress if a future label makes the whole bar genuinely too wide. */
-.pnav-actions{display:flex;align-items:center;gap:8px;justify-self:end;min-width:max-content}
+.pnav-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;min-width:max-content}
+/* The bar's pills join the 38px row rather than standing 2px proud of it.
+   Scoped to the bar: .ui-pill-sm is shared with a dozen other surfaces. */
+.pnav-actions .ui-pill-sm{height:var(--pnav-ctl)}
 /* Sales-page "Start for Free" pill — hidden until the visitor scrolls to
    section 2 (#create); PillNav toggles .is-waiting from the scroll listener.
    While waiting the pill also collapses its width (the 0fr grid track below,
@@ -3294,8 +3330,8 @@ html.lenis{scroll-behavior:auto!important}
    already carry — the identical border/background/radius as .pnav-iconbtn,
    .pnav-more and .pnav-search-field. Ink then fills the box, both margins
    come out at 16px, and the three read as one row of equal controls. */
-.pnav-mobile{display:none;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.pnav-mobile:hover{background:var(--hvr);border-color:var(--t2);color:var(--t0)}
+.pnav-mobile{display:none;align-items:center;justify-content:center;width:var(--pnav-ctl);height:var(--pnav-ctl);flex:0 0 auto;border:1px solid var(--border);background:var(--bg-2);color:var(--t1);border-radius:var(--radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-mobile:hover{background:var(--bg-3);border-color:var(--bh);color:var(--t0)}
 
 /* Centre search — sits between the nav triggers and the right-hand actions
    cluster; it takes the bar's spare width (flex:1) so the fixed-width field
@@ -3317,8 +3353,11 @@ html.lenis{scroll-behavior:auto!important}
    keeps it shrinkable at widths where the lead column is genuinely squeezed. */
 .pnav-search{display:flex;align-items:center;justify-content:flex-start;flex:0 1 auto;width:300px;min-width:0;transition:width var(--dur-3) var(--ease-out)}
 .pnav-search.is-hot{width:390px}
-.pnav-search-field{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:100%;min-width:40px;height:40px;padding:0 14px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-1);color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.pnav-search-field:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+/* The design's field (App line 103): 12px radius, an --bg-2 wash inside a
+   hairline, 9px/11px/14px of padding and a mono "/" chip at the end. The pill
+   shape is gone with the rest of the pill family. */
+.pnav-search-field{display:flex;align-items:center;justify-content:flex-start;gap:10px;width:100%;min-width:var(--pnav-ctl);height:var(--pnav-ctl);padding:0 11px 0 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:var(--fs-body-s);font-weight:500;white-space:nowrap;cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-search-field:hover{border-color:var(--bh);background:var(--bg-3);color:var(--t0)}
 .pnav-search-field .pnav-search-ico{flex:0 0 auto;color:var(--t2)}
 .pnav-search-field:hover .pnav-search-ico{color:var(--t1)}
 .pnav-search-ph{white-space:nowrap;flex:1 1 auto;text-align:left;overflow:hidden;text-overflow:ellipsis}
@@ -3327,15 +3366,33 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-search-field:hover .pnav-search-ph--typing{color:var(--t0)}
 .pnav-search-caret{display:inline-block;width:1px;height:1em;margin-left:1px;vertical-align:-0.15em;background:currentColor;animation:pnav-caret 1s steps(1,end) infinite}
 @keyframes pnav-caret{0%,49%{opacity:1}50%,100%{opacity:0}}
-.pnav-search-kbd{flex:0 0 auto;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:6px;border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:11px;font-weight:600;line-height:1}
-/* Sales/marketing routes drop the search field (the / shortcut still opens the
-   palette); the grid's middle column keeps the three menus centred regardless. */
-.pnav--sales .pnav-search-field{display:none}
-/* Always-visible icon buttons in the RIGHT actions cluster: saved projects
-   (bookmark) + export stay one click away instead of behind a menu, since
-   both are reached constantly mid-task. 40px circles like .pnav-more. */
-.pnav-iconbtn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;text-decoration:none;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.pnav-iconbtn:hover,.pnav-iconbtn[aria-expanded="true"]{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+/* Mono, per the design (App line 106) — a keycap is a literal keystroke, which
+   is the one thing --mono is for. It sits on a step ABOVE the field it is in
+   (--bg-3 inside --bg-2), or it disappears into it. */
+.pnav-search-kbd{flex:0 0 auto;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:10px;font-weight:500;line-height:1}
+/* Sales/marketing routes drop the search (the / shortcut still opens the
+   palette).
+
+   THE WRAPPER, NOT THE FIELD. This hid .pnav-search-field and left
+   .pnav-search — a definite 300px box — standing in the row. Under the old
+   `1fr auto 1fr` grid that was invisible: the three menus were centred by the
+   grid whatever the lead cluster did, so the 300px of nothing just sat inside a
+   shrink-to-fit track nobody could see. In the design's flex row it PUSHES, and
+   it pushed 300px of hole between the wordmark and the theme cycle on `/` —
+   measured at 1440: the triggers started at x=505 for a wordmark ending at
+   x=105. The ≤768 rule below hands the whole wrapper back, for the same
+   reason: on a phone the field is the only way into the palette. */
+.pnav--sales .pnav-search{display:none}
+/* Always-visible icon buttons: saved projects (bookmark), export and the theme
+   cycle stay one click away instead of behind a menu, since all three are
+   reached constantly mid-task. 38px 12px-radius squares, which is the design's
+   own icon button (App lines 108 and 120) and the same box the search field and
+   the hamburger paint — see the ink note on .pnav-mobile. */
+.pnav-iconbtn{display:inline-flex;align-items:center;justify-content:center;width:var(--pnav-ctl);height:var(--pnav-ctl);flex:0 0 auto;border:1px solid var(--border);background:var(--bg-2);color:var(--t1);border-radius:var(--radius);cursor:pointer;text-decoration:none;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-iconbtn:hover,.pnav-iconbtn[aria-expanded="true"]{border-color:var(--bh);background:var(--bg-3);color:var(--t0)}
+/* The theme cycle lives in .pnav-lead, between the search field and the section
+   triggers, exactly where App line 108 puts it. */
+.pnav-theme{margin-left:2px}
 /* Export keeps its accent tint so it still reads as the primary action. */
 .pnav-export{border-color:transparent;background:var(--accent-bg);color:var(--accent)}
 .pnav-export:hover,.pnav-export[aria-expanded="true"]{border-color:transparent;background:color-mix(in srgb,var(--accent) 18%,var(--bg-2));color:var(--accent)}
@@ -3343,8 +3400,8 @@ html.lenis{scroll-behavior:auto!important}
 /* Compact "more" (3-dot) button — the signed-out theme + auth menu. Always
    visible on the fixed bar, styled like the other 40px icon buttons. */
 .pnav-more-wrap{flex:0 0 auto}
-.pnav-more{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t1);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.pnav-more:hover,.pnav-more[aria-expanded="true"]{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
+.pnav-more{display:inline-flex;align-items:center;justify-content:center;width:var(--pnav-ctl);height:var(--pnav-ctl);flex:0 0 auto;border:1px solid var(--border);background:var(--bg-2);color:var(--t1);border-radius:var(--radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.pnav-more:hover,.pnav-more[aria-expanded="true"]{border-color:var(--bh);background:var(--bg-3);color:var(--t0)}
 
 /* Avatar hover — darken + soften the photo and float a settings cog over it, so it
    reads as "account AND preferences" now that both live behind this one control. */
@@ -3354,7 +3411,11 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-avatar-btn:hover .pnav-avatar-cog,.pnav-avatar-btn:focus-visible .pnav-avatar-cog,.pnav-avatar-btn[aria-expanded="true"] .pnav-avatar-cog{opacity:1}
 
 /* Gear + avatar icon buttons and their popovers */
-.pnav-avatar-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;flex:0 0 auto;padding:0;border:1px solid var(--border);background:var(--bg-1);border-radius:50%;cursor:pointer;overflow:hidden;transition:border-color var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
+/* The avatar stays a CIRCLE while its neighbours became squircles — that is
+   the design too (App line 123, `border-radius:999px` on the identity chip
+   beside 12px buttons). A face is round everywhere on the web and reads as the
+   account, not as another tool. */
+.pnav-avatar-btn{display:inline-flex;align-items:center;justify-content:center;width:var(--pnav-ctl);height:var(--pnav-ctl);flex:0 0 auto;padding:0;border:1px solid var(--border);background:var(--bg-2);border-radius:50%;cursor:pointer;overflow:hidden;transition:border-color var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .pnav-avatar-btn:hover,.pnav-avatar-btn[aria-expanded="true"]{border-color:var(--bh);box-shadow:var(--shadow-xs)}
 .pnav-avatar-btn .pnav-avatar{width:100%;height:100%}
 .pnav-pop-wrap{position:relative;flex:0 0 auto}
@@ -3417,64 +3478,87 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-acct:disabled{cursor:wait;opacity:.66}
 .pnav-switch-status{margin:7px 10px 3px;padding:8px 10px;border-radius:var(--radius-s);background:var(--bg-2);color:var(--t2);font-size:var(--fs-caption);line-height:1.45}
 
-/* Mega-menu panel — one shared node, morphs width per section */
-/* THE PANEL MUST FIT THE SCREEN IT OPENS ON.
-   Measured, not guessed: with no max-height and `overflow:hidden`, the Create
-   panel rendered 771px tall and simply ran off the bottom of any viewport
-   shorter than that — 71px lost on a 1366x768 laptop and on an iPad in
-   landscape (1024x768), 137px and three tool rows lost at 769x900. There is no
-   scrollbar to recover it: the panel is position:fixed and clips.
-   1366x768 is the most common laptop resolution there is.
+/* ══ Mega-menu panel — `UIL4B App.dc.html` lines 127-216 ══
+   TWO NESTED SURFACES, NOT ONE BOX. The design builds the menu as an outer
+   TRAY (line 127: 7px of padding, a 26px radius, a blurred translucent ground
+   and the panel shadow) holding an inner CARD (line 128: an 18px radius on
+   --card2 with `overflow:hidden`) that clips the column grid, the promo pane
+   and the view-all foot into one solid block. The old panel was a single box
+   with the foot painted onto it.
 
-   So the panel gets a height budget (viewport minus the bar minus a 16px
-   breathing gap) and the COLUMNS scroll inside it, not the whole panel — the
-   footer stays put, which is what makes it legible that there is more above.
-   `svh` so a mobile browser's collapsing toolbar cannot shrink it mid-open. */
-.pnav-menu{position:fixed;top:var(--nav-clear);left:50%;transform:translateX(-50%);z-index:119;display:flex;flex-direction:column;width:1040px;max-width:calc(100vw - 32px);max-height:calc(100svh - var(--chrome-h) - 24px);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l);overflow:hidden;animation:pnav-menu-in var(--dur-4) var(--ease-entrance)}
-@keyframes pnav-menu-in{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
-.pnav-menu[data-menu="create"]{width:1260px}
-/* 940 held two columns. Discover has three groups and now gets three columns,
-   so the panel widens to carry them at a readable measure.
+   IT IS FULL-BLEED NOW, AND THE THREE PER-SECTION WIDTHS ARE GONE.
+   The panel used to be centred with `translateX(-50%)` and sized per section
+   — 1260px for Create, 1200px for Discover, 960px for Learn — three numbers
+   that had to be re-measured every time a tool was added to a column, and that
+   had already produced a `transition:width` fault (25 distinct widths painted
+   across 37 frames while the first tool row travelled 150px sideways). The
+   design pins the panel to the header's own gutters instead, so its width is
+   whatever the header's width is and there is no distance to interpolate.
 
-   1200 STANDS, but not for the reason first written here. The original note said
-   this was the width at which the descriptions stopped clipping mid-word; they
-   did not — "Reuse prompts proven by the community." was still losing its last
-   two words at exactly this width, because a -webkit-line-clamp reports overflow
-   as an ellipsis rather than as a wrap and nothing failed. Re-measured with a
-   Range (scrollWidth lies here: .pnav-tool-line is a flex child stretched to its
-   1fr column, so every stack reports the column width): the three stacks want
-   228 + 251 + 240 plus gaps = 783px of grid, and 783 + the 260px card + the
-   40px paddings and divider IS 1200, with 3px to spare. It is already the width
-   of its content. The panel reads wide because short columns leave it EMPTY
-   below, which is a vertical problem and not this number. */
-.pnav-menu[data-menu="discover"]{width:1200px}
-/* Learn holds two stacks wanting 240 + 261 + a 32px gap = 533px of grid, which
-   with the card and paddings is 953px of panel. 960 rather than 953 so the
-   widest row ("Help & Getting Started" + its Soon badge) is not sitting hard
-   against the edge. The 1020 this replaces was set when every Learn row still
-   carried a description; none do now, because every Learn tool is Soon. */
-.pnav-menu[data-menu="learn"]{width:960px}
-/* min-height:0 is what lets this flex child actually shrink and scroll instead
-   of forcing the panel past its max-height. */
-.pnav-menu-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:32px 40px}
-/* Menu body splits into the editorial card (left) + the group grid (right).
-   `align-items:start`, NOT stretch: stretched, the 260px card was pulled to the
-   full height of the tallest column and its "Explore …" link — margin-top:auto —
-   was pushed to the bottom, leaving a measured 275px of blank card between the
-   blurb and the link on Create and 209px on Discover. The promo card in every
-   mega-menu on Mobbin with one (lululemon, Selfridges, Hers) is sized to its own
-   content and top-aligned. The divider moves onto the grid, which is the tall
-   side, so the columns stay visually separated at full height. */
-.pnav-menu-cols{display:grid;grid-template-columns:260px minmax(0,1fr);gap:40px;align-items:start}
-.pnav-editorial{display:flex;flex-direction:column;align-items:flex-start;padding-right:32px}
-.pnav-menu-cols > .pnav-grid{padding-left:40px;margin-left:-40px;border-left:1px solid var(--border)}
-.pnav-editorial-visual{width:100%;margin-bottom:20px;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1)}
-.pnav-editorial-title{margin-top:10px;font-size:var(--fs-h3);font-weight:700;line-height:1.1;letter-spacing:-.025em;color:var(--t0)}
-.pnav-editorial-blurb{margin-top:10px;font-size:var(--fs-caption);line-height:1.5;color:var(--t2)}
-/* margin-top:auto is gone with the stretch — it was the mechanism that opened
-   the void, not a layout the card needed. */
-.pnav-editorial-link{display:inline-flex;align-items:center;gap:8px;margin-top:20px;font-size:var(--fs-body-s);font-weight:650;color:var(--t0);text-decoration:none}
-.pnav-editorial-link:hover{color:var(--accent-strong);text-decoration:none}
+   --page-inline RATHER THAN THE DESIGN'S clamp(14px,2vw,22px). The design's
+   header is edge-to-edge; ours is inset on the shared page gutter, which the
+   bar, the page body and the footer all use. Matching it lines the panel's
+   edges up with the wordmark and the avatar above it, and caps the panel at the
+   content measure on an ultra-wide screen instead of flinging six columns
+   across 2560px.
+
+   THE PANEL STILL HAS TO FIT THE SCREEN IT OPENS ON. Measured before the
+   max-height existed: the Create panel rendered 771px tall and ran off the
+   bottom of any shorter viewport — 71px lost on a 1366x768 laptop, 137px and
+   three tool rows at 769x900, with no scrollbar to recover it because the panel
+   is position:fixed and clips. So the budget stays (viewport minus the chrome
+   minus a breathing gap) and the COLUMNS scroll inside the card while the
+   view-all foot stays put. `svh` so a mobile browser's collapsing toolbar
+   cannot shrink it mid-open. */
+/* PASS 1, MEASURED AND FIXED: full-bleed was wrong for a sparse section.
+   At 1024 the Learn panel ran the card edge to edge for two stacks holding
+   eleven rows and ONE row, which left a 500px void under "Design Principles"
+   -- a bigger, more obvious version of a void the three hand-kept widths had
+   been hiding. So the panel is anchored to the bar's left gutter and sized to
+   its CONTENT, capped at the gutters it would otherwise reach. Create and
+   Discover still run nearly the full measure; Learn is now an 880px panel with
+   no hole in it, and no number here needs re-measuring when a tool joins a
+   column. `left` is fixed either way, which is what
+   84-nav-motion-contract.spec.js reads when it checks that switching sections
+   does not drag the tool rows sideways. */
+.pnav-menu{position:fixed;top:calc(var(--chrome-h) + 6px);left:var(--page-inline);right:auto;width:max-content;max-width:calc(100vw - (2 * var(--page-inline)));z-index:119;display:flex;flex-direction:column;max-height:calc(100svh - var(--chrome-h) - 24px);padding:6px;background:color-mix(in srgb,var(--bg-1) 96%,transparent);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);border:1px solid var(--border);border-radius:var(--radius-3xl);box-shadow:var(--shadow-panel);animation:pnav-menu-in var(--dur-4) var(--ease-entrance)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .pnav-menu{background:var(--bg-1)}
+}
+/* Opacity and transform only: 84-nav-motion-contract.spec.js fails the build if
+   the panel's entrance animates anything the compositor cannot run, and if more
+   than one animation plays on a single open. */
+@keyframes pnav-menu-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+/* The inner card. min-height:0 is what lets it shrink inside the tray's flex
+   column so the body below can actually scroll. */
+.pnav-menu-card{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;border-radius:var(--radius-2xl);background:var(--bg-2);border:1px solid var(--border);overflow:hidden}
+/* min-height:0 again, for the same reason, one level down. Padding now belongs
+   to the columns and the promo pane, because in the design each of those is a
+   pane with its own ground and its own hairline — a shared padding on the
+   scroller would inset the hairlines away from the card edge. */
+.pnav-menu-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+/* Columns and promo pane sit side by side and STRETCH to the card's height
+   (App line 129, `align-items:stretch`), which is the change that makes the
+   promo pane a pane rather than a card.
+
+   THE OLD `align-items:start` WAS A WORKAROUND FOR A DIFFERENT LAYOUT. Under
+   the previous arrangement the promo was a 260px card floating on the panel's
+   own ground, so stretching it pulled its bottom-anchored link down and left a
+   measured 275px of blank card between the blurb and the link on Create. It has
+   a ground and a hairline of its own now, so the space below its CTA reads as
+   the pane it is, which is exactly why the design gives it one. */
+.pnav-menu-cols{display:flex;flex-wrap:wrap;align-items:stretch}
+.pnav-grid{flex:0 1 auto;min-width:0}
+/* The promo pane: fixed-ish width on the right, on the --card step, hairlined
+   off the columns (App line 151). */
+.pnav-editorial{flex:0 0 280px;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:13px;padding:15px;background:var(--bg-1);border-left:1px solid var(--border)}
+.pnav-editorial-visual{width:100%;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2)}
+/* 16.5px / 560 / 1.22 / -.02em is the design's pane heading (App line 153). It
+   was --fs-h3 at 700, which is a page heading inside a 300px pane. */
+.pnav-editorial-title{margin:0;font-size:var(--fs-h5);font-weight:560;line-height:1.22;letter-spacing:-.02em;color:var(--t0)}
+.pnav-editorial-blurb{margin:0;font-size:var(--fs-caption);line-height:1.55;color:var(--t2)}
+.pnav-editorial-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;font-size:var(--fs-caption);font-weight:560;color:var(--t1);text-decoration:none}
+.pnav-editorial-link:hover{color:var(--t0);text-decoration:none}
 
 /* ── The editorial card's real contents ─────────────────────────────────────
    Replaces the abstract PromoMock SVG. Every value here is a token, so both
@@ -3521,16 +3605,18 @@ html.lenis{scroll-behavior:auto!important}
    the hierarchy. */
 .pnav-prev-ag{font-size:30px;font-weight:700;line-height:1;letter-spacing:-.03em;color:var(--t0)}
 .pnav-prev-mono{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;color:var(--t2)}
-.pnav-prev--discover{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px}
-.pnav-prev-grad{height:64px;border-radius:var(--radius-s);box-shadow:inset 0 0 0 1px var(--border)}
+.pnav-prev--discover{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:11px}
+.pnav-prev-grad{height:52px;border-radius:var(--radius-s);box-shadow:inset 0 0 0 1px var(--border)}
 
 /* ── The guided path, made visible ──────────────────────────────────────────
    Rendered from UIKIT_STEPS. Numerals are mono and tabular so four rows sit on
    one optical axis; the step is text, not a link, because every one of these
    routes is already a row in the columns to the right and duplicating them
    would add four keyboard stops for no new destination. */
-.pnav-steps{list-style:none;display:flex;flex-direction:column;gap:1px;margin:18px 0 0;padding:0;border-top:1px solid var(--border)}
-.pnav-step{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+.pnav-steps{list-style:none;display:flex;flex-direction:column;gap:1px;margin:0;padding:0}
+/* The design's pane rows (App line 166): a soft-cornered wash per row rather
+   than a ruled list, so four steps read as a checklist and not as a table. */
+.pnav-step{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:var(--radius);background:var(--bg-2)}
 .pnav-step-n{flex:0 0 auto;font-family:var(--mono);font-size:var(--fs-micro);font-variant-numeric:tabular-nums;color:var(--t3)}
 .pnav-step-label{font-size:var(--fs-body-s);font-weight:600;color:var(--t1)}
 /* Step one is where the flow starts, and the card exists to say so. */
@@ -3540,35 +3626,65 @@ html.lenis{scroll-behavior:auto!important}
 /* ── Card actions ──────────────────────────────────────────────────────────
    The primary is the guided flow; "Explore" steps back to a quiet text link so
    the card has one obvious action rather than two competing ones. */
-.pnav-editorial-actions{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:20px}
-.pnav-editorial-actions .pnav-editorial-link{margin-top:0}
-.pnav-editorial-cta{white-space:nowrap}
+/* `margin-top:auto` pins the pane's action to the bottom of the pane, which is
+   what App line 203 does. It is safe here in a way it was not on the old
+   floating card: the pane has a ground and a hairline of its own, so the space
+   above the button is pane, not a hole. */
+.pnav-editorial-actions{display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-top:auto}
+.pnav-editorial-actions .pnav-editorial-link{margin-top:0;justify-content:center}
+.pnav-editorial-cta{width:100%;white-space:nowrap}
 /* row-gap was 0. Discover has THREE stacks in a TWO-column grid, so the third
    wrapped onto row 2 and its "YOUR LIBRARY" eyebrow landed flush against the
    bottom of the Icon Library row above it — the rule read as an underline for
    the wrong group. Discover gets the third column it always had content for,
    and the row-gap is a standing guard for any future wrap. */
-.pnav-grid{display:grid;column-gap:32px;row-gap:34px}
-.pnav-menu[data-menu="create"] .pnav-grid,.pnav-menu[data-menu="discover"] .pnav-grid{grid-template-columns:repeat(3,1fr)}
-.pnav-menu[data-menu="learn"] .pnav-grid{grid-template-columns:repeat(2,1fr)}
+/* The design's `data-menu-cols` grid (App line 130): equal columns, no gap,
+   each column separated by its own right-hand hairline rather than by space.
+   The column COUNT is still per section because the sections genuinely hold
+   different numbers of groups. */
+/* ONE COLUMN PER STACK, AND THE COUNT IS NOT WRITTEN DOWN.
+   `grid-auto-flow:column` gives the grid exactly as many columns as the
+   section has stacks, so the two per-section counts this replaces
+   (create/discover 3, learn 2) are gone the same way the three per-section
+   panel widths went: a section that gains a group gets a column, and nobody
+   re-measures anything.
+
+   MEASURED, PASS 2: Learn has THREE stacks and was pinned to two, so GROWTH &
+   HELP wrapped to grid row 2 -- which left the FOUNDATIONS pane holding one
+   row above 300px of nothing, with its hairline stopping halfway down the
+   card. Three columns puts all three side by side.
+
+   300px is the measure the 1440 columns already had (330 including the 13px of
+   pane padding each side); minmax's 0 floor is what lets them shrink when the
+   panel's max-width clamps on a small laptop. */
+.pnav-grid{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,300px)}
 /* Each grid column is a stack of one or more captioned groups; a group = a
    small uppercase eyebrow with a hairline rule (Velt-style) captioning the
    related tools beneath it. Stacking lets a tiny subcategory (Icons) sit above
    a larger one (Media & AI) inside the same column. */
-.pnav-colstack{position:relative;display:flex;flex-direction:column;gap:30px;min-width:0}
+/* A stack is one grid column: 15px/13px of padding and a hairline down its
+   right edge (App line 132). The hairline replaces the absolutely-positioned
+   ::before rule the old layout drew into the 32px gap — same line, but drawn
+   by the column that owns it, so it cannot end up floating in empty space when
+   the stacks wrap. */
+.pnav-colstack{position:relative;display:flex;flex-direction:column;gap:13px;min-width:0;padding:15px 13px;border-right:1px solid var(--border)}
+.pnav-colstack:last-child{border-right:0}
 .pnav-col{position:relative;display:flex;flex-direction:column;min-width:0}
-.pnav-col-label{display:flex;align-items:center;gap:9px;margin:0 0 22px;padding-bottom:12px;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:var(--fs-caption);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t1)}
+/* The design's group caption (App line 135): mono, .16em, faint, no rule under
+   it. The hue dash before it stays — see the note below. */
+.pnav-col-label{display:flex;align-items:center;gap:8px;margin:0;padding:0 6px 8px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--t2)}
 /* The rule wears the column's own category hue (data-hue on .pnav-col sets
    --hue), falling back to accent for Discover and Learn, whose rows carry no
    category. Non-text, so the hue tokens' 3:1-class contrast is the right bar;
    the LABEL stays --t1 because it is small text. */
-.pnav-col-label::before{content:'';flex:0 0 auto;width:16px;height:2px;border-radius:1px;background:var(--hue,var(--accent))}
+.pnav-col-label::before{content:'';flex:0 0 auto;width:14px;height:2px;border-radius:1px;background:var(--hue,var(--accent))}
 /* Whole-group coming-soon: mute the eyebrow so live columns lead the eye. */
 .pnav-col[data-soon] .pnav-col-label{color:var(--t3)}
 .pnav-col[data-soon] .pnav-col-label::before{background:var(--t3)}
-/* Hairline divider between adjacent grid columns so the regrouped layout reads
-   as distinct, captioned sections rather than one undifferentiated grid. */
-.pnav-menu .pnav-colstack + .pnav-colstack::before{content:'';position:absolute;top:3px;bottom:2px;left:-28px;width:1px;background:var(--border)}
+/* The old free-floating divider, retired: .pnav-colstack draws its own
+   border-right now. Kept as a no-op rather than deleted so the selector the
+   980px media query still switches off resolves to something. */
+.pnav-menu .pnav-colstack + .pnav-colstack::before{content:none}
 /* Create group-heads are clickable category destinations (they open the group
    home), so give them a trailing arrow affordance — distinguishing the heading
    from the sub-tools listed beneath it. */
@@ -3582,8 +3698,8 @@ html.lenis{scroll-behavior:auto!important}
 /* ── Flat icon+label tool rows — one row per tool under a column eyebrow.
    Replaces the old group-head + sub-dot list for maximum scannable density.
    The icon tile takes its colour from the row's data-hue (falls back to accent). */
-.pnav-toollist{list-style:none;display:flex;flex-direction:column;gap:1px;margin:0;padding:0}
-.pnav-tool{display:flex;align-items:center;gap:11px;min-height:44px;padding:7px 8px;border-radius:var(--radius-s);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
+.pnav-toollist{list-style:none;display:grid;gap:1px;margin:0;padding:0}
+.pnav-tool{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 9px;border-radius:var(--radius);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 /* A ROW HOVER IS BACKGROUND, COLOUR AND THE HUE RAIL BELOW. NOTHING MOVES.
 
    The icon used to lift on hover — .pnav-tool:hover .pnav-tool-ico took
@@ -3598,8 +3714,14 @@ html.lenis{scroll-behavior:auto!important}
    its own middle. It now just appears. Opacity is the whole transition, which
    is also the only part the compositor could run without a layout pass. */
 .pnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
-.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:28px;height:28px;color:var(--hue,var(--accent-strong))}
-.pnav-tool-ico svg{width:16px;height:16px}
+/* A TINTED TILE, NOT A BARE GLYPH. App line 139 sets every menu row's icon in
+   a 26px rounded tile washed in the row's own colour, which is the treatment
+   the MOBILE sheet in this product has always used (.pnav-acc-ico) and the
+   desktop panel never did. The wash is mixed from --hue, the column's category
+   colour, falling back to --accent for Discover and Learn — so a premium theme
+   moves these too. */
+.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong))}
+.pnav-tool-ico svg{width:14px;height:14px}
 .pnav-tool-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
 /* Label and its badge on one line, wrapping together if the column is narrow. */
 .pnav-tool-line{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
@@ -3609,7 +3731,7 @@ html.lenis{scroll-behavior:auto!important}
    "Landing-Page …". A tool whose name you cannot read is not in the menu. The
    name wraps now; the DESCRIPTION is the line that gives way, because losing
    the tail of a description costs nothing you cannot get by clicking. */
-.pnav-tool-label{min-width:0;overflow-wrap:anywhere;font-size:var(--fs-body-s);font-weight:650;color:var(--t0)}
+.pnav-tool-label{min-width:0;overflow-wrap:anywhere;font-size:var(--fs-caption);font-weight:560;color:var(--t0)}
 /* One line, per the Higgsfield and Hers mega-menus — both hold their rows to a
    single line of supporting copy. Unclamped, the Discover rows ran three lines
    and made an 84px row sit beside a 54px one. */
@@ -3653,9 +3775,26 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-promo-blurb{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
 .pnav-promo-actions{display:flex;gap:8px;margin-top:auto}
 .pnav-promo-actions .ui-pill{flex:1}
-.pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 48px;border-top:1px solid var(--border);background:var(--bg-0)}
-.pnav-menu-foot-note{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
-.pnav-menu-foot-link{font-size:var(--fs-body-s);font-weight:560;color:var(--t0);text-decoration:none}
+/* Badges INSIDE the menu take the design's compact chip (App line 141): a
+   softer 6px corner and tighter padding than the pill .soon-badge wears on
+   /plans and the Converter. Scoped, because .soon-badge and .beta-badge are
+   shared with five other surfaces that were not part of this pass.
+
+   THE TWO STILL DIFFER ONLY IN COLOUR, which is the existing rule and stays:
+   Soon is "not yet" and reads neutral, Beta is "yes, with a stated limit" and
+   reads accent. Beta is NOT a second Soon. */
+.pnav-tool .soon-badge,.pnav-tool .beta-badge,.pnav-acc-link .soon-badge,.pnav-acc-link .beta-badge{padding:3px 6px;border-radius:var(--radius-xs)}
+/* The view-all bar (App lines 209-214): a note on the left, the section's own
+   view-all on the right, on the card2 ground under a hairline. 48px of side
+   padding belonged to a panel whose body was padded; this one sits on the card
+   edge with the columns. */
+.pnav-menu-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 15px;border-top:1px solid var(--border);background:var(--bg-2)}
+.pnav-menu-foot-note{font-size:var(--fs-caption);color:var(--t2)}
+/* --accent-mid is the design's own `{{ accentMid }}` on this link, and it is a
+   derived token, so a premium theme carries it. Measured on both grounds:
+   5.3:1 light, 8.5:1 dark, i.e. clear of the 4.5:1 floor for text this size. */
+.pnav-menu-foot-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;font-size:var(--fs-caption);font-weight:560;color:var(--accent-mid);text-decoration:none}
+.pnav-menu-foot-link:hover{color:var(--accent-strong);text-decoration:none}
 
 /* Mobile sheet */
 .pnav-sheet{position:fixed;inset:0;z-index:110;background:var(--bg-1);padding:calc(var(--chrome-h) + 16px) 20px 20px;overflow-y:auto;overscroll-behavior:contain;animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
@@ -3701,6 +3840,201 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-sheet-cta{position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;margin-top:24px;padding-top:16px;background:var(--bg-1);border-top:1px solid var(--border)}
 .pnav-sheet-cta::before{content:'';position:absolute;left:0;right:0;bottom:100%;height:24px;pointer-events:none;background:linear-gradient(to top,var(--bg-1),transparent)}
 @media(max-width:380px){.pnav-sheet-promo .pnav-promo-actions{flex-direction:column}}
+
+/* == SpectrumNav -- the MARKETING nav, `UIL4B - Spectrum.dc.html` 217-258 ==
+   A floating pill on the sales page, not a shelf. It lives beside .pnav rather
+   than in a page stylesheet because it is a navigation component and this is
+   where navigation CSS lives in this repo; the two never render together.
+
+   THE WRAPPER IS pointer-events:none AND THE PILL IS pointer-events:auto.
+   That is the design's own arrangement (line 218) and it is load-bearing: the
+   nav spans the full width so the pill can centre itself, and without this the
+   invisible 100px-tall band would eat clicks on whatever the hero puts up
+   there.
+
+   HIDE-ON-SCROLL, AND THE REDUCED-MOTION ANSWER IS "DO NOT HIDE".
+   Spectrum's own script branches on prefers-reduced-motion and leaves the bar
+   in place rather than teleporting it (setNav, standalone source line 2045),
+   which is the right call: a bar that vanishes with no transition reads as a
+   rendering fault, and someone who asked for less motion has not asked for
+   less navigation. Both companions below say so. */
+.spnav{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;justify-content:center;padding:clamp(14px,2vw,26px) clamp(14px,3vw,40px) 0;pointer-events:none;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard)}
+.spnav[data-nav-hidden="1"]{transform:translateY(calc(-100% - 14px));opacity:0}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
+}
+html[data-reduced-motion="true"] .spnav{transition:none}
+html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
+/* flex-wrap is the design's (line 219) and it is the overflow guard: at a width
+   where the pill cannot hold its row it stacks rather than pushing the page
+   sideways. The media queries at the end of this block mean it never gets
+   there on a real phone. */
+.spnav-bar{pointer-events:auto;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:7px;max-width:100%;padding:6px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-0) 62%,transparent);border:1px solid var(--border);-webkit-backdrop-filter:blur(26px);backdrop-filter:blur(26px);box-shadow:var(--shadow-panel),var(--ring)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .spnav-bar{background:var(--bg-1)}
+}
+.spnav-mark{display:flex;align-items:baseline;gap:10px;padding:8px 14px;border-radius:var(--radius-pill);color:var(--t0);text-decoration:none}
+.spnav-mark:hover{text-decoration:none}
+.spnav-word{font-size:21px;font-weight:560;letter-spacing:-.01em;white-space:nowrap}
+/* --accent-mid, the design's own `{{ accentMid }}`, and a DERIVED token: a
+   premium theme template moves --accent alone and this follows. */
+.spnav-word-mark{color:var(--accent-mid)}
+.spnav-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--t2);white-space:nowrap}
+.spnav-rule{flex:0 0 auto;width:1px;height:20px;background:var(--border)}
+.spnav-quiet{display:flex;align-items:center;gap:1px}
+.spnav-quiet-link{display:inline-flex;align-items:center;min-height:24px;padding:9px 14px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);text-decoration:none;transition:color var(--dur-1) var(--ease-standard)}
+@media(hover:hover){.spnav-quiet-link:hover{color:var(--t0);text-decoration:none}}
+.spnav-icon{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border:0;border-radius:var(--radius-pill);background:var(--hvr);color:var(--t0);cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+.spnav-icon:hover{background:var(--bg-3)}
+/* THE BURGER MORPH. Three bars, two of which rotate into a cross while the
+   middle one squashes and fades -- Spectrum lines 234-237 and 129-132, with its
+   own .34s curve. The 5.15px offsets are the design's; they are what make the
+   two bars meet exactly on the centre line. */
+.spnav-burger-ico{position:relative;display:block;width:16px;height:12px}
+.spnav-burger-ico > span{position:absolute;left:0;width:100%;height:1.7px;border-radius:2px;background:currentColor;transition:transform .34s cubic-bezier(.65,0,.35,1),opacity var(--dur-2) var(--ease-standard)}
+.spnav-burger-ico > span:nth-child(1){top:0}
+.spnav-burger-ico > span:nth-child(2){top:5.15px}
+.spnav-burger-ico > span:nth-child(3){top:10.3px}
+.spnav-burger-ico[data-burger="in"] > span:nth-child(1){transform:translateY(5.15px) rotate(45deg)}
+.spnav-burger-ico[data-burger="in"] > span:nth-child(2){transform:scaleX(.2);opacity:0}
+.spnav-burger-ico[data-burger="in"] > span:nth-child(3){transform:translateY(-5.15px) rotate(-45deg)}
+/* The morph's reduced-motion companion: the cross still forms, it just forms
+   in one frame. The STATE has to survive -- it is the only thing telling a
+   sighted user the button is now "close". */
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-burger-ico > span{transition:none}
+}
+html[data-reduced-motion="true"] .spnav-burger-ico > span{transition:none}
+/* Ink pill, page-coloured label -- `background:var(--ink);color:var(--page)`
+   (line 240). Inverse of the body pairing, so its contrast is the body's. */
+.spnav-cta{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding:6px 7px 6px 18px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-1);font-family:var(--font);font-size:13.5px;font-weight:540;white-space:nowrap;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+.spnav-cta:hover{background:var(--t1)}
+.spnav-cta-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-1) 18%,transparent);transition:transform var(--dur-1) var(--ease-standard)}
+/* 45 degrees on hover -- the design's one signature nav gesture (line 70),
+   scoped to pointers that can hover so a tap does not leave it stuck rotated. */
+@media(hover:hover) and (pointer:fine){.spnav-cta:hover .spnav-cta-icon{transform:rotate(45deg)}}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-cta-icon{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav-cta:hover .spnav-cta-icon{transform:none}
+}
+html[data-reduced-motion="true"] .spnav-cta-icon{transition:none}
+html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none}
+
+/* -- The full-screen menu (lines 247-257) ------------------------------------
+   TOP-ALIGNED AND SCROLLABLE, where the design centres a four-item list. It
+   carries the entire tool tree and the utility block as well as the four big
+   items, because on `/` it is the only way to them -- see SpectrumNav.jsx. A
+   centred layout would have put the first group off the top of a laptop. */
+/* PASS 1: 92% was the design's .9 and it was too thin over THIS hero. The
+   headline's --hi marker pen ghosted through the blur as a yellow band behind
+   "Discover" and "Pricing", which reads as a rendering fault rather than as
+   depth. The design's own hero has no highlight to show through. */
+.spnav-menu{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;gap:clamp(20px,3vw,34px);padding:clamp(20px,5vw,64px) clamp(16px,5vw,72px) clamp(32px,6vw,80px);background:color-mix(in srgb,var(--bg-0) 97%,transparent);-webkit-backdrop-filter:blur(34px);backdrop-filter:blur(34px);overflow-y:auto;overscroll-behavior:contain;animation:spnav-menu-in var(--dur-3) var(--ease-entrance)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .spnav-menu{background:var(--bg-0)}
+}
+@keyframes spnav-menu-in{from{opacity:0}to{opacity:1}}
+/* Sticky rather than absolute: this layer scrolls, and a close button that
+   scrolls off the top of a full-screen menu is a trap with an Escape key. */
+.spnav-close{position:sticky;top:0;z-index:2;align-self:flex-end;display:flex;align-items:center;gap:9px;flex:0 0 auto;padding:11px 18px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-1);font-family:var(--font);font-size:var(--fs-body-s);font-weight:540;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+.spnav-close:hover{background:var(--t1)}
+.spnav-menu-inner{width:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:clamp(26px,4vw,52px)}
+.spnav-rail{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.spnav-mi{position:relative;display:inline-block;padding:0;border:0;background:none;font-family:var(--display);font-size:clamp(34px,7.6vw,88px);font-weight:560;line-height:1.04;letter-spacing:-.02em;color:var(--t0);text-align:left;text-decoration:none;cursor:pointer;transition:color var(--dur-2) var(--ease-standard),opacity var(--dur-2) var(--ease-standard)}
+.spnav-mi--accent{color:var(--accent-text)}
+.spnav-mi::after{content:"";position:absolute;left:0;right:0;bottom:.06em;height:2px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform var(--dur-3) var(--ease-entrance)}
+/* Dim the siblings of whatever is pointed at -- the design's own `[data-menu]
+   :hover [data-mi]{opacity:.42}` (line 190). Pointer-only: on touch there is no
+   hover to leave, and a stuck .42 would read as five disabled links. */
+@media(hover:hover) and (pointer:fine){
+  .spnav-rail:hover .spnav-mi{opacity:.42}
+  .spnav-rail .spnav-mi:hover{opacity:1}
+  .spnav-mi:hover::after{transform:scaleX(1)}
+}
+.spnav-mi:focus-visible::after{transform:scaleX(1)}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-mi,html:not([data-reduced-motion="false"]) .spnav-mi::after{transition:none}
+}
+html[data-reduced-motion="true"] .spnav-mi,html[data-reduced-motion="true"] .spnav-mi::after{transition:none}
+/* The staggered entrance (lines 139-145). Delays are the design's, and they are
+   scoped per parent because `[data-mi]` is worn by the rail's five items AND by
+   the two blocks under it -- an unscoped nth-child would have counted them into
+   one sequence. */
+@keyframes spnav-mi-in{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+.spnav-menu[data-menu="in"] [data-mi]{animation:spnav-mi-in .52s cubic-bezier(.16,1,.3,1) both}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(1){animation-delay:.04s}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(2){animation-delay:.09s}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(3){animation-delay:.14s}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(4){animation-delay:.19s}
+.spnav-menu[data-menu="in"] .spnav-tree{animation-delay:.24s}
+.spnav-menu[data-menu="in"] .spnav-util{animation-delay:.3s}
+/* The stagger's companion. `animation:none` rather than a 0.01ms duration: the
+   items are `both`-filled, so cancelling the animation outright is what leaves
+   them at their natural opacity instead of at a frame of one. */
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-menu,
+  html:not([data-reduced-motion="false"]) .spnav-menu [data-mi]{animation:none}
+}
+html[data-reduced-motion="true"] .spnav-menu,
+html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
+
+/* -- The tool tree inside the menu ---------------------------------------- */
+.spnav-tree{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(18px,3vw,40px)}
+.spnav-tree-sec{min-width:0}
+.spnav-tree-head{margin:0 0 6px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--t2)}
+.spnav-tree-col{min-width:0}
+.spnav-tree-colhead{margin:14px 0 4px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
+.spnav-tool{display:flex;align-items:center;gap:10px;min-height:44px;padding:7px 8px;border-radius:var(--radius);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.spnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
+.spnav-tool:focus-visible{background:var(--hvr);color:var(--t0);outline:2px solid var(--accent);outline-offset:-2px}
+.spnav-tool-ico{display:grid;place-items:center;width:26px;height:26px;flex:0 0 auto;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong))}
+.spnav-tool-ico svg{width:14px;height:14px}
+.spnav-tool-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.spnav-tool-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.spnav-tool-label{min-width:0;overflow-wrap:anywhere;font-size:var(--fs-caption);font-weight:560;color:var(--t0)}
+.spnav-tool-desc{font-size:var(--fs-micro);line-height:1.35;color:var(--t2)}
+/* Soon rows mute their LABEL and their tile, and keep the row itself at full
+   opacity -- the same correction .pnav-tool[data-soon] already carries, so a
+   coming-soon row stays legible instead of being dimmed to .45. */
+.spnav-tool[data-soon] .spnav-tool-label{color:var(--t3)}
+.spnav-tool[data-soon] .spnav-tool-ico{opacity:.5;filter:grayscale(1)}
+.spnav-tool[data-soon]:hover .spnav-tool-label{color:var(--t0)}
+.spnav-tool .soon-badge,.spnav-tool .beta-badge{padding:3px 6px;border-radius:var(--radius-xs)}
+.spnav-tree-all{display:inline-flex;align-items:center;gap:8px;min-height:24px;margin-top:12px;font-size:var(--fs-caption);font-weight:560;color:var(--accent-mid);text-decoration:none}
+.spnav-tree-all:hover{color:var(--accent-strong);text-decoration:none}
+
+/* -- The utilities the pill has no room for -------------------------------- */
+.spnav-util{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.5vw,32px);align-items:start;padding-top:clamp(18px,3vw,30px);border-top:1px solid var(--border)}
+.spnav-util-head{margin:0 0 8px;padding:0 10px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.14em;text-transform:uppercase;color:var(--t2)}
+.spnav-util-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:0;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-body-s);font-weight:540;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.spnav-util-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
+.spnav-util-item svg{flex:0 0 auto;color:var(--t2)}
+.spnav-util-item--accent{color:var(--accent-strong);font-weight:600}
+.spnav-util-theme .theme-seg{max-width:320px}
+.spnav-kbd{margin-left:auto;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--mono);font-size:10px;line-height:1}
+
+/* -- Responsive. The pill sheds, it never wraps on a real phone -------------
+   MEASURED at 320px: wordmark + eyebrow + three quiet links + two icon buttons
+   + the CTA wants ~560px of row. flex-wrap above stops that becoming page
+   overflow, but a four-line pill over the hero is not a nav, so each band
+   drops what the full-screen menu already carries. Nothing dropped here is
+   dropped from the product: the quiet links are the menu's first three big
+   items, the theme cycle is the menu's ThemeChoice, and the CTA is its fourth
+   big item. */
+@media(max-width:900px){
+  .spnav-quiet,.spnav-rule{display:none}
+  .spnav-tree,.spnav-util{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:560px){
+  .spnav-cta{display:none}
+}
+@media(max-width:420px){
+  .spnav{padding-top:12px}
+  .spnav-eyebrow{display:none}
+  .spnav-mark{padding:8px 10px}
+}
+
 .exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;text-align:left;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
 .exp-fmt:hover{border-color:var(--bh);background:var(--bg-1)}
 .exp-fmt.is-active{border-color:color-mix(in srgb,var(--accent) 60%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--bg-1))}
@@ -5311,7 +5645,7 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
      `.pnav-search.is-hot` would otherwise keep winning down here, where there
      is no hover and no placeholder to expand for. */
   .pnav-search,.pnav-search.is-hot{flex:0 0 auto;width:auto}
-  .pnav-search-field{width:40px;padding:0;justify-content:center}
+  .pnav-search-field{width:var(--pnav-ctl);padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
 }
 @media(max-width:1024px){
@@ -5328,11 +5662,7 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
    the rhythm of every column. The card is the decoration and the tools are the
    function, so the card is what goes. */
 @media(max-width:1240px){
-  .pnav-menu-cols{grid-template-columns:1fr}
   .pnav-promo,.pnav-editorial{display:none}
-  /* The divider belongs to the editorial card's edge; with the card gone it
-     would draw a rule down the left of the whole panel. */
-  .pnav-menu-cols > .pnav-grid{padding-left:0;margin-left:0;border-left:0}
 }
 /* 769–980 is the band the mega menu opens in on a small laptop and a tablet in
    landscape, and three columns do not fit there: at 834 a column is 227px, of
@@ -5347,12 +5677,23 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
      above 190px of nothing waiting for the taller stack beside it to finish.
      `columns` balances by height instead, so the groups pack. break-inside
      keeps a group and its eyebrow together. */
-  .pnav-menu[data-menu="create"] .pnav-grid,.pnav-menu[data-menu="discover"] .pnav-grid{display:block;columns:2;column-gap:32px}
-  .pnav-menu[data-menu="create"] .pnav-colstack,.pnav-menu[data-menu="discover"] .pnav-colstack{break-inside:avoid;margin-bottom:30px}
-  /* The inter-column hairline is drawn by each stack against the one before it.
-     In a flowed layout a stack's previous sibling may sit in the other column,
-     so the rule would be drawn against empty space. */
-  .pnav-menu .pnav-colstack + .pnav-colstack::before{display:none}
+  /* 769-980 is the band the menu opens in on a small laptop and a tablet in
+     landscape, and three columns do not fit: measured at 834 a column falls to
+     227px, of which 39px is the icon, leaving 188px for a label plus a Soon
+     badge that together need 197 -- the badge wrapped to its own line and made
+     a 77px row sit among 52px ones. Two columns give it back.
+
+     The old rule flowed them with CSS multicol (`columns:2`) to balance by
+     height, because a 2-column grid put the short Colour stack above 190px of
+     nothing. That trade is gone: a stack is a bordered PANE now, so the space
+     under a short one reads as the pane's own padding, and multicol cannot
+     carry a per-column border anyway. */
+  .pnav-grid{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,300px));align-content:start}
+  /* With two columns, the stack at the end of a row must not draw a hairline
+     against the card edge, and the rows need a rule between them. */
+  .pnav-colstack:nth-child(2n){border-right:0}
+  .pnav-colstack{border-bottom:1px solid var(--border)}
+  .pnav-colstack:last-child{border-bottom:0}
 }
 @media(max-width:768px){
   .pnav-items,.pnav-actions .ui-pill-ghost{display:none}
@@ -5372,8 +5713,8 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
      sales routes get it back too — on mobile it's the only way into the
      palette. The bookmark / export icon buttons fold away into the sheet. */
   .pnav-search,.pnav-search.is-hot{flex:0 0 auto;width:auto;margin-left:auto}
-  .pnav--sales .pnav-search-field{display:flex}
-  .pnav-search-field{width:40px;min-width:0;padding:0;justify-content:center}
+  .pnav--sales .pnav-search{display:flex}
+  .pnav-search-field{width:var(--pnav-ctl);min-width:0;padding:0;justify-content:center}
   .pnav-search-ph,.pnav-search-kbd{display:none}
   .pnav-iconbtn{display:none}
   /* Touch: the hamburger sheet IS the menu, so the resting 3-dots (a desktop
@@ -5394,9 +5735,12 @@ html[data-reduced-motion="true"] .hcomm-card-link:hover .hcomm-card-go{transform
   /* Phone: a shorter bar. Every offset (menu, sheet, hero padding) derives from
      the token, so one override re-seats them all. */
   :root{--nav-h:52px}
+  .pnav{--pnav-ctl:36px}
   /* Drop the gear + inline action pills — those live in the sheet — so the
-     bar stays to logo · search · avatar · menu. */
-  .pnav-actions .ui-pill{display:none}
+     bar stays to logo · search · avatar · menu. The theme cycle goes with them
+     for the same reason and to the same place: the sheet renders the full
+     three-way ThemeChoice, so nothing is out of reach. */
+  .pnav-actions .ui-pill,.pnav-theme{display:none}
   .home-hero-cta{flex-direction:column}
   .home-hero-cta .ui-pill{width:100%}
   .home-hero{padding-inline:18px}
@@ -7620,9 +7964,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 /* The mega-menu is a panel, not a popover: --shadow-panel and the panel radius,
    per design-language-v2.md's elevation pair. Structure and IA are untouched. */
-.pnav-menu{box-shadow:var(--shadow-panel);border-radius:var(--radius-2xl)}
-/* Tool rows in the mega menu share the popover row rhythm. */
-.pnav-tool{border-radius:var(--radius-s)}
+.pnav-menu{box-shadow:var(--shadow-panel);border-radius:var(--radius-3xl)}
+/* Tool rows in the mega menu share the panel's 12px corner (App line 138). */
+.pnav-tool{border-radius:var(--radius)}
 
 /* ── Modals ─────────────────────────────────────────────────────────────── */
 /* One elevation for every modal surface, per the V2 pair. */
@@ -7904,13 +8248,15 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    pointer. --dur-4 (420ms) is the scroll-reveal step and read as lag here;
    --dur-3 is the named step for "reveals with travel - small panels".
 
-   THERE IS NO WIDTH MORPH BETWEEN SECTIONS ANY MORE. The panel carried a
-   transition on width, so moving the pointer from Create to Learn interpolated
-   1260px down to 960px. MEASURED at 1440: 25 distinct widths painted across 37
-   frames, and the first tool row travelled 150px sideways while it ran, under
-   a pointer that was on its way to click something. The per-section widths
-   below are still exact and still apply; they just apply in one frame, because
-   which section is open is a state and not a distance. */
+   THERE IS NO WIDTH MORPH BETWEEN SECTIONS ANY MORE, AND NOW NO WIDTH EITHER.
+   The panel carried a transition on width, so moving the pointer from Create to
+   Learn interpolated 1260px down to 960px. MEASURED at 1440: 25 distinct widths
+   painted across 37 frames, and the first tool row travelled 150px sideways
+   while it ran, under a pointer that was on its way to click something. The
+   transition went first; the three per-section widths went with the Spectrum
+   rebuild, which pins the panel to the header's gutters. A panel that is always
+   the same width has no distance to interpolate and nothing to re-measure when
+   a tool joins a column. */
 .pnav-menu{animation-duration:var(--dur-3)}
 
 /* Hierarchy: the mega menu is a list of destinations, so the eye needs a spine.
@@ -7929,10 +8275,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    rows together below the small-laptop breakpoint rather than letting the
    panel grow taller than the viewport. */
 @media(max-width:980px){
-  .pnav-menu-body{padding:24px 28px}
-  .pnav-menu-cols{gap:28px}
-  .pnav-tool{min-height:44px;padding:6px 8px}
-  .pnav-menu-foot{padding:14px 28px}
+  .pnav-colstack{padding:12px 10px;gap:11px}
+  .pnav-tool{min-height:44px;padding:7px 8px}
+  .pnav-menu-foot{padding:10px 12px}
 }
 
 /* Focus visibility on the bar itself. A pill trigger with only a background

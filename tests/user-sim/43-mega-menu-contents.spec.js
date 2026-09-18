@@ -286,12 +286,29 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     // WHAT IS IN THE RING, not just how many. Every assertion below reads
     // items[0] and items[at end] back out of the live DOM, so on its own the
     // walk would happily pass against a ring that had silently lost members --
-    // mutation-checked, and it did. These two names are the contract: the
-    // card's primary action and the panel's last link were BOTH unreachable by
+    // mutation-checked, and it did. These three names are the contract: the
+    // card's primary action and the panel's two exits were ALL unreachable by
     // keyboard before this pass, jumped over in each direction by the Tab
     // bridge, so naming them is what stops that regressing quietly.
-    expect(items[0]).toContain('Build a brand kit')
-    expect(items[items.length - 1]).toContain('How UIL4B works')
+    //
+    // BY NAME, NOT BY INDEX, since the Spectrum rebuild (2026-09-18). This read
+    // `items[0]` for the guided CTA, which encoded the old DOM order: the promo
+    // card was the FIRST child of .pnav-menu-cols and the tool columns came
+    // after it. `UIL4B App.dc.html` puts the promo pane on the right, and the
+    // aside moved in the DOM as well as on screen rather than being placed
+    // there with `order` -- a keyboard user must not Tab into a 1260px panel at
+    // its far right and then walk back left (WCAG 2.4.3). So the ring opens on
+    // the first TOOL now. The thing this test exists to catch is a ring that
+    // has silently LOST a member, and that is what these three assert; the
+    // endpoints are pinned separately below.
+    const names = items.join(' | ')
+    expect(names, 'the guided CTA fell out of the keyboard ring again').toMatch(/Build a brand kit|Resume:/)
+    expect(names, 'the "how it works" link fell out of the keyboard ring').toContain('How UIL4B works')
+    expect(names, 'the view-all fell out of the keyboard ring').toContain('Explore Create')
+    // The ring still opens on a real destination and ends on the panel's
+    // view-all, which is the last thing in the card's DOM.
+    expect(items[0]).toContain('Palette')
+    expect(items[items.length - 1]).toContain('Explore Create')
     // The trigger handler focuses inside requestAnimationFrame twice over, so
     // every assertion that follows a trigger key has to settle rather than read
     // the first frame. Arrow keys WITHIN the panel move focus synchronously and
