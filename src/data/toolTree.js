@@ -349,7 +349,13 @@ const DISCOVER_SPEC = [
   // Emoji Library is deliberately not a second entry — it is the other tab of
   // this same page, one click away inside the hero #306 shipped.
   { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search 200,000+ icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
-  { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/discover', soon: true },
+  // /community has been live since #472 and this row was still pointing at
+  // /discover — the surface the visitor is already standing on — with a Soon
+  // badge on it. The mega menu, the mobile sheet and the visual sitemap all
+  // render this one row, so the site said "Soon" for a page it was serving 200
+  // for in three places at once. Route and flag both corrected; the desc was
+  // already written for the live page and is untouched.
+  { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: false },
   { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
   // Live as of this change. The 22 curated resources in discoverResources.js
   // have existed since Slice 2; only the page was missing, so this entry
@@ -384,7 +390,16 @@ export const DISCOVER_GROUPS = DISCOVER_SPEC.map((row) => {
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from './learnIndex.js'
 
 export const LEARN_GROUPS = [
-  { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/learn', soon: true },
+  // LIVE, AND IT WAS SAYING SOON. /principles has been a real page for months —
+  // it computes its own contrast ratios on load — and this row pointed at
+  // /learn with a Soon badge, in the mega menu, the mobile sheet and the visual
+  // sitemap. On /sitemap it was worse than a badge: that page ALREADY lists
+  // "Design Principles → /principles" in its own section (SiteMap.jsx:43), so
+  // the Learn column was contradicting a row 200px away. Founder's call,
+  // 2026-09-18: point the row at the live page. See LEARN_TOPIC_ROWS below for
+  // what stops a live row disappearing out of the menu when it leaves the
+  // roadmap.
+  { id: 'principles', label: 'Design Principles', desc: 'The rules behind interfaces that work.', route: '/principles', soon: false },
   { id: 'themes', label: 'UI Themes', desc: 'Dark, light and custom theme systems.', route: '/learn/theme-systems', soon: false },
   { id: 'brand', label: 'Brand Colour Guide', desc: 'Choose brand colours with confidence.', route: '/learn/brand-colour', soon: false },
   { id: 'typography', label: 'Typography Guide', desc: 'Type that reads and scales cleanly.', route: '/learn/typeface-metrics', soon: false },
@@ -392,7 +407,11 @@ export const LEARN_GROUPS = [
   { id: 'marketing', label: 'Marketing', desc: 'Positioning, messaging and social.', route: '/learn', soon: true },
   { id: 'ai-assistants', label: 'AI Coding Assistants', desc: 'Ship faster with AI in the loop.', route: '/learn', soon: true },
   // The conversion-adjacent item — gets the accent-blue dot in the menu.
-  { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/learn', soon: true, accent: true },
+  // Same correction, and this one was the most visible of the three: the mobile
+  // sheet's own Learn card carries a "View docs" button to /help about 250px
+  // below the row telling the reader Help is Soon. /sitemap lists it too
+  // (SiteMap.jsx:42).
+  { id: 'help', label: 'Help & Getting Started', desc: 'Everything to get productive fast.', route: '/help', soon: false, accent: true },
 ]
 
 /**
@@ -405,6 +424,25 @@ export const LEARN_ROADMAP = LEARN_GROUPS.filter((g) => g.soon)
 /** Roadmap rows a published guide has already answered. */
 export const LEARN_DELIVERED = LEARN_GROUPS.filter(
   (g) => !g.soon && LEARN_ARTICLE_ROUTES.includes(g.route),
+)
+
+/**
+ * What the menu's two topic columns render: everything still to be written,
+ * PLUS a live row whose destination is not one of the Guides column's articles.
+ *
+ * Both halves are load-bearing. Rendering LEARN_ROADMAP alone would drop
+ * Design Principles and Help out of the menu entirely the moment they stopped
+ * saying Soon — a live page punished for going live. Rendering LEARN_GROUPS
+ * instead would put the three delivered rows (themes, brand, typography) beside
+ * the Guides column that already lists those exact articles, which is the
+ * duplicate-destination failure the note on LEARN_GROUPS warns about: two rows
+ * with one data-route in the sitemap and two links to one page in the menu.
+ *
+ * So: a row appears in these columns when it is Soon, or when it points
+ * somewhere the Guides column does not already point.
+ */
+export const LEARN_TOPIC_ROWS = LEARN_GROUPS.filter(
+  (g) => g.soon || !LEARN_ARTICLE_ROUTES.includes(g.route),
 )
 
 // ── Menu-only column model ──────────────────────────────────────────────────
@@ -572,11 +610,14 @@ const LEARN_ARTICLE_ROWS = LEARN_ARTICLES.map((a) => ({
   soon: false,
 }))
 
-// Guides first: it is the only column whose rows go anywhere. The two roadmap
-// columns keep their Soon badges and stay below it in reading order.
+// Guides first, and it is no longer the only column whose rows go anywhere:
+// Design Principles and Help are live pages sitting in the topic columns, so
+// those columns now mix working links with Soon rows. `groupsToMenu` carries
+// each row's own `soon`, so the badge is per row and a live one simply does not
+// wear it.
 const LEARN_MENU = [
   [{ label: 'Guides', tools: LEARN_ARTICLE_ROWS }],
-  ...groupsToMenu(LEARN_ROADMAP, [
+  ...groupsToMenu(LEARN_TOPIC_ROWS, [
     { label: 'Foundations', ids: ['principles', 'themes', 'brand', 'typography'] },
     { label: 'Growth & help', ids: ['seo', 'marketing', 'ai-assistants', 'help'] },
   ]),

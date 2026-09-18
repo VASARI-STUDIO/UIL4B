@@ -265,8 +265,16 @@ export default function Community({ toast }) {
     if (authLoading) return
     if (!uid) {
       setSubmitIntent(SUBMIT_SURFACE)
+      // `signup: true` — the third of the three, and the one the 2026-09-16
+      // audit did not list. It named Type Scale's save and Gradient's submit;
+      // this gate has the identical shape (only reached when `uid` is absent,
+      // so everybody who meets it has no account) and was greeting them with
+      // "Log in to continue" all the same. Fixing two of three would have left
+      // the product doing the same thing two ways, which is the split this
+      // branch keeps closing elsewhere.
       const signedIn = await requireLogin('submit a design to the community', {
         free: true,
+        signup: true,
         reasons: COMMUNITY_SUBMIT_REASONS,
       })
       if (!signedIn) { resetSubmitIntent(); return }

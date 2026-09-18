@@ -282,9 +282,17 @@ export default function SaveTypeSystem({ gate, label, summary, toast }) {
   // Saving is free and only needs an account, exactly as in PaletteBuilder and
   // IconLibrary. `free: true` keeps the login popup's copy off the Pro pitch --
   // this is not the upsell, it is the prerequisite.
+  //
+  // `signup: true` OPENS ON THE CREATE-ACCOUNT FORM, and it was missing here.
+  // The branch only runs for somebody who cannot save projects, which signed
+  // out means somebody with no account — and they were being greeted with
+  // "Log in to continue", a form for an account they do not have, at the moment
+  // they first tried to keep their work. PaletteBuilder's save and the export
+  // gate both pass it (useExportGate.js:81 records the rule); this and the
+  // Gradient community submit were the two that did not.
   const trigger = useCallback(async () => {
     if (!canSaveProjects) {
-      const user = await requireLogin(`save ${label}`, { free: true })
+      const user = await requireLogin(`save ${label}`, { free: true, signup: true })
       if (!user) return
     }
     setOpen((v) => !v)

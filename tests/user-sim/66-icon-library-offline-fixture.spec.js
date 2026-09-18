@@ -99,12 +99,34 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
 
   expect(await page.locator('.ic').count(), 'the grid is populated from the fixture').toBeGreaterThan(20)
 
+  // WAIT FOR THE GLYPHS, NOT JUST THE CATALOGUE. The summary line above says
+  // every pack ANSWERED; it says nothing about the markup, which now arrives in
+  // a second round of requests a beat after the catalogue settles. Reading the
+  // tally straight after the summary raced that round and measured zero batched
+  // requests on a page that was about to make them. The condition the assertion
+  // below is really about is cells having painted, so wait for that.
+  await expect
+    .poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 })
+    .toBeGreaterThan(20)
+
   const tally = iconifyRequests(ctx)
   expect(tally, 'the stub is installed on this context').not.toBeNull()
   expect(tally.collection, 'one /collection request per pack the page browses on first paint').toBe(packs.length)
   expect(tally.missing, 'every request had an answer in the fixture').toEqual([])
   expect(tally.escaped, 'no response came from a real Iconify host').toEqual([])
-  expect(tally.svg, 'the visible cells fetched their glyphs through the fixture too').toBeGreaterThan(0)
+  // THE GRID'S GLYPHS, WHICH ARE NO LONGER ONE REQUEST EACH. This read
+  // `tally.svg > 0` when every cell fetched its own .svg — 120 of them on first
+  // paint, which is the request storm that rate-limited the page into a grid of
+  // blank cells. The markup now arrives batched, one request per pack, so the
+  // fixture is consumed through `batch` instead.
+  expect(tally.batch, 'the visible cells fetched their glyphs through the fixture too').toBeGreaterThan(0)
+  // And the storm has not come back: a batched grid must never need a request
+  // per cell, so the per-icon endpoint stays far below the number of cells on
+  // screen. It is not asserted at zero — hovering a cell legitimately prefetches
+  // one glyph's own markup for the customizer.
+  const cells = await page.locator('.ic').count()
+  expect(tally.svg, `${tally.svg} per-icon glyph requests for ${cells} cells — the grid has stopped batching`)
+    .toBeLessThan(cells)
   await ctx.close()
 })
 

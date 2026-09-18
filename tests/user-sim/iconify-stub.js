@@ -25,10 +25,14 @@
 //                                requests on first paint has a file
 //   /search?query=…&prefix(es)=… search.json, filtered by query and prefix(es)
 //                                so a query resolves to a MIXED-pack answer
+//   /<pack>.json?icons=a,b,c     one { body } per requested name, from the same
+//                                icon.svg — THE ENDPOINT THE GRID NOW USES.
+//                                One request per pack replaced one per cell.
 //   /<pack>/<name>.svg           icon.svg, with the CORS headers the real API
-//                                sends (BrandGlyph draws it onto a canvas
-//                                through crossOrigin="anonymous"; without the
-//                                header every cell is a CORS console error)
+//                                sends. Still served: the customizer fetches a
+//                                glyph's own markup this way. The grid no
+//                                longer does, so this is no longer the path
+//                                that decides whether cells paint.
 //
 // Fulfilled, never aborted: an abort is a console error the feedback loop
 // reports on every viewport, and the page's own fallback branch is a different
@@ -101,7 +105,15 @@ export async function refuseIconify(page) {
 export async function refuseIconifyGlyphs(page) {
   const headers = { [ICONIFY_STUB_HEADER]: REFUSED_VALUE }
   await page.route(
-    (u) => ICONIFY_HOSTS.includes(u.hostname) && u.pathname.endsWith('.svg'),
+    // BOTH SHAPES OF "A GLYPH", or this helper stops refusing anything.
+    // It used to match `.svg` alone, because a cell was one .svg request. The
+    // grid now takes its markup from the batched /{prefix}.json?icons=… instead
+    // (see IconLibrary.jsx), so `.svg` alone would leave the batches answering
+    // 200 from the fixture and this "outage" would quietly test a healthy page.
+    // The catalogue — /collections, /collection, /search — still answers, which
+    // is what makes this the 2026-09-15 failure rather than the 2026-09-08 one.
+    (u) => ICONIFY_HOSTS.includes(u.hostname)
+      && (u.pathname.endsWith('.svg') || (/^\/[^/]+\.json$/.test(u.pathname) && u.search.includes('icons='))),
     (route) => route.fulfill({
       status: 429, contentType: 'text/plain', headers, body: 'Too Many Requests',
     }),
@@ -137,11 +149,17 @@ function loadFixture() {
   for (const f of fs.readdirSync(path.join(FIXTURE_DIR, 'collection'))) {
     if (f.endsWith('.json')) collection.set(f.slice(0, -5), read(path.join('collection', f)))
   }
+  const svg = read('icon.svg')
   fixture = {
     collections: read('collections.json'),
     collection,
     search: JSON.parse(read('search.json')),
-    svg: read('icon.svg'),
+    svg,
+    // The same artwork as a BODY — the markup inside the <svg> root, which is
+    // the shape the real API's /{prefix}.json?icons=… returns per icon. Derived
+    // from the one fixture file rather than committed twice, so the batched and
+    // per-icon endpoints can never drift apart.
+    svgBody: svg.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, ''),
   }
   return fixture
 }
@@ -195,6 +213,30 @@ export function answerIconify(urlString) {
     })
   }
 
+  // /{prefix}.json?icons=a,b,c — the BATCHED glyph endpoint, which is how the
+  // grid gets its markup now. One request per pack replaced one per cell (120
+  // on first paint); the reasoning is in IconLibrary.jsx. Answering it here is
+  // not optional: without it the page's batches 404, every grid cell stays
+  // empty and the suite silently tests the built-in fallback instead of the
+  // product.
+  //
+  // Only a pack the fixture actually carries is answered, exactly as
+  // /collection does — a request for a pack with no fixture file must stay
+  // visible as a 404 rather than be invented.
+  const batch = url.pathname.match(/^\/([^/]+)\.json$/)
+  if (batch && url.searchParams.has('icons')) {
+    const prefix = batch[1]
+    if (!fx.collection.has(prefix)) return json(404, { error: 'not found' })
+    const names = (url.searchParams.get('icons') || '').split(',').map((s) => s.trim()).filter(Boolean)
+    const icons = {}
+    for (const n of names) icons[n] = { body: fx.svgBody }
+    // `width`/`height` are the pack defaults the real API sends at the top
+    // level, and `aliases` is present-but-empty on purpose: the page walks an
+    // alias chain, and an absent key must not be the only reason that path is
+    // never exercised.
+    return json(200, { prefix, width: 24, height: 24, icons, aliases: {} })
+  }
+
   if (/^\/[^/]+\/[^/]+\.svg$/.test(url.pathname)) {
     return { status: 200, contentType: 'image/svg+xml; charset=utf-8', body: fx.svg }
   }
@@ -216,7 +258,12 @@ function appendAudit(entry) {
  */
 export async function stubIconify(context) {
   if (isLiveIconify()) return context
-  const tally = { stubbed: 0, refused: 0, collection: 0, search: 0, svg: 0, missing: [], escaped: [] }
+  // `batch` counts /{prefix}.json?icons=… — how the GRID gets its markup now.
+  // `svg` stays and still counts the per-icon endpoint, which the customizer
+  // uses; the two are separate because "the grid drew its icons" and "a glyph's
+  // own markup was fetched" stopped being the same question when the grid
+  // started batching.
+  const tally = { stubbed: 0, refused: 0, collection: 0, search: 0, svg: 0, batch: 0, missing: [], escaped: [] }
   context[ICONIFY_TALLY] = tally
 
   await context.route((url) => ICONIFY_HOSTS.includes(url.hostname), (route) => {
@@ -227,6 +274,7 @@ export async function stubIconify(context) {
     if (pathname === '/collection') tally.collection += 1
     else if (pathname === '/search') tally.search += 1
     else if (pathname.endsWith('.svg')) tally.svg += 1
+    else if (/^\/[^/]+\.json$/.test(pathname) && new URL(req.url()).search.includes('icons=')) tally.batch += 1
     if (answer.status === 404) tally.missing.push(pathname + new URL(req.url()).search)
     return route.fulfill({ status: answer.status, contentType: answer.contentType, headers: CORS, body: answer.body })
       .catch(() => { /* context torn down mid-flight */ })

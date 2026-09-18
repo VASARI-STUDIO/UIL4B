@@ -295,7 +295,11 @@ const COLLAPSED_WIDTHS = [768, 834]
 // COLLAPSED trigger count stopped being the same number on 2026-09-07. It
 // defaults to `expandedRows`, so every row that was correct before still is.
 const FILTER_TRAYS = [
-  ['/discover/gradients', '.lbry-filters', '.lbry-filter', 2, 12],
+  // ONE expanded tray since 2026-09-16 — Type, 4 chips. Mood (8 options) is a
+  // labelled menu at every width, as on palettes below and for the same
+  // measured reason: beside the type tray it wrapped the sticky toolbar to
+  // two rows (122px) at 1024. Two triggers in the collapsed band, as before.
+  ['/discover/gradients', '.lbry-filters', '.lbry-filter', 1, 4, null, 2],
   // TWO GROUPS since 2026-09-07, with two different shapes on purpose.
   // Collection (All palettes / Curated / Brand) is the page's primary split and
   // stays a visible segmented row — that is the one expanded tray with 3 chips

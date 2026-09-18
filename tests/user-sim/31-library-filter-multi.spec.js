@@ -116,10 +116,23 @@ test.describe('library filter multi-select', () => {
 
   // The other trays on this page and elsewhere did not opt in, and must be
   // unaffected — the multi-select is a prop, not a change of default.
-  test('the mood tray beside it is still single-select', async ({ page }) => {
+  //
+  // The Mood group is a MENU at every width since 2026-09-16 (eight options
+  // beside this tray wrapped the toolbar to two rows at 1024), so its options
+  // exist only while its trigger is open, and a single-select menu closes on
+  // choice — hence the reopen before the shift-click and again before the
+  // pressed state is read.
+  test('the mood menu beside it is still single-select', async ({ page }) => {
+    const trigger = page.locator('.grg-toolbar .lbry-filtertrig:has(.lbry-filtertrig-k:text-is("Mood"))')
     const mood = page.locator('[aria-label^="Filter by mood"]')
+    await trigger.click()
     await mood.getByRole('button', { name: 'Warm', exact: true }).click()
+    await expect(trigger).toContainText('Warm')
+    await trigger.click()
     await mood.getByRole('button', { name: 'Cool', exact: true }).click({ modifiers: ['Shift'] })
+    await expect(trigger).toContainText('Cool')
+    await expect(trigger).not.toContainText('Warm')
+    await trigger.click()
     const on = await mood.locator('button[aria-pressed="true"]').evaluateAll(els => els.map(e => e.textContent.trim()))
     expect(on).toEqual(['Cool'])
   })

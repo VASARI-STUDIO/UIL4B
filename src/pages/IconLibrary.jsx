@@ -30,10 +30,21 @@ import '../styles/deferred/tool-shell.css'
 
 const API_LIMIT = 999
 
+// ONE HOST, BECAUSE THE OTHER TWO WERE NEVER A FALLBACK.
+// `api.simplesvg.com` and `api.unisvg.com` are Iconify's documented mirrors and
+// sat here as the retry path for exactly the outage this file keeps hitting.
+// MEASURED 2026-09-18, both from this machine and unauthenticated:
+//   api.iconify.design  /collection?prefix=lucide -> 200
+//   api.simplesvg.com   /collection?prefix=lucide -> 403
+//   api.unisvg.com      /collection?prefix=lucide -> 403
+// They do not rate-limit us, they refuse us outright, so every failure path in
+// this file walked two guaranteed-403 hosts before giving up — three round
+// trips of latency per failed icon, and a "fallback" that has never once
+// returned a byte. Keeping them made the retry look survivable when it was
+// not. The array shape stays so the loops below are unchanged and a real
+// mirror can be added back the day one exists.
 const API_HOSTS = [
   'https://api.iconify.design',
-  'https://api.simplesvg.com',
-  'https://api.unisvg.com',
 ]
 
 const COLORED_PACKS = new Set([
@@ -264,6 +275,126 @@ const prefetchIconSvg = (icon) => {
   if (icon?.cdn && !icon.custom && !icon.logo) fetchSvgText(icon.pack, icon.name).catch(() => {})
 }
 
+/* ── THE GRID ASKS FOR ONE FILE PER PACK, NOT ONE PER ICON ───────────────────
+
+   THE BUG THIS EXISTS TO KILL. Every cell used to render
+   `<img src="https://api.iconify.design/{pack}/{name}.svg?width=24&height=24">`.
+   PAGE_SIZE is 120, so the first paint of this page fired 120 image requests at
+   one host, on top of the 25 `/collection` requests `browseAll` already sends —
+   ~145 requests to api.iconify.design from one IP, per load, before the visitor
+   has scrolled once. Cloudflare answers that with error 1015 (rate limited by
+   IP), which is precisely the 2026-09-15 breakage recorded at `noteGlyphFailure`
+   below: the catalogue answered 200, every glyph came back 429, and because the
+   API serves a rate-limited glyph as text/plain while the browser asked for an
+   image, ORB blocked it and the <img> just failed. The page believed it was
+   healthy and drew 120 blank cells.
+
+   THE FIX. The Iconify API serves many icons in ONE request:
+   `/{prefix}.json?icons=a,b,c` returns `{ icons: { a: {body}, … }, aliases, … }`.
+   MEASURED 2026-09-18: 60 lucide icons in a single response, HTTP 200, 14,977
+   bytes. So a 120-cell page costs one request per PACK PRESENT (≈25 on the
+   mixed "All packs" view, far fewer on a single pack or a group) instead of 120
+   — and scrolling to the next page is usually free, because a pack's tranche is
+   fetched generously and cached for the session.
+
+   WHY THE MARKUP IS STILL AN <img>, NOT INLINE SVG. The obvious way to use the
+   body is `dangerouslySetInnerHTML`. This repo does not contain a single use of
+   it — `grep -rn dangerouslySetInnerHTML src` returns nothing, which is a large
+   part of why the 2026-09-16 security review found no XSS — and third-party
+   markup is the worst possible place to introduce the first one. Composing the
+   body into a `data:image/svg+xml` URI keeps the exact same <img> element, the
+   same `ig-inv` tint, the same `loading="lazy"`, and the same canvas sampling in
+   BrandGlyph (a data: URI does not taint a canvas, so that path stops needing
+   CORS at all) — while SVG inside an <img> is a non-scripting context by spec,
+   so a hostile body cannot run anything. Same pixels, no new attack surface.
+
+   AND THE FAILURE IS NOW VISIBLE. This is the half that matters as much as the
+   request count. A 429 on an <img> is invisible to JavaScript — that is how the
+   old code shipped a page of blank cells believing the service was fine. A 429
+   on a fetch() is a status code we can read, so a refusal now flips the SAME
+   `loadError` the catalogue path sets, and the honest notice and built-in grid
+   appear for the reason they were built. */
+
+// 'pack:name' → svg body markup. Module scope, so it survives remounts.
+const GLYPH_BODY = new Map()
+// 'pack:name' → { w, h } when the icon overrides its pack's default box.
+const GLYPH_BOX = new Map()
+// pack → Set of names already requested (resolved or in flight), so a scroll
+// that re-renders the same cells never re-asks for them.
+const GLYPH_ASKED = new Map()
+
+// One request carries this many names. 60 measured at ~15KB; 100 keeps the URL
+// well inside every proxy's limit and still lands under 30KB for a stroke pack.
+const GLYPH_BATCH = 100
+
+const askedFor = (pack) => {
+  let s = GLYPH_ASKED.get(pack)
+  if (!s) { s = new Set(); GLYPH_ASKED.set(pack, s) }
+  return s
+}
+
+/**
+ * Fetch one pack's worth of glyph bodies in a single request and fill the
+ * caches. Resolves true when the request was answered, false when the service
+ * refused it — the caller turns a false into the page's existing refused state
+ * rather than into 120 silently broken images.
+ */
+async function loadGlyphBatch(pack, names) {
+  if (!names.length) return true
+  const url = `${API_HOSTS[0]}/${pack}.json?icons=${names.map(encodeURIComponent).join(',')}`
+  let data
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    // 429 (Cloudflare 1015) and 5xx land here as a readable status instead of
+    // as a broken image nobody can see.
+    if (!r.ok) return false
+    data = await r.json()
+  } catch {
+    return false
+  }
+  const defW = data.width || 24
+  const defH = data.height || 24
+  const bodyOf = (n) => {
+    // A requested name can be an alias; the parent carries the markup. Iconify
+    // allows an alias chain, so walk it with a hop cap rather than trusting it
+    // to be one deep. Without this, `lucide:home` (an alias of `house` as of
+    // 2026-09-18) would cache as missing and fall back to its own request.
+    let cur = n
+    for (let hop = 0; hop < 8; hop++) {
+      if (data.icons && data.icons[cur]) return { icon: data.icons[cur], key: cur }
+      const alias = data.aliases && data.aliases[cur]
+      if (!alias || !alias.parent) return null
+      cur = alias.parent
+    }
+    return null
+  }
+  for (const n of names) {
+    const found = bodyOf(n)
+    if (!found || typeof found.icon.body !== 'string') continue
+    const key = svgKey(pack, n)
+    GLYPH_BODY.set(key, found.icon.body)
+    const w = found.icon.width || defW
+    const h = found.icon.height || defH
+    if (w !== 24 || h !== 24) GLYPH_BOX.set(key, { w, h })
+  }
+  return true
+}
+
+/**
+ * The <img> src for a batched glyph, or '' when its body has not arrived. The
+ * body is Iconify's own markup for the icon; wrapping it in an <svg> root with
+ * the right viewBox is all that turns it into a standalone file.
+ */
+function glyphDataUri(pack, name) {
+  const key = svgKey(pack, name)
+  const body = GLYPH_BODY.get(key)
+  if (!body) return ''
+  const box = GLYPH_BOX.get(key) || { w: 24, h: 24 }
+  return svgToDataUri(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box.w} ${box.h}" width="${box.w}" height="${box.h}">${body}</svg>`
+  )
+}
+
 // ── Brand-glyph contrast chips ───────────────────────────────────────────────
 // Colored/brand artwork keeps its own colours, so the grid can't tint it for
 // contrast the way `ig-inv` does for monochrome packs. Instead each glyph sits
@@ -369,7 +500,16 @@ function sampleGlyph(img) {
 // follow the artwork, so the element's intrinsic aspect is finally the truth
 // about the art. Square glyphs are unaffected - the CSS still paints them in a
 // 24px box - and 48 gives the wide chip resolution to scale from.
-function BrandGlyph({ pack, name }) {
+// `src` is the batched data: URI from the grid (see the batching note above).
+// It arrives empty on the render before this icon's tranche lands, and the chip
+// is drawn anyway — the chip IS the placeholder, so the cell does not resize
+// under the reader when the artwork appears.
+//
+// The sampling below is unchanged and is now on firmer ground: a data: URI does
+// not taint a canvas, so `getImageData` no longer depends on the CDN returning
+// a permissive `Access-Control-Allow-Origin`. `crossOrigin` goes with it — it
+// was only ever there to make that sampling legal.
+function BrandGlyph({ pack, name, src }) {
   const key = svgKey(pack, name)
   const [shape, setShape] = useState(() => glyphCache.get(key) || { tone: 'light', ar: 1, cap: 1 })
   const cached = glyphCache.get(key)
@@ -386,13 +526,14 @@ function BrandGlyph({ pack, name }) {
       className={`ig-chip${shape.tone === 'dark' ? ' ig-chip--dark' : ''}${wide ? ' ig-chip--wide' : ''}`}
       style={wide ? { '--ig-wide-cap': shape.cap } : undefined}
     >
-      <img
-        src={`https://api.iconify.design/${pack}/${name}.svg?height=48`}
-        crossOrigin="anonymous"
-        loading="lazy"
-        alt={name}
-        onLoad={onLoad}
-      />
+      {src && (
+        <img
+          src={src}
+          loading="lazy"
+          alt={name}
+          onLoad={onLoad}
+        />
+      )}
     </span>
   )
 }
@@ -1903,6 +2044,107 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const shown = icons.slice(0, visible)
   const hasMore = visible < icons.length
   const isMyIcons = source === 'custom'
+
+  // Batch in the markup for whatever the grid is about to draw. Demand-driven:
+  // the effect re-runs when `shown` grows (the sentinel raises `visible`) or the
+  // browse changes, and `GLYPH_ASKED` means a pack is only ever asked for the
+  // names it has not already been asked for. `glyphTick` exists to re-render
+  // once a tranche lands — the caches are plain module Maps, so nothing else
+  // would tell React the cells can paint.
+  const [glyphTick, setGlyphTick] = useState(0)
+  // MOUNTED, NOT PER-RUN. An `alive` flag cleared by this effect's own cleanup
+  // looks like the right way to drop a stale response, and here it silently ate
+  // every glyph on the page. `browseAll` appends a pack at a time, so `icons`
+  // changes ~25 times during one load; each change re-ran this effect and its
+  // cleanup cancelled the tick for the request still in flight. The bodies
+  // landed in the cache, the names stayed marked as asked so nothing re-fetched
+  // them, and no re-render was ever triggered — MEASURED at 127.0.0.1:5199 on
+  // the first build of this change: 120 cells, 120 placeholders, 0 images, two
+  // lucide batches both HTTP 200. A resolved tranche is never stale — the cache
+  // is module-level and the markup is as good on run 25 as on run 1 — so the
+  // only thing worth guarding is the component actually still being mounted.
+  //
+  // SET IT ON THE WAY IN, NOT JUST ON THE WAY OUT. `useRef(true)` plus a
+  // cleanup that clears it is the shape everyone writes, and under StrictMode
+  // it is wrong in exactly the way that is hardest to see: React mounts, runs
+  // the cleanup against the simulated unmount, then mounts again — so the ref
+  // is false for the whole real lifetime of the component and nothing ever sets
+  // it back. MEASURED here: 120 lucide bodies in the cache, all 120 visible
+  // cells wanting one of them, and not a single <img>, because every
+  // `setGlyphTick` was skipped by a guard that thought the page had gone.
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+  // `icons` and `visible`, NOT `shown`. `shown` is a fresh array on every render,
+  // so depending on it re-runs this body for every unrelated state change in the
+  // page — the customizer opening, a slider moving, a toast. It would be
+  // harmless (the asked-set short-circuits it) but it would walk 120 icons each
+  // time to decide it had nothing to do.
+  useEffect(() => {
+    // The refused state already owns the screen and is showing built-in icons;
+    // asking again here would be the retry button's job, not a render's.
+    if (cdnOk.current === false) return
+    // COLLAPSE THE PROGRESSIVE LOAD INTO ONE PASS. `browseAll` sets `icons` once
+    // per pack as each /collection resolves, so without this the first seconds
+    // of a load would batch the 120 lucide icons that briefly fill the grid,
+    // then batch again for the mixed set that replaces them — measured as 2
+    // wasted requests for names nobody was looking at any more. One frame's
+    // worth of settling is under the network round trip that follows it.
+    const t = setTimeout(() => {
+      const wanted = new Map()
+      // The Recent rail is drawn from a separate list that is never part of
+      // `icons`, so it has to be named here or its glyphs would wait forever.
+      for (const icon of [...icons.slice(0, visible), ...recents]) {
+        if (!icon.cdn || icon.custom || icon.logo) continue
+        const key = svgKey(icon.pack, icon.name)
+        if (GLYPH_BODY.has(key)) continue
+        const asked = askedFor(icon.pack)
+        if (asked.has(icon.name)) continue
+        asked.add(icon.name)
+        if (!wanted.has(icon.pack)) wanted.set(icon.pack, [])
+        wanted.get(icon.pack).push(icon.name)
+      }
+      if (!wanted.size) return
+      const jobs = []
+      for (const [pack, names] of wanted) {
+        for (let i = 0; i < names.length; i += GLYPH_BATCH) {
+          jobs.push(loadGlyphBatch(pack, names.slice(i, i + GLYPH_BATCH)))
+        }
+      }
+      Promise.all(jobs).then((results) => {
+        if (!mountedRef.current) return
+        setGlyphTick(n => n + 1)
+        // EVERY request refused is the service refusing, not an icon missing.
+        // A partial failure is left alone: the cells whose bodies did arrive
+        // paint, and the ones that did not keep their placeholder, which is
+        // the honest picture of a pack the API would not hand over.
+        if (results.length && results.every(ok => ok === false)) {
+          // Names that were never answered must not stay marked as asked, or
+          // the retry button would find nothing left to request.
+          for (const [pack, names] of wanted) {
+            const asked = askedFor(pack)
+            for (const n of names) asked.delete(n)
+          }
+          cdnOk.current = false
+          setLoadError(true)
+          renderLocal('', '')
+        }
+      })
+    }, 120)
+    return () => clearTimeout(t)
+  }, [icons, visible, recents, renderLocal])
+
+  // The one read of `glyphTick`. The caches above are module-level Maps, so a
+  // tranche landing changes nothing React can see; tying this callback's
+  // identity to the counter is what lets a cell that first rendered blank
+  // repaint with its markup.
+  const glyphSrc = useCallback(
+    (pack, name) => glyphDataUri(pack, name),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [glyphTick]
+  )
   // `!loadError` WAS TOO STRONG, AND IT PUT BACK THE SILENCE THE EMPTY STATE
   // BELOW WAS ADDED TO END.
   //
@@ -1964,8 +2206,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       )
     }
     if (icon.cdn) {
-      if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} />
-      return <img src={`https://api.iconify.design/${icon.pack}/${icon.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} onError={noteGlyphFailure} />
+      if (COLORED_PACKS.has(icon.pack)) return <BrandGlyph pack={icon.pack} name={icon.name} src={glyphSrc(icon.pack, icon.name)} />
+      // The batched body, composed into a data: URI. Empty until its tranche
+      // lands, which is a cell that has not painted yet rather than a cell that
+      // failed — so NO per-icon URL fallback here. Falling back would put the
+      // 120 requests this whole change removes straight back on the first paint,
+      // and the batch's own refusal is already handled where it can be read.
+      const src = glyphSrc(icon.pack, icon.name)
+      if (!src) return <span className="ig-glyph-wait" aria-hidden="true" />
+      return <img src={src} width="24" height="24" className={invClass(icon.pack)} loading="lazy" alt={icon.name} onError={noteGlyphFailure} />
     }
     return (
       <svg viewBox="0 0 24 24" fill={icon.filled ? 'currentColor' : 'none'} stroke={icon.filled ? 'none' : 'currentColor'} aria-hidden="true">
@@ -2059,7 +2308,17 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
                 onClick={() => handleIconClick(r)}
               >
                 {r.cdn ? (
-                  <img src={`https://api.iconify.design/${r.pack}/${r.name}.svg?width=24&height=24`} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
+                  // NEVER `src=""`. The browser resolves an empty src against the
+                  // document URL, fetches the HTML page, fails to decode it as an
+                  // image and fires onError — which here is `noteGlyphFailure`, so
+                  // a rail waiting one tick for its tranche would have counted
+                  // itself past the eight-failure threshold and thrown the whole
+                  // library into its refused state.
+                  glyphSrc(r.pack, r.name) ? (
+                    <img src={glyphSrc(r.pack, r.name)} width="24" height="24" className={invClass(r.pack)} loading="lazy" alt="" onError={noteGlyphFailure} />
+                  ) : (
+                    <span className="ig-glyph-wait" aria-hidden="true" />
+                  )
                 ) : (
                   <svg viewBox="0 0 24 24" fill={r.filled ? 'currentColor' : 'none'} stroke={r.filled ? 'none' : 'currentColor'} aria-hidden="true"><path d={r.d} /></svg>
                 )}

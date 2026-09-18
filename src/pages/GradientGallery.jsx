@@ -178,12 +178,24 @@ export default function GradientGallery({ toast }) {
           label: 'Search gradients',
         }}
       >
+        {/* A MENU at every width, as the Palette Library's Mood group is and
+            for the same measured reason. Eight options beside the four-option
+            Type tray and the search field: MEASURED 2026-09-16 on the live
+            site, 122px of two-row sticky toolbar at 1024 (iPad landscape,
+            small laptops) against 68px at 1280. Neither mechanism the tray
+            already has reaches that width — the measured `overflows` path is
+            deliberately blind to sibling groups (LibraryFilterGroup's
+            oscillation note) and the collapse band stops at 980 — so, as on
+            palettes, it is a decision about the OPTIONS taken here: a facet
+            with eight values is a labelled control that opens a list, and
+            the trigger states the selection ("MOOD · Warm"). */}
         <LibraryFilterGroup
           label="Filter by mood"
           triggerLabel="Mood"
           value={tag}
           onChange={setTag}
           options={MOOD_OPTIONS}
+          alwaysCollapsed
         />
         <LibraryFilterGroup
           label="Filter by gradient type"

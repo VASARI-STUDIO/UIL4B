@@ -123,7 +123,7 @@ export const PAGE_DESCRIPTIONS = {
   // the sentence Google prints under the result and every share card shows.
   // The replacement names the eight and claims nothing: no "best", no adjective
   // of quality, no urgency. 142 chars, inside what Google renders.
-  '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, plus a page of external resources. Inspiration and Collections are marked Soon.',
+  '/discover': 'The UI L4B palette, gradient, font, icon and prompt libraries, plus a page of external resources. Collections is marked Soon.',
   // THE SAME TWO FALSEHOODS AS THE LINE ABOVE, ON ITS OWN CHILD, LEFT BEHIND BY
   // THE FIX THAT CAUGHT THE PARENT. It read "A curated library of the best
   // gradient resources on the web" — but this route renders GALLERY_GRADIENTS,

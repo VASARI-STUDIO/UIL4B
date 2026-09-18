@@ -82,6 +82,59 @@ test('/collections and .svg answer, everything else is a 404', () => {
   assert.equal(answerIconify(`${HOST}/`).status, 404)
 })
 
+test('/{prefix}.json?icons= answers one body per requested name', () => {
+  const a = answerIconify(`${HOST}/lucide.json?icons=zap,home,search`)
+  assert.equal(a.status, 200)
+  const body = json(a)
+  assert.equal(body.prefix, 'lucide')
+  assert.deepEqual(Object.keys(body.icons).sort(), ['home', 'search', 'zap'])
+  for (const n of ['zap', 'home', 'search']) {
+    assert.equal(typeof body.icons[n].body, 'string')
+    assert.doesNotMatch(body.icons[n].body, /<svg/,
+      'a batched icon carries the markup INSIDE the svg root, not a whole document — '
+      + 'the page wraps it in its own <svg> with the viewBox from width/height')
+  }
+  // The page reads these to build the viewBox, so a missing default is a grid
+  // of icons drawn at the wrong scale.
+  assert.equal(body.width, 24)
+  assert.equal(body.height, 24)
+  assert.ok(body.aliases, 'aliases must be present — the page walks an alias chain')
+
+  // A pack with no fixture file stays a 404, exactly as /collection does.
+  assert.equal(answerIconify(`${HOST}/not-a-real-pack.json?icons=zap`).status, 404)
+  // Without `icons=` this is not the batch endpoint and must not be invented.
+  assert.equal(answerIconify(`${HOST}/lucide.json`).status, 404)
+})
+
+test('the GRID takes its markup from the batch endpoint, never one request per cell', () => {
+  // THE REGRESSION THIS EXISTS FOR. Every cell used to be
+  // `<img src={`https://api.iconify.design/${pack}/${name}.svg?…`}>`, so a
+  // 120-cell first paint fired 120 image requests at one host on top of the 25
+  // /collection requests — measured at ~145, which is what Cloudflare answered
+  // with error 1015 and what left the founder looking at a grid of blank cells
+  // on 2026-09-15. Comment-blind, so the note explaining the change cannot be
+  // what satisfies the rule.
+  const page = strip(read('src/pages/IconLibrary.jsx'))
+  assert.match(page, /\.json\?icons=/,
+    'IconLibrary.jsx must request the batched /{prefix}.json?icons=… endpoint')
+  assert.doesNotMatch(page, /src=\{`https:\/\/api\.iconify\.design/,
+    'A cell must not build its own api.iconify.design URL. That is the one-request-per-icon '
+    + 'pattern that rate-limited the page into a grid of blank cells; the glyph comes from the '
+    + 'batched endpoint, composed into a data: URI.')
+
+  // The dead mirrors. Both answered 403 to every path when measured on
+  // 2026-09-18, so listing them only bought three round trips per failure.
+  assert.doesNotMatch(page, /api\.simplesvg\.com|api\.unisvg\.com/,
+    'api.simplesvg.com and api.unisvg.com refuse this origin outright (403). They are not a '
+    + 'fallback; re-adding one puts a guaranteed-failing hop back in front of every retry.')
+
+  // Third-party markup must never become HTML. The whole repo is free of this
+  // and that is a large part of why the 2026-09-16 security review found no XSS.
+  assert.doesNotMatch(page, /dangerouslySetInnerHTML/,
+    'A batched body is remote third-party markup. It goes into a data: URI inside an <img>, '
+    + 'which is a non-scripting context, never into the DOM as HTML.')
+})
+
 test('the stub is installed once, in base.js, and checked by the teardown', () => {
   const base = strip(read('tests/user-sim/base.js'))
   assert.match(base, /browser\.newContext\s*=\s*async[\s\S]{0,200}?stubIconify\s*\(/,

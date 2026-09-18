@@ -371,9 +371,17 @@ function DropZone({ accept, multiple, onFiles, hint, sub }) {
 function ImageConvert({ toast, initialFiles, initialDraft }) {
   // A file needs a free account; converting and previewing never do.
   const requireExportAccount = useExportGate()
+  // RETURNS WHETHER THE FILE ACTUALLY LEFT. It used to return undefined, and
+  // every caller ignored it: `gatedDownload(...)` then `toast('Downloaded ZIP
+  // with N images')` on the next line, unawaited. For a visitor with no account
+  // the gate opens a signup dialog and the download never happens — so the
+  // success toast rendered BEHIND the dialog, telling them a file they did not
+  // get had arrived. A dismissed gate is not a failure and says nothing; it is
+  // the visitor's own answer, and the dialog already explained itself.
   const gatedDownload = useCallback(async (blobOrUrl, filename, reason) => {
-    if (!(await requireExportAccount(reason))) return
+    if (!(await requireExportAccount(reason))) return false
     triggerDownload(blobOrUrl, filename)
+    return true
   }, [requireExportAccount])
   // A homepage output draft is applied to the real controls once, on mount, and
   // then belongs to the visitor — nothing here keeps re-asserting it.
@@ -407,7 +415,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   const addFiles = useCallback((files) => {
     const arr = Array.from(files)
     const imgs = arr.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp|avif|ico)$/i.test(f.name))
-    if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images'); return 0 }
+    if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images', 'error'); return 0 }
     const big = imgs.find(f => f.size > LARGE_FILE_BYTES)
     if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`)
     const next = imgs.map(f => ({
@@ -547,7 +555,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
       setConvertProgress({ done: i + 1, total: items.length })
     }
     setBusy(false)
-    toast(ok ? `Converted ${ok} image${ok > 1 ? 's' : ''}` : 'Conversion failed')
+    toast(ok ? `Converted ${ok} image${ok > 1 ? 's' : ''}` : 'Conversion failed', ok ? 'success' : 'error')
   }, [items, busy, convertOne, toast])
 
   const fmt = OUTPUT_FORMATS.find(f => f.id === format)
@@ -598,10 +606,13 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
         zip.file(name, it.out.blob)
       })
       const content = await zip.generateAsync({ type: 'blob' })
-      gatedDownload(content, `converted-${fmt.ext}.zip`, 'download the converted images')
-      toast(`Downloaded ZIP with ${ready.length} images`)
+      // Awaited, and the toast is conditional on it: the gate may open a signup
+      // dialog and never download anything.
+      if (await gatedDownload(content, `converted-${fmt.ext}.zip`, 'download the converted images')) {
+        toast(`Downloaded ZIP with ${ready.length} images`)
+      }
     } catch {
-      toast('Failed to create ZIP file')
+      toast('Failed to create ZIP file', 'error')
     }
     setZipping(false)
   }, [items, fmt, downloadOne, toast, gatedDownload])
@@ -907,7 +918,7 @@ function VideoToGif({ toast }) {
     const f = Array.from(files)[0]
     if (!f) return
     const okType = f.type.startsWith('video/') || /\.(mp4|webm|mov|avi|gif|webp)$/i.test(f.name)
-    if (!okType) { toast('Please choose a video, animated GIF or animated WebP'); return }
+    if (!okType) { toast('Please choose a video, animated GIF or animated WebP', 'error'); return }
     if (f.size > LARGE_FILE_BYTES) toast(`Heads up: file is over 50 MB — conversion may be slow or run out of memory`)
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     if (result?.url) URL.revokeObjectURL(result.url)
@@ -922,11 +933,11 @@ function VideoToGif({ toast }) {
   const convert = useCallback(async () => {
     if (!file || working) return
     if (duration > 0 && (trimEnd == null ? duration : trimEnd) <= trimStart) {
-      toast('Trim end must be after trim start')
+      toast('Trim end must be after trim start', 'error')
       return
     }
     if (!navigator.onLine && !ffmpegInstance) {
-      toast('You appear to be offline — the converter engine needs a connection to load')
+      toast('You appear to be offline — the converter engine needs a connection to load', 'error')
       return
     }
     setWorking(true)
@@ -950,7 +961,7 @@ function VideoToGif({ toast }) {
       setEngineBytes(null)
       setWorking(false)
       setProgress('')
-      toast('Could not load the converter engine. Check your connection or try the Image tab.')
+      toast('Could not load the converter engine. Check your connection or try the Image tab.', 'error')
       return
     }
 
@@ -981,7 +992,7 @@ function VideoToGif({ toast }) {
       toast('GIF ready')
     } catch (err) {
       setProgress('')
-      toast('Conversion failed: ' + (err?.message || 'unknown error'))
+      toast('Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
     setWorking(false)
   }, [file, working, width, fps, quality, duration, trimStart, trimEnd, toast])
@@ -1124,9 +1135,17 @@ function DownloadButton({ url, name }) {
 // ── Mode 3: Video → Frames (HTML5 video + canvas seek) ───────────────────────
 function VideoFrames({ toast }) {
   const requireExportAccount = useExportGate()
+  // RETURNS WHETHER THE FILE ACTUALLY LEFT. It used to return undefined, and
+  // every caller ignored it: `gatedDownload(...)` then `toast('Downloaded ZIP
+  // with N images')` on the next line, unawaited. For a visitor with no account
+  // the gate opens a signup dialog and the download never happens — so the
+  // success toast rendered BEHIND the dialog, telling them a file they did not
+  // get had arrived. A dismissed gate is not a failure and says nothing; it is
+  // the visitor's own answer, and the dialog already explained itself.
   const gatedDownload = useCallback(async (blobOrUrl, filename, reason) => {
-    if (!(await requireExportAccount(reason))) return
+    if (!(await requireExportAccount(reason))) return false
     triggerDownload(blobOrUrl, filename)
+    return true
   }, [requireExportAccount])
   const [file, setFile] = useState(null)
   const [srcUrl, setSrcUrl] = useState(null)
@@ -1158,7 +1177,7 @@ function VideoFrames({ toast }) {
     const f = Array.from(files)[0]
     if (!f) return
     if (!f.type.startsWith('video/') && !/\.(mp4|webm|mov|avi)$/i.test(f.name)) {
-      toast('Please choose a video file (MP4, WebM, MOV, AVI)')
+      toast('Please choose a video file (MP4, WebM, MOV, AVI)', 'error')
       return
     }
     if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow')
@@ -1194,7 +1213,7 @@ function VideoFrames({ toast }) {
         video.onerror = () => reject(new Error('Could not load video'))
       })
     } catch (err) {
-      toast(err.message)
+      toast(err.message, 'error')
       setExtracting(false)
       return
     }
@@ -1242,8 +1261,8 @@ function VideoFrames({ toast }) {
         setProgress(Math.round((idx / total) * 100))
       }
     } catch (err) {
-      if (unsupported) toast(err.message)
-      else toast(out.length ? `Extracted ${out.length} frames (stopped: ${err.message})` : `Extraction failed: ${err.message}`)
+      if (unsupported) toast(err.message, 'error')
+      else toast(out.length ? `Extracted ${out.length} frames (stopped: ${err.message})` : `Extraction failed: ${err.message}`, out.length ? 'success' : 'error')
     }
 
     setFrames(out)
@@ -1259,10 +1278,11 @@ function VideoFrames({ toast }) {
       const zip = new JSZip()
       frames.forEach(f => zip.file(f.name, f.blob))
       const content = await zip.generateAsync({ type: 'blob' })
-      gatedDownload(content, `frames-${(file?.name || 'video').replace(/\.[^.]+$/, '')}.zip`, 'download the extracted frames')
-      toast(`Downloaded ZIP with ${frames.length} frames`)
+      if (await gatedDownload(content, `frames-${(file?.name || 'video').replace(/\.[^.]+$/, '')}.zip`, 'download the extracted frames')) {
+        toast(`Downloaded ZIP with ${frames.length} frames`)
+      }
     } catch {
-      toast('Failed to create ZIP file')
+      toast('Failed to create ZIP file', 'error')
     }
     setZipping(false)
   }, [frames, file, toast, gatedDownload])

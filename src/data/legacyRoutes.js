@@ -131,10 +131,35 @@ export const RETIRED_ROUTES = Object.freeze([
   ['/faq', '/help#faq'],
 ])
 
+// A SURFACE ROOT NOBODY EVER BUILT A PAGE FOR.
+//
+// Its own group rather than a line in RETIRED_ROUTES, because nothing was
+// retired here: /create has never existed. /discover and /learn each answer on
+// their own root, /create matched no rewrite, fell through to the catch-all and
+// was served dist/404.html — so the Create surface's own root URL answered with
+// a noindex "Page not found" shell. MEASURED 2026-09-18 against production:
+// GET https://www.uil4b.com/create -> 200, <title>UI L4B | Page not found</title>.
+// It is a URL people type and a URL that gets linked, and it was the one entry
+// point into the surface that led nowhere.
+//
+// /create/color is the destination because it is the only Create category with
+// a LANDING rather than a redirect to its first tool (the other four homes
+// bounce), so it is the only page in the surface that introduces it instead of
+// dropping the visitor straight into a workbench. /export already points here,
+// so this adds no chain.
+//
+// A real /create landing, sibling to /discover's and /learn's, is a page to
+// DESIGN rather than to improvise inside a redirect table — noted for the
+// redesign, not attempted here.
+export const SURFACE_ROOT_ALIASES = Object.freeze([
+  ['/create', '/create/color'],
+])
+
 // The whole set, in the order it is written to vercel.json.
 export const LEGACY_REDIRECTS = Object.freeze([
   ...CREATE_ROUTE_MIGRATION,
   ...RETIRED_ROUTES,
+  ...SURFACE_ROOT_ALIASES,
 ])
 
 // Two of these are answered by an early return in App.jsx, ABOVE the router, so

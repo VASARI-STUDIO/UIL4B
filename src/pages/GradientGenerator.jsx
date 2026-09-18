@@ -660,8 +660,13 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     if (authLoading) return
     if (!uid) {
       setSubmitIntent(SUBMIT_SURFACE)
+      // `signup: true` for the same reason as the Type Scale save and the
+      // export gate: this branch is only reached when `uid` is absent, so the
+      // person meeting it has no account, and "Log in to continue" greets them
+      // with a form for one they have never made.
       const signedIn = await requireLogin('submit a gradient to the community library', {
         free: true,
+        signup: true,
         reasons: COMMUNITY_SUBMIT_REASONS,
       })
       if (!signedIn) { resetSubmitIntent(); return }

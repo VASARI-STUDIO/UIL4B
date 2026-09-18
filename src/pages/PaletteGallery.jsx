@@ -12,6 +12,7 @@ import { useSubscription } from '../contexts/SubscriptionContext'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { splitLockedLibrary } from '../utils/lockedPreview'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../utils/paletteMood'
+import { paletteHaystack } from '../utils/paletteSearch'
 import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
@@ -138,10 +139,12 @@ const SECTIONS = [
 // hexes alone. No `mood:` field exists on a palette and none should — a tag is
 // written once and keeps its answer after an edit changes the colours under it.
 const MOODS = new Map(LIBRARY_PALETTES.map((palette) => [palette.id, classifyPalette(palette.colors)]))
-const HAYSTACKS = new Map(LIBRARY_PALETTES.map((palette) => [
-  palette.id,
-  `${palette.name} ${palette.kind === 'brand' ? 'brand system' : 'curated'} ${palette.colors.join(' ')}`.toLowerCase(),
-]))
+// Name, kind, hex — and the palette's moods and the hue name of every swatch
+// (utils/paletteSearch.js). MEASURED on the live site at 1280 before this:
+// "blue", "green", "warm" and "pastel" each returned 0 palettes while the
+// Gradient Library answered all four. The moods were classified one line up
+// and never indexed. The classification is handed in rather than re-run.
+const HAYSTACKS = new Map(LIBRARY_PALETTES.map((palette) => [palette.id, paletteHaystack(palette, MOODS.get(palette.id))]))
 
 export default function PaletteGallery({ toast }) {
   const [query, setQuery] = useState('')
@@ -286,7 +289,9 @@ export default function PaletteGallery({ toast }) {
         search={{
           value: query,
           onChange: setQuery,
-          placeholder: 'Search by name or hex…',
+          // Says what the field now matches. The Gradient Library's reads
+          // "by name, hex or mood"; this one also has the hue names.
+          placeholder: 'Search by name, hex, colour or mood…',
           label: 'Search palettes',
         }}
         action={<Link className="pgl-build-link" to="/create/palette">Create a palette <span aria-hidden="true">↗</span></Link>}

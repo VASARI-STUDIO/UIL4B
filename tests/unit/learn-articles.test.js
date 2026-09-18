@@ -34,9 +34,18 @@ import {
   readingMinutes,
 } from '../../src/data/learnIndex.js'
 import { PAGE_DESCRIPTIONS, PAGE_TITLES } from '../../src/data/routeMetaMap.js'
-import { LEARN_DELIVERED, LEARN_GROUPS, LEARN_ROADMAP } from '../../src/data/toolTree.js'
+import { LEARN_DELIVERED, LEARN_GROUPS, LEARN_ROADMAP, LEARN_TOPIC_ROWS } from '../../src/data/toolTree.js'
 import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
 import { countWords, proseOf } from '../../scripts/learn-wordcount.mjs'
+
+// The pages a live roadmap row is allowed to point at when it is NOT a guide.
+// Derived from the app's own route table rather than typed, so a row can only
+// name a page the runtime actually knows about — that is the whole guard: the
+// rule widened from "must be a published guide" to "must be something that
+// renders", and this is what keeps the second half honest. /learn itself is
+// excluded above, because pointing a done row at the section landing is the
+// original dishonesty.
+const LIVE_NON_GUIDE_ROUTES = new Set(Object.keys(PAGE_TITLES))
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const proseDir = path.join('src', 'data', 'learn')
@@ -192,21 +201,60 @@ test('a roadmap row that has stopped saying Soon points at a guide that renders'
   // an unflipped `soon: false` is a topic advertised as done with the section
   // landing behind it, which is the exact dishonesty the Soon badge exists to
   // prevent.
+  // THE RULE IS "SOMEWHERE THAT RENDERS", NOT "A GUIDE". It was the stricter
+  // one until 2026-09-18, and the stricter one was holding two lies in place:
+  // Design Principles and Help & Getting Started wore Soon badges in the mega
+  // menu, the mobile sheet and the visual sitemap while /principles and /help
+  // both answered 200 — and /sitemap already listed both as live rows of its
+  // own, so it contradicted itself twice on one page. Founder's call: point
+  // them at the live pages. What the guard is actually FOR — no row advertising
+  // a topic as done with nothing behind it — is unchanged and enforced below;
+  // only the definition of "something behind it" widened from a published guide
+  // to a route the app can render.
   const live = LEARN_GROUPS.filter((g) => !g.soon)
   for (const group of live) {
-    assert.ok(LEARN_ARTICLE_ROUTES.includes(group.route),
-      `the ${group.id} roadmap row is no longer Soon but points at ${group.route},`
-      + ' which is not a published guide')
-    assert.ok(findArticle(group.route.replace('/learn/', '')),
-      `${group.route} is not a registered article`)
+    const isGuide = LEARN_ARTICLE_ROUTES.includes(group.route)
+    assert.ok(isGuide || LIVE_NON_GUIDE_ROUTES.has(group.route),
+      `the ${group.id} row is no longer Soon but points at ${group.route}, which is neither a`
+      + ' published guide nor a live page')
+    // A guide row still has to name a guide that exists.
+    if (isGuide) {
+      assert.ok(findArticle(group.route.replace('/learn/', '')),
+        `${group.route} is not a registered article`)
+    }
+    // And the section landing is never a destination for a row that claims to
+    // be done — that is the original dishonesty, and it is still banned.
+    assert.notEqual(group.route, '/learn',
+      `the ${group.id} row says it is live and points at the section landing`)
   }
-  // LEARN_ROADMAP and LEARN_DELIVERED are what the surfaces render; between
-  // them they must account for every row exactly once, or a topic silently
-  // disappears from both the roadmap and the guide list.
+  // LEARN_ROADMAP and the live rows must account for every row exactly once, or
+  // a topic silently disappears from both the roadmap and the guide list.
   assert.equal(LEARN_ROADMAP.length + live.length, LEARN_GROUPS.length)
-  assert.deepEqual(LEARN_DELIVERED.map((g) => g.id), live.map((g) => g.id),
-    'a delivered row points somewhere that is not one of the article routes')
   assert.ok(LEARN_ROADMAP.every((g) => g.soon), 'LEARN_ROADMAP carries a row that is not Soon')
+  // LEARN_DELIVERED is the narrower set — rows a published GUIDE answered — so
+  // it is a subset of the live rows rather than equal to them.
+  const liveIds = new Set(live.map((g) => g.id))
+  for (const g of LEARN_DELIVERED) {
+    assert.ok(liveIds.has(g.id), `${g.id} is delivered but not live`)
+    assert.ok(LEARN_ARTICLE_ROUTES.includes(g.route),
+      'a delivered row points somewhere that is not one of the article routes')
+  }
+  // THE ONE THAT STOPS A LIVE ROW VANISHING. A row that leaves the roadmap
+  // leaves the menu's topic columns too, unless it is picked up by
+  // LEARN_TOPIC_ROWS — which is exactly what happened to Design Principles and
+  // Help the moment they stopped saying Soon. Every row must still be rendered
+  // by something.
+  const topicIds = new Set(LEARN_TOPIC_ROWS.map((g) => g.id))
+  const deliveredIds = new Set(LEARN_DELIVERED.map((g) => g.id))
+  for (const g of LEARN_GROUPS) {
+    assert.ok(topicIds.has(g.id) || deliveredIds.has(g.id),
+      `the ${g.id} row is rendered by nothing: not in LEARN_TOPIC_ROWS (the menu's topic`
+      + " columns) and not in LEARN_DELIVERED (the Guides column). It would vanish from the nav.")
+  }
+  // And the two sets must not overlap, or the menu shows one page twice.
+  const both = LEARN_TOPIC_ROWS.filter((g) => deliveredIds.has(g.id)).map((g) => g.id)
+  assert.deepEqual(both, [],
+    'these rows are in BOTH the Guides column and the topic columns, which is two links to one page')
 })
 
 test('no two Learn rows claim the same destination', () => {

@@ -97,7 +97,7 @@ test.describe('public route contract', () => {
     // library size, and the wall states how many of it are Pro.
     await expect(page.locator('.pgal-card'))
       .toHaveCount(LIBRARY_PALETTES.filter((palette) => palette.pro !== true).length)
-    await page.getByPlaceholder('Search by name or hex…').fill('Midnight Teal')
+    await page.getByPlaceholder('Search by name, hex, colour or mood…').fill('Midnight Teal')
     await expect(page.locator('.pgal-card')).toHaveCount(1)
   })
 

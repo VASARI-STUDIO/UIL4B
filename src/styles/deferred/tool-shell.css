@@ -1003,6 +1003,14 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 .lbry-filter-ind{position:absolute;top:0;left:0;width:var(--lbry-ind-w,0px);height:var(--lbry-ind-h,0px);opacity:var(--lbry-ind-opacity,0);background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-xs);transform:translate(var(--lbry-ind-x,0px),var(--lbry-ind-y,0px));transition:transform var(--dur-2) var(--ease-standard),width var(--dur-2) var(--ease-standard),height var(--dur-2) var(--ease-standard),opacity var(--dur-1) var(--ease-standard);pointer-events:none}
 .lbry-filter-hint{align-self:center;padding:0 10px 0 4px;color:var(--t3);font-size:10px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
 @media(max-width:900px){.lbry-filter-hint{display:none}}
+/* And on ANY touch device, whatever its width. The 900px rule was standing in
+   for "no modifier key", and an iPad in landscape is 1024px wide: MEASURED
+   2026-09-16 on the live /discover/gradients at 1024 with touch, the Type tray
+   printed "Shift-click to combine types" beside chips no finger can
+   shift-click. The trigger and the pressed chips still report a
+   multi-selection; only the instruction for a gesture that is not offered
+   goes. */
+@media(hover:none){.lbry-filter-hint{display:none}}
 
 /* ── The tray's collapsed form (641–980px) ──────────────────────────────────
    One trigger that names the group and its current selection, and a menu that
