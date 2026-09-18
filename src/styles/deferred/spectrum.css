@@ -1,0 +1,1030 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   SPECTRUM — the sales page.
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Ported from "UIL4B - Spectrum.dc.html", which authors every rule as an inline
+   `style=` attribute against its own parallel token set (`--page`, `--card`,
+   `--ink`, `--ink-rgb`, `--ink-dim`, `--ink-faint`, `--shade-rgb`). None of
+   those ship. The design's ground IS this product's ground already reseeded —
+   dark #0B0C0E/#16181D/#EFEEEA against the app's #101012/#191A1D/#F2F1EC, light
+   #F5F5F2/#FFFFFF/#121418 against #EFEEE9/#FFFFFF/#0F0F10 — so the whole sheet
+   maps onto the existing --bg-* / --t* ramp rather than adding a second one
+   beside it. A parallel ramp is precisely the "disjointed" the 2026-09-16 audit
+   measured and this redesign exists to end.
+
+   ── THE ACCENT IS NEVER A HEX HERE ──────────────────────────────────────────
+   Spectrum's `#2A60E8` appears nowhere in this file. Every accent surface reads
+   the family global.css derives from `--accent`: --accent-mid, --accent-text,
+   --accent-bright, --accent-hover, --accent-border, --accent-border-strong,
+   --accent-wash, --accent-wash-4, --accent-ink, --accent-ink-wash. That is the
+   mechanism behind premium theme templates — a Pro user picks a theme, one
+   variable moves, and this page follows without a second token being touched —
+   so a literal here would be a hole in the product, not just a style nit.
+   `tests/unit/spectrum-truth.test.js` fails the build on any hex that is not a
+   neutral or one of the design's own fixed non-accent colours.
+
+   ── MOTION ──────────────────────────────────────────────────────────────────
+   `cubic-bezier(.23,1,.32,1)` is the design's house curve and is kept as
+   --sp-ease; the entrance curve is the app's own --ease-entrance, which is the
+   same `cubic-bezier(.16,1,.3,1)` the design uses for its reveals. Every
+   transition and animation below has a reduced-motion companion, and the
+   companions are grouped at the foot of the file so a sweep can read them in one
+   place. global.css's blanket rule already clamps durations; these turn the
+   MOVEMENT off, which is the part a duration clamp does not fix.
+
+   ── OVERFLOW ────────────────────────────────────────────────────────────────
+   Zero horizontal overflow at 320 / 360 / 390 / 414 / 768 / 834 / 1024 / 1280 /
+   1440 is true on every route today and has to stay true. The two rules that do
+   the work: every grid child that can hold a long token gets `min-width:0`, and
+   every grid track is `minmax(min(Npx,100%),1fr)` so a 320px viewport collapses
+   the floor rather than overflowing it.                                        */
+
+.spectrum {
+  /* Local aliases, so the port reads like the source while resolving to the
+     app's tokens. Nothing below this block names a --bg-* or --t- directly. */
+  --sp-page: var(--bg-0);
+  --sp-card: var(--card);
+  --sp-card-2: var(--bg-1);
+  --sp-ink: var(--t0);
+  --sp-dim: var(--t1);
+  --sp-faint: var(--t2);
+  --sp-quiet: var(--t3);
+  --sp-line: var(--border);
+  --sp-line-strong: var(--bh);
+  /* The design's ink-alpha washes, as colour-mix off the ink token so they
+     track the theme without a second RGB triple to keep in step. (The design
+     spells them as an rgba of its own ink triple, which does not ship here.) */
+  --sp-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --sp-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  --sp-wash-2: color-mix(in srgb, var(--t0) 6%, transparent);
+
+  --sp-gutter: clamp(20px, 4vw, 52px);
+  --sp-shell: 1400px;
+  --sp-sec: clamp(80px, 11vw, 152px);
+  --sp-ease: cubic-bezier(.23, 1, .32, 1);
+
+  position: relative;
+  background: var(--sp-page);
+  color: var(--sp-ink);
+  /* `clip` rather than `hidden`: `hidden` on an ancestor silently turns every
+     descendant `position:sticky` into a no-op, and this page has two sticky
+     systems (the bench rail and the specimen stack). body already carries
+     `overflow-x:clip` for the same reason. */
+  overflow-x: clip;
+}
+
+/* The film grain. One inline SVG turbulence, 5%, fixed — the design's own
+   layer, kept because very large flat fields of --bg-0 band on 6-bit panels and
+   this page is mostly large flat fields. It is `pointer-events:none` so it can
+   never eat a click, and it sits UNDER the nav (z-index 50 vs PillNav's 120). */
+.sp-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: .05;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");
+}
+
+.spectrum > main { position: relative; z-index: 2; }
+
+/* ── shell and rhythm ─────────────────────────────────────────────────────── */
+
+.sp-shell {
+  max-width: var(--sp-shell);
+  margin-inline: auto;
+  padding-inline: var(--sp-gutter);
+}
+
+.sp-section { padding-top: var(--sp-sec); }
+.sp-section--bench { padding-top: clamp(64px, 9vw, 120px); }
+
+/* One anchor offset for every `#id` on the page, so a jump from the footer or
+   from a shared link never parks a heading under the fixed nav. */
+.spectrum [id] { scroll-margin-top: calc(var(--chrome-h) + 24px); }
+
+.sp-h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(34px, 5vw, 68px);
+  line-height: .98;
+  letter-spacing: -.035em;
+  max-width: 24ch;
+  text-wrap: balance;
+}
+.sp-h2--sm { font-size: clamp(28px, 4vw, 52px); line-height: 1; }
+
+.sp-lede {
+  margin: 18px 0 0;
+  max-width: 52ch;
+  font-size: clamp(15.5px, 1.2vw, 16.5px);
+  line-height: 1.62;
+  color: var(--sp-dim);
+  text-wrap: pretty;
+}
+
+.sp-centre-head { max-width: 62ch; margin-inline: auto; text-align: center; }
+.sp-centre-head .sp-h2 { margin-inline: auto; }
+.sp-centre-head .sp-lede { margin-inline: auto; }
+
+/* ── the word reveal ──────────────────────────────────────────────────────────
+   RESTING STATE IS VISIBLE. `.sp-w` has no transform of its own; the movement
+   is a keyframe animation that only exists once an ancestor carries `.is-in`,
+   which is added by useReveal() on scroll (or, for the hero, on mount). A
+   headline that is hidden until JS runs is invisible in the prerendered shell
+   and invisible to a reader with motion off — see the note in Spectrum.jsx. */
+.sp-words, .sp-words-visual { display: inline; }
+.sp-wm {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  /* Descenders would be clipped by the overflow otherwise; the pair cancels out
+     so the line box is unchanged. The design's own values. */
+  padding-bottom: .09em;
+  margin-bottom: -.09em;
+}
+.sp-w { display: inline-block; will-change: transform; }
+.sp-w--mark { color: var(--accent-mid); font-weight: 600; }
+
+@keyframes sp-word-up {
+  from { transform: translateY(112%); }
+  to { transform: none; }
+}
+.is-in .sp-w {
+  animation: sp-word-up var(--dur-6) var(--ease-entrance) both;
+  animation-delay: calc(var(--sp-wi, 0) * var(--fl-stagger));
+}
+
+/* ── the section entrances ────────────────────────────────────────────────────
+   `[data-sp-reveal]` DECLARES NOTHING AT REST. That is the whole rule and it is
+   not a style preference: the shared `[data-reveal]` contract starts at
+   `opacity:0` and waits for an observer, and measured in a rendered browser on
+   this page a fast pass down the document left 16 of 19 blocks invisible. The
+   entrance is therefore an animation that exists only while `.is-in` is on the
+   element, and its last frame is the element's ordinary appearance — so a missed
+   observation costs the movement, never the content. useSpectrumReveal.js
+   carries the measurement.
+
+   `--sp-d` lets a caller stagger a block behind the one above it, the way the
+   design's `data-d="1|2|3"` does. Unset, there is no delay. */
+@keyframes sp-rise {
+  from { opacity: 0; transform: translate3d(0, 34px, 0); }
+  to { opacity: 1; transform: none; }
+}
+.is-in[data-sp-reveal] {
+  animation: sp-rise var(--dur-5) var(--ease-entrance) both;
+  animation-delay: calc(var(--sp-d, 0) * 90ms);
+}
+
+/* ── the spectrum band ────────────────────────────────────────────────────── */
+
+.sp-ramp { position: relative; display: flex; flex-direction: column; width: 100%; }
+.sp-ramp--hero { margin-top: clamp(48px, 6vw, 84px); }
+.sp-ramp--close { margin-top: clamp(56px, 7vw, 96px); }
+
+.sp-ramp-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding-inline: 2px;
+  height: clamp(120px, 15vw, 200px);
+}
+.sp-ramp--hero .sp-ramp-bars { height: clamp(140px, 18vw, 232px); }
+
+.sp-ramp-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  /* EVERY ONE OF THESE FOUR IS WRITTEN BY REACT, AND EVERY ONE CARRIES A
+     FALLBACK. A `var()` with no fallback that resolves to nothing makes its
+     whole declaration invalid and the browser drops it silently — which for
+     `background` would paint twenty-one invisible bars. The fallbacks are the
+     first bar's own values, so a ramp that somehow lost its inline styles is a
+     flat band rather than a hole. tests/unit/design-tokens.test.js enforces
+     this across every sheet in the app; it caught this file. */
+  height: var(--sp-bar-h, 60%);
+  transform-origin: bottom;
+  /* ONE custom property drives all twenty-one hues. See SpectrumRamp.jsx. */
+  background: hsl(calc(var(--sp-h, 8deg) + var(--sp-spin, 0deg)) var(--sp-s, 58%) var(--sp-l, 56%));
+  transition: transform var(--dur-3) var(--sp-ease), filter var(--dur-2) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .sp-ramp-bar:hover { transform: scale3d(1, 1.07, 1); filter: brightness(1.08); }
+}
+
+/* The reflection, BELOW the band, falling away from the same baseline and
+   fading into the ground. The bars hang from the top of a shorter box and the
+   overflow clips them, so the tallest reflections run off the bottom of the
+   fade exactly as the real bars run off the top of the band. */
+.sp-ramp-mirror {
+  position: relative;
+  height: clamp(104px, 14vw, 190px);
+  overflow: hidden;
+  pointer-events: none;
+}
+.sp-ramp-bars--mirror { align-items: flex-start; opacity: .4; }
+.sp-ramp-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--sp-page) 0%, transparent) 0%,
+    color-mix(in srgb, var(--sp-page) 55%, transparent) 52%,
+    color-mix(in srgb, var(--sp-page) 92%, transparent) 84%,
+    var(--sp-page) 100%);
+}
+
+/* ── hero ─────────────────────────────────────────────────────────────────── */
+
+.sp-hero { padding-top: calc(var(--chrome-h) + clamp(34px, 5vw, 72px)); text-align: center; }
+.sp-hero-h1 {
+  margin: 0 auto;
+  max-width: 24ch;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(38px, 6.4vw, 92px);
+  line-height: .96;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.sp-hero-sub {
+  margin: 28px auto 0;
+  max-width: 58ch;
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.6;
+  color: var(--sp-dim);
+}
+.sp-hero-bar { position: relative; margin: clamp(30px, 4vw, 44px) auto 0; max-width: 660px; text-align: left; }
+.sp-hero-cta { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
+
+/* ── the CTA family ───────────────────────────────────────────────────────────
+   The design's `[data-cta]` pill: ink ground, page-coloured label, a round
+   bubble on the right holding an arrow that rotates 45° on hover so it points
+   along the direction of travel. Three variants (ink, ghost, accent) and two
+   sizes — which is the whole button system on this page, against the four the
+   2026-09-16 audit counted across the site. */
+.sp-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px 8px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 540;
+  line-height: 1.2;
+  /* ≥24px target at every size, before padding — the repo's a11y sweeps check
+     this and the design's own 8px vertical padding is short on its own. */
+  min-height: 44px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform var(--dur-1) var(--sp-ease), background var(--dur-1) ease,
+              color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+.sp-cta:hover { text-decoration: none; }
+.sp-cta:active { transform: scale(.978); }
+.sp-cta--lg { font-size: 15.5px; padding: 11px 12px 11px 24px; }
+.sp-cta--block { justify-content: center; width: 100%; padding: 14px 22px; }
+
+.sp-cta--ink { background: var(--sp-ink); color: var(--sp-page); border-color: var(--sp-ink); }
+.sp-cta--ink:hover { background: color-mix(in srgb, var(--t0) 86%, var(--bg-0)); color: var(--sp-page); }
+
+.sp-cta--ghost { background: transparent; color: var(--sp-ink); border-color: var(--sp-line-strong); }
+.sp-cta--ghost:hover { background: var(--sp-wash); border-color: var(--sp-ink); color: var(--sp-ink); }
+
+.sp-cta--accent { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.sp-cta--accent:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-ink); }
+
+.sp-cta-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  transition: transform var(--dur-1) var(--sp-ease);
+}
+.sp-cta-icon--lg { width: 38px; height: 38px; }
+@media (hover: hover) and (pointer: fine) {
+  .sp-cta:hover .sp-cta-icon { transform: rotate(45deg); }
+  .sp-disc-card--cta:hover .sp-cta-icon { transform: rotate(45deg); }
+}
+
+.sp-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 14px;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  color: var(--sp-dim);
+  text-decoration: none;
+  transition: background var(--dur-2) ease, border-color var(--dur-2) ease, color var(--dur-2) ease;
+}
+.sp-ghost:hover { background: var(--sp-wash); border-color: var(--sp-line-strong); color: var(--sp-ink); }
+
+.sp-quiet-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  font-size: 13.5px;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.sp-quiet-link:hover { color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; }
+
+.sp-beta {
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--accent-wash-4);
+  color: var(--accent-bright);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* ── chips and tabs ───────────────────────────────────────────────────────── */
+
+.sp-tabs { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.sp-tab {
+  min-height: 32px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--sp-faint);
+  font-family: var(--font);
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.sp-tab:hover { color: var(--sp-ink); background: var(--sp-wash); }
+.sp-tab[aria-pressed="true"] { background: var(--accent-wash-4); color: var(--accent-bright); font-weight: 560; }
+
+.sp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 9px 16px;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--sp-dim);
+  font-family: var(--font);
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--sp-ease), background var(--dur-1) ease,
+              border-color var(--dur-1) ease, color var(--dur-1) ease;
+}
+.sp-chip:hover { background: var(--sp-wash); border-color: var(--sp-line-strong); color: var(--sp-ink); }
+.sp-chip:active { transform: scale(.96); }
+.sp-chip[aria-pressed="true"] { background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
+.sp-chip--copy { font-size: 12.5px; padding: 8px 14px; }
+
+/* ── the bench ────────────────────────────────────────────────────────────── */
+
+.sp-bench-head { max-width: 100%; min-width: 0; }
+.sp-bench-head .sp-lede { max-width: 42ch; }
+/* The rail column is narrower than half, and deliberately: the evidence is the
+   thing being read, and a 50/50 split would give a five-row index the same
+   weight as five product panels. Equal weight for unequal things is on the
+   anti-slop tell list — it is the same reasoning that made the homepage tools
+   grid size its cards by how many live tools each group has. */
+.sp-bench-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 27rem) minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 64px);
+  align-items: start;
+  margin-top: clamp(20px, 2.4vw, 32px);
+}
+.sp-h2--rail { font-size: clamp(30px, 3.4vw, 50px); max-width: 15ch; }
+
+.sp-rail-col { position: sticky; top: calc(var(--chrome-h) + 28px); min-width: 0; }
+.sp-rail { margin-top: clamp(24px, 3vw, 38px); min-width: 0; }
+.sp-rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.sp-rail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--sp-faint);
+  font-family: var(--font);
+  font-size: 15.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.sp-rail-row:hover { background: var(--sp-wash); color: var(--sp-ink); }
+.sp-rail-row.is-on { background: var(--sp-wash-2); color: var(--sp-ink); }
+.sp-rail-no { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--sp-quiet); }
+.sp-rail-row.is-on .sp-rail-no { color: var(--accent-text); }
+.sp-rail-label { flex: 1; min-width: 0; }
+.sp-rail-count { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; color: var(--sp-quiet); }
+.sp-rail-row.is-on .sp-rail-count { color: var(--accent-text); }
+
+.sp-panels { display: grid; gap: 0; min-width: 0; }
+/* One panel, one screen — the design's `min-height:100dvh` step, trimmed to
+   92svh so the panel has room to breathe without a full viewport of dead air
+   above and below it. `svh` rather than `dvh`: the step must not resize when a
+   mobile URL bar retracts, which would reflow the whole column mid-scroll. */
+.sp-step { min-width: 0; display: flex; align-items: center; min-height: 92svh; }
+.sp-step + .sp-step { margin-top: 0; }
+
+.sp-panel {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--radius-3xl);
+  background: var(--sp-card);
+  box-shadow: var(--shadow-l);
+}
+.sp-panel-chrome { display: flex; flex-direction: column; min-height: min(74svh, 660px); }
+.sp-panel-bar {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex: none;
+  min-height: 46px;
+  padding: 0 clamp(12px, 1.6vw, 16px);
+  border-bottom: 1px solid var(--sp-line);
+  background: var(--sp-wash);
+}
+.sp-panel-lights { display: flex; gap: 6px; flex: 0 0 auto; }
+.sp-panel-lights i { width: 11px; height: 11px; border-radius: var(--radius-pill); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+/* The three window dots are the ONE place a fixed hue is correct: they are a
+   picture of an operating-system window, not a product colour, and tinting them
+   with the brand accent would make them read as status. The design ships these
+   exact values. */
+.sp-panel-lights i:nth-child(1) { background: #ED6A5E; }
+.sp-panel-lights i:nth-child(2) { background: #F4BF4F; }
+.sp-panel-lights i:nth-child(3) { background: #61C554; }
+.sp-panel-rule { width: 1px; height: 15px; background: var(--sp-line-strong); flex: 0 0 auto; }
+.sp-panel-no { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--sp-quiet); }
+.sp-panel-glyph { display: grid; place-items: center; color: var(--sp-dim); }
+.sp-panel-glyph svg { width: 16px; height: 16px; }
+.sp-panel-name { font-size: 14px; font-weight: 540; color: var(--sp-ink); min-width: 0; }
+.sp-panel-hint { margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; color: var(--accent-text); }
+
+/* A FLEX COLUMN, not a block with a percentage-height child.
+   `.sp-fig` was `height:100%` against this, and a percentage height resolved
+   against a flex item's own flexed height is not reliably definite — measured at
+   1440 the figures came out 226–368px inside a 539px body, so every panel
+   carried up to 310px of dead air under its content. Making this the flex
+   container and letting the figure GROW is the version that cannot be
+   indefinite. */
+.sp-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: clamp(15px, 2vw, 22px); }
+.sp-panel-foot {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px clamp(15px, 2vw, 22px);
+  border-top: 1px solid var(--sp-line);
+}
+.sp-panel-tools { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; min-width: 0; }
+
+/* ── panel figures ────────────────────────────────────────────────────────── */
+
+.sp-fig { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; min-height: 0; min-width: 0; }
+.sp-fig-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.sp-fig-meta { display: grid; gap: 2px; min-width: 0; }
+.sp-fig-meta-name { font-size: 13px; font-weight: 560; color: var(--sp-ink); }
+.sp-fig-meta-sub { font-family: var(--mono); font-size: 11px; color: var(--sp-quiet); }
+.sp-fig-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid var(--sp-line); margin-top: auto; }
+.sp-fig-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; color: var(--sp-quiet); }
+.sp-fig-note { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--sp-dim); }
+.sp-fig-note--quiet { color: var(--sp-quiet); }
+
+.sp-seedset { display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: var(--radius-l); background: var(--sp-wash); border: 1px solid var(--sp-line); }
+.sp-seed {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--sp-seed, var(--accent));
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  transition: box-shadow var(--dur-1) ease, transform var(--dur-1) var(--sp-ease);
+}
+.sp-seed:active { transform: scale(.94); }
+.sp-seed-tick { opacity: 0; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .55)); }
+.sp-seed[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sp-card), 0 0 0 4px var(--accent); }
+.sp-seed[aria-pressed="true"] .sp-seed-tick { opacity: 1; }
+
+.sp-roles { flex: 1 1 auto; list-style: none; display: grid; grid-auto-rows: 1fr; gap: 1px; margin: 0; padding: 0; border-radius: var(--radius); overflow: hidden; background: var(--sp-line); }
+/* THE <li> IS THE GRID CELL AND THE SWATCH HAS TO FILL IT.
+   `.sp-roles` paints `--sp-line` behind a 1px gap to draw hairlines between the
+   swatches. With `grid-auto-rows:1fr` the cells are taller than the swatch's own
+   `min-height`, so that hairline colour showed through as a ~25px beige band
+   under every colour — four stripes of the line token masquerading as part of
+   the palette, on the one panel whose whole job is to state colours exactly. */
+.sp-roles li { display: flex; min-width: 0; }
+.sp-role {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 62px;
+  padding: 12px 14px;
+  min-width: 0;
+}
+.sp-role-val { font-family: var(--mono); font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-role-aa { flex: 0 0 auto; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; opacity: .85; }
+
+/* `grid-auto-rows: 1fr` inside a flexed figure stretched two rows of tiles to
+   ~200px each — tall narrow boxes around a 20px glyph. A fixed band keeps the
+   tile roughly square and lets the leftover height fall to the detail row
+   below, which is pinned to the bottom by its own `margin-top:auto`. */
+/* `flex: 0 1 auto` — the grid takes the height its rows need and no more. With
+   `1 1 auto` the box grew to fill the panel while `align-content:start` held the
+   rows at the top, so 216px of the grid was empty space INSIDE the grid, where
+   the detail row's own `margin-top:auto` could not reach it. */
+.sp-glyphgrid { flex: 0 1 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(74px, 100%), 1fr)); grid-auto-rows: minmax(64px, 84px); gap: 8px; min-width: 0; align-content: start; }
+.sp-glyph {
+  display: grid;
+  place-items: center;
+  min-height: 62px;
+  padding: 8px;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--sp-dim);
+  cursor: pointer;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+.sp-glyph:hover { background: var(--sp-wash); color: var(--sp-ink); }
+.sp-glyph[aria-pressed="true"] { border-color: var(--accent-border); background: var(--accent-wash); color: var(--accent-bright); }
+.sp-glyph-detail { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--sp-line); margin-top: auto; }
+.sp-glyph-large { display: grid; place-items: center; width: 74px; height: 74px; border-radius: var(--radius-xl); border: 1px solid var(--sp-line); background: var(--sp-wash); color: var(--sp-ink); flex: 0 0 auto; }
+.sp-glyph-large svg { width: 38px; height: 38px; }
+.sp-glyph-meta { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.sp-glyph-name { font-size: 15px; font-weight: 540; text-transform: capitalize; }
+.sp-glyph-note { font-size: 12px; color: var(--sp-quiet); }
+
+.sp-scale { flex: 1 1 auto; list-style: none; display: grid; grid-auto-rows: minmax(0, 1fr); align-content: stretch; gap: 10px; margin: 0; padding: 0; min-width: 0; }
+.sp-scale li { display: flex; align-items: baseline; gap: 14px; min-width: 0; padding-bottom: 9px; border-bottom: 1px solid var(--sp-line); }
+.sp-scale-name { flex: 0 0 auto; width: 62px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--sp-quiet); }
+.sp-scale-specimen { flex: 1; min-width: 0; line-height: 1.12; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-scale-px { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; color: var(--sp-dim); }
+
+.sp-ratio-stage { flex: 1 1 auto; position: relative; display: grid; place-items: center; min-height: 190px; padding: 14px; border: 1px solid var(--sp-line); border-radius: var(--radius-xl); background: var(--sp-page); }
+.sp-ratio-box { width: min(100%, 320px); max-height: 160px; border-radius: var(--radius-s); background: linear-gradient(135deg, var(--accent-wash-4), var(--accent-wash)); border: 1px solid var(--accent-border); transition: aspect-ratio var(--dur-3) var(--sp-ease); }
+.sp-ratio-dims { position: absolute; right: 12px; bottom: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--sp-dim); }
+.sp-ratio-rows { display: grid; gap: 8px; margin: 0; }
+.sp-ratio-rows > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--sp-line); min-width: 0; }
+.sp-ratio-rows dt { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; color: var(--sp-quiet); flex: 0 0 auto; }
+.sp-ratio-rows dd { margin: 0; font-size: 13px; color: var(--sp-ink); text-align: right; min-width: 0; }
+
+/* The AI panel has the least content of the five, so it is CENTRED in its
+   window rather than pinned to the top with its footnote pushed to the floor —
+   which left a third of the panel empty in the middle, the one place a reader
+   looks first. */
+.sp-fig--ai { justify-content: center; gap: 20px; }
+.sp-quota { flex: 0 0 auto; list-style: none; display: grid; gap: 14px; margin: 0; padding: 0; }
+.sp-quota li { display: grid; grid-template-columns: minmax(0, 96px) minmax(0, 1fr) minmax(0, auto); align-items: center; gap: 4px 14px; min-width: 0; }
+.sp-quota-name { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--sp-quiet); }
+.sp-quota-track { display: block; height: 10px; border-radius: var(--radius-pill); background: var(--sp-hair); overflow: hidden; }
+.sp-quota-fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--sp-line-strong); }
+.sp-quota-fill.is-pro { background: var(--accent); }
+.sp-quota-val { font-family: var(--mono); font-size: 11.5px; color: var(--sp-dim); white-space: nowrap; text-align: right; }
+
+/* ── discover ─────────────────────────────────────────────────────────────── */
+
+.sp-disc-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: clamp(20px, 3vw, 40px); }
+.sp-disc-head > div { max-width: 60ch; min-width: 0; }
+.sp-tabs--chips { gap: 6px; }
+
+/* THREE TRACKS, NOT `auto-fill`. Auto-fill gave five columns at 1440, which put
+   the five artefacts on one row and stranded the "Open the gallery" card alone
+   on a second — a ragged shelf. Three is the design's own count and it divides
+   six evenly at every width it applies to. */
+.sp-disc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: clamp(26px, 3.4vw, 44px);
+  min-width: 0;
+}
+@media (max-width: 900px) { .sp-disc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .sp-disc-grid { grid-template-columns: minmax(0, 1fr); } }
+.sp-disc-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--sp-line);
+  border-radius: var(--radius-2xl);
+  background: var(--sp-wash);
+  color: var(--sp-ink);
+  text-decoration: none;
+  transition: border-color var(--dur-2) ease, background var(--dur-2) ease, transform var(--dur-2) var(--sp-ease);
+}
+.sp-disc-card:hover { border-color: var(--sp-line-strong); background: var(--sp-wash-2); color: var(--sp-ink); transform: translateY(-2px); }
+.sp-disc-art { display: block; height: 132px; }
+.sp-disc-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 13px 14px 14px; min-width: 0; }
+.sp-disc-name { font-size: 14.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-disc-meta { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--sp-quiet); white-space: nowrap; }
+
+.sp-disc-card--cta { justify-content: space-between; gap: 18px; min-height: 176px; padding: 18px; background: var(--sp-ink); border-color: var(--sp-ink); color: var(--sp-page); }
+.sp-disc-card--cta:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); transform: translateY(-2px); }
+.sp-disc-cta-say { font-family: var(--display); font-weight: 560; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.04; letter-spacing: -.02em; max-width: 14ch; }
+.sp-disc-cta-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.sp-disc-cta-count { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; opacity: .78; }
+.sp-disc-foot { margin: clamp(22px, 2.6vw, 32px) 0 0; padding-top: 22px; border-top: 1px solid var(--sp-line); max-width: 52ch; font-size: 14.5px; line-height: 1.55; color: var(--sp-dim); }
+
+/* ── specimens: the stacked cards ─────────────────────────────────────────── */
+
+.sp-stack { position: relative; margin-top: clamp(32px, 4.4vw, 56px); }
+.sp-stack-slot { position: relative; }
+.sp-stack-pad { height: min(14dvh, 140px); }
+.sp-stack-card {
+  border: 1px solid var(--sp-line);
+  border-radius: var(--radius-3xl);
+  background: var(--sp-card);
+  box-shadow: var(--shadow-l);
+  transition: transform var(--dur-4) var(--sp-ease), filter var(--dur-4) ease;
+}
+.sp-stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(22px, 3vw, 48px);
+  align-items: stretch;
+  padding: clamp(22px, 3vw, 44px);
+  min-width: 0;
+}
+.sp-stack-say { align-self: center; min-width: 0; }
+.sp-stack-say h3 { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(26px, 3.2vw, 42px); line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
+.sp-stack-say p { margin: 16px 0 0; max-width: 46ch; font-size: 15.5px; line-height: 1.62; color: var(--sp-dim); }
+.sp-stack-note { margin-top: 20px !important; font-size: 13.5px; color: var(--sp-quiet) !important; }
+.sp-stack-art { display: flex; flex-direction: column; justify-content: center; gap: 14px; min-width: 0; padding: clamp(14px, 1.6vw, 20px); border: 1px solid var(--sp-line); border-radius: var(--radius-2xl); background: var(--sp-page); }
+.sp-stack-foot { margin: auto 0 0; font-size: 12px; line-height: 1.5; color: var(--sp-quiet); }
+
+.sp-filelist, .sp-projects { list-style: none; display: grid; gap: 9px; margin: 0; padding: 0; min-width: 0; }
+.sp-filelist li, .sp-projects li { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 11px 12px; border: 1px solid var(--sp-line); border-radius: var(--radius); background: var(--sp-card); }
+.sp-filelist-ico, .sp-projects-ico { display: grid; place-items: center; flex: 0 0 auto; color: var(--sp-quiet); }
+.sp-filelist-name, .sp-projects-slot { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-filelist-tag, .sp-projects-state { flex: 0 0 auto; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; color: var(--sp-quiet); }
+.sp-filelist-tag.is-pro, .sp-projects-state.is-pro { padding: 3px 8px; border-radius: var(--radius-pill); background: var(--accent-wash-4); color: var(--accent-bright); }
+.sp-projects li.is-locked { border-style: dashed; background: transparent; }
+
+/* ── the terms band ───────────────────────────────────────────────────────── */
+
+.sp-section--terms { padding-top: clamp(96px, 12vw, 176px); }
+.sp-terms {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: clamp(26px, 4vw, 48px);
+  margin: 0;
+  padding: clamp(30px, 4vw, 48px) 0;
+  border-top: 1px solid var(--sp-line-strong);
+  border-bottom: 1px solid var(--sp-line-strong);
+  min-width: 0;
+}
+.sp-terms li { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.sp-terms-claim { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(19px, 2vw, 24px); line-height: 1.16; letter-spacing: -.02em; text-wrap: balance; }
+.sp-terms-note { margin: 0; font-size: 14px; line-height: 1.55; color: var(--sp-dim); }
+
+/* ── pricing ──────────────────────────────────────────────────────────────── */
+
+.sp-billing { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin: 32px auto 0; padding: 5px; border: 1px solid var(--sp-line); border-radius: var(--radius-pill); background: var(--sp-wash); width: fit-content; max-width: 100%; }
+.sp-billing-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--sp-dim);
+  font-family: var(--font);
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.sp-billing-tab:hover { color: var(--sp-ink); }
+.sp-billing-tab[aria-pressed="true"] { background: var(--sp-ink); color: var(--sp-page); }
+.sp-billing-save { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; padding: 3px 8px; border-radius: var(--radius-pill); background: var(--accent-wash-4); color: var(--accent-bright); }
+.sp-billing-tab[aria-pressed="true"] .sp-billing-save { background: color-mix(in srgb, var(--bg-0) 18%, transparent); color: var(--sp-page); }
+
+.sp-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: clamp(16px, 2vw, 26px); margin-top: clamp(28px, 4vw, 48px); min-width: 0; }
+.sp-plan { position: relative; display: flex; flex-direction: column; min-width: 0; padding: clamp(24px, 3vw, 36px); border: 1px solid var(--sp-line); border-radius: var(--radius-3xl); background: var(--sp-card); overflow: hidden; }
+.sp-plan--pro { border-color: var(--accent-border-strong); background: linear-gradient(170deg, var(--accent-wash), var(--sp-card) 58%); box-shadow: var(--shadow-m); }
+.sp-plan-edge { position: absolute; inset: 0 0 auto; height: 3px; background: var(--accent); }
+.sp-plan-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 26px; }
+.sp-plan-tier { font-family: var(--mono); font-size: 10.5px; letter-spacing: .2em; color: var(--sp-quiet); }
+.sp-plan-tier.is-pro { color: var(--accent-text); }
+.sp-plan-aside { font-size: 12.5px; color: var(--sp-quiet); text-align: right; }
+.sp-plan-badge { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; padding: 5px 11px; border-radius: var(--radius-pill); background: var(--accent-wash); color: var(--accent-bright); white-space: nowrap; }
+.sp-plan-price { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; font-family: var(--display); font-weight: 560; font-size: clamp(42px, 5vw, 62px); line-height: 1; letter-spacing: -.035em; }
+.sp-plan-price em { font-style: normal; font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--sp-quiet); }
+.sp-plan-intro { margin: 12px 0 0; min-height: 2.6em; font-size: 14px; line-height: 1.45; color: var(--sp-quiet); }
+.sp-plan .sp-cta--block { margin-top: 24px; }
+.sp-plan-rule { display: block; height: 1px; margin-top: 26px; background: var(--sp-line); }
+.sp-plan--pro .sp-plan-rule { background: var(--accent-border-strong); }
+.sp-plan-label { margin: 22px 0 0; font-family: var(--mono); font-size: 9.5px; letter-spacing: .18em; color: var(--sp-quiet); }
+.sp-plan-label.is-pro { color: var(--accent-text); }
+.sp-plan-list { list-style: none; display: grid; gap: 12px; margin: 16px 0 0; padding: 0; }
+.sp-plan-list li { display: flex; gap: 11px; font-size: 14.5px; line-height: 1.5; color: var(--sp-dim); min-width: 0; }
+.sp-plan-list li > span:first-child { flex: 0 0 auto; margin-top: 4px; color: var(--sp-quiet); }
+.sp-plan-list li > span.is-pro { color: var(--accent-text); }
+.sp-plan-list li.is-off { color: var(--sp-quiet); }
+
+.sp-assure { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(14px, 2.4vw, 34px); margin: clamp(22px, 3vw, 34px) 0 0; padding: 0; }
+.sp-assure li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--sp-dim); }
+.sp-assure li > span { display: grid; place-items: center; color: var(--accent-mid); }
+
+.sp-compare { margin-top: clamp(56px, 8vw, 110px); min-width: 0; }
+.sp-compare-h { margin: 0 0 22px; font-family: var(--display); font-weight: 560; font-size: clamp(26px, 3.4vw, 44px); line-height: 1; letter-spacing: -.035em; }
+.sp-compare-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.sp-compare-table thead th { padding: 14px 0; border-bottom: 1px solid var(--sp-line-strong); font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--sp-quiet); text-align: left; }
+.sp-compare-table thead th:last-child { color: var(--accent-bright); }
+.sp-compare-table tbody th { font-weight: 400; text-align: left; font-size: 15px; line-height: 1.5; color: var(--sp-dim); }
+.sp-compare-table td { font-size: 13.5px; line-height: 1.5; color: var(--sp-quiet); vertical-align: baseline; }
+.sp-compare-table td.is-pro { color: var(--accent-text); }
+.sp-compare-table tbody th, .sp-compare-table td { padding: 14px clamp(8px, 2vw, 32px) 14px 0; border-bottom: 1px solid var(--sp-line); overflow-wrap: anywhere; }
+.sp-compare-table tbody th { width: 46%; }
+.sp-compare-group { display: block; margin-bottom: 8px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .18em; color: var(--sp-quiet); }
+.sp-compare-foot { margin: 22px 0 0; font-size: 13.5px; color: var(--sp-quiet); }
+.sp-compare-foot a { color: var(--accent-text); }
+
+/* ── FAQ ──────────────────────────────────────────────────────────────────── */
+
+/* A NARROW HEADING COLUMN, not an equal half.
+   The design gives this column a heading and a lede; the lede it ships ("ask
+   support and we'll add it to this list") is a commitment nothing in this repo
+   can honour, so it is not here and the founder has it in the handover. An equal
+   half holding a four-word heading and one link reads as a column that failed to
+   load, and it squeezed the questions themselves into ~250px of measure. The
+   heading takes the width it needs and the questions take the rest. */
+.sp-faq { display: grid; grid-template-columns: minmax(0, 19rem) minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); align-items: start; }
+@media (max-width: 900px) { .sp-faq { grid-template-columns: minmax(0, 1fr); } }
+.sp-faq-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(24px, 3vw, 48px); border-top: 1px solid var(--sp-line-strong); min-width: 0; }
+.sp-faq-row { padding: 22px 0; border-bottom: 1px solid var(--sp-line); min-width: 0; }
+.sp-faq-row h3 { margin: 0; font-size: 16.5px; font-weight: 540; }
+.sp-faq-row p { margin: 11px 0 0; max-width: 52ch; font-size: 14.5px; line-height: 1.6; color: var(--sp-dim); }
+
+/* ── the handoff ──────────────────────────────────────────────────────────── */
+
+.sp-close { padding-top: clamp(110px, 14vw, 200px); padding-bottom: clamp(40px, 5vw, 72px); }
+
+/* ── footer ───────────────────────────────────────────────────────────────── */
+
+.sp-footer { position: relative; z-index: 2; border-top: 1px solid var(--sp-line); background: var(--sp-page); }
+.sp-footer-inner { max-width: var(--sp-shell); margin-inline: auto; padding: clamp(48px, 6vw, 80px) var(--sp-gutter); }
+/* The brand column takes about a third and the four link columns share the rest
+   — the design's proportion, held with explicit tracks rather than `auto-fit`,
+   which at 1440 gave the display line the same width as a list of four words. */
+.sp-footer-grid { display: grid; grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); gap: 36px clamp(32px, 5vw, 72px); align-items: start; min-width: 0; }
+@media (max-width: 860px) { .sp-footer-grid { grid-template-columns: minmax(0, 1fr); } }
+.sp-footer-say { margin: 0; font-family: var(--display); font-weight: 560; font-size: clamp(24px, 3vw, 38px); line-height: 1.06; letter-spacing: -.02em; max-width: 22ch; text-wrap: balance; }
+.sp-footer-brand .sp-cta { margin-top: 22px; }
+/* Four columns now (the design's three, with its middle split — see the note in
+   SpectrumFooter.jsx), so the floor drops to 130px and they collapse to two at
+   phone width rather than to one very tall list. */
+.sp-footer-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(130px, 100%), 1fr)); gap: 28px 24px; min-width: 0; }
+.sp-footer-col { min-width: 0; }
+.sp-footer-col-h { margin: 0; font-family: var(--mono); font-size: 10px; font-weight: 540; letter-spacing: .18em; color: var(--sp-quiet); }
+.sp-footer-col ul { list-style: none; display: grid; gap: 10px; margin: 16px 0 0; padding: 0; }
+.sp-footer-col a { display: inline-flex; align-items: center; min-height: 24px; font-size: 14px; color: var(--sp-dim); text-decoration: none; transition: color var(--dur-1) ease; }
+.sp-footer-col a:hover { color: var(--sp-ink); text-decoration: underline; text-underline-offset: 3px; }
+
+.sp-footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px clamp(14px, 2vw, 28px);
+  margin-top: clamp(36px, 4vw, 56px);
+  padding-top: 22px;
+  border-top: 1px solid var(--sp-line);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--sp-quiet);
+}
+.sp-footer-legal a { color: var(--sp-dim); }
+.sp-footer-legal a:hover { color: var(--sp-ink); }
+/* THE FOUNDER'S NOTE TRIGGER, restyled to this footer and nothing else.
+   `.app-footer-note` is FounderNote.jsx's own class and global.css styles it for
+   AppFooter's legal row; here it needs the mono baseline the row is set in. Only
+   appearance moves — the element, its label, its `aria-haspopup="dialog"` and
+   the fact that it opens on a press and never on its own are untouched. */
+.sp-footer .app-footer-note {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  color: var(--sp-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.sp-footer .app-footer-note:hover { color: var(--sp-ink); }
+
+/* ── focus ────────────────────────────────────────────────────────────────────
+   One ring for the whole page, on the accent, with an offset so it clears the
+   round CTA bubbles and the swatch fills. `:focus-visible` only, so a pointer
+   press never paints it — and the word `outline:none` appears nowhere in this
+   file, for any control, in any state.
+
+   NO `border-radius` IN A FOCUS RULE. An outline follows its OWN element's
+   radius, so declaring one here would not round the ring — it would round the
+   CONTROL, at the instant of focus, and the ring would then trace a shape the
+   user was not looking at a frame earlier. The founder reported that as "the
+   search bar has a weird visual, i have noticed this on many of the search
+   bars" (2026-09-04), and tests/unit/focus-ring-geometry.test.js has banned it
+   in every sheet since. This file was written with the same mistake and that
+   test caught it. Every control here already carries its radius at rest — pills
+   at --radius-pill, panels at --radius-3xl, glyph tiles at --radius — so the
+   ring is the right shape for free, which is the point. */
+.spectrum :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+/* The swatch buttons already carry a selection ring in `box-shadow`; the outline
+   sits outside it rather than replacing it, so focus and selection stay legible
+   as two different things. */
+.spectrum .sp-seed:focus-visible { outline-offset: 4px; }
+
+/* ── responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 1000px) {
+  /* The rail stops being a sidebar and becomes a horizontal index above the
+     panels. It keeps its scroll-linked highlight and its jump behaviour — the
+     design drops the rail entirely at this width, which throws away the only
+     overview of thirteen tools on the width where an overview is worth most. */
+  .sp-bench-grid { grid-template-columns: minmax(0, 1fr); gap: clamp(22px, 4vw, 34px); }
+  .sp-rail-col { position: static; }
+  .sp-h2--rail { max-width: 20ch; }
+  .sp-bench-head .sp-lede { max-width: 52ch; }
+  .sp-rail ol {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+    /* Bleed to the gutter so the row reads as scrollable rather than as a
+       truncated list, then pad it back — the same trick the design uses for its
+       phone row. */
+    margin-inline: calc(var(--sp-gutter) * -1);
+    padding-inline: var(--sp-gutter);
+  }
+  .sp-rail ol::-webkit-scrollbar { display: none; height: 0; }
+  .sp-rail-row { border: 1px solid var(--sp-line); border-radius: var(--radius-pill); font-size: 14px; padding: 10px 16px; }
+  .sp-step { min-height: 0; }
+  .sp-step + .sp-step { margin-top: clamp(18px, 3vw, 28px); }
+}
+
+@media (min-width: 900px) {
+  /* The stack only stacks where there is room to see two cards at once. Below
+     this it is three ordinary cards in the document, which is the honest
+     degradation — a sticky card in a 640px viewport pins something taller than
+     the screen and traps the reader. */
+  .sp-stack-card { position: sticky; top: var(--sp-stack-top, 96px); }
+  .sp-stack-grid { min-height: clamp(440px, 56dvh, 640px); }
+}
+
+@media (max-width: 899px) {
+  .sp-stack-pad { height: clamp(14px, 3vw, 24px); }
+}
+
+@media (max-width: 760px) {
+  .sp-panel { border-radius: var(--radius-xl); }
+  .sp-panel-chrome { min-height: 0; }
+  .sp-faq-grid { grid-template-columns: minmax(0, 1fr); }
+  .sp-hero-cta { gap: 8px; }
+
+  /* THE COMPARISON TABLE AT PHONE WIDTH.
+     Three columns cannot fit, so each row becomes a block and each value is
+     prefixed with the plan it belongs to. The prefix is VISUAL ONLY — the
+     `<th scope>` pair still carries the relationship for assistive tech, which
+     is what the design's `content: attr(data-plan)` pseudo-element could not do
+     because a pseudo-element is not reliably in the accessibility tree. */
+  .sp-compare-table, .sp-compare-table tbody, .sp-compare-table tr,
+  .sp-compare-table tbody th, .sp-compare-table td { display: block; width: auto; }
+  .sp-compare-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .sp-compare-table tr { padding: 14px 0; border-bottom: 1px solid var(--sp-line); }
+  .sp-compare-table tbody th { width: auto; padding: 0 0 5px; border-bottom: 0; color: var(--sp-ink); }
+  .sp-compare-table td { padding: 2px 0; border-bottom: 0; }
+  .sp-compare-table td::before { content: attr(data-plan) " "; display: inline-block; min-width: 42px; color: var(--sp-quiet); }
+}
+
+@media (max-width: 560px) {
+  .sp-role { min-height: 54px; }
+  .sp-glyph-large { width: 60px; height: 60px; }
+  .sp-glyph-large svg { width: 30px; height: 30px; }
+  .sp-stack-note { margin-top: 16px !important; }
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
+   Every moving thing on this page, turned off in one place, under BOTH
+   spellings the app uses: the Settings choice (`html[data-reduced-motion]`,
+   which wins in both directions) and the OS preference (only when no choice has
+   been made). That is the precedence global.css encodes and the one
+   `reducedMotion.js` mirrors in JS.
+
+   global.css already clamps every duration and delay to 0.01ms. These rules
+   remove the MOVEMENT itself, which a duration clamp does not — a 0.01ms slide
+   is still a slide, and on the word reveal it is a flicker. `animation:none` on
+   `.sp-w` is also what guarantees the headline is readable: its resting state is
+   its final state, so removing the animation leaves the words exactly where they
+   belong rather than parked below a clipping edge.
+
+   `tests/unit/spectrum-structure.test.js` fails the build if either block is
+   deleted. */
+:where(html[data-reduced-motion="true"]) .spectrum .sp-w,
+:where(html[data-reduced-motion="true"]) .spectrum .is-in .sp-w,
+:where(html[data-reduced-motion="true"]) .spectrum [data-sp-reveal],
+:where(html[data-reduced-motion="true"]) .spectrum .is-in[data-sp-reveal] {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+:where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-stack-card,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-cta,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-cta-icon,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-chip,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-disc-card,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-ratio-box,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-seed {
+  transition: none !important;
+}
+:where(html[data-reduced-motion="true"]) .spectrum .sp-ramp-bar:hover,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-disc-card:hover,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-cta:hover .sp-cta-icon,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-cta:active,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-chip:active,
+:where(html[data-reduced-motion="true"]) .spectrum .sp-seed:active {
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-w,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .is-in .sp-w,
+  :where(html:not([data-reduced-motion="false"])) .spectrum [data-sp-reveal],
+  :where(html:not([data-reduced-motion="false"])) .spectrum .is-in[data-sp-reveal] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-stack-card,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-cta,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-cta-icon,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-chip,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-card,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ratio-box,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-seed {
+    transition: none !important;
+  }
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-ramp-bar:hover,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-disc-card:hover,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-cta:hover .sp-cta-icon,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-cta:active,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-chip:active,
+  :where(html:not([data-reduced-motion="false"])) .spectrum .sp-seed:active {
+    transform: none !important;
+  }
+}
+
+/* ── FORCED COLOURS ──────────────────────────────────────────────────────────
+   In Windows High Contrast the accent family collapses to the system colours and
+   every `color-mix` wash becomes indistinguishable from its ground, so the
+   selected states below — which are carried by a wash alone — would be
+   invisible. Give each one a border the OS is obliged to paint. */
+@media (forced-colors: active) {
+  .spectrum .sp-tab[aria-pressed="true"],
+  .spectrum .sp-chip[aria-pressed="true"],
+  .spectrum .sp-billing-tab[aria-pressed="true"],
+  .spectrum .sp-glyph[aria-pressed="true"],
+  .spectrum .sp-rail-row.is-on { border: 2px solid Highlight; }
+  .spectrum .sp-seed[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: 2px; }
+  .spectrum .sp-ramp { forced-color-adjust: none; }
+}

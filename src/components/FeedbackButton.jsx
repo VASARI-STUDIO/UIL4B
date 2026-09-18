@@ -34,7 +34,18 @@ import { chromelessRoutes } from '../data/toolTree'
 // where the page already IS the form.
 const NO_BUTTON = new Set([
   ...chromelessRoutes(),
-  '/', '/home', '/welcome', '/onboarding', '/feedback',
+  // '/spectrum' is the new sales page's preview route while it and the old Home
+  // are both reachable. It is the same KIND of surface as '/home' — a chromeless
+  // marketing page that mounts its own nav and its own footer — so it takes the
+  // same answer: no fixed bottom-right button. It leaves this list on the commit
+  // that makes Spectrum '/', which is already here.
+  //
+  // Not optional, and not tidiness: tests/unit/feedback-reach.test.js requires
+  // every path App.jsx early-returns on BY NAME to appear here, because hoisting
+  // the feedback mount out of the app shell would otherwise give a new
+  // early-return route a button it never had, in a corner global.css already
+  // records as colliding with the footer attribution.
+  '/', '/home', '/welcome', '/onboarding', '/feedback', '/spectrum',
 ])
 
 export default function FeedbackButton() {

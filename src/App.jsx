@@ -67,6 +67,23 @@ const CuratedResources = lazy(() => import('./pages/CuratedResources'))
 // way /discover is chromeless and /discover/palettes is not.
 const LearnArticle = lazy(() => import('./pages/LearnArticle'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+// ── SPECTRUM, THE NEW SALES PAGE, ON A PREVIEW ROUTE AND LAZY FOR NOW ───────
+//
+// It is destined for `/`, where it must be a STATIC import the way <Home /> is
+// today: the front door is the first paint and must not wait on a chunk.
+// It cannot be static yet, because Home is still routed at `/` and `/home`, and
+// two sales pages in the entry graph at once puts both stylesheets in the
+// render-blocking sheet — measured at 317,140 bytes against the 300,000 budget
+// in tests/unit/home-asset-budget.test.js, plus 460,168 against 440,000 on the
+// entry chunk. `lazy()` here and `styles/deferred/spectrum.css` there is the
+// pairing that test sanctions, and it costs the entry graph nothing.
+//
+// THE SWAP IS W2's AND IT IS ONE COMMIT: make this a static import, render it
+// where <Home /> renders now, delete Home.jsx and the ~262 `.home-*` rule blocks
+// in global.css, and re-point home-asset-budget.test.js's own positive control
+// from `.home-hero-h1` to `.sp-hero-h1`. Deleting the Home CSS before Home stops
+// being routed ships an unstyled homepage, so the order matters.
+const Spectrum = lazy(() => import('./pages/Spectrum'))
 
 // Create tool routes come straight from the single tool-tree source, so adding a
 // tool never needs a hand-edited <Route>. These paths — plus /discover and
@@ -337,6 +354,16 @@ function AppInner() {
   //          indexable root is unchanged and first paint is unchanged). Signed in
   //          it hands over to the User Home.
   //
+  // The Spectrum preview route. Its own Suspense boundary because this branch
+  // returns above the app shell, and the shell's <Suspense> is what every other
+  // lazy page leans on.
+  if (location.pathname === '/spectrum') {
+    return (
+      <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+        <Spectrum />
+      </Suspense>
+    )
+  }
   // /welcome is the legacy path — redirect it to /home so old links keep working.
   if (location.pathname === '/welcome') {
     return <Navigate to="/home" replace />
