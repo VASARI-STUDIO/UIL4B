@@ -370,8 +370,18 @@ test.describe('Gradient Generator · submit for review', () => {
 
     const submit = page.getByRole('button', { name: 'Submit for review' })
     await submit.click()
-    const login = page.getByRole('dialog', { name: /log in to continue/i })
+    // CREATE AN ACCOUNT, NOT "LOG IN TO CONTINUE". This asserted the log-in
+    // title until 2026-09-18, and the title was the defect: the gate is only
+    // reached when there is no uid, so everybody who sees it is somebody with
+    // no account, and it was greeting them with a form for one they have never
+    // made. `signup: true` now opens it on the create-account form, matching
+    // PaletteBuilder's save and the export gate. Nobody is stranded — the
+    // dialog's own toggle reads "Already have an account? Sign in".
+    const login = page.getByRole('dialog', { name: /create your free account/i })
     await expect(login).toBeVisible()
+    // What the gate is really for is unchanged and still checked: it names the
+    // action, it states the review promise, and the review form does not exist
+    // behind it.
     await expect(login).toContainText('submit a gradient to the community library')
     await expect(login).toContainText('reviewed before it appears')
     await expect(page.getByRole('dialog', { name: 'Submit a gradient for review' })).toHaveCount(0)
@@ -384,7 +394,10 @@ test.describe('Gradient Generator · submit for review', () => {
     await submit.click()
     await page.keyboard.press('Escape')
 
-    await expect(page.getByRole('dialog', { name: /log in to continue/i })).toBeHidden()
+    // The create-account title, matching the gate above. Left as the log-in
+    // title this would pass on a locator that matches nothing, which is a
+    // dismissal test that stopped checking the dismissal.
+    await expect(page.getByRole('dialog', { name: /create your free account/i })).toBeHidden()
     await expect(submit).toBeFocused()
     await expect(page.getByRole('dialog', { name: 'Submit a gradient for review' })).toHaveCount(0)
     await expect.poll(() => page.evaluate(() => localStorage.getItem('vs-gradient-submissions'))).toBeNull()

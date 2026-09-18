@@ -56,7 +56,12 @@ test('community submission entry points explain sign-in before showing a form', 
   const submit = page.getByRole('button', { name: 'Submit design' })
   await submit.click()
 
-  const dialog = page.getByRole('dialog', { name: /log in to continue/i })
+  // CREATE AN ACCOUNT, NOT "LOG IN TO CONTINUE". This gate only runs when
+  // there is no uid, so everybody who reaches it has no account and was being
+  // shown a form for one they have never made. Corrected 2026-09-18 with the
+  // Type Scale save and the Gradient submit, which have the same shape. The
+  // dialog's toggle still reads "Already have an account? Sign in".
+  const dialog = page.getByRole('dialog', { name: /create your free account/i })
   await expect(dialog).toBeVisible()
   await expect(dialog.getByText('Why we ask first')).toBeVisible()
   await expect(dialog).toContainText('credited to you')
