@@ -9,8 +9,19 @@
 // an empty "Community" heading would be a promise the product cannot keep, and
 // a "Trending" heading over an unranked list would be an invention dressed as a
 // measurement.
+//
+// ── WHY THIS FILE SIGNS IN (2026-09-18) ─────────────────────────────────────
+//
+// The galleries gained the founder's three rungs — 3 palettes signed out, 10
+// with a free account, all 101 with Pro. Sectioning is a BROWSE behaviour, and
+// below the top rung there is not enough library left to browse: three curated
+// palettes fill one section and the Brand systems group has nothing open in it
+// at all, so every assertion here would be measuring the cap instead of the
+// thing it was written for. The gate itself is covered by 44 and by the unit
+// suite; this file signs in as Pro so the surface under test is the whole
+// library, exactly as it was when these assertions were written.
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch } from './helpers.js'
+import { go, restingScrollY, watch, signIn } from './helpers.js'
 
 const ROUTE = '/discover/palettes'
 const HEAD = '.pgl-section-head'
@@ -26,7 +37,8 @@ const headings = (page) => page.locator(`${HEAD} h3`).allTextContents()
 
 test.describe('palette library sections', () => {
   test.beforeEach(async ({ page }) => {
-    watch(page, 'someone browsing for a palette')
+    watch(page, 'a Pro subscriber browsing for a palette')
+    await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
     await expect(page.locator('.pgal-card').first()).toBeVisible()
   })
@@ -198,15 +210,29 @@ test.describe('palette library sections', () => {
         return id ? document.getElementById(id)?.textContent?.trim() : null
       }),
     )
-    // Three grids, not two: the Brand systems section is followed by the teased
-    // placeholders for the Pro rows, and that grid names itself too. A screen
-    // reader meeting three more cards after the free ones needs to know why
-    // they differ, and an unnamed second grid inside one section is exactly the
-    // unexplained repetition this test exists to prevent.
+    // Two section grids, each named. The teased placeholders used to be a third
+    // grid INSIDE the Brand systems section; since the tier cap they sit after
+    // the sections, because the withheld tail now starts in whichever group the
+    // cap fell in and a section with nothing open is not rendered at all. This
+    // viewer is Pro, so there is no tail here — the test below covers the rung
+    // that has one.
     expect(labelled).toEqual([
       'Curated collection',
       'Brand systems',
-      'Brand systems included with Pro',
     ])
+  })
+
+  test('the teased grid names itself too, and stands outside the sections', async ({ page }) => {
+    // A screen reader meeting three more cards after the open ones needs to
+    // know why they differ; an unnamed second grid is exactly the unexplained
+    // repetition this file exists to prevent.
+    await signIn(page, { plan: 'free' })
+    await go(page, ROUTE)
+    await expect(page.locator('.pgal-card')).toHaveCount(10)
+    const locked = page.locator('.lbry-grid[aria-labelledby="pgl-locked-more"]')
+    await expect(locked).toHaveCount(1)
+    await expect(page.locator('#pgl-locked-more')).toHaveText('Palettes included with Pro')
+    expect(await page.locator('.pgl-section .lbry-grid[aria-labelledby="pgl-locked-more"]').count(),
+      'the teased grid is nested inside a section again — it disappears when that section has nothing open').toBe(0)
   })
 })

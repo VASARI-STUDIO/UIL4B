@@ -7,7 +7,7 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 import { COMMUNITY_PROMPTS } from '../data/communityPrompts'
 import { TAG_CATEGORIES } from '../data/promptCategories'
 import { getPrompts, setPromptsStore, getSavedIds, setSavedIdsStore, parseTags } from '../utils/promptStore'
-import { splitLockedLibrary } from '../utils/lockedPreview'
+import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import { LockedPromptCard, LockedTeaseCta } from '../components/library/LockedTease'
 import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 import LibraryToolbar from '../components/library/LibraryToolbar'
@@ -194,11 +194,12 @@ export default function PromptLibrary({ onCopy, toast }) {
   }
 
   const isCommunity = tab === 'community'
-  const sortedCommunity = useMemo(() => {
-    const list = [...COMMUNITY_PROMPTS]
-    if (communitySort === 'new') return list.reverse()
-    return list.sort((a, b) => (b.saves || 0) - (a.saves || 0))
-  }, [communitySort])
+
+  // Anonymous → free account → Pro. `uid` rather than `user` so the rung does
+  // not change identity on every AuthContext render, and an exact null check
+  // rather than a truthy one: while auth is resolving there is no account, so
+  // the page shows the rung BELOW and climbs when the answer arrives.
+  const tier = galleryTier({ isPro, signedIn: uid !== null })
 
   // The gate, applied BEFORE search and sort can reach the data.
   //
@@ -217,8 +218,23 @@ export default function PromptLibrary({ onCopy, toast }) {
   // `unlocked` is `isPro === true` and nothing looser: a subscription still
   // resolving is not a subscription. See utils/lockedPreview for why a preview
   // can never carry the payload.
-  const { open: browsableCommunity, locked: lockedPrompts, remaining: lockedCount } = useMemo(() => (
-    splitLockedLibrary(sortedCommunity, {
+  //
+  // ── THE SORT MOVED BELOW THE GATE, AND IT HAD TO ──────────────────────────
+  //
+  // This call used to be handed `sortedCommunity` — the library AFTER the Sort
+  // control had reordered it. With a flag-only gate that was harmless, because
+  // the answer did not depend on position. The tier cap does depend on
+  // position, so feeding it a sorted list would have rebuilt the original
+  // defect in a new place: flipping Sort to Newest would reverse the array,
+  // hand the cap a different first three, and a visitor could collect six
+  // prompts out of a three-prompt allowance by toggling one control.
+  //
+  // So COMMUNITY_PROMPTS goes in, in the order the data file declares, and the
+  // OPEN set is sorted afterwards. Which prompts are free is now a property of
+  // the library; the order they are shown in is the reader's choice, and the
+  // two can no longer reach each other.
+  const { open: openCommunity, locked: lockedPrompts, remaining: lockedCount, eligible } = useMemo(() => (
+    splitLockedLibrary(COMMUNITY_PROMPTS, {
       unlocked: isPro === true,
       isOpen: (p) => p.free === true,
       // No label. A brand palette's name is the tease and its hexes are the
@@ -231,8 +247,22 @@ export default function PromptLibrary({ onCopy, toast }) {
       // publishing, and deriving one from the text length would leak the size
       // of what is being withheld. Three lines is the card's shape, not data.
       preview: (p) => ({ id: p.id, tags: parseTags(p.tags).slice(0, 2), slots: 3 }),
+      // The rung's cap, over the canonical list above. A prompt that fails the
+      // `free` flag is still locked at every rung below Pro, so the cap narrows
+      // the free tier and can never widen it.
+      limit: galleryLimit(tier),
     })
-  ), [sortedCommunity, isPro])
+  ), [isPro, tier])
+
+  // Display order, chosen by the reader, applied to what the gate already
+  // opened. Nothing here can move a prompt across the gate.
+  const browsableCommunity = useMemo(() => {
+    const list = [...openCommunity]
+    if (communitySort === 'new') return list.reverse()
+    return list.sort((a, b) => (b.saves || 0) - (a.saves || 0))
+  }, [openCommunity, communitySort])
+
+  const accountAdds = accountTierGain({ tier, eligible, shown: openCommunity.length })
 
   const sourceList = isCommunity ? browsableCommunity : prompts
 
@@ -307,7 +337,12 @@ export default function PromptLibrary({ onCopy, toast }) {
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
           Community
-          <span className="pl-tab-count">{COMMUNITY_PROMPTS.length}</span>
+          {/* The number of prompts THIS TAB WILL SHOW, not the size of the
+              library behind it. Its sibling counts the prompts you have, so a
+              badge reading 20 over a grid of three would be the one number on
+              the page that disagrees with the page. How many are withheld is
+              the wall's job, and the wall states it exactly. */}
+          <span className="pl-tab-count">{browsableCommunity.length}</span>
         </button>
       </div>
 
@@ -452,31 +487,55 @@ export default function PromptLibrary({ onCopy, toast }) {
           would be the search oracle rebuilt in words: it answers "does a Pro
           prompt contain my phrase" for anyone willing to type. */}
       {lockedBlockVisible && (
-        <>
-          {/* The locked grid names itself. A screen-reader user meets three more
-              cards after the free ones and needs to know why they differ. The
-              placeholder SHAPES are hidden inside the card; nothing announced
-              here is invented, because the card holds nothing to invent. */}
-          {/* h2, not h3: this labels a top-level region of the page, and the
-              only other landmark heading here (the closing CTA) is an h2. As an
-              h3 it made the page read h1 -> h3 -> h2 to anyone navigating by
-              heading level. */}
-          <h2 className="sr-only" id="pl-locked-community">Community prompts included with Pro</h2>
-          <div className="pl-gallery pl-gallery--continues" role="group" aria-labelledby="pl-locked-community">
-            {lockedPrompts.map((preview) => <LockedPromptCard key={preview.id} preview={preview} />)}
+        tier === 'anonymous' ? (
+          /* The anonymous rung gets the wall and no placeholders.
+             LockedPromptCard stamps each one "Pro", and for a signed-out
+             visitor that is the wrong price: the next seven arrive with a free
+             account. The pill lives in components/library/LockedTease.jsx,
+             which this stream does not own, so the rows are left out rather
+             than mislabelled — see the note in PaletteGallery.jsx. The action
+             is the app's own sign-in gate with `free: true`, the same one the
+             Submit button above uses, so this is a rung and not a second gate. */
+          <div className="lockt-cta">
+            <div className="lockt-cta-copy">
+              <p className="lockt-cta-head">{`Another ${accountAdds} community ${accountAdds === 1 ? 'prompt' : 'prompts'} with a free account`}</p>
+              <p className="lockt-cta-body">{`A free account opens ${browsableCommunity.length + accountAdds} of the ${COMMUNITY_PROMPTS.length} community prompts. Pro opens all ${COMMUNITY_PROMPTS.length}.`}</p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-accent lockt-cta-btn"
+              onClick={() => requireLogin('browse more of the community prompts', { free: true, signup: true })}
+            >
+              Create your free account
+            </button>
           </div>
-          <LockedTeaseCta
-            gate="prompt-library-community-lock"
-            heading={`Another ${lockedCount} community ${lockedCount === 1 ? 'prompt' : 'prompts'} with Pro`}
-            body="Each one opens as the complete brief its author wrote — the full prompt text to copy, not a preview of it."
-            action="See what Pro includes"
-            modal={{
-              eyebrow: 'Pro prompt library',
-              title: 'The full community library',
-              subtitle: `Free covers ${browsableCommunity.length} of the ${COMMUNITY_PROMPTS.length} community prompts. Pro opens the remaining ${lockedCount}, each as the full text its author submitted.`,
-            }}
-          />
-        </>
+        ) : (
+          <>
+            {/* The locked grid names itself. A screen-reader user meets three more
+                cards after the free ones and needs to know why they differ. The
+                placeholder SHAPES are hidden inside the card; nothing announced
+                here is invented, because the card holds nothing to invent. */}
+            {/* h2, not h3: this labels a top-level region of the page, and the
+                only other landmark heading here (the closing CTA) is an h2. As an
+                h3 it made the page read h1 -> h3 -> h2 to anyone navigating by
+                heading level. */}
+            <h2 className="sr-only" id="pl-locked-community">Community prompts included with Pro</h2>
+            <div className="pl-gallery pl-gallery--continues" role="group" aria-labelledby="pl-locked-community">
+              {lockedPrompts.map((preview) => <LockedPromptCard key={preview.id} preview={preview} />)}
+            </div>
+            <LockedTeaseCta
+              gate="prompt-library-community-lock"
+              heading={`Another ${lockedCount} community ${lockedCount === 1 ? 'prompt' : 'prompts'} with Pro`}
+              body="Each one opens as the complete brief its author wrote — the full prompt text to copy, not a preview of it."
+              action="See what Pro includes"
+              modal={{
+                eyebrow: 'Pro prompt library',
+                title: 'The full community library',
+                subtitle: `Free covers ${browsableCommunity.length} of the ${COMMUNITY_PROMPTS.length} community prompts. Pro opens the remaining ${lockedCount}, each as the full text its author submitted.`,
+              }}
+            />
+          </>
+        )
       )}
 
       {/* The closing line, below the last card and below the Pro tease. The

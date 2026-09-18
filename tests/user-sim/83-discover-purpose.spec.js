@@ -224,7 +224,13 @@ test.describe('the Discover surfaces say what they are made of', () => {
 
   // ── LibraryGrid's discarded names ────────────────────────────────────────
   test('the Palette Library category grids are named, and are not landmarks', async ({ page }) => {
-    watch(page, 'someone entering a category grid with a screen reader')
+    watch(page, 'a subscriber entering a category grid with a screen reader')
+    // Pro, because the assertion needs MORE THAN ONE category on the page and
+    // the tier cap (3 / 10 / everything, 2026-09-18) leaves a signed-out
+    // visitor three curated palettes and no Brand systems group at all. The
+    // naming rule is about grids, not about entitlement; the teased grid's own
+    // name is asserted in 34-palette-library-sections.
+    await signIn(page, { plan: 'pro' })
     await go(page, '/discover/palettes')
     await arrived(page, 'Palette Library')
 

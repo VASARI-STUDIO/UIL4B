@@ -16,7 +16,7 @@
 //   3. the grid actually widens — the filter is wired to the data, not just to
 //      the pills.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, watch, signIn } from './helpers.js'
 
 const ROUTE = '/discover/gradients'
 const TRAY = '[aria-label^="Filter by gradient type"]'
@@ -33,7 +33,12 @@ const cardCount = (page) => page.locator('.lbry-grid .lbry-card').count()
 
 test.describe('library filter multi-select', () => {
   test.beforeEach(async ({ page }) => {
-    watch(page, 'designer narrowing the gradient library')
+    watch(page, 'a subscriber narrowing the gradient library')
+    // Signed in as Pro so the grid holds the whole collection. The tier cap
+    // (3 / 10 / everything) leaves a signed-out visitor three gradients, and
+    // "the grid grows when a second type is added" cannot be measured on three
+    // cards — it would be testing the cap, which 44 and the unit suite cover.
+    await signIn(page, { plan: 'pro' })
     await go(page, ROUTE)
     await expect(page.locator(TRAY)).toBeVisible()
   })
