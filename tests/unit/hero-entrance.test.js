@@ -250,6 +250,38 @@ test('every authored weight sits inside the variable axis that renders it', () =
     const text = fs.readFileSync(file, 'utf8').replace(/@font-face\{[^}]*\}/g, '')
     return [...text.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1]))
   })
+
+  // AND THE WEIGHTS NO STYLESHEET CONTAINS. A component can set a weight two
+  // ways that a CSS scan will never reach: an inline style object
+  // (`style={{ fontWeight: 800 }}`) and — the one that actually got through —
+  // an SVG presentation ATTRIBUTE in JSX (`fontWeight="800"` on a <text>).
+  // The admin donut's total was drawn at 800 and clamped for weeks; it was
+  // found by eye, after this test had already been widened once to walk every
+  // stylesheet. A guard that only reads CSS reports a clean axis while JSX
+  // clamps.
+  //
+  // Comments stripped first, for the reason design-tokens.test.js was fixed on
+  // the same day: source files now CONTAIN prose about this rule, and a test
+  // that fires on an explanation of itself is a test people stop believing.
+  const codeFiles = []
+  const walkCode = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walkCode(full)
+      else if (/\.jsx?$/.test(entry.name)) codeFiles.push(full)
+    }
+  }
+  walkCode(path.join(process.cwd(), 'src'))
+  assert.ok(codeFiles.length >= 20, `only ${codeFiles.length} source files found — the walk is not reaching them`)
+
+  const inlineUsed = codeFiles.flatMap((file) => {
+    const text = stripJs(fs.readFileSync(file, 'utf8'))
+    return [...text.matchAll(/fontWeight\s*[:=]\s*["']?(\d{3})["']?/g)].map((m) => Number(m[1]))
+  })
+  const inlineOutOfAxis = inlineUsed.filter((w) => w < 300 || w > 700)
+  assert.deepEqual(inlineOutOfAxis, [],
+    'a JSX fontWeight sits outside Geist\'s 300..700 axis — inline styles and SVG presentation '
+    + 'attributes are invisible to a stylesheet scan, and the browser clamps them silently')
   const odd = [...new Set(used.filter((w) => w % 100 !== 0))]
   assert.ok(odd.length > 0, 'expected intermediate weights; if these were removed, update this test')
   // The intermediate weights are the whole reason for a variable font, so they
