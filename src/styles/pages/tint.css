@@ -149,7 +149,7 @@
 
 .tt-cell:focus-visible{position:relative;z-index:1;outline:2px solid var(--brand);outline-offset:-3px}
 
-.tt-cell-step{font-size:11px;font-weight:750;letter-spacing:.02em}
+.tt-cell-step{font-size:11px;font-weight:700;letter-spacing:.02em}
 
 /* NO OPACITY ON EITHER SWATCH LABEL. Both inherit `color:var(--tt-ink)`,
    which TintTool.jsx sets per swatch to textColorForBg(colour) - black or

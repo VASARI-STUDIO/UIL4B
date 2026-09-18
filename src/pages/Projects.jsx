@@ -127,7 +127,7 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {icon && <img src={icon} alt="" className="proj-detail-icon" />}
-              <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', flex: 1 }}>{project.name}</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em', flex: 1 }}>{project.name}</h2>
               {isCurrent && (
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '3px 8px', borderRadius: 4 }}>Loaded</span>
               )}
@@ -277,7 +277,7 @@ function NewProjectModal({ onClose, onCreate, error }) {
         </button>
 
         <div className="fg-detail-section" style={{ marginBottom: 20 }}>
-          <h2 id="proj-new-title" style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' }}>New project</h2>
+          <h2 id="proj-new-title" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>New project</h2>
           <p style={{ fontSize: 13, color: 'var(--t2)', marginTop: 4 }}>
             Give it a name and choose where to begin.
           </p>

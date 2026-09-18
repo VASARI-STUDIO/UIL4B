@@ -78,7 +78,7 @@
 .checkout-plan-name{font-size:16px;font-weight:700;color:var(--t0)}
 .checkout-plan-cadence{font-size:12px;color:var(--t2);margin-top:2px}
 .checkout-plan-price{text-align:right;white-space:nowrap}
-.checkout-plan-amount{font-size:26px;font-weight:800;letter-spacing:-.03em;color:var(--t0);line-height:1;display:block}
+.checkout-plan-amount{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--t0);line-height:1;display:block}
 .checkout-plan-per{font-size:11px;color:var(--t2)}
 .checkout-plan-note{font-size:11px;color:var(--accent-strong);font-weight:600;margin-top:14px}
 .checkout-price-retry{align-self:flex-start;margin-top:10px}

@@ -20,6 +20,10 @@ yarn.lock
 
 # Build
 dist/
+# Any sibling build output too. An agent running an isolated
+# `vite build --mode test` into dist-test/ left it untracked AND unignored on a
+# PUBLIC repo, where one broad `git add` publishes a whole build.
+dist-*/
 .cache/
 .npm-cache/
 tmp/

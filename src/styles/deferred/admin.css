@@ -117,7 +117,7 @@
 .adm-pipe-bar-fill{display:block;height:100%;border-radius:var(--radius-pill);transition:width var(--t)}
 .adm-pipe-todo{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);transition:border-color var(--dur-1) var(--ease-standard)}
 .adm-pipe-todo:hover{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
-.adm-pipe-prio{flex-shrink:0;font-size:10px;font-weight:800;letter-spacing:.04em;font-family:var(--mono);padding:3px 7px;border:1px solid;border-radius:var(--radius-xs,4px);line-height:1}
+.adm-pipe-prio{flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.04em;font-family:var(--mono);padding:3px 7px;border:1px solid;border-radius:var(--radius-xs,4px);line-height:1}
 .adm-pipe-status{font-size:10px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:var(--radius-pill);white-space:nowrap}
 
 /* Submission cards */
@@ -149,7 +149,7 @@
 /* Lock screen */
 .adm-lock{max-width:400px;margin:80px auto;text-align:center}
 .adm-lock-eyebrow{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:16px;font-family:var(--mono)}
-.adm-lock h1{font-size:28px;font-weight:800;letter-spacing:-.03em;margin-bottom:8px}
+.adm-lock h1{font-size:28px;font-weight:700;letter-spacing:-.03em;margin-bottom:8px}
 .adm-lock p{font-size:14px;color:var(--t1);margin-bottom:24px}
 .adm-lock form{display:flex;gap:8px}
 .adm-lock input{flex:1;text-align:center;font-size:14px;letter-spacing:.04em}

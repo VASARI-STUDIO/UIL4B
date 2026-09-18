@@ -228,9 +228,28 @@ test('every authored weight sits inside the variable axis that renders it', () =
     }
     assert.match(f, /font-display:\s*swap/)
   }
-  // Weights authored OUTSIDE the @font-face rules, i.e. real call sites.
-  const used = [...css.replace(/@font-face\{[^}]*\}/g, '').matchAll(/font-weight:\s*(\d{3})/g)]
-    .map((m) => Number(m[1]))
+  // EVERY STYLESHEET, NOT JUST global.css. This scanned global.css alone, and
+  // that blindness cost 39 silent clamps: the Spectrum font swap remapped the 21
+  // weights this file could see and left 750s and 800s sitting in
+  // deferred/tool-shell.css (13), deferred/colour.css (10), studio, account,
+  // admin, semantic-color, seo-inspector and tint — plus inline `fontWeight` in
+  // JSX, which no CSS scan would ever reach. A guard that only watches one file
+  // reports a clean axis while eight other files clamp.
+  const styleFiles = []
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (entry.name.endsWith('.css')) styleFiles.push(full)
+    }
+  }
+  walk(path.join(process.cwd(), 'src', 'styles'))
+  assert.ok(styleFiles.length >= 5, `only ${styleFiles.length} stylesheets found — the walk is not reaching them`)
+
+  const used = styleFiles.flatMap((file) => {
+    const text = fs.readFileSync(file, 'utf8').replace(/@font-face\{[^}]*\}/g, '')
+    return [...text.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1]))
+  })
   const odd = [...new Set(used.filter((w) => w % 100 !== 0))]
   assert.ok(odd.length > 0, 'expected intermediate weights; if these were removed, update this test')
   // The intermediate weights are the whole reason for a variable font, so they
