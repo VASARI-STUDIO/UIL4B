@@ -34,7 +34,7 @@
 //     fails on the label count;
 //   - drop role="status" from .ig-notice → the refusal tests fail on getByRole.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
+import { go, signIn, watch } from './helpers.js'
 import { fixturePacks, iconifyRequests, isLiveIconify, ICONIFY_STUB_HEADER, REFUSED_VALUE } from './iconify-stub.js'
 
 const LIVE = 'UIL4B_LIVE_ICONIFY is set: the live catalogue is not the fixture, so nothing here is measurable'
@@ -87,6 +87,14 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   const page = await ctx.newPage()
   watch(page, 'designer opening the icon library')
+  // SIGNED IN AS PRO, BECAUSE THE SUBJECT IS THE FIXTURE AND NOT THE PAYWALL.
+  // /create/icons is tiered as of 2026-09-18 (src/data/iconPackTiers.js): a
+  // signed-out visitor browses five packs, not twenty-five, so "one /collection
+  // per pack the page browses on first paint" would be measuring the gate here
+  // rather than the stub. Pro is the tier that browses everything, which is the
+  // state this test has always been written against. The tiers are measured in
+  // their own tests at the bottom of this file.
+  await signIn(page, { plan: 'pro' })
   await go(page, '/create/icons')
   await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
 
@@ -157,6 +165,9 @@ test('when every Iconify host refuses, the page says so, shows the built-in set,
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   const page = await ctx.newPage()
   watch(page, REFUSED)
+  // Pro, so the recovery below is measured against the whole catalogue — see
+  // the note on the first test in this file.
+  await signIn(page, { plan: 'pro' })
   await refuseIconify(page)
   await go(page, '/create/icons')
 
@@ -221,6 +232,11 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   const page = await ctx.newPage()
   watch(page, REFUSED)
+  // Pro. The subject here is which packs the BUILT-IN SET covers, and signed
+  // out eighteen of these twenty-four are gated — they would answer with the
+  // Pro wall, which is a correct answer to a different question and would make
+  // this sweep vacuous.
+  await signIn(page, { plan: 'pro' })
   await refuseIconify(page)
   await go(page, '/create/icons')
 
@@ -256,7 +272,11 @@ test('choosing a pack the built-in set does not cover answers instead of emptyin
     ).catch(() => {})
     const seen = await page.evaluate(() => ({
       cells: document.querySelectorAll('.ic').length,
-      answered: !!document.querySelector('.pl-empty'),
+      // `.ig-gate` counts as an answer too. It cannot appear in THIS test — the
+      // session is Pro — but a tier regression that let a wall through here
+      // would otherwise be reported as silence, which is the one thing this
+      // test exists to distinguish.
+      answered: !!document.querySelector('.pl-empty') || !!document.querySelector('.ig-gate'),
     }))
     if (seen.cells === 0) {
       emptied += 1
@@ -326,3 +346,193 @@ for (const theme of ['light', 'dark']) {
     await ctx.close()
   })
 }
+
+/* ── WHO THE CATALOGUE IS FETCHED FOR ───────────────────────────────────────
+
+   The pack tiers, measured the only way that proves them: by counting what
+   /create/icons ASKS api.iconify.design for. This file already counts that, so
+   the tiers belong here rather than in a file of their own — a gate that is
+   checked by reading the DOM is a gate that has already been walked through.
+
+   src/utils/lockedPreview.js sets the standard these assertions are written to:
+   a locked thing's payload never reaches the browser. For a pack that means it
+   is never REQUESTED — not requested and hidden, not requested and dimmed. So
+   every test here asserts on the URL list, and the DOM is used only to say
+   which state the visitor is looking at.
+
+   EVERY ABSENCE IS PAIRED WITH A PRESENCE. "No brand pack was fetched" is
+   trivially true of a page that fetched nothing, so each test also names the
+   packs that MUST have been fetched at that tier. */
+
+const OUTLINED = ['lucide', 'tabler', 'iconoir', 'heroicons', 'ph']
+const NEEDS_ACCOUNT = ['mdi', 'material-symbols', 'solar', 'fa6-solid', 'bxs']
+const NEEDS_PRO = ['simple-icons', 'logos', 'devicon', 'skill-icons', 'twemoji', 'noto',
+  'openmoji', 'fluent-emoji', 'circle-flags', 'flag', 'flagpack', 'cif', 'flat-color-icons',
+  'vscode-icons', 'token-branded']
+
+/** The pack a request to api.iconify.design is about, or null for /search. */
+function packInUrl(raw) {
+  const url = new URL(raw)
+  if (url.pathname === '/collection') return url.searchParams.get('prefix')
+  const batch = url.pathname.match(/^\/([^/]+)\.json$/)
+  if (batch) return batch[1]
+  const svg = url.pathname.match(/^\/([^/]+)\/[^/]+\.svg$/)
+  return svg ? svg[1] : null
+}
+
+/** Collect every Iconify and Logo.dev URL this page asks for. */
+function iconifyUrlLog(page) {
+  const urls = []
+  page.on('request', (r) => {
+    if (/api\.iconify\.design|img\.logo\.dev/.test(r.url())) urls.push(r.url())
+  })
+  return urls
+}
+
+const packsIn = (urls) => [...new Set(urls.map(packInUrl).filter(Boolean))]
+
+test('signed out: the grid is capped, and only the outlined packs are ever requested', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
+  const page = await ctx.newPage()
+  watch(page, 'visitor who has not signed in')
+  const urls = iconifyUrlLog(page)
+  await go(page, '/create/icons')
+  await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
+  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+
+  const fetched = packsIn(urls)
+  // PRESENCE, so a page that fetched nothing at all cannot pass this.
+  for (const pack of OUTLINED) {
+    expect(fetched, `${pack} is the signed-out sample and must be fetched`).toContain(pack)
+  }
+  // ABSENCE, which is the gate.
+  for (const pack of [...NEEDS_ACCOUNT, ...NEEDS_PRO]) {
+    expect(fetched, `${pack} is gated signed out and must never appear in a URL`).not.toContain(pack)
+  }
+
+  // The cap is enforced on the DATA rather than on the scroll, so nothing the
+  // visitor does can walk past it. Asserted by trying.
+  const cells = await page.locator('.ig .ic').count()
+  expect(cells, 'the signed-out grid is capped').toBeLessThanOrEqual(60)
+  expect(cells, 'and it is a real sample, not a stub').toBeGreaterThanOrEqual(24)
+  await page.mouse.wheel(0, 20000)
+  await page.waitForTimeout(1500)
+  expect(await page.locator('.ig .ic').count(), 'scrolling must not reveal more than the cap').toBe(cells)
+
+  // The cap is SAID, not only done — a count with no explanation is what makes
+  // a limit feel punitive rather than deliberate.
+  await expect(page.locator('.ig-gate')).toBeVisible()
+  await expect(page.locator('.ig-gate')).toContainText(String(cells))
+  // And it is not the outage state: nothing refused anything here.
+  await expect(page.locator('.ig-notice')).toHaveCount(0)
+  await ctx.close()
+})
+
+test('signed in free: the solid packs open, the brand, flag and emoji packs are not fetched', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
+  const page = await ctx.newPage()
+  watch(page, 'designer on the free plan')
+  const urls = iconifyUrlLog(page)
+  await signIn(page, { plan: 'free' })
+  await go(page, '/create/icons')
+  await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
+  await expect.poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 }).toBeGreaterThan(20)
+
+  const fetched = packsIn(urls)
+  for (const pack of [...OUTLINED, ...NEEDS_ACCOUNT]) {
+    expect(fetched, `${pack} has a free official browser, so an account opens it`).toContain(pack)
+  }
+  for (const pack of NEEDS_PRO) {
+    expect(fetched, `${pack} is Pro and must never appear in a URL for a free account`).not.toContain(pack)
+  }
+  // NO STANDING BANNER for a free account. The markers on the pack menu and the
+  // group tray are the whole of it until they reach for something.
+  await expect(page.locator('.ig-gate')).toHaveCount(0)
+  await ctx.close()
+})
+
+test('choosing a Pro pack costs nothing, and says so in its own words', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
+  const page = await ctx.newPage()
+  watch(page, 'designer on the free plan')
+  await signIn(page, { plan: 'free' })
+  await go(page, '/create/icons')
+  await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
+  await page.waitForTimeout(1500)
+
+  // Counted from the moment of the click, so the default browse is not in the way.
+  const after = iconifyUrlLog(page)
+  await page.locator('.lbry-select').selectOption('simple-icons')
+  await page.waitForTimeout(2500)
+
+  expect(after, `picking a Pro pack made ${after.length} request(s): ${after.slice(0, 3).join(' ')}`).toEqual([])
+  const wall = page.locator('.ig-gate')
+  await expect(wall).toBeVisible()
+  await expect(wall, 'the wall names the pack that was picked').toContainText('Simple Icons')
+  await expect(wall.getByRole('button')).toBeVisible()
+  // THE THREE REFUSALS STAY APART. The product saying no must not wear the
+  // network's words, and must not wear the catalogue's either.
+  await expect(page.locator('.ig-notice'), 'a gated pack is not an outage').toHaveCount(0)
+  await expect(page.locator('.pl-empty'), 'a gated pack is not an empty search').toHaveCount(0)
+  await ctx.close()
+})
+
+test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
+  const page = await ctx.newPage()
+  watch(page, 'visitor who has not signed in')
+
+  // A RECENT FROM A PACK THIS VISITOR CAN NO LONGER BROWSE.
+  //
+  // vs-recent-icons outlives a sign-out and a lapsed subscription, and it is a
+  // list of REFERENCES — pack plus name — not of markup. So a browser that was
+  // Pro yesterday asks the Recent rail to draw `simple-icons:github` today, and
+  // that rail is fetched by a different code path from the grid. It is the one
+  // route by which a gated pack could still reach api.iconify.design with every
+  // browse function behaving perfectly.
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('vs-recent-icons', JSON.stringify([
+        { key: 'simple-icons:github', action: 'copy', ts: Date.now(), cdn: true, pack: 'simple-icons', name: 'github' },
+        { key: 'lucide:zap', action: 'copy', ts: Date.now() - 1000, cdn: true, pack: 'lucide', name: 'zap' },
+      ]))
+    } catch { /* a blocked store is the app's problem to survive, not ours */ }
+  })
+
+  const early = []
+  page.on('request', (r) => { if (r.url().includes('api.iconify.design')) early.push(r.url()) })
+  await go(page, '/create/icons')
+  await expect(page.locator('.ic').first()).toBeVisible({ timeout: 20000 })
+  await page.waitForTimeout(2500)
+
+  // POSITIVE CONTROL FIRST: the rail is real and its allowed entry did paint.
+  await expect(page.locator('.ig-rail'), 'the Recent rail is on screen').toBeVisible()
+  expect(early.some((u) => u.includes('lucide')), 'the allowed recent was fetched').toBe(true)
+  expect(early.filter((u) => u.includes('simple-icons')),
+    'the Recent rail fetched a pack this visitor may not browse').toEqual([])
+  expect(await page.locator('.ig-rail-item').count(),
+    'only the recent the visitor may still have is drawn').toBe(1)
+
+  // The visitor's own icons, at the narrowest tier there is.
+  await page.locator('.lbry-select').selectOption('custom')
+  await page.waitForTimeout(1500)
+  await expect(page.locator('.ig-gate'), 'My Icons carries no wall at any tier').toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Saved' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Recently copied' })).toBeVisible()
+
+  // Logo.dev is a paid pack that makes no Iconify request at all — it resolves
+  // 48 images from a commercial API on our own publishable token. The gate has
+  // to stand in front of that too, or the one pack whose cost is ours is the
+  // one left open.
+  const logos = []
+  page.on('request', (r) => { if (r.url().includes('img.logo.dev')) logos.push(r.url()) })
+  await page.locator('.lbry-select').selectOption('logodev')
+  await page.waitForTimeout(2500)
+  expect(logos, 'a gated Logo.dev must not resolve a single brand image').toEqual([])
+  await expect(page.locator('.ig-gate')).toBeVisible()
+  await ctx.close()
+})

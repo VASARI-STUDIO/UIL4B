@@ -23,7 +23,7 @@
 // viewports, because a desktop Chromium narrowed to 390px still reports
 // `hover: hover` and hides this whole class of defect.
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch } from './helpers.js'
+import { go, restingScrollY, signIn, watch } from './helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -1129,6 +1129,17 @@ test('the icon grid labels the pack only when the results actually mix packs', a
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   const page = await ctx.newPage()
   watch(page, 'a designer browsing icons on a laptop')
+  // PRO, BECAUSE THIS TEST IS ABOUT THE LABEL RULE AND NOT ABOUT THE PAYWALL.
+  // The rule is "name the pack only when the result set holds more than one",
+  // and it needs a genuinely SINGLE-pack default grid to be falsifiable. Since
+  // the pack tiers landed (src/data/iconPackTiers.js) that is a Pro viewer: one
+  // browses 250 names from each of 25 packs, so the first page of 120 cells is
+  // all Lucide. A signed-out viewer gets the 60-icon sample — twelve from each
+  // of five outlined packs — which genuinely mixes packs and therefore SHOULD
+  // label every cell, so it satisfies the rule by the other branch and measures
+  // nothing here. The second half needs Pro too: Brand logos is a Pro pack, and
+  // signed out the chip answers with a wall rather than a mixed grid.
+  await signIn(page, { plan: 'pro' })
   await go(page, '/create/icons')
   await page.locator('.ic').first().waitFor({ timeout: 20000 })
 
