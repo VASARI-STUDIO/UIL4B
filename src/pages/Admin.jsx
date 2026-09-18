@@ -2020,6 +2020,7 @@ export default function Admin({ toast }) {
             role="tab"
             id={`admtab-${t.id}`}
             aria-selected={tab === t.id}
+            aria-controls="adm-panel"
             tabIndex={tab === t.id ? 0 : -1}
             ref={(el) => { if (el) tabRefs.current[t.id] = el }}
             className={`adm-tab${tab === t.id ? ' active' : ''}`}
@@ -2032,6 +2033,34 @@ export default function Admin({ toast }) {
           </button>
         ))}
       </div>
+
+      {/* ONE PANEL, NAMED BY WHICHEVER TAB IS SELECTED.
+
+          The tablist was already correct — roving tabindex, arrow keys,
+          aria-selected, a real focus ring — but there was no tabpanel and no
+          aria-controls anywhere on the route. A screen reader was told "tab,
+          selected" and then offered nothing to move into. Found by the
+          2026-09-18 independent review, measured: [role=tabpanel] count 0,
+          every aria-controls null.
+
+          Settings.jsx renders all six of ITS panels and hides the inactive
+          ones, which is the house pattern in nine other files. That shape is
+          wrong here: these panels fetch — users, the community queue, Stripe
+          — so rendering all six always would trade an accessibility fix for a
+          performance and quota regression. Only the selected panel exists, so
+          there is one panel element and its accessible name follows the
+          selection via aria-labelledby.
+
+          tabIndex={-1} rather than 0: the panel always contains focusable
+          content, so making the container itself a tab stop would add an
+          empty stop before every panel. -1 keeps it programmatically
+          focusable for the arrow-key handler without that cost. */}
+      <div
+        id="adm-panel"
+        role="tabpanel"
+        aria-labelledby={`admtab-${tab}`}
+        tabIndex={-1}
+      >
 
       {/* ═══════ OVERVIEW TAB ═══════ */}
       {tab === 'overview' && (
@@ -2486,6 +2515,7 @@ export default function Admin({ toast }) {
 
       {/* ═══════ STRIPE TAB ═══════ */}
       {tab === 'stripe' && <StripeSetupPanel toast={toast} />}
+      </div>
     </div>
   )
 }

@@ -109,6 +109,8 @@ export default function CommunityQueue({ toast }) {
               key={f.id}
               role="tab"
               aria-selected={status === f.id}
+              id={`cq-filter-${f.id}`}
+              aria-controls="cq-panel"
               className={`cq-filter${status === f.id ? ' is-on' : ''}`}
               onClick={() => setStatus(f.id)}
             >
@@ -121,6 +123,24 @@ export default function CommunityQueue({ toast }) {
           {state === 'loading' ? 'Loading…' : 'Refresh'}
         </button>
       </div>
+
+      {/* THE ROLE WAS LYING. These filters carried role="tab" with no tabpanel
+          and no aria-controls anywhere in the file, so a screen reader was told
+          "tab, selected" and given nothing to move into — the same defect the
+          2026-09-18 review found on the Admin tablist, and this was its second
+          instance.
+
+          They ARE tabs rather than toggles: choosing one replaces everything
+          below it, which is a panel swap, not a filter applied in place. So the
+          role stays and the missing half is supplied. One panel, because only
+          the selected status is ever fetched and rendered; its accessible name
+          follows the selection. */}
+      <div
+        id="cq-panel"
+        role="tabpanel"
+        aria-labelledby={`cq-filter-${status}`}
+        tabIndex={-1}
+      >
 
       {state === 'loading' && <div className="cq-msg">Reading the queue…</div>}
 
@@ -175,6 +195,7 @@ export default function CommunityQueue({ toast }) {
           ))}
         </ul>
       )}
+      </div>
     </div>
   )
 }

@@ -42,7 +42,15 @@
 .adm-stat-label{font-size:11px;font-weight:600;color:var(--t2);margin-top:8px;letter-spacing:.02em}
 .adm-stat-sub{font-size:10px;color:var(--t3);margin-top:3px}
 .adm-stat-delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:8px}
-.adm-grid-3{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:14px}
+/* auto-FIT, not auto-fill — the same correction made for the hairline stat
+   grid further down this file, applied to the instance it missed. auto-fill
+   KEEPS the empty tracks it creates: measured on the rendered Overview tab at
+   both 1280 and 1440, in both themes, this resolved to four 280px tracks for
+   three children, leaving a 280px empty column beside the Feedback & Community
+   row. A dashboard row with a blank slot in it reads as something that failed
+   to load, which is the worst thing an admin surface can imply. The class is
+   named for three cards; it now yields three. */
+.adm-grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:14px}
 
 /* Card variants */
 .adm-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow);overflow:hidden}
