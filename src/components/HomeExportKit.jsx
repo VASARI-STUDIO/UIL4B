@@ -74,6 +74,49 @@ const FALLBACK = Object.freeze({
 })
 
 /**
+ * The first family in a CSS font stack, with its quotes taken off.
+ *
+ * NO REGEX: a lone apostrophe in a character class desyncs
+ * tests/helpers/strip-comments.js, which then stops blanking this file's
+ * comments and hands every source-scanning test the prose as if it were code.
+ */
+const QUOTE_CHARS = ['"', "'"]
+function firstFamily(stack) {
+  let s = String(stack || '').split(',')[0].trim()
+  if (QUOTE_CHARS.includes(s.slice(0, 1))) s = s.slice(1)
+  if (QUOTE_CHARS.includes(s.slice(-1))) s = s.slice(0, -1)
+  return s
+}
+
+/**
+ * The face a type token resolves to right now, read from the running stylesheet.
+ *
+ * NOT typed here. A family name written into this file is a second declaration
+ * of the product's typeface, and a second declaration is one that can disagree:
+ * this line still read `family: 'Manrope'` after global.css had moved --font to
+ * Geist, so the deck advertised a face the app no longer served. Reading the
+ * token is the only version of this that cannot go stale.
+ * `system-ui` is the last resort rather than a face name
+ * for the same reason: on a render with no document to read it is also what the
+ * browser would actually paint, so it cannot be wrong in the way a stale name is.
+ */
+function tokenFace(varName) {
+  if (typeof document === 'undefined' || !document.documentElement) return 'system-ui'
+  return firstFamily(getComputedStyle(document.documentElement).getPropertyValue(varName)) || 'system-ui'
+}
+
+/**
+ * The deck's heading and body weights.
+ *
+ * 700 is the top of the shipped face's axis, not a round number picked for
+ * emphasis: global.css declares `font-weight:300 700`, and a heavier request is
+ * CLAMPED silently rather than refused — which is what the 800 here was doing
+ * from the moment Geist replaced Manrope's 200..800.
+ */
+const HEADING_WEIGHT = 700
+const BODY_WEIGHT = 400
+
+/**
  * A `design` object in the shape `utils/brandGuidelines.js` expects, built from
  * the live workbench values. Deliberately NOT a second description of a design:
  * readGuidelines() below is the same reader the real export runs.
@@ -83,10 +126,13 @@ function designFrom(system) {
   return {
     palette: { colors: s.palette, base: s.palette[0], harmony: 'auto' },
     // The workbench has no font picker, so the deck's faces are the app's own
-    // two families rather than a choice the visitor has not made. Naming them
-    // here is honest — it is what the export would use — and the deck's type
+    // rather than a choice the visitor has not made. They are READ from the
+    // type tokens — it is what the export would use — and the deck's type
     // section reads them back out of the same object.
-    fonts: { heading: { family: 'Manrope', weight: 800 }, body: { family: 'Manrope', weight: 400 } },
+    fonts: {
+      heading: { family: tokenFace('--display'), weight: HEADING_WEIGHT },
+      body: { family: tokenFace('--font'), weight: BODY_WEIGHT },
+    },
     typeScale: { base: s.baseSize, ratio: s.ratio, lineHeight: 1.5 },
   }
 }

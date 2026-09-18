@@ -34,7 +34,7 @@ import { detectCanvasFontRendered } from '../utils/fontDetection'
 const AT_PX = 16
 const SAMPLE = 'Every figure cited or computed'
 
-/** `'Manrope'` → `Manrope`. */
+/** `'Geist'` → `Geist`. */
 const unquote = (value) => String(value || '').trim().replace(/^['"]|['"]$/g, '')
 
 function readRows() {

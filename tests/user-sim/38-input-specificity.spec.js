@@ -25,7 +25,11 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
-const MONO = /JetBrains Mono/
+// The product's mono face, by name, because this asserts the COMPUTED stack and
+// a computed value cannot be compared to `var(--mono)`. Geist Mono since the
+// Spectrum adoption, 2026-09-18; it was JetBrains Mono, and these four
+// assertions went red the moment global.css stopped serving it.
+const MONO = /Geist Mono/
 
 // route, selector, what the component class asks for, and what the reset would
 // have imposed instead — the second column is what these used to render as.
