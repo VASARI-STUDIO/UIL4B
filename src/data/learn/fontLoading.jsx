@@ -162,7 +162,7 @@ export default function FontLoading() {
         <FontFaceTable />
 
         <p>
-          Two families, four rules, each family split at U+0100 — and the second
+          Three families, six rules, each family split at U+0100 — and the second
           file of each pair is only fetched when a character in its range is
           actually rendered. That is what the last column measures: it asks
           whether the file that would draw the first printable character of each

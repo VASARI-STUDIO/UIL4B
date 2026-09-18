@@ -184,9 +184,14 @@ test('the fonts are self-hosted, not two third-party round trips', () => {
 
 test('both families are preloaded, in CORS mode', () => {
   const links = html.match(/<link[^>]*rel="preload"[^>]*>/g) || []
-  // BOTH, not just the UI face: V2 puts mono above the fold (nav wordmark,
-  // eyebrows, stat line), so a late mono arrival shifts first paint too.
-  for (const want of [/manrope-latin\.woff2/, /jetbrains-mono-latin\.woff2/]) {
+  // BOTH, not just the UI face: the design puts mono above the fold (nav
+  // wordmark, eyebrows, stat line), so a late mono arrival shifts first paint
+  // too. Geist and Geist Mono since the Spectrum adoption, 2026-09-18.
+  //
+  // CAVEAT IS DELIBERATELY ABSENT. It is the handwritten annotation and nothing
+  // else, it is below the fold on one route, and preloading a third face would
+  // spend first-paint budget on decoration.
+  for (const want of [/geist-latin\.woff2/, /geist-mono-latin\.woff2/]) {
     const link = links.find((l) => want.test(l))
     assert.ok(link, `no preload for ${want}`)
     assert.match(link, /as="font"/)
@@ -201,15 +206,26 @@ test('every authored weight sits inside the variable axis that renders it', () =
   // instances cannot express those, so they were silently rounded — the hero h1
   // asks for 720 and was rendering at 700. Hence variable faces with a RANGE.
   //
-  // The V2 families have narrower axes than Outfit's 100..900 — verified by
-  // reading the fvar table of the shipped files: Manrope 200..800, JetBrains
-  // Mono 100..800. A weight outside a family's axis is silently CLAMPED, which
-  // is the same silent-rounding failure this test was written to catch.
+  // Geist is NARROWER STILL than the faces before it — 300..700 against
+  // Manrope's 200..800 — and a weight outside a family's axis is silently
+  // CLAMPED, which is the same silent-rounding failure this test was written to
+  // catch. Adopting Spectrum on 2026-09-18 therefore moved 21 call sites at
+  // 720/750/800/900 down to 700; see the note at the bottom of this test.
+  //
+  // Caveat is the exception and is allowed a SINGLE weight: it ships one static
+  // instance at 500 because it has exactly one job (the handwritten homepage
+  // annotation) and no second weight is ever asked for. A range is required of
+  // every face that carries intermediate weights, which is the real rule.
   const faces = css.match(/@font-face\{[^}]*\}/g) || []
   assert.ok(faces.length >= 1, 'expected self-hosted @font-face rules')
   for (const f of faces) {
-    assert.match(f, /font-weight:\s*\d{3} \d{3}/,
-      'each face must declare a variable RANGE, or intermediate weights round')
+    const single = /font-family:\s*'Caveat'/.test(f)
+    if (single) {
+      assert.match(f, /font-weight:\s*500\b/, 'Caveat ships one static weight, 500')
+    } else {
+      assert.match(f, /font-weight:\s*\d{3} \d{3}/,
+        'each variable face must declare a RANGE, or intermediate weights round')
+    }
     assert.match(f, /font-display:\s*swap/)
   }
   // Weights authored OUTSIDE the @font-face rules, i.e. real call sites.
@@ -218,16 +234,25 @@ test('every authored weight sits inside the variable axis that renders it', () =
   const odd = [...new Set(used.filter((w) => w % 100 !== 0))]
   assert.ok(odd.length > 0, 'expected intermediate weights; if these were removed, update this test')
   // The intermediate weights are the whole reason for a variable font, so they
-  // must be renderable by BOTH families — the tighter axis, 200..800, binds.
+  // must be renderable by BOTH families — the tighter axis, Geist's 300..700,
+  // binds.
   for (const w of odd) {
-    assert.ok(w >= 200 && w <= 800, `intermediate weight ${w} sits outside Manrope's 200..800 axis`)
+    assert.ok(w >= 300 && w <= 700, `intermediate weight ${w} sits outside Geist's 300..700 axis`)
   }
-  // Two call sites still ask for 900 (Palette Builder's preview/export headings)
-  // and clamp to Manrope's 800. V2's own display scale tops out at 800, so this
-  // is accepted rather than fixed — but it is BOUNDED here on purpose. A third
-  // out-of-axis weight fails this test so the next author has to make a choice
-  // instead of inheriting a silent clamp.
-  const outOfAxis = used.filter((w) => w < 200 || w > 800)
-  assert.deepStrictEqual(outOfAxis, [900, 900],
-    'a new out-of-axis weight appeared; it will be silently clamped — pick one inside 200..800')
+  // NOW ZERO, AND THAT IS THE POINT. Under Manrope this list read [900, 900] —
+  // two Palette Builder headings that clamped to 800 and were accepted as a
+  // bounded exception. Geist's axis is narrower, so adopting Spectrum turned
+  // that exception plus 19 more (720, 750, 800) into weights that would clamp
+  // to 700 without anyone seeing it. All 21 were remapped to 700 rather than
+  // left to clamp, because a clamp is a decision the renderer makes silently
+  // and a remap is one an author made on purpose. Most of them sit on the Home
+  // page Spectrum replaces outright; the rest are display numbers where Geist
+  // at 700 already reads heavier than Manrope did.
+  //
+  // The empty list is now the guard: a single new out-of-axis weight fails
+  // here, so the next author picks one inside 300..700 instead of inheriting a
+  // silent clamp.
+  const outOfAxis = used.filter((w) => w < 300 || w > 700)
+  assert.deepStrictEqual(outOfAxis, [],
+    'an out-of-axis weight appeared; it will be silently clamped — pick one inside Geist\'s 300..700')
 })

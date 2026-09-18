@@ -237,11 +237,14 @@ test('the weight range the guide quotes is the one global.css declares', () => {
   assert.ok(face, `global.css declares no @font-face for ${bodyFamily}, the family --font asks for first`)
 
   const [low, high] = face.weight.split(/\s+/).map(Number)
-  assert.equal(low, 200)
-  assert.equal(high, 800)
+  // Geist since the Spectrum adoption, 2026-09-18. These were 200/800 under
+  // Manrope; the guide quotes whatever the shipped face actually declares, and
+  // this test is what stops the two drifting apart.
+  assert.equal(low, 300)
+  assert.equal(high, 700)
   // The two derived figures in the sentence, recomputed. font-weight accepts
   // 1 through 1000, so the span the property allows is 999 units wide.
-  assert.equal(high - low, 600, `the declared weight span is now ${high - low} units`)
+  assert.equal(high - low, 400, `the declared weight span is now ${high - low} units`)
   assert.equal(1000 - 1, 999)
 
   assert.match(metricsProse, new RegExp(`font-weight: ${low} ${high}`),
@@ -254,10 +257,14 @@ test('the weight range the guide quotes is the one global.css declares', () => {
 
 test('the inventory the guide describes is the inventory global.css declares', () => {
   const faces = fontFaces()
-  assert.equal(faces.length, 4, `global.css now declares ${faces.length} @font-face rules`)
+  // Three since Caveat joined for the handwritten annotation (Spectrum,
+  // 2026-09-18). The count is asserted rather than derived on purpose: a family
+  // appearing or disappearing is a first-paint decision, and this is where the
+  // guide's sentence and the stylesheet are held to the same number.
+  assert.equal(faces.length, 6, `global.css now declares ${faces.length} @font-face rules`)
   const families = [...new Set(faces.map((f) => f.family))]
-  assert.equal(families.length, 2, `global.css now declares ${families.length} families`)
-  assert.match(loadingProse, /Two families, four rules/)
+  assert.equal(families.length, 3, `global.css now declares ${families.length} families`)
+  assert.match(loadingProse, /Three families, six rules/)
 
   for (const family of families) {
     const pair = faces.filter((f) => f.family === family)
