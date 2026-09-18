@@ -92,6 +92,17 @@ const MENU_TOOL_COPY = {
   // a 54px neighbour and pushing the panel past the bottom of a 768px screen.
   // A menu row is one line (the Higgsfield and Hers mega-menus on Mobbin are
   // both strictly one), so these are the one-line forms of the same promise.
+  // The two Learn rows that stopped saying Soon on 2026-09-18. While they were
+  // Soon, menuDescription returned '' for them on the first line and the
+  // question never arose; live, they fell through to their LEARN_GROUPS `desc`
+  // — "The rules behind interfaces that work." and "Everything to get
+  // productive fast." — which is landing-page copy in a 180px menu column, the
+  // exact fall-through the note above this table warns about. '' rather than a
+  // new sentence, for the same reason as the seven below it: the label already
+  // is the sentence. Design Principles is the principles; Help & Getting
+  // Started is the help.
+  principles: '',
+  help: '',
   'palette-library': 'Copy a curated colour system.',
   'gradient-gallery': 'Production-ready CSS gradients.',
   'community-prompts': 'Proven by the community, not scraped.',

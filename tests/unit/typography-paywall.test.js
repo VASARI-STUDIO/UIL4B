@@ -480,8 +480,19 @@ test('9 · saving needs an account, not a subscription', () => {
   // IconLibrary: "Saving is FREE - it just needs an account"). A signed-out
   // visitor who clicks Save must meet a login prompt, never a paywall.
   const code = stripComments(SAVE)
-  assert.match(code, /requireLogin\(`save \$\{label\}`, \{ free: true \}\)/,
+  // The options are matched as a SET rather than as one exact literal. This
+  // read `{ free: true }` character for character and went red on 2026-09-18
+  // for a change that strengthened the very thing it was protecting: adding
+  // `signup: true`, so a visitor with no account meets the create-account form
+  // instead of "Log in to continue" at the moment they first try to keep their
+  // work. What matters is which flags are on, not the order they are written.
+  const opts = /requireLogin\(`save \$\{label\}`, \{([^}]*)\}\)/.exec(code)?.[1]
+  assert.ok(opts, 'the save trigger no longer opens a login prompt for `save ${label}`')
+  assert.match(opts, /free:\s*true/,
     'the save trigger no longer opens the FREE login prompt')
+  assert.match(opts, /signup:\s*true/,
+    'the save trigger greets somebody with no account with "Log in to continue" — '
+    + 'this branch only runs for a visitor who cannot save, so signed out means no account')
   // The Pro modal is reachable only from the cap, never from being signed out.
   const triggerBody = /const trigger = useCallback\(async \(\) => \{([\s\S]*?)\}, \[/.exec(code)?.[1]
   assert.ok(triggerBody, 'the save trigger changed shape')
