@@ -99,6 +99,16 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
 
   expect(await page.locator('.ic').count(), 'the grid is populated from the fixture').toBeGreaterThan(20)
 
+  // WAIT FOR THE GLYPHS, NOT JUST THE CATALOGUE. The summary line above says
+  // every pack ANSWERED; it says nothing about the markup, which now arrives in
+  // a second round of requests a beat after the catalogue settles. Reading the
+  // tally straight after the summary raced that round and measured zero batched
+  // requests on a page that was about to make them. The condition the assertion
+  // below is really about is cells having painted, so wait for that.
+  await expect
+    .poll(() => page.locator('.ig .ic img').count(), { timeout: 20000 })
+    .toBeGreaterThan(20)
+
   const tally = iconifyRequests(ctx)
   expect(tally, 'the stub is installed on this context').not.toBeNull()
   expect(tally.collection, 'one /collection request per pack the page browses on first paint').toBe(packs.length)
