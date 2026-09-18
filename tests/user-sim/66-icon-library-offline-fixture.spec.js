@@ -104,7 +104,19 @@ test('the default grid is fetched through the fixture, one answer per pack', asy
   expect(tally.collection, 'one /collection request per pack the page browses on first paint').toBe(packs.length)
   expect(tally.missing, 'every request had an answer in the fixture').toEqual([])
   expect(tally.escaped, 'no response came from a real Iconify host').toEqual([])
-  expect(tally.svg, 'the visible cells fetched their glyphs through the fixture too').toBeGreaterThan(0)
+  // THE GRID'S GLYPHS, WHICH ARE NO LONGER ONE REQUEST EACH. This read
+  // `tally.svg > 0` when every cell fetched its own .svg — 120 of them on first
+  // paint, which is the request storm that rate-limited the page into a grid of
+  // blank cells. The markup now arrives batched, one request per pack, so the
+  // fixture is consumed through `batch` instead.
+  expect(tally.batch, 'the visible cells fetched their glyphs through the fixture too').toBeGreaterThan(0)
+  // And the storm has not come back: a batched grid must never need a request
+  // per cell, so the per-icon endpoint stays far below the number of cells on
+  // screen. It is not asserted at zero — hovering a cell legitimately prefetches
+  // one glyph's own markup for the customizer.
+  const cells = await page.locator('.ic').count()
+  expect(tally.svg, `${tally.svg} per-icon glyph requests for ${cells} cells — the grid has stopped batching`)
+    .toBeLessThan(cells)
   await ctx.close()
 })
 

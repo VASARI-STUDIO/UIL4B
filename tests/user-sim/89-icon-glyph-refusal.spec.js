@@ -41,11 +41,20 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
     // which is the whole point of falling back rather than showing broken boxes.
     const m = await page.evaluate(() => ({
       broken: [...document.querySelectorAll('img')].filter((i) => i.complete && i.naturalWidth === 0).length,
-      cdnImgs: [...document.querySelectorAll('img')].filter((i) => /iconify|simplesvg|unisvg/.test(i.src)).length,
+      // Nothing from the refused service got through. Counting src hosts is no
+      // longer the way to ask: a cell that DID get its markup carries a data:
+      // URI, so the question is whether any catalogue glyph painted at all.
+      // Counted inside the grid, because the masthead and rail are not it.
+      catalogueCells: document.querySelectorAll('.ig .ic img').length,
+      // And no cell is left sitting on the placeholder: the fallback replaced
+      // the grid rather than leaving 120 empty boxes, which is the whole
+      // difference between this state and the bug at the top of this file.
+      waiting: document.querySelectorAll('.ig .ic .ig-glyph-wait').length,
       inlineCells: document.querySelectorAll('button svg').length,
     }))
     expect(m.broken, `${m.broken} broken image(s) still on screen`).toBe(0)
-    expect(m.cdnImgs, 'the grid is still asking the refused service for glyphs').toBe(0)
+    expect(m.catalogueCells, 'the grid still shows catalogue glyphs the service refused').toBe(0)
+    expect(m.waiting, `${m.waiting} cell(s) left waiting on markup that was refused`).toBe(0)
     expect(m.inlineCells, 'no built-in icons rendered').toBeGreaterThan(8)
   })
 
@@ -66,16 +75,37 @@ test.describe('the icon grid when the catalogue answers and the glyphs do not', 
   test('POSITIVE CONTROL: with glyphs served, none of the above appears', async ({ page }) => {
     // Every assertion above is satisfied by a page that fell back for any
     // reason at all, including one that always falls back. With the fixture
-    // answering normally the grid must be the CATALOGUE — no notice, and real
-    // glyph requests going out.
+    // answering normally the grid must be the CATALOGUE — no notice, real glyph
+    // requests going out, and cells that actually decoded.
+    //
+    // THE EVIDENCE CHANGED SHAPE, THE CONTROL DID NOT. This used to count
+    // <img> elements whose src pointed at an Iconify host, because each cell
+    // was its own request to one. That is the pattern that rate-limited the
+    // page into the blank grid at the top of this file, and it is gone: the
+    // grid now asks for one batch per pack and composes each returned body into
+    // a data: URI. So the request count is watched on the WIRE, where it is now
+    // the only place it exists, and the cells are checked for having decoded.
     watch(page, PERSONA)
+    const batched = []
+    page.on('request', (r) => {
+      if (/\/[^/]+\.json\?icons=/.test(r.url())) batched.push(r.url())
+    })
     await go(page, '/create/icons')
     await page.waitForTimeout(2500)
 
     await expect(page.getByText(/couldn.t reach the icon service/i)).toHaveCount(0)
-    const cdnImgs = await page.evaluate(
-      () => [...document.querySelectorAll('img')].filter((i) => /iconify|simplesvg|unisvg/.test(i.src)).length,
-    )
-    expect(cdnImgs, 'the catalogue grid is not requesting any glyphs').toBeGreaterThan(8)
+    expect(batched.length, 'the catalogue grid is not requesting any glyphs').toBeGreaterThan(0)
+
+    const m = await page.evaluate(() => {
+      const cells = [...document.querySelectorAll('.ig .ic img')]
+      return {
+        painted: cells.filter((i) => i.complete && i.naturalWidth > 0).length,
+        notFromBatch: cells.filter((i) => !i.src.startsWith('data:')).length,
+        waiting: document.querySelectorAll('.ig .ic .ig-glyph-wait').length,
+      }
+    })
+    expect(m.painted, 'the grid drew no glyphs at all').toBeGreaterThan(8)
+    expect(m.notFromBatch, 'a cell is still fetching its own glyph instead of using the batch').toBe(0)
+    expect(m.waiting, 'cells are still waiting for markup that never arrived').toBe(0)
   })
 })

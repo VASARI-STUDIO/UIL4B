@@ -258,7 +258,12 @@ function appendAudit(entry) {
  */
 export async function stubIconify(context) {
   if (isLiveIconify()) return context
-  const tally = { stubbed: 0, refused: 0, collection: 0, search: 0, svg: 0, missing: [], escaped: [] }
+  // `batch` counts /{prefix}.json?icons=… — how the GRID gets its markup now.
+  // `svg` stays and still counts the per-icon endpoint, which the customizer
+  // uses; the two are separate because "the grid drew its icons" and "a glyph's
+  // own markup was fetched" stopped being the same question when the grid
+  // started batching.
+  const tally = { stubbed: 0, refused: 0, collection: 0, search: 0, svg: 0, batch: 0, missing: [], escaped: [] }
   context[ICONIFY_TALLY] = tally
 
   await context.route((url) => ICONIFY_HOSTS.includes(url.hostname), (route) => {
@@ -269,6 +274,7 @@ export async function stubIconify(context) {
     if (pathname === '/collection') tally.collection += 1
     else if (pathname === '/search') tally.search += 1
     else if (pathname.endsWith('.svg')) tally.svg += 1
+    else if (/^\/[^/]+\.json$/.test(pathname) && new URL(req.url()).search.includes('icons=')) tally.batch += 1
     if (answer.status === 404) tally.missing.push(pathname + new URL(req.url()).search)
     return route.fulfill({ status: answer.status, contentType: answer.contentType, headers: CORS, body: answer.body })
       .catch(() => { /* context torn down mid-flight */ })
