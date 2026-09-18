@@ -64,9 +64,18 @@ const STATUS_LABELS = FEEDBACK_STATUS_LABELS
 // is strictly better than a literal, but the badge contrast here is unchecked
 // and belongs to [flair-tone-contrast]'s class of text-on-a-tint-of-itself.
 const STATUS_COLORS = { new: 'var(--warn)', 'in-progress': 'var(--pending)', done: 'var(--ok)' }
-const STATUS_BGS = { new: 'rgba(245,158,11,.1)', 'in-progress': 'color-mix(in srgb,var(--pending) 12%,transparent)', done: 'rgba(16,185,129,.1)' }
+// SPECTRUM, 2026-09-18: the last three literals here became color-mix() on the
+// tokens they were approximating. `rgba(245,158,11,.1)` is amber, `rgba(16,185,
+// 129,.1)` is emerald and `rgba(239,68,68,.1)` is red — each one the LIGHT
+// theme's value of a signal token, frozen. The note above records that the
+// same fault was already fixed once here for `#a855f7`, which "had no dark
+// value at all"; these three had the same problem and survived that sweep
+// because an rgba() reads less like a hardcoded colour than a hex does. They
+// are the same thing. Derived from the token, they now track both themes and
+// any future change to the signal ramp.
+const STATUS_BGS = { new: 'color-mix(in srgb,var(--warn) 12%,transparent)', 'in-progress': 'color-mix(in srgb,var(--pending) 12%,transparent)', done: 'color-mix(in srgb,var(--ok) 12%,transparent)' }
 const TYPE_COLORS = { bug: 'var(--err)', feature: 'var(--accent)', general: 'var(--t2)', help: 'var(--pending)' }
-const TYPE_BGS = { bug: 'rgba(239,68,68,.1)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--pending) 12%,transparent)' }
+const TYPE_BGS = { bug: 'color-mix(in srgb,var(--err) 12%,transparent)', feature: 'var(--accent-bg)', general: 'var(--bg-2)', help: 'color-mix(in srgb,var(--pending) 12%,transparent)' }
 const DONUT_COLORS = ['var(--accent)', 'var(--ok)', 'var(--warn)', 'var(--err)', 'var(--pending)', 'var(--t3)']
 
 // ── TEN TABS, AUDITED, SIX LEFT ───────────────────────────────────────────
@@ -171,8 +180,18 @@ function DonutChart({ segments, size = 120 }) {
     <div className="adm-donut-wrap">
       <svg role="img" aria-label="Distribution breakdown" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {paths}
-        <text x={cx} y={cy - 4} textAnchor="middle" fill="var(--t0)" fontSize="20" fontWeight="800">{total}</text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--t3)" fontSize="9">total</text>
+        {/* The number in the hole is a VALUE, so it is Geist Mono like every
+            other figure on the dashboard — and its weight was 800, which is
+            outside Geist's 300..700 axis and was being clamped to 700 by the
+            renderer with nobody choosing it. The stylesheet sweep that caught
+            the other 39 of these cannot see this one: it is an SVG attribute
+            in JSX (`fontWeight="800"`), not a CSS declaration. 600 is the top
+            of Geist Mono's own axis. */}
+        <text x={cx} y={cy - 4} textAnchor="middle" fill="var(--t0)" fontFamily="var(--mono)" fontSize="19" fontWeight="600">{total}</text>
+        {/* The word stays exactly as it was. Uppercasing it would have been a
+            styling decision that edits a string, and strings on this page are
+            the founder's. Mono and tracking carry the treatment instead. */}
+        <text x={cx} y={cy + 12} textAnchor="middle" fill="var(--t3)" fontFamily="var(--mono)" fontSize="8.5" letterSpacing=".1em">total</text>
       </svg>
       <div className="adm-donut-legend">
         {segments.map((seg, i) => (
@@ -202,7 +221,7 @@ function TopList({ title, rows, unit, empty }) {
     <div className="adm-card">
       <div className="adm-card-header">
         <span className="adm-card-title">{title}</span>
-        <span style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} {unit}</span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{rows.length} {unit}</span>
       </div>
       <div className="adm-card-body">
         {rows.length > 0 ? (
@@ -239,7 +258,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
             <span className="adm-badge" style={{ color: TYPE_COLORS[item.type], background: TYPE_BGS[item.type] }}>{item.type}</span>
             <span className="adm-badge" style={{ color: STATUS_COLORS[item.status], background: STATUS_BGS[item.status] }}>{STATUS_LABELS[item.status]}</span>
             {item.source && <span className="adm-badge" style={{ color: 'var(--t3)', background: 'var(--bg-2)' }}>{item.source}</span>}
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>{fmtDateTime(item.createdAt)}</span>
+            <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{fmtDateTime(item.createdAt)}</span>
           </div>
           <div className="adm-submission-title">{item.subject || `[${item.type}] Submission`}</div>
           <p className={`adm-submission-preview${expanded ? ' expanded' : ''}`}>{item.message}</p>
@@ -275,7 +294,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
               badge: it is provenance, not a status. */}
           <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 12 }}>
             {item.reviewedBy
-              ? <>Last actioned by <strong style={{ color: 'var(--t2)' }}>{item.reviewedBy}</strong>{item.updatedAt ? ` · ${fmtDateTime(item.updatedAt)}` : ''}</>
+              ? <>Last actioned by <strong className="mono" style={{ color: 'var(--t2)' }}>{item.reviewedBy}</strong>{item.updatedAt ? <> · <span className="mono">{fmtDateTime(item.updatedAt)}</span></> : ''}</>
               : 'Not actioned by anyone yet'}
           </div>
           <div className="adm-submission-notes">
@@ -305,7 +324,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
             {confirmDel ? (
               <>
                 <span style={{ fontSize: 10, color: 'var(--err)', fontWeight: 600, marginLeft: 'auto' }}>Delete?</span>
-                <button className="btn btn-s" onClick={() => { onDelete(item.id); setConfirmDel(false) }} style={{ fontSize: 10, color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>Yes</button>
+                <button className="btn btn-s" onClick={() => { onDelete(item.id); setConfirmDel(false) }} style={{ fontSize: 10, color: 'var(--err-fg)', background: 'var(--err)', borderColor: 'var(--err)' }}>Yes</button>
                 <button className="btn btn-s" onClick={() => setConfirmDel(false)} style={{ fontSize: 10 }}>No</button>
               </>
             ) : (
@@ -401,7 +420,12 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
   }
 
   const statusColor = { pending: 'var(--warn)', approved: 'var(--ok)', rejected: 'var(--err)' }[prompt.status] || 'var(--t2)'
-  const statusBg = { pending: 'rgba(245,158,11,.1)', approved: 'rgba(16,185,129,.1)', rejected: 'rgba(239,68,68,.1)' }[prompt.status] || 'var(--bg-2)'
+  // Same three frozen light-theme literals as STATUS_BGS above, same fix.
+  const statusBg = {
+    pending: 'color-mix(in srgb,var(--warn) 12%,transparent)',
+    approved: 'color-mix(in srgb,var(--ok) 12%,transparent)',
+    rejected: 'color-mix(in srgb,var(--err) 12%,transparent)',
+  }[prompt.status] || 'var(--bg-2)'
   const profileLink = resolvePromptProfileLink(prompt)
 
   return (
@@ -410,8 +434,8 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
         <div className="adm-prompt-header">
           <span className="adm-badge" style={{ color: statusColor, background: statusBg }}>{prompt.status}</span>
           {prompt.authorName && <span style={{ fontSize: 11, color: 'var(--t2)' }}>by {prompt.authorName}</span>}
-          {prompt.authorUid && <span title="Firebase user ID" style={{ fontSize: 10, color: 'var(--t3)' }}>UID {prompt.authorUid}</span>}
-          <span style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
+          {prompt.authorUid && <span className="mono" title="Firebase user ID" style={{ fontSize: 10, color: 'var(--t3)' }}>UID {prompt.authorUid}</span>}
+          <span className="mono" style={{ fontSize: 10, color: 'var(--t3)', marginLeft: 'auto' }}>{fmtDateTime(prompt.createdAt)}</span>
         </div>
 
         {editing ? (
@@ -450,9 +474,9 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
             {prompt.mediaUrl && (
               <div style={{ marginBottom: 8, padding: 8, background: 'var(--bg-1)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                 {prompt.mediaType === 'image' ? (
-                  <img src={prompt.mediaUrl} alt="Prompt media" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, display: 'block' }} />
+                  <img src={prompt.mediaUrl} alt="Prompt media" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 'var(--radius-s)', display: 'block' }} />
                 ) : (
-                  <video src={prompt.mediaUrl} controls style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 6, display: 'block' }} />
+                  <video src={prompt.mediaUrl} controls style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 'var(--radius-s)', display: 'block' }} />
                 )}
                 <button className="btn btn-s" onClick={() => updatePrompt({ mediaUrl: '', mediaType: '' })} disabled={busy}
                   style={{ fontSize: 10, color: 'var(--err)', marginTop: 6 }}>Remove media</button>
@@ -480,7 +504,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
           {confirmingDelete ? (
             <>
               <span style={{ fontSize: 10, color: 'var(--err)', fontWeight: 600, marginLeft: 'auto' }}>Delete?</span>
-              <button className="btn btn-s" onClick={handleDelete} disabled={busy} style={{ fontSize: 10, color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>Yes</button>
+              <button className="btn btn-s" onClick={handleDelete} disabled={busy} style={{ fontSize: 10, color: 'var(--err-fg)', background: 'var(--err)', borderColor: 'var(--err)' }}>Yes</button>
               <button className="btn btn-s" onClick={() => setConfirmingDelete(false)} style={{ fontSize: 10 }}>No</button>
             </>
           ) : (
@@ -529,7 +553,36 @@ function StripeSetupPanel({ toast }) {
       ...opts,
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
     })
-    const data = await res.json().catch(() => ({}))
+    // ── A 200 THAT IS NOT JSON IS A FAILED READ, NOT AN EMPTY CONFIG ────────
+    // This was `await res.json().catch(() => ({}))`, and the fallback was the
+    // defect: a response that is not JSON became `{}`, `{}` passed the `res.ok`
+    // check, and `setConfig({})` put a TRUTHY object into state. The panel then
+    // took its loaded branch and ran `config.currencies.map(...)` on undefined.
+    //
+    // That is not hypothetical and it is not confined to the Stripe tab. The
+    // throw lands in render, the route's ErrorBoundary catches it, and the
+    // WHOLE admin dashboard unmounts — six tabs gone because one fetch came
+    // back as a document. It reproduces on any host that answers an unknown
+    // /api path with the SPA shell, which is exactly what `vite preview` does:
+    // GET /api/setup-stripe there is `200 text/html`.
+    //
+    // It is worth guarding rather than dismissing as a preview artefact,
+    // because the production shape of the same fault is a dropped or
+    // mis-deployed function — and /api is at Vercel's twelve-function limit,
+    // so a deploy that loses one is the realistic way this happens live.
+    //
+    // The parse failure is now reported instead of swallowed. Nothing about a
+    // real response changes: a genuine JSON body behaves exactly as before, and
+    // the panel's existing "Couldn't load Stripe config" card — which already
+    // prints `error` in mono — is where this surfaces.
+    const body = await res.text()
+    let data
+    try {
+      data = body ? JSON.parse(body) : {}
+    } catch {
+      const kind = res.headers.get('content-type') || 'no content type'
+      throw new Error(`The Stripe settings route answered ${res.status} with ${kind} rather than JSON`)
+    }
     if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`)
     return data
   }, [])
@@ -1930,7 +1983,7 @@ export default function Admin({ toast }) {
               current — and this page is only useful if you can trust its age. */}
           {refreshedAt && (
             <span className="adm-cat-desc" style={{ marginRight: 8 }}>
-              Updated {new Date(refreshedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              Updated <span className="mono">{new Date(refreshedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
             </span>
           )}
           <button className="btn btn-s" onClick={refresh}>Refresh</button>
@@ -2120,7 +2173,7 @@ export default function Admin({ toast }) {
             <div className="adm-card">
               <div className="adm-card-header">
                 <span className="adm-card-title">Feature Requests</span>
-                <span style={{ fontSize: 10, color: 'var(--t3)' }}>{feedback.filter(f => f.type === 'feature').length} total</span>
+                <span className="mono" style={{ fontSize: 10, color: 'var(--t3)' }}>{feedback.filter(f => f.type === 'feature').length} total</span>
               </div>
               <div className="adm-card-body">
                 <div className="adm-list">
@@ -2149,7 +2202,7 @@ export default function Admin({ toast }) {
                       <span className="adm-feed-dot" style={{ background: STATUS_COLORS[f.status] }} />
                       <div className="adm-feed-body">
                         <div className="adm-feed-text">{f.subject || 'No subject'}</div>
-                        <div className="adm-feed-meta">{STATUS_LABELS[f.status]} · {fmtDateTime(f.createdAt)}</div>
+                        <div className="adm-feed-meta">{STATUS_LABELS[f.status]} · <span className="mono">{fmtDateTime(f.createdAt)}</span></div>
                       </div>
                     </div>
                   ))}
@@ -2206,16 +2259,16 @@ export default function Admin({ toast }) {
                     <div style={{ fontSize: 12, color: 'var(--t2)', lineHeight: 1.5 }}>{aiHealth.summary}</div>
                     {aiHealth.totals && (
                       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--t2)' }}>
-                        <span>OpenRouter served <strong style={{ color: 'var(--t0)' }}>{aiHealth.totals.openrouterOk}</strong></span>
-                        <span>OpenRouter failed <strong style={{ color: 'var(--t0)' }}>{aiHealth.totals.openrouterFail}</strong></span>
-                        <span>Gemini fallback served <strong style={{ color: 'var(--t0)' }}>{aiHealth.totals.geminiOk}</strong></span>
-                        <span>Both down <strong style={{ color: 'var(--t0)' }}>{aiHealth.totals.noProvider}</strong></span>
+                        <span>OpenRouter served <strong className="mono" style={{ color: 'var(--t0)' }}>{aiHealth.totals.openrouterOk}</strong></span>
+                        <span>OpenRouter failed <strong className="mono" style={{ color: 'var(--t0)' }}>{aiHealth.totals.openrouterFail}</strong></span>
+                        <span>Gemini fallback served <strong className="mono" style={{ color: 'var(--t0)' }}>{aiHealth.totals.geminiOk}</strong></span>
+                        <span>Both down <strong className="mono" style={{ color: 'var(--t0)' }}>{aiHealth.totals.noProvider}</strong></span>
                       </div>
                     )}
                     {aiHealth.lastFailover && (
                       <div style={{ fontSize: 11, color: 'var(--t3)', lineHeight: 1.5 }}>
-                        Last failover {fmtDateTime(aiHealth.lastFailover.at)}
-                        {aiHealth.lastFailover.status ? ` · HTTP ${aiHealth.lastFailover.status}` : ''}
+                        Last failover <span className="mono">{fmtDateTime(aiHealth.lastFailover.at)}</span>
+                        {aiHealth.lastFailover.status ? <> · <span className="mono">HTTP {aiHealth.lastFailover.status}</span></> : ''}
                         {aiHealth.lastFailover.message ? ` · ${aiHealth.lastFailover.message}` : ''}
                       </div>
                     )}
@@ -2265,9 +2318,12 @@ export default function Admin({ toast }) {
           <div className="adm-section-h">
             <div className="adm-section-title"><span className="adm-section-bar" />Submissions ({filteredFeedback.length}{filteredFeedback.length !== feedback.length ? ` of ${feedback.length}` : ''})</div>
             <div className="adm-sub-summary">
-              <span style={{ color: 'var(--warn)' }}>{newCount} new</span>
-              <span style={{ color: 'var(--accent-strong)' }}>{inProgressCount} in progress</span>
-              <span style={{ color: 'var(--ok)' }}>{statusCounts.done || 0} done</span>
+              {/* The figure is mono, the word beside it is not: these three
+                  read as one line and the split is what makes the counts
+                  comparable down the eye rather than three sentences. */}
+              <span style={{ color: 'var(--warn)' }}><span className="mono">{newCount}</span> new</span>
+              <span style={{ color: 'var(--accent-strong)' }}><span className="mono">{inProgressCount}</span> in progress</span>
+              <span style={{ color: 'var(--ok)' }}><span className="mono">{statusCounts.done || 0}</span> done</span>
             </div>
           </div>
 
@@ -2303,7 +2359,7 @@ export default function Admin({ toast }) {
             </div>
           ) : (
             <div className="adm-cat-desc" style={{ marginBottom: 8 }}>
-              {serverFeedbackCount} from the server · {Math.max(0, feedback.length - serverFeedbackCount)} from this browser
+              <span className="mono">{serverFeedbackCount}</span> from the server · <span className="mono">{Math.max(0, feedback.length - serverFeedbackCount)}</span> from this browser
             </div>
           )}
 

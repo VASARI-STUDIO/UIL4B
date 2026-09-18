@@ -338,9 +338,9 @@
 .adm-confirm-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--t1);line-height:1.6}
 .adm-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
 .adm-btn-danger{border-color:var(--err);color:var(--err-strong)}
-.adm-btn-danger:hover:not(:disabled){background:var(--err);border-color:var(--err);color:var(--err-fg,#fff)}
+.adm-btn-danger:hover:not(:disabled){background:var(--err);border-color:var(--err);color:var(--err-fg)}
 .adm-btn-go{border-color:var(--accent);color:var(--accent-strong)}
-.adm-btn-go:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--accent-fg,#fff)}
+.adm-btn-go:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 
 /* ── 980px and under: drop the column the filter chips already answer ───────
  * Seven columns do not fit a tablet without the horizontal scroll taking the
@@ -397,4 +397,913 @@
   .adm-detail-dl dt{margin-top:8px}
   .adm-copy-row{flex-wrap:wrap}
   .adm-copy-value{flex-basis:100%;order:3;font-size:11px}
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * SPECTRUM — the admin dashboard adopts the design system  (2026-09-18)
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * WHAT THIS BLOCK IS, AND WHY IT IS A BLOCK RATHER THAN AN EDIT IN PLACE.
+ *
+ * The admin surface is styled from TWO files. The rules above are its own; a
+ * second set — the tab bar, the stat figures, the table's th/td, the sort
+ * buttons, the country chips, `.adm-card-body`, `.adm-grid-2` — still lives in
+ * src/styles/global.css, because those were never lifted out with the rest.
+ * global.css belongs to another workstream on this branch and is not ours to
+ * edit, and this deferred sheet cascades AFTER the whole critical sheet (see
+ * the file header). So the adoption is expressed as an override block at the
+ * end: equal specificity, later source order, and the diff stays inside the
+ * two files this work owns.
+ *
+ * IT IS A RESTYLE. Not one figure below changes what it means or where it
+ * comes from. #484 took the browser-local numbers off this dashboard, cut ten
+ * tabs to six and rebuilt the Users tab around honest plan states; every one of
+ * those decisions is load-bearing and none of them is touched here.
+ *
+ * ── THE FOUR THINGS SPECTRUM ACTUALLY CHANGES HERE ────────────────────────
+ *
+ * 1. MONO CARRIES EVERY VALUE. Geist Mono with tabular figures on anything a
+ *    person reads off the screen or copies — counts, dates, ids, statuses,
+ *    amounts, ratios — and Geist for prose. In the design source this is the
+ *    loudest signal that a surface belongs to the product: the palette panel
+ *    sets `#6A95F1`, `AA 5.8`, `LOW 2.5` in mono against a sans heading, and
+ *    the export panel does the same with `0.2 KB` and `11 lines`. Tabular
+ *    figures matter more here than on the sales page, because this is the one
+ *    surface where numbers are stacked in columns and compared down the column.
+ *
+ * 2. MONO ALSO CARRIES THE MICRO-LABELS. Spectrum's eyebrows and nav items are
+ *    Geist Mono at 10.5px / .14em / uppercase. The dashboard already had
+ *    uppercase letter-spaced micro-labels everywhere — card titles, column
+ *    headers, detail-section headings — in the sans face. Moving them to mono
+ *    is a one-line change per rule that makes the whole page read as one
+ *    system.
+ *
+ * 3. PILLS, AND THE HOUSE MOTION. 999px chips, the `cubic-bezier(.23,1,.32,1)`
+ *    curve, `.16s` on colour, `scale(.97)` on press — with a
+ *    `prefers-reduced-motion` companion for every one, which the source ships
+ *    and which is easy to drop in a port.
+ *
+ * 4. DENSITY IS PRESERVED ON PURPOSE. The sales page's spacing is not imported.
+ *    Rows get TIGHTER here, not looser: this is a surface for scanning two
+ *    hundred accounts, and a dashboard that inherits marketing spacing is a
+ *    dashboard you have to scroll to use. Mobbin, on how dense a real admin
+ *    table runs: Whop's members table holds identity, email, status, country,
+ *    spend, two timestamps and two actions in a ~34px row
+ *    (https://mobbin.com/screens/b1276866-b330-4964-b81d-2ffa4de5c7a0), and
+ *    Vapi's monitor list does the same on dark ground
+ *    (https://mobbin.com/screens/1965682c-0c4e-4146-a0fb-864ad2eabf2d).
+ *
+ * NO HARDCODED COLOUR BELOW. Every colour is a token or a color-mix() of one.
+ * The accent especially: premium theme templates work by changing `--accent`
+ * alone, so a blue typed in here would be a blue that does not follow the
+ * theme — which is a broken feature, not a styling slip.
+ */
+
+/* The house curve and the two durations, named once. Local to this surface
+   rather than added to the global token layer, which is another agent's file. */
+.adm,
+.adm-lock {
+  --adm-ease: cubic-bezier(.23, 1, .32, 1);
+  --adm-t-color: .16s;
+  --adm-t-move: .24s;
+  /* Spectrum's micro-label: mono, tiny, widely tracked, uppercase. */
+  --adm-label-size: 10px;
+  --adm-label-track: .12em;
+}
+
+/* ── 1. THE VALUE/PROSE SPLIT ──────────────────────────────────────────────
+ *
+ * `.mono` was only ever defined as `.adm-table .mono` and `.adm-list-name.mono`
+ * in global.css, so the bare class the page uses OUTSIDE a table did nothing:
+ * the `analytics-daily` collection name in the reset confirmation and the
+ * aggregate error string both asked for mono and rendered in the sans face.
+ * Defining it for the whole surface fixes those two and makes the class mean
+ * one thing wherever it appears. */
+.adm .mono,
+.adm-lock .mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The figures. Every one of these is a number a person reads off the page, so
+   every one is mono with tabular figures — in a column of counts, proportional
+   digits make the ones and the sevens fail to line up, which is the one thing
+   a column of counts exists to do. */
+.adm-stat-value,
+.adm-user-view-n,
+.adm-bar-value,
+.adm-donut-count,
+.adm-list-value,
+.adm-list-rank,
+.adm-user-count,
+.adm-tab-badge,
+.adm-plan-interval,
+.adm-flag-cell,
+.adm-stripe-na,
+.adm-stripe-env,
+.cq-filter-count {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The headline figures. Geist Mono's axis stops at 600 — asking for more is a
+   clamp the renderer performs silently, so the weight is stated inside it and
+   the size and tracking carry the rest of the emphasis. */
+.adm-stat-value {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1.05;
+  color: var(--t0);
+}
+
+.adm-user-view-n {
+  font-family: var(--mono);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+}
+
+/* Dates and times are values too, and these two columns are read down rather
+   than across — the whole point of the Joined / Last seen pair is spotting the
+   account that has not been back. Targeted by the data-label the narrow layout
+   already relies on, so no second source of truth about which column is which. */
+.adm-users-table td[data-label="Joined"],
+.adm-users-table td[data-label="Last seen"] {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--t1);
+}
+
+/* The two handles the founder copies out to act in Firebase or Stripe. An id
+   is the canonical case for mono: it is compared character by character. */
+.adm-copy-value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+}
+
+/* Values inside the detail panel's definition lists stay sans — they are
+   sentences ("Within the seven-day past-due grace…") — but the ones that are
+   data get the mono treatment through the `.mono` class the markup already
+   carries on the Stripe status. Prose is the default and stays the default. */
+.adm-detail-dl dd.mono {
+  font-size: 11.5px;
+}
+
+/* ── 2. THE MICRO-LABEL ────────────────────────────────────────────────────
+ *
+ * Spectrum sets its eyebrows and nav in Geist Mono at 10.5px with .14em of
+ * tracking, uppercase. These are the dashboard's equivalents and they were all
+ * already uppercase and tracked — in the sans face, which is what made the page
+ * read as a different product from the one around it. */
+.adm-card-title,
+.adm-detail-sec h4,
+.adm-th-sort,
+.adm-submission-notes-title,
+.adm-stripe-table th,
+.adm-lock-eyebrow,
+.adm-status,
+.adm-badge,
+.adm-access--founder,
+.adm-access--moderator,
+.adm-prompt-tag,
+.cq-kind {
+  font-family: var(--mono);
+  letter-spacing: var(--adm-label-track);
+  text-transform: uppercase;
+}
+
+/* Mono runs optically larger than Geist at the same size and its uppercase is
+   wide, so the micro-labels come DOWN a notch rather than staying put — a
+   straight face swap at the old sizes would have made every label louder than
+   the value it labels. */
+.adm-card-title,
+.adm-detail-sec h4,
+.adm-th-sort,
+.adm-submission-notes-title,
+.adm-stripe-table th {
+  font-size: var(--adm-label-size);
+  font-weight: 600;
+}
+
+.adm-table thead th {
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+  padding: 9px 14px;
+}
+
+/* The cell label the card layout prints in place of the column header it lost
+   below 680px. Same micro-label, same face — it IS a column header. */
+@media (max-width: 680px) {
+  .adm-users-table tbody td[data-label]::before {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: var(--adm-label-track);
+  }
+}
+
+/* ── 3. PANEL AND CARD ANATOMY ─────────────────────────────────────────────
+ *
+ * Spectrum's panels are a hairline border, a flat surface and a generous
+ * radius, with nested panels stepping DOWN a radius rather than repeating the
+ * outer one. No stacked shadow: the source separates surfaces with the border
+ * and the ground colour, and on a page that nests a card inside a category
+ * block inside a section, shadows compound into mud. */
+/* 18px is the app design's panel radius — `UIL4B App.dc.html` sets exactly
+   `border-radius:18px;background:var(--card);border:1px solid
+   rgba(var(--ink-rgb),.09)` on both the "Start something" section and every
+   project card. --radius-2xl is 18px in the token layer. */
+.adm-card {
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: none;
+  transition: border-color var(--adm-t-color) var(--adm-ease);
+}
+
+.adm-cat {
+  border-radius: var(--radius-2xl);
+  padding: 18px;
+  margin-bottom: 18px;
+  gap: 14px;
+  background: var(--bg-1);
+}
+
+/* A card inside a category block sits one step down the radius scale and one
+   step up the ground, so the nesting is legible without a second border
+   weight. */
+.adm-cat .adm-card {
+  border-radius: var(--radius-l);
+}
+
+.adm-card-header {
+  padding: 12px 16px 10px;
+}
+
+.adm-card-body {
+  padding: 14px 16px;
+}
+
+.adm-section {
+  margin-bottom: 24px;
+}
+
+/* The stat tile. Mobbin: Deel's compliance dashboard puts the figure first and
+   large with the qualifier under it, which is the right way round when the
+   number is what is being scanned
+   (https://mobbin.com/screens/9f5af254-f966-4810-adbb-c428854523e3); Midday
+   runs the same row of tiles directly above the table they summarise
+   (https://mobbin.com/screens/6a2ff8b1-4e58-4305-b75f-b7d2a27c4c60). */
+/* ── THE HAIRLINE GRID ─────────────────────────────────────────────────────
+ *
+ * The app design's own idiom, and the most distinctive thing in the file: the
+ * quick-create grid is `display:grid;gap:1px;background:rgba(var(--ink-rgb),
+ * .08)` with each cell painted `var(--card)`, so the GAP is the divider and
+ * there is not a single `border` between cells. One panel ruled into parts,
+ * rather than four cards floating a gap apart.
+ *
+ * It is the right shape for the four Overview figures specifically. They are
+ * one reading — views, pages, actions, days, all from the same 30-day server
+ * aggregate — and four separate cards said they were four unrelated things.
+ * It is also denser: the 10px gutters become 1px rules. */
+/* auto-FIT, not auto-fill. `auto-fill` keeps the empty tracks it created, and
+ * inside a hairline grid an empty track is not invisible the way it is between
+ * floating cards — it is a filled cell. At 1440 the four figures left a fifth,
+ * blank, card-coloured panel sitting in the row with a rule beside it, in both
+ * themes. `auto-fit` collapses the empty tracks and the four figures share the
+ * width. Caught by looking at the render; no assertion would have said it. */
+.adm-stats {
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  overflow: hidden;
+}
+
+.adm-stat {
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--card);
+  box-shadow: none;
+  transition: background var(--adm-t-color) var(--adm-ease);
+}
+
+/* With no border of its own, the hover is the ground — which is also what the
+   app design does with its `data-hov` cells. */
+.adm-stat:hover {
+  background: var(--bg-2);
+  border-color: transparent;
+}
+
+.adm-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--t2);
+  margin-top: 6px;
+}
+
+.adm-stat-sub {
+  font-size: 10.5px;
+  color: var(--t3);
+}
+
+/* ── 4. PILLS ──────────────────────────────────────────────────────────────
+ *
+ * The tab bar, the filter chips, the country chips and the queue's status tabs
+ * are all the same object in the design source: a 999px pill, mono micro-label,
+ * transparent at rest, and an accent WASH rather than an accent fill when it is
+ * the selected one. The wash is what keeps it swappable — it is derived from
+ * `--accent`, so a premium theme template moves it without a second edit. */
+/* The container loses its box entirely — the pills are the object, which is how
+   the source draws its nav and its `CSS variables / Tailwind / DTCG JSON`
+   switch. NO bottom rule here, deliberately: `.adm-tabs` also carries
+   `.rail-overflow`, whose edge mask fades the element's own border along with
+   its content, so a rule on this box would dissolve at both ends and look like
+   a rendering fault. */
+.adm-tabs {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 2px 0;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+/* ── CORRECTED AGAINST `UIL4B App.dc.html`, 2026-09-18 ─────────────────────
+ * These were 999px pills in the first pass, taken from the SALES page, which
+ * uses a 999px radius 130 times. That was the wrong source. The founder's
+ * correction names `UIL4B App.dc.html` as the design for the app, and the app
+ * file does not pill its controls: its toolbars, search field and secondary
+ * buttons are 12px and 10px rounded rectangles over a hairline border
+ * (`border-radius:12px;border:1px solid rgba(var(--ink-rgb),.09)`), and 999px
+ * is reserved there for progress bars and one 26px round CTA glyph. A pill on
+ * a dense admin control also costs horizontal room that a rectangle does not.
+ * The radius scale is the app's: 12px for a control, 10px for a small one. */
+.adm-tab,
+.adm-time-btn,
+.adm-country-chip,
+.cq-filter {
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: var(--adm-label-track);
+  font-weight: 500;
+  transition:
+    color var(--adm-t-color) var(--adm-ease),
+    background var(--adm-t-color) var(--adm-ease),
+    border-color var(--adm-t-color) var(--adm-ease),
+    transform var(--adm-t-move) var(--adm-ease);
+}
+
+.adm-tab {
+  padding: 7px 14px;
+  font-size: 10.5px;
+  border: 1px solid transparent;
+  /* ≥24px target: 7+7 padding + ~11px line box clears it, and the tab bar is a
+     primary navigation control on a surface that is used on a tablet. */
+  min-height: 30px;
+}
+
+.adm-tab:hover {
+  color: var(--t0);
+  background: var(--hvr);
+}
+
+/* Accent wash + accent border + accent text, not a solid fill. The solid fill
+   was doing two jobs — "selected" and "primary action" — and on a bar of six it
+   read as the loudest thing on the page. */
+.adm-tab.active {
+  color: var(--accent-text);
+  background: var(--accent-wash);
+  border-color: var(--accent-border);
+  box-shadow: none;
+}
+
+.adm-time-btn {
+  padding: 5px 11px;
+  font-size: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: var(--radius-s);
+}
+
+.adm-time-btn:hover {
+  color: var(--t0);
+  border-color: var(--bh);
+}
+
+.adm-time-btn.active {
+  color: var(--accent-text);
+  background: var(--accent-wash);
+  border-color: var(--accent-border);
+  box-shadow: none;
+}
+
+.adm-country-chip {
+  padding: 5px 11px;
+  font-size: 10px;
+  border-radius: var(--radius-s);
+}
+
+.adm-country-chip.active {
+  color: var(--accent-text);
+  border-color: var(--accent-border);
+  background: var(--accent-wash);
+}
+
+/* The count that rides inside a chip is a value, so it is mono and it is
+   quieter than the label it qualifies. */
+.adm-country-chip > span:last-child {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 9.5px;
+  color: var(--t3);
+  letter-spacing: 0;
+}
+
+.adm-country-chip.active > span:last-child {
+  color: var(--accent-text);
+}
+
+/* The community queue's status tabs. `.cq-filter` is defined in global.css and
+   was a solid accent fill when selected — the same two-jobs problem as the tab
+   bar, so it takes the same wash. */
+.cq-filter {
+  padding: 6px 12px;
+  font-size: 10px;
+  border-radius: var(--radius-s);
+}
+
+.cq-filter.is-on {
+  background: var(--accent-wash);
+  border-color: var(--accent-border);
+  color: var(--accent-text);
+}
+
+.cq-filter-count {
+  font-size: 9.5px;
+  letter-spacing: 0;
+  opacity: 1;
+  color: var(--t3);
+}
+
+.cq-filter.is-on .cq-filter-count {
+  color: var(--accent-text);
+}
+
+/* The badge on the Submissions tab is a count, so mono — and it keeps the solid
+   accent because it is the one place on the bar that is genuinely saying
+   "there is work here", which is a different statement from "you are here". */
+.adm-tab-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0;
+}
+
+/* ── 5. STATUS AND PLAN CHIPS ──────────────────────────────────────────────
+ *
+ * Mobbin, on how a plan state reads in a product that respects it: Twenty puts
+ * `Pro` and `Trial` as two small low-saturation tints inside the billing
+ * definition list rather than as loud badges
+ * (https://mobbin.com/screens/0daf80ce-dde1-4ce8-bc94-2b216fe09e66); Slite
+ * marks the one card that needs attention with a small uppercase `INCOMPLETE`
+ * tint and leaves the others unmarked
+ * (https://mobbin.com/screens/34392e14-4e35-436b-af7b-918b2906e72f); Substack's
+ * subscriber table does the same with Free / Comp / Author
+ * (https://mobbin.com/screens/f6aec922-6201-4bca-ab9c-a1eda11f7ffb).
+ *
+ * That is already the shape `.adm-plan--*` uses, and #484's reasoning for it —
+ * colour only when there is something to colour — is not relitigated here. The
+ * change is the FACE and the radius: a state name is a value, so it is mono,
+ * and the chip takes the system's chip radius. */
+.adm-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  line-height: 1.4;
+}
+
+.adm-plan {
+  border-radius: var(--radius-xs);
+}
+
+.adm-plan-interval {
+  font-size: 9.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.adm-access--founder,
+.adm-access--moderator {
+  font-size: 9.5px;
+  font-weight: 600;
+  border-radius: var(--radius-xs);
+  padding: 3px 8px;
+}
+
+.adm-prompt-tag {
+  font-size: 9.5px;
+  font-weight: 500;
+  border-radius: var(--radius-xs);
+  color: var(--t2);
+}
+
+.cq-kind {
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: var(--radius-xs);
+}
+
+/* ── 6. THE TABLE ──────────────────────────────────────────────────────────
+ *
+ * Tighter rows, a hairline that does not fight the text, and the hover as the
+ * only row decoration. The zebra stripe stays off on the users table for the
+ * reason #484 turned it off — a detail row is a tbody child too, so banding
+ * inverted below every open row. */
+.adm-table tbody td {
+  font-size: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.adm-table tbody tr {
+  transition: background var(--adm-t-color) var(--adm-ease);
+}
+
+.adm-users-table .adm-row-flag td:first-child {
+  box-shadow: inset 2px 0 0 var(--warn);
+}
+
+.adm-detail {
+  border-radius: 0 var(--radius-l) var(--radius-l) 0;
+  border-left: 2px solid var(--accent);
+  padding: 14px 16px 16px;
+  gap: 14px;
+}
+
+.adm-detail-dl {
+  font-size: 11.5px;
+}
+
+/* ── 7. THE COUNT TILES THAT ARE ALSO THE FILTERS ──────────────────────────
+ * Structure and behaviour are #484's; this is the radius, the motion and the
+ * wash coming from the token layer. */
+/* ── THE TOOLBAR, AND THE FIELD IN IT ──────────────────────────────────────
+ * The app design gives a toolbar a body of its own rather than letting the
+ * controls float on the page: its plan strip is `padding:12px 15px;
+ * border-radius:12px;background:var(--card);border:1px solid
+ * rgba(var(--ink-rgb),.09)`, and the search field inside the header is
+ * `border-radius:12px;background:rgba(var(--ink-rgb),.045);border:1px solid
+ * rgba(var(--ink-rgb),.09)`. Both toolbars on this surface take that shape, so
+ * the search, the counts and the two buttons read as one object. */
+.adm-users-toolbar,
+.adm-sub-toolbar {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.adm-search {
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+}
+
+.adm-user-view {
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 11px 13px;
+  transition:
+    border-color var(--adm-t-color) var(--adm-ease),
+    background var(--adm-t-color) var(--adm-ease),
+    transform var(--adm-t-move) var(--adm-ease);
+}
+
+.adm-user-view:hover {
+  border-color: var(--bh);
+}
+
+.adm-user-view.active {
+  border-color: var(--accent-border-strong);
+  background: var(--accent-wash);
+}
+
+.adm-user-view-l {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--t2);
+}
+
+/* ── 8. THE REMAINING PANELS ───────────────────────────────────────────────*/
+.adm-confirm {
+  border-radius: var(--radius-l);
+  padding: 13px 15px;
+}
+
+.adm-submission-notes {
+  border-radius: var(--radius-l);
+  background: var(--bg-2);
+  padding: 11px 13px;
+}
+
+.adm-section-bar {
+  background: var(--accent);
+}
+
+.adm-header {
+  margin-bottom: 18px;
+}
+
+/* The app design's own page title, to the value: `font-size:clamp(24px,3vw,
+   34px);font-weight:600;letter-spacing:-.035em;line-height:1.04` on "Your
+   workspace". */
+.adm-header-left h1 {
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1.04;
+}
+
+/* 560 and 540 are the design's section and label weights — lighter than the
+   700s this dashboard was carrying, and inside Geist's 300..700 axis. A
+   dashboard whose every heading is bold has no hierarchy, only loudness. */
+.adm-section-title,
+.adm-cat-title {
+  font-weight: 560;
+  font-size: 14px;
+  letter-spacing: -.01em;
+}
+
+.adm-submission-title {
+  font-weight: 560;
+}
+
+.adm-cq-h2,
+.adm-cat-head h2 {
+  font-weight: 560;
+  letter-spacing: -.02em;
+}
+
+.adm-status {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: var(--adm-label-track);
+}
+
+.adm-lock-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: var(--adm-label-track);
+}
+
+.adm-lock {
+  margin: 64px auto;
+}
+
+/* The queue rows take the card radius and the same hairline as everything
+   else, so the Community tab is not a different product from the tab beside
+   it. */
+.cq-item {
+  border-radius: var(--radius-l);
+  transition: border-color var(--adm-t-color) var(--adm-ease);
+}
+
+.cq-item:hover {
+  border-color: var(--bh);
+}
+
+.cq-preview {
+  border-radius: var(--radius-s);
+}
+
+.cq-item-meta {
+  font-size: 11.5px;
+}
+
+/* The queue's own date is a value. */
+.cq-msg {
+  border-radius: var(--radius-l);
+}
+
+/* The bars and the sparkline move on the house curve rather than the generic
+   one, which is the only thing about them that is a Spectrum decision. */
+.adm-bar-fill {
+  transition: width .3s var(--adm-ease);
+}
+
+/* 5px and 999px are the app design's meter, exactly: its "AI generations
+   today" and "Project slots" bars are
+   `height:5px;border-radius:999px;background:rgba(var(--ink-rgb),.1)` with a
+   999px accent fill. 8px read as a chart; 5px reads as a meter beside a
+   figure, which is what these are. */
+.adm-bar-track {
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-3);
+}
+
+.adm-bar-fill {
+  border-radius: var(--radius-pill);
+}
+
+.adm-bar-label {
+  font-size: 11px;
+}
+
+/* ── THE ICON TILE ─────────────────────────────────────────────────────────
+ * Every glyph in the app design sits on a rounded SQUARE washed with the
+ * accent — `width:28..36px;border-radius:9..11px;background:{{ accentWash }};
+ * color:{{ accentMid }}` — never on a circle. The setup checklist's markers
+ * were 20px circles; they take the design's shape and its accent-derived wash,
+ * so they follow a theme template like everything else.
+ * The signal colours stay: a checklist marker's job is to say done or not, and
+ * `.done` / `.pending` keep their own tints from the rules above. */
+.adm-check-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-s);
+}
+
+/* ── 9. PRESS, AND ITS REDUCED-MOTION COMPANION ────────────────────────────
+ *
+ * `scale(.97)` on press is the source's own figure and it is on every
+ * interactive element there. It is a TRANSFORM APPLIED IN A STATE, not a
+ * transition, so the global reduced-motion rule — which clamps durations —
+ * does not remove it: it would still snap. Every one below therefore has an
+ * explicit companion, which is what the source ships and what a port drops. */
+.adm-tab:active,
+.adm-time-btn:active,
+.adm-country-chip:active,
+.cq-filter:active,
+.adm-user-view:active,
+.adm-eye-btn:active {
+  transform: scale(.97);
+}
+
+.adm-eye-btn {
+  border-radius: var(--radius-s);
+  transition:
+    color var(--adm-t-color) var(--adm-ease),
+    background var(--adm-t-color) var(--adm-ease),
+    transform var(--adm-t-move) var(--adm-ease);
+}
+
+html[data-reduced-motion="true"] .adm-tab:active,
+html[data-reduced-motion="true"] .adm-time-btn:active,
+html[data-reduced-motion="true"] .adm-country-chip:active,
+html[data-reduced-motion="true"] .cq-filter:active,
+html[data-reduced-motion="true"] .adm-user-view:active,
+html[data-reduced-motion="true"] .adm-eye-btn:active,
+html[data-reduced-motion="true"] .adm-swatch-grid .adm-swatch:hover {
+  transform: none;
+}
+
+html[data-reduced-motion="true"] .adm-status-dot {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .adm-tab:active,
+  html:not([data-reduced-motion="false"]) .adm-time-btn:active,
+  html:not([data-reduced-motion="false"]) .adm-country-chip:active,
+  html:not([data-reduced-motion="false"]) .cq-filter:active,
+  html:not([data-reduced-motion="false"]) .adm-user-view:active,
+  html:not([data-reduced-motion="false"]) .adm-eye-btn:active,
+  html:not([data-reduced-motion="false"]) .adm-swatch-grid .adm-swatch:hover {
+    transform: none;
+  }
+
+  html:not([data-reduced-motion="false"]) .adm-status-dot {
+    animation: none;
+  }
+}
+
+/* ── 10. ZERO HORIZONTAL OVERFLOW, 320 TO 1440 ─────────────────────────────
+ *
+ * Admin tables are where this breaks, and the users table breaks it in a way
+ * that is easy to miss: below 680px every cell becomes a block, but the table
+ * keeps `min-width:fit-content` from the wide layout — and `fit-content` on a
+ * block-laid table is computed from the widest unbreakable run in it, which on
+ * this page is a 28-character Firebase uid. The wrapper scrolls, so nothing
+ * looks broken; the card just never fits the phone.
+ *
+ * Verified in the browser at 320 / 390 / 834 / 1440 rather than reasoned about
+ * — the scroll width is compared against the client width at each one. */
+@media (max-width: 680px) {
+  .adm-users-table,
+  .adm-users-table tbody,
+  .adm-users-table tr,
+  .adm-users-table td {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* The wrapper KEEPS `overflow-x:auto`. Clipping it would have been the
+     smaller diff and the worse one: if any row still exceeds the viewport the
+     scroller is how you reach it, and `hidden` would silently take the content
+     away instead of letting it be seen. The fix is the min-width above, which
+     removes the reason to scroll; the scroller stays as the safety net. */
+
+  /* The uid and the email are the two long unbreakable runs on the card. */
+  .adm-copy-value,
+  .adm-mask-text {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* The category block loses its inset at the narrowest widths rather than
+   letting the 18px each side eat a tenth of a 320px viewport. */
+@media (max-width: 420px) {
+  .adm-cat {
+    padding: 14px 12px;
+    border-radius: var(--radius-xl);
+  }
+
+  .adm-card-body {
+    padding: 12px 13px;
+  }
+
+  .adm-card-header {
+    padding: 11px 13px 9px;
+  }
+
+  .adm-table tbody td {
+    padding: 8px 12px;
+  }
+
+  /* Four tiles across a 320px screen is 80px each, which cannot hold
+     "Needs attention". Two up. */
+  .adm-user-views {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* The same call for the Overview figures, and it has to be made HERE rather
+     than left to the `@media(max-width:480px)` rule further up this file. That
+     rule is earlier in source order, so the unconditional `auto-fit` above now
+     outranks it at every width — a media query adds no specificity. Stating it
+     again at this breakpoint keeps the two-up narrow layout that rule intended,
+     and keeps the decision next to the one it matches. */
+  .adm-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adm-header-left h1 {
+    font-size: 22px;
+  }
+}
+
+/* The Stripe table is the one table that genuinely cannot reflow — it is a
+   currency × interval matrix, and dropping either axis makes it a different
+   table. It scrolls, and the scroller is the thing that is allowed to be wide,
+   not the page. */
+.adm-stripe-table {
+  min-width: min(620px, max-content);
+}
+
+.adm-stripe-input input {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── THE BUTTONS ARE THE APP'S, NOT THE MARKETING PAGE'S ───────────────────
+ *
+ * `.btn` in the critical sheet is a 999px pill, which is right for the sales
+ * page and wrong here. `UIL4B App.dc.html` gives its secondary button
+ * `height:32px;padding:0 13px;border:1px solid rgba(var(--ink-rgb),.11);
+ * border-radius:10px;font-size:12.5px` and its primary `border-radius:12px;
+ * font-weight:560;min-height:44px` — rectangles on the same 10/12 radius scale
+ * as every other control in the app.
+ *
+ * Scoped to this surface rather than changed globally: `.btn` belongs to the
+ * critical sheet, which is another workstream's file, and every other page
+ * still wants the pill.
+ *
+ * The SIZE is deliberately not reduced to the design's 32px here. These
+ * buttons sit in table rows and confirmation panels where they are the only
+ * target, and the accessibility sweeps hold a ≥24px minimum that the existing
+ * padding already clears with room. Shrinking them would be adopting a number
+ * rather than a design. */
+.adm .btn,
+.adm-lock .btn {
+  border-radius: var(--radius);
+}
+
+.adm .btn-s,
+.adm-lock .btn-s {
+  border-radius: var(--radius-s);
+}
+
+/* The lock screen's field matches the toolbar field's shape for the same
+   reason: it is the same object doing the same job. */
+.adm-lock input {
+  border-radius: var(--radius);
 }

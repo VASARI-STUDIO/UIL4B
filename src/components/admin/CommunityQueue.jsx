@@ -150,7 +150,9 @@ export default function CommunityQueue({ toast }) {
                 <p className="cq-item-meta">
                   <span className="cq-kind">{item.kind}</span>
                   {item.authorName || 'Unknown'}
-                  {item.createdAt && <> · {new Date(item.createdAt).toLocaleDateString()}</>}
+                  {/* The date is a value, so it carries the dashboard's mono
+                      treatment like every other figure on the surface. */}
+                  {item.createdAt && <> · <span className="mono">{new Date(item.createdAt).toLocaleDateString()}</span></>}
                 </p>
               </div>
               <div className="cq-item-actions">
