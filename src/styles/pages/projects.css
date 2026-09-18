@@ -44,11 +44,23 @@
 
 .proj-detail-meta-row strong{color:var(--t0);font-weight:600}
 
-/* ─── Projects: Cards ─── */
-.proj-card{transition:transform var(--dur-2) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
-.proj-card:hover{transform:translateY(-2px);box-shadow:var(--warm-shadow-lg)}
-.proj-card-active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.proj-card-icon{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:6px;object-fit:contain;background:rgba(255,255,255,.9);padding:3px;box-shadow:0 1px 6px rgba(0,0,0,.2)}
+/* ─── Projects: the list ───
+   Everything that made a project a CARD is gone — see the note at the top of
+   src/components/userhome/ProjectCard.jsx for the reading that removed it. What
+   is left of this block is the one state a row can be in that matters, and the
+   one piece of motion that says so.
+
+   `.proj-card-icon` was deleted with it. It positioned a 28px icon absolutely
+   over the card art with a white pad and a drop shadow, and nothing had rendered
+   it since the icon moved inline into the row header — dead CSS describing a
+   surface that no longer existed. */
+
+/* LOADED, and this is the only place on the page a row differs from its
+   neighbours. An inset rule rather than a border so the row does not shift 2px
+   when it becomes the loaded one; a transition on it so a person who has just
+   pressed Load on the third row can see WHICH row answered. That is the whole
+   motion budget of this list, and it is spent on state. */
+.proj-card-active{box-shadow:inset 2px 0 0 var(--accent)}
 .proj-detail-icon{width:32px;height:32px;border-radius:6px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:2px}
 .proj-detail-icon-lg{width:56px;height:56px;border-radius:8px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:4px}
 .proj-detail-icon-empty{display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:20px}
@@ -80,7 +92,11 @@
 .uh-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-5);flex-wrap:wrap;margin-bottom:var(--s-5)}
 .uh-head-main{min-width:0}
 .uh-sub{max-width:56ch;font-size:var(--fs-body-s);line-height:1.6;color:var(--t2)}
+/* nowrap: "Save Current" broke across two lines inside its own pill at 390,
+   which made the masthead taller on exactly the width that can least afford it.
+   The row still wraps as a row when two buttons will not fit. */
 .uh-head-actions{display:flex;gap:var(--s-2);flex-wrap:wrap}
+.uh-head-actions .btn{white-space:nowrap}
 
 /* Quick data tracking. Mono + tabular figures so the numbers line up and read
    as measurements rather than as marketing. Any figure that would be zero is
@@ -113,28 +129,86 @@
 
 .uh-skel{display:block;width:min(38ch,100%);height:1em;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2) 0%,var(--bg-3) 50%,var(--bg-2) 100%);background-size:200% 100%;animation:uh-skel-slide var(--fl-shimmer-dur) var(--ease-standard) infinite}
 
-.uh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:var(--s-4)}
+/* ── The list ─────────────────────────────────────────────────────
+   A grid of 300px-minimum cards until 2026-09-16. At 1440 with two projects that
+   left the right 390px of the screen empty while the four rotating STARTER cards
+   below ran the full width — so the promos outweighed the work, in the same card
+   shape, on the page that holds the work.
 
-.uh-card{padding:0;overflow:visible;display:flex;flex-direction:column}
+   It is one column of ruled rows now, full width at every size. No fill, no
+   border box, no radius, no shadow: a hairline between rows is enough to
+   separate them, and it is the only thing separating them, which is what makes
+   the row's own contents — the palette chip, the name, the values — the loudest
+   things in it.
 
-/* The palette, at a size you can actually read it at. 40px rather than a hairline
-   because “see what is in each project at a glance” is the whole brief, and an
-   8px spine is a decoration that gestures at a palette instead of showing one.
-   Nothing is typeset on top of it: the old header set the project name in white
-   over a two-colour blend, so legibility depended on the user's own colours and
-   any dark-on-light palette broke it. */
-.uh-card-art{height:40px;border-radius:var(--radius-xl) var(--radius-xl) 0 0;border-bottom:1px solid var(--border)}
-.uh-card-body{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-4);flex:1}
+   The 8px of negative inline margin is the row's hover band, and nothing else:
+   it lets the hover tint start a little outside the text rather than clipping to
+   it. It is well inside --page-gutter's 20px floor at every width. */
+.uh-grid{display:block;border-bottom:1px solid var(--border);margin-inline:calc(var(--s-2) * -1)}
+
+.uh-card{
+  overflow:visible;
+  display:grid;
+  align-items:center;
+  /* ONE FLEXIBLE COLUMN, AND IT IS THE ONE WHOSE CONTENT VARIES.
+     Two proportional columns (2fr / 1.4fr) put slack inside BOTH text columns,
+     so at 1440 the row read as three loose clusters with a hole after the
+     values and a second hole before the timestamp. The row only holds about
+     900px of content; no arrangement makes that fill 1348px, so the choice is
+     where the space goes, and the answer is ONE division — what the project
+     is, then how it stands and what you can do to it.
+
+     So: body takes the slack (it is left-aligned, so the space trails it), and
+     parts/when/foot/acts are fixed or content-sized and pack against the right
+     as one group. Fixed rather than `auto` on purpose — every row is its own
+     grid, so an `auto` track would size to ITS OWN content and Load would land
+     at a different x on every row. */
+  grid-template-columns:auto minmax(0,1fr) 18rem 7rem auto auto;
+  grid-template-areas:"art body parts when foot acts" "confirm confirm confirm confirm confirm confirm";
+  column-gap:var(--s-5);
+  row-gap:0;
+  padding:var(--s-3) var(--s-2);
+  border-top:1px solid var(--border);
+  /* Background only. The card this replaced lifted 2px and dropped a large
+     shadow on hover — motion that reported nothing, on every row at once. */
+  transition:background var(--dur-1) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard);
+}
+.uh-card:hover{background:var(--hvr)}
+/* Put away, not deleted. Stated by weight rather than by a second badge: the
+   row already carries the word "Archived". */
+.uh-card.is-archived .uh-card-name{color:var(--t2);font-weight:600}
+
+/* THE PALETTE AS A SPECIMEN, NOT AS A BANNER. Hard stops, every colour in the
+   project, at a size the colours can be told apart at — but sized as a swatch a
+   row carries rather than as a 40px slab the row is wearing. The difference is
+   the whole of the AI-dashboard reading: three untouched projects used to render
+   as three identical full-bleed blocks of the default blue. */
+.uh-card-art{grid-area:art;width:64px;height:40px;border:1px solid var(--border);border-radius:var(--radius-xs)}
+/* No palette chosen: the outline stays so the rows keep their left edge, the
+   fill goes. Nothing is added to say "empty" — the absence says it, which is
+   the same answer Ditto draws for a project slot with nothing in it
+   (mobbin.com/screens/5becd4a2-666d-4d2e-abab-4a9cbee67f48) and Zillow for a
+   tour that has not been uploaded
+   (mobbin.com/screens/ee541e38-a931-451d-bd51-ec557632a4ce). */
+.uh-card-art.is-unset{background:none}
+.uh-card-body{grid-area:body;display:flex;flex-direction:column;gap:3px;min-width:0}
 .uh-card-top{display:flex;align-items:center;gap:var(--s-2)}
-.uh-card-icon{width:22px;height:22px;border-radius:var(--radius-xs);object-fit:contain;flex:0 0 auto}
+.uh-card-icon{width:20px;height:20px;border-radius:var(--radius-xs);object-fit:contain;flex:0 0 auto}
 
-/* The name, set in the project's OWN heading face. A button because it opens
-   the detail sheet; styled as text because it is the card's title. */
-.uh-card-name{flex:1;min-width:0;min-height:24px;padding:0;border:none;background:none;font-size:var(--fs-h5);font-weight:700;letter-spacing:-.015em;line-height:1.25;color:var(--t0);text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The name. A button because it opens the detail sheet; styled as text because
+   it is the row's title. (It is set in the UI face, NOT in the project's own
+   heading family — the note in ProjectCard.jsx gives the reason. This comment
+   claimed the opposite for as long as the rule has existed.) */
+.uh-card-name{flex:0 1 auto;min-width:0;min-height:24px;padding:0;border:none;background:none;font-size:var(--fs-h5);font-weight:700;letter-spacing:-.015em;line-height:1.25;color:var(--t0);text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .uh-card-name:hover{color:var(--accent-strong)}
 
-.uh-tag{flex:0 0 auto;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 7px;line-height:1.4}
-.uh-tag--live{color:var(--accent-strong);background:var(--accent-bg);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+/* A WORD, NOT A PILL. These were two rounded, filled, bordered chips — the same
+   shape the page uses for its buttons, carrying metadata rather than an action.
+   The anti-slop bar's "pills used for navigation, metadata, actions and
+   decoration until roles become indistinguishable" is exactly that, and the fix
+   is to stop drawing a container round a word that is already legible. */
+.uh-tag{flex:0 0 auto;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t3);line-height:1.4}
+.uh-tag--live{color:var(--accent-strong)}
 
 /* What is in it. Mono, because these are values read off the project rather
    than prose about it. Wraps rather than truncating — two font names and a
@@ -145,38 +219,44 @@
 .uh-card-rename{display:flex;gap:var(--s-2)}
 .uh-card-rename input{flex:1;min-width:0;font-size:var(--fs-body-s);font-weight:600}
 
-.uh-parts{display:flex;align-items:flex-start;gap:var(--s-2);flex-wrap:nowrap;margin-top:auto;font-size:var(--fs-micro)}
+.uh-parts{grid-area:parts;display:flex;align-items:baseline;gap:var(--s-2);flex-wrap:wrap;font-size:var(--fs-micro)}
 
-.uh-parts-dots{display:inline-flex;gap:5px;flex:0 0 auto;padding-top:.35em}
+.uh-parts-dots{display:inline-flex;gap:5px;flex:0 0 auto;align-self:center}
 
 .uh-part{width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--t3)}
 
-.uh-parts-label{flex:1;min-width:0;font-family:var(--mono);font-weight:600;letter-spacing:.03em;line-height:1.6;color:var(--t2)}
+.uh-parts-label{flex:1 1 auto;min-width:0;font-family:var(--mono);font-weight:600;letter-spacing:.03em;line-height:1.6;color:var(--t2)}
 
-.uh-card-when{flex:0 0 auto;font-family:var(--mono);letter-spacing:.02em;line-height:1.6;color:var(--t3);white-space:nowrap}
+/* Right-aligned in its own fixed column, so "1 day ago" and "25 minutes ago"
+   line up at their right edge down the list instead of starting at whatever x
+   the reading beside them happens to end on. */
+.uh-card-when{grid-area:when;justify-self:end;font-size:var(--fs-micro);font-family:var(--mono);letter-spacing:.02em;line-height:1.6;color:var(--t3);white-space:nowrap}
 
-.uh-card-foot{display:flex;align-items:center;gap:var(--s-2)}
+.uh-card-foot{grid-area:foot;display:flex;align-items:center;gap:var(--s-2);justify-self:end}
 
 /* Deletion still types the name. The ⋯ row only ARMS this — a one-click destroy
    in a menu that also holds “Rename” is how people lose work. */
-.uh-card-confirm{display:flex;flex-direction:column;gap:var(--s-2)}
+.uh-card-confirm{grid-area:confirm;display:flex;flex-direction:column;gap:var(--s-2);margin-top:var(--s-3);max-width:44ch}
 .uh-card-confirm p{margin:0;font-size:var(--fs-micro);line-height:1.6;color:var(--err-strong)}
 .uh-card-confirm input{font-size:var(--fs-body-s)}
 .uh-card-confirm-actions{display:flex;gap:var(--s-2)}
 .uh-danger{color:var(--err-strong);border-color:color-mix(in srgb,var(--err) 45%,transparent)}
 .uh-danger:disabled{opacity:.5;cursor:not-allowed}
 
-.uh-actions{position:relative;flex:0 0 auto}
-/* A card with its Actions menu open outranks its neighbours. .card:hover lifts
-   the card with a transform, and a transform is a stacking context — so the
-   menu's z-index:130 was boxed inside the hovered card, and in the one-column
-   grid at 390 the NEXT card's .uh-card-art painted over Duplicate and
-   everything below it. Measured 2026-09-10: elementFromPoint on Duplicate
-   returned the next card's art; the tap did nothing. Scoped to an open menu
-   so an ordinary hover changes nothing. */
-.uh-card:has(.uh-menu){z-index:2}
+.uh-actions{grid-area:acts;justify-self:end;position:relative;flex:0 0 auto}
+/* A row with its Actions menu open outranks its neighbours. The transform that
+   originally boxed the menu inside a hovered card is gone with the card, but the
+   rule is not: rows are shorter than cards were, so an open menu now overlaps
+   MORE of the list below it, and without this the next row's own painted
+   background still takes the tap. Measured 2026-09-10 on the card build:
+   elementFromPoint on Duplicate returned the next card's art and the tap did
+   nothing (72-flow-followups § M9 holds it). Scoped to an open menu, so an
+   ordinary hover changes nothing. */
+.uh-card:has(.uh-menu){z-index:2;position:relative}
 
-.uh-actions-trigger{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid transparent;border-radius:var(--radius-pill);background:none;color:var(--t3);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
+/* Square-ish, not a pill. It sits at the end of a row of values; a 999px radius
+   made it read as one more of the page's buttons. */
+.uh-actions-trigger{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid transparent;border-radius:var(--radius-xs);background:none;color:var(--t3);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 
 .uh-actions-trigger:hover,.uh-actions-trigger[aria-expanded="true"]{background:var(--hvr);border-color:var(--border);color:var(--t0)}
 
@@ -201,29 +281,45 @@
 
 /* ── Nothing saved yet ─────────────────────────────────────────── */
 /* The panel a new account lands on, and since the "Default Project" seed was
-   dropped it is the FIRST SCREEN of the product. Every value here was an inline
-   style on the <div> until 2026-09-13 and is unchanged from 641px up; what was
-   missing was a rule for what happens below that.
+   dropped it is the FIRST SCREEN of the product.
 
-   MEASURED, 320px wide: 48px of padding each side left 176px of line for a
-   sentence that names two tools, so it wrapped to five lines and the card grew
-   from 319px tall to 340 — the panel got taller the less room it had, and its
-   own button went down with it. 24px below 640 buys back 48px of width and
-   48px of height on exactly the screens that had neither. */
-.uh-empty{padding:48px;text-align:center}
-.uh-empty-mark{display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin:0 auto 16px;border-radius:50%;background:var(--accent-bg)}
-.uh-empty-title{margin-bottom:6px;font-size:16px;font-weight:700}
-.uh-empty-text{margin:0 auto 16px;max-width:360px;font-size:13px;color:var(--t2)}
+   IT WAS A CENTRED CARD WITH A CIRCULAR TINTED ICON BADGE ON TOP OF IT, and the
+   page's own stylesheet had already written down why that was wrong. Read the
+   note on .uh-signin twenty lines up: "Left-aligned on a tinted ground rather
+   than a centred card with a circular icon. The centred-icon-card is the shape
+   this page is deliberately not made of, and it would be the only one on the
+   page if it stayed." That was true of the sign-in panel and it was equally
+   true of this one, one state over, where nobody had looked.
+
+   So it is the SAME treatment as .uh-signin, not a second one that resembles
+   it — the signed-out visitor and the brand-new account now meet the same
+   shape of panel, because they are being told the same kind of thing.
+
+   The 48px folder mark went with the card. It was a decorative glyph above a
+   heading that already said what the panel meant, hidden from the accessibility
+   tree precisely because it carried nothing — which is the definition of
+   furniture. Deleting it takes 64px off the panel, all of it above the only
+   control a new account has.
+
+   WHAT THE PADDING RULE WAS FOR, and it still holds: at 320px the old 48px of
+   padding each side left 176px of line for a sentence that names two tools, so
+   it wrapped to five lines and the panel grew TALLER the narrower the screen
+   got, taking its own button down with it. Inline padding is the same at every
+   width now, so that cannot happen again. */
+.uh-empty{max-width:60ch;margin-bottom:var(--s-5);padding:var(--s-5);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 var(--radius-l) var(--radius-l) 0;background:var(--bg-2)}
+.uh-empty-title{margin-bottom:var(--s-2);font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0)}
+.uh-empty-text{margin:0 0 var(--s-4);max-width:52ch;font-size:var(--fs-body-s);line-height:1.65;color:var(--t2)}
 /* "Nothing matched your filters", which is a different sentence and a different
-   panel from "you have nothing yet" above. Same treatment, one size down,
-   because it answers an action the reader just took rather than greeting them.
+   panel from "you have nothing yet" above. Not the accent-ruled panel: it
+   answers an action the reader just took rather than greeting them, and an
+   accent rule on it would give a dead end the same standing as the invitation.
+   Two hairlines, the same band the page already uses for NEXT | TIP.
    The reset sits in the panel — see the note at the call site. */
-.uh-filtered{display:flex;flex-direction:column;align-items:center;gap:var(--s-3);padding:40px;text-align:center}
-.uh-filtered-text{font-size:13px;color:var(--t2)}
+.uh-filtered{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s-3);padding:var(--s-4) 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.uh-filtered-text{margin:0;font-size:var(--fs-body-s);color:var(--t2)}
 
 @media(max-width:640px){
-  .uh-empty{padding:24px}
-  .uh-filtered{padding:24px}
+  .uh-empty{padding:var(--s-4)}
 }
 
 /* ── Daily starters ────────────────────────────────────────────── */
@@ -232,8 +328,14 @@
 .uh-starters-head{margin-bottom:var(--s-4)}
 .uh-starters-note{margin:0;max-width:60ch;font-size:var(--fs-micro);line-height:1.6;color:var(--t3)}
 .uh-starter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr));gap:var(--s-3);padding:0;list-style:none}
-.uh-starter{display:flex;flex-direction:column;height:100%;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);overflow:hidden;text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
-.uh-starter:hover{border-color:var(--bh);text-decoration:none;transform:translateY(-2px);box-shadow:var(--shadow-cmd)}
+/* These stay objects — they are artefacts you browse and their art IS their
+   content — and that is now a DISTINCTION rather than a coincidence: your own
+   work is a list of values, a suggestion is a thing to look at. The lift came
+   off for the same reason it came off the project rows: nothing about a starter
+   changes when the pointer crosses it, so nothing should move. The border
+   colour still answers, which is what a hover is for. */
+.uh-starter{display:flex;flex-direction:column;height:100%;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);overflow:hidden;text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard)}
+.uh-starter:hover{border-color:var(--bh);text-decoration:none}
 /* The artefact itself, at a size it can be judged at. */
 .uh-starter-art{display:block;height:64px;border-bottom:1px solid var(--border)}
 .uh-starter-body{display:flex;flex-direction:column;gap:2px;padding:var(--s-3)}
@@ -242,11 +344,47 @@
 .uh-starter-fact{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2);font-variant-numeric:tabular-nums}
 .uh-starter-opens{margin-top:var(--s-1);font-size:var(--fs-micro);color:var(--t3)}
 
+/* ── The row, below a single line ────────────────────────────────
+   Five columns do not fit a phone, and the honest reflow is not five narrower
+   columns — it is three lines: WHAT IT IS, WHAT IS IN IT, WHAT YOU CAN DO. The
+   order is the same as the wide row reads left to right, so a person moving
+   between a laptop and a phone is reading the same sentence either way.
+
+   900 rather than 640 because the parts column carries a string as long as
+   "No type scale, fonts or tints" — measured, it is the column that runs out of
+   room first, well before the viewport does. */
+@media(max-width:900px){
+  .uh-card{
+    align-items:start;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    /* Load shares the parts line and `when` gets the thin line under it — which
+       is exactly where both already rendered before `when` became a column, so
+       the desktop fix costs the phone nothing. Putting Load on the `when` line
+       instead added a full button's height to every row: measured, 20px each,
+       60px on a free account at the cap. */
+    grid-template-areas:"art body acts" "parts parts foot" "when when when" "confirm confirm confirm";
+    column-gap:var(--s-3);
+  }
+  .uh-card-art{width:44px;height:28px;margin-top:2px}
+  .uh-parts{margin-top:var(--s-2)}
+  /* Back to the left of its own line down here, on the line it shares with
+     Load — which is where it already rendered before it became a column, so
+     the phone layout is unchanged by the desktop fix. */
+  .uh-card-when{justify-self:start;align-self:center}
+  .uh-card-foot{margin-top:var(--s-2);align-self:start}
+}
+
 @media(max-width:640px){
   .uh-head{margin-bottom:var(--s-4)}
+  /* Every pixel between the masthead and the first row is a pixel of a
+     person's own work that is not on their phone screen. */
+  .proj-toolbar{gap:var(--s-2);margin-bottom:var(--s-3)}
   .uh-card-foot{flex-wrap:wrap}
-  .uh-head-actions{width:100%}
-  .uh-stats li + li{padding-left:var(--s-3)}
-  .uh-parts{flex-wrap:wrap}
-  .uh-card-when{flex:1 0 100%}
+  /* The divider is a TRAILING separator below 640, not a leading rule. The
+     list wraps to two lines at these widths, and a border-left on the wrapped
+     item drew a vertical rule against the left margin at the start of line
+     two — a divider dividing nothing. A trailing middot leaves the mark at the
+     end of line one, where a wrap actually is. */
+  .uh-stats li + li{padding-left:0;border-left:none}
+  .uh-stats li:not(:last-child)::after{content:'·';margin-left:.55em;color:var(--t3)}
 }

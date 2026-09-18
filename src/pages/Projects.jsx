@@ -660,16 +660,29 @@ export default function Projects({ toast }) {
             </p>
           )}
         </div>
+        {/* THE ACCENT IS ON "NEW PROJECT" NOW, AND IT WAS ON THE OTHER ONE.
+            Both controls stay — neither is redundant — but they were drawn as
+            equals with the filled one on the wrong action. The empty state's own
+            control is "Create your first project", accent, and it opens THIS
+            dialog: so on a page with no projects the primary action was accent
+            and on a page with projects the same action was the plain one beside
+            an accent-filled "Save Current". A person's primary action should not
+            change colour because their account filled up.
+
+            "Save Current" is the secondary of the two on the merits as well: it
+            files away whatever happens to be in the working kit, which is only
+            meaningful to somebody who has just been in a tool. Starting a
+            project is the thing this page is for. */}
         <div className="uh-head-actions">
           {!showSaveForm && (
-            <button className="btn btn-accent" onClick={() => setShowSaveForm(true)}>
+            <button className="btn" onClick={() => setShowSaveForm(true)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
               </svg>
               Save Current
             </button>
           )}
-          <button className="btn" onClick={() => setShowNewModal(true)} title="Start a new project">
+          <button className="btn btn-accent" onClick={() => setShowNewModal(true)} title="Start a new project">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -810,22 +823,23 @@ export default function Projects({ toast }) {
              compute identically here.
            · The folder mark was an unlabelled <svg> exposed to the
              accessibility tree as a graphics object between the heading and
-             the sentence. It is decoration for a panel whose heading already
-             says what it means, so it is hidden rather than given a name it
-             does not need. */
-        /* THE PADDING WAS 48 AND IT WAS A NUMBER, not a rule. Written inline it
-           applied unchanged at 320px, where 48 left and 48 right of a 272px-wide
-           card leave 176px for a sentence that names two tools — it wrapped to
-           five lines and the card grew from 319px tall at 390 to 340 at 320,
-           pushing its own button further down the narrower the screen got. It
-           is a class now so the value can answer the width; the 48 is unchanged
-           from 641px up, which is every width it was ever looked at on. */
-        <div className="card uh-empty">
-          <div className="uh-empty-mark">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-            </svg>
-          </div>
+             the sentence. It was hidden from the tree on 2026-09-13; on
+             2026-09-16 it is GONE, along with the 48px tinted circle it sat
+             in and the centred card both were drawn on.
+
+             That is the founder's "feels AI generated" call applied to this
+             panel: a circular tinted icon badge over a bold centred heading
+             over centred prose over a filled pill is the stock first-run
+             screen, and the glyph in it was decoration by its own admission —
+             hidden from assistive technology precisely because it carried
+             nothing. The panel now takes the shape this page had already
+             authored for the one other thing it says to somebody with no work
+             here yet: .uh-signin's left-aligned, accent-ruled ground. Same
+             words, one pattern instead of two.
+
+             It is also 64px shorter, and every one of those pixels was above
+             the only control a new account has. */
+        <div className="uh-empty">
           <h2 className="uh-empty-title">No projects yet</h2>
           <p className="uh-empty-text">
             Build a palette in <NavLink to="/create/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/create/font-pair">Font Pair Finder</NavLink>, then save your design as a project.
@@ -854,7 +868,7 @@ export default function Projects({ toast }) {
            role="status" for the same reason LibraryEmpty gives: the grid
            emptying is otherwise silent, and at 390 this panel opens at y=815
            in an 844px viewport, directly under the controls that caused it. */
-        <div className="card uh-filtered" role="status">
+        <div className="uh-filtered" role="status">
           <p className="uh-filtered-text">
             No projects match “{search.trim()}”.
           </p>
