@@ -520,6 +520,33 @@
 }
 .sp-panel-tools { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; min-width: 0; }
 
+/* THE PANEL CTA WRAPS ITS LABEL RATHER THAN OVERFLOWING THE VIEWPORT.
+   .sp-cta is white-space:nowrap, and at a 320px viewport this foot is 278px
+   wide — 248px inside its padding. Measured there, two of the five panel CTAs
+   ran past the edge: "Open Typography System Builder" 304px wide with its
+   right edge at 340, and "Open Colour System Generator" 289px ending at 325.
+   The page sets overflow-x:clip, so those tails were not merely off-screen,
+   they were unreachable — no sideways scroll gets to them, which is what
+   1.4.10 forbids and what 21-reflow-320 measures. The other three fit ("Open
+   Icons & Emoji" 241, "Open Imagery & Media" 264, "Open AI Studio" 211), so
+   this is the two long labels.
+   SHORTENING THE LABELS IS NOT AVAILABLE: they are built from the category
+   names, and a CTA that names its destination is asserted elsewhere in the
+   suite. Shrinking cannot reach it either — the pill's chrome is a fixed 67px
+   (20 + 9 padding, the 10 gap, the 28 bubble), leaving 181px for a label that
+   wants 237, i.e. an 11.5px type step on the page's primary panel action. So
+   the label wraps.
+   NO MEDIA QUERY, DELIBERATELY. The button's flex base size is still
+   max-content, so at every width where the label fits it lays out exactly as
+   it did before — one line, same pill, same weight. It shrinks only when the
+   flex line genuinely overflows, which is the case this rule exists for. A
+   breakpoint here would be a guess, and it would be wrong the first time a
+   label, a font or a panel width moved. */
+.sp-panel-foot .sp-cta { white-space: normal; max-width: 100%; }
+/* Balanced, so the wrap reads as two lines rather than a full line plus an
+   orphan. The label is a flex item, so it is blockified and this applies. */
+.sp-panel-foot .sp-cta > span:not(.sp-cta-icon) { text-wrap: balance; }
+
 /* ── panel figures ────────────────────────────────────────────────────────── */
 
 .sp-fig { flex: 1 1 auto; display: flex; flex-direction: column; gap: 14px; min-height: 0; min-width: 0; }
