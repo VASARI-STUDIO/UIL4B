@@ -80,6 +80,12 @@ const PALETTE_LEDE = ''
 import '../styles/deferred/account.css'
 import '../styles/deferred/colour.css'
 import '../styles/deferred/tool-shell.css'
+// This page's OWN sheet, and it must stay LAST. The `plb` family's base rules
+// live in global.css and in the shared deferred/colour.css, neither of which
+// this route may edit. Importing last means this sheet loads after both and
+// wins at equal specificity — which is also what lets it re-point the
+// `--accent-strong` and `--brand` aliases for the whole page in one place.
+import '../styles/pages/palette-builder.css'
 
 // Palette Builder — the standalone /create/palette workbench. A full-bleed
 // board so the columns are the page, not a panel floating in chrome: a
