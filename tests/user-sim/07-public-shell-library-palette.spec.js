@@ -6,6 +6,26 @@ import { appendCommunitySubmission, readCommunitySubmissions } from '../../src/u
 import { buildCommunityPromptRecord, resolvePromptProfileLink } from '../../src/utils/promptSubmission.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
 
+/* THE FOUNDER'S REAL ADDRESS, AND IT HAS TO BE THE LITERAL.
+ *
+ * These fixtures exercise the legacy-record scrub: a community submission that
+ * still carries his email must come back showing his PUBLIC HANDLE and never
+ * the address. The lookup that does it is keyed by a SHA-256 DIGEST of the
+ * address (src/utils/constants.js, OWNER_HANDLES) precisely so the plaintext
+ * stopped shipping in the browser bundle — and a digest is one-way, so no
+ * substitute address can be made to match. A reserved @uil4b.test address was
+ * tried here and the scrub simply does not fire for it, which turns a real
+ * test into a green one that proves nothing.
+ *
+ * So it stays, in ONE place rather than four, with the reason written down.
+ * This is a known residue of the 2026-09-22 exposure review: the address is
+ * already in this repository's git history and in the digest's pre-image, so
+ * the marginal disclosure here is nil — but it IS still a plaintext copy in a
+ * public repo, and the only real fixes are the founder changing the address or
+ * re-keying OWNER_HANDLES on something else. Recorded in OWNER-ACTIONS.
+ */
+const FOUNDER_EMAIL = 'dylanjacob1100@gmail.com'
+
 /**
  * Fire the connectivity event and read back what the library's status pill
  * actually says.
@@ -368,7 +388,7 @@ test.describe('public UI quality release', () => {
         id: 'unsafe-owner-record',
         name: 'Unsafe link test',
         author: 'Old profile name',
-        authorEmail: 'dylanjacob1100@gmail.com',
+        authorEmail: FOUNDER_EMAIL,
         category: 'Landing',
         url: 'javascript:alert(1)',
         c1: '#111111',
@@ -395,7 +415,7 @@ test.describe('public UI quality release', () => {
         id: 'discover-legacy-owner',
         name: 'Discover legacy record',
         author: 'Legacy owner',
-        authorEmail: 'dylanjacob1100@gmail.com',
+        authorEmail: FOUNDER_EMAIL,
         category: 'Branding',
         url: 'data:text/html,unsafe',
         c1: '#111111',
@@ -429,7 +449,7 @@ test.describe('public UI quality release', () => {
         id: 'legacy',
         name: 'Legacy',
         author: 'Old',
-        authorEmail: 'dylanjacob1100@gmail.com',
+        authorEmail: FOUNDER_EMAIL,
         url: 'javascript:alert(1)',
       }]),
     ]])
@@ -457,7 +477,7 @@ test.describe('public UI quality release', () => {
 
   test('prompt submissions omit email, use safe founder metadata, and reject unsafe profiles', () => {
     const founder = buildCommunityPromptRecord({
-      user: { uid: 'founder-uid', email: 'dylanjacob1100@gmail.com' },
+      user: { uid: 'founder-uid', email: FOUNDER_EMAIL },
       userProfile: { displayName: 'Outdated name' },
       title: 'Founder prompt',
       text: 'Create a colour system.',
