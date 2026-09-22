@@ -1,10 +1,19 @@
 import { adminAuth, adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
 import { failRequest } from './_lib/http.js'
-import { resolveOrigin } from './_lib/origins.js'
+import { allowedOrigins, resolveOrigin } from './_lib/origins.js'
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // An allowlisted origin is reflected, anything else gets no CORS header at
+  // all — the same allowlist and the same shape as api/support.js, which
+  // records the reasoning. `*` was not a CSRF hole here (the bearer token below
+  // is the only credential and a browser never attaches it by itself), it was
+  // simply wider than anything that needs it.
+  const origin = req.headers.origin
+  if (origin && allowedOrigins().includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 

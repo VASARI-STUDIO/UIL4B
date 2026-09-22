@@ -3,6 +3,7 @@ import { adminAuth, credentialProblem } from './_lib/firebase-admin.js'
 // One list, shared with /api/verify-admin and /api/ai's diagnostic.
 import { ADMIN_EMAILS } from './_lib/admin.js'
 import { proProductDescription } from './_lib/plans.js'
+import { allowedOrigins } from './_lib/origins.js'
 import {
   SUPPORTED_CURRENCIES, CURRENCY_CODES, BASE_CURRENCY, DEFAULT_PRICES,
   LOOKUP_KEYS, INTERVAL_MAP, INTERVAL_COUNTS, BILLING_INTERVALS, LIFETIME_CURRENCY_CODES,
@@ -98,7 +99,17 @@ function validatePrices(prices) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // An allowlisted origin is reflected, anything else gets no CORS header at
+  // all — the same allowlist and the same shape as api/support.js, which
+  // records the reasoning. `*` was not a CSRF hole here (the bearer token below
+  // is the only credential and a browser never attaches it by itself), it was
+  // simply wider than anything that needs it — and this route creates Stripe
+  // products.
+  const origin = req.headers.origin
+  if (origin && allowedOrigins().includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 

@@ -45,6 +45,7 @@
 import { adminAuth, adminDb, adminStorageBucket } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
 import { failRequest } from './_lib/http.js'
+import { allowedOrigins } from './_lib/origins.js'
 import {
   isReauthFresh, customerOwnershipVerdict, mayProceedWithDeletion, liveSubscriptions,
 } from './_lib/accountDeletion.js'
@@ -108,7 +109,17 @@ async function cancelBilling(uid, userData) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // An allowlisted origin is reflected, anything else gets no CORS header at
+  // all — the same allowlist and the same shape as api/support.js, which
+  // records the reasoning. `*` was not a CSRF hole even here (the bearer token
+  // below is the only credential and a browser never attaches it by itself),
+  // but this route deletes an account and there is no page outside the
+  // allowlist that has any business asking a visitor's browser to call it.
+  const origin = req.headers.origin
+  if (origin && allowedOrigins().includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 

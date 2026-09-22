@@ -63,6 +63,51 @@ test('support no longer answers every origin on the internet', () => {
   assert.match(support, /'Vary',\s*'Origin'/, 'a per-origin ACAO without Vary is a cache-poisoning trap')
 })
 
+// ── and the same question asked of every other route ─────────────────────────
+//
+// support.js was fixed alone and the other seven kept `'*'` for another month.
+// Written as a SWEEP rather than seven named assertions so the next route to
+// grow a CORS header is covered on the day it is written: any file under /api
+// that answers with an Access-Control-Allow-Origin at all has to answer with an
+// allowlisted one.
+//
+// WHAT THIS IS AND IS NOT WORTH. None of these routes authenticates with a
+// cookie — every one of them reads a bearer token the browser never attaches by
+// itself — so `'*'` was not an ambient-credential CSRF hole and this closes no
+// live exploit. It removes reach: with `'*'` any page on the internet could read
+// these responses out of a visitor's browser, including the one that deletes an
+// account and the one that lists every user. CORS is a browser protection and
+// does nothing against curl, which is what the rate limiter and the bearer token
+// are for; the three are not interchangeable.
+test('no /api route answers every origin on the internet', () => {
+  const withCors = fs.readdirSync(API)
+    .filter(f => f.endsWith('.js'))
+    .map(f => ({ file: f, source: stripJs(read(f)) }))
+    .filter(({ source }) => source.includes('Access-Control-Allow-Origin'))
+
+  // The sweep has to be looking at something. Eight routes set CORS headers
+  // today; a walk that found one or none would report every route clean.
+  assert.ok(withCors.length >= 8,
+    `only ${withCors.length} /api routes set a CORS header — this sweep is reading the wrong directory`)
+
+  const wildcards = withCors
+    .filter(({ source }) => /Access-Control-Allow-Origin'\s*,\s*'\*'/.test(source))
+    .map(({ file }) => file)
+  assert.deepEqual(wildcards, [],
+    'these routes invite every page on the internet to call them from a visitor\'s browser:\n  '
+    + wildcards.join('\n  '))
+
+  const unlisted = withCors.filter(({ source }) => !/allowedOrigins\(\)/.test(source)).map(({ file }) => file)
+  assert.deepEqual(unlisted, [],
+    'these routes set an Access-Control-Allow-Origin without consulting the shared allowlist in '
+    + 'api/_lib/origins.js — a second mechanism is a second thing to get wrong:\n  ' + unlisted.join('\n  '))
+
+  const unvaried = withCors.filter(({ source }) => !/'Vary',\s*'Origin'/.test(source)).map(({ file }) => file)
+  assert.deepEqual(unvaried, [],
+    'these routes reflect a per-origin ACAO with no Vary: Origin, so a shared cache can serve one origin\'s '
+    + 'header to another:\n  ' + unvaried.join('\n  '))
+})
+
 test('support rate-limits before it does any work', () => {
   const support = stripJs(read('support.js'))
   const limitAt = support.indexOf('consume(')
