@@ -54,6 +54,26 @@ import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
 // the hero, the login popup and two of the three /plans instances actually
 // used. It is the broadest of the three and it is the one that catches a
 // paraphrase.
+// ─────────────────────────────────────────────────────────────────────────────
+// KNOWN RED AS OF THE ROUTE SWAP, AND IT IS THE PRODUCT, NOT THIS FILE
+// ─────────────────────────────────────────────────────────────────────────────
+// `/` and `/home` currently FAIL on 'no card'. The front door's reassurance row
+// ships `{ icon: 'card', label: 'No card needed for Free' }` —
+// src/components/spectrum/spectrumFacts.js, `ASSURANCES` — which is the exact
+// class of line the founder retired on 2026-09-07 ("remove the no credit card
+// required tag line … these all over the place is a huge AI Slop feature").
+//
+// That row's own comment shows the check that was made and the one that was
+// not: it records dropping the design's "Cancel Pro any time" because /plans
+// had deleted the same claim, and says nothing about the card line, so the
+// retirement was simply not known to whoever built the row.
+//
+// This walk is left RED rather than exempted, because an exemption here is
+// indistinguishable from the tagline being allowed back — which is the exact
+// mechanism the file's header describes ("removing them once, in the place you
+// happen to be looking, is how this comes back"). The fix is one line in
+// spectrumFacts.js and it is the founder's call whether anything replaces it;
+// his instruction last time was to delete the clause, not reword it.
 const RETIRED = [
   'no credit card',
   'credit card required',

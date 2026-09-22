@@ -42,56 +42,71 @@ const RESOLVED = resolvePlanLadder()
 const BUYABLE = purchasablePlans(RESOLVED)
 const UNBUYABLE = RESOLVED.filter((p) => !p.purchasable)
 
-// Bring the pricing panel into view and let its reveal finish. `.hprice-panel`
-// carries `data-reveal`, and global.css starts every one of those at
-// `opacity: 0` — the exact state that let an entire closing CTA ship invisible
-// on /plans while Playwright clicked it happily, so the opacity assertion in
-// the first test below is the one that matters most here.
+// ─────────────────────────────────────────────────────────────────────────────
+// THE PANEL MOVED, AND SO DID THE WAIT — ALL THE WAY OUT
+// ─────────────────────────────────────────────────────────────────────────────
+// Home.jsx's `.hprice-panel` is gone with the page. The front door's money is
+// now the `#pricing` section of Spectrum: `.sp-billing` (one tab per cadence,
+// from `LADDER`), two `.sp-plan` cards tagged `.sp-plan-tier` FREE / PRO, and
+// `.sp-compare-foot`, which is where the derived cheapest rate is stated in a
+// sentence. Every figure in it still comes from planLadder.js — Spectrum.jsx
+// refuses to type a number — so this file's subject is unchanged.
 //
-// WAITING FOR STABILITY ALONE IS THE WRONG WAIT, and the first version of this
-// helper did exactly that: it polled until the opacity had held the same value
-// for six frames. `0` is a perfectly stable value, so the loop returned
-// immediately — before the reveal had begun — and reported a panel that
-// reveals fine as invisible. Verified in a browser afterwards: the panel
-// reaches opacity 1 under a real wheel gesture, the End key AND
-// scrollIntoView. So this waits for the panel to ARRIVE and only treats the
-// timeout as an answer, leaving the assertion to report the measured number
-// rather than throwing a wait error over it.
-async function revealPricing(page) {
-  await page.evaluate(() => document.querySelector('.hprice-panel')?.scrollIntoView({ block: 'center', behavior: 'instant' }))
-  await page.waitForFunction(
-    () => {
-      const el = document.querySelector('.hprice-panel')
-      return !!el && Number(getComputedStyle(el).opacity) > 0.9
-    },
-    null,
-    { timeout: 10000, polling: 'raf' },
-  ).catch(() => {})
-}
+// THE `revealPricing()` HELPER IS DELETED RATHER THAN RE-POINTED, and that is
+// the interesting half. It existed because `[data-reveal]` STARTS at opacity 0
+// and waits for a scroll observer, so the panel had to be brought into view
+// before it could be read — the exact state that let a closing CTA ship
+// invisible on /plans while Playwright clicked it happily.
+//
+// `[data-sp-reveal]` inverts that contract: it carries no opacity of its own,
+// the entrance is a keyframe animation that only exists while `.is-in` is on
+// the element, and its last frame is the element's ordinary appearance (see
+// useSpectrumReveal.js, which measured 16 of 19 blocks left blank by the old
+// ordering on a fast pass). So the resting state is VISIBLE and there is
+// nothing to wait for.
+//
+// That makes the opacity assertion below STRONGER than it was, not weaker: it
+// is now read WITHOUT scrolling to the section, so a reading of 1 is evidence
+// about the resting state itself. Restore `opacity:0` to the reveal attribute
+// and this fails on the next run, with no scroll to hide behind.
+const PRICING = '#pricing'
+
+/** What the front door's pricing section says, read where it rests. */
+const readPricing = (page) => page.evaluate((sel) => {
+  const el = document.querySelector(sel)
+  if (!el) return null
+  const plans = el.querySelector('.sp-plans')
+  return {
+    // textContent, not innerText: the claim is what the section SAYS, and a
+    // block the reader has not scrolled to must not be able to hide a retired
+    // tier from this sweep.
+    text: el.textContent || '',
+    opacity: Number(getComputedStyle(plans || el).opacity),
+    // The two things that NAME a tier: the cadence tabs and the plan cards.
+    cadenceCount: el.querySelectorAll('.sp-billing-tab').length,
+    tierCount: el.querySelectorAll('.sp-plan-tier').length,
+  }
+}, PRICING)
 
 test.describe('the homepage price panel only names tiers that can be bought', () => {
   test('no unpurchasable tier is advertised, and every purchasable one is', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/')
     await expectRendered(page)
-    await revealPricing(page)
 
-    const panel = await page.evaluate(() => {
-      const el = document.querySelector('.hprice-panel')
-      if (!el) return null
-      return {
-        text: el.innerText,
-        opacity: Number(getComputedStyle(el).opacity),
-        rowCount: el.querySelectorAll('.hprice-row').length,
-      }
-    })
+    const panel = await readPricing(page)
 
     // ── Positive controls. Every assertion below is an absence or a match, and
     //    both are trivially satisfiable by a panel that failed to render.
-    expect(panel, 'the pricing panel is not in the DOM at all').not.toBeNull()
-    expect(panel.rowCount, 'the pricing panel rendered no rows — the tier assertions below would pass vacuously')
-      .toBeGreaterThan(0)
-    expect(panel.opacity, 'the pricing panel is on the page at opacity 0 — a visitor cannot read any of this')
+    expect(panel, 'the pricing section is not in the DOM at all').not.toBeNull()
+    expect(panel.cadenceCount, 'the pricing section rendered no cadence tabs — the tier assertions below would pass vacuously')
+      .toBe(BUYABLE.length)
+    expect(panel.tierCount, 'the pricing section rendered no plan cards — FREE and PRO are what the tier names hang on')
+      .toBe(2)
+    // Read WITHOUT scrolling to it, which is what makes this a statement about
+    // the resting state rather than about a reveal that happened to fire.
+    expect(panel.opacity, 'the pricing panel rests at opacity 0 — a visitor who has not scrolled to it '
+      + 'sees nothing, which is the ordering useSpectrumReveal.js exists to prevent')
       .toBeGreaterThan(0.9)
 
     // ── The central guard. A tier with no `checkoutPlan` has nothing that can
@@ -99,11 +114,13 @@ test.describe('the homepage price panel only names tiers that can be bought', ()
     expect(UNBUYABLE.length, 'planLadder.js currently has no unpurchasable tier, so this guard is not exercising anything — if quarterly was wired up, delete this test with it')
       .toBeGreaterThan(0)
 
-    // CASE-INSENSITIVELY, and that is load-bearing rather than tidy. The row
-    // labels are uppercased in CSS, so `innerText` reads "MONTHLY" while the
-    // ladder says "Monthly". A case-SENSITIVE absence check would have been
-    // satisfied by a panel with "QUARTERLY" printed across it — an assertion
-    // that could not fail, guarding the one claim this file exists for.
+    // CASE-INSENSITIVELY, and that is load-bearing rather than tidy. The tab
+    // and tier labels are uppercased in CSS, so what is PAINTED is "MONTHLY"
+    // while the ladder says "Monthly". A case-SENSITIVE absence check would
+    // have been satisfied by a panel with "QUARTERLY" printed across it — an
+    // assertion that could not fail, guarding the one claim this file exists
+    // for. (`textContent` returns the authored case, which is the same
+    // argument from the other end: neither reading may decide the result.)
     const names = panel.text.toLowerCase()
     for (const plan of UNBUYABLE) {
       expect(
@@ -122,19 +139,39 @@ test.describe('the homepage price panel only names tiers that can be bought', ()
     }
   })
 
+  // THE HEADLINE FIGURE MOVED OUT OF THE HEADING, AND THAT IS THE POINT OF
+  // RE-POINTING RATHER THAN RETIRING THIS.
+  //
+  // Home's `#hprice-title` quoted the rate in the heading itself. Spectrum's
+  // `#sp-price-h` deliberately does not — it reads "The whole toolkit is free.
+  // Pro adds room.", because /plans's own h1 is the position and a visitor must
+  // not meet two different ones. The claim this test exists for did not move
+  // with it: SOMEWHERE on the front door a headline rate is stated, and it must
+  // be the cheapest one a person can actually buy. On Spectrum that sentence is
+  // `.sp-compare-foot` ("…Pro starts at $4 a month"), rendered from `CHEAPEST`,
+  // which is `cheapestPerMonth(RESOLVED)` — the same export this file resolves.
+  //
+  // The Pro card's own `$N / month` is asserted beside it because the two can
+  // disagree: the card shows the PRESELECTED cadence's rate, which is seeded
+  // from the ladder's `best` flag, and a ladder where the recommended cadence
+  // is not the cheapest would put two different rates a card apart.
   test('the headline price is the cheapest tier that can actually be bought', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/')
     await expectRendered(page)
-    await revealPricing(page)
 
-    const heading = await page.locator('#hprice-title').innerText()
     const cheapest = cheapestPerMonth(RESOLVED)
-
     expect(cheapest?.perMonthLabel, 'the ladder resolved no purchasable per-month figure').toBeTruthy()
+
+    const headline = (await page.locator('.sp-compare-foot').innerText()).replace(/\s+/g, ' ').trim()
+    // POSITIVE CONTROL — the sentence is on the page and says something. An
+    // empty string satisfies the absence half below for free.
+    expect(headline.length, 'the front door no longer states a headline rate anywhere, so the '
+      + 'checks below are guarding an empty string').toBeGreaterThan(20)
+
     expect(
-      heading.includes(cheapest.perMonthLabel),
-      `the headline reads "${heading.replace(/\s+/g, ' ').trim()}" but the cheapest buyable tier is ${cheapest.perMonthLabel}/month (${cheapest.label})`,
+      headline.includes(cheapest.perMonthLabel),
+      `the headline reads "${headline}" but the cheapest buyable tier is ${cheapest.perMonthLabel}/month (${cheapest.label})`,
     ).toBe(true)
 
     // A typed headline survives a ladder change; a derived one cannot. Guard
@@ -143,19 +180,34 @@ test.describe('the homepage price panel only names tiers that can be bought', ()
     for (const plan of UNBUYABLE) {
       if (!plan.perMonthLabel || plan.perMonthLabel === cheapest.perMonthLabel) continue
       expect(
-        heading.includes(plan.perMonthLabel),
+        headline.includes(plan.perMonthLabel),
         `the headline quotes ${plan.perMonthLabel}, which is the ${plan.label} rate — a tier that cannot be bought`,
       ).toBe(false)
     }
+
+    // …and the card a visitor clicks agrees with the sentence they just read.
+    const card = (await page.locator('.sp-plan--pro .sp-plan-price').innerText()).replace(/\s+/g, ' ').trim()
+    expect(
+      card.includes(cheapest.perMonthLabel),
+      `the Pro card leads with "${card}" while the sentence under the table says `
+      + `${cheapest.perMonthLabel} — the preselected cadence is not the cheapest buyable one`,
+    ).toBe(true)
   })
 
   test('the homepage does not promise a cancellation the billing portal cannot do', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/')
     await expectRendered(page)
-    await revealPricing(page)
 
-    const bodyText = await page.evaluate(() => document.body.innerText)
+    // textContent rather than innerText, for the reason 62-retired-taglines
+    // records at length: the claim is that the sentence is not on the page,
+    // including in a band the visitor has not scrolled to and including in
+    // sr-only text a screen reader would announce.
+    const bodyText = await page.evaluate(() => {
+      const clone = document.body.cloneNode(true)
+      clone.querySelectorAll('script, style, template, noscript').forEach((n) => n.remove())
+      return clone.textContent || ''
+    })
 
     expect(bodyText.length, 'the homepage rendered almost nothing — this absence check would pass vacuously')
       .toBeGreaterThan(500)

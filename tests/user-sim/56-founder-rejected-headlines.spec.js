@@ -39,10 +39,34 @@
 import { test, expect } from './base.js'
 import { go, watch, expectRendered } from './helpers.js'
 
-// The three heading slots the founder has ruled on. A rejected line is only
-// half the rule — the other half is that the slot still says SOMETHING, so
-// deleting a heading can never be the way this file goes green.
-const SLOTS = ['hsteps-title', 'htools-title', 'hcomm-title']
+// The heading slots the front door still has. A rejected line is only half the
+// rule — the other half is that the page still says SOMETHING in its headings,
+// so deleting a heading can never be the way this file goes green.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// THESE IDS MOVED WITH THE ROUTE SWAP, AND THE RULE DID NOT
+// ─────────────────────────────────────────────────────────────────────────────
+// The four sentences below were rejected for what they SAY, not for the element
+// they sat in, and the founder's ruling does not expire because a page was
+// rebuilt — a page he has not read is exactly where a retired sentence comes
+// back. So the absence sweep is unchanged and still runs over the whole of
+// <main>; only the presence control had to be re-pointed.
+//
+// Home.jsx's `#hsteps-title` / `#htools-title` / `#hcomm-title` are gone with
+// the page. Their successors on Spectrum, where one exists:
+//   · #hsteps-title (the tools/workbench heading)  → #sp-bench-h, which renders
+//     `SURFACE_LINE.toolsSectionHeading` — his own line for that section, and
+//     the slot both rejected workbench headings were aimed at.
+//   · #hcomm-title  (the community showcase)        → #sp-disc-h, the library
+//     section. "Systems worth stealing." was rejected in this slot.
+//   · #htools-title (the six-category strip)        → NOTHING. Spectrum has no
+//     category strip; the bench is one rail of five groups. The sentence stays
+//     in REJECTED regardless, because the sweep is over the page, not the slot.
+//
+// Listed as the page's full set of section headings rather than as two, because
+// the control is "the front door still headlines its sections" and naming all
+// of them makes a quietly deleted section fail here too.
+const SLOTS = ['sp-bench-h', 'sp-disc-h', 'sp-spec-h', 'sp-price-h', 'sp-faq-h', 'sp-close-h']
 
 const REJECTED = [
   {
@@ -71,24 +95,27 @@ const REJECTED = [
   },
 ]
 
-// `textContent`, not `innerText`, and this is the deliberate opposite of the
-// P-019 "token" check in 10-home-chaos-to-calm.spec.js, which reads innerText
-// off the same element.
+// `textContent`, not `innerText`, and the reason SURVIVED the route swap
+// intact — only the attribute's name changed.
 //
-// MEASURED, NOT ASSUMED: every `.hsteps-head` / `.htools-head` / `.hcomm-head`
-// on this page carries `data-reveal`, which is `opacity:0` until the section
-// scrolls in (global.css:5904), and under the GSAP path the band reports as
-// hidden outright — `toBeVisible()` on `#hsteps-title` fails on a freshly
-// loaded homepage. So an innerText rule here would be evadable by the worst
-// possible means: a rejected sentence could come back below the fold and this
-// file would call the page clean.
+// MEASURED, NOT ASSUMED: every section block on the front door carries
+// `data-sp-reveal` (Home's `data-reveal` before it), which spectrum.css starts
+// at `opacity:0` and hands to a scroll observer, so `toBeVisible()` on a
+// section heading fails on a freshly loaded page. An innerText rule here would
+// be evadable by the worst possible means: a rejected sentence could come back
+// below the fold and this file would call the page clean.
 //
 // The two rules want different subjects and that is correct. "Do not SELL with
 // this word" is about what is read, so it reads innerText. "The founder threw
 // this sentence out" is about what the page SAYS, full stop — reveal state,
 // scroll position and viewport cannot make a retired headline acceptable — so
-// it reads the DOM. The hidden-but-mounted workbench panels textContent also
-// returns are tool chrome; none of the four strings below can appear in them.
+// it reads the DOM.
+//
+// ONE CONSEQUENCE OF <SpectrumWords>, and it is harmless here: every headline
+// it paints appears TWICE in textContent — once in the `.sr-only` sentence and
+// once as the per-word visual split. This sweep only ever asks whether a
+// retired string is present, so a doubled haystack changes nothing; a test that
+// wanted the sentence itself must read the words (see 73-founder-calls-0910).
 const homepageText = async (page) =>
   flatten(await page.locator('#main').evaluate((el) => el.textContent || ''))
 
@@ -132,45 +159,65 @@ test.describe('homepage copy the founder has already ruled out', () => {
     }
   })
 
-  // ── C11, the one line of the parked batch that reached main ───────────────
+  // ── C11 IS GONE WITH THE SECTION IT NAMED. What replaced it, and why ──────
   //
-  // Four of #264's five headline lines never landed. This one did, and until
-  // now nothing asserted it: the suite checked the strip's DATA thoroughly
-  // (cards link inward, no fabricated save counts, no ordering tablist) and
-  // never once checked that the section still has the heading that names it.
-  // The heading could have been reworded, or deleted outright, and the whole
-  // homepage suite would have stayed green.
+  // WHAT THE DELETED TEST GUARDED. `section.hcomm` — the "starting points"
+  // strip of six inward cards — carried `aria-labelledby="hcomm-title"`, and
+  // "Start from something that already works." was the one line of #264's
+  // C8–C13 copy batch that ever reached main. The test pinned that sentence
+  // through the section's ACCESSIBLE NAME rather than by reading the h2,
+  // because the text alone is not the wiring: reading `#hcomm-title` directly
+  // still passes with the `aria-labelledby` deleted, which is exactly the
+  // failure that costs a screen-reader user the section's name.
   //
-  // Asserted through the ACCESSIBLE NAME rather than by reading the h2's text,
-  // because that is the wiring and the text alone is not. `section.hcomm`
-  // carries `aria-labelledby="hcomm-title"`; going through role+name proves in
-  // one assertion that the section exists, that its label points at a real
-  // element, and that the element says this. Reading `#hcomm-title` directly
-  // would still pass with the aria-labelledby deleted, which is the failure
-  // that costs a screen-reader user the section's name.
-  test('the starting-points section is still named by the C11 heading that shipped', async ({ page }) => {
-    watch(page, 'a screen-reader user reaching the starting-points strip')
+  // WHY IT IS GONE. Home.jsx is deleted and Spectrum has no starting-points
+  // strip: the front door's "somewhere to begin" is now the bench (five tool
+  // panels, each ending at the real tool) and the Discover grid (five real
+  // library rows out of CURATED_LIBRARY_PALETTES / GALLERY_GRADIENTS). The
+  // sentence was never the founder's — it was an agent line from a parked PR —
+  // so there is nothing of his to carry forward, and re-pointing a copy pin at
+  // a heading he has not ruled on would invent an approval. Founder's call on
+  // the page, taken 2026-09-22 with the route swap.
+  //
+  // WHERE THE SURVIVING HALF LIVES. Two pieces, both kept:
+  //   · the CARDS half — that the section is not an empty band wearing a label
+  //     — is now the bench and Discover grids, counted in 04-premium-home.
+  //   · the WIRING half is the test below, which is the same claim made of the
+  //     whole page instead of one section: a labelled section's name must
+  //     resolve to a real heading that says something.
+  test('every section on the front door is named by a heading that exists', async ({ page }) => {
+    watch(page, 'a screen-reader user listing the front door by landmark')
     await go(page, '/')
     await expectRendered(page, '/')
 
-    const region = page.getByRole('region', {
-      name: 'Start from something that already works.',
-      exact: true,
-    })
-    await expect(
-      region,
-      'section.hcomm is no longer labelled "Start from something that already works." — '
-      + 'either the heading moved, its text changed, or the aria-labelledby that points '
-      + 'at it was dropped. This is the only line of #264\'s C8–C13 batch on main.',
-    ).toHaveCount(1)
+    const sections = await page.locator('main#main section[aria-labelledby]').evaluateAll(
+      (els) => els.map((el) => {
+        const id = el.getAttribute('aria-labelledby')
+        const target = id ? document.getElementById(id) : null
+        return {
+          id,
+          className: el.className,
+          resolves: !!target,
+          says: (target?.textContent || '').replace(/\s+/g, ' ').trim().length,
+        }
+      }),
+    )
 
-    // POSITIVE CONTROL — and it is the right region. A `<section>` that lost
-    // its cards would still answer to the name; the six inward cards are what
-    // make this the starting-points strip and not an empty band wearing its
-    // label. Their destinations are covered in 10-home-chaos-to-calm.spec.js.
-    await expect(
-      region.locator('.hcomm-card-link'),
-      'the region carries the C11 heading but rendered no starting points under it',
-    ).toHaveCount(6)
+    // POSITIVE CONTROL. An empty list satisfies every check below, and a page
+    // that stopped labelling its sections is precisely the regression.
+    expect(sections.length, 'the front door labels no section at all — the checks below would be vacuous')
+      .toBeGreaterThanOrEqual(5)
+
+    const broken = sections.filter((s) => !s.resolves || s.says === 0)
+    expect(broken.map((s) => `${s.className} → #${s.id}`),
+      'a section points aria-labelledby at an element that does not exist or says nothing, so a '
+      + 'screen-reader user is given an unnamed region where the page has a heading',
+    ).toEqual([])
+
+    // …and the names actually reach the accessibility tree, which is the half
+    // reading the DOM cannot prove.
+    await expect(page.locator('main#main').getByRole('region'),
+      'the labelled sections are not being exposed as named regions',
+    ).toHaveCount(await page.locator('main#main section[aria-labelledby], main#main section[aria-label]').count())
   })
 })
