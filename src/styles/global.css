@@ -516,7 +516,27 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 
 .stc-head.solo{cursor:default}
 .stc-head.solo .stc-toolbar{margin-left:0;width:100%}
-.stc-role-presets .pt-t{padding:4px 10px;font-size:10px;min-height:0}
+/* THE ROLE PRESETS ARE COMPACT, NOT SUB-MINIMUM.
+ *
+ * This read `min-height:0`, which is (0,2,0) and therefore beat BOTH floors
+ * `.pt-t` has: the 36px base above, and the 44px touch floor that
+ * deferred/tool-shell.css sets at (0,1,0) inside `@media(max-width:640px)`.
+ * With the height left to the line box, the chip measured 4+4 padding, 1+1
+ * border and a `line-height:normal` box at 10px — which came to 24px under
+ * Manrope and comes to 23px under Geist. One pixel, 212 controls, every width,
+ * and a WCAG 2.5.8 failure that nothing had changed to cause.
+ *
+ * 24px is the AA floor and one pixel more than the chip already occupied, so
+ * the compact look this override exists for is unchanged. The touch floor is
+ * RESTATED at this specificity rather than relied upon, for exactly the reason
+ * it was lost the first time. */
+.stc-role-presets .pt-t{padding:4px 10px;font-size:10px;min-height:24px}
+@media(max-width:640px){
+  .stc-role-presets .pt-t{min-height:44px}
+}
+@media(pointer:coarse){
+  .stc-role-presets .pt-t{min-height:44px}
+}
 
 /* Semantic colour workbench */
 .stc-head.solo{padding-bottom:var(--s-5);border-bottom:1px solid var(--border)}

@@ -419,14 +419,22 @@ test.describe('the homepage headline keeps its proportion on a short desktop', (
       const ctx = await browser.newContext({ viewport: { width, height } })
       const page = await ctx.newPage()
       await go(page, '/')
-      const h1 = page.locator('.home-hero-h1')
+      // `.home-hero-h1` until the front door became Spectrum. The RULE did not
+      // move — a display headline must not eat a short desktop — and it still
+      // holds with the ceiling unchanged: measured 2026-09-22 across these nine
+      // viewports, Spectrum's hero reports 25–34%, so 38 is still a ceiling
+      // with room in it rather than a number refitted around the new page.
+      //
+      // The above-the-fold marker is now the hero's CTA, which is the lowest
+      // element of the hero block the way `.home-hero-hint` was on the old one.
+      const h1 = page.locator('.sp-hero-h1')
       await expect(h1).toBeVisible()
       await page.waitForTimeout(160)
 
       const m = await page.evaluate(() => {
-        const el = document.querySelector('.home-hero-h1')
+        const el = document.querySelector('.sp-hero-h1')
         const r = el.getBoundingClientRect()
-        const hint = document.querySelector('.home-hero-hint')?.getBoundingClientRect()
+        const hint = document.querySelector('.sp-hero .sp-cta')?.getBoundingClientRect()
         return {
           fs: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
           height: Math.round(r.height),

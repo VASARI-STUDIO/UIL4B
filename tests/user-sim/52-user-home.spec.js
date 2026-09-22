@@ -31,7 +31,7 @@ test.describe('the front door', () => {
     await expect(page).toHaveURL(/\/$/)
     // The hero, not the dashboard. Asserted on the landing's own root element so
     // this cannot be satisfied by shared chrome.
-    await expect(page.locator('.home')).toBeVisible()
+    await expect(page.locator('.spectrum')).toBeVisible()
     await expect(page.locator('.uh-tip')).toHaveCount(0)
   })
 
@@ -43,9 +43,15 @@ test.describe('the front door', () => {
     await expect(page, 'the root must hand a returning visitor to the User Home').toHaveURL(/\/projects$/)
     // THE FLASH TEST. The sales page must never have rendered on the way: the
     // decision is made in the first render, from the hint, before Firebase has
-    // loaded at all. If it were made after auth resolved, .home would paint
-    // first and this would catch it.
-    await expect(page.locator('.home')).toHaveCount(0)
+    // loaded at all. If it were made after auth resolved, the sales page would
+    // paint first and this would catch it.
+    //
+    // THIS ONE WENT VACUOUS AND STILL REPORTED GREEN. It read `.home` — the old
+    // Home.jsx root — which stopped existing the moment Spectrum took `/`. A
+    // count of zero was then true of every page in the app, so the flash test
+    // was asserting nothing at all while passing. It names the element that
+    // would actually flash now.
+    await expect(page.locator('.spectrum')).toHaveCount(0)
   })
 
   test('/home is the sales page for EVERYONE, session or not', async ({ page }) => {
@@ -58,12 +64,12 @@ test.describe('the front door', () => {
     watch(page, 'a visitor at /home')
     await go(page, '/home')
     await expect(page, '/home must never redirect for a signed-out visitor').toHaveURL(/\/home$/)
-    await expect(page.locator('.home')).toBeVisible()
+    await expect(page.locator('.spectrum')).toBeVisible()
 
     await withSessionHint(page)
     await go(page, '/home')
     await expect(page, '/home must never redirect for a signed-in visitor either').toHaveURL(/\/home$/)
-    await expect(page.locator('.home')).toBeVisible()
+    await expect(page.locator('.spectrum')).toBeVisible()
   })
 
   test('the nav Home control reaches the sales page from inside the app', async ({ page }) => {
@@ -74,7 +80,7 @@ test.describe('the front door', () => {
     await expect(page).toHaveURL(/\/projects$/)
     await page.getByRole('link', { name: 'UIL4B home' }).first().click()
     await expect(page, 'the Home control must land on the sales page and stay there').toHaveURL(/\/home$/)
-    await expect(page.locator('.home')).toBeVisible()
+    await expect(page.locator('.spectrum')).toBeVisible()
   })
 
   test('a stale hint settles without looping', async ({ page }) => {

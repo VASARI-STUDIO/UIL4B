@@ -92,11 +92,21 @@ test.describe('the homepage below the hero', () => {
     await expectRendered(page, '/')
     await walk(page)
 
-    const panel = page.locator('.hprice-panel')
+    /* MOVED ONTO SPECTRUM'S PRICING SECTION.
+     *
+     * `.hprice-panel` was Home's single Pro panel. Spectrum draws both tiers as
+     * `.sp-plan` cards under `#pricing`, so the Pro card is the one this test is
+     * about — found by its own tier label rather than by index, because an index
+     * silently tests the Free card if the order is ever swapped.
+     *
+     * Everything below this point is unchanged, and that is the point: the
+     * figures still have to come from the config that ENFORCES them, and the
+     * four sentences the founder had removed still must not come back. Those
+     * are claims about the product, not about the page that carried them. */
+    const panel = page.locator('.sp-plan', { has: page.locator('.sp-plan-tier', { hasText: /^PRO$/i }) })
     await expect(panel).toHaveCount(1)
-    await expect(panel.locator('.hprice-lede')).toHaveText('Everything in Free, plus:')
 
-    const items = await panel.locator('.hprice-includes li').allTextContents()
+    const items = await panel.locator('li').allTextContents()
     const joined = items.join(' | ')
     expect(joined).toContain(`${AI_LIMITS.pro.daily} AI generations a day`)
     expect(joined).toContain(`${AI_LIMITS.pro.monthly} a month`)
@@ -326,8 +336,23 @@ test.describe('the Plans page closing band', () => {
   })
 })
 
+/* THE APP FOOTER'S OWN RULES, ON THE ROUTES THAT MOUNT IT.
+ *
+ * '/' left this loop when it became Spectrum. The front door renders
+ * `<SpectrumFooter />` instead of `<AppFooter />` — deliberately, so the page
+ * has one contentinfo landmark rather than two — and that footer is a different
+ * object with different rules: no wordmark block, and it DOES carry one
+ * sentence ("Save time, and save your mind."), which SpectrumFooter.jsx argues
+ * is a handoff above a button rather than the tagline-under-a-wordmark the
+ * founder retired. Asserting the AppFooter rules there would fail a page that
+ * is behaving as designed.
+ *
+ * What still holds on every route, '/' included, is the founder attribution —
+ * and 07-public-shell-library-palette asserts it across both footers. The
+ * Spectrum footer's link parity with AppFooter is pinned by
+ * tests/unit/spectrum-footer-parity.test.js. */
 test.describe('the footer', () => {
-  for (const route of ['/', '/plans', '/discover/palettes']) {
+  for (const route of ['/plans', '/discover/palettes']) {
     test(`${route} carries the wordmark and no tagline`, async ({ page }) => {
       // Was: "The operating workspace for building, validating and exporting
       // interface foundations." under the wordmark on every page — a tagline,
@@ -341,7 +366,10 @@ test.describe('the footer', () => {
       await expect(footer).toHaveCount(1)
       await expect(footer.locator('.app-footer-mark')).toHaveText('UIL4B')
       await expect(footer.locator('.app-footer-tagline'), 'the footer tagline is back').toHaveCount(0)
-      await expect(footer.getByRole('link', { name: /Start with colour/ })).toHaveAttribute('href', '/create/color')
+      // '/create/color' until the colour landing was deleted. The link is built
+      // from categoryDestination('colour'), which now answers with the group's
+      // first tool because the category home only bounces.
+      await expect(footer.getByRole('link', { name: /Start with colour/ })).toHaveAttribute('href', '/create/palette')
     })
   }
 })
