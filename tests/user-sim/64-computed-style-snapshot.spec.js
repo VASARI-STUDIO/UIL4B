@@ -118,8 +118,30 @@ const elementCount = routeNames.reduce(
 test('the baseline under test is not empty', async () => {
   expect(PROPS.length).toBeGreaterThanOrEqual(30)
   expect(WIDTHS).toEqual([390, 1440])
-  expect(routeNames.length).toBeGreaterThanOrEqual(25)
-  expect(elementCount).toBeGreaterThanOrEqual(1900)
+  /* 24 AND 1800, DOWN FROM 25 AND 1900 — and the reason is a route LEAVING
+   * rather than the fixture shrinking, which is the thing these floors exist
+   * to catch.
+   *
+   * `/create/color` was in the baseline and is not a page: the colour landing
+   * was deleted and the route redirects to `/create/palette`, which is measured
+   * in its own right two rows below. Snapshotting a redirect measured the
+   * destination a second time under the wrong name, and `go()`'s readiness wait
+   * does not resolve for it at all — regenerating that entry fails outright.
+   *
+   * THE FRONT DOOR WENT THE OTHER WAY AND THAT IS THE WARNING WORTH KEEPING.
+   * `/` held 76 elements as Home.jsx and dropped to TWO after the redesign,
+   * because this file freezes its class list on purpose and
+   * UPDATE_STYLE_BASELINE can therefore only ever SHRINK it — re-measuring
+   * Home's classes against Spectrum left the single survivor, `.sr-only`. The
+   * fixture still looked healthy, and the page every visitor lands on had no
+   * computed-style coverage at all. Its selector list was re-derived from the
+   * rendered page and is 40 again at both widths.
+   *
+   * So: if this floor ever needs lowering again, find out WHICH route lost
+   * elements first. A shrinking route is the defect; a removed route is a
+   * decision. */
+  expect(routeNames.length).toBeGreaterThanOrEqual(24)
+  expect(elementCount).toBeGreaterThanOrEqual(1800)
   // Every route carries a full set at both widths.
   for (const r of routeNames) {
     for (const w of WIDTHS) {

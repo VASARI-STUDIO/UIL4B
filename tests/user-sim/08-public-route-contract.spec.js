@@ -15,6 +15,12 @@ const STATIC_INDEXABLE_ROUTES = [
   '/info',
   '/seo',
   '/feedback',
+  // The third-party attribution page. A real, indexable surface rather than a
+  // legal footnote: four of the icon packs it credits are CC-BY and REQUIRE
+  // visible attribution, and two of those are on the free tier — so this is
+  // owed to a signed-out visitor, and a crawler should find it advertised
+  // rather than treated as an orphan. Reached from both footers.
+  '/credits',
   '/privacy',
   '/terms',
   // The HTML sitemap. Low priority, but it is a real page and the 404 links to

@@ -66,7 +66,14 @@ const FIELDS = [
     // what this spec must prove about it is unchanged in kind — that the class
     // wins over `input[type="text"]` — and changed in value.
     route: '/create/gradient', sel: '.ggn-stop-hex', name: 'gradient stop hex field',
-    want: { fontFamily: MONO, padding: '5px 6px', borderRadius: '6px' },
+    // 10px, not 6px: the colour-tools pass moved this field off a literal onto
+    // `--radius-s`, which is what "tokens only" asks for and what the rest of
+    // the sheet now uses. The CONTRACT this spec exists for is unchanged and
+    // still proved — 10px is not the reset's 12px, so the component class is
+    // still winning over `input[type="text"]`. Only the number moved, and
+    // `wasWrongly` below is what keeps that a real assertion rather than a
+    // value copied out of whatever the page happens to render today.
+    want: { fontFamily: MONO, padding: '5px 6px', borderRadius: '10px' },
     wasWrongly: { fontFamily: 'Manrope', padding: '9px 14px', borderRadius: '12px' },
   },
 ]

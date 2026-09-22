@@ -383,19 +383,25 @@ test.describe('public UI quality release', () => {
 
   test('community records are scrubbed and unsafe external URLs never become links', async ({ page }) => {
     watch(page, 'privacy-conscious community visitor')
-    await page.addInitScript(() => {
+    // PASSED AS AN ARGUMENT, never closed over. `addInitScript` serialises this
+    // function and runs it in the BROWSER, where a module constant from this
+    // Node file does not exist — the callback throws ReferenceError, the seed
+    // never lands, and the test fails as "no card rendered", which reads like a
+    // page defect rather than a harness one. Cost an hour of looking at the
+    // wrong file.
+    await page.addInitScript((email) => {
       localStorage.setItem('vs-community-submissions', JSON.stringify([{
         id: 'unsafe-owner-record',
         name: 'Unsafe link test',
         author: 'Old profile name',
-        authorEmail: FOUNDER_EMAIL,
+        authorEmail: email,
         category: 'Landing',
         url: 'javascript:alert(1)',
         c1: '#111111',
         c2: '#333333',
         saves: 0,
       }]))
-    })
+    }, FOUNDER_EMAIL)
     await go(page, '/community')
 
     const card = page.locator('.ch-card', { hasText: 'Unsafe link test' })
@@ -410,19 +416,19 @@ test.describe('public UI quality release', () => {
 
   test('direct Discover load migrates legacy community records before the surface renders', async ({ page }) => {
     watch(page, 'visitor opening Discover from a saved link')
-    await page.addInitScript(() => {
+    await page.addInitScript((email) => {
       localStorage.setItem('vs-community-submissions', JSON.stringify([{
         id: 'discover-legacy-owner',
         name: 'Discover legacy record',
         author: 'Legacy owner',
-        authorEmail: FOUNDER_EMAIL,
+        authorEmail: email,
         category: 'Branding',
         url: 'data:text/html,unsafe',
         c1: '#111111',
         c2: '#222222',
         saves: 0,
       }]))
-    })
+    }, FOUNDER_EMAIL)
     await go(page, '/discover')
 
     // The h1 is the surface's name. "Find systems worth stealing." was here
