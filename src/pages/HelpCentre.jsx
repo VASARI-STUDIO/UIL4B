@@ -81,16 +81,27 @@ import { HELP_ANSWERS, HELP_STARTS, LIVE_TOOLS, SOON_TOOLS, STARTS_WITH_CONTENT 
 // sales surface derives its value claim from. positioning-truth.test.js fails
 // if this page types the sentence instead.
 import { SURFACE_LINE, line } from '../data/positioning'
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/reading.css'
+// The front door's own glyph set, so the arrow in this page's call to action
+// and the arrow in Spectrum's are the same drawing rather than two that look
+// alike. Inline SVG in the NavIcon idiom — no CDN, no icon font, no new
+// origin — and Spectrum is a STATIC import in App.jsx, so the module is
+// already in the entry chunk and costs this route nothing.
+import SpectrumIcon from '../components/spectrum/SpectrumIcon'
+// THIS PAGE NO LONGER IMPORTS styles/deferred/reading.css. Its `.hlp-*` rules
+// are replaced wholesale by help.css, and loading both would leave two sets of
+// rules for the same class names cascading by file order — which is the one
+// way a restyle produces a page that is half old and half new. The dead block
+// in reading.css is a follow-up for whoever owns that file next; it is shared
+// with /learn/:slug, /404 and /sitemap, and three other lanes are writing to
+// this tree.
+import '../styles/pages/content.css'
+import '../styles/pages/help.css'
 
 export default function HelpCentre() {
   useReveal()
 
   return (
-    <div className="sec hlp">
+    <div className="sec cpg hlp">
       <header className="hlp-hero">
         <h1 className="hlp-h1">
           Open any tool. It starts with <mark className="home-mark">something</mark> in it.
@@ -108,9 +119,13 @@ export default function HelpCentre() {
             audit, 2026-09-09. */}
         <p className="hlp-lede">{line(SURFACE_LINE.helpOpening)}</p>
         <div className="hlp-hero-cta">
-          <Link className="ui-pill ui-pill-ink ui-pill-lg" to="/create/palette">
-            Open the palette builder
-            <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
+          {/* The Spectrum pill, replacing `.ui-pill ui-pill-ink ui-pill-lg`.
+              Same destination, same label, same single call to action. */}
+          <Link className="cpg-cta cpg-cta--ink cpg-cta--lg" to="/create/palette">
+            <span>Open the palette builder</span>
+            <span className="cpg-cta-icon cpg-cta-icon--lg" aria-hidden="true">
+              <SpectrumIcon name="arrow-up-right" size={14} />
+            </span>
           </Link>
         </div>
         {/* Counted, not typed. The sentence this replaced named a tool that had
@@ -144,7 +159,7 @@ export default function HelpCentre() {
               <Link className="hlp-start-link" to={step.to}>
                 <span className="hlp-start-label">{step.label}</span>
                 <span className="hlp-start-opens">opens with {step.opensWith}</span>
-                <span className="hlp-start-go" aria-hidden="true">&rarr;</span>
+                <span className="hlp-start-go" aria-hidden="true"><SpectrumIcon name="arrow-right" size={15} /></span>
               </Link>
               <p className="hlp-start-body">{step.body}</p>
             </li>
@@ -190,9 +205,11 @@ export default function HelpCentre() {
             reaches the same place whether you send it from here or from the tool
             that broke.
           </p>
-          <Link className="ui-pill ui-pill-out ui-pill-md" to="/feedback">
-            Report it
-            <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
+          <Link className="cpg-cta cpg-cta--ghost" to="/feedback">
+            <span>Report it</span>
+            <span className="cpg-cta-icon" aria-hidden="true">
+              <SpectrumIcon name="arrow-up-right" size={12} />
+            </span>
           </Link>
         </div>
       </section>
