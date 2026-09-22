@@ -1,0 +1,424 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONTENT — the `cpg` family. The Spectrum design language, for the four
+   content surfaces that never got a design pass: /principles, /help, /info,
+   /terms and /privacy.
+   ═══════════════════════════════════════════════════════════════════════════
+
+   ── Why one shared sheet rather than four ───────────────────────────────────
+
+   These five routes are five lazy chunks, and every one of them needs the same
+   six things: a display headline, a lede, a section head, the CTA pill, a
+   sticky index rail and a hairline row. Authored per page that is the same
+   ~180 lines written five times, and five places for the accent family to
+   drift apart — which is precisely the "disjointed" the 2026-09-16 audit
+   measured. Vite emits a module imported by several lazy chunks ONCE, into a
+   shared chunk, so the cost of sharing is a second stylesheet request on the
+   first content route and nothing after it.
+
+   ── This is a port of spectrum.css, not a new language ──────────────────────
+
+   Every value below is either the app's own token or the corresponding value
+   in src/styles/pages/spectrum.css, and the ones that differ differ for one
+   reason: these are CONTENT pages inside the app shell, not the front door.
+   The front door's h1 clamps to 92px because it is the only thing on the
+   screen; a help page's h1 clamps to 64px because a paragraph follows it.
+   Where a value is Spectrum's, it is Spectrum's exactly — the CTA pill's 44px
+   floor, its 28px bubble, the 45° rotation, `cubic-bezier(.23,1,.32,1)`, the
+   hairline row, the sticky rail and its 1000px collapse.
+
+   ── THE ACCENT IS NEVER A HEX, AND NEVER --accent-strong ────────────────────
+
+   Same contract as spectrum.css: every accent surface here reads the DERIVED
+   family (--accent-mid, --accent-text, --accent-bright, --accent-border,
+   --accent-wash, --accent-wash-4, --accent-ink), so a premium theme template
+   that moves `--accent` alone moves these pages with it.
+
+   `--accent-strong` is banned here and its absence is the point. It is a
+   per-theme LITERAL (#0B5ED7 / #4A90FF and their high-contrast siblings) that
+   does not track `--accent` at all, and the sheet this one replaces used it on
+   /principles' call to action, /help's row hover, /info's eyebrow, /info's
+   orientation figure and the storage key on /privacy — five elements that
+   would have stayed brand-blue on a theme that had moved to green.
+
+   ── CONTRAST: --t3 IS NOT ALLOWED ON A WASH ─────────────────────────────────
+
+   Four AA failures on this branch have the same shape — a quiet grey over a
+   tinted ground — so the floor here is measured on the COMPOSITED colour, not
+   the declared one:
+
+     --t3 (#6C6C66) on --bg-0 (#EFEEE9) ............ 4.59:1  (passes, barely)
+     --t3 on --cpg-wash over --bg-0 (~#E6E5E0) ..... 4.23:1  FAILS
+     --t2 (#5F5F59) on that same wash .............. 5.18:1  passes
+
+   So `--cpg-quiet` (--t3) appears only where the ground is the page or a plain
+   `--card`, and every label that sits on `--cpg-wash`, `--cpg-wash-2` or an
+   accent wash uses `--cpg-faint` (--t2) instead. Light is the worse theme in
+   every one of those pairs, which is why it is the one quoted.                */
+
+.cpg {
+  /* Local aliases, so this sheet reads like spectrum.css while resolving to
+     the app's tokens. Nothing below this block names a --bg-* or --t- directly
+     except the wash definitions themselves. */
+  --cpg-page: var(--bg-0);
+  --cpg-card: var(--card);
+  --cpg-ink: var(--t0);
+  --cpg-dim: var(--t1);
+  --cpg-faint: var(--t2);
+  --cpg-quiet: var(--t3);
+  --cpg-line: var(--border);
+  --cpg-line-strong: var(--bh);
+  /* The ink-alpha washes, as colour-mix off the ink token so they track the
+     theme without a second RGB triple to keep in step. spectrum.css's own
+     --sp-hair / --sp-wash / --sp-wash-2, at the same percentages. */
+  --cpg-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --cpg-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  --cpg-wash-2: color-mix(in srgb, var(--t0) 6%, transparent);
+
+  --cpg-ease: cubic-bezier(.23, 1, .32, 1);
+  /* The band rhythm. Shorter than spectrum.css's clamp(80px,11vw,152px): the
+     front door is a scroll narrative with one idea per screen, these are read
+     top to bottom. */
+  --cpg-sec: clamp(56px, 7vw, 104px);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--cpg-sec);
+  padding-bottom: var(--s-8);
+  color: var(--cpg-ink);
+}
+
+/* One anchor offset for every `#id`, so a jump from the footer, from a shared
+   link or from a table of contents never parks a heading under the fixed nav.
+   spectrum.css's own rule. */
+.cpg [id] { scroll-margin-top: calc(var(--chrome-h) + 24px); }
+
+/* ── Type ─────────────────────────────────────────────────────────────────── */
+
+.cpg-h1 {
+  margin: 0;
+  max-width: 20ch;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(34px, 5.4vw, 64px);
+  line-height: .99;
+  letter-spacing: -.04em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+/* The accented run in a headline. spectrum.css's `.sp-w--mark`, and the
+   replacement for `<mark class="home-mark">`, which painted the --hi
+   highlighter (#E9FF64) behind a phrase — a second brand colour on a page
+   whose whole argument is one derived accent family. `--accent-mid` measures
+   5.18:1 light and 9.17:1 dark against the page, so the run is a colour rather
+   than a box and needs no padding, no clipping allowance and no line-height
+   compensation. */
+.cpg-mark { color: var(--accent-mid); font-weight: 600; }
+
+.cpg-lede {
+  margin: 0;
+  max-width: 56ch;
+  font-size: clamp(15.5px, 1.3vw, 17px);
+  line-height: 1.6;
+  color: var(--cpg-dim);
+  text-wrap: pretty;
+}
+
+.cpg-h2 {
+  margin: 0;
+  max-width: 22ch;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(26px, 3.4vw, 44px);
+  line-height: 1.02;
+  letter-spacing: -.03em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+.cpg-h3 {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 16.5px;
+  font-weight: 540;
+  line-height: 1.35;
+  color: var(--cpg-ink);
+}
+
+/* The mono caption family. One size, one tracking, three grounds — this is the
+   whole of the small-label system on these pages, against the six different
+   mono captions the sheet it replaces carried (9px/9.5px/10px/10.5px/11px and
+   --fs-micro, at .04em/.06em/.08em/.1em/.12em/.14em). */
+.cpg-cap {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--cpg-faint);
+}
+.cpg-cap--accent { color: var(--accent-text); }
+
+.cpg-note {
+  margin: 0;
+  max-width: 68ch;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--cpg-faint);
+}
+.cpg-note code { font-family: var(--mono); font-size: .92em; color: var(--cpg-dim); }
+
+/* ── The section head ─────────────────────────────────────────────────────────
+   A numeral, a rule and the heading. The numeral is the rhythm device that
+   replaces the emoji these pages used to open every section with — a glyph per
+   heading is the construction the anti-slop bar names, and an emoji cannot be
+   themed, cannot be measured for contrast and renders as a different picture
+   on every platform. A counter can do none of those wrong. */
+.cpg-head { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.cpg-head-top { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.cpg-head-top .cpg-cap { flex: 0 0 auto; }
+.cpg-head-rule { flex: 1 1 auto; height: 1px; background: var(--cpg-line); min-width: 24px; }
+
+/* ── The CTA family ───────────────────────────────────────────────────────────
+   spectrum.css's `.sp-cta`, value for value: the ink ground, the page-coloured
+   label, the round bubble on the right holding an arrow that rotates 45° on
+   hover so it points along the direction of travel. Three variants and two
+   sizes, which is the whole button system on these pages — they carried
+   `.ui-pill` in three variants and two sizes before, drawn from a family the
+   Spectrum brief retired by name. */
+.cpg-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px 8px 20px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 540;
+  line-height: 1.2;
+  /* ≥44px before padding, so it clears 2.5.8 at every size and on a coarse
+     pointer. Spectrum's own floor. */
+  min-height: 44px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform var(--dur-1) var(--cpg-ease), background var(--dur-1) ease,
+              color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+.cpg-cta:hover { text-decoration: none; }
+.cpg-cta:active { transform: scale(.978); }
+.cpg-cta--lg { font-size: 15.5px; padding: 11px 12px 11px 24px; }
+
+.cpg-cta--ink { background: var(--cpg-ink); color: var(--cpg-page); border-color: var(--cpg-ink); }
+.cpg-cta--ink:hover { background: color-mix(in srgb, var(--t0) 86%, var(--bg-0)); color: var(--cpg-page); }
+
+.cpg-cta--ghost { background: transparent; color: var(--cpg-ink); border-color: var(--cpg-line-strong); }
+.cpg-cta--ghost:hover { background: var(--cpg-wash); border-color: var(--cpg-ink); color: var(--cpg-ink); }
+
+/* --accent-mid, NOT --accent, AND THE HOVER MOVED WITH THE FILL.
+   The reasoning is spectrum.css's and the measurements are its: pure white on
+   --accent is 4.46:1 against a 4.5 floor at 15px/540, so the ground is the only
+   thing left to move. --accent-mid measures 5.18:1 light / 9.17:1 dark.
+   --accent-hover was NOT used, because it mixes toward --accent-paper in both
+   themes and in light is therefore LIGHTER than the button it lifts off — 3.40:1,
+   i.e. hovering would undo the fix. --accent-text continues in the direction
+   --accent-mid already travels and measures 5.73:1 light / 9.65:1 dark. */
+.cpg-cta--accent { background: var(--accent-mid); color: var(--accent-ink); border-color: var(--accent-mid); }
+.cpg-cta--accent:hover { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent-ink); }
+
+.cpg-cta-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  transition: transform var(--dur-1) var(--cpg-ease);
+}
+.cpg-cta-icon--lg { width: 38px; height: 38px; }
+@media (hover: hover) and (pointer: fine) {
+  .cpg-cta:hover .cpg-cta-icon { transform: rotate(45deg); }
+}
+
+/* The quiet inline link. --accent-text at rest (6.33:1 on --card light,
+   9.40:1 dark), --accent-mid on hover, and 24px of box under a 13.5px line so
+   the target clears 2.5.8 without touching the type size. */
+.cpg-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  color: var(--accent-text);
+  text-decoration: none;
+  font-weight: 500;
+}
+.cpg-link:hover { color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; }
+.cpg-link-go { transition: transform var(--dur-2) var(--cpg-ease); }
+.cpg-link:hover .cpg-link-go,
+.cpg-link:focus-visible .cpg-link-go { transform: translateX(3px); }
+
+/* ── The hairline row ─────────────────────────────────────────────────────────
+   Rows separated by a rule, never enclosed in cards. Four equally weighted
+   rounded rectangles is the construction the quality bar names, and it is the
+   one every generic help centre in the Mobbin corpus reaches for: the ones that
+   read as built rather than generated use a plain rule between rows.
+     https://mobbin.com/sites/sections/bd0c6bd0-c1cc-4f33-a0b1-65e3ff136401  Readymag
+     https://mobbin.com/sites/sections/543f3b6e-e6c9-41c4-883f-c5eca59ab1ec  Deel
+     https://mobbin.com/sites/sections/16e4aaa4-988f-4e40-9a78-1ce6fc42c7f6  Notion */
+.cpg-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; min-width: 0; }
+.cpg-row { padding: var(--s-5) 0; border-top: 1px solid var(--cpg-line); min-width: 0; }
+.cpg-row:first-child { border-top: 0; padding-top: 0; }
+
+/* ── The sticky index rail ────────────────────────────────────────────────────
+   spectrum.css's `.sp-rail`, including its 1000px collapse to a horizontal
+   scroller that bleeds to the shell gutter. The pattern is the one every legal
+   and documentation surface worth copying uses, and the reason is the same on
+   all of them: a long single-column document needs an overview that stays put.
+     https://mobbin.com/sites/sections/7daeaf18-5ea6-4d3b-96ad-6e87fd114dc7  Miro legal
+     https://mobbin.com/sites/sections/9d751164-5282-43ef-8f89-ec642922c329  Intercom
+     https://mobbin.com/sites/sections/b8a96a18-f6d3-427c-a319-4c0eae8702c1  Steep docs */
+.cpg-split {
+  display: grid;
+  grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 64px);
+  align-items: start;
+  min-width: 0;
+}
+.cpg-rail-col { position: sticky; top: calc(var(--chrome-h) + 28px); min-width: 0; }
+.cpg-rail { min-width: 0; }
+.cpg-rail ol, .cpg-rail ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.cpg-rail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--cpg-faint);
+  font-family: var(--font);
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.cpg-rail-row:hover { background: var(--cpg-wash); color: var(--cpg-ink); text-decoration: none; }
+.cpg-rail-row.is-on { background: var(--cpg-wash-2); color: var(--cpg-ink); }
+/* --cpg-faint, not --cpg-quiet: this numeral sits on --cpg-wash the moment the
+   row is hovered or current, where --t3 measures 4.23:1. See the header. */
+.cpg-rail-no {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  color: var(--cpg-faint);
+  font-variant-numeric: tabular-nums;
+}
+.cpg-rail-row.is-on .cpg-rail-no { color: var(--accent-text); }
+.cpg-rail-label { flex: 1; min-width: 0; }
+
+/* ── Focus. Never removed, only drawn. ────────────────────────────────────────
+   One ring for every control on these pages, on the accent, offset so it clears
+   the round CTA bubbles.
+
+   NO `border-radius` IN A FOCUS RULE. An outline follows its own element's
+   radius, so declaring one here would round the CONTROL at the instant of
+   focus rather than rounding the ring, and the ring would trace a shape the
+   reader was not looking at a frame earlier. The founder reported that as "the
+   search bar has a weird visual" (2026-09-04) and
+   tests/unit/focus-ring-geometry.test.js has banned it in every sheet since.
+   Every control here carries its radius at rest, so the ring is the right
+   shape for free. */
+.cpg :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 1000px) {
+  /* The rail stops being a sidebar and becomes a horizontal index above the
+     content. It keeps every link and its current-section highlight — dropping
+     it would throw away the only overview of a long document at exactly the
+     width where an overview is worth most. The bleed is to the shell's own
+     gutter, so the row reads as scrollable rather than as a truncated list. */
+  .cpg-split { grid-template-columns: minmax(0, 1fr); gap: clamp(20px, 4vw, 32px); }
+  .cpg-rail-col { position: static; }
+  .cpg-rail ol, .cpg-rail ul {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 6px;
+    scrollbar-width: none;
+    margin-inline: calc(var(--page-inline) * -1);
+    padding-inline: var(--page-inline);
+  }
+  .cpg-rail ol::-webkit-scrollbar,
+  .cpg-rail ul::-webkit-scrollbar { display: none; height: 0; }
+  .cpg-rail-row {
+    border: 1px solid var(--cpg-line);
+    border-radius: var(--radius-pill);
+    /* 44px on the touch width, where the rail is a row of pills rather than a
+       list of text rows. */
+    min-height: 44px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 560px) {
+  .cpg-h1, .cpg-lede, .cpg-h2 { max-width: none; }
+  .cpg-cta { white-space: normal; max-width: 100%; }
+  .cpg-cta > span:not(.cpg-cta-icon) { text-wrap: balance; }
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
+   Every moving thing these pages own, turned off in one place, under BOTH
+   spellings the app uses: the Settings choice (`html[data-reduced-motion]`,
+   which wins in both directions) and the OS preference (only when no choice
+   has been made). That is the precedence global.css encodes and the one
+   reducedMotion.js mirrors in JS.
+
+   global.css already clamps every duration and delay to 0.01ms and already
+   handles `[data-reveal]`. These rules remove the MOVEMENT itself, which a
+   duration clamp does not — a 0.01ms rotation is still a rotation, and on the
+   CTA bubble it is a flicker. */
+:where(html[data-reduced-motion="true"]) .cpg .cpg-cta,
+:where(html[data-reduced-motion="true"]) .cpg .cpg-cta-icon,
+:where(html[data-reduced-motion="true"]) .cpg .cpg-link-go,
+:where(html[data-reduced-motion="true"]) .cpg .cpg-rail-row {
+  transition: none !important;
+}
+:where(html[data-reduced-motion="true"]) .cpg .cpg-cta:hover .cpg-cta-icon,
+:where(html[data-reduced-motion="true"]) .cpg .cpg-cta:active,
+:where(html[data-reduced-motion="true"]) .cpg .cpg-link:hover .cpg-link-go,
+:where(html[data-reduced-motion="true"]) .cpg .cpg-link:focus-visible .cpg-link-go {
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .cpg .cpg-cta,
+  :where(html:not([data-reduced-motion="false"])) .cpg .cpg-cta-icon,
+  :where(html:not([data-reduced-motion="false"])) .cpg .cpg-link-go,
+  :where(html:not([data-reduced-motion="false"])) .cpg .cpg-rail-row {
+    transition: none !important;
+  }
+  :where(html:not([data-reduced-motion="false"])) .cpg .cpg-cta:hover .cpg-cta-icon,
+  :where(html:not([data-reduced-motion="false"])) .cpg .cpg-cta:active,
+  :where(html:not([data-reduced-motion="false"])) .cpg .cpg-link:hover .cpg-link-go,
+  :where(html:not([data-reduced-motion="false"])) .cpg .cpg-link:focus-visible .cpg-link-go {
+    transform: none !important;
+  }
+}
+
+/* ── FORCED COLOURS ──────────────────────────────────────────────────────────
+   In Windows High Contrast the accent family collapses to the system colours
+   and every `color-mix` wash becomes indistinguishable from its ground, so the
+   current-row state below — which is carried by a wash alone — would be
+   invisible. Give it a border the OS is obliged to paint. */
+@media (forced-colors: active) {
+  .cpg .cpg-rail-row.is-on { border: 2px solid Highlight; }
+}
