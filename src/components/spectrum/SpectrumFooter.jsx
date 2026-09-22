@@ -108,6 +108,14 @@ const FOOTER_GROUPS = [
     links: [
       ['/privacy', 'Privacy'],
       ['/terms', 'Terms'],
+      // The third legal destination, and the one that is a licence CONDITION
+      // rather than a policy we chose to publish: CC-BY icon sets, SIL OFL
+      // typefaces and an Apache-2.0 SDK all ask that their notices be reachable
+      // from wherever the work appears. This footer replaces AppFooter on the
+      // front door, so a link only AppFooter carries is a notice the homepage
+      // does not discharge — which is exactly what
+      // tests/unit/spectrum-structure.test.js fails the build over.
+      ['/credits', 'Credits'],
     ],
   },
 ]

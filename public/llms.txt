@@ -51,6 +51,7 @@
 - [Sitemap](https://uil4b.com/sitemap): The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.
 - [Privacy](https://uil4b.com/privacy): UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.
 - [Terms](https://uil4b.com/terms): UI L4B terms of service. Usage rules, intellectual property, and account policies.
+- [Credits & Licences](https://uil4b.com/credits): Every icon set, typeface and package UI L4B is built on, with its licence — CC BY, MIT, Apache 2.0 and the SIL Open Font License — and a link to each project.
 
 ## Optional
 Not yet built. These routes resolve to an honest "still in the workshop" state rather than a working tool, and should not be described as available:

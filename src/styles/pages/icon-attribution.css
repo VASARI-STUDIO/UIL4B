@@ -1,0 +1,80 @@
+/* icon-attribution.css — the `ig-credit` family: the persistent licence line
+ * under the icon grid.
+ *
+ * ── Why this is its own file ────────────────────────────────────────────────
+ *
+ * Every other `.ig-*` rule lives in src/styles/deferred/library.css, and this
+ * one deliberately does not. The line it paints is a licence CONDITION — four
+ * of the sets on that grid are Creative Commons Attribution sets, two of them
+ * free-tier — and a rule that can be deleted or overridden during an unrelated
+ * pass through a 900-line shared sheet is a rule that takes a credit off the
+ * screen with it. Here, a change to it is a change to a file whose name says
+ * what it is for.
+ *
+ * It rides the same lazy chunk library.css does, so it costs no request and no
+ * byte on any other route.
+ *
+ * ── Design ──────────────────────────────────────────────────────────────────
+ *
+ * A caption, not a banner. It sits under the grid in the same caption ink as
+ * `.ig-status`, reads as one wrapped sentence of names, and never draws a box:
+ * an attribution that announces itself is an attribution people learn to skip,
+ * and the founder's anti-slop pass deleted the last element on this surface
+ * that shouted at its own content.
+ *
+ * Every target is a link in running text, which is the SC 2.5.8 hazard on this
+ * whole family — a 13px inline anchor is about 16px tall. `inline-flex` plus
+ * `min-height:24px` lifts each box without changing the type size, and the
+ * 2-unit line-height keeps the rows from overlapping once they do.
+ *
+ * Measured at 320, 390, 834 and 1440 in both themes. Twenty-five names wrap to
+ * three rows at 390 and one at 1440; `overflow-wrap:anywhere` is for the one
+ * name with no break opportunity in it.
+ */
+
+.ig-credit {
+  padding: 4px 0 24px;
+  text-align: center;
+  font-size: var(--fs-caption);
+  line-height: 2;
+  color: var(--t3);
+}
+
+.ig-credit-packs {
+  margin: 0 auto;
+  max-width: 96ch;
+  overflow-wrap: anywhere;
+}
+
+.ig-credit-pack { white-space: nowrap; }
+/* The separator may break even though the names it joins may not — otherwise a
+   run of twenty-five names is one unbreakable string at 320. */
+.ig-credit-sep { white-space: normal; color: var(--t3); opacity: .6; }
+
+/* The radius is AT REST. A focus style that changes geometry moves the thing it
+   is meant to point at, and tests/unit/focus-ring-geometry.test.js fails the
+   build over it — the ring traces the shape the control actually has. */
+.ig-credit a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--t1);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  border-radius: var(--radius-xs);
+}
+.ig-credit a:hover { color: var(--t0); border-bottom-color: var(--bh); }
+.ig-credit a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The licence sits in the dimmest ink on the line: it qualifies the name, and
+   a licence id set at the same weight as the set's name reads as a second
+   product. */
+.ig-credit-lic { font-family: var(--mono); font-size: .92em; color: var(--t3); }
+
+.ig-credit-more { margin: 0; }
+.ig-credit-more a { color: var(--accent-strong); font-weight: 600; }
+.ig-credit-more a:hover { color: var(--accent-strong); border-bottom-color: currentColor; }
+
+@media (max-width: 600px) {
+  .ig-credit { text-align: left; padding-bottom: 20px; }
+}

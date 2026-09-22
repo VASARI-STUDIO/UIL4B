@@ -28,11 +28,20 @@ import { WIDE_INK, inkShape } from '../utils/glyphShape'
 import {
   ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, tierOf, viewerTier, visiblePacks,
 } from '../data/iconPackTiers'
+// WHAT IS OWED TO THE PEOPLE WHO DREW THEM. Four of the sets below are Creative
+// Commons Attribution sets and two of those are free-tier, so the credit under
+// this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
+import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
+// The attribution line's own sheet. It is NOT in library.css, deliberately: a
+// licence condition should be editable — and reviewable — without opening a
+// 900-line shared stylesheet, and a rule that disappears by accident here is a
+// rule that takes a credit off the screen with it.
+import '../styles/pages/icon-attribution.css'
 
 const API_LIMIT = 999
 
@@ -1568,15 +1577,35 @@ function collectionToNames(d) {
 // RAW de-duped name list + title; each caller still applies its own style filter.
 const COLLECTION_CACHE = new Map()
 
+/* ── `&info=1`, AND IT COSTS NOTHING ────────────────────────────────────────
+ *
+ * The bare `/collection?prefix=x` response carries the names and the title and
+ * no licence at all. `&info=1` adds an `info` block with the set's author and
+ * its licence as { title, spdx, url } — MEASURED against the live API on
+ * 2026-09-23 — on the SAME request. No second round trip, no new host, no extra
+ * entry in the rate-limit budget this page was rescued from on 2026-09-18.
+ *
+ * That matters because a licence table typed into this repository goes stale on
+ * the day a pack relicenses, silently, in the direction of us making a claim
+ * about somebody else's terms that they have withdrawn. Read from the registry,
+ * the credit under the grid is whatever the registry is publishing today.
+ *
+ * src/data/iconPackCredits.js is the floor under it — the committed fixtures
+ * the acceptance suite serves carry no `info` block, and neither does the
+ * refused/offline state, and an attribution that only appears when a third
+ * party is up is not an attribution. */
 async function getCollectionNames(pack) {
   const hit = COLLECTION_CACHE.get(pack)
   if (hit) return hit
-  const r = await fetchWithFallback(`/collection?prefix=${pack}`, 6000)
+  const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
   const d = await r.json()
-  const entry = { names: collectionToNames(d), title: d.title || pack }
+  const entry = { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
   COLLECTION_CACHE.set(pack, entry)
   return entry
 }
+
+/** The licence the registry answered for this pack, or null if it never has. */
+const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
 
 const PAGE_SIZE = 120
 
@@ -1620,6 +1649,93 @@ const PACK_MENU = [
 ]
 const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
 const packLabel = (p) => PACK_LABELS[p] || p
+
+/* ── THE CREDIT UNDER THE GRID ───────────────────────────────────────────────
+
+   WHAT THIS REPLACES. Until 2026-09-23 the whole product carried one
+   attribution string: the `<p className="ig-attrib">` further down, rendered
+   only when `pack === 'logodev'`. Every other set on this screen was uncredited,
+   and the one credit that existed vanished the moment the visitor changed packs.
+
+   THAT IS NOT A STYLE POINT. `solar` and `fa6-solid` are CC-BY-4.0 and both sit
+   on the FREE tier, so a signed-out visitor is shown Attribution-licensed work
+   on first paint; `twemoji` (CC-BY-4.0) and `openmoji` (CC-BY-SA-4.0) are the
+   same obligation on Pro. Attribution is a condition of those grants. logo.dev's
+   free tier separately requires its link wherever its logos appear — which is
+   why this line names the packs ON SCREEN rather than a fixed list, and why it
+   renders in every state of the surface including the gated one, the empty one
+   and the offline one. A credit with a condition on it is not a credit.
+
+   WHY IT NAMES WHAT IS IN VIEW RATHER THAN ALL 25. Crediting a set whose icons
+   are not on the screen is noise, and noise is what teaches people to stop
+   reading the line that also carries the four that matter. /credits carries the
+   full list, permanently, and this line links to it. */
+
+/* The fallback grid names its packs by LABEL rather than by prefix:
+   renderLocal() sets `pack: PACKS[i.p]`, and window.PACKS maps 'L' to 'Lucide'.
+   Those 120 built-in icons are still Lucide, Tabler, Iconoir, Heroicons and
+   Simple Icons and still owe their notices, so a label is resolved back to its
+   prefix instead of five packs going uncredited on the one screen that is
+   already apologising for something. */
+const PREFIX_BY_LABEL = Object.fromEntries(
+  Object.entries(PACK_LABELS).map(([prefix, label]) => [label, prefix]),
+)
+const toPrefix = (p) => (ICON_PACK_CREDITS[p] ? p : PREFIX_BY_LABEL[p] || p)
+
+/** Every pack represented in the given lists, in first-appearance order. */
+function packsOnScreen(...lists) {
+  const seen = new Set()
+  const out = []
+  for (const list of lists) {
+    for (const icon of list || []) {
+      if (!icon?.pack) continue
+      const prefix = toPrefix(icon.pack)
+      if (seen.has(prefix)) continue
+      seen.add(prefix)
+      out.push(prefix)
+    }
+  }
+  return out
+}
+
+/**
+ * The persistent licence line.
+ *
+ * A pack with no row in iconPackCredits.js is one a Pro search reached outside
+ * the twenty-five this product curates — the /search endpoint answers from the
+ * whole registry when it is left unscoped, which is what a Pro search has always
+ * done. It is credited by its prefix, linked to the Iconify set page, which
+ * states that set's licence. Firing a /collection for it would be more precise
+ * and would also put an unbounded number of extra requests behind a keystroke,
+ * on the one surface in this app with a measured history of being rate-limited.
+ */
+function IconPackCredit({ packs }) {
+  const rows = packs.map((prefix) => packCredit(prefix, liveCredit(prefix)) || {
+    prefix,
+    name: prefix,
+    url: `https://icon-sets.iconify.design/${prefix}/`,
+    licenceName: 'licence on Iconify',
+  })
+  return (
+    <aside className="ig-credit" aria-label="Icon set licences">
+      {rows.length > 0 && (
+        <p className="ig-credit-packs">
+          {rows.map((row, i) => (
+            <span className="ig-credit-pack" key={row.prefix}>
+              {i > 0 && <span className="ig-credit-sep" aria-hidden="true"> · </span>}
+              <a href={row.url} target="_blank" rel="noopener noreferrer">{row.name}</a>
+              {' '}
+              <span className="ig-credit-lic">{row.licenceName}</span>
+            </span>
+          ))}
+        </p>
+      )}
+      <p className="ig-credit-more">
+        <Link to="/credits">Every set, its author and its licence in full</Link>
+      </p>
+    </aside>
+  )
+}
 
 // The word a locked control carries. 'Pro' and 'Log in' are both already this
 // app's own labels — 'Pro' is the tag LockedTease prints on every locked row,
@@ -3005,6 +3121,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               />
             )}
 
+            {/* THE LOGO.DEV USAGE HINT, which is product copy and stays
+                conditional — it explains a control that only exists on this
+                pack. It is no longer the only place logo.dev is credited: the
+                unconditional line below carries that link in every state, which
+                is what their free tier actually asks for. Both are kept; a
+                second credit on the screen that is all logo.dev costs nothing,
+                and removing it would be removing a working sentence. */}
             {pack === 'logodev' && (
               <p className="ig-attrib">
                 Search any brand by name or domain (e.g. <code>notion.so</code>) — click a logo to copy its
@@ -3015,6 +3138,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           </>
         )}
       </div>
+      {/* OUTSIDE THE `isMyIcons` BRANCH, AND OUTSIDE EVERY OTHER CONDITION ON
+          this surface. The saved and recently-copied grids under My Icons are
+          the same third-party glyphs under another heading, the Recent rail
+          sits above every state including the gated one, and the offline grid
+          is Lucide, Tabler, Iconoir, Heroicons and Simple Icons. There is no
+          state of this page that shows somebody else's work and owes nothing,
+          so there is no condition here. */}
+      <IconPackCredit packs={packsOnScreen(icons, recents)} />
       <UIKitGuide step="icons" />
 
       {(selected || addMode) && (

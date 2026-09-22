@@ -1,0 +1,287 @@
+{
+  "_generated": "scripts/sync-credits.mjs — run `node scripts/sync-credits.mjs`. Do not edit by hand. tests/unit/credits-coverage.test.js re-derives all three lists from public/fonts/, package.json and node_modules/ and fails the build if this file has drifted, so a font added without its notice or a dependency added without its licence cannot ship uncredited. It is .json rather than .js because its content is npm package NAMES, and a module under src/ that names a package reads to a text scan exactly like a module that imports one.",
+  "fonts": [
+    {
+      "slug": "caveat",
+      "family": "Caveat",
+      "copyright": "Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)",
+      "source": "https://github.com/googlefonts/caveat",
+      "licenceFile": "/fonts/CAVEAT-OFL.txt"
+    },
+    {
+      "slug": "geist",
+      "family": "Geist",
+      "copyright": "Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font)",
+      "source": "https://github.com/vercel/geist-font",
+      "licenceFile": "/fonts/GEIST-OFL.txt"
+    },
+    {
+      "slug": "geist-mono",
+      "family": "Geist Mono",
+      "copyright": "Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font)",
+      "source": "https://github.com/vercel/geist-font",
+      "licenceFile": "/fonts/GEIST-MONO-OFL.txt"
+    },
+    {
+      "slug": "jetbrains-mono",
+      "family": "JetBrains Mono",
+      "copyright": "Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)",
+      "source": "https://github.com/JetBrains/JetBrainsMono",
+      "licenceFile": "/fonts/JETBRAINS-MONO-OFL.txt"
+    },
+    {
+      "slug": "manrope",
+      "family": "Manrope",
+      "copyright": "Copyright 2018 The Manrope Project Authors (https://github.com/sharanda/manrope)",
+      "source": "https://github.com/sharanda/manrope",
+      "licenceFile": "/fonts/MANROPE-OFL.txt"
+    },
+    {
+      "slug": "outfit",
+      "family": "Outfit",
+      "copyright": "Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts)",
+      "source": "https://github.com/Outfitio/Outfit-Fonts",
+      "licenceFile": "/fonts/OUTFIT-OFL.txt"
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "@ffmpeg/core",
+      "licence": "MIT"
+    },
+    {
+      "name": "@ffmpeg/ffmpeg",
+      "licence": "MIT"
+    },
+    {
+      "name": "@ffmpeg/util",
+      "licence": "MIT"
+    },
+    {
+      "name": "@stripe/react-stripe-js",
+      "licence": "MIT"
+    },
+    {
+      "name": "@stripe/stripe-js",
+      "licence": "MIT"
+    },
+    {
+      "name": "@vercel/analytics",
+      "licence": "MIT"
+    },
+    {
+      "name": "firebase",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "firebase-admin",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "gsap",
+      "licence": "Standard 'no charge' license: https://gsap.com/standard-license."
+    },
+    {
+      "name": "jszip",
+      "licence": "(MIT OR GPL-3.0-or-later)"
+    },
+    {
+      "name": "lenis",
+      "licence": "MIT"
+    },
+    {
+      "name": "react",
+      "licence": "MIT"
+    },
+    {
+      "name": "react-dom",
+      "licence": "MIT"
+    },
+    {
+      "name": "react-router-dom",
+      "licence": "MIT"
+    },
+    {
+      "name": "stripe",
+      "licence": "MIT"
+    }
+  ],
+  "firebase": [
+    {
+      "name": "@firebase/ai",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/analytics",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/analytics-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/analytics-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/app",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/app-check",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/app-check-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/app-check-interop-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/app-check-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/app-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/app-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/auth",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/auth-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/auth-interop-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/auth-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/component",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/data-connect",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/database",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/database-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/database-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/firestore",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/firestore-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/firestore-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/functions",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/functions-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/functions-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/installations",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/installations-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/installations-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/logger",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/messaging",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/messaging-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/messaging-interop-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/performance",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/performance-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/performance-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/remote-config",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/remote-config-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/remote-config-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/storage",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/storage-compat",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/storage-types",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/util",
+      "licence": "Apache-2.0"
+    },
+    {
+      "name": "@firebase/webchannel-wrapper",
+      "licence": "Apache-2.0"
+    }
+  ]
+}

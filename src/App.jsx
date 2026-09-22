@@ -47,6 +47,11 @@ const Community = lazy(() => import('./pages/Community'))
 const Feedback = lazy(() => import('./pages/Feedback'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
+// /credits — the colophon. Lazy for the same reason /privacy and /terms are:
+// it is a reading surface nobody arrives on, and it pulls the whole credits
+// manifest (every font notice, every package licence) with it. That manifest
+// must never reach the entry chunk — see tests/unit/home-asset-budget.test.js.
+const Credits = lazy(() => import('./pages/Credits'))
 const SiteMap = lazy(() => import('./pages/SiteMap'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Projects = lazy(() => import('./pages/Projects'))
@@ -528,6 +533,7 @@ function AppInner() {
               <Route path="/feedback" element={<Feedback toast={toast} />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/credits" element={<Credits />} />
               <Route path="/sitemap" element={<SiteMap />} />
               <Route path="/help" element={<HelpCentre />} />
               <Route path="/principles" element={<DesignPrinciples />} />

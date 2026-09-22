@@ -333,6 +333,10 @@
       "destination": "/create/type-scale/index.html"
     },
     {
+      "source": "/credits",
+      "destination": "/credits/index.html"
+    },
+    {
       "source": "/discover",
       "destination": "/discover/index.html"
     },

@@ -60,6 +60,16 @@ const FOOTER_GROUPS = [
       ['/feedback', 'Send feedback'],
       ['/privacy', 'Privacy'],
       ['/terms', 'Terms'],
+      // ADDED 2026-09-23, and it is a licence condition rather than a
+      // navigation opinion. Four of the icon sets the Icon Library renders are
+      // Creative Commons Attribution sets and two of those are on the free
+      // tier; the six typefaces are SIL OFL; the Firebase SDK is Apache-2.0.
+      // All three of those licences ask that the notice be reachable wherever
+      // the work is, and a footer link on every page is how a website answers
+      // that. It sits beside Privacy and Terms because those are the other two
+      // pages a reader goes looking for deliberately, and because
+      // SpectrumFooter gives all three a column of their own.
+      ['/credits', 'Credits'],
     ],
   },
 ]

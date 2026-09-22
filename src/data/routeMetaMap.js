@@ -62,6 +62,7 @@ export const PAGE_TITLES = {
   '/seo': 'UI L4B | SEO Specialist',
   '/privacy': 'UI L4B | Privacy',
   '/terms': 'UI L4B | Terms',
+  '/credits': 'UI L4B | Credits & Licences',
   '/sitemap': 'UI L4B | Sitemap',
   '/admin': 'UI L4B | Admin',
   '/create/auto-builder': 'UI L4B | Brand Starter',
@@ -179,6 +180,11 @@ export const PAGE_DESCRIPTIONS = {
   '/seo': 'Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.',
   '/privacy': 'UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.',
   '/terms': 'UI L4B terms of service. Usage rules, intellectual property, and account policies.',
+  // Every claim in this sentence is a count the page derives rather than a
+  // promise: the icon sets come from iconPackTiers.js, the typefaces from
+  // public/fonts/, the packages from package.json. It names the licences a
+  // reader is most likely to be looking for rather than describing the page.
+  '/credits': 'Every icon set, typeface and package UI L4B is built on, with its licence — CC BY, MIT, Apache 2.0 and the SIL Open Font License — and a link to each project.',
   '/sitemap': 'The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.',
   '/admin': DEFAULT_DESCRIPTION,
   '/create/file-converter': 'Convert files between formats directly in your browser. Fast, private, client-side processing.',
