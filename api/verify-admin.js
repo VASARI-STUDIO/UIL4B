@@ -1,7 +1,7 @@
 import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
 // One list, shared with /api/ai's diagnostic. Two copies of an allowlist is one
 // copy too many — the day they disagree, the disagreement is a hole.
-import { ADMIN_EMAILS } from './_lib/admin.js'
+import { isAdminEmail } from './_lib/adminEmails.js'
 // The CORS allowlist, shared with /api/support and the Stripe flows.
 import { allowedOrigins } from './_lib/origins.js'
 // The moderator roster. api/_lib/ is underscore-prefixed and NOT deployed as a
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
     const email = decoded.email?.toLowerCase()
     // Require a Firebase-verified email — an unverified signup could
     // otherwise register the admin address and pass the allowlist check.
-    const isAdmin = !!email && !!decoded.email_verified && ADMIN_EMAILS.includes(email)
+    const isAdmin = !!email && !!decoded.email_verified && isAdminEmail(email)
 
     // ── Grant the `admin` custom claim ────────────────────────────────────
     // firestore.rules gates every moderation write on

@@ -49,7 +49,7 @@
 // would have needed a rules change AND would have published the list of people
 // worth phishing.
 import { adminAuth, adminDb } from './firebase-admin.js'
-import { ADMIN_EMAILS } from './admin.js'
+import { isAdminEmail } from './adminEmails.js'
 
 export const MODERATORS_COLLECTION = 'moderators'
 
@@ -82,12 +82,13 @@ const lower = (s) => (typeof s === 'string' ? s.trim().toLowerCase() : '')
 /**
  * Is this address the founder's?
  *
- * Reads api/_lib/admin.js rather than keeping a second list, for the reason
- * that file already gives: two copies of an allowlist is one copy too many, and
- * the day they disagree the disagreement is a hole rather than a bug.
+ * Reads api/_lib/adminEmails.js rather than keeping a second list, for the
+ * reason that file already gives: two copies of an allowlist is one copy too
+ * many, and the day they disagree the disagreement is a hole rather than a bug.
+ * It is the ADMIN_EMAILS environment variable, and an unset one names nobody.
  */
 export function isFounderEmail(email) {
-  return ADMIN_EMAILS.includes(lower(email))
+  return isAdminEmail(lower(email))
 }
 
 /**

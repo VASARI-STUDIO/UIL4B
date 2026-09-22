@@ -1,8 +1,13 @@
-// Who counts as an administrator, server-side.
+// Verifying that a request comes from an administrator, server-side.
 // Files in /api/_lib are underscore-prefixed and NOT deployed as routes, so
 // this adds nothing to the 12-function budget.
 //
-// The list lived only in api/verify-admin.js. A second endpoint now needs the
+// WHO is on the allowlist now lives in ./adminEmails.js, which reads it from
+// the ADMIN_EMAILS environment variable and explains why it is no longer a
+// literal in this file. This module answers the other half — whether the caller
+// in front of us has proved they are that person.
+//
+// The list lived only in api/verify-admin.js. A second endpoint then needed the
 // same answer, and two copies of an allowlist is one copy too many — the day
 // they disagree, the disagreement is a security hole rather than a bug.
 //
@@ -12,8 +17,7 @@
 // person to edit "the" list would have no way to tell which one was load-bearing.
 
 import { adminAuth } from './firebase-admin.js'
-
-export const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
+import { isAdminEmail } from './adminEmails.js'
 
 /**
  * Verify the caller is an administrator from their Firebase ID token.
@@ -33,7 +37,7 @@ export async function requireAdmin(req) {
   try {
     const decoded = await adminAuth().verifyIdToken(header.slice(7))
     const email = decoded.email?.toLowerCase()
-    if (!email || !decoded.email_verified || !ADMIN_EMAILS.includes(email)) {
+    if (!email || !decoded.email_verified || !isAdminEmail(email)) {
       // 404, not 403. A 403 confirms the endpoint exists and that the caller
       // simply is not the right person, which is exactly the information an
       // attacker probing for an admin surface is after.

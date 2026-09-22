@@ -1,7 +1,8 @@
 import { getStripeServer } from './_lib/stripe.js'
 import { adminAuth, credentialProblem } from './_lib/firebase-admin.js'
-// One list, shared with /api/verify-admin and /api/ai's diagnostic.
-import { ADMIN_EMAILS } from './_lib/admin.js'
+// One list, shared with /api/verify-admin and /api/ai's diagnostic. It is the
+// ADMIN_EMAILS environment variable, and an unset one grants admin to nobody.
+import { isAdminEmail } from './_lib/adminEmails.js'
 import { proProductDescription } from './_lib/plans.js'
 import { allowedOrigins } from './_lib/origins.js'
 import {
@@ -28,7 +29,7 @@ async function requireAdmin(req) {
     const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     // Require a Firebase-verified email — an unverified signup could
     // otherwise register the admin address and pass the allowlist check.
-    if (!decoded.email_verified || !ADMIN_EMAILS.includes(decoded.email?.toLowerCase())) {
+    if (!decoded.email_verified || !isAdminEmail(decoded.email)) {
       return { error: 'Admin access required', status: 403 }
     }
     return { decoded }

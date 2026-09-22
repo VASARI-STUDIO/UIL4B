@@ -1,6 +1,11 @@
 // Central plan + entitlement config — shared shape with src/config/plans.js.
 // Keep the limits here authoritative for the server (security boundary).
 //
+// The one import this module takes, and why it is safe: ./adminEmails.js has no
+// dependencies of its own, so importing it here does not pull firebase-admin
+// into the unit tests and client-adjacent tooling that read this plan table.
+import { isAdminEmail } from './adminEmails.js'
+
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY THESE NUMBERS ARE SMALL — read before raising any of them
 // ─────────────────────────────────────────────────────────────────────────────
@@ -132,12 +137,19 @@ export function hasLifetimeEntitlement(entitlement) {
 // Founder/admin accounts get Pro entitlements without a Stripe subscription so
 // the team can dog-food paid features. The email is read from a verified
 // Firebase ID token on the server, so a non-admin can't spoof their way in.
-// Keep this list in sync with src/utils/constants.js (ADMIN_EMAILS).
-export const ADMIN_EMAILS = ['dylanjacob1100@gmail.com']
-
-export function isAdminEmail(email) {
-  return !!email && ADMIN_EMAILS.includes(email.toLowerCase())
-}
+//
+// THE LIST IS NOT HERE ANY MORE. It was a second copy of the literal in
+// api/_lib/admin.js — the defect that file's own header names — and both were
+// the founder's personal address in tracked, public source. It now comes from
+// the ADMIN_EMAILS environment variable, defined once in ./adminEmails.js,
+// which is a dependency-free module precisely so this one can import it without
+// dragging firebase-admin into every consumer of the plan table.
+//
+// Re-exported under this name because src/utils/constants.js points at
+// "`isAdminEmail` in api/_lib/plans.js" as the security boundary it mirrors,
+// and a comment that names a symbol which is no longer there is a comment that
+// sends the next reader to the wrong file.
+export { isAdminEmail }
 
 // Resolve the effective plan for a request: admins are always Pro; everyone
 // else falls back to their real subscription.

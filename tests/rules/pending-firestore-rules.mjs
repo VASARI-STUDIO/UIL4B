@@ -235,12 +235,12 @@ const SUBMISSIONS_CREATE = {
 const ANALYTICS_BOUNDS = {
   id: 'analytics-daily-day-id-and-field-cap',
   find: `    match /analytics-daily/{day} {
-      allow read: if request.auth != null && request.auth.token.email == 'dylanjacob1100@gmail.com';
+      allow read: if request.auth != null && request.auth.token.admin == true;
       allow create, update: if request.auth != null;
     }
 `,
   replace: `    match /analytics-daily/{day} {
-      allow read: if request.auth != null && request.auth.token.email == 'dylanjacob1100@gmail.com';
+      allow read: if request.auth != null && request.auth.token.admin == true;
 
       // Two bounds this never had, and one it deliberately still does not.
       //

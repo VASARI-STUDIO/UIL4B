@@ -220,8 +220,19 @@ test('nothing the four grant is taken away from the file they land in', async ()
   const rules = lf(plan.after.get('firestore.rules'))
   assert.match(rules, /function lockedUserFields\(\)[\s\S]*?'lifetimeEntitlement', 'subscription', 'stripeCustomerId'/,
     'the billing fields are no longer locked on users/{uid}')
-  assert.match(rules, /allow read: if request\.auth != null && request\.auth\.token\.email == 'dylanjacob1100@gmail\.com';/,
+  // The analytics read is gated on the `admin` CLAIM. It used to compare
+  // `request.auth.token.email` against the founder's address, written into the
+  // rules file — which is what made this assertion a string match on a personal
+  // address in a public repository. The claim is the stronger gate (it is
+  // minted from a server-verified email against the server-side allowlist) and
+  // the property this line guards is unchanged: NOT isReviewer(), because
+  // reviewing submissions is not a reason to hand a volunteer site-wide usage
+  // analytics.
+  assert.match(rules, /match \/analytics-daily\/\{day\} \{\s*\r?\n\s*allow read: if request\.auth != null && request\.auth\.token\.admin == true;/,
     'analytics-daily read was widened — reviewing submissions is not a reason to hand over usage analytics')
+  assert.doesNotMatch(rules, /allow read: if request\.auth != null && request\.auth\.token\.email ==/,
+    'the analytics read is matching on an email literal again — that publishes the one account worth phishing '
+    + 'in a file anybody can read, and it is weaker than the claim it replaced')
   assert.doesNotMatch(rules, /provider-health/,
     'the server-only counter now has a rules block, which makes it reachable from a client')
 })
