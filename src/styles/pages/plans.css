@@ -1,138 +1,1061 @@
-/* plans.css — the `plans` family, lifted out of global.css.
- * Imported by the page module that owns it, so Vite emits it as that page's
- * chunk stylesheet and only that route pays for it.
- *
- * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
- * so anything here now outranks every global rule at equal specificity —
- * which is why a rule a later global rule overrides was left behind rather
- * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   PLANS — the pricing page, in Spectrum.
+   ═══════════════════════════════════════════════════════════════════════════
 
-.plans-page{max-width:1120px}
+   This page never had a design pass. It wore the pre-Spectrum language — 12px
+   body copy, 14px radii, a 32px price, `--fs-*` ramp headings — directly beside
+   a front door built on the Spectrum scale, and the seam showed on the one
+   route a visitor arrives at from a CTA on that front door.
 
-/* The founder's framing line sits above the lede as its own paragraph; the
- * global reset zeroes p margins, so the gap between the two is set here. */
-.plans-framing{margin-bottom:10px}
+   ── WHAT THIS SHEET IS ──────────────────────────────────────────────────────
+   Everything below is SCOPED TO `.plans-page`, and that is not tidiness. The
+   `.sub-*` family is shared with /settings's subscription panel and the
+   `.btn` family is the whole app's; restyling either at the root would restyle
+   surfaces two other lanes are editing this week. So the page carries its own
+   ground and the shared families are re-dressed only while they are standing
+   on it.
 
-.plans-tiers{grid-template-columns:minmax(260px,.78fr) minmax(0,1.22fr);align-items:stretch;gap:20px}
+   ── WHERE THE VALUES COME FROM ──────────────────────────────────────────────
+   `src/styles/pages/spectrum.css`, rule for rule. The type scale (`.sp-h2`,
+   `.sp-lede`, `.sp-plan-price`), the radii (24px cards, 999px pills), the house
+   curve `cubic-bezier(.23,1,.32,1)`, the hairline washes as `color-mix` off the
+   ink token, and the accent family — never a literal, because a Pro theme
+   template moves `--accent` and this page has to follow it.
 
-.plans-tiers .plans-free-card{background:var(--bg-1);box-shadow:none}
+   ── WHAT WAS DELETED, AND WHY ───────────────────────────────────────────────
+   Eight rule blocks for markup that has not existed in `Plans.jsx` for some
+   time: `.plans-outcomes`, `.plans-outcome-group` (+ its `h2`/`p`),
+   `.plans-outcome-metrics` (+ `strong`/`span`), `.plans-anchor` (+ `strong`),
+   and the bare `.plans-compare` / `.plans-compare span` pair — which is NOT
+   `.plans-compare-wrap` or `.plans-compare-table`, both of which are alive and
+   are asserted by `36-rail-overflow.spec.js`. Verified unreachable by grepping
+   every `.jsx` in `src/` and every spec before removal. `.plans-outcome-metrics
+   strong` was also the sheet's only reference to `--accent-strong`.
 
-.plans-card-intro{font-size:13px;line-height:1.55;color:var(--t2);margin:0}
+   ── WHAT WAS DELIBERATELY NOT CHANGED ───────────────────────────────────────
+   · THE COMPARISON TABLE STAYS THREE COLUMNS AT 390. Spectrum collapses its
+     own table to blocks below 760 and prefixes each value with `data-plan`.
+     This table has no `data-plan` attributes, and `36-rail-overflow.spec.js`
+     asserts it needs no horizontal gesture at 390 under the 44/28/28 fixed
+     layout below. That layout works and is measured; swapping it for a block
+     collapse would trade a proven geometry for a screenshot match.
+   · `.plans-page .sub-save{display:none}` at ≤640 lives in `global.css` and is
+     not overridden here. Un-hiding the savings badge would be a behaviour
+     change on the narrowest width, and a pricing surface is the wrong place to
+     make one as a side effect of a restyle.
+   · The FAQ stays an ACCORDION. Spectrum's FAQ is static prose in two columns;
+     this one is `aria-expanded` buttons whose answers mount on press. The
+     composition below is Spectrum's (a narrow heading column beside the
+     questions) and the control is this page's, unchanged.                    */
 
-.plans-pro-intro{color:var(--t1);font-size:13.5px}
+.plans-page {
+  /* Local aliases, so this sheet reads like spectrum.css while resolving to the
+     app's own tokens. Nothing below names a --bg-* or a --t- directly. */
+  --pl-page: var(--bg-0);
+  --pl-card: var(--card);
+  --pl-ink: var(--t0);
+  --pl-dim: var(--t1);
+  --pl-faint: var(--t2);
+  --pl-quiet: var(--t3);
+  --pl-line: var(--border);
+  --pl-line-strong: var(--bh);
+  --pl-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  --pl-wash-2: color-mix(in srgb, var(--t0) 6%, transparent);
+  --pl-ease: cubic-bezier(.23, 1, .32, 1);
 
-.plans-price-slot{min-height:40px}
-
-.plans-price-detail{font-size:11px;line-height:1.4;color:var(--t2);min-height:1.4em}
-
-.plans-outcomes{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:10px;flex:1}
-
-.plans-outcome-group{padding:14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1)}
-
-.plans-outcome-group h2{margin:0 0 8px;font-size:12px;line-height:1.3;color:var(--t0)}
-
-.plans-outcome-group p{margin:0;font-size:12px;line-height:1.5;color:var(--t2)}
-
-.plans-outcome-metrics{display:flex;flex-direction:column;gap:10px}
-
-.plans-outcome-metrics div{display:flex;flex-direction:column;gap:2px}
-
-.plans-outcome-metrics strong{font-size:22px;line-height:1;letter-spacing:-.02em;color:var(--accent-strong)}
-
-.plans-outcome-metrics span{font-size:11px;line-height:1.35;color:var(--t2)}
-
-.plans-price-retry{align-self:flex-start;margin-top:8px}
-
-.plans-unavailable-note{margin:0;text-align:center;font-size:12px;line-height:1.5;color:var(--t1)}
-
-.plans-anchor{margin:44px auto 0;max-width:760px;text-align:center;font-size:var(--fs-body);color:var(--t1);line-height:1.55}
-
-.plans-anchor strong{color:var(--t0)}
-
-.plans-excludes{margin-top:2px;padding-top:14px;border-top:1px solid var(--border)}
-
-.plans-excludes-h{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:9px}
-
-.plans-excludes ul{display:flex;flex-direction:column;gap:7px;margin:0;padding:0;list-style:none}
-
-.plans-excludes li{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;line-height:1.5;color:var(--t2)}
-
-/* ── Before you pay. Three disclosures on hairline rules, NOT three cards:
-      the plan cards are the only card shape on this page, and boxing the
-      disclosure would make it read as another sales panel. */
-.plans-notes{display:grid;grid-template-columns:repeat(3,1fr);gap:0 28px;align-items:start;margin:34px 0 0;padding-top:20px;border-top:1px solid var(--border)}
-.plans-notes-h{grid-column:1/-1;margin:0 0 18px;font-family:var(--mono);font-size:var(--fs-caption);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
-.plans-note{padding-left:22px;border-left:1px solid var(--border)}
-.plans-note:first-of-type{padding-left:0;border-left:none}
-.plans-note h3{margin:0 0 8px;font-size:13.5px;font-weight:640;line-height:1.35;color:var(--t0);text-wrap:balance}
-.plans-note p{margin:0;font-size:12.5px;line-height:1.6;color:var(--t2)}
-.plans-note-foot{margin-top:8px!important;color:var(--t3)!important}
-
-/* The Soon badge, matching the export panel's own (Mobbin/Clerk prints
-   "Coming soon" inline against the feature it belongs to rather than in a
-   footnote, so the reader cannot take the claim without the caveat). */
-.plans-soon-inline,.plans-soon-badge{display:inline-flex;align-items:center;padding:1px 7px;border:1px solid var(--border);border-radius:999px;background:var(--bg-2);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);white-space:nowrap}
-.plans-soon-inline{margin:0 4px;vertical-align:baseline}
-.plans-soon-list{display:flex;flex-direction:column;gap:6px;margin:10px 0 0;padding:0;list-style:none}
-.plans-soon-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12.5px;color:var(--t1)}
-.plans-soon-list li:last-child{border-bottom:none}
-.plans-soon-name{min-width:0;overflow-wrap:anywhere}
-
-.plans-compare-wrap{margin-top:20px}
-
-.plans-compare-table{width:100%;min-width:520px;border-collapse:collapse;font-size:var(--fs-body-s)}
-
-.plans-compare-table th,.plans-compare-table td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--border)}
-
-.plans-compare-table thead th{font-family:var(--mono);font-size:var(--fs-caption);text-transform:uppercase;letter-spacing:.06em;color:var(--t2)}
-
-.plans-compare-table td:first-child{color:var(--t1);font-weight:560}
-
-.plans-pro-banner{display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:18px;border-radius:var(--radius-l);background:color-mix(in srgb,var(--accent) 10%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border));font-size:13px;color:var(--t1);line-height:1.5}
-
-.plans-pro-banner svg{flex-shrink:0;color:var(--accent)}
-
-.plans-pro-banner a{color:var(--accent-strong);font-weight:600;white-space:nowrap}
-
-.plans-compare{text-align:center;margin-top:8px;font-size:12px;color:var(--t1);min-height:1.4em}
-
-.plans-compare span{margin-right:4px}
-
-.plans-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 28px;margin-top:26px;padding-top:22px;border-top:1px solid var(--border)}
-
-.plans-trust span{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--t2)}
-
-.plans-faq{max-width:720px;margin:44px auto 0}
-
-.plans-faq-h{font-size:20px;font-weight:700;letter-spacing:-.02em;text-align:center;margin-bottom:18px;color:var(--t0)}
-
-.plans-faq-item{border-bottom:1px solid var(--border)}
-
-.plans-faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 2px;background:none;border:none;font-family:var(--font);font-size:15px;font-weight:600;color:var(--t0);text-align:left;cursor:pointer;transition:color var(--dur-2) var(--ease-standard)}
-
-.plans-faq-q:hover{color:var(--accent-strong)}
-
-.plans-faq-q svg{flex-shrink:0;color:var(--t2);transition:transform var(--dur-2) var(--ease-out)}
-
-.plans-faq-a{padding:0 2px 18px;font-size:14px;line-height:1.6;color:var(--t1)}
-
-@media(max-width:900px){
-  .plans-tiers{grid-template-columns:1fr}
-  .plans-outcomes{grid-template-columns:1fr}
+  /* 1120 → 1240. The comparison table is the widest thing on the page and at
+     1120 its Pro column was 250px of a 15px measure. Still well inside
+     `.sec`'s own 1400 ceiling. */
+  max-width: 1240px;
 }
 
-@media(max-width:560px){
-  .plans-compare-table{min-width:0;font-size:var(--fs-caption);table-layout:fixed}
-  .plans-notes{grid-template-columns:1fr;gap:0}
-  .plans-note{padding-left:0;border-left:none;padding-top:16px;border-top:1px solid var(--border)}
-  .plans-note:first-of-type{padding-top:0;border-top:none}
-  .plans-soon-list li{align-items:flex-start;flex-wrap:wrap}
-  .plans-compare-table th,.plans-compare-table td{padding:10px 8px;overflow-wrap:anywhere}
-  /* 44/28/28. The capability name is the only cell that ever needs two lines,
-     so it takes the slack; the two value columns stay equal so Free and Pro
-     read as a pair being compared rather than a column and an afterthought. */
-  .plans-compare-table th:first-child,.plans-compare-table td:first-child{width:44%}
-  .plans-compare-table th:nth-child(2),.plans-compare-table td:nth-child(2),
-  .plans-compare-table th:nth-child(3),.plans-compare-table td:nth-child(3){width:28%}
-  .plans-compare-table thead th{letter-spacing:.03em}
+/* ── the masthead ─────────────────────────────────────────────────────────────
+   Spectrum's `.sp-centre-head`: the headline centred over a 52ch lede, both
+   `text-wrap` balanced, nothing above the h1.
+
+   NO EYEBROW IS ADDED HERE and none is coming back. Founder, 2026-09-14, on the
+   10px mono-caps label that used to sit above this h1: "remove this text its
+   such a common AI trait". The note in Plans.jsx carries the full quote. */
+.plans-page .plans-hero {
+  max-width: 62ch;
+  margin-inline: auto;
+  text-align: center;
+  margin-bottom: clamp(28px, 4vw, 44px);
+}
+
+.plans-page .plans-hero h1 {
+  margin: 0 auto;
+  max-width: 20ch;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(34px, 5vw, 68px);
+  line-height: .98;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+  color: var(--pl-ink);
+}
+
+/* The <em> in "The whole toolkit is *free*." is the headline's mark run, and it
+   takes Spectrum's `.sp-w--mark` treatment exactly: the accent at 600, never an
+   italic. `font-style:normal` because this is an <em> and the browser would
+   otherwise slant it — the emphasis is carried by colour and weight, which is
+   what the design does on the front door for the same sentence. */
+.plans-page .plans-hero h1 em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent-mid);
+}
+
+.plans-page .plans-hero p {
+  margin: 18px auto 0;
+  max-width: 52ch;
+  font-size: clamp(15.5px, 1.2vw, 16.5px);
+  line-height: 1.62;
+  color: var(--pl-dim);
+  text-wrap: pretty;
+}
+
+.plans-page .plans-framing {
+  margin-top: 20px;
+  color: var(--pl-ink);
+}
+
+/* ── the Pro banner ───────────────────────────────────────────────────────────
+   Only rendered for an account that already has Pro. Spectrum's card shape at
+   the smaller radius, on the accent wash rather than a `color-mix` of its own. */
+.plans-page .plans-pro-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px 18px;
+  margin: 0 auto clamp(22px, 3vw, 32px);
+  max-width: 62ch;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-2xl);
+  background: var(--accent-wash);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--pl-dim);
+}
+.plans-page .plans-pro-banner svg { flex-shrink: 0; color: var(--accent-mid); }
+.plans-page .plans-pro-banner a {
+  color: var(--accent-text);
+  font-weight: 560;
+  white-space: nowrap;
+}
+.plans-page .plans-pro-banner a:hover { color: var(--accent-mid); }
+
+/* ── the billing toggle ───────────────────────────────────────────────────────
+   Spectrum's `.sp-billing` pill, and the ONE structural note that matters: the
+   control keeps `role="tablist"`, `aria-selected` and the Arrow/Home/End
+   handler it already had. `.active` is still matched beside
+   `[aria-selected="true"]` so neither the class nor the state can be the only
+   thing holding the appearance together. */
+.plans-page .sub-billing-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto clamp(26px, 3.4vw, 40px);
+  padding: 5px;
+  border: 1px solid var(--pl-line);
+  border-radius: var(--radius-pill);
+  background: var(--pl-wash);
+}
+
+.plans-page .sub-billing-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  /* 40px + the 5px track padding clears the 44px coarse-pointer floor, and the
+     target is the button itself rather than a padded label. */
+  min-height: 40px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--pl-dim);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.plans-page .sub-billing-toggle button:hover { color: var(--pl-ink); }
+.plans-page .sub-billing-toggle button.active,
+.plans-page .sub-billing-toggle button[aria-selected="true"] {
+  background: var(--pl-ink);
+  color: var(--pl-page);
+  box-shadow: none;
+}
+
+/* `--accent-bright`, MEASURED AT 4.70:1 ON ITS OWN WASH, and the direction of
+   that choice is counter-intuitive enough to record: in LIGHT theme
+   `--accent-toward` is `--accent-deep`, so `bright` (72% accent) is the DARKEST
+   member of the family and `mid` (86%) the lightest — the opposite of what the
+   names suggest. A first pass here swapped bright for text to raise contrast
+   and lowered it instead, 4.70 → 4.09. Measured in a browser, not reasoned.
+
+   This badge earns the accent where the Soon badge below does not: "Save 25%"
+   is a real saving on the cadence a buyer should pick, computed live from
+   Stripe rather than typed. */
+.plans-page .sub-save {
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-wash-4);
+  color: var(--accent-bright);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .08em;
+}
+/* On the selected tab the wash sits on the ink ground, where an accent wash is
+   nearly invisible — so it flips to a translucent page colour, which is what
+   Spectrum does with its own `.sp-billing-save`. */
+.plans-page .sub-billing-toggle button.active .sub-save,
+.plans-page .sub-billing-toggle button[aria-selected="true"] .sub-save {
+  background: color-mix(in srgb, var(--bg-0) 18%, transparent);
+  color: var(--pl-page);
+}
+
+/* ── the plan cards ───────────────────────────────────────────────────────────
+   EQUAL TRACKS, changed from .78fr / 1.22fr.
+   The Free card carries seven benefit rows AND the "Not on Free" exclusion
+   block; the Pro card carries seven rows and a price. The narrower column held
+   the longer document, so the free tier — the thing this page's h1 is about —
+   was the one being squeezed. Equal weight is correct here because the two
+   cards genuinely are the same kind of thing being compared. */
+.plans-page .plans-tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  align-items: stretch;
+  gap: clamp(16px, 2vw, 26px);
+  min-width: 0;
+}
+
+.plans-page .sub-tier {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(24px, 3vw, 36px);
+  border: 1px solid var(--pl-line);
+  border-radius: var(--radius-3xl);
+  background: var(--pl-card);
+  box-shadow: none;
+}
+
+.plans-page .plans-free-card { background: var(--pl-card); box-shadow: none; }
+
+.plans-page .sub-tier-pro {
+  border-color: var(--accent-border-strong);
+  background: linear-gradient(170deg, var(--accent-wash), var(--pl-card) 58%);
+  box-shadow: var(--shadow-m);
+}
+/* Spectrum draws a 3px accent edge across the top of the Pro card with a
+   `<span class="sp-plan-edge">`. This page has no such element and does not
+   need one: the edge is decoration, so it is a pseudo-element and never
+   reaches the accessibility tree. */
+.plans-page .sub-tier-pro::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--accent);
+}
+
+.plans-page .sub-tier-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+}
+.plans-page .sub-tier-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 26px;
+}
+.plans-page .sub-tier-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--pl-line);
+  background: transparent;
+  color: var(--pl-faint);
+}
+.plans-page .sub-tier-pro .sub-tier-icon {
+  border-color: var(--accent-border);
+  background: var(--accent-wash);
+  color: var(--accent-mid);
+}
+.plans-page .sub-tier-name {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+.plans-page .sub-tier-pro .sub-tier-name { color: var(--accent-text); }
+
+.plans-page .sub-tier-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.plans-page .sub-tier-amount {
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(38px, 4.4vw, 56px);
+  line-height: 1;
+  letter-spacing: -.035em;
+  color: var(--pl-ink);
+}
+/* THE LOADING DASH IS NOT A PRICE, so it is not set like one. `.is-loading`
+   is written by Plans.jsx whenever the live Stripe figure has not resolved;
+   quieting it stops an em dash reading as a confirmed $0. */
+.plans-page .sub-tier-amount.is-loading { color: var(--pl-quiet); }
+/* THE "UNAVAILABLE" STATE. `is-word` is written by Plans.jsx whenever the
+   ladder loaded but produced no amount — Stripe unreachable. A word set at the
+   price's own 62px display size filled the card and collided with the cadence
+   beside it, so the slot drops to a sentence size and the cadence keeps its
+   own. It is still the loudest thing in the head, because the missing price is
+   still the most important fact on the card; it just stops being a headline. */
+.plans-page .sub-tier-amount.is-word,
+.plans-page .sub-tier-pro .sub-tier-amount.is-word {
+  font-family: var(--font);
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 560;
+  letter-spacing: -.015em;
+  line-height: 1.15;
+  color: var(--pl-ink);
+}
+.plans-page .sub-tier-pro .sub-tier-amount { font-size: clamp(42px, 5vw, 62px); }
+/* `--pl-faint`, NOT `--pl-quiet`, AND THAT IS A MEASURED FIX.
+   The Pro card's ground is `linear-gradient(170deg, var(--accent-wash), …)`,
+   not the page. `--t3` over that gradient measured **4.46:1** at 390 in light —
+   under the 4.5 floor, on the two lines that qualify the price. `--t2` is the
+   ink the equivalent Spectrum rule takes for the same reason, and it is
+   `color-mix`-derived so it still tracks a premium theme moving `--accent`.
+   `48-text-over-gradients.spec.js` re-measures this composited, not declared. */
+.plans-page .sub-tier-per {
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--pl-faint);
+}
+/* The live/guide price line. It was `--accent-strong` at 600 — an accent-weight
+   badge for a sentence whose whole job is to be a caveat.
+
+   `--pl-faint` for the same measured reason as `.sub-tier-per` above: `--t3`
+   over the Pro card's accent gradient came out at 4.47:1. And `--accent-strong`
+   would have been the wrong replacement even where it passes — it is a
+   per-theme literal that does NOT track `--accent`, so a Pro theme template
+   moving the accent would strand this line on the old brand blue. */
+.plans-page .sub-tier-sub {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: .04em;
+  line-height: 1.5;
+  color: var(--pl-faint);
+}
+.plans-page .plans-price-slot { min-height: 56px; }
+.plans-page .plans-price-detail {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--pl-faint);
+  min-height: 1.45em;
+}
+.plans-page .plans-price-retry { align-self: flex-start; margin-top: 10px; }
+
+.plans-page .plans-card-intro {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--pl-quiet);
+}
+/* "Everything in Free, plus:" is a LABEL for the list under it, not a sentence
+   about the plan — Spectrum sets the same words as `.sp-plan-label`, the mono
+   micro-caps rule every section label on that page uses. The Free card's intro
+   directly above stays a sentence, because it is one. */
+.plans-page .plans-pro-intro {
+  margin-top: 22px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+/* ── the benefit lists ────────────────────────────────────────────────────── */
+
+.plans-page .sub-tier-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  flex: 0 0 auto;
+}
+/* A BLOCK WITH A HANGING INDENT, NOT A FLEX ROW — and this is a bug fix, not a
+   preference.
+   `display:flex` makes every ELEMENT child its own flex item, and these rows
+   are not "tick + one string": they are tick + text + `<strong>` + more text,
+   or tick + text + `.beta-badge` + more text. Flex therefore split one sentence
+   into two or three columns that each wrapped independently. Rendered at 390 it
+   read
+
+       ✓  Brand      [BETA]   — 1 generation,
+          Starter             once per account
+
+   with the label in a 60px column of its own. At 1440 the Pro card's
+   "**30 AI generations a day** · 300 a month" broke the same way at the
+   `<strong>`. Both were inherited from the pre-Spectrum sheet.
+
+   A block lets the whole row flow as one line of text; the tick is an inline
+   SVG pulled into the padding by a negative `text-indent`, so a wrapped second
+   line still aligns under the first word rather than under the glyph. 26px =
+   the tick's own 15px plus the 11px gap, so the rhythm is unchanged. */
+.plans-page .sub-tier-list li {
+  display: block;
+  min-width: 0;
+  padding-left: 26px;
+  text-indent: -26px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--pl-dim);
+}
+/* The indent applies to the FIRST line box only, so nothing inside the row may
+   re-inherit it — a badge that starts a wrapped line would otherwise be pulled
+   26px into the gutter. */
+.plans-page .sub-tier-list li > * { text-indent: 0; }
+.plans-page .sub-tier-list li strong { color: var(--pl-ink); font-weight: 560; }
+/* The tick loses its filled chip. A 15px glyph on a tinted rounded square, once
+   per row, seven rows deep, turned the list into a column of badges — the
+   marker was competing with the thing it marks. Spectrum's `.sp-plan-list`
+   carries a bare stroke glyph and the tint moves to the Pro card's. */
+.plans-page .sub-check {
+  flex-shrink: 0;
+  /* Inline, and aligned optically rather than on the baseline: the tick's ink
+     sits high in its box, so a baseline-aligned glyph reads as floating above
+     the first word. */
+  vertical-align: -2px;
+  margin-right: 11px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pl-quiet);
+}
+.plans-page .sub-tier-pro .sub-check { color: var(--accent-text); }
+.plans-page .sub-cross { flex-shrink: 0; margin-top: 3px; color: var(--pl-quiet); }
+
+/* ── "Not on Free" ────────────────────────────────────────────────────────────
+   The exclusions block keeps its own labelled frame — Mobbin/Dropbox and
+   Mobbin/Copy.ai both state what a tier does NOT include rather than leaving
+   the reader to diff two lists, and Copy.ai greys the excluded rows in place
+   (https://mobbin.com/sites/sections/2b4ce5a9-1e9c-4069-b0bb-70358ab3a5b9).
+   On a page whose failure mode has twice been an overstated free tier, the
+   exclusions are the half worth labelling. */
+.plans-page .plans-excludes {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--pl-line);
+}
+.plans-page .plans-excludes-h {
+  margin-bottom: 14px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+.plans-page .plans-excludes ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.plans-page .plans-excludes li {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--pl-quiet);
+}
+
+/* ── the two card buttons ─────────────────────────────────────────────────────
+   `.btn` is the app's own primary shape and is not touched; only its
+   proportions while it is the full-width action inside a plan card. Spectrum's
+   `.sp-cta--block`: centred, 100% wide, a 44px floor, 15px at 540. */
+.plans-page .sub-tier-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 46px;
+  margin-top: 24px;
+  padding: 14px 22px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 540;
+  transition: transform var(--dur-1) var(--pl-ease), background var(--dur-1) ease,
+              color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+.plans-page .sub-tier-btn:active { transform: scale(.978); }
+.plans-page .sub-tier-btn:disabled,
+.plans-page .sub-tier-btn[aria-disabled="true"] { transform: none; }
+.plans-page .sub-tier-foot {
+  margin-top: 12px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+}
+.plans-page .plans-unavailable-note {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--pl-faint);
+}
+
+/* ── the Beta badge ───────────────────────────────────────────────────────────
+   `.beta-badge` is `global.css`'s, mounted here on the Brand Starter row of
+   BOTH plan lists. On the Pro card it stands on the accent gradient, where its
+   accent ink measured **4.14:1** at 390, 834 and 1440 in light — a fail on the
+   one word that qualifies a capability being sold.
+
+   It takes the same neutral treatment as the Soon badge for the same reason:
+   Beta is a maturity CAVEAT, not a benefit, and painting it in the colour this
+   page uses for "Pro buys you this" argues the opposite of what it says. The
+   note in Plans.jsx puts it plainly — "a capability listed on a pricing page
+   without its maturity is the same class of claim as an unbuilt export sold as
+   a benefit". Neutral measures 5.01:1 on the Pro gradient and 6.43:1 on the
+   Free card. Scoped to this page; the badge keeps its accent everywhere else. */
+.plans-page .beta-badge {
+  background: transparent;
+  border: 1px solid var(--pl-line);
+  color: var(--pl-faint);
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: .1em;
+}
+
+/* ── "Before you pay" ─────────────────────────────────────────────────────────
+   Still three disclosures on hairline rules and still NOT three cards: the plan
+   cards above are the only card shape on this page, and boxing the disclosure
+   would make it read as a fourth sales panel. Only the scale moved — 12.5px
+   body to 14px, and the heading to the mono micro-caps Spectrum uses for every
+   section label. */
+.plans-page .plans-notes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 0 clamp(24px, 3vw, 44px);
+  margin: clamp(56px, 8vw, 104px) 0 0;
+  padding-top: clamp(24px, 3vw, 32px);
+  border-top: 1px solid var(--pl-line-strong);
+  min-width: 0;
+}
+.plans-page .plans-notes-h {
+  grid-column: 1 / -1;
+  margin: 0 0 22px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  /* `--t2`, not `--t3`: 9.5px mono caps on the page ground measured 4.55:1 as
+     `--t3` — passing, but with 0.05 of headroom on the smallest type in the
+     section. `--t2` is 5.28:1. The same swap is made on every micro-caps label
+     in this sheet. */
+  color: var(--pl-faint);
+}
+.plans-page .plans-note {
+  min-width: 0;
+  padding-left: clamp(20px, 2.4vw, 28px);
+  border-left: 1px solid var(--pl-line);
+}
+.plans-page .plans-note:first-of-type { padding-left: 0; border-left: none; }
+.plans-page .plans-note h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 540;
+  line-height: 1.25;
+  letter-spacing: -.01em;
+  color: var(--pl-ink);
+  text-wrap: balance;
+}
+.plans-page .plans-note p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--pl-dim);
+}
+.plans-page .plans-note-foot { margin-top: 12px !important; color: var(--pl-quiet) !important; }
+
+/* The Soon badge, matching the export panel's own. Mobbin/Clerk prints "Coming
+   soon" inline against the feature it belongs to rather than in a footnote, so
+   the reader cannot take the claim without the caveat. */
+.plans-page .plans-soon-inline,
+.plans-page .plans-soon-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  /* THE SOON BADGE LOSES THE ACCENT ENTIRELY, and that is the argument rather
+     than a contrast workaround. The accent on this page means "Pro buys you
+     this". A format that is not built is the opposite of a benefit — Pro does
+     not unlock it, because there is nothing to unlock — so marking it in the
+     same colour as the things being sold was the page quietly advertising four
+     things it cannot deliver. Spectrum gives its non-Pro `.sp-filelist-tag` the
+     same neutral treatment.
+
+     It also fixes a measured failure: accent ink on `--accent-wash-4` came out
+     at 4.09:1 at 9px. Neutral is 5.28:1 on the page ground.
+     `54-plans-truth.spec.js` asserts this badge is VISIBLE, so its legibility
+     is load-bearing rather than decorative. */
+  background: transparent;
+  border: 1px solid var(--pl-line);
+  color: var(--pl-faint);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.plans-page .plans-soon-inline { margin: 0 4px; vertical-align: baseline; }
+.plans-page .plans-soon-list {
+  display: grid;
+  gap: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.plans-page .plans-soon-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 9px 0;
+  /* Solid, not dashed. A dashed rule inside a block whose whole argument is
+     "these do not exist" reads as a placeholder for the list rather than as the
+     list, and nothing else on the page is dashed. */
+  border-bottom: 1px solid var(--pl-line);
+  font-size: 13.5px;
+  color: var(--pl-dim);
+}
+.plans-page .plans-soon-list li:last-child { border-bottom: none; }
+.plans-page .plans-soon-name { min-width: 0; overflow-wrap: anywhere; }
+
+/* ── the comparison ───────────────────────────────────────────────────────────
+   Spectrum's `.sp-compare-table`, value for value: a mono micro-caps head over
+   a strong rule, the Pro column head in the accent, 15px row labels,
+   13.5px values, and the Pro cells in `--accent-text` so the column a buyer is
+   reading is legible without a fill behind it.
+
+   GROUPED, AND QUANTIFIED — and that ordering is the founder's product, not a
+   layout preference. Mobbin/Linear and Mobbin/folk both lead with a "Usage"
+   group of real numbers before any list of ticks
+   (https://mobbin.com/sites/sections/63de05a5-f462-4bf4-84d3-8a7bc2911ad4,
+   https://mobbin.com/sites/sections/7caa8e9c-f644-48ac-afb7-138d93ebb49f).
+   Every wall in this product is a COUNT, so a table of ticks would hide the
+   entire pricing model. There is not one bare tick below. */
+.plans-page .plans-compare-wrap { margin-top: clamp(56px, 8vw, 104px); }
+
+.plans-page .plans-compare-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13.5px;
+}
+.plans-page .plans-compare-table thead th {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--pl-line-strong);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--pl-quiet);
+  text-align: left;
+}
+/* THE PRO COLUMN SITS ON AN 8% ACCENT FILL that `global.css` paints on every
+   `.pct-pro` cell, so nothing in this column is measured against the page.
+   `--accent-bright` on that fill is 5.48:1; `--accent-text` was 4.78. */
+.plans-page .plans-compare-table thead th.pct-pro { color: var(--accent-bright); }
+.plans-page .plans-compare-table th,
+.plans-page .plans-compare-table td {
+  padding: 14px clamp(8px, 1.6vw, 28px) 14px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--pl-line);
+  overflow-wrap: anywhere;
+}
+.plans-page .plans-compare-table td:first-child {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--pl-dim);
+}
+.plans-page .plans-compare-table td { line-height: 1.5; color: var(--pl-faint); vertical-align: baseline; }
+.plans-page .plans-compare-table td.pct-pro { color: var(--accent-bright); }
+.plans-page .plans-compare-table td.pct-none { color: var(--pl-quiet); }
+/* "Not built" in the Pro column is not a Pro benefit, so it does not wear the
+   accent the rest of that column does — but it still stands on the column's 8%
+   accent fill, where `--t3` measured 4.11:1. `--t2` on that fill is 5.01:1. */
+.plans-page .plans-compare-table td.pct-none-pro { color: var(--pl-faint); }
+
+/* The group rows. `colSpan={3}` is load-bearing — 36-rail-overflow counts the
+   Pro cells and asserts the 44/28/28 arithmetic below, which a group row split
+   across three cells would break. */
+.plans-page .plans-compare-table .pct-group th {
+  padding: clamp(24px, 3vw, 34px) 0 10px;
+  border-bottom: 1px solid var(--pl-line-strong);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--pl-faint);
+}
+.plans-page .plans-compare-table tr:first-child .pct-group th,
+.plans-page .plans-compare-table tbody tr:first-child th { padding-top: 22px; }
+
+/* ── the trust row ────────────────────────────────────────────────────────────
+   Spectrum's `.sp-assure`: a centred wrap of short statements, the tick in the
+   accent rather than a chip. */
+.plans-page .plans-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(14px, 2.4vw, 34px);
+  margin-top: clamp(28px, 3.4vw, 40px);
+  padding-top: clamp(24px, 3vw, 32px);
+  border-top: 1px solid var(--pl-line);
+}
+.plans-page .plans-trust span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--pl-dim);
+}
+.plans-page .plans-trust .sub-check { margin-top: 0; color: var(--accent-mid); }
+
+/* ── the questions ───────────────────────────────────────────────────────────
+   Spectrum's `.sp-faq` composition — a narrow heading column beside the rows —
+   built WITHOUT touching the DOM: the heading takes column one and every
+   `.plans-faq-item` is pinned to column two, so auto-placement stacks them down
+   the second track. The accordion, its `aria-expanded` button and its mounted
+   answer are exactly what they were.
+
+   A narrow heading column and not an equal half: an equal half holding three
+   words would read as a column that failed to load, and it would squeeze the
+   questions into ~250px of measure. */
+.plans-page .plans-faq {
+  display: grid;
+  grid-template-columns: minmax(0, 17rem) minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: start;
+  max-width: none;
+  margin: clamp(64px, 9vw, 120px) 0 0;
+  min-width: 0;
+}
+.plans-page .plans-faq-h {
+  grid-column: 1;
+  grid-row: 1 / -1;
+  align-self: start;
+  position: sticky;
+  top: calc(var(--chrome-h) + 28px);
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(28px, 4vw, 52px);
+  line-height: 1;
+  letter-spacing: -.035em;
+  text-align: left;
+  color: var(--pl-ink);
+  text-wrap: balance;
+}
+.plans-page .plans-faq-item {
+  grid-column: 2;
+  min-width: 0;
+  border-bottom: 1px solid var(--pl-line);
+}
+.plans-page .plans-faq-item:first-of-type { border-top: 1px solid var(--pl-line-strong); }
+.plans-page .plans-faq-q {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+  padding: 20px 2px;
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 16.5px;
+  font-weight: 540;
+  line-height: 1.35;
+  color: var(--pl-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--dur-1) ease;
+}
+.plans-page .plans-faq-q:hover { color: var(--accent-text); }
+.plans-page .plans-faq-q svg {
+  flex-shrink: 0;
+  color: var(--pl-quiet);
+  transition: transform var(--dur-2) var(--pl-ease);
+}
+.plans-page .plans-faq-item.open .plans-faq-q svg { transform: rotate(180deg); }
+.plans-page .plans-faq-a {
+  padding: 0 2px 22px;
+  max-width: 62ch;
+  font-size: 14.5px;
+  line-height: 1.62;
+  color: var(--pl-dim);
+}
+
+/* ── the closing band ─────────────────────────────────────────────────────────
+   `SystemCTA` is a SHARED component — LoginPopup and SurfaceIndex mount it too
+   — so its file and its own rules are untouched and only its appearance while
+   it is standing on this page moves. `[data-reveal]` inside it still starts at
+   `opacity:0` and is still lit by the `useReveal()` call in Plans.jsx, the
+   thing whose absence once rendered this whole block as a 472px blank white
+   box. Nothing here touches that contract: no rule below names `opacity`.
+
+   ── TWO DECORATIVE LAYERS ARE SUBTRACTED, NOT RESTYLED ──────────────────────
+   `.system-cta-beams` is seven empty `<i>`s drawing a fan of light behind the
+   heading and `.system-cta-grid` is a ruled overlay on top of it. Both are
+   `aria-hidden`, so removing them costs nothing an assistive reader ever had,
+   and both are the anti-slop bar's named tell — "glow, blur, glass, gradients …
+   layered together as a generic premium signal". Spectrum's own closing band
+   (`.sp-close`) is a headline, a lede and two pills on the page ground, with no
+   decoration at all. Hidden rather than deleted because the markup belongs to a
+   component three other surfaces render. */
+.plans-page .system-cta {
+  margin-top: clamp(72px, 10vw, 140px);
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+.plans-page .system-cta-beams,
+.plans-page .system-cta-grid { display: none; }
+.plans-page .system-cta-inner {
+  max-width: 62ch;
+  margin-inline: auto;
+  padding: 0;
+  text-align: center;
+}
+.plans-page .system-cta-title {
+  margin: 0 auto;
+  max-width: 24ch;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(28px, 4vw, 52px);
+  line-height: 1;
+  letter-spacing: -.035em;
+  color: var(--pl-ink);
+  text-wrap: balance;
+}
+.plans-page .system-cta-lede {
+  margin: 18px auto 0;
+  max-width: 52ch;
+  font-size: clamp(15.5px, 1.2vw, 16.5px);
+  line-height: 1.62;
+  color: var(--pl-dim);
+  text-wrap: pretty;
+}
+.plans-page .system-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 26px;
+}
+/* The `ui-pill` family, re-proportioned to Spectrum's `.sp-cta` while it is on
+   this page: ink ground for the primary, a hairline ghost for the secondary,
+   a 44px floor on both, and the press at `scale(.978)` rather than a hover
+   lift. The arrow keeps its own element and its `aria-hidden`. */
+.plans-page .ui-pill {
+  min-height: 44px;
+  padding: 11px 24px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font);
+  font-size: 15.5px;
+  font-weight: 540;
+  line-height: 1.2;
+  box-shadow: none;
+  transition: transform var(--dur-1) var(--pl-ease), background var(--dur-1) ease,
+              color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+.plans-page .ui-pill:active { transform: scale(.978); }
+.plans-page .ui-pill-ink {
+  background: var(--pl-ink);
+  color: var(--pl-page);
+  border: 1px solid var(--pl-ink);
+}
+.plans-page .ui-pill-ink:hover {
+  background: color-mix(in srgb, var(--t0) 86%, var(--bg-0));
+  border-color: color-mix(in srgb, var(--t0) 86%, var(--bg-0));
+  color: var(--pl-page);
+}
+.plans-page .ui-pill-out {
+  background: transparent;
+  color: var(--pl-ink);
+  border: 1px solid var(--pl-line-strong);
+}
+.plans-page .ui-pill-out:hover {
+  background: var(--pl-wash);
+  border-color: var(--pl-ink);
+  color: var(--pl-ink);
+}
+.plans-page .ui-pill-arrow { transition: transform var(--dur-1) var(--pl-ease); }
+@media (hover: hover) and (pointer: fine) {
+  .plans-page .ui-pill:hover .ui-pill-arrow { transform: translateX(3px); }
+}
+/* NO RULE FOR `.system-cta-hint`, and that is deliberate. Plans.jsx passes
+   `hint={null}`, and `70-anti-slop-marketing.spec.js` asserts
+   `.system-cta .system-cta-hint` has a count of ZERO on this page — the
+   micro-line was a third payment reassurance in a slot the retired "No credit
+   card required" already occupied. Styling an element the suite forbids would
+   be the first step back toward shipping it. Same for `.home-eyebrow`. */
+
+/* ── focus ────────────────────────────────────────────────────────────────────
+   One ring for the page, on the accent, at an offset that clears the pill
+   tracks and the card edges.
+
+   NO `border-radius` IN A FOCUS RULE. An outline follows its own element's
+   radius, so declaring one here would round the CONTROL at the instant of
+   focus rather than the ring. The founder reported exactly that as "the search
+   bar has a weird visual" (2026-09-04) and
+   `tests/unit/focus-ring-geometry.test.js` has banned it in every sheet since.
+   Every control here already carries its radius at rest, so the ring is the
+   right shape for free. */
+.plans-page :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ── responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .plans-page .plans-faq { grid-template-columns: minmax(0, 1fr); gap: clamp(18px, 3vw, 24px); }
+  .plans-page .plans-faq-h { grid-column: 1; grid-row: auto; position: static; }
+  .plans-page .plans-faq-item { grid-column: 1; }
+  .plans-page .plans-notes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+  .plans-page .plans-note:nth-of-type(2) { padding-left: 0; border-left: none; }
+  .plans-page .plans-note:nth-of-type(n+3) {
+    grid-column: 1 / -1;
+    margin-top: 22px;
+    padding-top: 22px;
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px solid var(--pl-line);
+  }
+}
+
+@media (max-width: 560px) {
+  .plans-page .plans-notes { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .plans-page .plans-note,
+  .plans-page .plans-note:nth-of-type(2) {
+    grid-column: 1;
+    margin-top: 0;
+    padding-left: 0;
+    padding-top: 20px;
+    border-left: none;
+    border-top: 1px solid var(--pl-line);
+  }
+  .plans-page .plans-note:first-of-type { padding-top: 0; border-top: none; }
+  .plans-page .plans-note:nth-of-type(n+3) { margin-top: 0; }
+  .plans-page .plans-soon-list li { align-items: flex-start; flex-wrap: wrap; }
+
+  /* 44/28/28, UNCHANGED. The capability name is the only cell that ever needs
+     two lines, so it takes the slack; the two value columns stay equal so Free
+     and Pro read as a pair being compared rather than a column and an
+     afterthought. 36-rail-overflow.spec.js asserts no horizontal gesture at
+     390px against exactly this. */
+  .plans-page .plans-compare-table { min-width: 0; font-size: 12.5px; }
+  .plans-page .plans-compare-table th,
+  .plans-page .plans-compare-table td { padding: 11px 8px 11px 0; }
+  .plans-page .plans-compare-table td:first-child { font-size: 13.5px; }
+  .plans-page .plans-compare-table th:first-child,
+  .plans-page .plans-compare-table td:first-child { width: 44%; }
+  .plans-page .plans-compare-table th:nth-child(2),
+  .plans-page .plans-compare-table td:nth-child(2),
+  .plans-page .plans-compare-table th:nth-child(3),
+  .plans-page .plans-compare-table td:nth-child(3) { width: 28%; }
+  .plans-page .plans-compare-table thead th { letter-spacing: .06em; }
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
+   Both spellings, in the precedence global.css encodes: the Settings choice
+   (`html[data-reduced-motion]`) wins in both directions, and the OS preference
+   applies only when no choice has been made. global.css already clamps every
+   duration; these remove the MOVEMENT, which a duration clamp does not — a
+   0.01ms press scale is still a scale, and a 0.01ms chevron flip is a flicker.
+   The chevron's ROTATED STATE is kept: it is the disclosure's open/closed
+   indicator, not an animation, so only the transition between the two goes. */
+:where(html[data-reduced-motion="true"]) .plans-page .sub-tier-btn,
+:where(html[data-reduced-motion="true"]) .plans-page .sub-billing-toggle button,
+:where(html[data-reduced-motion="true"]) .plans-page .plans-faq-q,
+:where(html[data-reduced-motion="true"]) .plans-page .plans-faq-q svg {
+  transition: none !important;
+}
+:where(html[data-reduced-motion="true"]) .plans-page .sub-tier-btn:active {
+  transform: none !important;
+}
+:where(html[data-reduced-motion="true"]) .plans-page .plans-faq-h { position: static; }
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .plans-page .sub-tier-btn,
+  :where(html:not([data-reduced-motion="false"])) .plans-page .sub-billing-toggle button,
+  :where(html:not([data-reduced-motion="false"])) .plans-page .plans-faq-q,
+  :where(html:not([data-reduced-motion="false"])) .plans-page .plans-faq-q svg {
+    transition: none !important;
+  }
+  :where(html:not([data-reduced-motion="false"])) .plans-page .sub-tier-btn:active {
+    transform: none !important;
+  }
+  :where(html:not([data-reduced-motion="false"])) .plans-page .plans-faq-h { position: static; }
+}
+
+/* ── FORCED COLOURS ──────────────────────────────────────────────────────────
+   In Windows High Contrast every `color-mix` wash collapses into its ground, so
+   the selected billing tab — which is carried by a fill alone — and the Pro
+   card's accent edge become invisible. Give each one something the OS is
+   obliged to paint. */
+@media (forced-colors: active) {
+  .plans-page .sub-billing-toggle button.active,
+  .plans-page .sub-billing-toggle button[aria-selected="true"] { border: 2px solid Highlight; }
+  .plans-page .sub-tier-pro { border: 2px solid Highlight; }
+  .plans-page .sub-tier-pro::before { forced-color-adjust: none; }
 }
