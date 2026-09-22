@@ -1,9 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/reading.css'
+// THIS PAGE NO LONGER IMPORTS styles/deferred/reading.css. Its `.ic-*` rules
+// are replaced wholesale by info.css, and loading both would leave two sets of
+// rules for the same class names cascading by file order. The dead block over
+// there is a follow-up for whoever owns that file next; it is shared with
+// /learn/:slug, /404 and /sitemap, and three other lanes are writing to this
+// tree.
+import '../styles/pages/content.css'
+import '../styles/pages/info.css'
+// The front door's own glyph set. Inline SVG in the NavIcon idiom, already in
+// the entry chunk because Spectrum is a static import in App.jsx.
+import SpectrumIcon from '../components/spectrum/SpectrumIcon'
 // The keys the app actually binds. Printed from here so this page cannot
 // document a chord the handlers ignore — which is exactly what it did.
 import { SEARCH_KEY, DOCUMENTED_SHORTCUTS } from '../config/shortcuts'
@@ -20,13 +27,28 @@ import { DISCOVER_GROUPS, toolRoute } from '../data/toolTree'
 const INTRO_KEY = 'vs-info-intro'
 
 // App breakpoints mirror the CSS: 768 tablet, 480 phone, 380 tiny.
+// EVERY EMOJI ON THIS PAGE IS GONE, and this function is where the last of
+// them lived. There were fourteen: one per accordion section, one in each of
+// those sections' index links, one on the dismissible note, one on the screen
+// -stats heading, one in the page's own eyebrow, and five here.
+//
+// They are not replaced with icons. An emoji beside a heading is the cheapest
+// available signal that a page was generated rather than designed, and the
+// founder has been deleting that family of tell by name since 2026-09-14
+// ("remove this text its such a common AI trait, scan the whole site and
+// remove alot of them where applied"). Beyond the taste argument they are
+// measurably worse than nothing here: an emoji cannot be themed, cannot be
+// measured for contrast, renders as a different picture on every platform,
+// and five of these fourteen were the same phone glyph standing for five
+// different things. The rhythm they were pretending to give is a numeral now,
+// drawn from a CSS counter, which cannot fall out of step with the list.
 function classifyWidth(w) {
-  if (w >= 1280) return { label: 'Large desktop', emoji: '🖥️' }
-  if (w >= 1024) return { label: 'Desktop', emoji: '💻' }
-  if (w >= 768) return { label: 'Tablet / small laptop', emoji: '📱' }
-  if (w >= 480) return { label: 'Large phone', emoji: '📱' }
-  if (w >= 380) return { label: 'Phone', emoji: '📱' }
-  return { label: 'Small phone', emoji: '📱' }
+  if (w >= 1280) return { label: 'Large desktop' }
+  if (w >= 1024) return { label: 'Desktop' }
+  if (w >= 768) return { label: 'Tablet / small laptop' }
+  if (w >= 480) return { label: 'Large phone' }
+  if (w >= 380) return { label: 'Phone' }
+  return { label: 'Small phone' }
 }
 
 const BREAKPOINTS = [
@@ -54,7 +76,6 @@ const CURATED = DISCOVER_GROUPS.find((g) => g.id === 'curated')
 const SECTIONS = [
   {
     id: 'getting-started',
-    emoji: '🚀',
     title: 'Getting started',
     body: (
       <>
@@ -91,7 +112,6 @@ const SECTIONS = [
   },
   {
     id: 'colour',
-    emoji: '🎨',
     title: 'Colour Studio',
     body: (
       <>
@@ -116,7 +136,6 @@ const SECTIONS = [
   },
   {
     id: 'typography',
-    emoji: '🔤',
     title: 'Typography',
     body: (
       <>
@@ -126,7 +145,6 @@ const SECTIONS = [
   },
   {
     id: 'imagery',
-    emoji: '🖼️',
     title: 'Imagery, Icons & Emoji',
     body: (
       <>
@@ -146,7 +164,6 @@ const SECTIONS = [
   // need a feature to describe; the section comes back with the tools.
   {
     id: 'docs',
-    emoji: '📚',
     title: 'Documentation & Resources',
     body: (
       <>
@@ -171,7 +188,6 @@ const SECTIONS = [
   },
   {
     id: 'accounts',
-    emoji: '👤',
     title: 'Accounts & sign-in',
     body: (
       <>
@@ -185,7 +201,6 @@ const SECTIONS = [
   },
   {
     id: 'saving',
-    emoji: '💾',
     title: 'Saving & syncing your work',
     body: (
       <>
@@ -196,7 +211,6 @@ const SECTIONS = [
   },
   {
     id: 'pro',
-    emoji: '✨',
     title: 'Free vs Pro',
     body: (
       <>
@@ -223,7 +237,6 @@ const SECTIONS = [
   },
   {
     id: 'troubleshooting',
-    emoji: '🛟',
     title: 'Troubleshooting',
     body: (
       <ul>
@@ -236,7 +249,6 @@ const SECTIONS = [
   },
   {
     id: 'shortcuts',
-    emoji: '⌨️',
     title: 'Keyboard shortcuts',
     // RENDERED FROM THE BINDINGS, NOT TYPED BESIDE THEM.
     //
@@ -261,7 +273,6 @@ const SECTIONS = [
   },
   {
     id: 'privacy',
-    emoji: '🔒',
     title: 'Privacy & your data',
     body: (
       <>
@@ -294,7 +305,7 @@ function ScreenStats() {
   return (
     <section id="screen-stats" className="ic-stats">
       <div className="ic-stats-head">
-        <h2><span aria-hidden="true">📐</span> Screen stats &amp; resize tool</h2>
+        <h2 className="ic-stats-h">Screen stats &amp; resize tool</h2>
         <p>Resize your browser window and watch these update live — a quick way to see which breakpoint your design lands on.</p>
       </div>
       <div className="ic-stats-grid">
@@ -304,7 +315,7 @@ function ScreenStats() {
         <div className="ic-stat"><div className="ic-stat-num ic-stat-sm">{stats.orientation}</div><div className="ic-stat-lbl">Orientation</div></div>
       </div>
       <div className="ic-bp">
-        <div className="ic-bp-current"><span aria-hidden="true">{cls.emoji}</span> {cls.label}</div>
+        <div className="ic-bp-current">{cls.label}</div>
         <div className="ic-bp-ruler">
           <div className="ic-bp-marker" style={{ left: `${markerPct}%` }} />
           {BREAKPOINTS.map(bp => (
@@ -326,6 +337,13 @@ export default function InfoCentre() {
   })
 
   const toggle = (id) => setOpen(prev => ({ ...prev, [id]: !prev[id] }))
+  // Jumping to a section from the index OPENS it. It always should have:
+  // the index linked to eleven anchors, ten of which land on a collapsed
+  // panel, so the common path through this page was "click the thing you
+  // want, arrive at a closed box, click again". Opening is additive —
+  // nothing closes, and the anchor still does its own jump — so a deep
+  // link, the back button and a mid-page refresh all behave as before.
+  const openSection = (id) => setOpen(prev => (prev[id] ? prev : { ...prev, [id]: true }))
 
   const dismissIntro = () => {
     setIntroDismissed(true)
@@ -333,77 +351,130 @@ export default function InfoCentre() {
   }
 
   return (
-    <div className="ic-wrap">
+    <div className="sec cpg ic-wrap">
       <header className="ic-head">
-        <div className="ic-head-eyebrow"><span aria-hidden="true">📖</span> Information Centre</div>
+        {/* NO TAXONOMY EYEBROW. It read "Information Centre" behind an open-book
+            glyph — a 10px mono-caps label, in --accent-strong, restating the
+            page's own name directly above an h1 that names it, on a route the
+            nav already has lit. The founder has marked this exact element "AI"
+            and had it deleted from the Font Gallery, Font Pair, the Type Scale,
+            the Tint tool (#382, #386) and /privacy. Hierarchy is a control, not
+            a label. */}
         <h1 className="ic-head-title">Everything you need to know about UIL4B</h1>
         <p className="ic-head-sub">One page, fully searchable. Learn what each tool does, pick up shortcuts, and check how your screen measures up.</p>
       </header>
 
       {!introDismissed && (
         <div className="ic-intro" role="note">
-          <span className="ic-intro-emoji" aria-hidden="true">👋</span>
           <div className="ic-intro-body">
             <strong>New here?</strong> Start with “Getting started” below, then explore the tools. You can open any section by clicking its header.
           </div>
+          {/* The dismissal and its localStorage key are untouched. It is a
+              control a visitor has already used on some devices, and a note
+              that stops staying dismissed is a capability lost. */}
           <button className="ic-intro-close" onClick={dismissIntro} aria-label="Dismiss intro">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            <SpectrumIcon name="close" size={16} />
           </button>
         </div>
       )}
 
-      <nav className="ic-toc" aria-label="On this page">
-        {SECTIONS.map(s => (
-          <a key={s.id} href={`#${s.id}`} className="ic-toc-link"><span aria-hidden="true">{s.emoji}</span> {s.title}</a>
-        ))}
-        <a href="#screen-stats" className="ic-toc-link"><span aria-hidden="true">📐</span> Screen stats</a>
-      </nav>
+      {/* THE INDEX IS A STICKY RAIL, not a wrapped row of pills above the
+          content. This page is one long document — eleven collapsible sections
+          and a live panel — and a reader who had scrolled to "Troubleshooting"
+          had no way back to the list without scrolling to the top. Every
+          documentation surface in the Mobbin corpus that handles a page this
+          long holds the index open beside it:
+            https://mobbin.com/sites/sections/b8a96a18-f6d3-427c-a319-4c0eae8702c1  Steep
+            https://mobbin.com/sites/sections/d367b862-f8ac-44e5-b6c7-140cae9f2c2e  Better Stack
+            https://mobbin.com/sites/sections/29328957-8bef-4ee5-ac7a-e6cef73db235  Dub
+          and it is the same rail the front door already runs beside its bench,
+          so this is the product's own pattern rather than a new one. */}
+      <div className="cpg-split">
+        <div className="cpg-rail-col">
+          <nav className="cpg-rail ic-toc" aria-label="On this page">
+            <ol>
+              {SECTIONS.map(s => (
+                <li key={s.id}>
+                  {/* `is-on` is the OPEN state, not a scroll position. It is
+                      read straight off the state the accordion already keeps,
+                      so the rail cannot disagree with the page, and it answers
+                      the question the rail is actually asked here — which of
+                      these is showing. */}
+                  <a
+                    className={`cpg-rail-row${open[s.id] ? ' is-on' : ''}`}
+                    href={`#${s.id}`}
+                    onClick={() => openSection(s.id)}
+                  >
+                    <span className="cpg-rail-label">{s.title}</span>
+                  </a>
+                </li>
+              ))}
+              <li>
+                <a className="cpg-rail-row" href="#screen-stats">
+                  <span className="cpg-rail-label">Screen stats</span>
+                </a>
+              </li>
+            </ol>
+          </nav>
+        </div>
 
-      <div className="ic-sections">
-        {SECTIONS.map(s => (
-          <section key={s.id} id={s.id} className="ic-acc">
-            <h2 className="ic-acc-h">
-              <button
-                id={`ic-head-${s.id}`}
-                className={`ic-acc-head${open[s.id] ? ' is-open' : ''}`}
-                onClick={() => toggle(s.id)}
-                aria-expanded={!!open[s.id]}
-                aria-controls={`ic-body-${s.id}`}
-              >
-                <span className="ic-acc-emoji" aria-hidden="true">{s.emoji}</span>
-                <span className="ic-acc-title">{s.title}</span>
-                <svg className="ic-acc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
-              </button>
-            </h2>
-            {/* `inert` on the collapsed panel, and it has to be an attribute
-                rather than CSS. The panel collapses with grid-template-rows
-                0fr -> 1fr, which animates cleanly and is why it was chosen, but
-                unlike display:none it leaves every descendant focusable: tabbing
-                /info landed on 8 links inside collapsed panels, each in a box
-                measured at ZERO height with overflow:hidden, so the focus ring
-                was invisible (S9, mobile-audit-2026-08). visibility:hidden would
-                also fix the tab order, but it would have to flip the instant the
-                panel starts closing - the content would vanish and then an empty
-                box would animate shut - and putting `visibility` in the
-                transition to delay it is the exact discrete-property trap S13
-                records. `inert` removes the subtree from the tab order AND the
-                accessibility tree with no paint of its own, so the collapse
-                animation is untouched. */}
-            {/* aria-labelledby points at the HEADER BUTTON, not at this panel.
-                It used to name `ic-body-${s.id}` — the panel's own id — so the
-                region was labelled by itself and had no accessible name at all.
-                A screen-reader user landing in an opened panel heard "region"
-                with nothing to say which of the twelve it was. The button is
-                what carries the section title, which is what an accordion
-                region is supposed to be named by. */}
-            <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-head-${s.id}`} inert={!open[s.id]}>
-              <div className="ic-acc-body-inner">{s.body}</div>
-            </div>
-          </section>
-        ))}
+        <div className="ic-main">
+          <div className="ic-sections">
+            {SECTIONS.map(s => (
+              <section key={s.id} id={s.id} className={`ic-acc${open[s.id] ? ' is-open' : ''}`}>
+                <h2 className="ic-acc-h">
+                  <button
+                    id={`ic-head-${s.id}`}
+                    className={`ic-acc-head${open[s.id] ? ' is-open' : ''}`}
+                    onClick={() => toggle(s.id)}
+                    aria-expanded={!!open[s.id]}
+                    aria-controls={`ic-body-${s.id}`}
+                  >
+                    {/* The numeral replaces the section emoji, and it is drawn
+                        by a CSS counter rather than typed, so a section added
+                        to or removed from SECTIONS cannot leave a hole in the
+                        sequence. `aria-hidden`, so the button's accessible name
+                        is still exactly the section title — which is what
+                        tests/user-sim/25-defect-sweep.spec.js matches the
+                        panel's own region name against. */}
+                    <span className="ic-acc-no" aria-hidden="true" />
+                    <span className="ic-acc-title">{s.title}</span>
+                    <span className="ic-acc-chevron" aria-hidden="true">
+                      <SpectrumIcon name="caret" size={16} />
+                    </span>
+                  </button>
+                </h2>
+                {/* `inert` on the collapsed panel, and it has to be an attribute
+                    rather than CSS. The panel collapses with grid-template-rows
+                    0fr -> 1fr, which animates cleanly and is why it was chosen, but
+                    unlike display:none it leaves every descendant focusable: tabbing
+                    /info landed on 8 links inside collapsed panels, each in a box
+                    measured at ZERO height with overflow:hidden, so the focus ring
+                    was invisible (S9, mobile-audit-2026-08). visibility:hidden would
+                    also fix the tab order, but it would have to flip the instant the
+                    panel starts closing - the content would vanish and then an empty
+                    box would animate shut - and putting `visibility` in the
+                    transition to delay it is the exact discrete-property trap S13
+                    records. `inert` removes the subtree from the tab order AND the
+                    accessibility tree with no paint of its own, so the collapse
+                    animation is untouched. */}
+                {/* aria-labelledby points at the HEADER BUTTON, not at this panel.
+                    It used to name the panel's own id — so the region was labelled
+                    by itself and had no accessible name at all. A screen-reader
+                    user landing in an opened panel heard "region" with nothing to
+                    say which of the eleven it was. The button is what carries the
+                    section title, which is what an accordion region is supposed to
+                    be named by. */}
+                <div id={`ic-body-${s.id}`} className={`ic-acc-body${open[s.id] ? ' is-open' : ''}`} role="region" aria-labelledby={`ic-head-${s.id}`} inert={!open[s.id]}>
+                  <div className="ic-acc-body-inner">{s.body}</div>
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <ScreenStats />
+        </div>
       </div>
-
-      <ScreenStats />
     </div>
   )
 }

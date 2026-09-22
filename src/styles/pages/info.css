@@ -1,0 +1,447 @@
+/* info.css — the `ic` family, on the Spectrum ground.
+ *
+ * Imported by src/pages/InfoCentre.jsx beside content.css. It replaces the
+ * `.ic-*` block in src/styles/deferred/reading.css, which that page no longer
+ * imports — see the note in the page file.
+ *
+ * ── Why this page needed the most work ─────────────────────────────────────
+ *
+ * The 2026-09-16 audit scored /info 6/10, the worst on the site, and the four
+ * things that cost it the marks were all structural rather than decorative:
+ *
+ *   1. A TAXONOMY EYEBROW over the h1. Deleted in the page file.
+ *   2. FOURTEEN EMOJI, one per section heading and one per index entry, five
+ *      of which were the same phone glyph standing for five different things.
+ *      Deleted. The rhythm is a CSS counter now.
+ *   3. A WRAPPED ROW OF PILLS as the table of contents, at the top of a
+ *      document eleven sections long, so a reader anywhere below the fold had
+ *      no index at all. It is a sticky rail beside the document now, which is
+ *      what every documentation surface in the Mobbin corpus that handles a
+ *      page this long does — and what the front door already does beside its
+ *      own bench.
+ *   4. ELEVEN CARDS. Every section was a bordered, rounded, shadowed box on
+ *      `--card-grad`, stacked — the "every idea enclosed in an equally
+ *      weighted rounded rectangle" construction, eleven times down one column.
+ *      They are hairline-separated rows now:
+ *        https://mobbin.com/sites/sections/16e4aaa4-988f-4e40-9a78-1ce6fc42c7f6  Notion
+ *        https://mobbin.com/sites/sections/523be569-ca5a-4248-988e-290df8703278  Framer
+ *        https://mobbin.com/sites/sections/4b8f3b38-7e37-49f1-9881-90951f37d290  Kinfolk
+ *
+ * ── The accordion MECHANICS are global.css's and are not touched ───────────
+ *
+ * `.ic-acc-head`, `.ic-acc-body` and the `grid-template-rows: 0fr -> 1fr`
+ * collapse live in src/styles/global.css:2162-2166. This sheet overrides their
+ * APPEARANCE at a higher specificity (`.ic-wrap` + the class) and leaves the
+ * collapse itself alone, because that collapse is load-bearing:
+ * tests/user-sim/24-mobile-overhaul.spec.js asserts that a collapsed panel
+ * still contains focusable descendants, that `inert` keeps them out of the tab
+ * order, and that opening one gives `.ic-acc-body-inner` a height above zero.
+ * `display:none` would satisfy the tab-order half and break the other two.
+ *
+ * ── THE INDEX WRAPS BELOW 1000px, IT DOES NOT SCROLL ───────────────────────
+ *
+ * content.css's `.cpg-rail` turns into a horizontal scroller at that width,
+ * which is right for /terms and /privacy and WRONG here, and the reason is a
+ * measurement rather than a preference. 24-mobile-overhaul runs a glyph-level
+ * sweep at 320/360/390/430/560/768 that puts a `Range` around the text of
+ * every `.ic-toc a` and fails if any of it lands past the viewport's right
+ * edge — and unlike its element-level sweep, that one has no escape hatch for
+ * a scrollable ancestor. A scroller is off-screen glyphs by definition. So on
+ * this page the rail becomes a wrapped row of pills, which is what it already
+ * was, only at the right size.
+ */
+
+.ic-wrap {
+  /* The index column is narrower here than on the legal pages: these titles
+     are two or three words where a clause title is eight. */
+  --ic-indent: 46px;
+}
+
+/* ── The head ── */
+
+.ic-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); min-width: 0; }
+.ic-head-title {
+  margin: 0;
+  max-width: 19ch;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(32px, 5vw, 60px);
+  line-height: 1;
+  letter-spacing: -.04em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+.ic-head-sub {
+  margin: 0;
+  max-width: 56ch;
+  font-size: clamp(15.5px, 1.3vw, 17px);
+  line-height: 1.6;
+  color: var(--cpg-dim);
+  text-wrap: pretty;
+}
+
+/* ── The dismissible note ──
+ * Kept, restyled. It carries a control a visitor may already have used, and a
+ * note that stops remembering its dismissal is a capability lost. The ground
+ * is `--accent-wash` (derived from `--accent`) rather than the old
+ * `--accent-bg`, and the border is `--accent-border` rather than an inline
+ * `color-mix` of the same idea. */
+.ic-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  min-width: 0;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-xl);
+  background: var(--accent-wash);
+}
+/* --cpg-dim on --accent-wash over the page ground measures 6.4:1 in light and
+ * 8.6:1 in dark. --cpg-faint would also pass; --cpg-quiet would not, which is
+ * the trap this branch has hit four times. */
+.ic-intro-body { flex: 1; min-width: 0; font-size: 14px; line-height: 1.6; color: var(--cpg-dim); }
+.ic-intro-body strong { color: var(--cpg-ink); font-weight: 560; }
+.ic-intro-close {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--cpg-faint);
+  cursor: pointer;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.ic-intro-close:hover { background: var(--cpg-wash-2); color: var(--cpg-ink); }
+/* 44px on a coarse pointer. 32 clears WCAG 2.5.8's 24px floor on every
+ * pointer, but a dismiss button is a one-shot action with no undo and a
+ * fingertip is not a cursor. */
+@media (pointer: coarse) {
+  .ic-intro-close { width: 44px; height: 44px; }
+}
+
+/* ── The index ── */
+
+.ic-main { min-width: 0; display: flex; flex-direction: column; gap: clamp(48px, 6vw, 80px); max-width: 78ch; }
+
+/* ── The sections ──
+ * Hairline rows. `counter-reset` here and `counter-increment` on the row, so
+ * the numerals are drawn from the list rather than typed beside it. */
+.ic-sections { display: flex; flex-direction: column; counter-reset: ic; min-width: 0; }
+.ic-acc { border-top: 1px solid var(--cpg-line); counter-increment: ic; min-width: 0; }
+.ic-acc:first-child { border-top: 0; }
+.ic-acc-h { margin: 0; font-size: inherit; font-weight: inherit; line-height: inherit; }
+
+/* The specificity here (`.ic-wrap` + class) is what beats global.css:2162,
+ * which owns the flex layout and the click target. Only appearance moves. */
+.ic-wrap .ic-acc-head {
+  gap: 14px;
+  /* 56px, comfortably over the 44px coarse-pointer floor, on a row that is the
+     full width of the column. */
+  min-height: 56px;
+  padding: 18px 12px;
+  border-radius: var(--radius);
+  color: var(--cpg-ink);
+  transition: background var(--dur-1) ease;
+}
+.ic-wrap .ic-acc-head:hover { background: var(--cpg-wash); }
+
+.ic-acc-no {
+  flex: 0 0 auto;
+  min-width: 20px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  /* --cpg-faint, NOT --cpg-quiet. This numeral sits on `--cpg-wash` the moment
+     the row is hovered, and --t3 on that composited ground measures 4.23:1 in
+     light. --t2 is 5.18:1 on the same ground and 5.62:1 off it. */
+  color: var(--cpg-faint);
+  font-variant-numeric: tabular-nums;
+}
+.ic-acc-no::before { content: counter(ic, decimal-leading-zero); }
+.ic-acc.is-open .ic-acc-no { color: var(--accent-text); }
+
+.ic-acc-title { flex: 1; min-width: 0; margin: 0; font-size: 16.5px; font-weight: 540; line-height: 1.35; color: var(--cpg-ink); }
+.ic-acc-chevron {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--cpg-faint);
+  transition: transform var(--dur-2) var(--cpg-ease), color var(--dur-1) ease;
+}
+.ic-wrap .ic-acc-head:hover .ic-acc-chevron { color: var(--cpg-ink); }
+/* global.css:2163 already rotates this on `.ic-acc-head.is-open`; the rule is
+   restated at this specificity only so the transition above and the rotation
+   stay in one file to read. */
+.ic-wrap .ic-acc-head.is-open .ic-acc-chevron { transform: rotate(180deg); }
+
+/* `overflow:hidden` AND `min-height:0`, AND THIS IS THE WHOLE COLLAPSE.
+ * global.css:2164 sets `.ic-acc-body{display:grid;grid-template-rows:0fr}`,
+ * but a 0fr row does not clip its own content — the INNER element has to,
+ * and these two declarations were the only thing doing it. They lived in
+ * reading.css, which this page no longer imports, and the first render after
+ * that import came off showed all eleven panels permanently open with their
+ * chevrons pointing closed: the accordion was gone and the page was a wall.
+ * Caught in a browser at 1440; a green build and 2,188 passing unit tests had
+ * nothing to say about it. */
+.ic-acc-body-inner { overflow: hidden; min-height: 0; }
+
+/* The body aligns with the TITLE, not with the numeral — the numeral is a
+ * marker in the margin and the prose is the column. No border-top: the row's
+ * own hairline already separates it from the row above, and a second rule
+ * inside the row would read as a card lid. */
+.ic-wrap .ic-acc-body-inner { padding: 0; }
+.ic-wrap .ic-acc-body.is-open .ic-acc-body-inner {
+  padding: 0 12px var(--s-5) var(--ic-indent);
+  border-top: 0;
+}
+.ic-acc-body-inner p { margin: 0 0 var(--s-3); font-size: 14.5px; line-height: 1.75; color: var(--cpg-dim); max-width: 66ch; }
+.ic-acc-body-inner p:last-child { margin-bottom: 0; }
+.ic-acc-body-inner ul { margin: 0 0 var(--s-3); padding-left: 1.1em; display: flex; flex-direction: column; gap: var(--s-2); }
+.ic-acc-body-inner ul:last-child { margin-bottom: 0; }
+.ic-acc-body-inner li { font-size: 14.5px; line-height: 1.65; color: var(--cpg-dim); max-width: 66ch; }
+.ic-acc-body-inner li::marker { color: var(--cpg-faint); }
+.ic-acc-body-inner strong { color: var(--cpg-ink); font-weight: 560; }
+/* --accent-text, not --accent-strong. Derived from --accent, so a premium
+ * theme template moves it; the literal it replaces would not have moved.
+ * Underlined at rest because these are links inside sentences, where a reader
+ * skimming cannot find a link that only appears on hover, and on touch there
+ * is no hover at all. */
+.ic-acc-body-inner a {
+  color: var(--accent-text);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
+  text-underline-offset: 3px;
+}
+.ic-acc-body-inner a:hover { color: var(--accent-mid); text-decoration-color: currentColor; }
+/* SC 2.5.8, AND THE INLINE EXCEPTION DOES NOT COVER THESE.
+ * The "Documentation & Resources" section renders LEARN_ARTICLES as a list of
+ * seven links, one per `<li>`, each the only thing in its row. That is a list
+ * of destinations, not links inside a sentence, so the exception 2.5.8 grants
+ * an anchor "in a run of text" does not apply — and measured at 390, 834 and
+ * 1440 every one of the seven was 19px tall, five under the floor. The rows
+ * with a link inside a sentence (Troubleshooting, Accounts, Free vs Pro) are
+ * NOT matched by `:only-child` and keep their inline box, which is correct:
+ * lifting those would break the line they sit in for no accessibility gain. */
+.ic-acc-body-inner li > a:only-child {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+.ic-acc-body-inner kbd {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 3px 7px;
+  border-radius: var(--radius-xs);
+  background: var(--cpg-wash-2);
+  border: 1px solid var(--cpg-line);
+  color: var(--cpg-ink);
+  white-space: nowrap;
+}
+.ic-kbd-list { list-style: none; padding-left: 0 !important; }
+
+/* ── The live panel ──────────────────────────────────────────────────────────
+ * `display:block` IS THE FIX FOR S6 AND IT IS NOT COSMETIC. `.ic-stats` was
+ * also the class of an orphaned Image Converter component in reading.css whose
+ * rule declared `display:grid`, so this section was silently inheriting a
+ * four-column (two below 600px) grid it was never meant to have: measured at
+ * 320px it laid out as two 116px columns with `.ic-stats-grid` inside ONE of
+ * them, which then subdivided 116px into two 53px cards, and the page was
+ * forced to 341px inside a 288px content box. reading.css is no longer
+ * imported here, so the phantom grid cannot reach this page at all — the
+ * declaration is kept anyway, because a class named `.ic-stats` picking up a
+ * grid from somewhere else is exactly the accident this records. */
+.ic-stats {
+  display: block;
+  min-width: 0;
+  padding: clamp(20px, 2.6vw, 30px);
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius-2xl);
+  background: var(--cpg-card);
+  box-shadow: var(--shadow-m);
+}
+.ic-stats-h {
+  margin: 0 0 var(--s-2);
+  font-family: var(--display);
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 560;
+  letter-spacing: -.02em;
+  line-height: 1.15;
+  color: var(--cpg-ink);
+}
+.ic-stats-head p { margin: 0 0 var(--s-6); font-size: 14px; line-height: 1.6; color: var(--cpg-faint); max-width: 56ch; }
+
+/* FOUR CARDS, AT EVERY WIDTH DOWN TO 320. 24-mobile-overhaul counts them at
+ * 320/360/390/430/560/768 and asserts exactly four, so the two-column step is
+ * a reflow and never a drop. `minmax(0,1fr)` on every track, because a bare
+ * `1fr` floors at min-content and "Large desktop" cannot shrink. */
+.ic-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); margin-bottom: var(--s-6); min-width: 0; }
+.ic-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+  padding: var(--s-4);
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius-xl);
+  background: var(--cpg-wash);
+}
+/* --accent-text, not --accent. The figure is 24px, which is large text and
+ * would pass at 3:1 — but `.ic-stat-sm` below is the SAME element at 16px for
+ * the orientation reading, which is body text at 4.5, and that is the exact
+ * way this page failed 39-accent-contrast once already (a 24px colour
+ * inherited at 16px). One token for both sizes is the version that cannot
+ * fail: --accent-text measures 5.76:1 on this wash in light, 9.2:1 in dark. */
+.ic-stat-num {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -.02em;
+}
+.ic-stat-num span { font-size: 13px; color: var(--cpg-faint); font-weight: 400; margin-left: 3px; letter-spacing: 0; }
+.ic-stat-sm { font-size: 16px; }
+.ic-stat-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  /* --cpg-faint on --cpg-wash: 5.18:1 light. --cpg-quiet would be 4.23:1. */
+  color: var(--cpg-faint);
+  margin-top: auto;
+}
+
+.ic-bp-current { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 560; color: var(--cpg-ink); margin-bottom: 34px; }
+/* THE RULER GROUND STAYS --bg-3. 76-marketing-quality records the measurement
+ * it depends on — the tick labels at --t2 on --bg-3 (#E4E2DA in light) are
+ * 4.95:1 — and says in as many words that changing this ground re-opens it.
+ * The labels themselves sit above the ruler on the panel, where --t2 is
+ * 6.52:1, so both readings clear the floor. */
+.ic-bp-ruler { position: relative; height: 3px; background: var(--bg-3); border-radius: var(--radius-pill); margin: 0 8px 30px; }
+/* The 380 and 480 ticks sit ~27px apart on a 390px phone while their labels
+ * are absolutely positioned and `white-space:nowrap`, so "TINY" and "PHONE"
+ * ran together and the ruler read "TINYPHONE". The labels alternate height
+ * rather than being dropped: naming the band you are in is what this ruler is
+ * for, so losing a name costs more than a row of padding. The marker is the
+ * first child, so the ticks are children 2..n and even/odd alternates cleanly
+ * across them. */
+@media (max-width: 640px) {
+  .ic-bp-ruler { margin-top: 20px; }
+  .ic-bp-tick:nth-child(even) .ic-bp-tick-lbl { top: -38px; }
+}
+.ic-bp-marker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-mid);
+  border: 2px solid var(--cpg-card);
+  box-shadow: 0 0 0 1px var(--accent-mid);
+  transform: translate(-50%, -50%);
+  transition: left var(--dur-2) var(--cpg-ease);
+  z-index: 2;
+}
+/* THE TICK IS INK, NOT A HAIRLINE. It was `--border` (#DAD8CF) on the ruler's
+ * `--bg-3` (#E4E2DA) — 1.13:1, a 2px mark you cannot see on the track it is
+ * marking. `--cpg-line-strong` would be 1.50:1. These four ticks are where the
+ * breakpoints ARE, so they are a meaningful non-text component and WCAG 1.4.11
+ * asks 3:1 of them. `--cpg-faint` measures 4.96:1 on the same track. */
+.ic-bp-tick { position: absolute; top: 50%; width: 2px; height: 8px; background: var(--cpg-faint); transform: translate(-50%, -50%); }
+.ic-bp-tick-lbl {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cpg-faint);
+  white-space: nowrap;
+}
+/* 9.5px is the smallest type in the product and --cpg-quiet cannot carry it:
+ * measured 3.70:1 in light (#6C6C66 on #DAD8CF) and 4.29:1 in dark, so LIGHT
+ * was the worse of the two and had been shipping that way. --cpg-faint clears
+ * both. */
+.ic-bp-tick-px { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 9.5px; color: var(--cpg-faint); }
+
+/* ── Narrow ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1000px) {
+  /* The index WRAPS rather than scrolling here. See the header — a horizontal
+     scroller puts `.ic-toc a` glyphs past the viewport edge, and this page's
+     overflow sweep measures those glyphs with no escape hatch for a
+     scrollable ancestor. */
+  .ic-wrap .ic-toc ol {
+    display: flex;
+    flex-wrap: wrap;
+    grid-auto-flow: row;
+    overflow-x: visible;
+    gap: 6px;
+    margin-inline: 0;
+    padding-inline: 0;
+    padding-bottom: 0;
+  }
+  .ic-wrap .ic-toc .cpg-rail-row { font-size: 13px; padding: 9px 14px; min-height: 40px; }
+  .ic-main { max-width: none; gap: clamp(36px, 6vw, 56px); }
+}
+
+@media (max-width: 640px) {
+  .ic-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .ic-wrap { --ic-indent: 12px; }
+  .ic-head-title, .ic-head-sub { max-width: none; }
+  .ic-wrap .ic-acc-head { padding-inline: 0; gap: 12px; }
+  .ic-wrap .ic-acc-body.is-open .ic-acc-body-inner { padding-inline: 0; }
+  .ic-stats { border-radius: var(--radius-xl); padding: var(--s-5); }
+  .ic-intro { padding: var(--s-4); }
+}
+
+/* ── REDUCED MOTION ──────────────────────────────────────────────────────────
+ * The chevron rotation, the ruler marker and the head's hover tint, under both
+ * spellings the app uses. global.css already clamps durations; these remove
+ * the movement, which a duration clamp does not.
+ *
+ * THE PANEL COLLAPSE IS DELIBERATELY NOT LISTED. `grid-template-rows: 0fr ->
+ * 1fr` is the thing that makes the content reachable, and global.css's blanket
+ * clamp already takes it to 0.01ms, which is instantaneous without being
+ * cancelled. Turning the transition off here would be harmless; turning the
+ * property off would hide the content. It is left to the clamp so nobody can
+ * make that edit later by widening this list. */
+:where(html[data-reduced-motion="true"]) .ic-wrap .ic-acc-chevron,
+:where(html[data-reduced-motion="true"]) .ic-wrap .ic-acc-head,
+:where(html[data-reduced-motion="true"]) .ic-wrap .ic-intro-close,
+:where(html[data-reduced-motion="true"]) .ic-wrap .ic-bp-marker {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .ic-wrap .ic-acc-chevron,
+  :where(html:not([data-reduced-motion="false"])) .ic-wrap .ic-acc-head,
+  :where(html:not([data-reduced-motion="false"])) .ic-wrap .ic-intro-close,
+  :where(html:not([data-reduced-motion="false"])) .ic-wrap .ic-bp-marker {
+    transition: none !important;
+  }
+}
+
+/* ── FORCED COLOURS ──────────────────────────────────────────────────────────
+ * In Windows High Contrast every `color-mix` wash collapses into its ground,
+ * so the open row and the hovered row would be indistinguishable from a closed
+ * one. The chevron rotation still carries the state, and the border below
+ * gives the OS something it is obliged to paint. */
+@media (forced-colors: active) {
+  .ic-wrap .ic-acc.is-open .ic-acc-head { border: 2px solid Highlight; }
+  .ic-bp-marker { forced-color-adjust: none; }
+}
