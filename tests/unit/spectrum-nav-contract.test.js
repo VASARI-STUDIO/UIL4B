@@ -64,9 +64,23 @@ test('the accent stays swappable — no hardcoded brand blue anywhere in the nav
     assert.doesNotMatch(stripJs(read(file)), /#(0F6FFF|6FA8FF|2A60E8)\b/i,
       `${file} hardcodes an accent blue`)
   }
-  // The two wordmarks both take it from the token layer.
-  assert.match(css, /\.pnav-word-mark\{color:var\(--accent\)\}/,
-    'the app header wordmark must take the accent from the token')
+  /* BOTH WORDMARKS NOW READ THE SAME DERIVED TOKEN, and that is the fix rather
+   * than a relaxation.
+   *
+   * The app header's rule pinned `var(--accent)`, which measured 4.36:1 on the
+   * light ground at 19px/600 — under AA on eleven route-and-width rows. The
+   * comment that justified it claimed 19px counts as large text; it does not,
+   * unless the weight is 700 or more, and that mistaken premise WAS the defect.
+   *
+   * It moved to `--accent-mid`, NOT `--accent-strong`, and the distinction is
+   * load-bearing: `--accent-strong` is a per-theme literal that does not track
+   * `--accent`, so a premium theme moving the accent alone would repaint the
+   * wordmark's letters and strand the "4" on the old brand blue. `--accent-mid`
+   * is color-mix()'d off `--accent`, which is what makes the derivation the
+   * theme mechanism. The marketing wordmark already read it, so the two are now
+   * one token instead of two that happened to look alike. */
+  assert.match(css, /\.pnav-word-mark\{color:var\(--accent-mid\)\}/,
+    'the app header wordmark must take the accent from the derived family')
   assert.match(css, /\.spnav-word-mark\{color:var\(--accent-mid\)\}/,
     'the marketing wordmark must take the accent from the derived family')
 })

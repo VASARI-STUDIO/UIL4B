@@ -15,11 +15,17 @@
 // The lane name picks the directory (`dist-<LANE>`) and keys the report dir, so
 // two lanes cannot overwrite each other's findings.jsonl or artifacts either.
 //
-// REBUILDING IS THE DIRECTOR'S JOB, NOT A LANE'S. A lane that runs
-// `npm run build` breaks every other lane. If a lane needs its source change
-// reflected, it rebuilds into its OWN directory:
-//   npx vite build --mode test --outDir dist-<LANE> && node scripts/prerender.mjs --out dist-<LANE>
-// and if prerender cannot target that directory, it asks the director instead.
+// A LANE REBUILDS INTO ITS OWN DIRECTORY, NEVER INTO dist/. Running
+// `npm run build` breaks every other lane — it overwrites the shared build and
+// strips the `--mode test` Firebase double, so `signIn()` becomes a silent
+// no-op and tier assertions fail while looking completely real.
+//
+// Both halves target the lane directory:
+//   npx vite build --mode test --outDir dist-<LANE>
+//   node scripts/prerender.mjs --out dist-<LANE>
+//
+// PRERENDER IS NOT OPTIONAL. `vite build` alone leaves the route shells stale,
+// and five specs that have nothing to do with your change go red on it.
 import fs from 'node:fs'
 import { defineConfig } from '@playwright/test'
 
