@@ -226,9 +226,23 @@ test.describe('Semantic Colour system workflow', () => {
     watch(page, 'a designer deciding where to go next')
     await go(page, '/create/semantic-color')
 
+    /* SCOPED TO <main>, WHICH IS WHAT "THIS PAGE" MEANS.
+     *
+     * This counted document-wide and passed for a year because the shared app
+     * footer's two colour links pointed at '/create/color' — a different href
+     * from anything the page itself offered. Deleting the colour landing made
+     * categoryDestination('colour') resolve to '/create/palette', so the
+     * footer's "Start with colour" CTA and its "Colour systems" list item
+     * started colliding with the page's own Palette card and the count went to
+     * three, on a page whose onward-navigation block is still correct.
+     *
+     * The app footer renders on every route and is not "the way out of THIS
+     * page", so it is out of scope. Its own two links sharing a destination is
+     * a CTA and a nav item agreeing, which is ordinary; 07 owns the footer. */
+    const main = page.locator('main')
     for (const route of ['/create/contrast', '/create/tint', '/create/palette', '/create/gradient']) {
       await expect(
-        page.locator(`a[href="${route}"]`),
+        main.locator(`a[href="${route}"]`),
         `${route} should be offered exactly once on the way out of this page`,
       ).toHaveCount(1)
     }

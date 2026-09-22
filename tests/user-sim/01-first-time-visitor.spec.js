@@ -27,18 +27,34 @@ test.describe('first-time visitor', () => {
     }
   })
 
-  test('can reach the Aspect & Resolution tool through the nav mega menu', async ({ page }) => {
+  /* THE JOURNEY IS THE TEST, AND THE JOURNEY SURVIVED THE NEW FRONT DOOR.
+   *
+   * This drove the app header's mega menu (`.pnav-trigger`) while Home owned
+   * '/'. Spectrum mounts the marketing pill instead, whose navigation is a
+   * full-screen menu — so the selectors moved, but the thing being asserted did
+   * not: a first-time visitor who has never seen this product can land on the
+   * front door and find a named tool by reading the nav.
+   *
+   * It is deliberately NOT re-pointed at an app route. Doing that would keep the
+   * test green while dropping the only coverage of the one journey every new
+   * visitor actually takes — and this is the file about a first-time visitor. */
+  test('can reach the Aspect & Resolution tool through the front door nav', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    // Open the first nav dropdown (Create) and follow a tool link like a
-    // curious human would: read the menu, click the thing that matches.
-    // NB: a real pointer hovers before it clicks — hover opens the menu and
-    // the click must PIN it open, not toggle it shut (regression guard).
-    await page.locator('.pnav-trigger').first().click()
-    // The utility tools live under their own "Media" eyebrow.
-    await expect(page.locator('.pnav-col-label', { hasText: /^Media$/ })).toBeVisible()
-    const tool = page.locator('.pnav-tool', { hasText: 'Aspect & Resolution' }).first()
+    await page.locator('.spnav-burger').click()
+    // The menu is a full-screen panel with a staggered entrance. Waiting on the
+    // animation layer rather than a timeout: mid-stagger the panel is still at
+    // opacity 0, and a stopwatch that happens to read it there reports a menu
+    // that is present and invisible.
+    await page.evaluate(async () => {
+      await Promise.all((document.getAnimations?.() || []).map((a) => a.finished.catch(() => {})))
+    })
+
+    // The utility tools live under their own "Media" eyebrow, the same eyebrow
+    // the app header uses — both are built from the one tool tree.
+    await expect(page.locator('.spnav-tree-colhead', { hasText: /^Media$/ })).toBeVisible()
+    const tool = page.locator('.spnav-tool', { hasText: 'Aspect & Resolution' }).first()
     await expect(tool).toBeVisible()
     await tool.click()
     await expect(page).toHaveURL(/\/create\/aspect-ratio/)

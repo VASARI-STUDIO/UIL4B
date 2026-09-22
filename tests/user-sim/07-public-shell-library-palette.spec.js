@@ -25,9 +25,17 @@ async function readNetPill(page, type = 'offline') {
 }
 
 test.describe('public UI quality release', () => {
+  /* DRIVEN FROM AN APP ROUTE, NOT FROM '/'.
+   *
+   * The front door is Spectrum now and it mounts `<PillNav variant="spectrum" />`
+   * — the floating marketing pill, whose navigation is a full-screen menu with
+   * no mega-menu and no `.pnav-*` markup at all. The app header this test is
+   * about still renders on every Create/Discover/Learn route, so the test moves
+   * to one instead of asserting the app header on a page that deliberately does
+   * not have it. `96-spectrum-nav.spec.js` owns the front door's own nav. */
   test('mega-menu supports directional entry and retired UI Colour links redirect safely', async ({ page }) => {
     watch(page, 'keyboard-first designer')
-    await go(page, '/')
+    await go(page, '/discover')
 
     const create = page.getByRole('button', { name: 'Create' })
     await create.focus()
@@ -43,13 +51,18 @@ test.describe('public UI quality release', () => {
     await expect(create).toBeFocused()
 
     await go(page, '/color/ui')
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/color')
+    // '/create/color' until the colour landing was deleted; it is a category
+    // home that bounces now, so the old bookmark goes straight to the tool.
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
   })
 
+  // Same move, same reason: `.pnav-mobile` is the app header's control and the
+  // front door no longer mounts it. SpectrumNav's own burger, its focus-in and
+  // its Escape-returns-focus are covered by 96-spectrum-nav.spec.js.
   test('mobile menu restores focus and keeps every route inside the viewport', async ({ page }) => {
     watch(page, 'mobile first-time visitor')
     await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/')
+    await go(page, '/discover')
 
     const menuButton = page.locator('.pnav-mobile')
     await menuButton.click()
@@ -63,11 +76,26 @@ test.describe('public UI quality release', () => {
     expect(overflow).toBeLessThanOrEqual(1)
   })
 
-  test('every public surface has one shared footer and a persistent Plans route', async ({ page }) => {
+  /* ONE FOOTER LANDMARK, COUNTED AS A LANDMARK.
+   *
+   * This asserted `.app-footer` on every route until `/` became Spectrum, which
+   * renders its own `<footer>` (`.sp-footer`) instead of AppFooter — deliberately,
+   * because mounting both would give the front door TWO contentinfo landmarks
+   * and two copyright lines. Counting the class would now fail on a correct page
+   * and, worse, would pass on the actual defect it exists to catch: two footers
+   * stacked, one of each kind.
+   *
+   * So it counts `footer` elements. That is the thing the rule is about, it is
+   * what a screen reader's landmark list shows, and it holds whichever footer
+   * the route mounts.
+   *
+   * '/create/color' left the loop with the colour landing's deletion — it is a
+   * redirect now, so it was asserting the footer of '/create/palette' twice. */
+  test('every public surface has exactly one footer landmark and a persistent Plans route', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/create/color', '/discover', '/learn', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
+    for (const route of ['/', '/discover', '/learn', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
       await go(page, route)
-      await expect(page.locator('.app-footer'), `${route} should render one shared footer`).toHaveCount(1)
+      await expect(page.locator('footer'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
       if (['/create/palette', '/create/icons', '/create/aspect-ratio'].includes(route)) {
         await expect(page.locator('.app-footer')).toHaveClass(/app-footer--compact/)
@@ -91,8 +119,12 @@ test.describe('public UI quality release', () => {
     watch(page, 'visitor wondering who made this')
     for (const route of ['/', '/discover', '/create/palette']) {
       await go(page, route)
-      const footer = page.locator('.app-footer')
-      const attrib = footer.locator('.app-footer-attrib')
+      // BOTH footers, because '/' is Spectrum and mounts `.sp-footer` while the
+      // app routes mount `.app-footer`. The credit is the founder's own ask and
+      // it is owed on every route, so the selector covers whichever one the
+      // route renders rather than quietly skipping the front door.
+      const footer = page.locator('footer')
+      const attrib = footer.locator('.app-footer-attrib, .sp-footer-attrib')
       await attrib.waitFor()
 
       await expect(footer, `${route} should credit the founder`).toContainText('Built in Brisbane by Dylan Coleman')
