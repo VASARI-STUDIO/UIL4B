@@ -12,6 +12,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { clientIp, hashKey, consume } from '../../api/_lib/rateLimit.js'
 import { ADMIN_EMAILS } from '../../api/_lib/admin.js'
 import { stripJs } from '../helpers/strip-comments.js'
@@ -100,6 +101,56 @@ test('the counter key is a hash, so no IP is stored', () => {
   assert.match(key, /^[0-9a-f]{32}$/)
   assert.equal(key, hashKey(ip), 'the same IP must hash to the same bucket or the limiter counts nothing')
   assert.notEqual(key, hashKey('203.0.113.8'))
+})
+
+// ── the salt ─────────────────────────────────────────────────────────────────
+//
+// A hash of an IP is only not-an-IP while the salt is unknown. This repository
+// is public, so `process.env.RATE_LIMIT_SALT || 'uil4b-rate-limit'` — which is
+// what this file used to read — published the salt with the code and made every
+// stored hash reversible by 4.3 billion SHA-256s of the IPv4 space. Both halves
+// are asserted: the constant must not come back, and the env var must still be
+// the thing that decides.
+
+test('an unset salt does not fall back to a constant anybody can read', () => {
+  // RATE_LIMIT_SALT is unset in this process — which is the whole point, since
+  // it is the misconfigured deployment that the old fallback silently served.
+  assert.equal(process.env.RATE_LIMIT_SALT, undefined,
+    'this test needs RATE_LIMIT_SALT unset to mean anything; something in the suite set it')
+
+  const ip = '203.0.113.7'
+  const withOldConstant = createHash('sha256').update(`uil4b-rate-limit:${ip}`).digest('hex').slice(0, 32)
+  assert.notEqual(hashKey(ip), withOldConstant,
+    'the limiter is hashing with the published constant again — every counter document in Firestore is a '
+    + 'reversible IP address, recoverable by anybody who can read this repository')
+
+  // Written against the CODE as well, because a future `|| 'something'` would
+  // reintroduce the fault in the exact form that looks like configuration —
+  // the same assertion DIAG_CODE already carries at the top of this file.
+  const limiter = stripJs(fs.readFileSync(path.join(API, '_lib/rateLimit.js'), 'utf8'))
+  assert.doesNotMatch(limiter, /RATE_LIMIT_SALT\s*(\|\||\?\?)\s*['"`]/,
+    'RATE_LIMIT_SALT has a literal fallback again — an unset salt must mean "generate one", never "use this string"')
+})
+
+test('the salt still comes from the environment when it is set', async () => {
+  // The fallback is the only thing that changed. If the env var stopped being
+  // read, every instance would salt itself randomly, counters would never be
+  // shared between them, and the limiter would silently become per-instance —
+  // the exact defect the module header gives for not using an in-memory Map.
+  const ip = '203.0.113.7'
+  process.env.RATE_LIMIT_SALT = 'salt-from-the-environment'
+  try {
+    // A fresh module instance: the salt is read once at load, so the import
+    // cache has to be stepped around with a query string.
+    const { hashKey: saltedHashKey } = await import('../../api/_lib/rateLimit.js?salted')
+    assert.equal(
+      saltedHashKey(ip),
+      createHash('sha256').update(`salt-from-the-environment:${ip}`).digest('hex').slice(0, 32),
+      'RATE_LIMIT_SALT is set and the limiter is not using it',
+    )
+  } finally {
+    delete process.env.RATE_LIMIT_SALT
+  }
 })
 
 // ── the limiter itself ───────────────────────────────────────────────────────
