@@ -1,0 +1,590 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMMUNITY — the hub, in Spectrum.
+   ═══════════════════════════════════════════════════════════════════════════
+
+   The 2026-09-16 audit scored this page 6 — joint worst on the site — and it
+   had never had a design pass since. It wore a 28px/700 masthead, 13.5px body
+   copy, 12px filter chips with an accent FILL on the active one, a 150px card
+   photo on `--card-grad` with a `--warm-shadow`, and a dashed empty state.
+
+   ── WHY THIS IS A NEW SHEET AND NOT AN EDIT TO account.css ──────────────────
+   `src/styles/deferred/account.css` holds the `.ch-*` family, and it is also
+   /settings's and /projects's sheet — three other surfaces, two of them owned
+   by other lanes this week. `src/styles/global.css` holds `.ch-filter` and
+   `.ch-sort-btn` and is the render-blocking entry sheet every route pays for.
+   So the page gets its own stylesheet, it is imported LAST in Community.jsx so
+   it outranks both at equal specificity, and every rule is scoped under
+   `.ch-spectrum` — the co-class on the page root — so nothing here can reach
+   a surface this lane does not own.
+
+   `.ch-card` and friends are `CommunityCard.jsx`'s, and that component is
+   built to be rendered on the Discover surface too. Scoping under `.ch-spectrum`
+   means a future Discover mount gets the card it has today, not this one, until
+   somebody decides otherwise on purpose.
+
+   ── WHAT IS DELIBERATELY NOT TOUCHED ────────────────────────────────────────
+   · `.ch-thumb-mono`'s COLOUR, and `.ch-thumb`'s `--mono-ink` pair.
+     `CommunityCard.jsx` computes the monogram's ink per card with
+     `inkOnGradient()` against a 3:1 floor, `community-monogram-ink.test.js`
+     pins the rule text, and `48-text-over-gradients.spec.js` re-measures it in
+     a browser over the card's own gradient in both themes. Nothing below
+     declares `color` on that element.
+   · `.ch-card-source`. `60-community-card-credit.spec.js` walks every one of
+     them at 320/360/390/414 and fails on `scrollWidth > clientWidth + 1` — a
+     truncated platform credit. Its size, its measure and its overflow are a
+     measured result, not a style choice.
+   · The `.ch-heart` reveal-on-hover pair. It is already guarded by
+     `@media (hover:hover)` in account.css so the control is permanently visible
+     on touch, which is what `24-mobile-overhaul.spec.js` checks.
+
+   Motion, radii, type scale and accent usage all come from
+   `src/styles/pages/spectrum.css`.                                           */
+
+/* `.ch-wrap.ch-spectrum`, NOT `.ch-spectrum` — the one rule in this sheet that
+   needs the extra class to win.
+   Every other rule below is `.ch-spectrum .thing`, which is (0,2,0) and beats
+   `deferred/account.css`'s `.thing` on specificity whatever order the two
+   sheets land in. The ROOT rule is the exception: `.ch-wrap` and `.ch-spectrum`
+   are both (0,1,0), so it is decided by sheet order — and measured in the built
+   preview, Vite emits this page sheet BEFORE the shared deferred one, so
+   `max-width` here was losing to account.css's 1080 silently. Verified by
+   reading the computed value in a browser, which is the only way this class of
+   bug is ever found. */
+.ch-wrap.ch-spectrum {
+  --cm-page: var(--bg-0);
+  --cm-card: var(--card);
+  --cm-ink: var(--t0);
+  --cm-dim: var(--t1);
+  --cm-faint: var(--t2);
+  --cm-quiet: var(--t3);
+  --cm-line: var(--border);
+  --cm-line-strong: var(--bh);
+  --cm-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  --cm-wash-2: color-mix(in srgb, var(--t0) 6%, transparent);
+  --cm-ease: cubic-bezier(.23, 1, .32, 1);
+
+  /* `width:100%` IS LOAD-BEARING, AND FIXES A LATENT BUG RATHER THAN A STYLE.
+     `.ch-wrap` is a flex ITEM of `.app-page` (a column flex) and carries
+     `margin: 0 auto` from account.css. An auto margin on the cross axis
+     SUPPRESSES stretch — so the box sized itself to `fit-content` and then
+     centred that, and the `max-width: 1080px` this page has declared for years
+     was never once reached. Measured at 1440 it rendered 924px wide: the
+     max-content width of the masthead row, which is to say the gallery's width
+     was decided by how long the two button labels are.
+     `width:100%` restores the stretch; the auto margins then centre the capped
+     box, which is what they were always there to do. Found by reading the
+     computed value in a browser after the max-width change did nothing. */
+  width: 100%;
+  max-width: 1240px;
+  gap: clamp(22px, 3vw, 34px);
+}
+
+/* ── masthead ─────────────────────────────────────────────────────────────── */
+
+.ch-spectrum .ch-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(18px, 3vw, 40px);
+  min-width: 0;
+  padding-bottom: clamp(22px, 3vw, 32px);
+  border-bottom: 1px solid var(--cm-line-strong);
+}
+.ch-spectrum .ch-head > div:first-child { min-width: 0; max-width: 60ch; }
+
+.ch-spectrum .ch-title {
+  margin: 0;
+  max-width: 18ch;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(34px, 5vw, 62px);
+  line-height: .98;
+  letter-spacing: -.035em;
+  color: var(--cm-ink);
+  text-wrap: balance;
+}
+
+.ch-spectrum .ch-sub {
+  margin: 16px 0 0;
+  max-width: 54ch;
+  font-size: clamp(15px, 1.2vw, 16px);
+  line-height: 1.62;
+  color: var(--cm-dim);
+  text-wrap: pretty;
+}
+/* The <small> that says the starter cards are examples is a CAVEAT, not a
+   second sentence of the pitch, and it is the one line that stops twelve seed
+   entries reading as a community. It keeps its own line and drops to the quiet
+   ink so the two are told apart at a glance rather than by reading both. */
+.ch-spectrum .ch-sub small {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--cm-quiet);
+}
+
+/* The two submit entries. A pair, not one with a switch — Mobbin/Wix runs
+   "Create Your Site" filled beside "Submit a Site" outlined at the head of its
+   showcase, and Mobbin/Webflow does the same with "Showcase your site"
+   (https://mobbin.com/sites/sections/ff53d018-ac1f-47f6-8643-51ff2d4963e1,
+   https://mobbin.com/sites/sections/d6aef00b-6480-4235-9ad9-0f330a64cdba).
+   A design and an icon have nothing in common as submissions, which is the
+   argument Community.jsx already makes at the form. */
+.ch-spectrum .ch-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.ch-spectrum .ch-submit-btn {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 11px 20px;
+  border-radius: var(--radius-pill);
+  font-size: 14.5px;
+  font-weight: 540;
+  box-shadow: none;
+  transition: transform var(--dur-1) var(--cm-ease), background var(--dur-1) ease,
+              color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+.ch-spectrum .ch-submit-btn:active:not(:disabled) { transform: scale(.978); }
+.ch-spectrum .ch-submit-btn svg { flex: 0 0 auto; }
+
+/* ── the toolbar ──────────────────────────────────────────────────────────────
+   Category chips and the sort segment. Mobbin/Kajabi and Mobbin/The Leap both
+   wrap their category chips into rows under a quiet label rather than scrolling
+   them, which is right here because there are only seven and a hidden eighth
+   would be a category nobody finds
+   (https://mobbin.com/sites/sections/abc34dbf-429d-43a0-a18f-684a40ca3a2a).
+
+   THE ACTIVE CHIP LOSES ITS ACCENT FILL. `--accent-strong` behind
+   `--accent-fg` put the loudest colour on the page on a filter, seven times
+   over, above the cards it is filtering. Spectrum's `.sp-chip[aria-pressed]` is
+   the ink ground — the same "selected" the billing tabs and the bench rail use
+   — so selection reads as one idea across the product and the accent is kept
+   for the thing being sold. */
+.ch-spectrum .ch-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+.ch-spectrum .ch-filters { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+
+.ch-spectrum .ch-filter {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 9px 16px;
+  border: 1px solid var(--cm-line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--cm-dim);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 400;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform var(--dur-1) var(--cm-ease), background var(--dur-1) ease,
+              border-color var(--dur-1) ease, color var(--dur-1) ease;
+}
+.ch-spectrum .ch-filter:hover {
+  background: var(--cm-wash);
+  border-color: var(--cm-line-strong);
+  color: var(--cm-ink);
+}
+.ch-spectrum .ch-filter:active { transform: scale(.96); }
+.ch-spectrum .ch-filter.is-active,
+.ch-spectrum .ch-filter[aria-pressed="true"] {
+  background: var(--cm-ink);
+  border-color: var(--cm-ink);
+  color: var(--cm-page);
+}
+/* The selected chip does not move on hover. The generic `.ch-filter:hover`
+   above lifts an UNSELECTED chip onto the ink wash; applying it to a selected
+   one would put a 4% ink film over an ink ground and drop the label's contrast
+   for no gain. Measure the hover whenever you change a fill — a sibling lane
+   lost a contrast fix exactly this way. */
+.ch-spectrum .ch-filter.is-active:hover,
+.ch-spectrum .ch-filter[aria-pressed="true"]:hover {
+  background: var(--cm-ink);
+  border-color: var(--cm-ink);
+  color: var(--cm-page);
+}
+
+.ch-spectrum .ch-sort {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 4px;
+  border: 1px solid var(--cm-line);
+  border-radius: var(--radius-pill);
+  background: var(--cm-wash);
+}
+.ch-spectrum .ch-sort-btn {
+  min-height: 32px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--cm-faint);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 400;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.ch-spectrum .ch-sort-btn:hover { background: var(--cm-wash-2); color: var(--cm-ink); }
+/* THE INK GROUND, NOT AN ACCENT WASH — and that is a measured fix, not a taste
+   call. `--accent-bright` on `--accent-wash-4` at 12.5px/560 measured **4.37:1**
+   in light theme at 1280: under the 4.5 floor, on the control that tells the
+   visitor whether they are looking at all designs or only their saved ones.
+
+   The replacement is the ink pair Spectrum gives every SEGMENTED control —
+   `.sp-billing-tab[aria-pressed="true"]` is `--sp-ink` on `--sp-page` — which
+   is what this is: two mutually exclusive options inside one bordered track.
+   The chips above are `.sp-chip`, which takes the same ink; the two read
+   apart by their containers, exactly as they do on the front door. It also
+   takes the selected state out of the accent entirely, which is the point:
+   the accent belongs to the thing being sold, not to a sort. */
+.ch-spectrum .ch-sort-btn.is-active,
+.ch-spectrum .ch-sort-btn[aria-pressed="true"] {
+  background: var(--cm-ink);
+  color: var(--cm-page);
+  font-weight: 500;
+}
+/* The hover must not undo the fix. `--accent-hover` mixes toward PAPER in both
+   themes, so lifting a selected control on hover with it measured 3.40:1 on a
+   sibling surface — worse than the state it was lifting off. The selected tab
+   therefore does not change on hover at all; only the unselected ones do. */
+.ch-spectrum .ch-sort-btn.is-active:hover,
+.ch-spectrum .ch-sort-btn[aria-pressed="true"]:hover {
+  background: var(--cm-ink);
+  color: var(--cm-page);
+}
+
+/* ── the grid ─────────────────────────────────────────────────────────────────
+   Spectrum's `.sp-disc-grid`/`.sp-disc-card`: a hairline card on the ink wash
+   rather than `--card-grad` behind a `--warm-shadow`, the art band above a
+   single baseline-aligned meta row, and a 2px lift on hover instead of 3.
+
+   `minmax(min(230px,100%),1fr)` rather than a bare 230px: at 320 the floor
+   collapses instead of overflowing, which is the rule every grid on the
+   Spectrum page follows and what keeps `21-reflow-320` green. */
+.ch-spectrum .ch-grid {
+  display: grid;
+  /* A 270px floor over a 1240px shell gives four ~299px cards at 1440 — the
+     density Mobbin/Lovable's "From the Community" shelf runs
+     (https://mobbin.com/sites/sections/bf12496d-52c5-487f-997e-eb9f6b9bdeab),
+     and wide enough that the monogram and the two meta values are not fighting
+     for the same line. `min(270px,100%)` so a 320 viewport collapses the floor
+     rather than overflowing it. */
+  grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.ch-spectrum .ch-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--cm-line);
+  border-radius: var(--radius-2xl);
+  background: var(--cm-wash);
+  box-shadow: none;
+  transition: border-color var(--dur-2) ease, background var(--dur-2) ease,
+              transform var(--dur-2) var(--cm-ease);
+}
+.ch-spectrum .ch-card:hover {
+  border-color: var(--cm-line-strong);
+  background: var(--cm-wash-2);
+  transform: translateY(-2px);
+}
+
+/* Height only. The gradient, the monogram and its computed ink are
+   CommunityCard's and are measured by two suites — see the header note. */
+.ch-spectrum .ch-thumb { height: 132px; }
+
+.ch-spectrum .ch-card-body { padding: 13px 14px 14px; min-width: 0; }
+.ch-spectrum .ch-card-name {
+  margin-bottom: 6px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--cm-ink);
+}
+.ch-spectrum .ch-card-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--cm-faint);
+}
+/* The category tag drops its accent chip. Every card carries one, so a tinted
+   accent pill on each turned the grid into a field of badges and spent the
+   accent on the least load-bearing word on the card. Spectrum's
+   `.sp-disc-meta` is mono micro-caps in the quiet ink, which is what a
+   classification is. */
+.ch-spectrum .ch-card-tag {
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  /* `--t2`, not `--t3`. On the card's own 4% ink wash `--t3` measured 4.19:1 at
+     390, 834 and 1440 in light — the category is the only classification on the
+     card and it is the smallest type on it, so it is the wrong place to spend
+     the last 0.3 of a contrast ratio. */
+  color: var(--cm-faint);
+  white-space: nowrap;
+}
+
+.ch-spectrum .ch-heart {
+  top: 10px;
+  right: 10px;
+  min-height: 28px;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── the empty state ──────────────────────────────────────────────────────────
+   A hairline panel, not a dashed one. Nothing else on this page is dashed, and
+   a dashed box reads as a drop target — the wrong invitation under a grid whose
+   only action is "save". The sentences are unchanged: they are the product's
+   own and they name the control that fills the state. */
+.ch-spectrum .ch-empty {
+  padding: clamp(40px, 6vw, 64px) 24px;
+  border: 1px solid var(--cm-line);
+  border-radius: var(--radius-2xl);
+  background: var(--cm-wash);
+  text-align: center;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--cm-faint);
+}
+
+/* ── your submissions ─────────────────────────────────────────────────────────
+   The queued-icon list. It was `<li className="toggle-row ch-toolbar">` with
+   three inline `style` objects doing the layout, because at the time every
+   stylesheet that could have held the rules belonged to another stream. This
+   sheet is that place, so the inline styles are gone and `.ch-queue-row` does
+   the work. Both original classes are KEPT on the element: `.toggle-row` is the
+   app's own row shape and `97-community-icons.spec.js` reaches this section by
+   its heading and its controls, so nothing is renamed out from under it. */
+.ch-spectrum .ch-queue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--cm-line-strong);
+}
+.ch-spectrum .ch-queue-head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.05;
+  letter-spacing: -.02em;
+  color: var(--cm-ink);
+}
+.ch-spectrum .ch-queue-head .meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cm-quiet);
+}
+.ch-spectrum .ch-queue-note {
+  margin: 14px 0 0;
+  max-width: 62ch;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--cm-faint);
+}
+.ch-spectrum .ch-queue-list {
+  display: grid;
+  gap: 9px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ch-spectrum .ch-queue-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--cm-line);
+  border-radius: var(--radius-xl);
+  background: var(--cm-card);
+}
+.ch-spectrum .ch-queue-row .toggle-row-info { flex: 1 1 140px; min-width: 0; }
+.ch-spectrum .ch-queue-row .toggle-row-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cm-ink);
+}
+.ch-spectrum .ch-queue-row .toggle-row-meta {
+  font-size: 12.5px;
+  color: var(--cm-quiet);
+}
+/* The status marker. `Pending review` vs `Not sent` is the whole point of the
+   row — an entry the account does not hold is one cache clear from gone — so it
+   is mono micro-caps in the quiet ink and NOT an accent chip, because "not
+   sent" is not a feature. */
+.ch-spectrum .ch-queue-row .ch-card-tag {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  color: var(--cm-quiet);
+}
+.ch-spectrum .ch-queue-row .btn {
+  min-height: 34px;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+}
+
+/* ── the closing CTA ──────────────────────────────────────────────────────────
+   `GalleryCloseCta` is shared with /discover/resources, so its own rules are
+   untouched and only its proportions on this ground move. It keeps its
+   `<section>`, its `aria-labelledby` heading and its single action — all three
+   are asserted by `57-palette-moods-and-gallery-cta.spec.js`, which also
+   requires it to sit below the lowest card and to clear 60px of height. */
+.ch-spectrum .ch-cta {
+  margin-top: clamp(40px, 6vw, 72px);
+  padding-top: clamp(28px, 4vw, 44px);
+  border-top: 1px solid var(--cm-line);
+  text-align: center;
+}
+.ch-spectrum .ch-cta .gcta-q {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(24px, 3vw, 38px);
+  line-height: 1.05;
+  letter-spacing: -.025em;
+  color: var(--cm-ink);
+  text-wrap: balance;
+}
+.ch-spectrum .ch-cta .gcta-detail {
+  margin: 14px auto 0;
+  max-width: 48ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--cm-dim);
+}
+.ch-spectrum .ch-cta .gcta-action {
+  margin-top: 22px;
+  min-height: 44px;
+  padding: 13px 24px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 540;
+  box-shadow: none;
+}
+
+/* ── focus ────────────────────────────────────────────────────────────────────
+   One ring, on the accent, offset so it clears the card radius and the chip
+   tracks. NO `border-radius` here: an outline follows its own element's radius,
+   so declaring one would round the CONTROL at the instant of focus rather than
+   the ring — the defect the founder reported on 2026-09-04 and that
+   `focus-ring-geometry.test.js` has banned in every sheet since. */
+.ch-spectrum :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+/* The heart sits ON the card art and is revealed by hover on fine pointers, so
+   its ring needs to be inside the thumbnail rather than on the card edge. */
+.ch-spectrum .ch-heart:focus-visible { outline-offset: 2px; }
+
+/* ── responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  .ch-spectrum .ch-head { align-items: flex-start; }
+  .ch-spectrum .ch-head-actions { width: 100%; }
+  .ch-spectrum .ch-head-actions .ch-submit-btn { flex: 1 1 160px; justify-content: center; }
+  .ch-spectrum .ch-toolbar { align-items: stretch; }
+  .ch-spectrum .ch-sort { align-self: flex-start; }
+}
+
+@media (max-width: 560px) {
+  .ch-spectrum .ch-grid { grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); }
+  .ch-spectrum .ch-thumb { height: 104px; }
+  .ch-spectrum .ch-card-name {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.6em;
+    line-height: 1.3;
+  }
+  /* The category tag grows back to a readable size at phone width, where a 10px
+     mono caps line is the smallest thing on the screen. account.css already
+     made the same call for the old chip. */
+  .ch-spectrum .ch-card-tag { font-size: 10.5px; letter-spacing: .06em; }
+  .ch-spectrum .ch-card-meta { gap: 6px; }
+  .ch-spectrum .ch-queue-row { gap: 10px; padding: 12px; }
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
+   Both spellings, in the precedence global.css encodes: the in-app Settings
+   choice wins in both directions, the OS preference applies only when no choice
+   has been made. global.css clamps durations; these remove the MOVEMENT, which
+   a clamp does not — a 0.01ms card lift is still a lift. */
+:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-card,
+:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-filter,
+:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-sort-btn,
+:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-submit-btn {
+  transition: none !important;
+}
+:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-card:hover,
+:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-filter:active,
+:where(html[data-reduced-motion="true"]) .ch-spectrum .ch-submit-btn:active {
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-card,
+  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-filter,
+  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-sort-btn,
+  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-submit-btn {
+    transition: none !important;
+  }
+  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-card:hover,
+  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-filter:active,
+  :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-submit-btn:active {
+    transform: none !important;
+  }
+}
+
+/* ── FORCED COLOURS ──────────────────────────────────────────────────────────
+   In Windows High Contrast every `color-mix` wash collapses into its ground, so
+   the selected filter chip and the selected sort tab — both carried by a fill
+   alone — would be indistinguishable from the unselected ones. Give each a
+   border the OS is obliged to paint. */
+@media (forced-colors: active) {
+  .ch-spectrum .ch-filter.is-active,
+  .ch-spectrum .ch-filter[aria-pressed="true"],
+  .ch-spectrum .ch-sort-btn.is-active,
+  .ch-spectrum .ch-sort-btn[aria-pressed="true"] { border: 2px solid Highlight; }
+}

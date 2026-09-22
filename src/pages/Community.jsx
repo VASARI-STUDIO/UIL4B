@@ -21,6 +21,15 @@ import useModalDialog from '../hooks/useModalDialog'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
+// THIS PAGE'S OWN SHEET, AND IT IS IMPORTED LAST ON PURPOSE.
+//
+// The `.ch-*` family lives in `deferred/account.css` (shared with /settings and
+// /projects) and `.ch-filter` / `.ch-sort-btn` live in the render-blocking
+// `global.css`. Neither is this lane's to edit. Importing here means Vite emits
+// the sheet with this route's own chunk — only a visitor who opens /community
+// pays for it, and it arrives after both of the sheets it re-dresses, so the
+// rules below win at equal specificity without an `!important` anywhere.
+import '../styles/pages/community.css'
 
 // Community Hub — browse, save, and submit design inspiration. Saves drive the
 // ranking. Baseline save counts are illustrative for now; the heart toggle and
@@ -616,7 +625,11 @@ export default function Community({ toast }) {
   }, [authLoading, uid, openIconForm])
 
   return (
-    <div className="ch-wrap">
+    // `ch-spectrum` is the SCOPE, not a replacement: `.ch-wrap` stays because
+    // it is what account.css and the computed-style baseline both know this
+    // page by, and every rule in pages/community.css hangs off the co-class so
+    // it can never reach the shared `.ch-*` surfaces this lane does not own.
+    <div className="ch-wrap ch-spectrum">
       <header className="ch-head">
         <div>
           <h1 className="ch-title">Community Hub</h1>
@@ -634,11 +647,16 @@ export default function Community({ toast }) {
             <small>The starter cards below are example entries showing the format — submissions from the community appear above them.</small>
           </p>
         </div>
-        {/* TWO ENTRY POINTS, NOT ONE WITH A SWITCH. The flex wrapper is three
-            inline properties rather than a new class because every stylesheet
-            that could hold it belongs to another stream this week; it is on the
-            list for whoever next owns account.css. */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {/* TWO ENTRY POINTS, NOT ONE WITH A SWITCH — Mobbin/Wix runs its
+            "Create" and "Submit" entries as a filled/outlined pair at the head
+            of the showcase for the same reason.
+
+            The three inline layout properties that used to be here are gone.
+            They were inline because "every stylesheet that could hold it
+            belongs to another stream this week"; pages/community.css is now
+            this page's own, so `.ch-head-actions` holds them and the rule can
+            be read, themed and made responsive like everything else. */}
+        <div className="ch-head-actions">
           <button
             className="btn btn-accent ch-submit-btn"
             onClick={openSubmit}
@@ -663,14 +681,31 @@ export default function Community({ toast }) {
       </header>
 
       <div className="ch-toolbar">
+        {/* `aria-pressed` ADDED, and it is a fix rather than a flourish. The
+            selected category and the selected sort were carried by `.is-active`
+            and by colour alone: a screen-reader user could press "Landing",
+            hear the count in the live region change, and never be told which of
+            the seven buttons they were now standing in. Nothing about the
+            behaviour moves — same handler, same state, same class — the state
+            is simply also announced. `type="button"` for the same class of
+            reason: neither is inside a form today, and neither should become a
+            submit if one ever wraps them. */}
         <div className="ch-filters">
           {COMMUNITY_CATEGORIES.map(c => (
-            <button key={c} className={`ch-filter${filter === c ? ' is-active' : ''}`} onClick={() => setFilter(c)}>{c}</button>
+            <button
+              key={c}
+              type="button"
+              className={`ch-filter${filter === c ? ' is-active' : ''}`}
+              aria-pressed={filter === c}
+              onClick={() => setFilter(c)}
+            >
+              {c}
+            </button>
           ))}
         </div>
         <div className="ch-sort">
-          <button className={`ch-sort-btn${sort === 'popular' ? ' is-active' : ''}`} onClick={() => setSort('popular')}>Top rated</button>
-          <button className={`ch-sort-btn${sort === 'saved' ? ' is-active' : ''}`} onClick={() => setSort('saved')}>Saved</button>
+          <button type="button" className={`ch-sort-btn${sort === 'popular' ? ' is-active' : ''}`} aria-pressed={sort === 'popular'} onClick={() => setSort('popular')}>Top rated</button>
+          <button type="button" className={`ch-sort-btn${sort === 'saved' ? ' is-active' : ''}`} aria-pressed={sort === 'saved'} onClick={() => setSort('saved')}>Saved</button>
         </div>
       </div>
 
@@ -721,16 +756,24 @@ export default function Community({ toast }) {
           account, which is what the founder asked for). */}
       {myIcons.length > 0 && (
         <section aria-labelledby="ch-icons-heading">
-          <div className="section-h">
+          {/* THE THREE INLINE `style` OBJECTS HERE ARE GONE, and the row keeps
+              both of the classes it already had. `.ch-toolbar` was doing double
+              duty as a generic flex row — the page toolbar's rules, borrowed —
+              so restyling the toolbar would have silently restyled this list.
+              `.ch-queue-row` gives it rules of its own; `.toggle-row` and
+              `.ch-toolbar` stay on the element because 97-community-icons
+              reaches this section through it and nothing is renamed out from
+              under a spec in a restyle. */}
+          <div className="section-h ch-queue-head">
             <h2 id="ch-icons-heading">Your submissions</h2>
             <span className="meta">Queued for review — not published</span>
           </div>
-          <p className="ui-modal-note">Submissions are saved to your account and queued for review, so they follow you across devices.</p>
-          <ul style={{ listStyle: 'none', margin: '12px 0 0', padding: 0 }}>
+          <p className="ui-modal-note ch-queue-note">Submissions are saved to your account and queued for review, so they follow you across devices.</p>
+          <ul className="ch-queue-list">
             {myIcons.map(s => (
-              <li key={s.id} className="toggle-row ch-toolbar">
+              <li key={s.id} className="toggle-row ch-toolbar ch-queue-row">
                 <IconSubmissionPreview svg={s.svg} name={s.name} />
-                <span className="toggle-row-info" style={{ flex: '1 1 140px', minWidth: 0 }}>
+                <span className="toggle-row-info">
                   <span className="toggle-row-label">{s.name}</span>
                   <span className="toggle-row-meta">
                     {s.author ? `${s.author} · ` : ''}
