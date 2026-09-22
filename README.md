@@ -204,4 +204,13 @@ firebase deploy --only firestore:rules
 
 ## Licence
 
-MIT — UIL4B 2026.
+**Proprietary, source-available.** The code here is published so it can be
+read; it is not open source and no licence to use it is granted. See
+[LICENSE](LICENSE) for what that does and does not allow.
+
+This repository was MIT-licensed until 2026-09-22. That grant cannot be
+withdrawn from anyone who took a copy while it was in effect.
+
+Third-party components keep their own licences and are **not** covered by the
+notice above — the icon packs in `public/icons-data.js`, the SIL OFL fonts in
+`public/fonts/`, and every dependency in `package.json`.

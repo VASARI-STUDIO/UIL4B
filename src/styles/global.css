@@ -39,9 +39,19 @@
    page, it is never used for reading, and it is not preloaded — so it costs a
    font request on one route, after paint, and nothing anywhere else.
 
-   All three are licensed SIL OFL 1.1, which permits redistribution; see
-   public/fonts/OFL.txt. Upgrading: refetch each subset from the css2 API and
-   bump the filenames if the version changes.
+   All three are licensed SIL OFL 1.1, which permits redistribution — BUT OFL
+   requires the copyright notice to travel with the files, and for a long time
+   this comment pointed at a single `public/fonts/OFL.txt` that carried
+   OUTFIT'S copyright line. Outfit is the one family here that is NOT used, so
+   the three live faces shipped beside a licence naming a different project.
+
+   There is now one file per family, each with its own copyright line:
+   GEIST-OFL.txt, GEIST-MONO-OFL.txt, CAVEAT-OFL.txt, and MANROPE-OFL.txt /
+   JETBRAINS-MONO-OFL.txt / OUTFIT-OFL.txt for the three that are still served
+   but unreferenced. Add the matching file when you add a face.
+
+   Upgrading: refetch each subset from the css2 API and bump the filenames if
+   the version changes.
 
    The Manrope, JetBrains Mono and Outfit files stay in public/fonts for now —
    removing them is a separate cleanup, and nothing here references them. */
