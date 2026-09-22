@@ -78,7 +78,7 @@ export default function IconEmojiLibrary({ onCopy }) {
 
   return (
     <>
-    <div className="sec">
+    <div className="sec lib-surface">
       {/* THE SHARED LIBRARY MASTHEAD. #292 moved this surface's browse language
           onto the Palette/Gradient components; the hero was not part of that,
           so it stayed on a bespoke `.lib-head` — light, flush, 56px/720-weight
@@ -112,6 +112,7 @@ export default function IconEmojiLibrary({ onCopy }) {
                 aria-controls="lib-panel-icon"
                 tabIndex={tab === 'icon' ? 0 : -1}
                 className={`lib-switch-btn${tab === 'icon' ? ' is-active' : ''}`}
+                title="Icons — SVG and JSX"
                 ref={(node) => { if (node) tabRefs.current.icon = node }}
                 onClick={() => activateTab('icon')}
                 onKeyDown={(event) => onTabKeyDown(event, 'icon')}
@@ -127,6 +128,7 @@ export default function IconEmojiLibrary({ onCopy }) {
                 aria-controls="lib-panel-emoji"
                 tabIndex={tab === 'emoji' ? 0 : -1}
                 className={`lib-switch-btn${tab === 'emoji' ? ' is-active' : ''}`}
+                title="Emoji — Unicode, copy-ready"
                 ref={(node) => { if (node) tabRefs.current.emoji = node }}
                 onClick={() => activateTab('emoji')}
                 onKeyDown={(event) => onTabKeyDown(event, 'emoji')}

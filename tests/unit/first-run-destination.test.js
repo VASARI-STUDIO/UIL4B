@@ -74,9 +74,20 @@ test('the sales page is still auth-unaware, which is why the routing lives in Ap
   // page to engineer around. The decision lives one level up, in App.jsx, where
   // it is made once from a synchronous hint. Push auth awareness into this file
   // and that guarantee is gone.
-  const home = read('src/pages/Home.jsx')
-  assert.ok(!/useAuth/.test(home),
-    'Home.jsx now knows about auth — reconsider FIRST_RUN_DESTINATION')
+  //
+  // THE FILE CHANGED, THE CONTRACT DID NOT. Home.jsx was deleted on 2026-09-18
+  // and src/pages/Spectrum.jsx is the sales page. It DOES call useAuth — the
+  // hero's "Open the toolkit" points at /projects for a signed-in visitor and
+  // /login for everyone else — so the assertion is narrowed to what actually
+  // has to hold: the page must not ROUTE on auth. A redirect inside the sales
+  // page is the thing that would reintroduce the flash, and the decision must
+  // stay one level up in App.jsx where it is made once from a synchronous hint.
+  const home = read('src/pages/Spectrum.jsx')
+  assert.ok(!/<Navigate\b/.test(home),
+    'Spectrum.jsx now redirects — the routing decision must stay in App.jsx, made '
+    + 'once from a synchronous hint, or the front door can flash the wrong page')
+  assert.ok(!/useNavigate\(/.test(home),
+    'Spectrum.jsx now navigates imperatively — same problem, later in the frame')
 })
 
 test('a new customer is sent to build, not to a redirect back to the sales page', () => {

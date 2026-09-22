@@ -99,8 +99,12 @@ export const SECTIONS = Object.freeze([
     blurb: 'Palettes, tints, gradients and contrast',
     hue: 'colour',
     group: 'colour',
+    // `/create/color` LEFT THIS LIST on 2026-09-18. It is no longer a page:
+    // the colour landing was deleted with the Spectrum swap, so the route is a
+    // 301 at the edge and gets no prerendered shell — a card pointed at it is a
+    // card nobody can ever unfurl.
     routes: Object.freeze([
-      '/create/color', '/create/palette', '/create/semantic-color',
+      '/create/palette', '/create/semantic-color',
       '/create/tint', '/create/gradient', '/create/contrast',
     ]),
   }),

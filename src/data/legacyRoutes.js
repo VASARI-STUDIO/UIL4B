@@ -58,7 +58,7 @@
 // founder decision asked for.
 export const CREATE_ROUTE_MIGRATION = Object.freeze([
   // Colour
-  ['/color', '/create/color'],
+  ['/color', '/create/palette'],
   ['/color/palette', '/create/palette'],
   ['/color/semantic', '/create/semantic-color'],
   ['/color/tint', '/create/tint'],
@@ -97,6 +97,14 @@ export const CREATE_ROUTE_MIGRATION = Object.freeze([
 // now point STRAIGHT at that tool's new `/create/*` URL. Leaving them aimed at
 // the old path would have built `/palette` → `/color/palette` → `/create/palette`,
 // a two-hop chain, on the day this landed.
+//
+// RETARGETED AGAIN, 2026-09-18, for the same reason: `/color/ui`, `/color-studio`
+// and `/export` all pointed at `/create/color`, and the founder deleted the
+// colour landing when Spectrum became `/`. `/create/color` is now a redirect
+// source itself, so leaving them would have rebuilt exactly the chain this
+// comment warns about — and the first hop would have landed on a URL the edge
+// answers with the noindex 404 shell. `/color` in the block above moved with
+// them. Every one of them now names the colour group's first tool.
 export const RETIRED_ROUTES = Object.freeze([
   ['/welcome', '/home'],
   // Retargeted 2026-09-05. It pointed at /home, the SALES page, which was the
@@ -105,9 +113,9 @@ export const RETIRED_ROUTES = Object.freeze([
   // /dashboard is asking for a dashboard, not for the page selling them one.
   // /projects is live and is not itself in this table, so this is a single hop.
   ['/dashboard', '/projects'],
-  ['/color/ui', '/create/color'],
-  ['/color-studio', '/create/color'],
-  ['/export', '/create/color'],
+  ['/color/ui', '/create/palette'],
+  ['/color-studio', '/create/palette'],
+  ['/export', '/create/palette'],
   ['/palette', '/create/palette'],
   ['/tints', '/create/tint'],
   ['/gradients', '/create/gradient'],
@@ -142,17 +150,48 @@ export const RETIRED_ROUTES = Object.freeze([
 // It is a URL people type and a URL that gets linked, and it was the one entry
 // point into the surface that led nowhere.
 //
-// /create/color is the destination because it is the only Create category with
-// a LANDING rather than a redirect to its first tool (the other four homes
-// bounce), so it is the only page in the surface that introduces it instead of
-// dropping the visitor straight into a workbench. /export already points here,
-// so this adds no chain.
+// /create/palette is the destination. It used to be /create/color, on the
+// argument that the colour landing was "the only Create category with a LANDING
+// rather than a redirect to its first tool (the other four homes bounce), so it
+// is the only page in the surface that introduces it instead of dropping the
+// visitor straight into a workbench". That argument died with the page: the
+// founder's 2026-09-18 decision deleted ColorLanding when Spectrum became `/`,
+// so all five category homes bounce now and there is nothing to introduce the
+// surface with. Leaving `/create` aimed at `/create/color` would have been a
+// 301 into a 301.
 //
 // A real /create landing, sibling to /discover's and /learn's, is a page to
 // DESIGN rather than to improvise inside a redirect table — noted for the
 // redesign, not attempted here.
+//
+// ── /create/color, THE ONE THAT WAS A REAL PAGE ──────────────────────────────
+//
+// This is not the same case as the other four category homes and it must not be
+// treated as one. /create/typography, /create/imagery, /create/ai-tools and
+// /create/icons-emoji have NEVER been pages: they match no rewrite, are absent
+// from public/sitemap.xml, and a visitor who types one gets the catch-all shell
+// and a client-side bounce. /create/color WAS a page — prerendered, in the
+// sitemap, indexable, with its own title and description in routeMetaMap.js —
+// and deleting it without a 301 is precisely the leak the header of this file
+// describes: the URL falls to the catch-all, is answered with a document
+// carrying `noindex`, and passes no link equity to the tool that replaced it.
+//
+// So the page's retirement is answered at the EDGE, once, permanently.
+//
+// ITS CLIENT-SIDE <Navigate> IS DEAD CODE, and that is worth saying out loud
+// rather than leaving for someone to discover. `/create/color` is still in
+// createRoutes(), so it is still in CHROMELESS_PATHS, so App.jsx's chromeless
+// early return catches it ABOVE the router the redirect routes live in. What
+// actually answers it under `vite preview` (which applies none of this file) is
+// CreateTool.jsx's category-home branch, which sends it to the group's first
+// tool — the same destination, computed rather than typed. It stays in the
+// table anyway because that is what gives it the 301, and because
+// redirects.test.js requires every edge redirect to have a client-side
+// counterpart; the counterpart being unreachable is a property of this one
+// path, not a licence to drop it.
 export const SURFACE_ROOT_ALIASES = Object.freeze([
-  ['/create', '/create/color'],
+  ['/create', '/create/palette'],
+  ['/create/color', '/create/palette'],
 ])
 
 // The whole set, in the order it is written to vercel.json.

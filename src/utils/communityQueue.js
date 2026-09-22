@@ -37,7 +37,16 @@ export const QUEUE_COLLECTION = 'community-submissions'
 export const QUEUE_STATUSES = Object.freeze(['pending', 'approved', 'rejected'])
 export const CLIENT_WRITABLE_STATUS = 'pending'
 
-export const QUEUE_KINDS = Object.freeze(['gradient', 'design', 'palette'])
+// 'icon' is the fourth, added 2026-09-18 on the founder's instruction ("people
+// can submit icons to the community they just need to be reviewed"). It needed
+// no fourth code path here, which is what this list being generalised over
+// `kind` was for — but it DOES need a rules change, because
+// firestore.rules pins `kind in ['gradient', 'design', 'palette']` and an icon
+// also carries a payload key ('svg') the rules' allowlist does not name. That
+// diff is docs/design/community-icon-rules.patch and it is the founder's to
+// publish; until he does, an icon submission is refused by Firestore and the
+// submitter is told so rather than told it reached a reviewer.
+export const QUEUE_KINDS = Object.freeze(['gradient', 'design', 'palette', 'icon'])
 
 /**
  * Shape a client record for the queue. Returns null when it cannot describe a

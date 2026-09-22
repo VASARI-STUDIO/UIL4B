@@ -15,6 +15,20 @@ import { GALLERY_GRADIENTS, gradientCss } from '../data/gradientGallery'
 // See the header of communityPromptsPreview.js for the measurement and for why
 // the values are a mirrored copy with a drift test rather than a `.length`.
 import { PROMPT_COUNT, PROMPT_PREVIEW_TITLES } from '../data/communityPromptsPreview'
+// THIS PAGE'S OWN SHEET, AND IT IS WHY THIS PAGE IS LAZY.
+//
+// These rules lived in global.css — the render-blocking entry stylesheet — for
+// as long as src/pages/Home.jsx shared them, because Home WAS the front door
+// and had to be eager. Spectrum is the front door now, so the only routes that
+// can reach `.home-container`, `.home-hero--surface`, `.surface-*` and `.scp-*`
+// are /discover and /learn, and /privacy was paying for them.
+//
+// An eagerly-imported page with its own sheet puts the sheet straight back in
+// the entry chunk — tests/unit/home-asset-budget.test.js walks the static
+// import graph from src/main.jsx precisely to catch that — so App.jsx reaches
+// this page through `lazy()`. The two surface indexes are not the first paint
+// and never were; the page they used to share a sheet with was.
+import '../styles/pages/surface.css'
 
 // ── Card previews: what is actually inside each library ─────────────────────
 // The eight cards on /discover were eight identical white rectangles carrying a
@@ -111,7 +125,7 @@ const PREVIEWS = {
   }),
 }
 
-// ── The Discover + Learn landings ───────────────────────────────────────────
+// ── The Discover + Learn INDEXES ────────────────────────────────────────────
 //
 // COMPRESSED to a value proposition and the links, on the founder's 2026-09-05
 // instruction: "i want to compress our secondary sales pages to mostly act as
@@ -158,10 +172,6 @@ const PREVIEWS = {
 // line, then every tool as name + one sentence + its own link, and nothing
 // after the grid. https://mobbin.com/sites/sections/0b61affd-faef-4b8c-b6fd-983b94de9a77
 
-// The guide the hero sends a first-time reader to. Read off the registry
-// rather than written down, so reordering the articles moves the button.
-const FIRST_GUIDE = LEARN_ARTICLES[0]
-
 // How many Discover libraries a visitor can actually open today. DERIVED, not
 // typed: the hint used to read "Four curated libraries are ready now — palettes,
 // gradients, fonts and icons", and it had been wrong since the Prompt Library
@@ -194,39 +204,27 @@ const SURFACES = {
   // (DiscoverGalleryHero.jsx). The derived hint under the button still says
   // what is open. Learn is untouched: #431 just reworked it.
   discover: {
-    eyebrow: null,
     title: 'Discover',
-    lede: null,
     hue: 'imagery',
     groups: DISCOVER_GROUPS,
-    primaryLabel: 'Browse palettes',
-    primaryTo: '/discover/palettes',
     hint: `${DISCOVER_LIVE} libraries open · ${DISCOVER_SOON} still being built`,
     gridTitle: 'Every library, and what is in it.',
   },
   learn: {
-    eyebrow: 'Learn',
-    title: 'Understand the craft, not just the tools.',
-    // "Growth playbooks" came out: SEO and Marketing are roadmap rows with
-    // nothing behind them. What exists is the published guides, and what makes
-    // them worth opening is that they show their working — which is what the
-    // hint says, in the place a reader decides whether to open one.
-    lede: 'Reference guides on colour, contrast and type. Each one states the rule, cites the standard it comes from, and ends at the tool that applies it.',
+    title: 'Learn',
     hue: 'ai',
     // The ROADMAP, not every group: two topics now have a guide, and those
     // guides are the cards above this grid. Rendering the delivered rows here
     // too would put a second link to the same page under a heading that says
     // nothing in the grid is written yet.
     groups: LEARN_ROADMAP,
-    primaryLabel: `Start with ${FIRST_GUIDE.navLabel.toLowerCase()}`,
-    primaryTo: `/learn/${FIRST_GUIDE.slug}`,
     hint: `${LEARN_ARTICLES.length} guides live · every figure cited or computed`,
     gridTitle: 'Topics still being written.',
     gridLede: 'Nothing in this grid is written yet — that is what Soon means.',
   },
 }
 
-export default function SurfaceLanding({ surface }) {
+export default function SurfaceIndex({ surface }) {
   useReveal()
   const s = SURFACES[surface] || SURFACES.discover
   useEffect(() => {
@@ -238,28 +236,30 @@ export default function SurfaceLanding({ surface }) {
       <PillNav />
 
       <main id="main" tabIndex={-1}>
-      {/* ── Hero ──
-          `home-hero` alone carries min-height:min(100svh,980px), which the
-          HOMEPAGE earns: it holds a search field, eleven satellites and the
-          workbench. This hero holds an eyebrow, a heading, a line of lede, one
-          button and a hint — measured at 1440x900 its content ended at 499px
-          inside a 900px box, so 401px of the first screen of /discover was
-          nothing at all. The modifier lets it be as tall as it is.
+      {/* ── The page head. NOT a hero, and that is the founder's 2026-09-18
+          decision: "/discover and /learn lose their sales intro and go straight
+          to the real library/guide index."
 
-          ONE button, not two. The second was "Explore fonts" on Discover and
-          "Start building" on Learn — a link OUT of the surface the visitor has
-          just arrived at, competing with the grid of that surface's own
-          destinations a screen below. */}
+          WHAT WENT, and it is the whole sales intro: the eyebrow, the pitch
+          headline ("Understand the craft, not just the tools."), the lede
+          paragraph under it, and the single big CTA into one destination. A
+          visitor who has clicked Discover has already decided to browse; a
+          screen of argument before the list is a toll on a decision they made
+          in the nav. The index is now the first thing on the page.
+
+          WHAT STAYED, and why it is not a pitch: the surface's own NAME as the
+          h1 — "Discover", "Learn", the labels the nav already uses, which is
+          also how every library under this page is headed ("Palette Library",
+          "Gradient Library") — and the DERIVED count line, which is a fact read
+          off the data (see DISCOVER_LIVE above) rather than a claim. No sentence
+          was written to replace anything: the founder's copy is his, and there
+          is no line of his about these two surfaces to borrow.
+
+          `home-hero--surface` drops the homepage's min-height:min(100svh,980px);
+          with the pitch gone this head is a name and one line, so the modifier
+          matters more than it did. */}
       <header className="home-hero home-hero--surface">
-        {s.eyebrow && <span className="home-eyebrow">{s.eyebrow}</span>}
         <h1 className="home-hero-h1">{s.title}</h1>
-        {s.lede && <p className="home-hero-sub">{s.lede}</p>}
-        <div className="home-hero-cta">
-          <Link className="ui-pill ui-pill-ink ui-pill-lg" to={s.primaryTo}>
-            {s.primaryLabel}
-            <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
-          </Link>
-        </div>
         <p className="home-hero-hint">{s.hint}</p>
       </header>
 

@@ -8,7 +8,7 @@
   "redirects": [
     {
       "source": "/color",
-      "destination": "/create/color",
+      "destination": "/create/palette",
       "permanent": true
     },
     {
@@ -138,17 +138,17 @@
     },
     {
       "source": "/color/ui",
-      "destination": "/create/color",
+      "destination": "/create/palette",
       "permanent": true
     },
     {
       "source": "/color-studio",
-      "destination": "/create/color",
+      "destination": "/create/palette",
       "permanent": true
     },
     {
       "source": "/export",
-      "destination": "/create/color",
+      "destination": "/create/palette",
       "permanent": true
     },
     {
@@ -258,7 +258,12 @@
     },
     {
       "source": "/create",
-      "destination": "/create/color",
+      "destination": "/create/palette",
+      "permanent": true
+    },
+    {
+      "source": "/create/color",
+      "destination": "/create/palette",
       "permanent": true
     }
   ],
@@ -282,10 +287,6 @@
     {
       "source": "/create/auto-builder",
       "destination": "/create/auto-builder/index.html"
-    },
-    {
-      "source": "/create/color",
-      "destination": "/create/color/index.html"
     },
     {
       "source": "/create/contrast",

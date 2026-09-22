@@ -1,0 +1,193 @@
+/* ── The Discover and Learn INDEXES ───────────────────────────────────────────
+ *
+ * Moved out of src/styles/global.css on 2026-09-18, when Spectrum became `/`.
+ *
+ * WHY IT MOVED. These rules are reachable from exactly two routes — /discover
+ * and /learn, both rendered by src/pages/SurfaceIndex.jsx — and they were in the
+ * render-blocking entry stylesheet only because the page that used to share
+ * them, src/pages/Home.jsx, WAS the front door and had to be eager. The front
+ * door is Spectrum now, its sheet is src/styles/pages/spectrum.css, and paying
+ * for the library index on /privacy, /terms and every Create tool is exactly
+ * what tests/unit/home-asset-budget.test.js means by "rules that only one route
+ * can reach belong in a sheet that route imports".
+ *
+ * ORDER IS UNCHANGED. Every block below sits in the order it held in
+ * global.css, so the relative cascade among them is what it was; the set as a
+ * whole now lands after global.css rather than inside it, which only matters
+ * against a shared rule of equal specificity — and the rules that name a shared
+ * class (.ui-pill, .fx-dot, .fx-lift, .soon-badge, .home-eyebrow, .home-mark)
+ * were deliberately LEFT in global.css for that reason.
+ */
+
+/* ══ Surface landing (Discover / Learn) — surface- ══ */
+/* `align-items:start` so a card is as tall as what it holds. Stretched, the
+   four coming-soon cards were pulled to the height of the preview cards beside
+   them and carried 150px of empty white with a Soon badge stranded at the
+   bottom. Tines' resource grid on Mobbin varies card weight deliberately —
+   it is what stops a grid of one shape reading as a table. */
+.surface-grid{display:grid;grid-template-columns:repeat(3,1fr);align-items:start;gap:var(--s-4);margin-top:var(--s-7)}
+.surface-card{display:flex;flex-direction:column;gap:8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px;box-shadow:var(--shadow-xs)}
+.surface-card-title{display:flex;align-items:center;gap:8px;font-size:var(--fs-h3);font-weight:600;letter-spacing:-.016em;color:var(--t0)}
+.surface-card-desc{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
+.surface-card--link{text-decoration:none;transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
+.surface-card--link:hover{border-color:var(--brand);box-shadow:var(--shadow-s)}
+.surface-card-go{font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong)}
+/* ── Discover card previews ─────────────────────────────────────────────────
+   A browse surface has to show what there is to browse. These sit above the
+   title and are drawn from the real gallery data (see PREVIEWS in
+   SurfaceLanding.jsx), with the count as a pill over the corner — the shape
+   Webflow's Libraries grid uses. Cards for libraries that have not shipped
+   carry no preview, which is what makes live and coming-soon read apart at a
+   glance instead of via a badge you have to find. */
+.surface-card-preview{position:relative;display:block;overflow:hidden;margin:-4px 0 6px;padding:14px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-2)}
+/* The card's bottom rail: the call to action on the left, how much is in there
+   on the right. `margin-top:auto` moves here from .surface-card-go, so it is
+   the rail that is pushed to the foot and the two stay on one baseline. */
+.surface-card-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:4px}
+.surface-card-meta{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--t3);white-space:nowrap}
+/* Palettes — three real systems, each a row of its own swatches. */
+.scp-stack{display:flex;flex-direction:column;gap:6px}
+.scp-row{display:flex;gap:4px;height:22px}
+.scp-chip{flex:1 1 0;min-width:0;border-radius:5px;box-shadow:inset 0 0 0 1px rgb(0 0 0/.06)}
+/* Gradients — three real gradients at the angle they are actually stored at. */
+.scp-tiles{display:flex;gap:6px;height:78px}
+.scp-tile{flex:1 1 0;min-width:0;border-radius:var(--radius-s);box-shadow:inset 0 0 0 1px rgb(0 0 0/.06)}
+/* Type — a specimen block in the two families the app actually ships (see the
+   note in SurfaceLanding.jsx: --display is Manrope, the same face as --font). */
+.scp-type{display:flex;flex-direction:column;justify-content:center;gap:4px;height:78px;color:var(--t0);overflow:hidden}
+.scp-type-display{font-size:30px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.scp-type-body{font-size:14px;font-weight:400;color:var(--t1);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scp-type-mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--t2);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scp-icons{display:flex;align-items:center;justify-content:space-between;gap:8px;height:78px;color:var(--t1)}
+.scp-icon svg{width:24px;height:24px}
+.scp-lines{display:flex;flex-direction:column;justify-content:center;gap:6px;height:78px}
+.scp-line{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 9px;border-radius:var(--radius-s);background:var(--bg-1);border:1px solid var(--border);font-size:var(--fs-micro);color:var(--t2)}
+.surface-card--link:hover .surface-card-preview{border-color:var(--brand)}
+/* The surface heroes are NOT the homepage hero. See the note in
+   SurfaceLanding.jsx: they carry a fraction of the content and inherited a
+   min-height that left 401px of the first screen empty at 1440x900.
+   Doubled class on purpose: `.home-hero` is declared 100+ lines further down
+   the sheet, so at equal specificity IT would win and this rule would be a
+   dead letter — which is exactly what happened on the first attempt. */
+.home-hero.home-hero--surface{min-height:0;padding-bottom:var(--s-7)}
+/* The value-pillar cards (sl-pillar-) and the decorative world map (wmap-)
+   were deleted with the sections that used them — see the header comments in
+   SurfaceLanding.jsx and ColorLanding.jsx. Neither selector has a element
+   left in src/, and src/components/WorldMap.jsx went with them. */
+
+/* ══ Sales / home page (home-) ══ */
+/* The accent radial wash is GONE. V2's ground is warm bone (--bg-0 #EFEEE9) and
+   content floats on white --surf cards above it; the spec is explicit that the
+   page is not tinted with the accent hue, and the blue wash over the bone read
+   as a colour cast rather than as depth.
+   Docs: docs/reference/design-language-v2.md#page-background */
+.home{position:relative;overflow-x:clip;background:var(--bg-0)}
+.home::before{content:"";position:absolute;inset:0 0 auto;height:760px;pointer-events:none;opacity:.46;background-image:
+  linear-gradient(color-mix(in srgb,var(--t0) 4%,transparent) 1px,transparent 1px),
+  linear-gradient(90deg,color-mix(in srgb,var(--t0) 4%,transparent) 1px,transparent 1px);
+  background-size:48px 48px;mask-image:linear-gradient(to bottom,#000,transparent 82%)}
+/* The sales-page measure is deliberately capped at 1216px of CONTENT, but its
+   gutter is the shared one — below the cap the homepage's content edge lands
+   exactly where the nav's and the footer's do. The cap carries the gutter so
+   widening the gutter narrows the page instead of the measure. */
+.home-container{max-width:calc(1216px + 2*var(--page-inline));margin:0 auto;padding-inline:var(--page-inline)}
+.home-section{padding-top:var(--sec-pad);padding-bottom:0}
+.home-head{max-width:720px}
+.home-head-center{margin:0 auto;text-align:center}
+.home-h2{font-size:var(--fs-h1);font-weight:700;letter-spacing:-.028em;line-height:1.06;color:var(--t0);text-wrap:balance;margin-top:16px}
+.home-lede{font-size:var(--fs-lede);color:var(--t1);line-height:1.5;max-width:60ch;margin-top:16px;text-wrap:pretty}
+.home-head-center .home-lede{margin-inline:auto}
+/* The hero owns the first screen. It was a flat 720px, which on any laptop
+   taller than that left the workbench sitting in the opening viewport — the
+   founder's "the mini tools are visible before scrolling". A fixed pixel height
+   cannot answer that, because the fold is a property of the VIEWPORT.
+   `100svh` is: the small-viewport unit, so a mobile browser's collapsing URL bar
+   cannot make the hero taller than the screen it is measured against. Clamped at
+   980px so an ultra-tall monitor does not stretch the copy into a void, and
+   floored by the content itself via min-height on a flow element. */
+/* THE FLOOR CAME DOWN FROM min(100svh,980px) TO min(78svh,760px), MEASURED.
+
+   #413 reported the hero leaving dead space with none of the next section on
+   screen. Re-measured here at twenty widths on the production build, one fresh
+   browser context per width (never a resize):
+
+     width x height   hero h   last ink   dead px   next section visible
+     1080 x 900        900.0     607.8     292.3     0px
+     1280 x 900        900.0     653.0     247.0     0px
+     1440 x 900        900.0     687.3     212.7     0px
+     1536 x 900        900.0     690.4     209.6     0px
+     1920 x 1080       980.0     738.4     241.6     100px
+
+   Every width from 1080 to 1536 put the next section's top edge EXACTLY at the
+   fold. That is the worst possible place for it: a page that ends flush at the
+   viewport edge reads as finished, and the 200-290px of empty hero above it is
+   what the visitor scrolls past to find out otherwise.
+
+   Below 1080 the hero was already content-height — 111-350px of the next
+   section showed and there was a constant 46px of trailing space. So the
+   defect was never the hero's CONTENT, it was the floor overriding it.
+
+   WHY THIS NUMBER. 78svh/760px sits just under the hero's own content height
+   at every desktop width, so the content floors it and the floor only does its
+   job on short viewports. What that buys, re-measured after the change, is a
+   deliberate 165-320px peek at every width — enough to show the next section
+   has begun.
+
+   AND IT DOES NOT UNDO THE REASON THE FLOOR EXISTS. The founder's note was
+   "the mini tools are visible before scrolling". The section that peeks is
+   `.hsteps`, whose first --sec-pad (160px at 1440) is padding and whose next
+   element is the heading — the workbench sits far below that. The peek shows
+   the section has started; it does not show the tools. */
+.home-hero{position:relative;isolation:isolate;text-align:center;max-width:1180px;min-height:min(78svh,760px);margin:0 auto;padding:calc(var(--chrome-h) + var(--s-7)) 24px var(--s-8)}
+/* V2 display scale — design-language-v2.md, "Display scale". */
+/* LINE-HEIGHT AND THE HIGHLIGHT ARE COUPLED, which is not obvious and cost a
+   visible break on a phone. `.home-mark` paints a background on an INLINE
+   element, so its box is the line box — and at line-height below 1 the line box
+   is shorter than the glyphs it contains, so a marked run on one visual line
+   paints over the descenders of the line above it.
+
+   That never showed while the headline was two short lines that did not wrap
+   inside a span. The current headline wraps to four visual lines at 390px, both
+   marked and unmarked, and the highlight sat on top of the words above it.
+
+   .98 stays where the line cannot collide with itself; anywhere the headline is
+   guaranteed to wrap, the line box gets enough height to hold its own
+   background. Measured at 390, 768 and 1440. */
+/* THE ONE HEADLINE ON THE SITE THAT IS SIZED BY HEIGHT AS WELL AS WIDTH.
+   `clamp(46px, 6.6vw, 96px)` reads the viewport WIDTH only, and a laptop is
+   wide and short. Measured 2026-09-15 on the built preview, this headline
+   wraps to four lines at every desktop width from 960 to 1920, and its share
+   of the screen climbs as the window gets shorter:
+     1920x1080   96px   365px   34% of the viewport
+     1656x910    96px   365px   40%   <- the founder's own window
+     1512x850    96px   365px   43%
+     1440x780    95px   361px   46%
+     1366x768    90px   343px   45%
+   34% is the design. 46% is the same rule mis-serving a shorter screen, and it
+   is what he reported as "on smaller desktop pages the scale seems too large".
+   Nothing was below the fold at any of those sizes, so this is proportion, not
+   overflow, which is why the fix is the type and not the layout.
+   `min(6.6vw, 9.5svh)` takes whichever axis is tighter, holding the share at
+   34-37% across all ten sizes instead of letting it climb. Every other hero on
+   the site was measured the same way and none of them needed it: the next
+   largest is /create/font-gallery at 25% and the rest sit under 13%. `svh`
+   rather than `vh` matches .home-hero's own min-height, and the 900px block
+   below replaces this declaration outright, so no phone ever reads a vh here. */
+.home-hero-h1{font-size:clamp(46px,min(6.6vw,9.5svh),96px);font-weight:700;letter-spacing:-.045em;line-height:.98;color:var(--t0);text-wrap:balance}
+/* Measured at 390x844. Two things were wrong and they compound:
+   the clamp floors at 46px, which puts this headline on FOUR lines and fills
+   the whole first screen with it; and at line-height 1.08 the descender of
+   "stay" reaches into the band where the next line paints its highlight, so
+   the mark covered the "y". A smaller floor gives three lines, and the extra
+   leading clears the descender. Both verified by screenshot, not by eye. */
+@media(max-width:900px){.home-hero-h1{font-size:clamp(34px,9vw,58px);line-height:1.14}}
+.home-hero-hint{animation:home-hero-rise .56s var(--ease-entrance) .8s both}
+.home-hero-hint{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-top:var(--s-4)}
+@media(max-width:1024px){
+  .home-hero{min-height:auto}
+  .surface-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  .home-hero{padding-top:calc(var(--chrome-h) + var(--s-8))}}
+@media(max-width:480px){
+  .surface-grid{grid-template-columns:1fr}}

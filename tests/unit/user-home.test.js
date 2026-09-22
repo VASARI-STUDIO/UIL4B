@@ -374,9 +374,15 @@ test('the nav Home control still points at the sales page', () => {
   assert.match(nav, /to="\/home"/, 'the nav logo / Home link must still reach /home')
 })
 
-test('the sales page is still auth-unaware, so nothing about it can flash', () => {
+test('the sales page never routes on auth, so nothing about it can flash', () => {
   // Kept from first-run-destination.test.js and load-bearing here: the routing
-  // decision lives in App.jsx, so Home.jsx renders identically for everyone and
-  // cannot re-render into a different page once auth resolves.
-  assert.ok(!/useAuth/.test(read('src/pages/Home.jsx')))
+  // decision lives in App.jsx, made once from a synchronous hint, so the sales
+  // page cannot re-route once auth resolves.
+  //
+  // Home.jsx was deleted on 2026-09-18; src/pages/Spectrum.jsx is the sales
+  // page and it does read auth, to choose where its CTA points. Reading auth is
+  // fine. ROUTING on it here is not.
+  const sales = read('src/pages/Spectrum.jsx')
+  assert.ok(!/<Navigate\b/.test(sales), 'the sales page renders a redirect of its own')
+  assert.ok(!/useNavigate\(/.test(sales), 'the sales page navigates imperatively')
 })

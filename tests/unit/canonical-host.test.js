@@ -126,11 +126,14 @@ function jsonLdOf(html, label) {
 
 test('the probe is holding the real build', { skip }, () => {
   const docs = shippedDocuments()
-  // 39 route shells + dist/index.html + the 404 shell. If the build stops
+  // 38 route shells + dist/index.html + the 404 shell. The count dropped from
+  // 39 on 2026-09-18: /create/color was the one Create category home that
+  // rendered a page, the founder deleted that landing when Spectrum became `/`,
+  // and a bouncing home gets no crawlable shell. If the build stops
   // producing one of these the read throws above rather than passing quietly.
-  assert.equal(docs.length, 41, 'the matrix and the published document set disagree')
-  assert.equal(prerenderRoutes().length, 39,
-    'the route matrix moved — every count in this file is calibrated against 39 route shells')
+  assert.equal(docs.length, 40, 'the matrix and the published document set disagree')
+  assert.equal(prerenderRoutes().length, 38,
+    'the route matrix moved — every count in this file is calibrated against 38 route shells')
   for (const { route, html } of docs) {
     assert.ok(html.length > 2000, `${route} is a stub, not a built shell (${html.length} bytes)`)
     // The correct origin IS there, and not once by accident: canonical (except
@@ -171,8 +174,8 @@ test('canonical, og:url, og:image and twitter:image are on the apex in every she
       checked += 1
     }
   }
-  // 41 documents x 3 always-present tags, + a canonical on all but the 404.
-  assert.equal(checked, 41 * 3 + 40, 'fewer tags were read than the shells contain')
+  // 40 documents x 3 always-present tags, + a canonical on all but the 404.
+  assert.equal(checked, 40 * 3 + 39, 'fewer tags were read than the shells contain')
 })
 
 test('every URL in the shipped JSON-LD is on the apex', { skip }, () => {
@@ -190,7 +193,7 @@ test('every URL in the shipped JSON-LD is on the apex', { skip }, () => {
   // Positive control: the walk found real URLs, so "none of them is wrong" is
   // a statement about something. Every shell carries at least a WebApplication
   // url, and 16 carry a BreadcrumbList whose every item is a URL too.
-  assert.ok(ours.length >= 41, `only ${ours.length} JSON-LD URLs were read across 41 shells`)
+  assert.ok(ours.length >= 40, `only ${ours.length} JSON-LD URLs were read across 40 shells`)
 })
 
 // ── The other published artefacts ───────────────────────────────────────────
@@ -221,7 +224,7 @@ test('dist/llms.txt advertises the apex and nothing else', { skip }, () => {
 test('dist/sitemap.xml asks for the apex to be crawled', { skip }, () => {
   const xml = fs.readFileSync(path.join(DIST, 'sitemap.xml'), 'utf8')
   const locs = [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map(([, url]) => url)
-  assert.equal(locs.length, 39, `the sitemap advertises ${locs.length} URLs`)
+  assert.equal(locs.length, 38, `the sitemap advertises ${locs.length} URLs`)
   for (const url of locs) {
     assert.ok(url.startsWith(`${SITE_ORIGIN}/`),
       `sitemap.xml asks Google to crawl ${url}`)

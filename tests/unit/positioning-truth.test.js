@@ -188,13 +188,15 @@ test('the headline pin can fail', () => {
 // ── The surfaces derive rather than restate ────────────────────────────────
 
 test('the homepage renders its headline and sub from the module, not from typed strings', () => {
-  const home = read('src/pages/Home.jsx')
+  // THE FILE MOVED, THE RULE DID NOT. This read src/pages/Home.jsx until
+  // 2026-09-18; the founder replaced it with src/pages/Spectrum.jsx, which
+  // renders the same founder sentence from the same module.
+  const home = read('src/pages/Spectrum.jsx')
 
   // The hero must reference the constants…
-  assert.match(home, /HERO_HEADLINE\.lead/, 'the hero h1 no longer renders the assembled headline from positioning.js')
+  assert.match(home, /heroHeadlineText\(\)/, 'the hero h1 no longer renders the assembled headline from positioning.js')
   assert.match(home, /HERO_HEADLINE\.mark/, 'the hero h1 no longer renders the highlighted run from positioning.js')
   assert.match(home, /line\(SURFACE_LINE\.homeHeroSub\)/, 'the hero sub-line no longer derives from positioning.js')
-  assert.match(home, /line\(SURFACE_LINE\.toolsSectionHeading\)/, 'the tools section heading no longer derives from positioning.js')
 
   // …and must NOT also carry the sentences as literals. A page that renders
   // from the module AND keeps a typed copy is one edit away from disagreeing
@@ -238,7 +240,8 @@ test('every SURFACE_LINE mapping has a surface that actually reads it', () => {
   // a day: declared in SURFACE_LINE while the three surfaces still typed their
   // own sentence. Each key must be read, by name, by at least one file.
   const consumers = [
-    'src/pages/Home.jsx',
+    'src/pages/Spectrum.jsx',
+    'src/components/spectrum/spectrumFacts.js',
     ...DERIVED_SURFACES.map(([file]) => file),
     'scripts/og-cards.mjs',
   ].map((file) => [file, read(file)])

@@ -53,6 +53,37 @@ const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
 //   /create/font-gallery      135          195         135       159
 //   /discover/prompts          80          172          80        92
 //
+// RE-DERIVED 2026-09-18, when the Spectrum redesign gave the filters a row of
+// their own. That is the app design file's own toolbar anatomy — one panel,
+// the search and the action on the first line, the filter chips full-width
+// under them — and it is what stops /create/icons and /create/emoji rendering
+// DIFFERENT toolbars on the two tabs of one page: the icons tray is expanded
+// at every desktop width and the emoji tray is collapsed at all of them, so a
+// rule that gave a row to chips but not to a trigger would reopen the 145px
+// tab jump the test below this one exists to catch.
+//
+// The ceilings move with it, by THE SAME RULE they were set by — the real
+// height at 1440 plus 24px of slack — not by loosening them until the new
+// layout fits. Measured on the built preview, both themes, at 641/768/834/
+// 1280/1440: every one of these toolbars is now the SAME height at all five
+// widths, which is a stronger statement than the ceiling makes.
+//
+//   surface                 1440   834   ceiling
+//   /discover/gradients       120   124       144
+//   /discover/palettes        120   124       144
+//   /create/emoji             120   124       144
+//   /create/icons             120   124       144
+//   /create/font-gallery      187   191       211
+//   /discover/prompts         120   124       144
+//
+// The 834 column is 4px over the 1440 one for the reason the tab test records:
+// @media(pointer:coarse) floors a tray option and a collapsed trigger at the
+// WCAG 44px target, and this file opens its pages with an iPad UA.
+//
+// What the band was written to catch is unchanged and still caught: the
+// failure was 192px in four ragged rows with the action stranded, against 68
+// at 1440. Two designed rows at every width is not that.
+//
 // /create/emoji's 1440 height is 213 because its 12-category tray genuinely
 // wraps to three lines on a desktop too; the ceiling is derived the same way
 // regardless, and the surface still went 225 → 68.
@@ -72,12 +103,12 @@ const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
 // have overruled a recorded choice on a surface #318 did not touch. #323 retired
 // that toolbar, so the exemption retired with it.
 const TOOLBARS = [
-  ['/discover/gradients', '.lbry-toolbar', 92, 0.6],
-  ['/discover/palettes', '.lbry-toolbar', 92, 0.6],
-  ['/create/emoji', '.lbry-toolbar', 237, 0.6],
-  ['/create/icons', '.lbry-toolbar', 92, 0.6],
-  ['/create/font-gallery', '.lbry-toolbar', 159, 0.6],
-  ['/discover/prompts', '.lbry-toolbar', 92, 0.6],
+  ['/discover/gradients', '.lbry-toolbar', 144, 0.6],
+  ['/discover/palettes', '.lbry-toolbar', 144, 0.6],
+  ['/create/emoji', '.lbry-toolbar', 144, 0.6],
+  ['/create/icons', '.lbry-toolbar', 144, 0.6],
+  ['/create/font-gallery', '.lbry-toolbar', 211, 0.6],
+  ['/discover/prompts', '.lbry-toolbar', 144, 0.6],
 ]
 
 async function open(browser, width, path, waitFor) {

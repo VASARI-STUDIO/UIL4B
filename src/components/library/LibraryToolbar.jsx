@@ -20,8 +20,18 @@ import LibrarySearch from './LibrarySearch'
 // than under it because pinning the search row while the rest scrolled out from
 // under it is a fault that tool already had once and fixed.
 
+// `count` is the quiet line the app design puts beside the search field on the
+// icons page — "60 of 200,000" — and it is a SLOT rather than a computation:
+// only the surface knows what it is showing against what, and a toolbar that
+// counted its own children would be counting the ones that happen to be
+// mounted. Optional, so the five surfaces that state their count in the result
+// head below the toolbar (DiscoverResultHead, which is where the design puts
+// it for the galleries) are unchanged. Not aria-live: the result head already
+// announces the same number, and two live regions saying it is the interrupting
+// live region the a11y sweep forbids.
 export default function LibraryToolbar({
   search,
+  count,
   action,
   extra,
   children,
@@ -39,6 +49,7 @@ export default function LibraryToolbar({
             label={search.label}
           />
         )}
+        {count && <span className="lbry-count">{count}</span>}
         {children && <div className="lbry-toolbar-filters">{children}</div>}
         {action && <div className="lbry-toolbar-action">{action}</div>}
       </div>

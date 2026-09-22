@@ -20,6 +20,7 @@ import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/colour.css'
+import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 
 // ── TWO QUESTIONS, TWO TRAYS ────────────────────────────────────────
@@ -324,7 +325,7 @@ export default function PaletteGallery({ toast }) {
   ) : null
 
   return (
-    <div className="sec pgl-page">
+    <div className="sec lib-surface pgl-page">
       {/* NO `description` (founder decision, 2026-09-13). The sentence that sat
           here — "Colour systems with a point of view … make it yours." — was the
           same template line the Gradient Library ran, word for word in its second

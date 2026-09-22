@@ -271,12 +271,22 @@ test('THE ONE THAT KEEPS IT TRUE: every parent crumb points at a page that exist
       + 'shell of its own — it is a redirect, not a page')
   }
   // Stated by name, because it is the specific mistake being avoided.
-  for (const tool of ['/create/font-pair', '/create/emoji', '/create/aspect-ratio', '/create/alt-text']) {
+  //
+  // `/create/contrast` JOINED THIS LIST on 2026-09-18 and it used to be the
+  // counter-example below it. Its parent was `/create/color`, the one Create
+  // category home that rendered a page; the founder deleted that landing when
+  // Spectrum became `/`, so all five colour tools are now in the same position
+  // as the four already named here — a category home that only redirects, and
+  // therefore no parent rather than a fabricated one.
+  for (const tool of [
+    '/create/font-pair', '/create/emoji', '/create/aspect-ratio', '/create/alt-text',
+    '/create/contrast', '/create/palette', '/create/tint', '/create/gradient',
+  ]) {
     assert.equal(parentOf(tool), null,
       `${tool}'s category home redirects, so it must not get a fabricated parent`)
   }
-  // And the ones that DO have a real parent still do.
-  assert.equal(parentOf('/create/contrast'), '/create/color')
+  // And the one that DOES have a real parent still does. /discover is a page in
+  // its own right, which is what makes it a legitimate middle crumb.
   assert.equal(parentOf('/discover/palettes'), '/discover')
 })
 

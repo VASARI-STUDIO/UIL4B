@@ -1,0 +1,50 @@
+diff --git a/firestore.rules b/firestore.rules
+index 1668a5b..207e91c 100644
+--- a/firestore.rules
++++ b/firestore.rules
+@@ -215,7 +215,7 @@ service cloud.firestore {
+         return request.resource.data.payload is map
+           && request.resource.data.payload.keys().hasOnly([
+                'type', 'angle', 'stops', 'author', 'category', 'url',
+-               'c1', 'c2', 'colors'])
++               'c1', 'c2', 'colors', 'svg'])
+           && (!('url' in request.resource.data.payload)
+               || (request.resource.data.payload.url is string
+                   && request.resource.data.payload.url.size() <= 2048))
+@@ -241,7 +241,26 @@ service cloud.firestore {
+                   && request.resource.data.payload.stops.size() <= 32))
+           && (!('colors' in request.resource.data.payload)
+               || (request.resource.data.payload.colors is list
+-                  && request.resource.data.payload.colors.size() <= 32));
++                  && request.resource.data.payload.colors.size() <= 32))
++          // AN ICON IS A DOCUMENT, not a handful of values, so it is the
++          // one payload key that could make this collection expensive. The
++          // cap is utils/iconSubmission.js ICON_MAX_BYTES, stated in bytes
++          // here because size() on a string counts them: 8 KB of markup, a
++          // real icon being 300 bytes to 3 KB. The admin queue reads 200
++          // documents at a time, so this is what bounds that read.
++          //
++          // WHAT THIS RULE DOES NOT DO, said plainly: it cannot tell safe
++          // artwork from a <script> tag. Firestore rules have no regex over
++          // arbitrary content worth trusting for that. The defence is that
++          // submitted markup is NEVER inlined anywhere in the product — the
++          // submitter's preview and the reviewer's queue row both render it
++          // in an <img>, where script does not run and external references
++          // are not fetched — plus normaliseIconSvg() refusing it on the
++          // way in. This rule bounds SIZE, which is the part a client
++          // cannot argue with.
++          && (!('svg' in request.resource.data.payload)
++              || (request.resource.data.payload.svg is string
++                  && request.resource.data.payload.svg.size() <= 8192));
+       }
+ 
+       function submissionShapeOk() {
+@@ -251,7 +270,7 @@ service cloud.firestore {
+           && request.resource.data.keys().hasAll([
+                  'kind', 'name', 'authorUid', 'authorName', 'status', 'payload',
+                  'createdAt'])
+-          && request.resource.data.kind in ['gradient', 'design', 'palette']
++          && request.resource.data.kind in ['gradient', 'design', 'palette', 'icon']
+           && request.resource.data.name is string
+           && request.resource.data.name.size() <= 80
+           && request.resource.data.authorName is string

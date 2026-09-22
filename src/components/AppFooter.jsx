@@ -81,7 +81,16 @@ export default function AppFooter({ compact = false }) {
               it — the four founder lines each already have a surface, and a
               footer that repeats one of them under every page would be the
               "all over the place" he named. The wordmark and the way in stay. */}
-          <Link className="app-footer-start" to="/create/color">
+          {/* READ FROM THE TREE, not typed. This said `/create/color` until
+              2026-09-18, which was correct while that was the one Create
+              category home that rendered a page. The founder deleted the colour
+              landing when Spectrum became `/`, so the URL now answers a 301 at
+              the edge and a bounce in the client — exactly the defect the
+              comment on FOOTER_CREATE above describes ("Imagery" pointing at
+              /create/imagery). categoryDestination() answers it from
+              CreateTool.jsx's own rule, so this link cannot go stale again.
+              tests/unit/tool-tree-surfaces.test.js fails the build if it does. */}
+          <Link className="app-footer-start" to={categoryDestination('colour')}>
             Start with colour <span aria-hidden="true">&rarr;</span>
           </Link>
         </div>

@@ -21,6 +21,7 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/colour.css'
+import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 
 // /discover/gradients — the Gradient Library. A designgradients-style browse
@@ -202,7 +203,7 @@ export default function GradientGallery({ toast }) {
   ) : null
 
   return (
-    <div className="sec grg-wrap">
+    <div className="sec lib-surface grg-wrap">
       {/* NO `description` (founder decision, 2026-09-13): the sentence here ran
           the same template as the Palette Library’s — "…with a point of view …
           make it yours." — which is what held both pages at 7 on

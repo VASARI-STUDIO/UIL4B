@@ -233,66 +233,38 @@ test('THE FOOTER ONE: no footer link sends a visitor through a bounce or a 301',
 test('the footer names Create groups rather than typing their URLs', () => {
   // The subtractive half. Three of the four rows happened to be right by hand;
   // the guard is that they are no longer written by hand at all, so the next
-  // one cannot be wrong. /create/color survives as the "Start with colour" CTA
-  // — it is a real page, and a hero button naming its own destination is not
-  // the same thing as a category list guessing at four of them.
+  // one cannot be wrong.
+  //
+  // THE LAST TYPED URL WENT ON 2026-09-18. `/create/color` survived here as the
+  // "Start with colour" CTA on the argument that it was a real page, and a hero
+  // button naming its own destination is not a category list guessing at four
+  // of them. The founder deleted that page with the Spectrum swap, so the URL
+  // became a bounce and a 301 and the CTA now asks the tree like every other
+  // row. The expected list is empty, which is the strongest form of this
+  // assertion: the file may not type a /create/ route at all.
   const src = stripComments(read('src/components/AppFooter.jsx'))
   const createPaths = [...src.matchAll(/(['"])(\/create\/[a-z0-9-]+)\1/g)].map((m) => m[2])
-  assert.deepEqual([...new Set(createPaths)], ['/create/color'],
+  assert.deepEqual([...new Set(createPaths)], [],
     'AppFooter.jsx types a /create/ category URL again — name the group id and let the tree answer')
   assert.match(src, /categoryDestination\(groupId\)/, 'the footer no longer derives its Create links')
+  assert.match(src, /categoryDestination\('colour'\)/,
+    'the "Start with colour" CTA no longer derives its destination')
 })
 
-test('the homepage tools grid links the destination, not the bouncing home', () => {
-  // The same defect, four instances, on the surface that matters most: every
-  // category head on the homepage linked `group.home`, and four of the six only
-  // redirect. The five literal step-rail routes that used to be parked here as
-  // C9 are derived now too — see the two step-rail tests below — so this still
-  // reads the one expression that changed rather than every path in the file.
-  const src = stripComments(read('src/pages/Home.jsx'))
-  assert.ok(src.includes('htool-head'), 'stripping ate Home.jsx own JSX')
-  assert.ok(!src.includes('to={group.home}'),
-    'the homepage category heads link group.home again — four of the six only redirect')
-  assert.match(src, /to=\{categoryDestination\(group\)\}/,
-    'the homepage no longer asks the tree where a category link should go')
-})
+// ── THE HOMEPAGE TOOLS GRID AND STEP RAIL ───────────────────────────────────
+//
+// Three tests stood here and they are deleted, not re-pointed, because their
+// subject is deleted: src/pages/Home.jsx rendered a `.htool-head` category grid
+// and a five-row STEPS rail, and the founder replaced the whole page with
+// src/pages/Spectrum.jsx on 2026-09-18.
+//
+// What they guarded is guarded elsewhere, which is why this is a deletion and
+// not a gap:
+//   · "link the destination, not the bouncing home" — the rule itself is
+//     `categoryDestination()`, asserted directly by the two tests above this
+//     comment, and Spectrum's own bench reads it (spectrumFacts.js `BENCH`
+//     takes `to: categoryDestination(group.id)`);
+//   · "the rail names a tool rather than typing its route" — Spectrum's panels
+//     carry no typed routes either, and tests/unit/spectrum-truth.test.js reads
+//     every figure and route on that page back to the module that owns it.
 
-// ── The homepage step rail ──────────────────────────────────────────────────
-
-test('the step rail names a tool rather than typing its route', () => {
-  // The last hand-kept copy of a route table on the homepage. Five `to:`
-  // literals sat in STEPS with no guard, eighty lines from the CTA that used
-  // them and a whole file away from CREATE_GROUPS, which owns where a tool
-  // actually lives. This is the subtractive half: the table may no longer say a
-  // route at all, so the next edit cannot put a wrong one back.
-  const block = arrayBlock('src/pages/Home.jsx', 'STEPS')
-  assert.ok(block.includes("tab: 'palette'"), 'stripping ate the step rail own code')
-  assert.ok(!block.includes('/create/'), 'STEPS names a /create/ URL again — name the tool id and let the tree answer')
-  assert.ok(!block.includes('to:'), 'STEPS declares a route again')
-  const src = stripComments(read('src/pages/Home.jsx'))
-  assert.match(src, /to=\{toolRoute\(step\.tool\)\}/,
-    'the step rail no longer asks the tree where its CTA should go')
-})
-
-test('every step-rail CTA is a real live tool, at the tree own route', () => {
-  // The additive half, and the one that would have caught a silent move: the
-  // five destinations are unchanged from the literals they replaced. Four of
-  // them are NOT their group's categoryDestination() — Colour resolves to
-  // /create/color and Type to /create/font-gallery — so deriving them from the
-  // wrong helper would still have produced five valid URLs, four of them wrong.
-  const tools = byId()
-  const block = arrayBlock('src/pages/Home.jsx', 'STEPS')
-  const ids = [...block.matchAll(/tool: '([a-z0-9-]+)'/g)].map((m) => m[1])
-  assert.equal(ids.length, 5, `the step rail declares ${ids.length} tools, not five`)
-  for (const id of ids) {
-    const tool = tools.get(id)
-    assert.ok(tool, `the step rail advertises "${id}", which is not a tool in CREATE_GROUPS`)
-    assert.ok(!tool.soon, `${id} is still in the workshop and must not be a homepage CTA`)
-    assert.equal(toolRoute(id), tool.route, `${id} is advertised at the wrong route`)
-  }
-  assert.deepEqual(ids.map(toolRoute), [
-    '/create/palette', '/create/gradient', '/create/file-converter',
-    '/create/icons', '/create/type-scale',
-  ], 'a step-rail destination moved — the derivation is not equivalent to the literals it replaced')
-  assert.throws(() => toolRoute('not-a-tool'), /not a tool in CREATE_GROUPS/)
-})

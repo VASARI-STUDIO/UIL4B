@@ -202,13 +202,13 @@ test('the raw search for the founder address finds it when it is there', () => {
 
 // ── The real build ──────────────────────────────────────────────────────────
 
-/** The 41 documents the build publishes, addressed by the ROUTE they serve
+/** The 40 documents the build publishes, addressed by the ROUTE they serve
  *  rather than by walking whatever happens to be on disk. */
 function publishedDocuments(files) {
   const byRel = new Map(files.map((f) => [f.rel, f]))
   const routes = prerenderRoutes()
-  assert.equal(routes.length, 39,
-    'the route matrix moved — the counts in this file are calibrated against 39 route shells')
+  assert.equal(routes.length, 38,
+    'the route matrix moved — the counts in this file are calibrated against 38 route shells')
   const wanted = [
     ['/', 'index.html'],
     ...routes.map((route) => [route, [...route.split('/').filter(Boolean), 'index.html'].join('/')]),
@@ -227,7 +227,10 @@ test('the probe is holding the real build', { skip }, () => {
   assert.ok(bytes >= 2_000_000, `dist/ is only ${bytes} bytes — this is not a full build`)
 
   const docs = publishedDocuments(files)
-  assert.equal(docs.length, 41, 'the published document set is not 39 route shells + index + 404')
+  // 38 route shells + index + 404. It was 39 + 2 until 2026-09-18, when the
+  // colour landing was deleted with the Spectrum swap and /create/color stopped
+  // getting a shell of its own.
+  assert.equal(docs.length, 40, 'the published document set is not 38 route shells + index + 404')
   for (const doc of docs) {
     assert.ok(doc.bytes > 2000, `${doc.route} is a stub, not a built shell (${doc.bytes} bytes)`)
   }
@@ -237,8 +240,8 @@ test('the probe is holding the real build', { skip }, () => {
   // numbers in the header stop describing reality.
   const preloaded = docs.filter((d) =>
     /<link rel="modulepreload"[^>]*href="\/assets\/constants-[A-Za-z0-9_-]+\.js"/.test(d.text))
-  assert.equal(preloaded.length, 41,
-    `the constants chunk is modulepreloaded by only ${preloaded.length} of 41 published documents`)
+  assert.equal(preloaded.length, 40,
+    `the constants chunk is modulepreloaded by only ${preloaded.length} of 40 published documents`)
 
   // The scan produced addresses. "None of them is forbidden" below is a claim
   // about this set, and an empty set would make it vacuous.

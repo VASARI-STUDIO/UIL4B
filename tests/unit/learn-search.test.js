@@ -147,7 +147,7 @@ test('the page reaches the extractor through the virtual module, lazily, and han
   assert.ok(!/<input/.test(page), 'LearnGuideIndex.jsx renders its own <input> instead of the shared LibrarySearch')
 
   // And the landing renders it where the flat grid used to be.
-  const landing = read('src/pages/SurfaceLanding.jsx')
+  const landing = read('src/pages/SurfaceIndex.jsx')
   assert.match(landing, /<LearnGuideIndex \/>/, 'SurfaceLanding.jsx no longer renders the guide index')
   assert.ok(!/LEARN_ARTICLES\.map\(\(a\) => \(\s*<Link className="lidx-card"/.test(landing),
     'SurfaceLanding.jsx still renders the flat, ungrouped card grid beside the index')

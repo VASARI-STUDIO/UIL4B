@@ -35,27 +35,21 @@ import {
   numberWord,
   route,
 } from '../components/spectrum/spectrumFacts'
-// DEFERRED, NOT `styles/pages/`, AND THAT IS A TEMPORARY ANSWER.
+// THE FRONT DOOR'S SHEET, SO IT IS RENDER-BLOCKING ON PURPOSE.
 //
-// This sheet is 54 KB. While Spectrum and the old Home are BOTH reachable — and
-// they are, because App.jsx still renders <Home /> at `/` and `/home` — wiring
-// this page eagerly puts both pages' CSS in the render-blocking sheet at once
-// and `tests/unit/home-asset-budget.test.js` goes red at 317,140 bytes against
-// a 300,000 budget. It was red, measured, before this moved.
+// This lived in `styles/deferred/` while Spectrum was a preview route at
+// `/spectrum` and the old Home still owned `/`: two sales pages in the entry
+// graph at once put both stylesheets in the render-blocking sheet and
+// `tests/unit/home-asset-budget.test.js` went red at 317,140 bytes against a
+// 300,000 budget.
 //
-// The test also states the resolution: "Rules that only one route can reach
-// belong in src/styles/deferred/, imported by that route." So this sheet lives
-// there and App.jsx reaches this page through `lazy()`, which is the sanctioned
-// pairing and costs the entry graph nothing.
-//
-// WHEN SPECTRUM BECOMES `/` THIS GOES BACK. The front door must not wait on a
-// chunk — that is why Home is a static import in App.jsx today — so the swap
-// commit moves this file to `src/styles/pages/spectrum.css`, makes the import in
-// App.jsx static again, and DELETES the old Home page with its ~262 `.home-*`
-// rule blocks in global.css. That deletion is what pays for this sheet: it
-// cannot happen until Home stops being routed, and it must happen in the same
-// commit that stops routing it. The handover carries the full instruction.
-import '../styles/deferred/spectrum.css'
+// The swap commit resolves that by subtraction rather than by deferral. Home is
+// deleted, its families are out of global.css, and this page is `/` — the first
+// paint, which must not wait on a chunk. So the sheet is a page sheet, the
+// import in App.jsx is static, and the budget test's own positive control now
+// matches `.sp-hero-h1` because this is the headline the entry sheet has to
+// style.
+import '../styles/pages/spectrum.css'
 
 // ═════════════════════════════════════════════════════════════════════════════
 // SPECTRUM — the sales page, built from "UIL4B - Spectrum.dc.html".
@@ -351,7 +345,15 @@ export default function Spectrum() {
 
   return (
     <div className="spectrum">
-      <PillNav />
+      {/* THE MARKETING NAV. `variant="spectrum"` makes PillNav early-return
+          <SpectrumNav /> before its first hook — the floating pill with the
+          wordmark, the three quiet links, the theme cycle and the burger that
+          opens the full-screen menu. The app header (search hints, mega menus,
+          account initials) stays on every other route. W11 owns the component;
+          this is the one line that mounts it, and it landed with the route swap
+          because two specs that read `.pnav-*` on `/` had to move at the same
+          moment. */}
+      <PillNav variant="spectrum" />
 
       {/* The film grain. Fixed, 5%, pointer-events:none, aria-hidden — one SVG
           turbulence filter as a data URI, which is what the design ships and

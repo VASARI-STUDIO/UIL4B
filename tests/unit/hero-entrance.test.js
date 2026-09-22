@@ -37,128 +37,44 @@ const stripHtml = (s) => s.replace(/<!--[\s\S]*?-->/g, '')
 
 const css = stripCss(read('src/styles/global.css'))
 const html = stripHtml(read('index.html'))
-const motion = stripJs(read('src/hooks/useHomeMotion.js'))
 
-// ── The entrance does not wait on a chunk ───────────────────────────────────
-
-test('the hero entrance is CSS, not a GSAP timeline', () => {
-  // A fire-once entrance does not need a timeline, and putting it in one means
-  // it cannot begin until the import resolves.
-  for (const sel of ['.home-hero-line-in', '.home-hero-sub', '.home-hero-hint']) {
-    assert.ok(!motion.includes(sel),
-      `${sel} is animated from useHomeMotion.js again — the entrance must not wait on the GSAP chunk`)
-  }
-  assert.match(css, /@keyframes home-hero-clip-up/)
-  assert.match(css, /@keyframes home-hero-rise/)
-})
-
-test('no JS class holds the hero hidden', () => {
-  // `.motion-armed` set opacity:0 on the headline until GSAP arrived. If the
-  // chunk failed, a bug in the failure path left the hero invisible for good.
-  assert.ok(!motion.includes('motion-armed'),
-    'the arming class is back; the hero must supply its own start state via animation-fill-mode')
-  assert.ok(!/\.home\.motion-armed/.test(css))
-})
-
-test('the hidden start state comes from the animation itself', () => {
-  // `both` fill applies the `from` keyframe before the animation starts, which
-  // is what prevents a flash without needing JS to hide anything.
-  const line = /\.home-hero-line-in\{animation:[^}]*\}/.exec(css)?.[0] || ''
-  assert.match(line, /\bboth\b/, 'the clip-up needs animation-fill-mode: both')
-})
-
-// ── Nothing expensive is animated ───────────────────────────────────────────
-
-test('the entrance animates transform and opacity only', () => {
-  // Anything else — filter, width, top — is laid out or rasterised per frame
-  // and cannot run on the compositor.
-  const frames = /@keyframes home-hero-(?:clip-up|rise)\{[\s\S]*?\}\s*\}/g
-  const blocks = css.match(frames) || []
-  assert.ok(blocks.length >= 2, 'expected both hero keyframe blocks')
-  for (const b of blocks) {
-    const props = [...b.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1])
-    for (const p of props) {
-      assert.ok(['transform', 'opacity'].includes(p),
-        `hero keyframes animate '${p}'; only transform and opacity composite`)
-    }
-  }
-})
-
-test('the blur burn-off is gone', () => {
-  assert.ok(!/filter:\s*blur/.test(motion),
-    'a filter tween is back in the hero timeline — it re-rasterises the largest text every frame')
-})
-
-// ── The clip actually clips ─────────────────────────────────────────────────
-
-// The compensation this reads is expressed in `em` on purpose, so one number
-// holds across the whole clamp(46px, 6.6vw, 96px) hero. Parsed as a number
-// rather than matched as a string, because the VALUE is the contract — a
-// literal match would pass on `.14em`, which was measured as insufficient.
-const lineRule = /\.home-hero-line\{([^}]*)\}/.exec(css)?.[1] || ''
-const markRule = /\.home-mark\{([^}]*)\}/.exec(css)?.[1] || ''
-const emOf = (rule, ...props) => {
-  for (const p of props) {
-    const m = new RegExp(String.raw`(?:^|;)\s*${p}\s*:\s*-?([\d.]+)em`).exec(rule)
-    if (m) return Number(m[1])
-  }
-  return 0
-}
-
-test('the headline lines have a clip container, with room for descenders', () => {
-  assert.match(lineRule, /overflow:\s*hidden/,
-    'without this the clip-up does not clip and the two lines slide through each other')
-  // line-height is .98, so `g` and `y` hang below the box and would be shaved.
-  assert.match(lineRule, /padding-(?:block|bottom):/, 'descenders need room inside the clip')
-  assert.match(lineRule, /margin-(?:block|bottom):\s*-/,
-    'the negative margin must cancel that padding in layout')
-})
-
-// C5 / F-2 (founder batch 2026-08-20). `.home-hero-line` compensated at the
-// BOTTOM ONLY, so the --hi mark — which paints the full inline box, not the
-// line box — was sheared by this same overflow:hidden. Measured in Chromium at
-// a 95.04px computed hero: 19px off the top, 4.56px still off the bottom.
+// ── WHAT THIS FILE STOPPED GUARDING, AND WHERE IT WENT ─────────────────────
 //
-// The fix is a derivation, not a taste call, which is why this test reads
-// numbers. `line-height:.98` against Manrope's 1.368em content area leaves
-// (1.368 - .98) / 2 = .194em of half-leading overflowing EACH edge, and
-// `.home-mark` adds its own `padding-block` on top of that. Anything less than
-// the sum clips again — F-2 originally proposed mirroring the existing .14em,
-// which measurement showed was ~6px short at the 96px cap.
-test('the clip container leaves room on BOTH edges, sized from the font metrics', () => {
-  const HALF_LEADING = 0.194
-
-  const top = emOf(lineRule, 'padding-block', 'padding-top')
-  const bottom = emOf(lineRule, 'padding-block', 'padding-bottom')
-  assert.ok(top >= HALF_LEADING,
-    `top compensation is ${top}em; the half-leading alone needs ${HALF_LEADING}em or the mark shears`)
-  assert.ok(bottom >= HALF_LEADING,
-    `bottom compensation is ${bottom}em; .14em was measured as insufficient`)
-
-  // The mark's own padding grows its painted box on both edges, so the clip
-  // container has to carry the half-leading PLUS that padding.
-  const markPad = emOf(markRule, 'padding-block')
-  assert.ok(top >= HALF_LEADING + markPad,
-    `.home-mark adds ${markPad}em of padding-block, so the clip needs at least `
-    + `${(HALF_LEADING + markPad).toFixed(3)}em; it has ${top}em`)
-  assert.ok(bottom >= HALF_LEADING + markPad,
-    `bottom needs ${(HALF_LEADING + markPad).toFixed(3)}em; it has ${bottom}em`)
-
-  // Padding without the matching negative margin moves the headline instead of
-  // widening the mask, which is a different bug that looks like this one.
-  const mTop = emOf(lineRule, 'margin-block', 'margin-top')
-  const mBottom = emOf(lineRule, 'margin-block', 'margin-bottom')
-  assert.equal(mTop, top, 'the negative top margin must cancel the top padding exactly')
-  assert.equal(mBottom, bottom, 'the negative bottom margin must cancel the bottom padding exactly')
-  assert.match(lineRule, /margin-(?:block|top):\s*-/, 'the top margin must be negative')
-})
+// Seven tests stood here: the entrance was CSS and not a GSAP timeline, no JS
+// class held the headline hidden, the start state came from `animation-fill-mode`,
+// the keyframes touched transform and opacity only, the blur burn-off was gone,
+// and the clip container left room for descenders on both edges.
+//
+// Their subject is deleted. src/pages/Home.jsx, src/hooks/useHomeMotion.js and
+// the `.home-hero-line` / `.home-hero-line-in` clip-up went on 2026-09-18, when
+// the founder made src/pages/Spectrum.jsx the front door. There is no hero left
+// with a GSAP timeline to avoid, an arming class to refuse, or a clip to size.
+//
+// THE ARGUMENTS SURVIVED THE PAGE, and they are held where the new hero lives:
+//   · "the entrance must not wait on a chunk" — Spectrum's word reveal is
+//     `@keyframes sp-word-up` in src/styles/pages/spectrum.css, which is now the
+//     RENDER-BLOCKING sheet (App.jsx imports the page statically), so it cannot
+//     wait on anything;
+//   · "no JS class holds the hero hidden" — the stronger version is asserted by
+//     tests/unit/spectrum-structure.test.js: `.sp-w` declares no transform at
+//     rest, so the resting state IS the final state and the headline is readable
+//     with the animation never running, in the prerendered shell and with motion
+//     off;
+//   · "the first painted frame is the settled one" — scripts/home-shell.mjs
+//     pre-paints that settled headline into the served `/` shell and
+//     tests/unit/home-shell-hero.test.js asserts the shell carries no `.is-in`.
+//
+// What is left in this file is the half that was never about one page: the
+// fonts, their preloads, and the weight axis.
 
 // ── Reduced motion, both directions ─────────────────────────────────────────
 
-test('reduced motion settles the hero instantly, and an explicit opt-in wins', () => {
+test('reduced motion settles the entrance instantly, and an explicit opt-in wins', () => {
   // AppearanceContext treats its own toggle as authoritative — a user may opt
-  // back INTO motion despite an OS-level reduce. useHomeMotion mirrors that, and
-  // the CSS has to agree or the two disagree about the same hero.
+  // back INTO motion despite an OS-level reduce. Every entrance in the app has
+  // to agree with that or the two disagree about the same element;
+  // src/components/spectrum/reducedMotion.js implements the same contract in JS
+  // for the Spectrum page.
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)/)
   assert.match(css, /html:not\(\[data-reduced-motion="false"\]\)[^{]*\{animation:none\}/)
   assert.match(css, /html\[data-reduced-motion="true"\][^{]*\{animation:none\}/)
@@ -170,11 +86,21 @@ test('the fonts are self-hosted, not two third-party round trips', () => {
   assert.ok(!/fonts\.googleapis\.com/.test(html),
     'the stylesheet request is back; the font URL is only discoverable after it parses')
   assert.ok(!/fonts\.gstatic\.com/.test(css), 'font files must be served from our own origin')
-  // Design Language V2 replaced Outfit with two families: Manrope (--font/--display)
-  // and JetBrains Mono (--mono, which V2 makes load-bearing rather than decorative).
+  // THE FILES THIS CHECKED WERE THE RETIRED ONES, and that is why it is worth a
+  // paragraph. It named manrope-* and jetbrains-mono-*, which nothing has
+  // referenced since the Spectrum adoption (dace2339) moved the product to Geist
+  // (--font/--display), Geist Mono (--mono) and Caveat (--hand). Those four files
+  // are still on disk — deliberately, because scripts/og-cards.mjs reads
+  // manrope-latin.woff2 directly to draw the share cards — so the assertion
+  // passed while checking faces the app does not ship. The Geist files could all
+  // have gone missing and it would have stayed green.
+  //
+  // Caveat is deliberately absent: it is the handwritten annotation only, it is
+  // preloaded nowhere, and the preload test below is the one that cares which
+  // faces are on the first-paint path.
   for (const f of [
-    'public/fonts/manrope-latin.woff2', 'public/fonts/manrope-latin-ext.woff2',
-    'public/fonts/jetbrains-mono-latin.woff2', 'public/fonts/jetbrains-mono-latin-ext.woff2'
+    'public/fonts/geist-latin.woff2', 'public/fonts/geist-latin-ext.woff2',
+    'public/fonts/geist-mono-latin.woff2', 'public/fonts/geist-mono-latin-ext.woff2'
   ]) {
     assert.ok(fs.existsSync(path.join(process.cwd(), f)), `${f} is missing`)
   }

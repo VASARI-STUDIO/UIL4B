@@ -7,7 +7,28 @@ import { AI_LIMITS } from '../../config/plans'
 import { COLOUR_SYSTEMS } from '../../config/colourSystems'
 import { CURATED_LIBRARY_PALETTES } from '../../data/paletteLibrary'
 import { contrastRatio, hexToOklch, textColorForBg } from '../../utils/colors'
-import { BENCH } from './spectrumFacts'
+import { BENCH, LIVE_TOOLS } from './spectrumFacts'
+
+// THE RAIL COUNTS WHAT THE HEADLINE COUNTS, AND IT DID NOT.
+//
+// The headline says "Thirteen tools", derived from TOOL_COUNT = live AND not
+// beta. The rail printed `panel.tools.length`, which is live only — so Brand
+// Starter (beta: true) was in the rail's arithmetic and not in the headline's,
+// and the five rail rows added up to fourteen a finger-width from a sentence
+// saying thirteen. Two derivations of one quantity, side by side, and a reader
+// settles it in three seconds.
+//
+// Fixed by counting off the SAME array TOOL_COUNT measures rather than by
+// repeating its predicate here: `LIVE_TOOLS` is `!soon && !beta`, so the rail
+// and the headline cannot drift again. Ship the UI Component Builder and both
+// move together.
+//
+// The panel below a row still LISTS its beta tool, badge and all — hiding a
+// shipped tool to make a count tidy would be the founder's number-one
+// constraint broken for an arithmetic problem. The rail counts the claim; the
+// panel shows the shelf.
+const COUNTED_ROUTES = new Set(LIVE_TOOLS.map((t) => t.route))
+const railCount = (panel) => panel.tools.filter((t) => COUNTED_ROUTES.has(t.route)).length
 
 // ═════════════════════════════════════════════════════════════════════════════
 // THE BENCH — "Say goodbye to bookmark folders."
@@ -478,7 +499,7 @@ export default function SpectrumBench({ head }) {
                 >
                   <span className="sp-rail-no">{panel.no}</span>
                   <span className="sp-rail-label">{panel.label}</span>
-                  <span className="sp-rail-count">{panel.tools.length}</span>
+                  <span className="sp-rail-count">{railCount(panel)}</span>
                 </button>
               </li>
             ))}

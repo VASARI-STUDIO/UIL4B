@@ -342,12 +342,19 @@ test('the sitemap carries no hand-kept per-URL data left to go stale', async () 
 })
 
 test('the category-home assumption is still true in the code it describes', () => {
-  // scripts/route-matrix.mjs excludes four Create category homes because
-  // CreateTool.jsx redirects them to their first tool, and keeps /create/color
-  // because App.jsx renders it above CreateTool. LIVE_TOOLS lives in a .jsx
-  // module Node cannot import, so that is the one fact in the matrix which is
-  // asserted rather than derived — and an unchecked assumption is just a
+  // scripts/route-matrix.mjs excludes EVERY Create category home because
+  // CreateTool.jsx redirects them to their first tool. LIVE_TOOLS lives in a
+  // .jsx module Node cannot import, so that is the one fact in the matrix which
+  // is asserted rather than derived — and an unchecked assumption is just a
   // parallel list with better manners. This reads both source files.
+  //
+  // THE EXCEPTION IS GONE, 2026-09-18. `/create/color` was kept because App.jsx
+  // intercepted it above CreateTool and rendered ColorLanding; the founder
+  // deleted that landing when Spectrum became `/`, so the intercept went with
+  // it and CREATE_HOMES_THAT_RENDER is empty. Both halves are asserted below —
+  // the empty list, and the absence of the intercept — because an empty list
+  // that App.jsx quietly contradicts is the same defect in the other
+  // direction.
   const createTool = read('src/pages/CreateTool.jsx')
   const app = read('src/App.jsx')
 
@@ -356,11 +363,10 @@ test('the category-home assumption is still true in the code it describes', () =
     'CreateTool.jsx no longer redirects live category homes to their first tool — '
     + 'the four homes excluded from the matrix may now be real pages')
 
-  // /create/color is the exception, and it is an exception because App.jsx says so.
-  assert.deepEqual([...CREATE_HOMES_THAT_RENDER], ['/create/color'])
-  assert.match(app, /bare === '\/create\/color'/,
-    'App.jsx no longer intercepts /create/color above CreateTool, so it may now '
-    + 'redirect like the other category homes')
+  assert.deepEqual([...CREATE_HOMES_THAT_RENDER], [])
+  assert.ok(!/bare === '\/create\/color'/.test(app),
+    'App.jsx intercepts /create/color above CreateTool again, so it renders a page '
+    + 'and CREATE_HOMES_THAT_RENDER must say so — otherwise the route gets no shell')
 
   // And no excluded home has quietly become a live screen.
   const liveBlock = createTool.slice(createTool.indexOf('const LIVE_TOOLS'))

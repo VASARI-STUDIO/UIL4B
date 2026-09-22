@@ -160,13 +160,16 @@ export const SURFACE_LINE = Object.freeze({
   // The homepage tools section, on the founder's 2026-09-07 instruction that
   // the heading should read "more something like" this line.
   toolsSectionHeading: 'one-tool-websites',
-  // The homepage export section's heading (HomeExportKit, passed down from
-  // Home.jsx). It read "Your system leaves as a document, not a screenshot."
-  // — the "not an X" defensive negation the founder threw out by name on the
-  // tools heading ("Not a screenshot. The actual tools, running here.", 2026-08).
-  // The section DRAWS a page of the export; the sentence that names what is
-  // being drawn is his build-and-export line. Anti-slop audit, 2026-09-09.
-  homeExportHeading: 'build-and-export',
+  // `homeExportHeading` WAS HERE and it is gone, 2026-09-18. It named the
+  // homepage export section's heading, rendered by HomeExportKit.jsx and passed
+  // down from Home.jsx; the founder replaced that whole page with Spectrum, so
+  // both files were deleted and the mapping had no surface left to describe.
+  //
+  // NO FOUNDER LINE WAS TOUCHED. It pointed at `build-and-export`, which is
+  // still in VALUE_PROPOSITION above and is still read by `llmsSummary` and by
+  // the hero itself. A mapping with no consumer is the thing this module's own
+  // test calls "a promise the module makes and nothing keeps", so it goes
+  // rather than sits.
   // /plans's closing band. It read "Build first. Upgrade when your workflow
   // asks for it." over a "No trial clock on Free" reassurance hint — agent copy
   // in the slot where the retired "No credit card required" line used to sit.

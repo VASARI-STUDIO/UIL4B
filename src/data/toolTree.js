@@ -118,14 +118,19 @@ export const CREATE_GROUPS = [
   },
 ]
 
-// The ONE Create category home that is a real page rather than a redirect.
+// The Create category homes that are real pages rather than redirects. THERE
+// ARE NONE LEFT, and the empty array is the fact, not an oversight.
 //
 // CreateTool.jsx sends a live group's category home to its first tool ("A live
 // group's category home has no screen of its own"), so /create/typography,
 // /create/imagery, /create/ai-tools and /create/icons-emoji are redirects, not
 // destinations; /create/components is `soon` and renders the workshop state.
-// /create/color is the exception because App.jsx intercepts it ABOVE CreateTool
-// and renders ColorLanding, the colour sales page.
+// /create/color used to be the one exception — App.jsx intercepted it above
+// CreateTool and rendered ColorLanding, the colour sales page. The founder
+// deleted that landing on 2026-09-18 when Spectrum became `/`, so the intercept
+// is gone and the colour home bounces to /create/palette like the other four.
+// It keeps its 301 as well, in src/data/legacyRoutes.js, because unlike the
+// other four it WAS a prerendered, indexed page.
 //
 // This lives here, next to the groups it describes, because THREE things need
 // it and none of them may keep its own copy:
@@ -140,7 +145,7 @@ export const CREATE_GROUPS = [
 // derived, because LIVE_TOOLS and the App.jsx intercept live in .jsx modules
 // Node cannot import. An unchecked assumption is just a parallel list with
 // better manners, so both are read as source text by the tests above.
-export const CREATE_HOMES_THAT_RENDER = Object.freeze(['/create/color'])
+export const CREATE_HOMES_THAT_RENDER = Object.freeze([])
 
 // WHERE A LINK TO A CATEGORY SHOULD ACTUALLY GO.
 //

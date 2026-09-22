@@ -284,7 +284,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   })
 
   return (
-    <div className="sec">
+    <div className="sec lib-surface">
       {/* The shared Discover masthead, same as the Palette, Gradient, Icon and
           Emoji libraries. This surface was the last one still on the site-wide
           `.sec-h`, where the eyebrow was rendered from the SAME i18n key as the
