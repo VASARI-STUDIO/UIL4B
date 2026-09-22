@@ -1896,8 +1896,32 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Social-card PNG (1200×630) of the palette — the shareable mini version,
   // rendered client-side so it needs no serverless function.
-  const downloadPng = () => {
+  const downloadPng = async () => {
     try {
+      /* THE EXPORT IS DRAWN IN THE PRODUCT'S TYPEFACE, READ FROM THE TOKEN.
+       *
+       * These two `g.font` lines said `Outfit`, and Outfit has had no
+       * @font-face since the Geist foundation landed — so every palette card
+       * anyone exported was silently drawn in system-ui. Nothing on screen
+       * showed it: the canvas just resolves the next family in the list. A
+       * paid export in the wrong face is the kind of defect that only ever
+       * gets noticed by the customer.
+       *
+       * Read from `--font` rather than naming Geist, so the next foundation
+       * change carries here without anyone remembering this file exists. */
+      const uiFont = getComputedStyle(document.documentElement)
+        .getPropertyValue('--font').trim() || 'system-ui, sans-serif'
+      const swatchFont = `600 26px ${uiFont}`
+      const markFont = `700 22px ${uiFont}`
+      /* AND THE FACE HAS TO BE LOADED BEFORE ANYTHING IS DRAWN. Canvas does
+       * not wait for a webfont the way layout does — it paints whatever is
+       * resolved at that instant and there is no second chance once toBlob
+       * has run. `document.fonts.load` is the wait; if it rejects we draw
+       * anyway rather than refuse the export. */
+      try {
+        await Promise.all([document.fonts.load(swatchFont), document.fonts.load(markFont)])
+      } catch { /* fall back to whatever the family list resolves to */ }
+
       const w = 1200, h = 630
       const canvas = document.createElement('canvas')
       canvas.width = w
@@ -1908,14 +1932,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         g.fillStyle = c
         g.fillRect(Math.floor(i * cw), 0, Math.ceil(cw) + 1, h)
         g.fillStyle = textColorForBg(c) === 'rgba(0,0,0,.85)' ? '#000000' : '#FFFFFF'
-        g.font = '600 26px Outfit, system-ui, sans-serif'
+        g.font = swatchFont
         g.textAlign = 'center'
         g.fillText(c, i * cw + cw / 2, h - 42)
       })
       // Free exports carry a small brand watermark; Pro exports stay clean.
       if (!isPro) {
         const label = 'Made with UIL4B'
-        g.font = '700 22px Outfit, system-ui, sans-serif'
+        g.font = markFont
         const tw = g.measureText(label).width
         const padX = 14, bh = 34, margin = 22, bw = tw + padX * 2
         const bx = w - margin - bw, by = margin
