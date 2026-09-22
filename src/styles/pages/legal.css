@@ -1,0 +1,219 @@
+/* legal.css — the `lgl` family. Imported by Terms.jsx and Privacy.jsx beside
+ * content.css, so the two legal routes share one chunk and neither pays for
+ * the other's page.
+ *
+ * ── The shape, and why it is not a card ─────────────────────────────────────
+ *
+ * Both pages were one `.card.legal-card` box wrapped around the whole
+ * document. Around eight or eleven clauses, a single box separates the
+ * document from the page — which is not the separation a reader needs. The
+ * separation a legal page needs is BETWEEN CLAUSES, so the clauses are
+ * separated by a rule and the box is gone. That is what every legal surface in
+ * the Mobbin corpus that reads as built rather than generated does; the
+ * citations are in Terms.jsx.
+ *
+ * ── Nothing here changes a word ─────────────────────────────────────────────
+ *
+ * These are legal commitments. This sheet moves type size, measure, rhythm and
+ * hierarchy and nothing else. Where it makes a clause easier to read, it does
+ * so by giving it room, not by shortening it.
+ *
+ * ── Tokens only ─────────────────────────────────────────────────────────────
+ *
+ * Every colour, radius, space and duration is a global token or one of
+ * content.css's `--cpg-*` aliases. There is no hex in this file.
+ */
+
+.lgl { --lgl-measure: 72ch; }
+
+/* ── The head ──
+ * The h1 and the date, and nothing between them. The date is the first thing a
+ * reader checks on a legal page and it was 15px body grey under a 52px
+ * headline — the same weight as the lede on every other page, on a page that
+ * has no lede. It is a mono caption now, which is what a stamp looks like. */
+.lgl-head { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); }
+.lgl-head .cpg-h1 { max-width: 16ch; }
+/* `em` inside the h1 is /privacy's own emphasis on the word "data". The
+ * italic display cut carries it; `--cpg-dim` at 64px is display type and well
+ * over its 3:1 floor (8.02:1 light on --bg-0, 9.1:1 dark). */
+.lgl-head .cpg-h1 em { font-style: italic; font-weight: 400; color: var(--cpg-dim); padding-right: .06em; }
+.lgl-updated { display: block; margin: 0; }
+
+/* ── The index ──
+ * One long list of clause titles, so it is set tighter than content.css's
+ * default rail row and allowed to wrap: "4. Data Storage & Security (APP 8 &
+ * 11)" is 42 characters and a nowrap row would either clip it or force the
+ * rail wider than the document beside it. */
+.lgl-toc .cpg-rail-row {
+  align-items: flex-start;
+  min-height: 32px;
+  padding: 7px 12px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.lgl-toc .cpg-rail-label { overflow-wrap: anywhere; }
+
+/* ── The document ──
+ * `.legal-card` STAYS ON THIS ELEMENT, and that is a contract rather than a
+ * leftover: tests/user-sim/88-marketing-breakpoints.spec.js reads the first
+ * visible `.legal-card h2` on /terms and on /privacy and compares the two
+ * pages' computed heading styles to each other — the check that caught the
+ * 16px-vs-22px split the 2026-09-13 founder decision resolved. Drop the class
+ * and that check has nothing to measure and fails on its own positive control.
+ * It costs nothing to keep: `.legal-card` in global.css is only
+ * `max-width:72ch; margin-inline:auto; line-height:1.8`. The BOX was `.card`,
+ * and `.card` is what came off.
+ * `margin-inline` is reset because the document is now a grid cell beside the
+ * index, and auto margins would float it away from the rail it belongs to. */
+.lgl-doc { min-width: 0; max-width: var(--lgl-measure); margin-inline: 0; }
+
+/* A rule between clauses, not a box around all of them. The top rule is on the
+ * clause rather than under the one above it, so the first clause sits directly
+ * under the index with no floating hairline above it. */
+.lgl-sec { padding: clamp(26px, 3vw, 38px) 0; border-top: 1px solid var(--cpg-line); min-width: 0; }
+.lgl-sec:first-child { border-top: 0; padding-top: 0; }
+
+/* `.lgl .lgl-h`, two classes, so it beats global.css's own `.legal-h` (one
+ * class) whatever order the two sheets end up in. global.css's rule is NOT
+ * edited and must not be: tests/unit/heading-and-meta.test.js asserts the
+ * literal `.legal-h{…font-size:22px…}` in that file, because it is the record
+ * of the founder's 2026-09-13 decision that the two legal pages set a section
+ * heading the same way. This rule keeps that true — both pages read it — and
+ * only lifts the size onto the Spectrum display clamp.
+ *
+ * THE FLOOR IS 20px, NOT 19. 88-marketing-breakpoints asserts
+ * `parseFloat(fontSize) >= 20` on that same heading, and it does not say at
+ * which width it measures. A clamp whose lower bound is under the assertion is
+ * a test that passes on the reviewer's monitor and fails on the runner's. */
+.lgl .lgl-h {
+  margin: 0 0 var(--s-3);
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(20px, 2.1vw, 25px);
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+
+/* 15px, not 14. The body size was hard-coded at 14px in twenty-two inline
+ * style attributes across the two pages — below the app's own --fs-body — on
+ * the one surface a reader is most likely to be reading closely and least
+ * likely to be enjoying. 1.8 line-height is `.legal-card`'s own value, kept:
+ * it is the right leading for a long measure and it was the one thing the old
+ * rule got right. */
+.lgl-p {
+  margin: 0 0 var(--s-4);
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--cpg-dim);
+  max-width: var(--lgl-measure);
+}
+.lgl-p:last-child { margin-bottom: 0; }
+
+.lgl-list {
+  margin: 0 0 var(--s-4);
+  padding-left: 1.15em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  max-width: var(--lgl-measure);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--cpg-dim);
+}
+.lgl-list:last-child { margin-bottom: 0; }
+/* --cpg-faint, not --cpg-quiet: a marker is a 15px glyph and this list sits on
+ * the page ground where --t3 measures 4.59:1 — passing, but with nothing in
+ * hand if a theme moves. --t2 is 5.62:1 on the same ground. */
+.lgl-list li::marker { color: var(--cpg-faint); }
+
+/* The aside under the storage table. Italic was doing the "this is a
+ * footnote" job and doing it badly at 13px; the rule down the side says the
+ * same thing without leaning the type. */
+.lgl-aside {
+  margin: 0;
+  padding-left: var(--s-4);
+  border-left: 2px solid var(--cpg-line-strong);
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--cpg-faint);
+  max-width: var(--lgl-measure);
+}
+.lgl-aside strong { color: var(--cpg-ink); font-weight: 560; }
+
+/* Links inside a clause. Underlined at rest — on a legal page, a reader
+ * skimming for an obligation should be able to see which words are links
+ * without hovering every line, and on touch there is no hover at all. Same
+ * recipe AppFooter and SpectrumFooter use for the one link that leaves the
+ * app: 70% of the current ink, 3px down, full strength on hover.
+ *
+ * --accent-text, NOT --accent-strong. global.css paints .storage-key in
+ * --accent-strong, which is a per-theme LITERAL (#0B5ED7 / #4A90FF) and does
+ * not track --accent at all — a premium theme template that moves the accent
+ * would leave every localStorage key on this page brand-blue. The override is
+ * below. --accent-text measures 6.33:1 on --card in light and 9.40:1 in dark. */
+.lgl-a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
+  text-underline-offset: 3px;
+  /* SC 2.5.8 — these are links in a run of text, which qualifies for the
+   * inline exception, but the box costs nothing here and the sweep does not
+   * have to make the judgement. */
+  min-height: 24px;
+  display: inline;
+}
+.lgl-a:hover { color: var(--accent-mid); text-decoration-color: currentColor; }
+
+/* ── The storage disclosure table ──
+ * global.css owns `.storage-table` and this sheet only lifts it to the
+ * Spectrum ground: a hairline-ruled table on the page rather than a bordered
+ * box, 13px instead of 12.5, and the two token corrections below. Every cell,
+ * every `data-label` and the whole stacked-card phone layout are global.css's
+ * and are untouched — including the `<thead>` that goes `display:none` under
+ * 640px, which is why the `data-label` attributes exist. */
+.lgl-table-wrap {
+  margin: 0 0 var(--s-5);
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  min-width: 0;
+}
+.lgl .storage-table { font-size: 13px; }
+.lgl .storage-table thead { background: var(--cpg-wash); }
+.lgl .storage-table th { color: var(--cpg-faint); font-weight: 600; letter-spacing: .12em; }
+.lgl .storage-table td { color: var(--cpg-dim); }
+.lgl .storage-table .storage-purpose { color: var(--cpg-dim); }
+/* THE TOKEN CORRECTION. See the note on .lgl-a. --accent-text tracks
+ * --accent; --accent-strong does not. */
+.lgl .storage-table .storage-key,
+.lgl .lgl-p .storage-key { color: var(--accent-text); }
+/* The inline `/create/color` example inside the aggregate-counts clause is the
+ * same class as a table cell but sits in a 15px sentence, so it needs to read
+ * as code in a line of prose rather than as a table value. */
+.lgl .lgl-p .storage-key {
+  font-family: var(--mono);
+  font-size: .88em;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--cpg-wash);
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  /* The stacked cards draw their own border; the wrapper's would double it. */
+  .lgl-table-wrap { border: 0; border-radius: 0; overflow: visible; }
+}
+
+/* ── Narrow ── */
+@media (max-width: 1000px) {
+  /* The document is the whole column once the rail is a row above it, so the
+   * measure cap becomes the only thing holding the line length. */
+  .lgl-doc { max-width: var(--lgl-measure); }
+  .lgl-toc .cpg-rail-row { min-height: 44px; align-items: center; }
+  .lgl-toc .cpg-rail-label { overflow-wrap: normal; }
+}
+@media (max-width: 560px) {
+  .lgl-head .cpg-h1 { max-width: none; }
+  .lgl-p, .lgl-list { font-size: 14.5px; }
+}
