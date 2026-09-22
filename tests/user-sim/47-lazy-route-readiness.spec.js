@@ -217,8 +217,43 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
       .toBe(false)
     expect(shell.booting, 'THE NEW CONTRACT: the static boot shell is still on screen')
       .toBe(true)
-    expect(shell.own, 'and the route itself has rendered nothing at all')
-      .toBe(0)
+
+    // ── THERE ARE TWO BOOT SHELLS NOW, and one of them has CONTENT. That is
+    //    the third way the old contract was vacuous, not a softening of this
+    //    one.
+    //
+    // This used to assert `shell.own === 0` flat, and that was true of the one
+    // skeleton index.html shipped before the route swap: grey boxes, a
+    // `role="status"` reading "Loading UIL4B", and no `<main>` at all.
+    // `scripts/prerender.mjs` writes TWO variants now. The plain one is
+    // unchanged. `/` gets `.boot-shell-home`, which paints the REAL Spectrum
+    // hero — a `<main>` holding `h1.sp-hero-h1` with the approved sentence,
+    // once for a screen reader and once word by word — deliberately, so the
+    // shell is the page's largest paint until hydration.
+    //
+    // Measured on that variant: 135 characters inside `main`, from an
+    // application that has not executed a line. That is comfortably over the
+    // content floor `expectRendered()` applies, so ON THE ONE PAGE EVERY
+    // VISITOR LANDS ON THE CONTENT COUNT NO LONGER DISTINGUISHES THE SHELL FROM
+    // AN ARRIVED ROUTE. Only the boot-shell check does.
+    //
+    // WHICH VARIANT THIS TEST MEETS DEPENDS ON THE SERVER, so it is read rather
+    // than assumed: `vite preview` resolves a clean URL like /privacy through
+    // its single-page fallback to /index.html — the HOME shell — while Vercel's
+    // rewrites serve the route's own prerendered file. Both are real, and the
+    // contract is the same either way; branching on the class is what keeps
+    // this from being an assertion about the preview server.
+    const variant = (await page.locator('#boot-shell').getAttribute('class')) || ''
+    if (variant.includes('boot-shell-home')) {
+      expect(
+        shell.own,
+        'the front-door shell prepaints h1.sp-hero-h1 and measured nothing — either the hero was'
+        + ' dropped from the prerendered shell, or index.html\'s `html:not([data-hero-prepainted])`'
+        + ' gate hid it, which is a visible regression in the first paint',
+      ).toBeGreaterThan(0)
+    } else {
+      expect(shell.own, 'the plain shell is grey boxes, so the route has rendered nothing at all').toBe(0)
+    }
 
     // ── So the wait must fail, and must name the cause. ──
     const failure = await ready(page, HELD_ROUTE).then(

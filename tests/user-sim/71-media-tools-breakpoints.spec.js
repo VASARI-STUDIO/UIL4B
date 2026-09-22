@@ -20,6 +20,20 @@ import path from 'node:path'
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
 import { fixturePacks, isLiveIconify, refuseIconify } from './iconify-stub.js'
+import { visiblePacks } from '../../src/data/iconPackTiers.js'
+
+/**
+ * How many icon packs the masthead pill should be counting for THIS viewer.
+ *
+ * It was `fixturePacks().length` — the whole fixture — and that stopped being
+ * the answer when the Icon Library started metering by account: src/data/
+ * iconPackTiers.js is the one editable table now, `visiblePacks()` applies it,
+ * and IconLibrary.jsx counts `allowedPacks`, not `ALL_PACKS`. Measured from the
+ * table: anon 5, free 10, paid 26 of 26. The tests below run signed out, so the
+ * pill says the anon number — derived here rather than typed, so a pack moving
+ * rung moves the expectation with it.
+ */
+const setsFor = (tier) => visiblePacks(fixturePacks(), tier).length
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -117,7 +131,26 @@ test.describe('/create/icons · the masthead pill says what the grid is showing'
     await page.unrouteAll()
     await notice.getByRole('button', { name: 'Try again' }).click()
     await expect(notice).toHaveCount(0, { timeout: 20000 })
-    await expect(page.getByText(new RegExp(`All packs · [\\d,]+ icons · ${fixturePacks().length} sets`))).toBeVisible({ timeout: 20000 })
+    // THE SCOPE LINE, in the form a SIGNED-OUT viewer gets.
+    //
+    // This matched `All packs · N icons · 25 sets`, and neither half of that is
+    // what the masthead prints any more. IconLibrary.jsx derives
+    // `seesEverything = allowedPacks.length === ALL_PACKS.length` and its
+    // `scopeLine()` prints the long "All packs · …" form ONLY for a viewer who
+    // has all of them — everyone else gets the short `${sets} sets`. Since the
+    // Icon Library started metering by pack (src/data/iconPackTiers.js: anon 5,
+    // free 10, paid 26 of 26), these tests' signed-out visitor is in the second
+    // branch, so the regex could not match on any build. Both the branch and
+    // the number are derived here rather than retyped.
+    const sets = setsFor('anon')
+    expect(sets, 'a signed-out visitor is entitled to no packs at all, so this would measure nothing').toBeGreaterThan(0)
+    await expect(
+      page.locator('.ig-status'),
+      'the masthead never went back to stating the catalogue it is browsing',
+    ).toContainText(`${sets} sets`, { timeout: 20000 })
+    // …and it is stating a POPULATED grid, not an empty one: the count is what
+    // says the browse actually re-ran rather than the line merely re-rendering.
+    await expect(page.locator('.ig-status')).toContainText(/Showing [\d,]+ of [\d,]+/)
     await expect(page.locator('.lib-net')).toHaveText('Live library connected')
     await expect(page.locator('.lib-net')).toHaveClass(/is-online/)
     await ctx.close()

@@ -102,14 +102,33 @@ test.describe('library filter multi-select', () => {
   test('both selected pills still read as selected once the indicator is gone', async ({ page }) => {
     await pill(page, 'Linear').click()
     await pill(page, 'Radial').click({ modifiers: ['Shift'] })
+    // READ AT REST, NOT ON THE FIRST FRAME AFTER THE CLICK. The chip restyle in
+    // src/styles/deferred/library.css gave `.lib-surface .lbry-filters
+    // .lbry-filter` a `transition: background var(--dur-1)`, so the pressed
+    // fill now ARRIVES rather than appearing — and the first frame of a
+    // transition out of `background:transparent` computes as exactly
+    // `rgba(0, 0, 0, 0)`, which is also what the unpressed chip beside it
+    // computes as. The two reads below were racing that, and reported "the two
+    // lit pills look exactly like the unlit one" about a control that was
+    // correct a sixth of a second later. Measured settled: pressed is
+    // rgb(15, 15, 16) (`--t0`), unpressed is transparent.
+    //
+    // POLLED, the same answer the indicator-opacity test two tests down already
+    // reached for, and for the same reason — `getAnimations()` is not enough on
+    // its own here because a transition that has not STARTED yet reports
+    // nothing, which is indistinguishable from one that has finished.
+    //
     // Not a colour assertion — a contrast-with-the-tray one. The indicator is
     // what used to draw this fill, so its absence must not leave the two lit
     // pills looking exactly like the unlit one beside them.
-    const [onBg, offBg] = await Promise.all([
-      pill(page, 'Radial').evaluate(el => getComputedStyle(el).backgroundColor),
-      pill(page, 'Conic').evaluate(el => getComputedStyle(el).backgroundColor),
-    ])
-    expect(onBg).not.toBe(offBg)
+    const bgOf = (name) => pill(page, name).evaluate(el => getComputedStyle(el).backgroundColor)
+    const offBg = await bgOf('Conic')
+    await expect.poll(() => bgOf('Radial'), {
+      message: `a pressed chip settled on ${offBg}, the same fill as the unpressed chip beside it`,
+    }).not.toBe(offBg)
+    // And the OTHER pressed chip, which is the half the multi-select rule is
+    // about: the indicator can only ever have covered one of them.
+    expect(await bgOf('Linear')).not.toBe(offBg)
   })
 
   test('the tray tells assistive technology it is multi-select, and how', async ({ page }) => {

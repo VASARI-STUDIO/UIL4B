@@ -514,7 +514,16 @@ test.describe('the Icon Library is reachable from Discover', () => {
 
   test('the Discover menu lists it on a desktop and on a phone', async ({ page }) => {
     watch(page, 'designer opening the Discover tab from the nav')
-    await go(page, '/home')
+    // ON /discover, NOT ON `/`. This drove the mega-menu from `/home`, and the
+    // front door does not have one any more: `/` and `/home` both render
+    // src/pages/Spectrum.jsx, which mounts `<PillNav variant="spectrum" />` —
+    // SpectrumNav, a marketing pill with its own full-screen menu — instead of
+    // the app header. So every `.pnav-*` selector below was asserting the app
+    // header on the one page that deliberately does not have it. The app header
+    // still renders unchanged on /discover, /learn and every /create/* route;
+    // verified there before this was re-pointed. Same move, same reason, as
+    // 43-mega-menu-contents in a66748a0.
+    await go(page, '/discover')
 
     // Desktop: the Discover pill opens the mega-menu. Clicking, not hovering —
     // the founder's 2026-09-02 direction is no hover-dependent affordances.
@@ -524,7 +533,7 @@ test.describe('the Icon Library is reachable from Discover', () => {
 
     // Phone: the same entry, inside the full-screen sheet.
     await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/home')
+    await go(page, '/discover')
     await page.getByRole('button', { name: 'Menu' }).first().click()
     const sheet = page.locator('.pnav-sheet')
     await expect(sheet).toBeVisible()

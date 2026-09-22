@@ -24,6 +24,7 @@
 // `hover: hover` and hides this whole class of defect.
 import { test, expect } from './base.js'
 import { go, restingScrollY, signIn, watch } from './helpers.js'
+import { GALLERY_GRADIENTS } from '../../src/data/gradientGallery.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const IPAD_UA = 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
@@ -93,7 +94,7 @@ const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
  * a fixed sleep is not allowed to be the thing that decides whether the element
  * exists, which is a trap this suite has already been caught by once.
  */
-async function open(browser, width, height, path, waitFor, { touch = true } = {}) {
+async function open(browser, width, height, path, waitFor, { touch = true, as = null } = {}) {
   const tablet = width >= 700
   const ctx = await browser.newContext({
     viewport: { width, height },
@@ -101,6 +102,12 @@ async function open(browser, width, height, path, waitFor, { touch = true } = {}
   })
   const page = await ctx.newPage()
   watch(page, `defect sweep ${width}x${height} ${path}`)
+  // `as` exists for the three galleries that meter by account. It must run
+  // BEFORE the navigation — signIn() installs init scripts, so a page that has
+  // already loaded is signed in for nobody. Every caller that does not pass it
+  // is unchanged and browses signed out, which is what most of this file is
+  // about.
+  if (as) await signIn(page, as)
   // One Tap used to be routed here, per page. It is stubbed for the whole suite
   // in base.js now — on the context, so it covers this hand-built one too — and
   // this copy is gone rather than racing it: a page route takes precedence over
@@ -919,11 +926,24 @@ test('N1 · no font family name is truncated down to the 320px floor', async ({ 
 
 const GRG_WIDTHS = [320, 440, 450, 480, 530, 560, 640, 700, 1180]
 
+// SIGNED IN AS PRO, AND THE COUNT COMES FROM THE MODULE.
+//
+// This asked for "the 100-card library" signed out and got three. That is the
+// tier cap doing exactly its job — GALLERY_TIER_LIMITS gives an anonymous
+// visitor 3 gallery rows, a free account 10 and Pro the lot — and a truncation
+// census over three cards is not a census. The whole point of walking nine
+// widths is to see every name and every meta line in the collection, so the
+// viewer who can see the collection is the right one to walk it as. The cap
+// itself is 44-locked-library-tease's and the unit suite's to guard.
+//
+// The expected count is `GALLERY_GRADIENTS.length` rather than the 100 that was
+// typed here: the census is over the library, so it should ask the library how
+// big it is.
 test('M6 · no gradient name or meta line is truncated at any width', async ({ browser }) => {
   budget(GRG_WIDTHS.length)
   const damage = []
   for (const w of GRG_WIDTHS) {
-    const { ctx, page } = await open(browser, w, 900, '/discover/gradients', '.grg-card')
+    const { ctx, page } = await open(browser, w, 900, '/discover/gradients', '.grg-card', { as: { plan: 'pro' } })
     const r = await page.evaluate(() => {
       const cut = (sel) => {
         const out = []
@@ -959,7 +979,11 @@ test('M6 · no gradient name or meta line is truncated at any width', async ({ b
       }
     })
     await ctx.close()
-    expect(r.cards, `${w}px: expected the 100-card library`).toBe(100)
+    expect(
+      r.cards,
+      `${w}px: expected the whole ${GALLERY_GRADIENTS.length}-card library and found ${r.cards}`
+      + ' — a Pro account sees all of it, so a short count here is the sign-in not taking rather than the cap',
+    ).toBe(GALLERY_GRADIENTS.length)
     // One name and one meta line per card, or the census below measured nothing
     // and its silence means nothing.
     expect(r.nameCount, `${w}px: expected a name on each of the ${r.cards} cards, found ${r.nameCount} — the card footer has changed shape`).toBe(r.cards)

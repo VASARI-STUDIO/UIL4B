@@ -355,8 +355,15 @@ const WALK = `(() => {
 // Every route that paints text over a gradient signed out, plus the surfaces
 // the sweep found nothing on - keeping those in the list is what makes a
 // gradient newly introduced on them show up here rather than go unmeasured.
+// `/create/color` was here and is RETIRED: App.jsx answers it with
+// `<Navigate to="/create/palette" replace />` since the colour landing was
+// deleted. It was not failing — `go()` followed the redirect — which is worse
+// than failing: every measurement taken under that label for as long as the
+// redirect has existed was actually of /create/palette, a route this list did
+// not otherwise name. Named honestly now, so the coverage is the same and the
+// label is true. Same move as 08-public-route-contract's in 048e37d5.
 const ROUTES = ['/', '/community', '/discover', '/discover/palettes', '/discover/gradients',
-  '/create/gradient', '/create/color', '/seo', '/plans', '/learn']
+  '/create/gradient', '/create/palette', '/seo', '/plans', '/learn']
 
 const VIEWPORTS = [{ width: 390, height: 844 }, { width: 1280, height: 900 }]
 

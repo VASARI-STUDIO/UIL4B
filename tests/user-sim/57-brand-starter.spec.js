@@ -481,8 +481,15 @@ test.describe('the pricing page and the server agree', () => {
     // tree, so the nav derives the row — this proves the derivation reaches the
     // rendered menu rather than stopping at the data.
     watch(page, 'a visitor looking for the AI tools')
-    await go(page, '/')
-    await expectRendered(page, 'the homepage')
+    // ON /discover, NOT ON `/`. This hovered the Create pill on the homepage,
+    // and the homepage is src/pages/Spectrum.jsx now — it mounts SpectrumNav
+    // (`<PillNav variant="spectrum" />`), a marketing pill whose menu is built
+    // from the same registry but wears `.spnav-*` classes, so `.pnav-tool`
+    // matched nothing there. The app header, and the derivation this test is
+    // about, are unchanged on /discover: measured there, the row is 274px wide,
+    // hrefs /create/auto-builder and carries the Beta badge.
+    await go(page, '/discover')
+    await expectRendered(page, 'the Discover index')
 
     await page.getByRole('button', { name: /^Create/ }).first().hover()
     const row = page.locator('.pnav-tool', { hasText: 'Brand Starter' }).first()

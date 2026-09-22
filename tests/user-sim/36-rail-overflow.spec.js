@@ -162,9 +162,27 @@ test.describe('the whole preset library is on screen on a desktop (A6)', () => {
 })
 
 test.describe('the shared rail affordance', () => {
-  // One rail per shape: a tab strip, a preset gallery, a control ribbon.
+  // One rail per shape: a preset gallery and a control ribbon.
+  //
+  // ── DELETED: 'home workbench tabs' (`/`, `.hw-tabs`, PHONE) ───────────────
+  // What it guarded: the shared rail affordance in its TAB-STRIP shape — a
+  // horizontal scroller that must keep a real scrollbar, carry the edge fade
+  // while there is more to the right, and drop the fade at the end.
+  //
+  // Why it is gone: the home workbench is gone. `/` and `/home` render
+  // src/pages/Spectrum.jsx since the route swap and src/pages/Home.jsx is
+  // deleted, taking HomeWorkbench and its `.hw-tabs` strip with it — measured
+  // on the built front door, `.hw-tabs` has count 0. There is no tab strip on
+  // any surface to re-point it at; Spectrum's `.sp-tabs--chips` is a
+  // role="group" of chips that switches a grid, not a scroller.
+  //
+  // Where the guarantee still lives: the affordance itself is ONE shared
+  // implementation, and the two rails below exercise it end to end — the same
+  // `--rail-l`/`--rail-r` custom properties, the same mask, the same
+  // scrollbar-width rule — at a phone width and a tablet width. What is lost is
+  // only the third SHAPE, not the contract. If a tab strip comes back on any
+  // route, it belongs in this list.
   const RAILS = [
-    { name: 'home workbench tabs', path: '/', sel: '.hw-tabs', viewport: PHONE },
     { name: 'gradient preset rail', path: '/create/gradient', sel: '.ggn-presets', viewport: PHONE },
     { name: 'palette action ribbon', path: '/create/palette', sel: '.plb-toolbar-group.rail-overflow', viewport: TABLET },
   ]

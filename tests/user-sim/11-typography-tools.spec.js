@@ -747,8 +747,24 @@ test.describe('Font Gallery', () => {
 
     const rowBox = await row.boundingBox()
     const shot = await page.locator('.fg-card-open').first().boundingBox()
-    expect(shot.width, 'the specimen block fills the row it is given')
-      .toBeGreaterThan(rowBox.width - 2)
+    // THE TOLERANCE IS THE CARD'S OWN BORDER, read rather than assumed.
+    //
+    // This was `toBeGreaterThan(rowBox.width - 2)`, and the 2 was a hand-picked
+    // slack that the library restyle turned into an exact boundary: the card is
+    // `box-sizing: border-box` with a 1px border, so its CONTENT box is exactly
+    // 2px narrower than its border box and the specimen — which fills that
+    // content box perfectly — lands on `rowBox.width - 2` rather than above it.
+    // Measured: card 1345.84, specimen 1343.84, a strict `>` short by nothing
+    // at all. The guarantee is "the specimen spends the whole row", and a
+    // specimen that is exactly the row minus its border is the best case of it,
+    // not a failure of it.
+    const inset = await row.evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth)
+        + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)
+    })
+    expect(shot.width, `the specimen block fills the row it is given (row ${rowBox.width}, inset ${inset})`)
+      .toBeGreaterThanOrEqual(rowBox.width - inset)
 
     // THE WEIGHT LADDER. The gallery's whole answer to "what weights has this
     // family got" used to be the string "6w" in the card foot. It now draws

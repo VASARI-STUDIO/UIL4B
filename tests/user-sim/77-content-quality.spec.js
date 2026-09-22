@@ -31,6 +31,7 @@
 import { test, expect } from './base.js'
 import { expectRendered, go, watch } from './helpers.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
+import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 
 const PERSONA = 'someone reading a reference guide on a laptop, and on a phone'
 
@@ -221,8 +222,22 @@ test.describe('the Prompt Library empty state', () => {
 
     const field = page.getByLabel('Search community prompts')
     // POSITIVE CONTROL: there are prompts to lose before we filter them away.
+    //
+    // The floor was a typed `> 3`, from before the galleries metered by
+    // account. A signed-out visitor now gets exactly
+    // GALLERY_TIER_LIMITS.anonymous open rows out of the prompt library —
+    // `splitLockedLibrary` applies the cap to the canonical list before search
+    // or sort can reach it — so the old floor was one short of what the tier
+    // hands over and this reported "the library rendered no cards to filter"
+    // about a correctly gated gallery. Read from the table rather than retyped,
+    // and asserted EXACTLY: a count that drifts either way is a change to the
+    // gate and should be seen here rather than absorbed by an inequality.
     const before = await page.locator('.pl-gallery .pl-card, .pl-gallery article').count()
-    expect(before, 'the library rendered no cards to filter').toBeGreaterThan(3)
+    expect(
+      before,
+      `the library handed a signed-out visitor ${before} cards; the anonymous tier is`
+      + ` ${GALLERY_TIER_LIMITS.anonymous}`,
+    ).toBe(GALLERY_TIER_LIMITS.anonymous)
 
     await field.fill('zzzzqqqnothing')
     await expect(page.locator('.lbry-empty')).toBeVisible()

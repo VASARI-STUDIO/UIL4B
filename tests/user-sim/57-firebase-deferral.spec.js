@@ -45,7 +45,13 @@ test('the homepage boots through the Firebase access broker and renders real con
   // broken export there throws while the module graph is still evaluating —
   // which paints nothing at all. A page that renders nothing paints fast and
   // passes every check that does not look at its text.
-  const hero = page.locator('.home-hero-h1')
+  // `.home-hero-h1` until the route swap. `/` renders src/pages/Spectrum.jsx
+  // now and its headline is `.sp-hero-h1` (SpectrumWords splits it into
+  // `.sp-w` spans, so this reads the h1 and not one word of it). The control is
+  // doing exactly the same job: a broken export in firebaseAccess throws while
+  // the module graph is evaluating, which paints nothing, and a blank page
+  // passes every check below.
+  const hero = page.locator('.sp-hero-h1')
   await expect(hero).toBeVisible()
   const heroText = (await hero.innerText()).trim()
   expect(
@@ -89,6 +95,17 @@ test('the account affordance resolves, so auth still reaches the chrome', async 
   watch(page, 'a signed-out visitor looking for the way in')
   await go(page, '/')
   await expectRendered(page, 'the homepage')
+
+  // INSIDE THE MENU, because that is where the front door puts it now.
+  // SpectrumNav's bar is a wordmark, three anchors, a theme cycle, a burger and
+  // one CTA; the auth block — "Log in" / "Start for Free" when signed out,
+  // the account list when signed in — is in `.spnav-util-account` inside the
+  // full-screen menu. So the affordance is one press away rather than on the
+  // bar, and a search of the resting page finds nothing. Opening the menu is
+  // not a softening of the assertion: the block is rendered from `user`, so it
+  // still cannot show "Log in" until AuthContext has resolved to signed out,
+  // which is the whole point of this test.
+  await page.click('[aria-label="Open menu"]')
 
   const signIn = page.getByRole('link', { name: /sign in|log ?in/i })
     .or(page.getByRole('button', { name: /sign in|log ?in/i }))
