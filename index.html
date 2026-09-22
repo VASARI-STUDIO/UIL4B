@@ -120,8 +120,21 @@ html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[dat
 /* The paint half of the gate below the theme script. The script REMOVES the
    headline for a visitor who must not see it; this makes it impossible for that
    headline to have painted in the meantime, without depending on when the
-   script ran. Inert on the other 38 shells, which carry no `.home-hero`. */
-html:not([data-hero-prepainted]) #boot-shell .home-hero{display:none}
+   script ran. Inert on the other shells, which carry no hero at all.
+
+   THIS SAID `.home-hero` AND MATCHED NOTHING. scripts/home-shell.mjs writes the
+   SPECTRUM hero into this shell now — `<header class="sp-hero">` with an
+   `h1.sp-hero-h1` — and there has been no `.home-hero` in the served document
+   since Home.jsx was deleted. So both halves of the gate went inert together:
+   this rule selected nothing, and the observer below never found a node to
+   remove. A returning signed-in visitor was served the sales headline, which is
+   the one thing the comment under the script says must not happen.
+
+   It failed SILENTLY, and that is the part worth remembering: the test that
+   binds this (57-signed-in-session) asserts the sales headline never appears,
+   and "`.home-hero` never appears" looks identical to "no sales page painted".
+   The guard went green by describing a page that no longer exists. */
+html:not([data-hero-prepainted]) #boot-shell .sp-hero{display:none}
 .boot-shell-home .boot-nav{position:fixed;top:0;left:0;right:0;z-index:1;max-width:none;height:var(--nav-h,60px);margin:0;border-width:0 0 1px;border-radius:0;padding:0 clamp(18px,4vw,48px)}
 .boot-shell-home .boot-below{padding:0 clamp(18px,4vw,48px)}
 @media(max-width:640px){.boot-nav-lines{display:none}.boot-main{padding-top:88px}.boot-cards{grid-template-columns:1fr}.boot-card:nth-child(n+2){display:none}}
@@ -216,7 +229,7 @@ html[data-reduced-motion="true"] .boot-line::after,html[data-reduced-motion="tru
 // EVERY STORAGE READ IN ITS OWN try/catch, for the reason the theme script
 // above records at length: localStorage THROWS on the accessor itself in some
 // privacy modes, and one shared catch would abandon the whole function.
-(function(){try{var r=document.documentElement;if(!r.hasAttribute('data-hero-prepainted'))return;var p=location.pathname.replace(/\/+$/,'')||'/';var s=false;try{s=localStorage.getItem('vs-session')==='1'}catch(e){}if((p==='/'||p==='/home')&&!s)return;r.removeAttribute('data-hero-prepainted');var mo=new MutationObserver(function(){var h=document.querySelector('#boot-shell .home-hero');if(h){h.remove();mo.disconnect()}});mo.observe(r,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',function(){mo.disconnect()})}catch(e){}})();
+(function(){try{var r=document.documentElement;if(!r.hasAttribute('data-hero-prepainted'))return;var p=location.pathname.replace(/\/+$/,'')||'/';var s=false;try{s=localStorage.getItem('vs-session')==='1'}catch(e){}if((p==='/'||p==='/home')&&!s)return;r.removeAttribute('data-hero-prepainted');var mo=new MutationObserver(function(){var h=document.querySelector('#boot-shell .sp-hero');if(h){h.remove();mo.disconnect()}});mo.observe(r,{childList:true,subtree:true});document.addEventListener('DOMContentLoaded',function(){mo.disconnect()})}catch(e){}})();
 </script>
 </head>
 <body>

@@ -131,7 +131,30 @@ export function ownerEmailDigest(email) {
 // constant is still the digest of it, so the two cannot drift in silence.
 const FOUNDER_DIGEST = 'a21225151329be64a7df9091c4a9cc016f6925ac48fa1f7321004537578a1ca1'
 
-export const ADMIN_EMAIL_DIGESTS = [FOUNDER_DIGEST]
+/* THE TEST ADMIN, AND WHY IT IS A DIGEST TOO.
+ *
+ * The acceptance suite's admin fixture signs in as `admin@uil4b.test` — a
+ * reserved domain, chosen when the server allowlist moved to `ADMIN_EMAILS` so
+ * the founder's real address stopped being the thing tests hardcode. But THIS
+ * list is the client gate, `RequireAdmin` reads it, and a digest cannot be
+ * satisfied by a substitute address. So four admin tests went red the moment
+ * the fixture changed: the server said yes and the browser said no.
+ *
+ * This is the digest of that reserved address, and it is only in the list under
+ * `--mode test`. `import.meta.env.MODE` is replaced at BUILD time by Vite, so
+ * the entry is not dead code in a production bundle — it is absent from it, the
+ * same mechanism that keeps the test auth double out of production
+ * (tests/unit/test-session-not-in-production.test.js proves that separately).
+ *
+ * It is a digest rather than a plaintext for consistency, not secrecy: an
+ * address on a reserved TLD that cannot receive mail is not a credential. What
+ * matters is that the gate takes one shape, so nobody later adds a plaintext
+ * branch here and reopens the disclosure this whole file exists to close. */
+const TEST_ADMIN_DIGEST = '2adf140688fd8cebaceeddf03ce7cddc7b73a131dcb2926aa18c39781b2e569f'
+
+export const ADMIN_EMAIL_DIGESTS = import.meta.env?.MODE === 'test'
+  ? [FOUNDER_DIGEST, TEST_ADMIN_DIGEST]
+  : [FOUNDER_DIGEST]
 
 /**
  * Client-side admin check. Keep in sync with `isAdminEmail` in
