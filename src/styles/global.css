@@ -3258,14 +3258,24 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-logo:hover{text-decoration:none}
 /* 19px / 600 / -.035em is the design's wordmark (App line 102). */
 .pnav-word{font-size:19px;font-weight:600;letter-spacing:-.035em;color:var(--t0);white-space:nowrap}
-/* THE "4" IS THE ACCENT, AND IT IS THE PLAIN --accent TOKEN.
-   Both design sources set it (`color:{{ accent }}` / `{{ accentMid }}`), and a
-   premium theme template works by moving --accent alone — so this has to be
-   the variable and never a blue. It is a 19px glyph, i.e. large text, so
-   --accent rather than --accent-strong is the right member of the family: the
-   4.5:1 floor that forces --accent-strong applies to small text, and a wordmark
-   is not small. */
-.pnav-word-mark{color:var(--accent)}
+/* THE "4" IS THE ACCENT, AND IT IS --accent-mid.
+   "A 19px glyph is large text" was the claim that used to sit here, and it is
+   wrong: WCAG's large-text floor is ≥24px, or ≥18.66px at weight ≥700. This is
+   19px/600, so the 4.5:1 floor for NORMAL text applies — the same floor the
+   note at .pnav-pop-item--accent below already states for small accent text.
+   Measured on the app header's real ground, plain --accent came to 4.36:1 on
+   #FDFDFC in light and failed on all ten routes 39-accent-contrast samples, at
+   1280 and at 390. Dark was never in trouble (#6FA8FF on #141518, 7.56:1), so
+   this needs no per-theme value: --accent-mid measures 5.46:1 light (#0E61DD)
+   and 8.53:1 dark (#82B3FF) on those same grounds, at 320, 390 and 1280.
+   WHY NOT --accent-strong, which is what the popover note prescribes: it is a
+   per-theme LITERAL (#0B5ED7 / #4A90FF), not a derivation of --accent, so a
+   premium theme template that moves --accent alone would leave the "4" painted
+   in the old brand blue while the rest of the mark moved. Both design sources
+   set this glyph from a derived value (`color:{{ accent }}` / `{{ accentMid }}`)
+   and .spnav-word-mark already uses --accent-mid, so this makes the app header
+   and the Spectrum nav one token instead of two. */
+.pnav-word-mark{color:var(--accent-mid)}
 .pnav-items{display:flex;align-items:center;gap:2px}
 /* 12px radius, not a pill: the design's section triggers are soft rectangles
    (App line 113, `border-radius:12px`), which is what lets them sit in a row
