@@ -214,3 +214,6 @@ withdrawn from anyone who took a copy while it was in effect.
 Third-party components keep their own licences and are **not** covered by the
 notice above — the icon packs in `public/icons-data.js`, the SIL OFL fonts in
 `public/fonts/`, and every dependency in `package.json`.
+
+The full list, with each component's licence and author, is published at
+**uil4b.com/credits** and generated from the code rather than kept by hand.
