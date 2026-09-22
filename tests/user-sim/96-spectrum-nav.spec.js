@@ -77,6 +77,19 @@ test.describe('the marketing pill', () => {
     const mounted = await page.locator('.spnav').count()
     if (!mounted) { await ctx.close(); test.skip(true, MOUNT); return }
     await page.evaluate(() => window.scrollTo(0, 1200))
+    /* WAIT FOR THE STATE, THEN MEASURE THE PAINT.
+     *
+     * Hide-on-scroll is a scroll LISTENER that sets React state, so the
+     * attribute lands a commit after the scroll, not with it. This read once,
+     * synchronously, and caught the bar mid-flight — `data-nav-hidden` was
+     * still '0'. The sibling test above asserts the same flip with
+     * `toHaveAttribute`, which retries, and passes; that pair is what shows
+     * this was the harness and not the component.
+     *
+     * It only surfaced now because this whole file skipped until the marketing
+     * pill was actually mounted on `/`. A spec that has never run is a spec
+     * whose races have never been paid for. */
+    await expect(page.locator('.spnav')).toHaveAttribute('data-nav-hidden', '1')
     const painted = await page.locator('.spnav').evaluate((el) => ({
       hidden: el.dataset.navHidden,
       transform: getComputedStyle(el).transform,
