@@ -241,12 +241,29 @@ export const COMPARE = [
 
 /* ── The reassurance row ──────────────────────────────────────────────────── */
 
-// The design's three assurances, minus the one that is false. "Cancel Pro any
-// time" is the claim /plans deleted under a founder flag because the Stripe
-// portal has no cancellation flow enabled, and re-adding it on the front page
-// would retract nothing. The other two are true and stay in his words.
+// The design's three assurances, minus the two that may not ship.
+//
+// "Cancel Pro any time" is the claim /plans deleted under a founder flag,
+// because the Stripe portal has no cancellation flow enabled; re-adding it on
+// the front page would retract nothing.
+//
+// "No card needed for Free" IS THE RETIRED TAGLINE, and it came back here
+// because whoever built this row did not know it had been retired. The founder,
+// 2026-09-07: *"remove the no credit card required tag line … these all over the
+// place is a huge AI Slop feature"*. It is swept by
+// tests/user-sim/62-retired-taglines.spec.js on every prerendered route, and it
+// was failing on `/` and `/home` — the two routes that matter most — from the
+// day Spectrum became the front door.
+//
+// DELETED, NOT REWORDED. That was his instruction for this class of line the
+// last time one was removed: a payment-reassurance line reworded is still a
+// payment-reassurance line. The fact itself is not lost — the Free plan card
+// under #pricing says "No account needed to use the tools" and prices at $0,
+// which is the same reassurance made by the product rather than asserted at the
+// reader.
+//
+// The remaining two are true and stay in his words.
 export const ASSURANCES = [
-  { icon: 'card', label: 'No card needed for Free' },
   { icon: 'lock', label: 'Image and video work happens in your browser' },
   { icon: 'check', label: `Every one of the ${numberWord(TOOL_COUNT)} tools opens without an account` },
 ]
