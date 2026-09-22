@@ -243,16 +243,39 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     // rewrites serve the route's own prerendered file. Both are real, and the
     // contract is the same either way; branching on the class is what keeps
     // this from being an assertion about the preview server.
-    const variant = (await page.locator('#boot-shell').getAttribute('class')) || ''
-    if (variant.includes('boot-shell-home')) {
+    /* BRANCHED ON THE GATE, NOT ON THE SHELL CLASS — and the difference is a
+     * real one this test got wrong.
+     *
+     * `.boot-shell-home` says the shell CARRIES the Spectrum hero markup.
+     * `data-hero-prepainted` on <html> says the visitor is allowed to SEE it.
+     * They are not the same fact, and `/privacy` is precisely where they come
+     * apart: its prerendered shell carries `boot-shell-home` (measured) and
+     * deliberately withholds the attribute, because the sales hero belongs to
+     * the front door and nowhere else.
+     *
+     * index.html's `html:not([data-hero-prepainted]) #boot-shell .sp-hero`
+     * rule then hides it, and an observer removes the node. So on this route a
+     * measurement of ZERO is the gate WORKING, and the old branch read it as a
+     * regression — it would have failed a correct page, and passed one where
+     * a signed-in visitor gets the sales headline, which is the defect the gate
+     * exists to prevent and which shipped inert for weeks because both halves
+     * still selected the deleted `.home-hero`. */
+    const prepainted = await page.evaluate(
+      () => document.documentElement.hasAttribute('data-hero-prepainted'),
+    )
+    if (prepainted) {
       expect(
         shell.own,
-        'the front-door shell prepaints h1.sp-hero-h1 and measured nothing — either the hero was'
-        + ' dropped from the prerendered shell, or index.html\'s `html:not([data-hero-prepainted])`'
-        + ' gate hid it, which is a visible regression in the first paint',
+        'this document is marked data-hero-prepainted, so the hero must be painted and measured'
+        + ' nothing — the hero was dropped from the prerendered shell',
       ).toBeGreaterThan(0)
     } else {
-      expect(shell.own, 'the plain shell is grey boxes, so the route has rendered nothing at all').toBe(0)
+      expect(
+        shell.own,
+        'the hero gate is armed on this route, so the Spectrum hero must NOT be painted — a'
+        + ' non-zero reading means index.html\'s gate has stopped matching the shell\'s markup,'
+        + ' which is how a signed-in visitor ends up served the sales headline',
+      ).toBe(0)
     }
 
     // ── So the wait must fail, and must name the cause. ──

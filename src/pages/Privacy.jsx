@@ -30,6 +30,7 @@
 // page, or the reverse. The ids are keyed off the translation key rather than
 // slugified from the rendered title, so a deep link survives translation into
 // the nine other locales this app ships.
+import { Link } from 'react-router-dom'
 import { useI18n } from '../contexts/I18nContext'
 import { KEY_PURPOSES } from '../utils/dataExport'
 import '../styles/pages/content.css'
@@ -55,7 +56,7 @@ function StorageSection() {
   return (
     <>
       <p className="lgl-p">
-        UIL4B writes the following keys to your browser&apos;s localStorage. With one narrow exception described below, this data stays on your device. You can inspect, export, or clear all of this from <a className="lgl-a" href="/settings">Settings → Your data</a>.
+        UIL4B writes the following keys to your browser&apos;s localStorage. With one narrow exception described below, this data stays on your device. You can inspect, export, or clear all of this from <Link className="lgl-a" to="/settings">Settings → Your data</Link>.
       </p>
       <div className="lgl-table-wrap">
         <table className="storage-table">
