@@ -160,6 +160,34 @@
    by contrast ratio (inkOn: #0B0C0E vs #F4F7FF, whichever clears 4.5:1). CSS
    cannot do that yet, so it is stated per theme here and recomputed in JS only
    when a premium theme applies a custom accent — see utils/accentTheme.js. */
+/* ⚠️ READ THIS BEFORE REACHING FOR AN ACCENT MEMBER TO FIX A CONTRAST RATIO.
+ *
+ * THESE THREE NAMES READ BACKWARDS IN LIGHT THEME. The mix is toward
+ * `--accent-toward`, which is `--accent-deep` (near-black) in light and
+ * `--accent-paper` in dark. So the percentage is how much ACCENT survives, and
+ * in light theme:
+ *
+ *     --accent-mid     86% accent  →  the LIGHTEST of the three
+ *     --accent-text    80% accent  →  the middle
+ *     --accent-bright  72% accent  →  the DARKEST of the three
+ *
+ * In dark theme they invert and the names read the way you expect. "bright" is
+ * a statement about the DARK theme that happens to be the opposite in light.
+ *
+ * This has already cost one lane a wrong fix: it swapped `bright → text` to
+ * RAISE contrast on a light ground and lowered it, 4.70 → 4.09, and only caught
+ * it by measuring. Reasoning from the names will mislead you in light theme
+ * every time. MEASURE THE COMPOSITED COLOUR.
+ *
+ * And two more rules this family keeps breaking:
+ *   · `--accent-strong` is NOT part of this derivation. It is a per-theme
+ *     LITERAL, so it does not track `--accent` and a premium theme moving the
+ *     accent alone strands anything using it on the old brand blue. For small
+ *     accent TEXT reach for `--accent-mid`, not `--accent-strong`.
+ *   · `--accent-hover` mixes toward `--accent-paper` in BOTH themes, so in
+ *     light it is LIGHTER than the fill it lifts off. Fixing a button's resting
+ *     contrast and leaving its hover alone has already undone one fix, where
+ *     the hover measured 3.40:1 against a resting state that passed. */
 :root{
   --accent-paper:#F4F7FF;
   --accent-deep:#0B0C0E;
