@@ -1053,6 +1053,23 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .lib-surface .lbry-filtermenu .lbry-filter[data-active="true"]{
   color:var(--t0);background:var(--bg-2);border-color:var(--border);
 }
+/* AND THE DARK ANSWER TRAVELS WITH IT. In dark `--bg-2` and `--card` are the
+   same hex, and `--card` is the menu's own ground, so the rule above paints the
+   chosen row in exactly the colour beneath it: rgb(25,26,29) on rgb(25,26,29),
+   a selection that differs from an unselected row by text colour alone.
+   global.css has carried the dark value since 2026-09-08
+   (`[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]`,
+   `--bg-3`) — but that is (0,4,0), EQUAL to the rule above, and this sheet
+   loads after it, so the restyle silently took the fix back and
+   65-new-surfaces-breakpoints:300 went red on the identical two numbers.
+   Restating it at (0,5,0) HERE, rather than raising the global rule, is what
+   stops load order deciding it a third time: the sheet that introduces a
+   theme-blind fill is the sheet that owes the theme its exception. The tray's
+   sliding indicator needs none — it is painted `--t0`, which is ink in both
+   themes. */
+[data-theme="dark"] .lib-surface .lbry-filtermenu .lbry-filter[data-active="true"]{
+  background:var(--bg-3);
+}
 /* RESTATED, not inherited: the base floors are (0,1,0) and everything above is
    (0,3,0), so without this the touch target would have gone from 44 to 40. */
 @media(pointer:coarse){
