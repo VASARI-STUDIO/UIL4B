@@ -826,6 +826,28 @@
 }
 .sp-footer-legal a { color: var(--sp-dim); }
 .sp-footer-legal a:hover { color: var(--sp-ink); }
+/* THE FOUNDER CREDIT IS UNDERLINED AT REST, and that is his direction rather
+   than a style choice: 2026-09-02, the one link in this footer that LEAVES the
+   app has to be discoverable without hover, because on touch there is no hover
+   to reveal it. `.app-footer-attrib` has carried that since; this footer is a
+   different component and shipped without it, so on the front door — the page
+   every visitor lands on — the outbound link was bare text.
+
+   The same recipe AppFooter uses: 70% of the current ink so the rule reads as
+   a rule rather than as a second baseline, at a 2px offset. Lifting the ink to
+   `--sp-dim`'s brighter sibling on hover keeps the hover state doing something
+   once the resting state already says "link".
+
+   07-public-shell-library-palette measures this by CONTRAST in both themes,
+   not by presence — an underline at 1.7:1 on a dark footer is a decoration, not
+   a signal, and "has an underline" would pass on one. */
+.sp-footer-legal a.sp-footer-attrib {
+  color: var(--sp-ink);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
+  text-underline-offset: 2px;
+}
+.sp-footer-legal a.sp-footer-attrib:hover { text-decoration-color: currentColor; }
 /* THE FOUNDER'S NOTE TRIGGER, restyled to this footer and nothing else.
    `.app-footer-note` is FounderNote.jsx's own class and global.css styles it for
    AppFooter's legal row; here it needs the mono baseline the row is set in. Only

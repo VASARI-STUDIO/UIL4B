@@ -85,9 +85,16 @@ test.describe('public UI quality release', () => {
    * and, worse, would pass on the actual defect it exists to catch: two footers
    * stacked, one of each kind.
    *
-   * So it counts `footer` elements. That is the thing the rule is about, it is
-   * what a screen reader's landmark list shows, and it holds whichever footer
-   * the route mounts.
+   * So it counts the `contentinfo` LANDMARK, which is the thing the rule is
+   * actually about and what a screen reader's landmark list shows.
+   *
+   * NOT `footer` elements — that was the first attempt and it over-counted.
+   * `/create/palette` renders a second `<footer class="plb-adjust">` for the
+   * ADJUST ALL toolbar, but it sits inside `<main>` and carries an explicit
+   * `role="group"`, so per HTML-AAM it is not a contentinfo landmark at all.
+   * A `<footer>` only maps to contentinfo when it is NOT nested in article,
+   * aside, main, nav or section — counting tags would have failed a page whose
+   * markup is right.
    *
    * '/create/color' left the loop with the colour landing's deletion — it is a
    * redirect now, so it was asserting the footer of '/create/palette' twice. */
@@ -95,7 +102,7 @@ test.describe('public UI quality release', () => {
     watch(page, 'visitor comparing the product before committing')
     for (const route of ['/', '/discover', '/learn', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
       await go(page, route)
-      await expect(page.locator('footer'), `${route} should render exactly one footer landmark`).toHaveCount(1)
+      await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
       if (['/create/palette', '/create/icons', '/create/aspect-ratio'].includes(route)) {
         await expect(page.locator('.app-footer')).toHaveClass(/app-footer--compact/)
@@ -123,7 +130,9 @@ test.describe('public UI quality release', () => {
       // app routes mount `.app-footer`. The credit is the founder's own ask and
       // it is owed on every route, so the selector covers whichever one the
       // route renders rather than quietly skipping the front door.
-      const footer = page.locator('footer')
+      // The landmark, not the tag: /create/palette also has a `<footer>` inside
+      // <main> for its ADJUST toolbar, which is not a contentinfo landmark.
+      const footer = page.getByRole('contentinfo')
       const attrib = footer.locator('.app-footer-attrib, .sp-footer-attrib')
       await attrib.waitFor()
 
@@ -170,7 +179,10 @@ test.describe('public UI quality release', () => {
           // The underline is semi-transparent, so composite it over the footer
           // ground before measuring — the painted colour is what a user sees.
           const deco = toRgba(style.textDecorationColor)
-          const bg = toRgba(getComputedStyle(el.closest('.app-footer')).backgroundColor)
+          // `.app-footer` until '/' became Spectrum, where this returned null
+          // and getComputedStyle threw. The ground is whichever footer the link
+          // is actually painted on.
+          const bg = toRgba(getComputedStyle(el.closest('footer')).backgroundColor)
           const over = [0, 1, 2].map((i) => deco[i] * deco[3] + bg[i] * (1 - deco[3]))
           const [a, b2] = [lum(over) + 0.05, lum(bg) + 0.05]
           if (previous === null) root.removeAttribute('data-theme')
