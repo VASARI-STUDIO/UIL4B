@@ -1180,8 +1180,44 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
 }
 .lib-surface .lbry-card:hover .lbry-card-shot{transform:none;box-shadow:none}
 .lib-surface .lbry-card .lbry-card-shot{border-radius:0}
-.lib-surface .lbry-card .lbry-card-foot{padding:16px 18px 18px}
-.lib-surface .lbry-card .lbry-card-name{font-size:16px;font-weight:540}
+/* THE FOOT IS TWO THINGS COMPETING FOR ONE LINE, AND THE NAME LOSES.
+   `.lbry-card-tail` is `flex-shrink:0`, so it holds the same width at every
+   card size — 141px of "Copy CSS" and "Open →" on the Gradient Library — while
+   `.lbry-card-id` is `flex:1 1 0` and simply absorbs whatever is left. That left
+   the name 97px at 320, 103px at 640 and 104px at 1280, against a widest curated
+   name ("Harmonic Energy") of 127px: 20 of 100 names ellipsized at 320, 15 at
+   640 and 13 at 1280 — the last of those at a width 25-defect-sweep:942 does not
+   even walk, so the founder's "no gradient name or meta line is truncated at any
+   width" was failing wider than its own guard could see.
+
+   THE TYPE IS NOT THE FIX, though the 16px below is what exposed it. Rendered
+   with the name put back to the base `--fs-body-s`, the same widest name asks
+   127px→113px against the same 97px column and 10 of 100 are STILL cut at 320,
+   3 at 640, 2 at 1280. A smaller face loses the same argument more slowly. What
+   is actually wrong is that the card gives its own identity a third of its width
+   so that two secondary buttons can sit beside it.
+
+   So the line gets a floor and is allowed to break. `1 1 128px` says the name
+   and meta have first claim on 128px of any line they share — one past the 127px
+   this library asks for, so the ellipsis has nothing left to do — and
+   `flex-wrap:wrap` sends the actions to their own full-width row on the cards
+   too narrow to honour that, which is the right anatomy on a phone anyway. It
+   reads as one decision because it is taken per CARD width, not per viewport:
+   every card in the grid is the same width, so they all wrap or none do (checked
+   — a single distinct card height at each of 19 widths from 320 to 1920). A
+   `max-width` query cannot do that. The 2-column band alone runs from ~612 to
+   ~912 and the cards inside it pass through 280→420px, so a viewport breakpoint
+   would have left the middle of every band truncating exactly as before.
+
+   `white-space:normal` is the floor under both. A name wider than the whole
+   card cannot be fixed by any share of the line, and the founder's rule has no
+   width exception — so the last resort is two lines, never three dots. */
+.lib-surface .lbry-card .lbry-card-foot{padding:16px 18px 18px;flex-wrap:wrap}
+.lib-surface .lbry-card .lbry-card-id{flex:1 1 128px}
+.lib-surface .lbry-card .lbry-card-name{
+  font-size:16px;font-weight:540;
+  white-space:normal;overflow-wrap:break-word;
+}
 .lib-surface .lbry-card .lbry-card-meta{font-size:12.5px}
 /* The two surfaces that had already hand-tuned the old anatomy, put back onto
    the shared one. `.pgl-page`/`.grg-*` set these at (0,2,0). */
