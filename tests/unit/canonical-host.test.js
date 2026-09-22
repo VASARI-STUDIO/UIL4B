@@ -3,7 +3,7 @@
 // ── The defect this ends ────────────────────────────────────────────────────
 //
 // Measured 2026-09-13. Every canonical tag, og:url, og:image, twitter:image and
-// JSON-LD url on all 40 prerendered shells named `https://www.uil4b.com`, and
+// JSON-LD url on every one of the prerendered shells named `https://www.uil4b.com`, and
 // that host does not serve:
 //
 //   · `curl https://uil4b.com/`      -> 200 in 0.9 s
@@ -57,6 +57,7 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { SITE_ORIGIN } from '../../src/utils/routeMeta.js'
 import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
+import { advertisedRoutes } from '../../scripts/sync-sitemap.mjs'
 
 const REPO = process.cwd()
 const DIST = path.join(REPO, 'dist')
@@ -126,14 +127,23 @@ function jsonLdOf(html, label) {
 
 test('the probe is holding the real build', { skip }, () => {
   const docs = shippedDocuments()
-  // 38 route shells + dist/index.html + the 404 shell. The count dropped from
-  // 39 on 2026-09-18: /create/color was the one Create category home that
-  // rendered a page, the founder deleted that landing when Spectrum became `/`,
-  // and a bouncing home gets no crawlable shell. If the build stops
-  // producing one of these the read throws above rather than passing quietly.
-  assert.equal(docs.length, 40, 'the matrix and the published document set disagree')
-  assert.equal(prerenderRoutes().length, 38,
-    'the route matrix moved — every count in this file is calibrated against 38 route shells')
+  // ONE SHELL PER MATRIX ROUTE, plus dist/index.html and the 404 shell. If the
+  // build stops producing one of them the read throws above rather than passing
+  // quietly.
+  //
+  // THIS USED TO BE FOUR LITERALS — 38 route shells, 40 documents, 40*3+39 tags
+  // and 38 sitemap entries — with a tripwire saying "every count in this file
+  // is calibrated against 38 route shells". Adding ONE public route (/credits,
+  // 2026-09-23) made all four wrong at once, in a file whose subject is the
+  // ORIGIN and not the route count, so a correct build failed here with a
+  // message about calibration. The RELATIONSHIP is what this is about, and a
+  // relationship survives the next route; the floor below is what stops it
+  // passing on a build that produced almost nothing.
+  const routes = prerenderRoutes()
+  assert.ok(routes.length >= 30, `the route matrix lists only ${routes.length} routes`)
+  assert.equal(docs.length, routes.length + 2,
+    'the matrix and the published document set disagree — one shell per route, plus '
+    + 'dist/index.html and dist/404.html')
   for (const { route, html } of docs) {
     assert.ok(html.length > 2000, `${route} is a stub, not a built shell (${html.length} bytes)`)
     // The correct origin IS there, and not once by accident: canonical (except
@@ -174,8 +184,10 @@ test('canonical, og:url, og:image and twitter:image are on the apex in every she
       checked += 1
     }
   }
-  // 40 documents x 3 always-present tags, + a canonical on all but the 404.
-  assert.equal(checked, 40 * 3 + 39, 'fewer tags were read than the shells contain')
+  // Three always-present tags per document, + a canonical on all but the 404.
+  // Derived from the document count for the reason recorded above.
+  const total = shippedDocuments().length
+  assert.equal(checked, total * 3 + (total - 1), 'fewer tags were read than the shells contain')
 })
 
 test('every URL in the shipped JSON-LD is on the apex', { skip }, () => {
@@ -192,8 +204,11 @@ test('every URL in the shipped JSON-LD is on the apex', { skip }, () => {
   }
   // Positive control: the walk found real URLs, so "none of them is wrong" is
   // a statement about something. Every shell carries at least a WebApplication
-  // url, and 16 carry a BreadcrumbList whose every item is a URL too.
-  assert.ok(ours.length >= 40, `only ${ours.length} JSON-LD URLs were read across 40 shells`)
+  // url, and sixteen carry a BreadcrumbList whose every item is a URL too — so
+  // the floor is the document count, which is the one shell-per-route number
+  // that does not go stale when a route is added.
+  const total = shippedDocuments().length
+  assert.ok(ours.length >= total, `only ${ours.length} JSON-LD URLs were read across ${total} shells`)
 })
 
 // ── The other published artefacts ───────────────────────────────────────────
@@ -224,7 +239,12 @@ test('dist/llms.txt advertises the apex and nothing else', { skip }, () => {
 test('dist/sitemap.xml asks for the apex to be crawled', { skip }, () => {
   const xml = fs.readFileSync(path.join(DIST, 'sitemap.xml'), 'utf8')
   const locs = [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map(([, url]) => url)
-  assert.equal(locs.length, 38, `the sitemap advertises ${locs.length} URLs`)
+  // The ADVERTISED subset of the matrix, asked of the generator rather than
+  // written down — `/` is advertised and not prerendered, `/home` is
+  // prerendered and not advertised, so the two counts are only equal by
+  // accident and a literal here goes stale on the next route either way.
+  assert.equal(locs.length, advertisedRoutes().length,
+    `dist/sitemap.xml advertises ${locs.length} URLs; the generator produces ${advertisedRoutes().length}`)
   for (const url of locs) {
     assert.ok(url.startsWith(`${SITE_ORIGIN}/`),
       `sitemap.xml asks Google to crawl ${url}`)

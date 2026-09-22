@@ -104,8 +104,21 @@ test('the fonts are self-hosted, not two third-party round trips', () => {
   ]) {
     assert.ok(fs.existsSync(path.join(process.cwd(), f)), `${f} is missing`)
   }
-  // OFL 1.1 permits redistribution; shipping the font means shipping the licence.
-  assert.ok(fs.existsSync(path.join(process.cwd(), 'public/fonts/OFL.txt')))
+  // OFL 1.1 permits redistribution; shipping the font means shipping the licence
+  // — AND THE RIGHT ONE. This named `public/fonts/OFL.txt`, a single combined
+  // file that has not existed since 139e7624 split it: it carried OUTFIT's
+  // copyright line, which is the one family the app no longer sets, so Geist,
+  // Geist Mono and Caveat each shipped beside a licence naming a different
+  // project. That commit wrote one file per family and did not update this
+  // assertion, so the check has been failing on a tree where the licensing is
+  // now correct. Asserted per family, derived from the .woff2 files this test
+  // already lists, so the next face to arrive brings its own notice or fails.
+  for (const family of ['GEIST', 'GEIST-MONO', 'CAVEAT']) {
+    const licence = `public/fonts/${family}-OFL.txt`
+    assert.ok(fs.existsSync(path.join(process.cwd(), licence)), `${licence} is missing`)
+    assert.match(fs.readFileSync(path.join(process.cwd(), licence), 'utf8'), /^Copyright \d{4} /,
+      `${licence} does not open on the copyright line OFL 1.1 asks travel with the font`)
+  }
 })
 
 test('both families are preloaded, in CORS mode', () => {

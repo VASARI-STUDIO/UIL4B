@@ -9,7 +9,7 @@
 //
 // `src/utils/constants.js` held the founder's personal address twice: once as
 // the only entry of ADMIN_EMAILS, and once as the KEY of OWNER_HANDLES. Its
-// chunk is in the `modulepreload` list of all 39 prerendered shells, so it was
+// chunk is in the `modulepreload` list of every prerendered shell, so it was
 // fetched in the first request wave by every anonymous visitor, on every route,
 // signed in or not — a personal address harvestable by any scraper on every
 // page, and the exact account to phish in order to reach /admin, named for the
@@ -252,13 +252,22 @@ test('the digest search finds a planted address when it is there', () => {
 
 // ── The real build ──────────────────────────────────────────────────────────
 
-/** The 40 documents the build publishes, addressed by the ROUTE they serve
- *  rather than by walking whatever happens to be on disk. */
+/** Every document the build publishes, addressed by the ROUTE it serves rather
+ *  than by walking whatever happens to be on disk: one shell per matrix route,
+ *  plus dist/index.html and the 404 shell.
+ *
+ *  THE COUNT USED TO BE A LITERAL 38, with a message saying "the counts in this
+ *  file are calibrated against 38 route shells". Adding ONE public route
+ *  (/credits, 2026-09-23) turned a correct build into a red test in a file whose
+ *  subject is whether the owner's email address is in dist/ — a failure that
+ *  tells the next reader nothing about what it guards. The floor keeps the walk
+ *  from passing on a build that produced almost nothing; the relationship
+ *  survives the next route. */
 function publishedDocuments(files) {
   const byRel = new Map(files.map((f) => [f.rel, f]))
   const routes = prerenderRoutes()
-  assert.equal(routes.length, 38,
-    'the route matrix moved — the counts in this file are calibrated against 38 route shells')
+  assert.ok(routes.length >= 30,
+    `the route matrix lists only ${routes.length} routes — this walk would be nearly vacuous`)
   const wanted = [
     ['/', 'index.html'],
     ...routes.map((route) => [route, [...route.split('/').filter(Boolean), 'index.html'].join('/')]),
@@ -277,10 +286,10 @@ test('the probe is holding the real build', { skip }, () => {
   assert.ok(bytes >= 2_000_000, `dist/ is only ${bytes} bytes — this is not a full build`)
 
   const docs = publishedDocuments(files)
-  // 38 route shells + index + 404. It was 39 + 2 until 2026-09-18, when the
-  // colour landing was deleted with the Spectrum swap and /create/color stopped
-  // getting a shell of its own.
-  assert.equal(docs.length, 40, 'the published document set is not 38 route shells + index + 404')
+  // One shell per matrix route, + index + 404 — derived for the reason recorded
+  // on publishedDocuments above.
+  assert.equal(docs.length, prerenderRoutes().length + 2,
+    'the published document set is not one shell per matrix route + index + 404')
   for (const doc of docs) {
     assert.ok(doc.bytes > 2000, `${doc.route} is a stub, not a built shell (${doc.bytes} bytes)`)
   }
@@ -290,8 +299,8 @@ test('the probe is holding the real build', { skip }, () => {
   // numbers in the header stop describing reality.
   const preloaded = docs.filter((d) =>
     /<link rel="modulepreload"[^>]*href="\/assets\/constants-[A-Za-z0-9_-]+\.js"/.test(d.text))
-  assert.equal(preloaded.length, 40,
-    `the constants chunk is modulepreloaded by only ${preloaded.length} of 40 published documents`)
+  assert.equal(preloaded.length, docs.length,
+    `the constants chunk is modulepreloaded by only ${preloaded.length} of ${docs.length} published documents`)
 
   // The scan produced addresses. "None of them is forbidden" below is a claim
   // about this set, and an empty set would make it vacuous.
