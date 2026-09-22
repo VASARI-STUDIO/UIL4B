@@ -1,0 +1,346 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   SITEMAP — the whole map, in Spectrum.
+   ═══════════════════════════════════════════════════════════════════════════
+
+   The visual site map never had a design pass. It wore the `--fs-*` ramp
+   headings, 12px category descriptions, 13px link labels and a `--card` box
+   with a `--shadow-s` hover lift on every one of eleven categories — a page of
+   cards that look pressable and are not, above forty-odd rows that are.
+
+   ── WHY THIS IS A NEW SHEET ─────────────────────────────────────────────────
+   `.smap-*` lives in `src/styles/deferred/reading.css` (shared with the Help
+   Centre, the Info Centre, Principles and the Learn guides) and in
+   `src/styles/global.css` (the render-blocking entry sheet). Neither is this
+   lane's to edit, and `category-hue-contrast.test.js` asserts four `.smap-*`
+   rules in global.css by their EXACT text, so touching them would be a byte
+   diff against a test as well as a collision. So the page takes its own sheet,
+   imported last in `SiteMap.jsx`, every rule scoped under `.smap-page`.
+
+   ── THREE THINGS THAT ARE MEASURED AND ARE THEREFORE NOT STYLE CHOICES ──────
+   1. `.smap-link-route` may not truncate. `76-marketing-quality.spec.js` walks
+      every row at seven widths from 1024 to 1920 and fails on a computed
+      `text-overflow: ellipsis` or `overflow: hidden`, and separately requires
+      the visible text to EQUAL the row's `data-route`. A route you cannot read
+      in full is a route you cannot type, which is the only reason the column
+      exists. Nothing below clips it.
+   2. The same spec requires every route's right edge to sit at or inside
+      `.smap-cat`'s right edge minus 20px, and it hard-codes that 20 as the
+      card's padding. The padding below has a 20px FLOOR for exactly that
+      reason, and grows from there.
+   3. `.smap-stage`'s translucent tint and `.smap-soon`'s hue-derived colour
+      pair are re-measured for contrast by `43-state-token-contrast.spec.js` and
+      `category-hue-contrast.test.js` against `--hue-*-strong` on four grounds.
+      Only their TYPE moves below — family, size, tracking. No rule here
+      declares `color` or `background` on either.
+
+   Type scale, radii, hairlines and motion all come from
+   `src/styles/pages/spectrum.css`.
+
+   Mobbin, for how a real site map is laid out:
+     Vercel   https://mobbin.com/sites/sections/82d7b249-da3b-4e9f-9b61-7f8f21dc94e3
+       Dense multi-column grid, mono micro-caps group headings, quiet links, and
+       a small marker inline on the entries that are new. That marker-in-the-row
+       pattern is what the Soon badge does here, and it is why the badge sits
+       beside the label rather than in a legend.
+     Firecrawl https://mobbin.com/sites/sections/4ca71dbc-5cb9-48db-9db8-e76cade73b11
+       The map drawn as a hairline grid of cells rather than a page of cards.
+       That is the shape below: the box partitions, it does not advertise.
+     Height   https://mobbin.com/sites/sections/c02410ae-9996-4f5a-8c69-d0c26eeb4d30
+       Sub-headed stacks inside one column, which is how this grid degrades at
+       phone width instead of becoming eleven full-width boxes.               */
+
+.smap-page {
+  --sm-page: var(--bg-0);
+  --sm-card: var(--card);
+  --sm-ink: var(--t0);
+  --sm-dim: var(--t1);
+  --sm-faint: var(--t2);
+  --sm-quiet: var(--t3);
+  --sm-line: var(--border);
+  --sm-line-strong: var(--bh);
+  --sm-wash-2: color-mix(in srgb, var(--t0) 6%, transparent);
+  --sm-ease: cubic-bezier(.23, 1, .32, 1);
+}
+
+/* ── masthead ─────────────────────────────────────────────────────────────── */
+
+.smap-page .sec-h {
+  max-width: 62ch;
+  margin-bottom: clamp(32px, 4.5vw, 56px);
+}
+.smap-page .sec-h h1 {
+  margin: 0;
+  max-width: 18ch;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(34px, 5vw, 68px);
+  line-height: .98;
+  letter-spacing: -.035em;
+  color: var(--sm-ink);
+  text-wrap: balance;
+}
+/* The mark run in "The whole *map*." — Spectrum's `.sp-w--mark` treatment: the
+   accent at 600 and never an italic, so an <em> here carries emphasis by colour
+   and weight rather than by a slant the display face was not drawn for. */
+.smap-page .sec-h h1 em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent-mid);
+}
+.smap-page .sec-h > p {
+  margin: 18px 0 0;
+  max-width: 52ch;
+  font-size: clamp(15.5px, 1.2vw, 16.5px);
+  line-height: 1.62;
+  color: var(--sm-dim);
+  text-wrap: pretty;
+}
+
+/* ── the three surfaces ───────────────────────────────────────────────────── */
+
+.smap-page .smap-surface { margin-top: clamp(56px, 8vw, 104px); }
+.smap-page .smap-surface:first-of-type { margin-top: clamp(40px, 5vw, 64px); }
+
+.smap-page .smap-surface-h {
+  margin-bottom: clamp(20px, 2.6vw, 30px);
+  padding-bottom: clamp(16px, 2vw, 22px);
+  border-bottom: 1px solid var(--sm-line-strong);
+}
+.smap-page .smap-surface-h h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(28px, 4vw, 52px);
+  line-height: 1;
+  letter-spacing: -.035em;
+  color: var(--sm-ink);
+  text-wrap: balance;
+}
+/* The section lede. `surface-claims-truth.test.js` matches the Create one by a
+   source regex that expects a BARE `<p>` immediately after the h2 — no class,
+   no wrapper — so this is reached as a descendant of the header rather than by
+   a class of its own. Do not add one. */
+.smap-page .smap-surface-h p {
+  margin: 12px 0 0;
+  max-width: 60ch;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--sm-dim);
+}
+
+/* ── the category cells ───────────────────────────────────────────────────────
+   `minmax(min(Npx,100%),1fr)` rather than a bare floor, on both tracks: at 320
+   the floor collapses instead of overflowing, which is what keeps
+   `documentElement.scrollWidth <= width + 1` true at every width
+   76-marketing-quality measures. */
+.smap-page .smap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+.smap-page .smap-grid--two {
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+}
+
+/* NO HOVER LIFT AND NO SHADOW. The cell is a partition, not a control: nothing
+   inside it is clickable except the rows, and a box that rises 3px and gains a
+   shadow when the pointer crosses it promises a press that never happens. The
+   border is the whole response, and it is there so the cursor can tell which of
+   eleven columns it is reading. Spectrum's own `.sp-disc-card` lifts because it
+   IS a link; this is closer to `.sp-stack-art`, which does not. */
+/* ── THE CELL GROUND IS `--card`, AND THAT IS A CONTRAST DECISION ────────────
+   The first draft of this sheet put the cell on `--sm-wash` (a 4% ink film over
+   the page), which is what Spectrum's `.sp-disc-card` uses. It was measured and
+   rejected: `.smap-soon`'s hue-derived ink over its own 7% tint came out at
+   **4.21:1** in light at both 1280 and 390, because the wash darkens the ground
+   the chip's tint is composited onto.
+
+   The chip's rule is `global.css:3081`, whose text is asserted verbatim by
+   `category-hue-contrast.test.js`, so it is not this lane's to change — and
+   scoping a higher-specificity override in here to work around it is exactly
+   how the dark-theme filter-menu regression happened on this branch. The ground
+   is the half this page owns, so the ground is the half that moves. `--card` is
+   the lightest surface in the light ramp and the darkest-relative one in dark,
+   and it is what Spectrum's own panels (`.sp-panel`, `.sp-stack-card`) stand
+   on, so this is a move toward the design rather than away from it. */
+.smap-page .smap-cat {
+  min-width: 0;
+  /* ≥20px is load-bearing: see note 2 in the header. */
+  padding: clamp(20px, 2.2vw, 26px);
+  border: 1px solid var(--sm-line);
+  border-radius: var(--radius-2xl);
+  background: var(--sm-card);
+  box-shadow: none;
+  transition: border-color var(--dur-2) ease;
+}
+/* THE HOVER DOES NOT CHANGE THE GROUND, for the same reason. A hover film over
+   the cell would shift the composited ground under every badge inside it and
+   quietly undo the fix above — the failure mode a sibling lane hit by fixing a
+   resting state and leaving its hover alone. The border is the whole response. */
+.smap-page .smap-cat:hover {
+  border-color: var(--sm-line-strong);
+  background: var(--sm-card);
+  box-shadow: none;
+  transform: none;
+}
+
+.smap-page .smap-cat-h {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+.smap-page .smap-cat-h h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 560;
+  line-height: 1.2;
+  letter-spacing: -.015em;
+  color: var(--sm-ink);
+}
+/* The hue dot keeps `var(--hue)` — it is the one thing on this page that ties a
+   category to the same colour the mega menu and the in-tool shell give it, and
+   `category-hue-contrast.test.js` derives every `--hue-*` pair from the tool
+   tree. Only the size moves, to sit on the new cap height. */
+.smap-page .smap-cat-dot { width: 7px; height: 7px; }
+
+.smap-page .smap-cat-desc {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--sm-faint);
+}
+
+/* ── the rows ─────────────────────────────────────────────────────────────────
+   Spectrum's `.sp-filelist` row: the label takes the measure, the route sits at
+   the end in mono, the note drops to its own line. The row bleeds to the card's
+   padding and pads back so the hover ground reads as a full-width row rather
+   than as a floating pill — the same trick `.sp-rail` uses at tablet width. */
+.smap-page .smap-links { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.smap-page .smap-link { margin: 0; min-width: 0; }
+
+.smap-page .smap-link-a {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 12px;
+  row-gap: 3px;
+  min-width: 0;
+  /* 24px is the WCAG 2.5.8 floor and 58-target-size-24 measures it; the rows
+     sit well above it with the note, and at exactly it without one. */
+  min-height: 24px;
+  padding: 9px 10px;
+  margin: 0 -10px;
+  border-radius: var(--radius-s);
+  text-decoration: none;
+  transition: background var(--dur-1) ease;
+}
+.smap-page .smap-link-a:hover { background: var(--sm-wash-2); }
+.smap-page .smap-link-a--soon { cursor: default; }
+.smap-page .smap-link-a--soon:hover { background: transparent; }
+
+.smap-page .smap-link-label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: var(--sm-ink);
+}
+.smap-page .smap-link-a--soon .smap-link-label { color: var(--sm-faint); }
+
+/* MONO, QUIET, AND NEVER CLIPPED. `white-space:nowrap` with no `overflow` and
+   no `text-overflow` is deliberate: the row is allowed to wrap the route onto
+   its own line at a narrow width, but the route itself is never shortened. */
+.smap-page .smap-link-route {
+  flex: 0 0 auto;
+  max-width: 100%;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  line-height: 1.5;
+  color: var(--sm-quiet);
+  white-space: nowrap;
+}
+
+.smap-page .smap-link-note {
+  flex: 0 0 100%;
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--sm-faint);
+}
+
+/* ── the two badges ───────────────────────────────────────────────────────────
+   TYPE ONLY. `.smap-soon`'s `--hue-strong` ink over a 7% `--hue` tint and
+   `.smap-stage`'s translucent `--ok` tint are both contrast-measured against
+   four grounds in two themes, and `.smap-stage`'s alpha being below 1 is itself
+   an assertion. Neither `color` nor `background` appears below; the badges take
+   Spectrum's mono micro-caps setting and keep every colour they had. */
+.smap-page .smap-soon,
+.smap-page .smap-stage {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  padding: 3px 7px;
+}
+.smap-page .smap-soon--inline { vertical-align: middle; margin: 0 2px; }
+
+/* ── focus ────────────────────────────────────────────────────────────────────
+   NO `border-radius` IN A FOCUS RULE — an outline follows its own element's
+   radius, so a radius here would round the ROW at the instant of focus rather
+   than the ring. The founder reported that class of defect on 2026-09-04 and
+   `focus-ring-geometry.test.js` has banned it in every sheet since; the row
+   already carries `--radius-s` at rest, so the ring is the right shape free. */
+.smap-page :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── responsive ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 560px) {
+  .smap-page .smap-grid,
+  .smap-page .smap-grid--two { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  /* At phone width the route is what wraps, so it takes its own full line under
+     the label rather than fighting it for the baseline. */
+  .smap-page .smap-link-route { flex: 0 0 100%; }
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
+   Both spellings, in the precedence global.css encodes: the in-app Settings
+   choice wins in both directions, the OS preference only when no choice has
+   been made. Nothing on this page moves, so what is turned off is the two
+   colour transitions — global.css clamps their duration and these remove them,
+   which is the part a duration clamp does not do. */
+:where(html[data-reduced-motion="true"]) .smap-page .smap-cat,
+:where(html[data-reduced-motion="true"]) .smap-page .smap-link-a {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .smap-page .smap-cat,
+  :where(html:not([data-reduced-motion="false"])) .smap-page .smap-link-a {
+    transition: none !important;
+  }
+}
+
+/* ── FORCED COLOURS ──────────────────────────────────────────────────────────
+   In Windows High Contrast the hue dot and both `color-mix` badge tints
+   collapse into their ground, so the only thing distinguishing a Soon row from
+   a live one would be gone. The dot keeps its own colour and the badges get a
+   border the OS is obliged to paint. */
+@media (forced-colors: active) {
+  .smap-page .smap-cat-dot { forced-color-adjust: none; }
+  .smap-page .smap-soon,
+  .smap-page .smap-stage { border: 1px solid CanvasText; }
+}

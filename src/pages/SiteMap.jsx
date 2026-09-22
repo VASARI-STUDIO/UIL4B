@@ -6,6 +6,16 @@ import { LEARN_ARTICLES } from '../data/learnIndex'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/reading.css'
 import '../styles/deferred/tool-shell.css'
+// THIS PAGE'S OWN SHEET, IMPORTED LAST ON PURPOSE.
+//
+// The `.smap-*` family is split between `deferred/reading.css` — shared with
+// the Help Centre, the Info Centre, Principles and the Learn guides — and the
+// render-blocking `global.css`, where `category-hue-contrast.test.js` asserts
+// four of its rules by their exact text. Neither is this lane's to edit, so the
+// page takes a sheet of its own, emitted with this route's lazy chunk and
+// arriving after both of the sheets it re-dresses. Every rule inside is scoped
+// under `.smap-page` so it cannot reach the four other surfaces.
+import '../styles/pages/sitemap.css'
 
 // The full visual site map — a single page that lays out every destination in
 // UIL4B so a visitor (or the founder) can see the whole product at a glance.
@@ -54,6 +64,20 @@ const FLAT_SECTIONS = [
     links: [
       { label: 'Privacy', route: '/privacy', note: 'What we store and how we handle data.' },
       { label: 'Terms', route: '/terms', note: 'Usage rules and account policies.' },
+      // CREDITS IS A LIVE ROUTE AND CARRIES NO `soon`. It is in routeMetaMap,
+      // sitemap.xml, vercel.json, llms.txt and both footers; this page was the
+      // only surface that did not list it, because this group is hand-kept
+      // rather than read from the tool tree. Several of the packs and faces it
+      // names legally require visible attribution, so a map that promises
+      // "every page in UIL4B" and omits it is the wrong page to omit from.
+      //
+      // The note is NOT written here: it is the first clause of the route's own
+      // meta description in `src/data/routeMetaMap.js`, trimmed to the length
+      // the other rows in this group use. The rest of that sentence names the
+      // four licences and is more than a map row needs; taking the opening of a
+      // sentence the product already ships is how every other note in this file
+      // should have been written.
+      { label: 'Credits', route: '/credits', note: 'Every icon set, typeface and package UI L4B is built on, with its licence.' },
     ],
   },
 ]
@@ -86,7 +110,11 @@ function MapLink({ label, route, note, soon }) {
 
 export default function SiteMap() {
   return (
-    <div className="sec">
+    // `smap-page` is a SCOPE, not a rename: every existing `.smap-*` class is
+    // untouched, and pages/sitemap.css hangs off this co-class so none of its
+    // rules can reach the Help Centre, the Info Centre, Principles or the Learn
+    // guides, which share the same family out of deferred/reading.css.
+    <div className="sec smap-page">
       <div className="sec-h">
         {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
             common AI trait, scan the whole site and remove alot of them where
