@@ -1,0 +1,390 @@
+/* gradient.css — the Spectrum pass on `/create/gradient`.
+ *
+ * ── WHY THIS FILE EXISTS AT ALL ─────────────────────────────────────────────
+ *
+ * The `ggn` family's base rules live in TWO sheets this lane must not edit:
+ * `src/styles/global.css` (the shared entry sheet) and
+ * `src/styles/deferred/colour.css`, which ten pages import — including the two
+ * galleries another agent is editing right now. Changing either would have
+ * restyled somebody else's page mid-flight.
+ *
+ * So this is a new page stylesheet, imported LAST by GradientGenerator.jsx.
+ * Vite emits it as that route's own chunk sheet, it loads after both of the
+ * above, and at equal specificity it wins. `.ggn-*` appears in exactly two
+ * source files (`GradientGenerator.jsx` and `src/data/pipeline.js`), so
+ * nothing outside this route can see any of it. Same mechanism and same
+ * reasoning as tint.css and contrast.css.
+ *
+ * NOTHING IS RENAMED. `06-colour-tool-workbenches` and `75-colour-tools-quality`
+ * assert `.ggn-step`, `.ggn-preset`, `.ggn-starting`, `.ggn-stop`,
+ * `.ggn-handle`, `.ggn-presets` and `.ggn-stop-hex` by class. This file changes
+ * how they are painted and never what they are called.
+ *
+ * ── THE ONE LINE THAT MATTERS MOST ──────────────────────────────────────────
+ *
+ * `global.css:5646` sets `--ggn-accent-text: var(--accent-strong)` on `.ggn`.
+ * `--accent-strong` is a PER-THEME LITERAL (`#0B5ED7` light, `#4A90FF` dark)
+ * declared beside `--accent` rather than derived from it — so a premium theme
+ * template that moves `--accent` alone would leave every accent-coloured word
+ * on this page stranded on the old brand blue. Re-pointing that one alias at
+ * `--accent-text` fixes the step labels, the stop badge, the format tabs, the
+ * "from your palette" marker and the gallery link in a single declaration,
+ * without touching any of the rules that use it.
+ *
+ * ── TARGET SIZE: THE STOP HANDLES WERE 20px ─────────────────────────────────
+ *
+ * Measured in a rendered browser at 390 / 834 / 1440 in BOTH themes: three
+ * `.ggn-handle` buttons at 20.0 x 20.0, against WCAG 2.5.8's 24px floor. They
+ * are the primary direct-manipulation control of this tool — the thing you drag
+ * to place a colour — so this was the worst 4px on the page. They are 24px now,
+ * which the 26px rail accommodates without the dots colliding, and a coarse
+ * pointer gets a 44px hit area from a pseudo-element rather than a 44px painted
+ * dot, which on a 46px bar would overlap its neighbours and hide the gradient
+ * the handles exist to show.
+ *
+ * ── WIDTHS AND THEMES ───────────────────────────────────────────────────────
+ *
+ * Rendered at 390 / 834 / 1440, light and dark. Zero horizontal page overflow
+ * at each; zero text nodes under their contrast floor measured on the
+ * COMPOSITED ground rather than the declared colour.
+ *
+ * The layout is NOT touched. The preset rail's wrap-at-981px rule, the
+ * inspector height cap and the 2.4-tile phone basis in colour.css all carry
+ * measurements in their own comments and all of them still hold; this pass is
+ * type, colour, radius and motion only. */
+
+.ggn {
+  /* Spectrum's house curve. */
+  --ggn-ease: cubic-bezier(.23, 1, .32, 1);
+  --ggn-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+
+  /* THE FIX. See the header — this replaces `var(--accent-strong)`, which does
+     not track `--accent`. `--accent-text` is `color-mix(in srgb, var(--accent)
+     80%, var(--accent-toward))`, so it follows the theme's accent wherever it
+     goes and keeps its direction: deeper in light, lighter in dark. Measured on
+     `--card`, which is what every user of this alias actually sits on:
+     #0E5BCF on #FFFFFF = 6.48:1 light, #8AB8FF on #191A1D = 9.12:1 dark. */
+  --ggn-accent-text: var(--accent-text);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────────
+   Spectrum's hero metrics. colour.css already lifted this to
+   clamp(38,5vw,64)/600/-.04em, which is close; this takes it the rest of the
+   way to the h1 step the front door uses, and gives the lede the 52ch measure
+   and 1.62 leading that spectrum.css sets for `.sp-lede`. */
+
+.ggn-title {
+  font-family: var(--display);
+  font-size: clamp(38px, 5.6vw, 72px);
+  font-weight: 600;
+  line-height: .96;
+  letter-spacing: -.045em;
+  color: var(--ggn-t0);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.ggn-sub {
+  max-width: 52ch;
+  margin: 16px 0 0;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--ggn-t1);
+  text-wrap: pretty;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────────
+   THE RECTANGLE, NOT THE MARKETING PILL, and deliberately. `/create/contrast`
+   is the finished colour tool on this branch and draws its buttons as 10px
+   rectangles; `/admin`, rebuilt against `UIL4B App.dc.html`, reached 9.3 doing
+   the same. There is also an open founder decision on whether app surfaces
+   should take the app file's rectangle over global.css's 999px pill
+   (SPECTRUM-REVIEW, copy-owed #4) — pilling this page would have voted on it
+   from a tool page. */
+
+.ggn-btn {
+  min-height: 42px;
+  padding: 9px 18px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 540;
+  border-radius: var(--radius-s);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  /* `transition: all` was the old rule. It animates every property the element
+     will ever have, including ones a later state adds, which is how a hover
+     picks up a transition nobody wrote. Named properties only. */
+  transition: background var(--dur-1) ease, border-color var(--dur-1) ease,
+              color var(--dur-1) ease, transform var(--dur-1) var(--ggn-ease);
+}
+
+.ggn-btn:active { transform: scale(.978); }
+
+/* --accent-mid, NOT --accent and NOT --accent-strong.
+   `--accent-fg` is white, and white on `--accent` measures 4.46:1 at 13px/540 —
+   under the 4.5 floor. The old rule used `--accent-strong`, which passed but is
+   the per-theme literal this file exists to stop using. `--accent-mid` +
+   `--accent-ink` measures 5.18:1 light / 9.17:1 dark.
+
+   AND THE HOVER IS A DIFFERENT COLOUR NOW. `.ggn-btn-accent:hover` in
+   colour.css set the SAME background and the SAME border as the rest state, so
+   the page's primary action had no hover feedback at all — a silent dead state
+   on the one button most visitors press first. `--accent-text` is the next step
+   in the direction `--accent-mid` already travels, so it moves away from the
+   page ground in both themes: 5.73:1 light / 9.65:1 dark.
+   NEVER `--accent-hover` — that one mixes toward `--accent-paper` in BOTH
+   themes, so in light it is lighter than the button it lifts off and measures
+   worse than the state it replaces. */
+.ggn-btn-accent {
+  background: var(--accent-mid);
+  border-color: var(--accent-mid);
+  color: var(--accent-ink);
+}
+
+.ggn-btn-accent:hover {
+  background: var(--accent-text);
+  border-color: var(--accent-text);
+  color: var(--accent-ink);
+}
+
+.ggn-btn-ghost {
+  background: transparent;
+  border-color: var(--ggn-line);
+  color: var(--ggn-t1);
+}
+
+.ggn-btn-ghost:hover {
+  border-color: var(--ggn-line-2);
+  color: var(--ggn-t0);
+  background: var(--ggn-wash);
+}
+
+.ggn-btn-sm { min-height: 36px; padding: 7px 14px; font-size: 12px; }
+
+.ggn-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Panels ──────────────────────────────────────────────────────────────────
+   Spectrum's card: a 2xl radius over a hairline on `--card`. The stage holds
+   the canvas and is the page's primary object, so it takes the 3xl and the
+   only real shadow on the page. */
+
+.ggn-stage,
+.ggn-panel,
+.ggn-block {
+  border-radius: var(--radius-2xl);
+  background: var(--ggn-panel);
+  border: 1px solid var(--ggn-line);
+}
+
+.ggn-stage { border-radius: var(--radius-3xl); box-shadow: var(--shadow-s); }
+
+.ggn-stage-head h2,
+.ggn-panel-head h2,
+.ggn-block-head h2 {
+  margin: 4px 0 0;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 560;
+  letter-spacing: -.02em;
+  color: var(--ggn-t0);
+}
+
+.ggn-block-head p { margin: 5px 0 0; max-width: 52ch; font-size: 12.5px; line-height: 1.5; color: var(--ggn-t2); }
+
+/* The step index is `--t3`, not the accent.
+   "01 · CANVAS" is an INDEX — it says where you are in a sequence, which is
+   orientation, not emphasis. In accent it was the brightest thing in a header
+   whose job is to introduce a canvas full of the user's own colour, and this
+   page has two of them competing with the artefact. spectrum.css makes the
+   same call for the same object: `.sp-panel-no` is `--sp-quiet` (`--t3`) while
+   `--accent-text` is spent on `.sp-panel-hint`, which is a live value rather
+   than a label. `--t3` on `--card` measures 5.24:1 light / 5.86:1 dark. */
+.ggn-step {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+/* The stop counter IS a live value — it is the only place the 12-stop limit
+   appears and the only warning that Add Stop is about to stop working — so it
+   keeps the accent, on the wash rather than as flat text. */
+.ggn-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  color: var(--accent-bright);
+  background: var(--accent-wash-4);
+  border: 1px solid var(--accent-border);
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The canvas chrome ───────────────────────────────────────────────────── */
+
+/* The pills that name the gradient's type and angle sit ON the user's gradient,
+   which can be any colour, so they cannot take a page token: a quiet grey here
+   would be unreadable over half the gradients the tool can make. A near-black
+   scrim with white ink is legible over every one of them, and it is a picture
+   of a chip on an image rather than a themed control — the same exception
+   spectrum.css makes for its three window dots. */
+.ggn-pill {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* ── Segmented controls and format tabs ──────────────────────────────────── */
+
+.ggn-seg,
+.ggn-fmt {
+  background: var(--ggn-wash);
+  border: 1px solid var(--ggn-line);
+  border-radius: var(--radius);
+  padding: 3px;
+}
+
+/* Named transitions, not `transition: all` — see the note on `.ggn-btn`. The
+   SIZES are deliberately left where colour.css and global.css put them: the
+   three format tabs (CSS / Tailwind / SVG) share one row inside a 340px
+   inspector, and stepping them from 11px to the page's 12.5px pushed that row
+   to wrap at 1440. Weight and colour carry the change instead. */
+.ggn-seg-btn,
+.ggn-fmt-btn {
+  font-family: var(--font);
+  font-weight: 500;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+
+.ggn-seg-btn { font-size: 12.5px; border-radius: var(--radius-s); }
+
+/* The ON state is the INK token, not the accent fill.
+   The old rule filled the selected segment with the brand blue, which put a
+   saturated blue rectangle immediately beside a canvas of the user's own
+   colour and read as part of the artefact. spectrum.css's `.sp-chip` and
+   `.sp-billing-tab` both use the ink ground for the pressed state for exactly
+   this reason, and it measures better: `--bg-0` on `--t0` is 16.88:1 in light
+   and 15.9:1 in dark, against 4.46:1 for white on `--accent`. */
+.ggn-seg-btn[aria-pressed="true"],
+.ggn-fmt-btn[aria-pressed="true"],
+.ggn-seg-btn.is-on,
+.ggn-fmt-btn.is-on {
+  background: var(--t0);
+  color: var(--bg-0);
+  font-weight: 560;
+}
+
+.ggn-seg-btn:focus-visible,
+.ggn-fmt-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── The stop handles ────────────────────────────────────────────────────────
+   24px, up from a measured 20.0 x 20.0 — see the file header. The white ring
+   and the dark drop shadow stay: they are what makes a handle findable on an
+   arbitrary gradient, and neither is a theme value any more than a crosshair
+   is. `--h-color` is the stop's own colour, written inline by React.
+
+   THE HIT AREA IS SEPARATE FROM THE PAINT. A 44px painted dot on a 46px rail
+   would overlap its neighbours and cover the gradient it is placed against, so
+   a coarse pointer gets the extra area from a pseudo-element instead. This is
+   the region that receives the pointer event, which is what SC 2.5.8 measures —
+   though note that a `getBoundingClientRect()` sweep reads the BUTTON and will
+   report 24px, so an automated check needs to know to look for this. */
+.ggn-handle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  transition: box-shadow var(--dur-1) ease, transform var(--dur-1) var(--ggn-ease);
+}
+
+.ggn-handle::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+}
+
+.ggn-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+@media (pointer: coarse) {
+  .ggn-handle::after { inset: -10px; }
+}
+
+/* ── Presets ─────────────────────────────────────────────────────────────── */
+
+.ggn-preset-swatch {
+  border-radius: var(--radius);
+  border: 1px solid var(--ggn-line);
+  transition: transform var(--dur-2) var(--ggn-ease), box-shadow var(--dur-2) ease;
+}
+
+.ggn-preset:hover .ggn-preset-swatch { transform: translateY(-2px); box-shadow: var(--shadow-m); }
+
+.ggn-preset-name { font-size: 12.5px; font-weight: 500; color: var(--ggn-t1); text-align: left; }
+
+.ggn-preset:hover .ggn-preset-name { color: var(--ggn-t0); }
+
+/* "From your palette" — a live marker, so it keeps the accent, and it is the
+   derived step rather than the literal `--ggn-accent` alias. */
+.ggn-preset--mine .ggn-preset-name { color: var(--accent-text); }
+
+.ggn-start-label {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+
+.ggn-stop-hex,
+.ggn-stop-pos input {
+  font-family: var(--mono);
+  border-radius: var(--radius-s);
+  transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
+}
+
+.ggn-stop-hex:focus,
+.ggn-stop-pos input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash-4);
+}
+
+/* ── Coarse pointers ─────────────────────────────────────────────────────────
+   44px on the controls that are pressed, not a blanket floor: the preset
+   swatches are already 16/9 tiles well over 44px, and the handles take their
+   area from the pseudo-element above rather than from a min-height that would
+   also stretch the rail. */
+@media (pointer: coarse) {
+  .ggn-btn,
+  .ggn-btn-sm,
+  .ggn-seg-btn,
+  .ggn-fmt-btn { min-height: 44px; }
+  .ggn-stop-lock,
+  .ggn-stop-x { width: 44px; height: 44px; }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   global.css's blanket rule clamps every DURATION under both spellings the app
+   uses — the Settings choice (`html[data-reduced-motion="true"]`) and the OS
+   query for anyone who has not made one. A clamp makes movement instant rather
+   than absent, so the two rules here that MOVE a box get a companion that
+   removes the movement itself. */
+:where(html[data-reduced-motion="true"]) .ggn-preset:hover .ggn-preset-swatch,
+:where(html[data-reduced-motion="true"]) .ggn-btn:active { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .ggn-preset:hover .ggn-preset-swatch,
+  :where(html:not([data-reduced-motion="false"])) .ggn-btn:active { transform: none; }
+}

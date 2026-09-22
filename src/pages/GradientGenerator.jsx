@@ -21,6 +21,12 @@ import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSu
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/colour.css'
 import '../styles/deferred/tool-shell.css'
+// This page's OWN sheet, and it must stay LAST. The `ggn` family's base rules
+// live in global.css and in the shared deferred/colour.css, neither of which
+// this route may edit — colour.css alone is imported by ten pages. Importing
+// last means this sheet loads after both and wins at equal specificity, which
+// is the same mechanism tint.css and contrast.css use.
+import '../styles/pages/gradient.css'
 
 // ── Gradient Generator ──
 // The standalone /create/gradient tool: build any linear / radial / conic
