@@ -112,7 +112,21 @@
 
 /* ── Spec: a requirement in the standard's own words, attributed. ── */
 .lart-spec{margin:var(--s-5) 0;padding:var(--s-4) 0 var(--s-4) var(--s-5);border-left:2px solid var(--bh)}
-.lart-spec-quote{font-size:15.5px;line-height:1.62;color:var(--t0)}
+/* A CAP, BECAUSE THIS IS RUNNING PROSE AND HAD NONE.
+ *
+ * Measured 77 characters a line at 768, 1097, 1440 and 1920 — identical at all
+ * four, because it simply took the prose column at a larger size than the prose
+ * does. Over this file's own 75 ceiling, which 77-content-quality enforces on
+ * the blocks it knows about and never knew about this one.
+ *
+ * It is the same font-swap regression as the aside and the next-step lede
+ * above: Geist's advances differ from Manrope's, so a column tuned for one face
+ * reads wider in the other. A spec quote is the standard's own words set for
+ * reading — the measure rule applies to it exactly as it applies to a paragraph.
+ *
+ * In `em` like its neighbours, not `ch`: `ch` is the `0` advance, which is a
+ * poor proxy for lowercase text and is what armed this trap in the first place. */
+.lart-spec-quote{font-size:15.5px;line-height:1.62;color:var(--t0);max-width:35.5em}
 .lart-spec-quote b{font-weight:700}
 .lart-spec-cite{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:var(--s-3);font-family:var(--mono);font-size:11px;letter-spacing:.03em}
 .lart-spec-cite a{color:var(--t2);text-decoration:none;border-bottom:1px solid var(--border)}

@@ -924,7 +924,20 @@ test('N1 · no font family name is truncated down to the 320px floor', async ({ 
 // this test is about this one — and the per-card counts below are asserted so a
 // third rename cannot make it vacuous again instead of red.
 
-const GRG_WIDTHS = [320, 440, 450, 480, 530, 560, 640, 700, 1180]
+/* 1024 AND 1280 WERE ADDED AFTER THE SWEEP MISSED A LIVE DEFECT.
+ *
+ * The founder's rule here is that no gradient name or meta line is truncated at
+ * ANY width. This list stopped at 1180, and when the library restyle bumped the
+ * card name from 14px to 16px it cut **13 of 100 names at 1280** and one at
+ * 1024 — neither width swept, so the sweep stayed green while the rule was
+ * being broken on the commonest desktop size there is.
+ *
+ * The narrow widths below are where a card is tightest, which is the intuition
+ * that built this list. It is the wrong intuition: the name's room is decided by
+ * the CARD's width, not the viewport's, and a four-column band at 1280 gives a
+ * narrower card than a two-column band at 700. A column-count change is exactly
+ * where that flips, so the sweep has to cross one. */
+const GRG_WIDTHS = [320, 440, 450, 480, 530, 560, 640, 700, 1024, 1180, 1280]
 
 // SIGNED IN AS PRO, AND THE COUNT COMES FROM THE MODULE.
 //
