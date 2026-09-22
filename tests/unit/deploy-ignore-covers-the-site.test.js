@@ -68,6 +68,12 @@ const NOT_DEPLOYED = new Map([
   ['firestore.rules', 'published to Firebase by the CLI, never by a Vercel build'],
   ['storage.rules', 'as above'],
   ['playwright.config.js', 'test runner config'],
+  // One lane of the acceptance suite, each serving its own dist-<LANE> on its
+  // own port so several agents can run the suite in one checkout without a
+  // stray build stripping the --mode test Firebase double out from under the
+  // others. Same class as playwright.config.js above: a test runner config,
+  // never read by the build.
+  ['pw-lane.config.js', 'test runner config, one lane per agent'],
   ['eslint.config.js', 'linter config'],
   ['favicon.svg', 'NOT the served icon — public/ holds what ships'],
 ])

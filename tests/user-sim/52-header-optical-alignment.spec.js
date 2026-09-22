@@ -47,8 +47,16 @@
 // above `.pnav-logo` names this file as the thing that measures its painted
 // left edge, which is the contract being kept: the bar is the subject, the
 // route is only where it is standing. /discover is also the right choice over a
-// /create/* shell — it is not in SALES_PATHS, so the search field is rendered
+// Create tool shell — it is not in SALES_PATHS, so the search field is rendered
 // at every width in the band rather than hidden on desktop.
+//
+// (That sentence used to name the shell with a wildcard path. Written inside a
+// line comment, the slash-star in it opens a BLOCK comment as far as any naive
+// stripper is concerned, and tests/unit/one-tap-stub.test.js strips comments
+// before checking that every spec imports `test` from ./base.js — so the two
+// imports below vanished and the guard reported this file as importing from
+// the wrong place. The rule is worth remembering: no wildcard paths in a line
+// comment in this repo.)
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
