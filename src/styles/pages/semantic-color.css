@@ -91,7 +91,14 @@
 
 .stc-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
 
-.stc-kicker{font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--t3)}
+/* --t2, and it STAYS --t2. The first cut of this pass moved it to --t3 along
+   with the rest of the mono micro-labels, which was a regression measured at
+   4.55:1 — this kicker sits on --bg-0, the PAGE ground, where --t3 is #6C6C66
+   on #EFEEE9. It passes by five hundredths, which is the contrast version of
+   the 23px control this page already shipped once. The --t3 labels that are
+   fine are the ones inside a --card panel (.stc-bundle-top>span), where the
+   same token measures 5.28:1. --t2 here is 6.37:1 light / 6.21:1 dark. */
+.stc-kicker{font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--t2)}
 
 /* Spectrum's ink CTA: the ink token as the ground, the page colour as the
    label, on a pill. 40px min-height so it clears the target floor without the

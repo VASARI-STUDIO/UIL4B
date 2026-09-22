@@ -711,7 +711,15 @@
 
 .tt-more > div:first-child { display: flex; flex-direction: column; gap: 5px; max-width: 470px; }
 
-.tt-more-kicker { font-family: var(--mono); font-size: 9.5px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--t3); }
+/* --t2, NOT --t3, and this one was measured after the fact rather than chosen.
+   This kicker sits on --bg-0 — the PAGE ground, not a card — and --t3 there is
+   #6C6C66 on #EFEEE9 = 4.55:1 against a 4.5 floor. It passes, and five
+   hundredths is not headroom: it is the contrast version of the 23px control
+   that shipped on /create/semantic-color, one step from failing on a font
+   metric or a rounding change. The sibling --t3 labels in this file are all
+   inside a --card panel, where the same token measures 5.28:1 and is fine.
+   --t2 measures 6.43:1 light / 6.54:1 dark here and still reads as a kicker. */
+.tt-more-kicker { font-family: var(--mono); font-size: 9.5px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--t2); }
 
 .tt-more strong { font-family: var(--display); font-size: 15px; font-weight: 560; line-height: 1.45; letter-spacing: -.015em; color: var(--t0); }
 

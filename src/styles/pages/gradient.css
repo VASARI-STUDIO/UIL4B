@@ -395,8 +395,39 @@
   .ggn .ggn-btn-sm,
   .ggn .ggn-seg-btn,
   .ggn .ggn-fmt-btn{ min-height: 44px; }
+
+  /* THE LOCK AND THE DELETE BUTTON DO NOT GET 44px OF WIDTH, and the first cut
+     of this file giving them that was a real regression that
+     `25-defect-sweep :: N2` caught.
+
+     They are 26x26 in global.css, which already clears SC 2.5.8's 24px floor.
+     Taking them to 44 stole 2 x 18 = 36px from the stop row, and the row's
+     flexible item is the HEX FIELD — the one thing in it a user is meant to
+     read and copy. Measured at 769px with touch emulation (which is how the
+     sweep opens it, and what puts `pointer: coarse` in play): the field
+     collapsed to 36px of content box against the 68px "#7C3AED" needs, so all
+     three stops rendered "#7C3AE" — a plausible but WRONG colour, which is
+     worse than an obviously truncated one. 780px was the same; 320 and 390
+     were clean only because the row reflows below ~700.
+
+     The hit area is widened instead of the box, the way `.ggn-handle` above
+     does it, so it costs no layout width. -4px and not -9px: the two buttons
+     sit 10px apart, so a true 44px target would make them OVERLAP, and the
+     one they would overlap into is Remove Stop. A destructive control that
+     steals its neighbour's taps is a worse defect than a 26px target. 34px
+     with 2px of clearance is what this row can honestly give; a full 44px
+     would need the trailing controls to wrap onto their own line, which is a
+     layout change to a measured row and is flagged in the report rather than
+     made here. */
   .ggn .ggn-stop-lock,
-  .ggn .ggn-stop-x{ width: 44px; height: 44px; }
+  .ggn .ggn-stop-x{ position: relative; }
+  .ggn .ggn-stop-lock::after,
+  .ggn .ggn-stop-x::after{
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: var(--radius-s);
+  }
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
