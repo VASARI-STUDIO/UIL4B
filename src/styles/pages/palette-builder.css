@@ -20,10 +20,23 @@
  * The `plb` family's rules live in `global.css` (249 of them) and in
  * `deferred/colour.css` (332), neither of which this lane may edit — colour.css
  * alone is imported by ten pages, two of which another agent is editing right
- * now. This sheet is imported LAST by PaletteBuilder.jsx, so Vite emits it as
- * that route's chunk sheet, it loads after both, and it wins at equal
- * specificity. Nothing is renamed: `11-palette-recovery` and
- * `50-palette-preview-ink` assert twenty-odd `.plb-*` classes by name.
+ * now. This sheet is imported LAST by PaletteBuilder.jsx. Nothing is renamed:
+ * `11-palette-recovery` and `50-palette-preview-ink` assert twenty-odd
+ * `.plb-*` classes by name.
+ *
+ * EVERY SELECTOR HERE IS SCOPED `.plb …`. Importing last does not put the
+ * sheet last: measured in a browser, the runtime <link> order is
+ * global.css -> index.css -> THIS SHEET -> colour.css -> tool-shell.css,
+ * because Vite orders chunk CSS by the dependency graph and not by the order of
+ * the `import` statements. So this file beats global.css but LOSES to
+ * `deferred/colour.css` at equal specificity, and four of the rules below also
+ * exist there. The root prefix takes each to (0,2,0) against (0,1,0) and
+ * settles it by construction rather than by load order.
+ *
+ * The two ALIAS declarations are the exception that needs no prefix: they are
+ * on `.plb` itself, nothing in colour.css sets them, and a custom property
+ * resolves wherever it is read — which is why the remap reaches all twenty-one
+ * rules without this sheet having to outrank any of them.
  *
  * ── THE TWO DECLARATIONS THAT DO MOST OF THE WORK ───────────────────────────
  *
@@ -104,7 +117,7 @@
    is `sr-only` and this rule paints nothing. It is here so that the day the
    founder writes the line, the heading arrives already on Spectrum's metrics
    rather than on the 500/-.035em h2 step it currently declares. */
-.plb-hero h1 {
+.plb .plb-hero h1{
   margin: 0;
   font-family: var(--display);
   font-size: clamp(38px, 5.6vw, 72px);
@@ -115,7 +128,7 @@
   text-wrap: balance;
 }
 
-.plb-hero-lede {
+.plb .plb-hero-lede{
   max-width: 52ch;
   margin: 16px 0 0;
   font-size: 15.5px;
@@ -130,9 +143,9 @@
    Spectrum separator, and the top bar gains the matching one so the board reads
    as held between two rules rather than sitting under one. */
 
-.plb-toolbar { border-bottom: 1px solid var(--border); }
+.plb .plb-toolbar{ border-bottom: 1px solid var(--border); }
 
-.plb-adjust { border-top: 1px solid var(--border); }
+.plb .plb-adjust{ border-top: 1px solid var(--border); }
 
 /* The adjust bar's own title — "ADJUST ALL" — is a section label on a rail, so
    it takes the mono micro-label Spectrum uses for exactly that job rather than
@@ -147,7 +160,7 @@
    bold. Somebody solved a legibility problem on that rail on purpose. Dimming
    them to a quiet grey is the exact shape of the four AA failures already found
    on this branch, arriving one step early. They are left alone. */
-.plb-adjust-title {
+.plb .plb-adjust-title{
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 500;
@@ -164,7 +177,7 @@
    `--card` at 11px and has to clear 4.5:1, which `--t2` does at 6.37:1 light /
    6.21:1 dark while `--t3` is 5.24 / 5.86 — both pass, and `--t2` is the one
    that still reads as a label you can press. */
-.plb-add {
+.plb .plb-add{
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 500;
@@ -174,29 +187,29 @@
   transition: color var(--dur-1) ease, background var(--dur-1) ease;
 }
 
-.plb-add:hover { color: var(--t0); background: var(--hvr); }
+.plb .plb-add:hover{ color: var(--t0); background: var(--hvr); }
 
-.plb-add:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.plb .plb-add:focus-visible{ outline: 2px solid var(--accent); outline-offset: -3px; }
 
 /* ── The collapsed rail ─────────────────────────────────────────────────────
    Shown when toolbarFit decides the exploratory cluster cannot have the row.
    Radius only — its metrics belong to the same measured system as the rail. */
 
-.plb-collapsed { border-radius: var(--radius); }
+.plb .plb-collapsed{ border-radius: var(--radius); }
 
-.plb-collapsed strong { font-weight: 560; }
+.plb .plb-collapsed strong{ font-weight: 560; }
 
 /* ── Popovers and menus ──────────────────────────────────────────────────────
    Spectrum's card radius, so a menu opening off the rail matches the panels on
    every neighbouring tool. Padding and width are untouched: the picker's
    geometry is asserted by `50-palette-preview-ink`. */
 
-.plb-menu,
-.plb-pop,
-.plb-picker { border-radius: var(--radius-xl); box-shadow: var(--shadow-l); }
+.plb .plb-menu,
+.plb .plb-pop,
+.plb .plb-picker{ border-radius: var(--radius-xl); box-shadow: var(--shadow-l); }
 
-.plb-menu-sub a,
-.plb-linkbtn { border-radius: var(--radius-xs); }
+.plb .plb-menu-sub a,
+.plb .plb-linkbtn{ border-radius: var(--radius-xs); }
 
 /* ── Focus ───────────────────────────────────────────────────────────────────
    Never removed, only drawn, and drawn in `--accent` so it follows a premium
@@ -204,13 +217,13 @@
    ring outside the box would be painted on the neighbouring colour and become
    invisible against it. */
 
-.plb-icobtn:focus-visible,
-.plb-hexfield:focus-visible,
-.plb-hex:focus-visible,
-.plb-linkbtn:focus-visible,
-.plb-collapsed-cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plb .plb-icobtn:focus-visible,
+.plb .plb-hexfield:focus-visible,
+.plb .plb-hex:focus-visible,
+.plb .plb-linkbtn:focus-visible,
+.plb .plb-collapsed-cta:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.plb-col:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.plb .plb-col:focus-visible{ outline: 2px solid var(--accent); outline-offset: -3px; }
 
 /* ── Coarse pointers ─────────────────────────────────────────────────────────
    44px, and min-HEIGHT only. toolbarFit.js measures the rail's intrinsic
@@ -218,13 +231,13 @@
    without moving the band at which the cluster collapses. The colour columns
    are not listed: they are already the full height of the work area. */
 @media (pointer: coarse) {
-  .plb-toolbar .btn-s,
-  .plb-icobtn,
-  .plb-hexfield,
-  .plb-seedpick .cpk-trigger,
-  .plb-collapsed-cta,
-  .plb-menu-row,
-  .plb-hex { min-height: 44px; }
+  .plb .plb-toolbar .btn-s,
+  .plb .plb-icobtn,
+  .plb .plb-hexfield,
+  .plb .plb-seedpick .cpk-trigger,
+  .plb .plb-collapsed-cta,
+  .plb .plb-menu-row,
+  .plb .plb-hex{ min-height: 44px; }
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────

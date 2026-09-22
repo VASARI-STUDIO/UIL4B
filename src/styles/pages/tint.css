@@ -837,15 +837,23 @@
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
    The global blanket rule clamps every DURATION under both spellings the app
-   uses — the Settings choice (`html[data-reduced-motion="true"]`) and the OS
+   uses — the Settings choice (the `data-reduced-motion` attribute) and the OS
    query for anyone who has not made one. A duration clamp does not remove the
    MOVEMENT, though: it makes it instant. These two rules are the only ones on
    this page that move a box rather than change a colour, so they get the
-   companion that turns the movement off outright. */
-:where(html[data-reduced-motion="true"]) .tt-back:hover span,
-:where(html[data-reduced-motion="true"]) .tt-back span { transform: none; }
+   companion that turns the movement off outright.
+
+   NOT `:where()`, and this was measured rather than assumed. `:where()`
+   contributes ZERO specificity, which is correct in spectrum.css because the
+   rule it overrides lives in the same file and wins on order alone. It is wrong
+   for a page sheet: Vite emits this as its own chunk and the runtime link order
+   measured in a browser puts the shared `deferred/colour.css` AFTER it, so a
+   `:where()`-wrapped companion loses to any base rule of equal specificity
+   sitting there. The bare attribute selector adds (0,1,1) and carries it. */
+html[data-reduced-motion="true"] .tt-back:hover span,
+html[data-reduced-motion="true"] .tt-back span { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .tt-back:hover span,
-  :where(html:not([data-reduced-motion="false"])) .tt-back span { transform: none; }
+  html:not([data-reduced-motion="false"]) .tt-back:hover span,
+  html:not([data-reduced-motion="false"]) .tt-back span { transform: none; }
 }

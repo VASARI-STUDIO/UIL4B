@@ -9,11 +9,35 @@
  * restyled somebody else's page mid-flight.
  *
  * So this is a new page stylesheet, imported LAST by GradientGenerator.jsx.
- * Vite emits it as that route's own chunk sheet, it loads after both of the
- * above, and at equal specificity it wins. `.ggn-*` appears in exactly two
- * source files (`GradientGenerator.jsx` and `src/data/pipeline.js`), so
- * nothing outside this route can see any of it. Same mechanism and same
- * reasoning as tint.css and contrast.css.
+ * `.ggn-*` appears in exactly two source files (`GradientGenerator.jsx` and
+ * `src/data/pipeline.js`), so nothing outside this route can see any of it.
+ *
+ * ── EVERY SELECTOR HERE IS SCOPED `.ggn …`, AND THAT IS NOT DECORATION ──────
+ *
+ * Importing last does NOT put this sheet last. Measured in a rendered browser,
+ * the runtime <link> order is
+ *
+ *     global.css -> index.css -> THIS SHEET -> colour.css -> tool-shell.css
+ *
+ * because Vite orders chunk CSS by the dependency graph rather than by the
+ * order of the `import` statements in the module. So this file beats global.css
+ * on order — which is what tint.css and semantic-color.css rely on, since their
+ * base rules are all in global.css — but it LOSES to `deferred/colour.css` at
+ * equal specificity, and thirty of the `ggn` rules restyled here also exist
+ * there.
+ *
+ * The first cut of this file did not know that, and thirty declarations were
+ * silently discarded: the h1 stayed at colour.css's clamp(38,5vw,64), the step
+ * label stayed accent-coloured, the buttons kept their old radius. The page
+ * still LOOKED changed, because the `--ggn-accent-text` remap below works
+ * through the variable rather than through the cascade, which is exactly the
+ * kind of partial success that reads as done.
+ *
+ * Prefixing the page root takes each rule to (0,2,0) against colour.css's
+ * (0,1,0) and settles it by construction rather than by load order — which is
+ * the part that would otherwise break again the next time the chunk graph
+ * moves. The two reduced-motion companions at the foot are the exception and
+ * say why in their own note.
  *
  * NOTHING IS RENAMED. `06-colour-tool-workbenches` and `75-colour-tools-quality`
  * assert `.ggn-step`, `.ggn-preset`, `.ggn-starting`, `.ggn-stop`,
@@ -73,7 +97,7 @@
    way to the h1 step the front door uses, and gives the lede the 52ch measure
    and 1.62 leading that spectrum.css sets for `.sp-lede`. */
 
-.ggn-title {
+.ggn .ggn-title{
   font-family: var(--display);
   font-size: clamp(38px, 5.6vw, 72px);
   font-weight: 600;
@@ -84,7 +108,7 @@
   text-wrap: balance;
 }
 
-.ggn-sub {
+.ggn .ggn-sub{
   max-width: 52ch;
   margin: 16px 0 0;
   font-size: 15.5px;
@@ -102,7 +126,7 @@
    (SPECTRUM-REVIEW, copy-owed #4) — pilling this page would have voted on it
    from a tool page. */
 
-.ggn-btn {
+.ggn .ggn-btn{
   min-height: 42px;
   padding: 9px 18px;
   font-family: var(--font);
@@ -119,7 +143,7 @@
               color var(--dur-1) ease, transform var(--dur-1) var(--ggn-ease);
 }
 
-.ggn-btn:active { transform: scale(.978); }
+.ggn .ggn-btn:active{ transform: scale(.978); }
 
 /* --accent-mid, NOT --accent and NOT --accent-strong.
    `--accent-fg` is white, and white on `--accent` measures 4.46:1 at 13px/540 —
@@ -136,52 +160,52 @@
    NEVER `--accent-hover` — that one mixes toward `--accent-paper` in BOTH
    themes, so in light it is lighter than the button it lifts off and measures
    worse than the state it replaces. */
-.ggn-btn-accent {
+.ggn .ggn-btn-accent{
   background: var(--accent-mid);
   border-color: var(--accent-mid);
   color: var(--accent-ink);
 }
 
-.ggn-btn-accent:hover {
+.ggn .ggn-btn-accent:hover{
   background: var(--accent-text);
   border-color: var(--accent-text);
   color: var(--accent-ink);
 }
 
-.ggn-btn-ghost {
+.ggn .ggn-btn-ghost{
   background: transparent;
   border-color: var(--ggn-line);
   color: var(--ggn-t1);
 }
 
-.ggn-btn-ghost:hover {
+.ggn .ggn-btn-ghost:hover{
   border-color: var(--ggn-line-2);
   color: var(--ggn-t0);
   background: var(--ggn-wash);
 }
 
-.ggn-btn-sm { min-height: 36px; padding: 7px 14px; font-size: 12px; }
+.ggn .ggn-btn-sm{ min-height: 36px; padding: 7px 14px; font-size: 12px; }
 
-.ggn-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ggn .ggn-btn:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Panels ──────────────────────────────────────────────────────────────────
    Spectrum's card: a 2xl radius over a hairline on `--card`. The stage holds
    the canvas and is the page's primary object, so it takes the 3xl and the
    only real shadow on the page. */
 
-.ggn-stage,
-.ggn-panel,
-.ggn-block {
+.ggn .ggn-stage,
+.ggn .ggn-panel,
+.ggn .ggn-block{
   border-radius: var(--radius-2xl);
   background: var(--ggn-panel);
   border: 1px solid var(--ggn-line);
 }
 
-.ggn-stage { border-radius: var(--radius-3xl); box-shadow: var(--shadow-s); }
+.ggn .ggn-stage{ border-radius: var(--radius-3xl); box-shadow: var(--shadow-s); }
 
-.ggn-stage-head h2,
-.ggn-panel-head h2,
-.ggn-block-head h2 {
+.ggn .ggn-stage-head h2,
+.ggn .ggn-panel-head h2,
+.ggn .ggn-block-head h2{
   margin: 4px 0 0;
   font-family: var(--display);
   font-size: 19px;
@@ -190,7 +214,7 @@
   color: var(--ggn-t0);
 }
 
-.ggn-block-head p { margin: 5px 0 0; max-width: 52ch; font-size: 12.5px; line-height: 1.5; color: var(--ggn-t2); }
+.ggn .ggn-block-head p{ margin: 5px 0 0; max-width: 52ch; font-size: 12.5px; line-height: 1.5; color: var(--ggn-t2); }
 
 /* The step index is `--t3`, not the accent.
    "01 · CANVAS" is an INDEX — it says where you are in a sequence, which is
@@ -200,7 +224,7 @@
    same call for the same object: `.sp-panel-no` is `--sp-quiet` (`--t3`) while
    `--accent-text` is spent on `.sp-panel-hint`, which is a live value rather
    than a label. `--t3` on `--card` measures 5.24:1 light / 5.86:1 dark. */
-.ggn-step {
+.ggn .ggn-step{
   font-family: var(--mono);
   font-size: 9.5px;
   font-weight: 500;
@@ -212,7 +236,7 @@
 /* The stop counter IS a live value — it is the only place the 12-stop limit
    appears and the only warning that Add Stop is about to stop working — so it
    keeps the accent, on the wash rather than as flat text. */
-.ggn-badge {
+.ggn .ggn-badge{
   font-family: var(--mono);
   font-size: 11px;
   font-weight: 500;
@@ -233,7 +257,7 @@
    scrim with white ink is legible over every one of them, and it is a picture
    of a chip on an image rather than a themed control — the same exception
    spectrum.css makes for its three window dots. */
-.ggn-pill {
+.ggn .ggn-pill{
   font-family: var(--mono);
   font-size: 10.5px;
   font-weight: 500;
@@ -243,8 +267,8 @@
 
 /* ── Segmented controls and format tabs ──────────────────────────────────── */
 
-.ggn-seg,
-.ggn-fmt {
+.ggn .ggn-seg,
+.ggn .ggn-fmt{
   background: var(--ggn-wash);
   border: 1px solid var(--ggn-line);
   border-radius: var(--radius);
@@ -256,14 +280,14 @@
    three format tabs (CSS / Tailwind / SVG) share one row inside a 340px
    inspector, and stepping them from 11px to the page's 12.5px pushed that row
    to wrap at 1440. Weight and colour carry the change instead. */
-.ggn-seg-btn,
-.ggn-fmt-btn {
+.ggn .ggn-seg-btn,
+.ggn .ggn-fmt-btn{
   font-family: var(--font);
   font-weight: 500;
   transition: background var(--dur-1) ease, color var(--dur-1) ease;
 }
 
-.ggn-seg-btn { font-size: 12.5px; border-radius: var(--radius-s); }
+.ggn .ggn-seg-btn{ font-size: 12.5px; border-radius: var(--radius-s); }
 
 /* The ON state is the INK token, not the accent fill.
    The old rule filled the selected segment with the brand blue, which put a
@@ -272,17 +296,17 @@
    `.sp-billing-tab` both use the ink ground for the pressed state for exactly
    this reason, and it measures better: `--bg-0` on `--t0` is 16.88:1 in light
    and 15.9:1 in dark, against 4.46:1 for white on `--accent`. */
-.ggn-seg-btn[aria-pressed="true"],
-.ggn-fmt-btn[aria-pressed="true"],
-.ggn-seg-btn.is-on,
-.ggn-fmt-btn.is-on {
+.ggn .ggn-seg-btn[aria-pressed="true"],
+.ggn .ggn-fmt-btn[aria-pressed="true"],
+.ggn .ggn-seg-btn.is-on,
+.ggn .ggn-fmt-btn.is-on{
   background: var(--t0);
   color: var(--bg-0);
   font-weight: 560;
 }
 
-.ggn-seg-btn:focus-visible,
-.ggn-fmt-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ggn .ggn-seg-btn:focus-visible,
+.ggn .ggn-fmt-btn:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── The stop handles ────────────────────────────────────────────────────────
    24px, up from a measured 20.0 x 20.0 — see the file header. The white ring
@@ -296,45 +320,45 @@
    the region that receives the pointer event, which is what SC 2.5.8 measures —
    though note that a `getBoundingClientRect()` sweep reads the BUTTON and will
    report 24px, so an automated check needs to know to look for this. */
-.ggn-handle {
+.ggn .ggn-handle{
   width: 24px;
   height: 24px;
   border-radius: 50%;
   transition: box-shadow var(--dur-1) ease, transform var(--dur-1) var(--ggn-ease);
 }
 
-.ggn-handle::after {
+.ggn .ggn-handle::after{
   content: '';
   position: absolute;
   inset: -4px;
   border-radius: 50%;
 }
 
-.ggn-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ggn .ggn-handle:focus-visible{ outline: 2px solid var(--accent); outline-offset: 3px; }
 
 @media (pointer: coarse) {
-  .ggn-handle::after { inset: -10px; }
+  .ggn .ggn-handle::after{ inset: -10px; }
 }
 
 /* ── Presets ─────────────────────────────────────────────────────────────── */
 
-.ggn-preset-swatch {
+.ggn .ggn-preset-swatch{
   border-radius: var(--radius);
   border: 1px solid var(--ggn-line);
   transition: transform var(--dur-2) var(--ggn-ease), box-shadow var(--dur-2) ease;
 }
 
-.ggn-preset:hover .ggn-preset-swatch { transform: translateY(-2px); box-shadow: var(--shadow-m); }
+.ggn .ggn-preset:hover .ggn-preset-swatch{ transform: translateY(-2px); box-shadow: var(--shadow-m); }
 
-.ggn-preset-name { font-size: 12.5px; font-weight: 500; color: var(--ggn-t1); text-align: left; }
+.ggn .ggn-preset-name{ font-size: 12.5px; font-weight: 500; color: var(--ggn-t1); text-align: left; }
 
-.ggn-preset:hover .ggn-preset-name { color: var(--ggn-t0); }
+.ggn .ggn-preset:hover .ggn-preset-name{ color: var(--ggn-t0); }
 
 /* "From your palette" — a live marker, so it keeps the accent, and it is the
    derived step rather than the literal `--ggn-accent` alias. */
-.ggn-preset--mine .ggn-preset-name { color: var(--accent-text); }
+.ggn .ggn-preset--mine .ggn-preset-name{ color: var(--accent-text); }
 
-.ggn-start-label {
+.ggn .ggn-start-label{
   display: block;
   margin-bottom: 10px;
   font-family: var(--mono);
@@ -347,15 +371,15 @@
 
 /* ── Fields ──────────────────────────────────────────────────────────────── */
 
-.ggn-stop-hex,
-.ggn-stop-pos input {
+.ggn .ggn-stop-hex,
+.ggn .ggn-stop-pos input{
   font-family: var(--mono);
   border-radius: var(--radius-s);
   transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
 }
 
-.ggn-stop-hex:focus,
-.ggn-stop-pos input:focus {
+.ggn .ggn-stop-hex:focus,
+.ggn .ggn-stop-pos input:focus{
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-wash-4);
@@ -367,24 +391,38 @@
    area from the pseudo-element above rather than from a min-height that would
    also stretch the rail. */
 @media (pointer: coarse) {
-  .ggn-btn,
-  .ggn-btn-sm,
-  .ggn-seg-btn,
-  .ggn-fmt-btn { min-height: 44px; }
-  .ggn-stop-lock,
-  .ggn-stop-x { width: 44px; height: 44px; }
+  .ggn .ggn-btn,
+  .ggn .ggn-btn-sm,
+  .ggn .ggn-seg-btn,
+  .ggn .ggn-fmt-btn{ min-height: 44px; }
+  .ggn .ggn-stop-lock,
+  .ggn .ggn-stop-x{ width: 44px; height: 44px; }
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
    global.css's blanket rule clamps every DURATION under both spellings the app
-   uses — the Settings choice (`html[data-reduced-motion="true"]`) and the OS
-   query for anyone who has not made one. A clamp makes movement instant rather
-   than absent, so the two rules here that MOVE a box get a companion that
-   removes the movement itself. */
-:where(html[data-reduced-motion="true"]) .ggn-preset:hover .ggn-preset-swatch,
-:where(html[data-reduced-motion="true"]) .ggn-btn:active { transform: none; }
+   uses — the Settings choice (the `data-reduced-motion` attribute on <html>)
+   and the OS query for anyone who has not made one. A clamp makes movement
+   instant rather than absent, so the two rules here that MOVE a box get a
+   companion that removes the movement itself.
+
+   NOT `:where()`, and this was measured rather than assumed. `:where()`
+   contributes ZERO specificity, which is correct in spectrum.css because the
+   rule it overrides sits in the same file and wins on order alone. Here the
+   base rule also exists in `deferred/colour.css`, which LOADS AFTER this sheet
+   (see the note above `.ggn`), so a zero-specificity companion loses to it and
+   the movement it was supposed to remove stays on — measured, the preset hover
+   still reported translateY(-2px) with reduced motion active in BOTH spellings.
+   The bare attribute selector adds (0,1,1) and carries it.
+
+   AND THE PAGE ROOT IS NOT PREFIXED HERE. Every other rule in this file is
+   scoped `.ggn …` to outrank colour.css, but <html> is an ANCESTOR of `.ggn`,
+   not a descendant: `.ggn html[…] .ggn-preset` can never match anything. These
+   two selectors already clear colour.css on their own. */
+html[data-reduced-motion="true"] .ggn-preset:hover .ggn-preset-swatch,
+html[data-reduced-motion="true"] .ggn-btn:active { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .ggn-preset:hover .ggn-preset-swatch,
-  :where(html:not([data-reduced-motion="false"])) .ggn-btn:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .ggn-preset:hover .ggn-preset-swatch,
+  html:not([data-reduced-motion="false"]) .ggn-btn:active { transform: none; }
 }

@@ -419,8 +419,19 @@
    is the other motion here and it is deliberately left alone: it is the only
    thing on the page saying "pending" still means pending, and the blanket rule
    already holds it to a single iteration. */
-:where(html[data-reduced-motion="true"]) .stc-bundle:hover { transform: none; }
+/* NOT `:where()`, and this was measured rather than assumed.
+   `:where()` contributes ZERO specificity, which is the right call in
+   spectrum.css because the rule it overrides lives in the same file and wins on
+   order alone. It is the WRONG call here: Vite emits this page sheet as its own
+   chunk, and the runtime <link> order is
+       global.css -> index.css -> THIS SHEET -> colour.css -> tool-shell.css
+   so the shared `deferred/colour.css` actually loads AFTER this file. Against a
+   base rule of equal specificity sitting in colour.css, a `:where()`-wrapped
+   companion loses, and the movement it was supposed to remove stayed on — the
+   hover still measured translateY(-2px) with reduced motion on, in BOTH
+   spellings. The bare attribute selector adds (0,1,1) and carries it. */
+html[data-reduced-motion="true"] .stc-bundle:hover { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(html:not([data-reduced-motion="false"])) .stc-bundle:hover { transform: none; }
+  html:not([data-reduced-motion="false"]) .stc-bundle:hover { transform: none; }
 }
