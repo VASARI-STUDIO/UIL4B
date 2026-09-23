@@ -960,7 +960,7 @@ html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
 .cp-item:hover,.cp-item.active{background:var(--hvr);color:var(--t0)}
 .cp-item.active{outline:none;box-shadow:inset 0 0 0 1px var(--accent-glow)}
 .cp-item-icon{width:30px;height:30px;border-radius:var(--radius-s);background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--t1);flex-shrink:0;transition:all var(--t)}
-.cp-item.active .cp-item-icon{background:var(--accent-bg);border-color:var(--accent-glow);color:var(--accent)}
+.cp-item.active .cp-item-icon{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent-mid)}
 
 /* ─── Cmd+K hint button (TopBar) ─── */
 .cmdk-hint{display:inline-flex;align-items:center;gap:8px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);padding:7px 16px;color:var(--t2);font-size:13px;font-family:var(--font);cursor:pointer;transition:all var(--dur-2) var(--ease-out);min-width:320px;flex:1;max-width:520px}
@@ -4113,7 +4113,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
   .spnav-mark{padding:8px 10px}
 }
 
-.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;text-align:left;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;text-align:left;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
 .exp-fmt:hover{border-color:var(--bh);background:var(--bg-1)}
 .exp-fmt.is-active{border-color:color-mix(in srgb,var(--accent) 60%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--bg-1))}
 .exp-fmt-check{flex:0 0 auto;width:18px;height:18px;border:2px solid var(--bh);border-radius:50%;transition:border-color var(--dur-2) var(--ease-out)}
@@ -7311,7 +7311,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    absent, "Pro" reports that a present format is paid for, and an outline for
    both made the two read as the same kind of unavailability. ══ */
 .exp-fmt-pro{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--bg-0);background:var(--t1);border:1px solid var(--t1);border-radius:var(--radius-pill);padding:2px 8px}
-.exp-fmt.is-active .exp-fmt-pro{background:var(--accent);border-color:var(--accent);color:#fff}
+/* Was bare --accent under #fff: 4.43:1 at micro size in light, and a literal
+   white that never flipped for dark. The .btn-accent pair: 5.18 / 9.17. */
+.exp-fmt.is-active .exp-fmt-pro{background:var(--accent-mid);border-color:var(--accent-mid);color:var(--accent-ink)}
 .lockt-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--t2)}
 .lockt-name{font-size:12.5px;font-weight:600;color:var(--t1)}
 /* --t1 on the pill ground, not --accent: this is micro text and #0F6FFF

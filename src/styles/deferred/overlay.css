@@ -21,7 +21,7 @@
 
 
 /* ─── Command Palette ─── */
-.cp-overlay{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding-top:max(10vh,80px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.cp-overlay{position:fixed;inset:0;background:var(--scrim);z-index:9998;display:flex;justify-content:center;align-items:flex-start;padding-top:max(10vh,80px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
 .cp-input-wrap{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border)}
 .cp-input-wrap svg{color:var(--t2);flex-shrink:0}
 .cp-input{flex:1;background:none;border:none;outline:none;color:var(--t0);font-family:var(--font);font-size:17px;font-weight:400;letter-spacing:-.01em;padding:0}
@@ -39,6 +39,8 @@
 .cp-footer-keys{display:flex;gap:14px}
 .cp-footer-keys span{display:inline-flex;align-items:center;gap:6px}
 .cmdk-hint-text{flex:1;text-align:left}
+/* The footer's label. It was an inline style object. */
+.cp-footer-brand{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
 .cmdk-hint-keys kbd{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:2px 6px;line-height:1}
 
 /* ─── Section switcher (top bar) ─── */
@@ -55,14 +57,15 @@
 /* ══ Export shell (exp-) — the polished, accessible Export dialog opened from the
    nav search cluster. No real export yet: every format previews and the primary
    action is a disabled "Soon", so the UI never claims a capability it lacks. ══ */
-.exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
-.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84vh,720px);overflow-y:auto;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.exp-overlay{position:fixed;inset:0;z-index:9997;display:flex;justify-content:center;align-items:flex-start;padding:max(8vh,64px) 16px 32px;background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.exp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 32px));max-height:min(84vh,720px);overflow-y:auto;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .exp-head{display:flex;align-items:flex-start;gap:16px;padding:24px 24px 16px}
 .exp-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
-.exp-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+/* --accent-mid on the panel's --bg-1: 5.55:1 light, 8.48:1 dark. */
+.exp-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .exp-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .exp-sub{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
-.exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
+.exp-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .exp-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
 .exp-formats{display:flex;flex-direction:column;gap:8px;padding:8px 24px 20px}
 .exp-fmt-text{display:flex;flex-direction:column;gap:3px;min-width:0}
@@ -70,6 +73,10 @@
 .exp-fmt-desc{font-size:var(--fs-caption);color:var(--t2);line-height:1.45}
 .exp-fmt-soon{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--t2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 8px}
 .exp-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid var(--border);background:var(--bg-0)}
+/* The footer's two actions: the app's rectangle at the 44px the old
+   .ui-pill-md held, so the target does not shrink. */
+.exp-foot .exp-act{min-height:44px;padding:0 18px;justify-content:center}
+.exp-logo-acts .btn-s{min-height:40px;padding:0 14px}
 
 
 /* Export panel error. The panel deliberately stays OPEN on a failed export —
@@ -112,7 +119,7 @@
 
 @media(max-width:560px){
   .exp-logo{margin:0 16px 16px}
-  /* The action column cannot hold a pill and a Remove link beside two lines of
+  /* The action column cannot hold a button and a Remove link beside two lines of
      hint text at 320px; it takes its own row under the label instead. */
   .exp-logo-row{flex-wrap:wrap}
   .exp-logo-acts{flex-direction:row;align-items:center;width:100%;margin-left:0;justify-content:flex-start;gap:14px}

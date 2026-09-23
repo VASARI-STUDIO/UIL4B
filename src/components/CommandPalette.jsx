@@ -199,7 +199,7 @@ export default function CommandPalette({ open, onClose }) {
         </div>
 
         <div className="cp-footer">
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t3)' }}>
+          <span className="cp-footer-brand">
             {t('brand.fullToolkit')}
           </span>
           <div className="cp-footer-keys">
