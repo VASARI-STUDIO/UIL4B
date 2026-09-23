@@ -54,6 +54,9 @@
 
 /* Section counts are values, not toggles. */
 .lib-surface.pgl-page .pgl-section-count{border-radius:var(--radius-xs)}
+/* Its own width, never the column's: below 640px the head is two auto columns
+   that share the free width, and the pill stretched from 22px to 110px. */
+.lib-surface.pgl-page .pgl-section-count{justify-self:start}
 
 /* The touch floor. Measured on a coarse pointer at 768: the like button 28px,
    the five swatch actions 23px tall, "Open →" 27px. */

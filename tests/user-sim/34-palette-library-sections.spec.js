@@ -236,3 +236,20 @@ test.describe('palette library sections', () => {
       'the teased grid is nested inside a section again — it disappears when that section has nothing open').toBe(0)
   })
 })
+
+// Below 640px the section head drops to two auto columns, and the free width
+// was shared between them: the palette count pill (22px wide at 1440) stretched
+// to 110px at 390 — a long empty capsule beside a two-digit number.
+test('the section count stays the width of its number on a phone', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const page = await ctx.newPage()
+  watch(page, 'someone browsing palettes on a phone')
+  await go(page, '/discover/palettes')
+  const count = page.locator('.pgl-section-count').first()
+  await expect(count).toBeVisible()
+  // POSITIVE CONTROL: this is the narrow layout, where the head has two columns.
+  expect(await page.locator('.pgl-section-head').first().evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(2)
+  const w = (await count.boundingBox()).width
+  expect(w, `the count pill is ${w}px wide`).toBeLessThan(48)
+  await ctx.close()
+})
