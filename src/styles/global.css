@@ -461,41 +461,50 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .split>.side{flex:0 1 360px;min-width:0}
 
 /* ─── Buttons ─── */
-/* ── BUTTONS — V2 has ONE shape: pill. There is no second button shape.
-   Docs: docs/reference/design-language-v2.md#buttons-pill-always
+/* ── BUTTONS — the APP's shape is a rounded rectangle, not a pill.
+   Source: `UIL4B App.dc.html`. Its toolbars, fields and secondary buttons are
+   12px (10px when small) rectangles over a hairline border; 999px is kept for
+   meters and filter chips there, and for the marketing page (`/` styles its
+   own `.sp-cta` in pages/spectrum.css and does not use `.btn`). Director
+   decision 2026-09-23, recorded in SPECTRUM-REVIEW.md "copy owed #4".
+   Radii come from the tokens so the rounding setting still reaches them.
    Three treatments and no others:
-     Primary  .btn-accent / .btn-primary — --accent fill, white text
+     Primary  .btn-accent / .btn-primary — derived accent fill, --accent-ink label
      Inverse  .btn-inverse               — ink fill, page-coloured text
-     Quiet    .btn (the base)            — --card surface + 1px --border line
+     Quiet    .btn (the base)            — --card surface + 1px --border hairline
    The base rule below IS the Quiet treatment; don't add a fourth. ── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--t0);transition:all var(--dur-3) var(--ease-standard);text-decoration:none!important;letter-spacing:-.005em}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--t0);transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),opacity var(--dur-2) var(--ease-standard);text-decoration:none!important;letter-spacing:-.005em}
 .btn:hover{border-color:var(--bh);background:var(--bg-2);color:var(--t0)}
 .btn:active{background:var(--bg-3);color:var(--t0);transition-duration:var(--dur-1)}
-.btn-s{padding:6px 12px;font-size:11px}
-/* Primary fills with --accent-strong, NOT --accent. The label is 12.5px, so it
-   is normal-size text at a 4.5:1 floor, and --accent-fg on --accent measures
-   only 4.43:1 in light. On --accent-strong it is 5.84:1 (light) and 6.09:1
-   (dark, where --accent-fg flips to ink). */
-.btn-accent,.btn-primary{background:var(--accent-strong);color:var(--accent-fg);border-color:transparent;transition:all var(--dur-2) var(--ease-standard)}
+.btn-s{padding:6px 12px;font-size:11.5px;border-radius:var(--radius-s)}
+/* Primary fills with --accent-mid and labels with --accent-ink — the pair the
+   migrated pages use (.sp-cta--accent, .tt-copy-primary). MEASURED, not
+   reasoned (the family's names read backwards in light theme, see above):
+     rest   --accent-mid   #0E61DD / ink #F4F7FF  5.18:1 light · #82B3FF / #0B0C0E 9.17:1 dark
+     hover  --accent-text  #0E5BCF               5.73:1 light · #8AB8FF          9.65:1 dark
+     press  --accent-bright #0E53BC              6.56:1 light · #94BEFF         10.33:1 dark
+   Each state moves AWAY from the ink, so hover and press never read worse than
+   rest. Raw --accent is 4.14:1 in light and fails; --accent-strong is a literal
+   that does not follow a premium accent, so neither is used. No lift, no glow:
+   the fill change is the state. */
+.btn-accent,.btn-primary{background:var(--accent-mid);color:var(--accent-ink);border-color:var(--accent-mid);font-weight:560}
 /* Inverse — the strongest non-accent action. Nav "Start free", in-panel tool
    links. Ink fill, page-coloured label, so it flips correctly with the theme. */
 .btn.btn-inverse{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
 .btn.btn-inverse:hover{background:var(--t1);border-color:var(--t1);color:var(--bg-0)}
 .btn.btn-inverse:active{background:var(--t0);color:var(--bg-0);transition-duration:var(--dur-1)}
-/* Hover no longer changes the FILL. The old --brand-soft hover dropped the
-   label to 3.11:1 in light — hovering a button made it harder to read. The
-   hover reads through the lift and shadow that were already here, which cost
-   nothing in contrast. */
-.btn-accent:hover,.btn-primary:hover{transform:translateY(-1px);box-shadow:0 1px 2px rgba(0,0,0,.12),0 4px 10px -3px color-mix(in srgb,var(--accent-strong) 40%,transparent)}
-.btn-accent:active,.btn-primary:active{transform:translateY(0);opacity:.8;transition-duration:var(--dur-1)}
-.btn-accent:disabled,.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none}
+/* Hover and press restate the label colour because `.btn:hover` (0,2,0) would
+   otherwise hand an accent button the quiet --bg-2 ground. */
+.btn-accent:hover,.btn-primary:hover{background:var(--accent-text);border-color:var(--accent-text);color:var(--accent-ink)}
+.btn-accent:active,.btn-primary:active{background:var(--accent-bright);border-color:var(--accent-bright);color:var(--accent-ink);transition-duration:var(--dur-1)}
+.btn-accent:disabled,.btn-primary:disabled,.btn-accent:disabled:hover,.btn-primary:disabled:hover{opacity:.4;cursor:not-allowed;background:var(--accent-mid);border-color:var(--accent-mid)}
 .btn.btn-ghost{background:none;border-color:transparent;color:var(--t1)}
 .btn.btn-ghost:hover{background:var(--hvr);color:var(--t0)}
 .btn-l{padding:14px 28px;font-size:14px}
 .btn.is-loading{color:transparent!important;position:relative;pointer-events:none}
 .btn.is-loading>*{visibility:hidden}
 .btn.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;color:var(--t1);animation:fg-spin .7s linear infinite}
-.btn-accent.is-loading::after,.btn-primary.is-loading::after{color:var(--accent-fg)}
+.btn-accent.is-loading::after,.btn-primary.is-loading::after{color:var(--accent-ink)}
 .tag{display:inline-flex;padding:4px 12px;border-radius:var(--radius-s);font-size:10px;font-weight:600}
 
 /* ─── Inputs ─── */
@@ -3202,26 +3211,23 @@ html.lenis{scroll-behavior:auto!important}
    entrance is CSS now and supplies its own hidden start state via
    `animation-fill-mode: both` — see the hero entrance block. */
 
-/* ── Reusable pill button system (nav, hero, rail, coming-soon) ── */
-.ui-pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius-pill);font-family:var(--font);font-weight:580;line-height:1;cursor:pointer;text-decoration:none;white-space:nowrap;border:1px solid transparent;transition:transform var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out)}
-.ui-pill:hover{text-decoration:none;transform:translateY(-1px)}
-.ui-pill:active{transform:scale(.98)}
+/* ── The legacy `.ui-pill` action family (nav, CTAs, coming-soon) ──
+   Despite the name it is no longer a pill: in the app it is the same rounded
+   rectangle as `.btn` (see the BUTTONS note), because `UIL4B App.dc.html` does
+   not pill its actions. The family is being retired surface by surface; pages
+   that still want Spectrum's pill (plans, help, principles) restate the radius
+   in their own root-scoped sheets. No hover lift and no glow — the ground or
+   border change is the state. */
+.ui-pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);font-family:var(--font);font-weight:540;line-height:1;cursor:pointer;text-decoration:none;white-space:nowrap;border:1px solid transparent;transition:background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out)}
+.ui-pill:hover{text-decoration:none}
 .ui-pill-ink{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
-.ui-pill-ink:hover{color:var(--bg-0);box-shadow:var(--shadow-s)}
-.ui-pill-out{background:var(--bg-1);color:var(--t0);border-color:var(--bh)}
-.ui-pill-out:hover{border-color:var(--t0)}
-/* Fills with --accent-strong, not --accent — same reason as .btn-accent. This
-   is the shared pill primitive behind the nav "Start for Free" and the hero
-   CTA, i.e. the most-seen control in the product: at 14px its label is normal
-   text, and --accent-fg on --accent measured 4.43:1 against the 4.5:1 floor.
-   On --accent-strong it is 5.84:1 (light) / 6.09:1 (dark).
-   The old rule had this backwards — it filled with --accent at rest and only
-   reached the readable --accent-strong on HOVER, so the resting state was the
-   failing one. Hover now holds the fill and reads through lift + glow, which
-   also keeps it correct in dark, where "darker on hover" would reduce contrast
-   against the ink label rather than increase it. */
-.ui-pill-accent{background:var(--accent-strong);color:var(--accent-fg);border-color:var(--accent-strong)}
-.ui-pill-accent:hover{background:var(--accent-strong);color:var(--accent-fg);border-color:var(--accent-strong);transform:translateY(-1px);box-shadow:0 4px 14px -4px var(--accent-glow)}
+.ui-pill-ink:hover{color:var(--bg-0);background:var(--t1);border-color:var(--t1)}
+.ui-pill-out{background:var(--card);color:var(--t0);border-color:var(--border)}
+.ui-pill-out:hover{border-color:var(--bh);background:var(--bg-2)}
+/* The same measured pair as .btn-accent: --accent-mid under --accent-ink at
+   rest (5.18:1 light · 9.17:1 dark), --accent-text on hover (5.73 · 9.65). */
+.ui-pill-accent{background:var(--accent-mid);color:var(--accent-ink);border-color:var(--accent-mid)}
+.ui-pill-accent:hover{background:var(--accent-text);color:var(--accent-ink);border-color:var(--accent-text)}
 .ui-pill-ghost{background:none;color:var(--t1)}
 .ui-pill-ghost:hover{background:var(--hvr);color:var(--t0)}
 .ui-pill-sm{height:40px;padding:0 18px;font-size:var(--fs-body-s)}
