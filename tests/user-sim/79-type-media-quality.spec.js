@@ -479,3 +479,20 @@ test('every selection on /create/aspect-ratio is announced, not just painted', a
   await expect(page.locator('.rc-tab[aria-pressed="true"]'),
     'two tabs read as chosen at once').toHaveCount(1)
 })
+
+// THE CALCULATOR IS IN THE LANDMARK LIST.
+//
+// Walked from the root of Chrome's accessibility tree on 2026-09-15, this route
+// reported navigation | main | contentinfo and nothing naming its content — 56
+// controls under one heading (create-tools-left-2026-09-15). The page root is
+// now a <section> named by its own h1, so a screen-reader user's landmark list
+// carries the tool. Asserted by role and name, which is what that list shows.
+test('/create/aspect-ratio exposes its tool as a named region', async ({ page }) => {
+  watch(page, 'someone jumping between landmarks with a screen reader')
+  await go(page, '/create/aspect-ratio')
+  const region = page.getByRole('region', { name: 'Aspect & Resolution Calculator', exact: true })
+  await expect(region, 'the calculator is not a named landmark').toHaveCount(1)
+  // POSITIVE CONTROL: the region must hold the tool, not merely the heading.
+  await expect(region.locator('.arc-ratio-card').first()).toBeVisible()
+  await expect(region.getByRole('button', { name: 'Copy size' })).toBeVisible()
+})
