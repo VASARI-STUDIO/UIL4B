@@ -3253,10 +3253,13 @@ html.lenis{scroll-behavior:auto!important}
 /* ── The legacy `.ui-pill` action family (nav, CTAs, coming-soon) ──
    Despite the name it is no longer a pill: in the app it is the same rounded
    rectangle as `.btn` (see the BUTTONS note), because `UIL4B App.dc.html` does
-   not pill its actions. The family is being retired surface by surface; pages
-   that still want Spectrum's pill (plans, help, principles) restate the radius
-   in their own root-scoped sheets. No hover lift and no glow — the ground or
-   border change is the state. */
+   not pill its actions. Two consumers are left: PillNav's CTAs (sm, lg, block;
+   accent, ghost, out), which ARE this rectangle, and SystemCTA on /plans (lg;
+   ink, out, arrow), which plans.css restates as Spectrum's pill under
+   `.plans-page`. Every other surface has moved to `.btn`, and the members only
+   they used (-md, -quiet, -hi, and the icon-customizer, article and learn-index
+   sizing) are gone. No hover lift and no glow — the ground or border change is
+   the state. */
 .ui-pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);font-family:var(--font);font-weight:540;line-height:1;cursor:pointer;text-decoration:none;white-space:nowrap;border:1px solid transparent;transition:background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out)}
 .ui-pill:hover{text-decoration:none}
 .ui-pill-ink{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
@@ -3270,7 +3273,6 @@ html.lenis{scroll-behavior:auto!important}
 .ui-pill-ghost{background:none;color:var(--t1)}
 .ui-pill-ghost:hover{background:var(--hvr);color:var(--t0)}
 .ui-pill-sm{height:40px;padding:0 18px;font-size:var(--fs-body-s)}
-.ui-pill-md{height:44px;padding:0 22px;font-size:var(--fs-body)}
 .ui-pill-lg{height:52px;padding:0 28px;font-size:var(--fs-body)}
 .ui-pill-block{width:100%}
 .ui-pill-arrow{transition:transform var(--dur-2) var(--ease-out)}
@@ -4167,7 +4169,6 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 /* Add-mode: paste-SVG affordance */
 .icust-paste{display:flex;flex-direction:column;gap:12px;padding:8px 24px 24px}
 .icust-paste .icust-foot{padding:16px 0 0}
-.icust-paste .icust-foot .ui-pill{flex:0 1 auto}
 /* Stage — fixed dark canvas; --light swap for dark-on-light legibility */
 .icust-stage{position:relative;display:grid;place-items:center;min-height:220px;margin:4px 24px 0;padding:24px;border-radius:var(--radius-xl);background:radial-gradient(120% 120% at 50% 0%,#17171B 0%,#0E0E11 62%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);overflow:hidden;--ig-size:48px;--ig-stroke:2;--ig-color:#F4F4F5;--ig-transform:none;--ig-cap:round;--ig-join:round}
 .icust-stage-host{display:grid;place-items:center;line-height:0}
@@ -4291,7 +4292,6 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 /* Footer + Pro save-lock — the four actions share the row width evenly and only
    wrap to a second line when the footer is genuinely too narrow, so none clip. */
 .icust-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:18px 24px 24px;border-top:1px solid var(--border)}
-.icust-foot .ui-pill{flex:1 1 auto;min-width:max-content;height:40px;padding:0 14px;font-size:var(--fs-body-s);white-space:nowrap}
 /* overflow / scrollbar / edge fade come from `.rail-overflow` (see the block by
    the global scrollbar rules). This was the eighth instance of the hidden-
    scroller shape: `overflow-x:auto` with the scrollbar deleted on both
@@ -4539,14 +4539,6 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hcmd-empty strong{color:var(--t0)}
 
 
-/* ── V2 pill treatments ──
-   Three, and no others: primary (accent), inverse (ink) and quiet. `ui-pill-hi`
-   is the inverted pricing panel's CTA — the panel is ink-on-ink, so its action
-   takes the highlight rather than the accent, which would vanish against it. */
-.ui-pill-quiet{background:var(--bg-1);color:var(--t0);border-color:var(--border)}
-.ui-pill-quiet:hover{border-color:var(--t0);color:var(--t0)}
-.ui-pill-hi{background:var(--hi);color:var(--hi-fg);border-color:var(--hi)}
-.ui-pill-hi:hover{color:var(--hi-fg);box-shadow:var(--shadow-s)}
 @media(max-width:768px){
   .hcmd-bar{min-height:54px;padding-left:14px}
   .hcmd-input{height:50px}
@@ -7490,7 +7482,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    number of pixels. */
 
 
-.lart-next .ui-pill{padding:11px 20px;font-size:14px}
 
 
 /* ══ /learn article index (.lidx-*) ═════════════════════════════════════════
@@ -7532,7 +7523,6 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .lidx-empty{max-width:48ch;margin:var(--s-6) auto 0;text-align:center}
 .lidx-empty-h{font-size:var(--fs-h4);font-weight:600;line-height:1.3;color:var(--t0);overflow-wrap:anywhere}
 .lidx-empty-p{margin-top:var(--s-2);font-size:var(--fs-body-s);line-height:1.6;color:var(--t2)}
-.lidx-empty .ui-pill{margin-top:var(--s-4)}
 
 /* ══ THE USER HOME (.uh-*) ═════════════════════════════════════════
    /projects, which signed-in visitors now land on instead of the sales page.
