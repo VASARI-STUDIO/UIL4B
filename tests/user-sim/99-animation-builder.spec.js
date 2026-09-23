@@ -303,6 +303,25 @@ test.describe('the animation builder', () => {
     expect(w.made - w.ended, 'an engine worker from the cancelled load is still alive').toBe(1)
   })
 
+  // Clearing the width field and tabbing away used to leave 16px — the field's
+  // floor — because an empty value was read as "the smallest allowed". An
+  // emptied field is not a request for 16 px; it goes back to the last width.
+  test('an emptied width field keeps the last width, not the 16 px floor', async ({ page }) => {
+    watch(page, PERSONA)
+    await openBuilder(page)
+    const width = page.getByLabel('Width (px)')
+    await width.fill('40')
+    await width.blur()
+    await expect(width).toHaveValue('40')
+    await width.fill('')
+    await width.blur()
+    await expect(width, 'an empty width collapsed to the floor').toHaveValue('40')
+    // POSITIVE CONTROL: a real small value still clamps up to the floor.
+    await width.fill('3')
+    await width.blur()
+    await expect(width).toHaveValue('16')
+  })
+
   test('with reduced motion the preview waits on frame one for Play', async ({ page }) => {
     watch(page, PERSONA)
     await page.emulateMedia({ reducedMotion: 'reduce' })

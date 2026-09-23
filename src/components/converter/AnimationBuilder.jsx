@@ -79,6 +79,10 @@ export default function AnimationBuilder({ toast }) {
   const n = frames.length
   const first = frames[0]
   const effWidth = width ?? (first ? Math.min(first.w, DEFAULT_WIDTH_CAP) : 0)
+  // The last width that was a real number, so emptying the field and leaving
+  // it restores that rather than reading "" as the 16 px floor.
+  const lastWidth = useRef(null)
+  useEffect(() => { if (typeof effWidth === 'number' && effWidth >= 16) lastWidth.current = effWidth }, [effWidth])
   const size = first ? animationSize(first.w, first.h, effWidth, { evenDims: fmt.evenDims }) : { w: 0, h: 0 }
   // A format with no alpha channel (MP4) always has a ground; the others only
   // when asked for one.
@@ -451,7 +455,7 @@ export default function AnimationBuilder({ toast }) {
           <label className="fc-eyebrow" htmlFor="fc-an-width">Width (px)</label>
           <input id="fc-an-width" className="fc-field fc-field--num" type="number" min={16} max={MAX_ANIMATION_SIDE} value={effWidth} disabled={busy}
             onChange={e => setWidth(e.target.value === '' ? '' : Math.max(0, Math.min(MAX_ANIMATION_SIDE, Math.round(+e.target.value))))}
-            onBlur={() => setWidth(Math.max(16, Number(width) || effWidth))} />
+            onBlur={() => setWidth(width === '' || !(Number(width) > 0) ? lastWidth.current : Math.max(16, Number(width)))} />
           <div className="fc-outsize">
             <span className="fc-outsize-k">Output</span>
             <span className="fc-outsize-v"><strong>{size.w}×{size.h}</strong> px — the first frame sets the shape</span>
