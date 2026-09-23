@@ -49,8 +49,8 @@ export default function SeoInspector({ onCopy, toast }) {
   }
 
   return (
-    <div className="sec seo-wrap">
-      <div className="sec-h">
+    <div className="sec seo-wrap seo-page">
+      <header className="seo-hero">
         {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
             common AI trait, scan the whole site and remove alot of them where
             applied." This continues #382 and #386, where he marked this exact
@@ -61,7 +61,7 @@ export default function SeoInspector({ onCopy, toast }) {
             label. */}
         <h1>{active.title}</h1>
         <p>{active.desc}</p>
-      </div>
+      </header>
 
       <div className="seo-tabs" role="tablist" aria-label="SEO tools">
         {TABS.map(tp => (

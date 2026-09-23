@@ -72,7 +72,7 @@
   .kbd-list{padding:8px 16px 14px}
   .kbd-desc{font-size:12px}
 }
-.seo-serp.is-mobile{max-width:360px}
+/* .seo-serp.is-mobile moved to pages/seo-inspector.css, under .seo-page. */
 
 
 /* Pro-locked overlay shell (placeholder is server-gated; we style the shell only) */
