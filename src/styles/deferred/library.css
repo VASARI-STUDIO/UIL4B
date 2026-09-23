@@ -48,7 +48,7 @@
    would be dead CSS added on top of dead CSS. The geometry override is just
    dropped. */
 .cs-pillnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.cs-pillnav-thumb{position:absolute;top:5px;left:0;z-index:0;height:calc(100% - 10px);border-radius:var(--radius-pill);background:var(--brand);box-shadow:0 2px 8px -2px var(--brand-glow);transform:translateX(var(--cs-thumb-x,0));width:var(--cs-thumb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
+.cs-pillnav-thumb{position:absolute;top:5px;left:0;z-index:0;height:calc(100% - 10px);border-radius:var(--radius-pill);background:var(--accent);box-shadow:0 2px 8px -2px var(--accent-border);transform:translateX(var(--cs-thumb-x,0));width:var(--cs-thumb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
 [data-theme="light"] .cs-pillnav{box-shadow:var(--shadow-m)}
 .cs-section-header{user-select:none;position:relative;z-index:10}
 .cs-section-header>h2{transition:color var(--dur-1) var(--ease-standard)}
@@ -102,7 +102,7 @@
 .cs-pb-adjust-field{display:flex;flex-direction:column;gap:6px}
 .cs-pb-adjust-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .cs-pb-adjust-val{color:var(--t1)}
-.cs-pb-adjust-reset{grid-column:1/-1;justify-self:start;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-strong);padding:4px 0;min-height:32px;transition:opacity var(--dur-1) var(--ease-standard)}
+.cs-pb-adjust-reset{grid-column:1/-1;justify-self:start;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-mid);padding:4px 0;min-height:32px;transition:opacity var(--dur-1) var(--ease-standard)}
 .cs-pb-adjust-reset:disabled{color:var(--t3);cursor:default;opacity:.6}
 
 /* Pro-lock affordance (real gate — glyph is the conversion driver) */
@@ -271,7 +271,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* Card date inline */
 .pl-card-date-inline{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:8px}
 /* Copy hint */
-.pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-strong);transition:opacity var(--dur-2) var(--ease-standard)}
+.pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-mid);transition:opacity var(--dur-2) var(--ease-standard)}
 /* Prompt modal overlay */
 .pl-modal-backdrop{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;animation:fg-fade var(--dur-2) var(--ease-entrance)}
 .pl-modal{background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);width:100%;max-width:680px;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--warm-shadow-lg);position:relative;animation:fg-rise var(--dur-3) var(--ease-entrance)}
@@ -396,7 +396,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
-.icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .icust-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .icust-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .icust-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
@@ -449,7 +449,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-code-box{position:relative;display:block;width:100%;text-align:left;padding:26px 16px 14px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out)}
 .icust-code-box:hover{border-color:var(--accent)}
 .icust-code-hint{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--dur-2) var(--ease-out)}
-.icust-code-box:hover .icust-code-hint{color:var(--accent-strong)}
+.icust-code-box:hover .icust-code-hint{color:var(--accent-mid)}
 /* Copy-only snippet: the text is not selectable, so the Copy button is the one
    way out — keeps the workflow inside UIL4B. */
 .icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
@@ -458,7 +458,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-save--locked{cursor:pointer;opacity:.85}
 .icust-save--locked:hover{opacity:1}
 .icust-lock-glyph{display:inline-grid;place-items:center}
-.icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-strong);white-space:nowrap}
+.icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-mid);white-space:nowrap}
 .icust-upgrade:hover{text-decoration:underline}
 
 /* Similar icons — same-pack siblings, a foot-of-popup retention nudge */
@@ -473,7 +473,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-rail{margin:8px 0 28px}
 .ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
 .ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--radius-s);background:none;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
-.ig-rail-clear:hover{color:var(--accent-strong);border-color:var(--border);background:var(--bg-1)}
+.ig-rail-clear:hover{color:var(--accent-mid);border-color:var(--border);background:var(--bg-1)}
 .ig-rail-clear svg{width:11px;height:11px}
 /* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
 .ig-rail-item{position:relative;flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-1) var(--ease-out)}
@@ -499,7 +499,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
 /* Toolbar add-icon button (icon-scoped; does not touch shared .pl- toolbar bits) */
 .ig-addbtn{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.ig-addbtn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-strong)}
+.ig-addbtn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-mid)}
 .ig-addbtn svg{flex-shrink:0}
 
 /* Custom-icons: Pro lock + empty state */
@@ -518,7 +518,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-mysec .ig-custom-lock{padding:48px 24px}
 /* Free-tier allowance hint under the Saved collection (non-Pro only). */
 .ig-custom-hint{margin-top:4px;font-size:var(--fs-caption);color:var(--t3)}
-.ig-custom-hint-link{font:inherit;color:var(--accent-strong);font-weight:600;background:none;border:0;padding:0;cursor:pointer}
+.ig-custom-hint-link{font:inherit;color:var(--accent-mid);font-weight:600;background:none;border:0;padding:0;cursor:pointer}
 .ig-custom-hint-link:hover{text-decoration:underline}
 
 /* Fetch-fallback notice, skeletons, status line, sentinel, CDN invert, pack tag */
@@ -592,7 +592,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-chip img.ig-logo{width:28px;height:28px}
 .ig-attrib{padding:6px 0 20px;text-align:center;font-size:var(--fs-caption);color:var(--t3);line-height:1.5}
 .ig-attrib code{font-family:var(--mono);font-size:.92em;color:var(--t2)}
-.ig-attrib a{color:var(--accent-strong);text-decoration:none;font-weight:600}
+.ig-attrib a{color:var(--accent-mid);text-decoration:none;font-weight:600}
 .ig-attrib a:hover{text-decoration:underline}
 
 @media(max-width:560px){
@@ -642,7 +642,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    --shadow-cmd, --shadow-panel — are owned by feat/v2-token-foundation. */
 
 /* ── Shared V2 section furniture ── */
-.hbrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.hbrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 
 /* ── Hero ────────────────────────────────────────────────────────────────────
    Composition is the page's existing centred measure; every TYPE and SPACING
@@ -1245,3 +1245,12 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    `:where()` keeps this at the element's own specificity, so every classed
    link rule (.cur-link, .grg-open, ...) still decides its own colour. */
 :where(.lib-surface) a{color:var(--accent-mid)}
+
+/* THE TOUCH FLOOR, for the controls above. Measured on a coarse pointer at
+   320/390/768 before this: the accent `.btn`s ("Log in", "Create your free
+   account") at 39px and the search input at 42px, under the 44px every other
+   library control is floored at in tool-shell.css. */
+@media(pointer:coarse){
+  .lib-surface .btn{min-height:44px}
+  .lib-surface .lbry-search input{min-height:44px}
+}

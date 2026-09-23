@@ -155,3 +155,12 @@
    the app file uses for hexes. */
 .lib-surface.cur-wrap .cur-tag,
 .lib-surface.cur-wrap .cur-chip{border-radius:var(--radius-xs)}
+
+/* The touch floor. The 24px floors above are SC 2.5.8's; on a coarse pointer
+   the row titles and the in-product hand-offs take the 44px every other
+   library control has (measured 24px at 390 and 768). */
+@media(pointer:coarse){
+  .lib-surface.cur-wrap .cur-lead-title .cur-link,
+  .lib-surface.cur-wrap .cur-row-title .cur-link,
+  .lib-surface.cur-wrap .cur-go{min-height:44px}
+}

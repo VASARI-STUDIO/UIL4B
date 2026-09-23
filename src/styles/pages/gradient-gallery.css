@@ -25,3 +25,5 @@
 .lib-surface.grg-wrap .grg-like:hover{background:rgba(10,10,14,.72)}
 .lib-surface.grg-wrap .grg-queue{border-radius:var(--radius-2xl)}
 .lib-surface.grg-wrap .grg-queue-status{border-radius:var(--radius-xs)}
+/* The like button measured 32px on a coarse pointer. */
+@media(pointer:coarse){.lib-surface.grg-wrap .grg-like{width:44px;height:44px}}

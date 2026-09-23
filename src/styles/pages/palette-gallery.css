@@ -49,3 +49,14 @@
 
 /* Section counts are values, not toggles. */
 .lib-surface.pgl-page .pgl-section-count{border-radius:var(--radius-xs)}
+
+/* The touch floor. Measured on a coarse pointer at 768: the like button 28px,
+   the five swatch actions 23px tall, "Open →" 27px. */
+@media(pointer:coarse){
+  .lib-surface.pgl-page .pgal-like{width:44px;height:44px}
+  .lib-surface.pgl-page .pgal-act,
+  .lib-surface.pgl-page .pgal-use{min-height:44px}
+  /* Below 600px the actions drop their labels to a glyph (global.css), which
+     left them 29px wide. */
+  .lib-surface.pgl-page .pgal-act{min-width:44px;justify-content:center}
+}

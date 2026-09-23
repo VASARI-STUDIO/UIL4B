@@ -89,6 +89,13 @@ const CATEGORY_OPTIONS = [
 // out mathematically (fixed square cells) and only the on-screen window ±
 // overscan is rendered; everything else is two spacer regions of pure height.
 const CELL_MIN = 42       // matches the old grid's minmax(42px, 1fr)
+// ON A COARSE POINTER THE FLOOR IS 44, the touch target the rest of the app
+// holds (tool-shell.css floors every library control at 44 under
+// `pointer:coarse`). The cells stretch to fill the row either way, so on a
+// fine pointer nothing moves; on a phone or tablet a row simply carries one
+// column fewer when 42 would have squeezed one more in. Measured before this:
+// 42x42 at 768 on a touch device, under the floor on every cell of the grid.
+const cellMin = () => (typeof window !== 'undefined' && window.matchMedia?.('(pointer:coarse)').matches ? 44 : CELL_MIN)
 const CELL_GAP = 4
 const HEAD_H = 42         // section header row (text + bottom breathing room)
 const SECTION_GAP = 24    // extra space above each section after the first
@@ -167,8 +174,9 @@ export default function EmojiLibrary({ onCopy }) {
   // Column count + square cell size from the measured container width — the
   // same result the old CSS grid produced with repeat(auto-fill, minmax(42px,1fr)).
   const { cols, cellW } = useMemo(() => {
-    if (!gridW) return { cols: 0, cellW: CELL_MIN }
-    const c = Math.max(1, Math.floor((gridW + CELL_GAP) / (CELL_MIN + CELL_GAP)))
+    const min = cellMin()
+    if (!gridW) return { cols: 0, cellW: min }
+    const c = Math.max(1, Math.floor((gridW + CELL_GAP) / (min + CELL_GAP)))
     return { cols: c, cellW: (gridW - (c - 1) * CELL_GAP) / c }
   }, [gridW])
 
