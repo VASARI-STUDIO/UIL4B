@@ -834,14 +834,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .fp{cursor:pointer;flex:1 1 280px;min-width:0}
 
 /* ─── Toast ─── */
-.toast{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--ring),var(--warm-shadow-lg);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius-l);font-family:var(--font);transform:translateY(16px) scale(.97);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
-.toast.show{transform:translateY(0) scale(1);opacity:1}
+.toast{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
 .toast-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .toast-ico svg{width:15px;height:15px}
 .toast-msg{font-size:13px;font-weight:500;line-height:1.35;color:var(--t0);letter-spacing:-.005em}
 .toast-success .toast-ico{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .toast-error .toast-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
-.toast-info .toast-ico{background:var(--accent-bg);color:var(--accent)}
+.toast-info .toast-ico{background:var(--accent-bg);color:var(--accent-mid)}
 /* The dismiss control. The toast itself stays pointer-events:none — it must
    never block what is under it — so the one thing that is meant to be pressed
    opts back in. Negative margins keep the box the same height it was. */
@@ -850,11 +850,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast-x:hover{background:var(--bg-2);color:var(--t0)}
 .toast:not(.show) .toast-x{pointer-events:none}
 .uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
-/* Success motion: icon spring-pop + checkmark stroke draw (E3, motion-safe) */
+/* Success motion: the checkmark draws, which is the state ("done") being
+   said. The spring pop that scaled the tile from .5 went: it said nothing the
+   draw does not, and springy decoration is on the founder's rejected list. */
 .toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
-.toast-success.show .toast-ico{animation:toast-pop var(--dur-4) var(--ease-spring) both}
 .toast-success.show .toast-ico svg path{animation:toast-draw var(--dur-3) var(--ease-entrance) 90ms forwards}
-@keyframes toast-pop{from{transform:scale(.5)}to{transform:scale(1)}}
 @keyframes toast-draw{to{stroke-dashoffset:0}}
 html[data-reduced-motion="true"] .toast-success.show .toast-ico{animation:none}
 html[data-reduced-motion="true"] .toast-success .toast-ico svg path,html[data-reduced-motion="true"] .toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
@@ -6570,7 +6570,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .offline-banner svg{color:var(--warn);flex-shrink:0;margin-top:1px}
 .offline-banner-text{margin:0;font-size:12.5px;line-height:1.55;color:var(--t1)}
 .offline-banner-text strong{color:var(--t0);font-weight:700}
-.bill-banner{position:fixed;left:20px;bottom:20px;z-index:120;display:flex;align-items:flex-start;gap:10px;width:min(360px,calc(100vw - 40px));padding:14px 12px 14px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--t3);border-radius:var(--radius-l);box-shadow:var(--ring),var(--warm-shadow-lg);animation:bill-rise var(--dur-3) var(--ease-entrance)}
+.bill-banner{position:fixed;left:20px;bottom:20px;z-index:120;display:flex;align-items:flex-start;gap:10px;width:min(360px,calc(100vw - 40px));padding:14px 12px 14px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--t3);border-radius:var(--radius);box-shadow:var(--shadow-m);animation:bill-rise var(--dur-3) var(--ease-entrance)}
 .bill-banner--urgent{border-left-color:var(--err)}
 .bill-banner-body{flex:1;min-width:0}
 .bill-banner-title{margin:0;font-size:13px;font-weight:650;line-height:1.4;color:var(--t0)}
@@ -6578,15 +6578,13 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .bill-banner-text{margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .bill-banner-err{margin:6px 0 0;font-size:12px;line-height:1.45;color:var(--err-strong)}
 .bill-banner-actions{display:flex;align-items:center;gap:12px;margin-top:11px;flex-wrap:wrap}
-/* Fills with --accent-strong, not --brand. At 12.5px the label is normal-size
-   text, so --accent-fg on --brand (== --accent) measured 4.43:1 against the
-   4.5:1 floor; on --accent-strong it is 5.84:1 light / 6.09:1 dark. Same
-   resting-state fault already fixed on .ui-pill-accent and .btn-accent — this
-   rule reached the readable tone only on HOVER, so the state a user actually
-   reads was the failing one. This banner tells someone their payment failed;
-   it is the last CTA in the product that should be hard to read. */
-.bill-banner-cta{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--accent-strong);background:var(--accent-strong);color:var(--accent-fg);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
-.bill-banner-cta:hover:not(:disabled){background:var(--accent-strong);border-color:var(--accent-strong);box-shadow:0 3px 10px -3px var(--accent-glow)}
+/* The .btn-accent pair: --accent-mid under --accent-ink (5.18:1 light, 9.17:1
+   dark), --accent-text on hover (5.73 / 9.65). Bare --accent would be 4.14:1
+   at this 12.5px label, and --accent-strong is a literal a premium accent does
+   not reach. This banner tells someone their payment failed; it is the last
+   CTA in the product that should be hard to read. */
+.bill-banner-cta{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--accent-mid);background:var(--accent-mid);color:var(--accent-ink);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.bill-banner-cta:hover:not(:disabled){background:var(--accent-text);border-color:var(--accent-text);color:var(--accent-ink)}
 .bill-banner-cta:disabled{opacity:.6;cursor:progress}
 .bill-banner-link{font-size:12.5px;font-weight:550;color:var(--t2);text-decoration:none}
 .bill-banner-link:hover{color:var(--t0);text-decoration:underline}
@@ -7617,7 +7615,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .sync-notice-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .sync-notice-ico svg{width:15px;height:15px}
 .sync-notice--error .sync-notice-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
-.sync-notice--info .sync-notice-ico{background:var(--accent-bg);color:var(--accent)}
+.sync-notice--info .sync-notice-ico{background:var(--accent-bg);color:var(--accent-mid)}
 .sync-notice-msg{flex:1;min-width:0;font-size:13px;font-weight:500;line-height:1.45;color:var(--t0);letter-spacing:-.005em}
 .sync-notice-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .sync-notice-dismiss{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-s);border:0;background:transparent;color:var(--t2);cursor:pointer}
