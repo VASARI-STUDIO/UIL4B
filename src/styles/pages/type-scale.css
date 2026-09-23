@@ -377,6 +377,9 @@
      pushed the switch 15px past the viewport (21-reflow-320). */
   .tsc-page .tsc-width-switch { width: 100%; }
   .tsc-page .tsc-width-btn { flex: 1 1 0; min-width: 0; padding: 7px 4px; }
+  /* Stacked, the row is a column, and type.css's flex:1 on the field then
+     sized its HEIGHT from a zero basis: measured 20px tall at 390. */
+  .tsc-page .tsc-sample-row .tsc-sample-input { flex: 0 0 auto; }
 }
 
 @media (max-width: 380px) {
@@ -395,7 +398,17 @@
   .tsc-page .tsc-handoff,
   .tsc-page .tsc-copy-all,
   .tsc-page .tsc-copy-primary,
-  .tsc-page .svt-trigger { min-height: 44px; }
+  .tsc-page .svt-trigger,
+  .tsc-page .tsc-tuning-toggle,
+  .tsc-page .tsc-more-link { min-height: 44px; }
+  /* A weight numeral is three characters; the chip is square at the floor
+     rather than 41px wide. */
+  .tsc-page .tsc-weight { min-width: 44px; }
+  .tsc-page .tsc-more-link { display: inline-flex; align-items: center; }
+  .tsc-page .tsc-select,
+  .tsc-page .tsc-scale-bar .tsc-select,
+  .tsc-page .tsc-sample-input { height: 44px; }
+  .tsc-page .snapv-value { min-height: 44px; }
 }
 
 /* ── Press feedback, with the house reduced-motion pair ──────────────────── */

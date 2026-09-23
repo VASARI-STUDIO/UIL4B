@@ -1207,3 +1207,4 @@
 :is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry{min-height:36px;border-color:var(--bh);border-radius:var(--radius-s);background:var(--card);color:var(--t0);font-weight:560}
 :is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry:hover:not(:disabled){background:var(--hvr);border-color:color-mix(in srgb,var(--t0) 34%,transparent);color:var(--t0)}
 :is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){:is(.fg-page,.fpr-page,.tsc-page) .typ-notice-retry{min-height:44px}}

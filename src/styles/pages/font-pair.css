@@ -768,7 +768,13 @@
   .fpr-page .fpr-card-apply,
   .fpr-page .fpr-hero-cta,
   .fpr-page .typ-picker-clear,
-  .fpr-page .svt-trigger { min-height: 44px; }
+  .fpr-page .svt-trigger,
+  .fpr-page .fpr-card-why > summary,
+  .fpr-page .fpr-more-link { min-height: 44px; }
+  .fpr-page .fpr-weight,
+  .fpr-page .fpr-wand { min-width: 44px; }
+  .fpr-page .fpr-more-link { display: inline-flex; align-items: center; }
+  .fpr-page .fpr-input { height: 44px; }
 }
 
 /* ── Press feedback, with the house reduced-motion pair ──────────────────── */
