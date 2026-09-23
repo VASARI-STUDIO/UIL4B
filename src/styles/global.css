@@ -1870,8 +1870,8 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    modal (480 vs 520) because this is one column of prose and nothing else, and
    .fnote-para caps at 56ch so the measure stays readable however long the note
    turns out to be. */
-.fnote-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance)}
-.fnote{display:flex;flex-direction:column;width:100%;max-width:480px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.fnote-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
+.fnote{display:flex;flex-direction:column;width:100%;max-width:480px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .fnote-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 14px;flex-shrink:0}
 .fnote-title{margin:0;font-size:var(--fs-body);font-weight:650;letter-spacing:-.01em;color:var(--t0)}
 .fnote-close{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;padding:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;color:var(--t2);cursor:pointer;transition:color var(--t-fast),background var(--t-fast),border-color var(--t-fast)}
@@ -1919,8 +1919,9 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 }
 
 /* Global floating feedback button */
-.global-feedback-btn{position:fixed;right:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(0,0,0,.3);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.global-feedback-btn:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg);transform:translateY(-2px)}
+.global-feedback-btn{position:fixed;right:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(0,0,0,.3);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+/* The .btn-accent pair (5.18:1 light, 9.17:1 dark); the fill is the state, no lift. */
+.global-feedback-btn:hover{background:var(--accent-mid);border-color:var(--accent-mid);color:var(--accent-ink)}
 .global-feedback-btn svg{flex-shrink:0}
 /* The compact form fires on EITHER axis. It used to be width-only, so the one
    device class with the least vertical room — a phone held sideways, 844–932px
@@ -1947,8 +1948,8 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 @media(max-width:640px),(max-height:500px){.global-feedback-btn span{display:none}.global-feedback-btn{padding:12px;right:14px;bottom:14px}}
 
 /* ─── Feedback modal (global floating feedback button popup) ─── */
-.fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance)}
-.fb-modal{display:flex;flex-direction:column;width:100%;max-width:520px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
+.fb-modal{display:flex;flex-direction:column;width:100%;max-width:520px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .fb-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
 .fb-title{font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--t0);margin:0}
 .fb-close{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;background:none;border:none;border-radius:var(--radius-s);color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
@@ -1961,7 +1962,10 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-types{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .fb-type{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 6px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
 .fb-type:hover{border-color:var(--bh);color:var(--t1)}
-.fb-type.on{border-color:var(--brand);background:var(--brand-bg);color:var(--accent-strong)}
+/* Chosen type: the label sits on an 8% accent wash over --bg-2, where
+   --accent-mid falls under 4.5 in light, so it reads --accent-text
+   (4.78:1 light, 8.41:1 dark). */
+.fb-type.on{border-color:var(--accent-mid);background:var(--accent-wash);color:var(--accent-text)}
 .fb-type svg{flex-shrink:0}
 .fb-selects{display:flex;flex-direction:column;gap:14px}
 .fb-select,.fb-input,.fb-textarea{width:100%}
@@ -2010,7 +2014,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-success-actions{display:flex;gap:8px}
 @media(max-width:480px){
   .fb-overlay{padding:0;align-items:flex-end}
-  .fb-modal{max-width:100%;max-height:92vh;border-radius:var(--radius-l) var(--radius-l) 0 0;border-bottom:none}
+  .fb-modal{max-width:100%;max-height:92vh;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-bottom:none}
   .fb-types{grid-template-columns:repeat(2,1fr)}
   .fb-actions{flex-direction:column-reverse}
   .fb-actions .btn{width:100%;justify-content:center}
