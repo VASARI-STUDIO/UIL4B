@@ -4,6 +4,8 @@ import JSZip from 'jszip'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import DropZone from '../components/converter/DropZone'
+import AnimationBuilder from '../components/converter/AnimationBuilder'
+import JobStatus from '../components/converter/JobStatus'
 import { loadImage, prefersReducedMotion, useGatedDownload } from '../components/converter/shared'
 import { getLenis } from '../hooks/useSmoothScroll'
 import {
@@ -20,7 +22,11 @@ import {
   exceedsCanvasLimit,
   outputDimensions,
 } from '../utils/imageResize'
-import { formatBytes, formatTime } from '../utils/mediaEncode'
+import {
+  ANIMATION_FORMATS, FPS_MAX, FPS_MIN, PLAY_OPTIONS, QUALITY_LEVELS,
+  clampFps, findFormat, formatBytes, formatTime, videoToAnimationArgs,
+} from '../utils/mediaEncode'
+import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -33,8 +39,9 @@ import '../styles/pages/file-converter.css'
 // ── Constants ────────────────────────────────────────────────────────────────
 const MODES = [
   { id: 'image', label: 'Image' },
-  { id: 'gif', label: 'Video → GIF' },
-  { id: 'frames', label: 'Video → Frames' },
+  { id: 'animation', label: 'Animation' },
+  { id: 'video', label: 'Video' },
+  { id: 'frames', label: 'Extract frames' },
 ]
 
 const OUTPUT_FORMATS = [
@@ -70,66 +77,9 @@ const QUALITY_DEFAULT = 90
 // the item instead so the batch — and the UI — always finishes.
 const ENCODE_TIMEOUT_MS = 30000
 
-// ── The ffmpeg.wasm engine, and why it is NOT served from uil4b.com ──────────
-//
-// THE BILL THAT PAID FOR THIS. The core is 32,129,114 bytes of WebAssembly. It
-// used to be imported here as `@ffmpeg/core?url`, which made Vite emit it into
-// `dist/assets/ffmpeg-core-<hash>.wasm` — one file that was 91% of the entire
-// deployable byte-mass (dist/assets was 35 MB; everything else in it is ~3 MB).
-// Vercel's Hobby plan allows 10 GB/month of FAST ORIGIN TRANSFER — bytes served
-// from the origin rather than from an edge cache — and the project hit it. The
-// mechanism is the content hash: every deploy renames the file, so the warm
-// copy in every edge region is discarded and the next visitor in each region
-// pulls the whole thing from origin again.
-//
-// How much that costs per miss depends on whether the edge compresses wasm,
-// which is NOT something this repo can verify from here — production is not
-// reachable from the sandbox. The measurable bracket: 32,129,114 bytes
-// uncompressed, and 9,260,281 bytes when a host does compress it (measured
-// against jsDelivr in Chromium, which served exactly those two numbers). So
-// somewhere between about 300 and 1,100 region-first-hits spends the whole
-// month, from one file, with ~80 undeployed merges queued behind it. The
-// bracket does not change the decision: after this, the number is zero.
-//
-// SO THE ENGINE IS FETCHED FROM jsDelivr, PINNED TO AN EXACT VERSION. These are
-// the same bytes the npm package ships, and that is measured rather than
-// assumed — both files were downloaded on 2026-09-06 and hashed against
-// node_modules/@ffmpeg/core/dist/esm, which is why the suite can fulfil these
-// URLs from the local copy and still be testing the real thing:
-//   ffmpeg-core.js   sha256 c972f5abeafcd5f3949e54edfbdc74a9badb27025809feb1945d468ffbcfb7f1
-//   ffmpeg-core.wasm sha256 2390efa7fb66e7e42dbae15427571a5ffc96b829480904c30f471f0a78967f61
-// jsDelivr serves them with `access-control-allow-origin: *` and `immutable`
-// caching, so `toBlobURL` below can read them cross-origin and the browser
-// keeps them for a year.
-//
-// WHY A PINNED VERSION AND NOT A RANGE. `@ffmpeg/core@0.12.6` names one
-// immutable artifact. A floating tag (`@latest`, `@0.12`) would let a
-// third party change the engine underneath a shipped build with no review, and
-// jsDelivr could not mark it immutable. tests/unit/ffmpeg-core-off-origin.test.js
-// fails if this version and the installed @ffmpeg/core ever disagree.
-//
-// WHY NO SECOND CDN AS A FALLBACK. A mirror would be a code path that only
-// executes during someone else's outage — the kind that rots unnoticed and is
-// a second pinned version to keep in step. The honest failure is already built:
-// getFfmpeg throws, `engineState` goes to 'error', and the UI says the engine
-// failed and that the Image tab still works. Image conversion — the tab this
-// page opens on — is pure canvas and needs none of this.
-//
-// SINGLE-THREADED CORE, deliberately: `@ffmpeg/core` not `@ffmpeg/core-mt`. The
-// mt build needs SharedArrayBuffer and therefore COOP/COEP cross-origin
-// isolation headers. Measured in Chromium against the built site on
-// 2026-09-06: `crossOriginIsolated` is false and `SharedArrayBuffer` is
-// undefined, because vercel.json sets neither header. The mt core would not
-// run here; this one does, and needs no header work at all.
-//
-// LOADED ONLY ON CONVERT, NEVER ON PAGE OPEN. These are plain strings; the
-// FFmpeg class and util are dynamic imports inside getFfmpeg, which only runs
-// when someone presses Convert. A visitor who opens the converter — or the
-// homepage workbench, which mounts the same image panel — downloads none of it.
-const FFMPEG_CORE_VERSION = '0.12.6'
-const FFMPEG_CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`
-const ffmpegCoreURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.js`
-const ffmpegWasmURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`
+// The ffmpeg.wasm engine — pinned, fetched from jsDelivr on first use, never
+// from our origin, single-threaded on purpose — lives in utils/ffmpegEngine.js
+// with the full reasoning. The animation builder is its second caller.
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 // Describes the size change between the original and converted file.
@@ -308,7 +258,8 @@ export default function FileConverter({ toast }) {
 
       <div className="fc-panel" role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
         {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
-        {mode === 'gif' && <VideoToGif toast={toast} />}
+        {mode === 'animation' && <AnimationBuilder toast={toast} />}
+        {mode === 'video' && <VideoConvert toast={toast} />}
         {mode === 'frames' && <VideoFrames toast={toast} />}
       </div>
     </div>
@@ -751,106 +702,6 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   )
 }
 
-// ── ffmpeg loader — Video → GIF is its ONLY caller ──────────────────────────
-// The header used to say "shared by GIF + Frames". It is not: Video → Frames
-// seeks a <video> element and paints each frame to a canvas (see `extract`
-// below), and never touches ffmpeg. Worth stating, because it is the reason
-// only one mode of four pays the engine download at all.
-let ffmpegInstance = null
-let ffmpegLoadPromise = null
-
-// Fetch one core file and report bytes as they arrive. @ffmpeg/util's own
-// toBlobURL(url, type, true, cb) was NOT used for this: it throws when the
-// byte count disagrees with Content-Length and then re-reads a body it has
-// already consumed — which is exactly what happens when a CDN serves the wasm
-// gzipped (Content-Length is the compressed size, the reader yields the
-// decompressed bytes). This reader asserts nothing about the total: it hands
-// back whatever arrived and lets the caller decide whether the total is
-// usable. Falls back to a plain arrayBuffer() when streaming is unavailable.
-async function fetchCoreFile(url, mimeType, onBytes) {
-  const resp = await fetch(url)
-  if (!resp.ok) throw new Error(`${url}: HTTP ${resp.status}`)
-  const total = Number(resp.headers.get('content-length')) || 0
-  const reader = resp.body?.getReader?.()
-  let buf
-  if (!reader) {
-    buf = await resp.arrayBuffer()
-    onBytes?.({ received: buf.byteLength, total: buf.byteLength })
-  } else {
-    const chunks = []
-    let received = 0
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
-      received += value.length
-      onBytes?.({ received, total })
-    }
-    const data = new Uint8Array(received)
-    let at = 0
-    for (const c of chunks) { data.set(c, at); at += c.length }
-    buf = data.buffer
-  }
-  return URL.createObjectURL(new Blob([buf], { type: mimeType }))
-}
-
-async function getFfmpeg(onLog, onBytes) {
-  if (ffmpegInstance) return ffmpegInstance
-  if (ffmpegLoadPromise) return ffmpegLoadPromise
-  ffmpegLoadPromise = (async () => {
-    const [{ FFmpeg }, { toBlobURL, fetchFile }] = await Promise.all([
-      import('@ffmpeg/ffmpeg'),
-      import('@ffmpeg/util'),
-    ])
-    const ffmpeg = new FFmpeg()
-    if (onLog) ffmpeg.on('log', ({ message }) => onLog(message))
-    // The wasm is the download (32 MB raw, ~9 MB compressed); the .js core is
-    // a few KB and not worth a second progress line.
-    await ffmpeg.load({
-      coreURL: await toBlobURL(ffmpegCoreURL, 'text/javascript'),
-      wasmURL: await fetchCoreFile(ffmpegWasmURL, 'application/wasm', onBytes),
-    })
-    ffmpeg._fetchFile = fetchFile
-    ffmpegInstance = ffmpeg
-    return ffmpeg
-  })()
-  try {
-    return await ffmpegLoadPromise
-  } catch (err) {
-    ffmpegLoadPromise = null
-    throw err
-  }
-}
-
-/** Engine download, then work, then failure — the three things a video mode says. */
-function EngineStatus({ progress, engineBytes, engineState }) {
-  return (
-    <>
-      {progress && (
-        <div className="fc-status" role="status">
-          <span className="fc-spinner" aria-hidden="true" />
-          {progress}
-          {engineBytes && (
-            <span className="fc-status-bytes">
-              {formatBytes(engineBytes.received)}{engineBytes.total ? ` of ${formatBytes(engineBytes.total)}` : ''}
-            </span>
-          )}
-        </div>
-      )}
-      {engineBytes?.total > 0 && (
-        <div className="fc-progress" role="progressbar" aria-label="Converter engine download" aria-valuemin={0} aria-valuemax={engineBytes.total} aria-valuenow={engineBytes.received}>
-          <div className="fc-progress-bar" style={{ '--fc-pct': `${Math.min(100, Math.round((engineBytes.received / engineBytes.total) * 100))}%` }} />
-        </div>
-      )}
-      {engineState === 'error' && (
-        <p className="fc-status fc-status-err">
-          The converter engine failed to load. Image conversion still works on the Image tab.
-        </p>
-      )}
-    </>
-  )
-}
-
 /** A video's source panel: the player, then the facts about the file. */
 function VideoSource({ srcUrl, videoRef, onLoadedMetadata, facts, onReplace, busy }) {
   return (
@@ -872,33 +723,43 @@ function VideoSource({ srcUrl, videoRef, onLoadedMetadata, facts, onReplace, bus
   )
 }
 
-// ── Mode 2: Video → GIF ──────────────────────────────────────────────────────
-function VideoToGif({ toast }) {
+// ── Mode 3: Video → an animated file ─────────────────────────────────────────
+// This was "Video → GIF". The engine it already loaded writes four more
+// formats for the cost of a different argument list (utils/mediaEncode.js), so
+// the same panel now offers GIF, animated WebP, APNG, MP4 and WebM. GIF stays
+// the default and its command is unchanged apart from an even height, which
+// tests/unit/media-encode.test.js pins. Sound is dropped in every format:
+// these are loops for a page, and saying so is better than a silent track
+// that sometimes survives.
+function VideoConvert({ toast }) {
   const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
   const [srcUrl, setSrcUrl] = useState(null)
+  const [format, setFormat] = useState('gif')
   const [fps, setFps] = useState(10)
   const [width, setWidth] = useState(480)
   const [quality, setQuality] = useState('medium')
+  const [plays, setPlays] = useState(0)
   const [duration, setDuration] = useState(0)
   const [trimStart, setTrimStart] = useState(0)
   const [trimEnd, setTrimEnd] = useState(null) // null = to the end
-  const [engineState, setEngineState] = useState('idle') // idle|loading|ready|error
-  const [working, setWorking] = useState(false)
-  const [progress, setProgress] = useState('')
-  // Bytes of the engine received so far, and the total when the CDN stated one
-  // the count can be measured against. null outside the engine download.
-  const [engineBytes, setEngineBytes] = useState(null)
-  const [result, setResult] = useState(null) // { url, bytes }
+  const [job, setJob] = useState(null)
+  const [engineFailed, setEngineFailed] = useState(false)
+  const [result, setResult] = useState(null) // { url, blob, bytes, format }
+  const cancelled = useRef(false)
+  const fmt = findFormat(format)
+  const working = !!job
 
-  // Unmount-only URL cleanup via a ref — with [srcUrl, result] deps the
-  // cleanup re-ran on every state change and revoked URLs still in use.
-  const urlsRef = useRef({})
-  useEffect(() => { urlsRef.current = { srcUrl, resultUrl: result?.url } })
+  // Unmount-only cleanup via a ref — with [srcUrl, result] deps the cleanup
+  // re-ran on every state change and revoked URLs still in use. An encode still
+  // running in the worker is stopped rather than left to finish for nobody.
+  const liveRef = useRef({})
+  useEffect(() => { liveRef.current = { srcUrl, resultUrl: result?.url, job } })
   useEffect(() => () => {
-    const u = urlsRef.current
+    const u = liveRef.current
     if (u.srcUrl) URL.revokeObjectURL(u.srcUrl)
     if (u.resultUrl) URL.revokeObjectURL(u.resultUrl)
+    if (u.job) { cancelled.current = true; resetFfmpeg() }
   }, [])
 
   const onFiles = useCallback((files) => {
@@ -923,68 +784,73 @@ function VideoToGif({ toast }) {
       toast('Trim end must be after trim start', 'error')
       return
     }
-    if (!navigator.onLine && !ffmpegInstance) {
+    if (!engineLoaded() && !navigator.onLine) {
       toast('You appear to be offline — the converter engine needs a connection to load', 'error')
       return
     }
-    setWorking(true)
-    setResult(null)
+    cancelled.current = false
+    setEngineFailed(false)
+    setResult(prev => { if (prev?.url) URL.revokeObjectURL(prev.url); return null })
+    const target = fmt
     let ffmpeg
     try {
-      if (!ffmpegInstance) { setEngineState('loading'); setProgress('Loading converter engine… (about 9 MB, first run only)') }
-      // The 9 MB sentence above is the promise; the bytes are the evidence.
+      // The 9 MB sentence is the promise; the bytes are the evidence.
       // Measured 2026-09-09: the engine download showed a spinner and that one
       // sentence for its whole duration, at every width — on a phone connection
-      // that is a minute of nothing moving. The count is shown against the
-      // stated total only while it is consistent with it (a gzipped transfer
-      // reports the compressed size and the reader yields more than that).
-      ffmpeg = await getFfmpeg(null, ({ received, total }) => {
-        setEngineBytes({ received, total: total >= received ? total : 0 })
+      // that is a minute of nothing moving. JobStatus shows the count against
+      // the stated total whenever the CDN's total can be trusted.
+      if (!engineLoaded()) setJob({ stage: 'engine', received: 0, bytesTotal: 0 })
+      ffmpeg = await getFfmpeg(({ received, total }) => {
+        if (!cancelled.current) setJob({ stage: 'engine', received, bytesTotal: total })
       })
-      setEngineBytes(null)
-      setEngineState('ready')
     } catch {
-      setEngineState('error')
-      setEngineBytes(null)
-      setWorking(false)
-      setProgress('')
+      if (cancelled.current) return
+      setJob(null)
+      setEngineFailed(true)
       toast('Could not load the converter engine. Check your connection or try the Image tab.', 'error')
       return
     }
+    if (cancelled.current) return
 
+    // Optional trim: -ss before -i seeks fast; -t caps the clip length.
+    const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
+    const end = trimEnd == null ? duration : Math.min(trimEnd, duration || trimEnd)
+    const clipLen = duration && end > start ? end - start : 0
+    const trimmed = clipLen > 0 && (start > 0 || end < duration)
+    const inName = 'input' + (file.name.match(/\.[^.]+$/)?.[0] || '.mp4')
+    setJob({ stage: 'encode', done: 0, total: clipLen, unit: 'time' })
     try {
-      setProgress('Converting to GIF…')
-      const inName = 'input' + (file.name.match(/\.[^.]+$/)?.[0] || '.mp4')
-      const outName = 'output.gif'
-      await ffmpeg.writeFile(inName, await ffmpeg._fetchFile(file))
-      const w = Math.max(16, Math.min(2000, width | 0))
-      const fpsVal = Math.max(1, Math.min(50, fps | 0))
-      const dither = quality === 'high' ? 'sierra2_4a' : quality === 'low' ? 'none' : 'bayer:bayer_scale=2'
-      const vf = `fps=${fpsVal},scale=${w}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse=dither=${dither}`
-      // Optional trim: -ss before -i seeks fast; -t caps the clip length.
-      const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
-      const end = trimEnd == null ? duration : Math.min(trimEnd, duration || trimEnd)
-      const clipLen = duration && end > start ? end - start : 0
-      const args = []
-      if (start > 0) args.push('-ss', String(start))
-      args.push('-i', inName)
-      if (clipLen > 0 && (start > 0 || end < duration)) args.push('-t', String(clipLen))
-      args.push('-vf', vf, '-loop', '0', outName)
-      await ffmpeg.exec(args)
-      const data = await ffmpeg.readFile(outName)
-      const blob = new Blob([data.buffer], { type: 'image/gif' })
-      try { await ffmpeg.deleteFile(inName); await ffmpeg.deleteFile(outName) } catch { /* ignore cleanup */ }
-      setResult({ url: URL.createObjectURL(blob), bytes: blob.size })
-      setProgress('')
-      toast('GIF ready')
+      const bytes = await runJob(ffmpeg, {
+        inputs: [{ name: inName, data: file }],
+        args: videoToAnimationArgs({
+          format: target.id, input: inName, fps, width, plays, quality,
+          start, length: trimmed ? clipLen : 0,
+        }),
+        output: `output.${target.ext}`,
+        onTime: (t) => { if (!cancelled.current) setJob({ stage: 'encode', done: t, total: clipLen, unit: 'time' }) },
+      })
+      if (cancelled.current) return
+      const blob = new Blob([bytes], { type: target.mime })
+      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id })
+      setJob(null)
+      toast(`${target.label} ready`)
     } catch (err) {
-      setProgress('')
+      if (cancelled.current) return
+      setJob(null)
       toast('Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-    setWorking(false)
-  }, [file, working, width, fps, quality, duration, trimStart, trimEnd, toast])
+  }, [file, working, fmt, width, fps, plays, quality, duration, trimStart, trimEnd, toast])
+
+  const cancel = () => {
+    cancelled.current = true
+    resetFfmpeg()
+    setJob(null)
+    toast('Conversion cancelled', 'info')
+  }
 
   const clearFile = () => { setFile(null); if (srcUrl) URL.revokeObjectURL(srcUrl); setSrcUrl(null); setResult(null) }
+  const resultFmt = result ? findFormat(result.format) : null
+  const base = (file?.name || 'video').replace(/\.[^.]+$/, '')
 
   return (
     <>
@@ -993,14 +859,16 @@ function VideoToGif({ toast }) {
           accept={ACCEPT_VIDEO}
           onFiles={onFiles}
           hint="Drop a video or animation here or click to browse"
-          sub="MP4, WebM, MOV, AVI, animated GIF / WebP"
+          sub="MP4, WebM, MOV, AVI, animated GIF / WebP — out as GIF, WebP, APNG, MP4 or WebM"
         />
       ) : (
         <div className="fc-bench">
           <div className="fc-bench-main">
             <VideoSource
               srcUrl={srcUrl}
-              onLoadedMetadata={e => setDuration(e.target.duration || 0)}
+              // A recorded WebM often reports Infinity until it is played
+              // through; treat that as unknown rather than as a length.
+              onLoadedMetadata={e => setDuration(Number.isFinite(e.target.duration) ? e.target.duration : 0)}
               facts={[
                 ['File', file?.name],
                 ['Size', formatBytes(file?.size)],
@@ -1012,41 +880,62 @@ function VideoToGif({ toast }) {
             {result && (
               <section className="fc-result" aria-label="Result">
                 <h2 className="fc-eyebrow">Result</h2>
-                <img className="fc-result-media" src={result.url} alt="GIF result" />
+                {resultFmt.kind === 'video' ? (
+                  <video className="fc-result-media" src={result.url} controls loop muted playsInline aria-label={`${resultFmt.label} result`} />
+                ) : (
+                  <img className="fc-result-media" src={result.url} alt={`${resultFmt.label} result`} />
+                )}
                 <p className="fc-meta">
-                  GIF · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
+                  {resultFmt.label} · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
                   {file?.size ? <Delta orig={file.size} out={result.bytes} /> : null}
                 </p>
-                <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.url, `${(file?.name || 'video').replace(/\.[^.]+$/, '')}.gif`, 'download the GIF')}>
-                  Download GIF
+                <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.blob, `${base}.${resultFmt.ext}`, `download the ${resultFmt.label}`)}>
+                  Download {resultFmt.label}
                 </button>
               </section>
             )}
           </div>
 
-          <aside className="fc-inspector" aria-label="GIF settings">
+          <aside className="fc-inspector" aria-label="Conversion settings">
+            <div className="fc-insp-sec">
+              <label className="fc-eyebrow" htmlFor="fc-vid-format">Output format</label>
+              <select id="fc-vid-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={working}>
+                {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              <p className="fc-note">Sound is removed</p>
+            </div>
             <div className="fc-insp-sec">
               <div className="fc-pair">
                 <div>
-                  <label className="fc-eyebrow" htmlFor="fc-gif-fps">Frame rate (fps)</label>
-                  <input id="fc-gif-fps" className="fc-field fc-field--num" type="number" min="1" max="50" value={fps} disabled={working}
-                    onChange={e => setFps(Math.max(1, Math.min(50, +e.target.value || 10)))} />
+                  <label className="fc-eyebrow" htmlFor="fc-vid-fps">Frame rate (fps)</label>
+                  <input id="fc-vid-fps" className="fc-field fc-field--num" type="number" min={FPS_MIN} max={FPS_MAX} value={fps} disabled={working}
+                    onChange={e => setFps(clampFps(+e.target.value || 10))} />
                 </div>
                 <div>
-                  <label className="fc-eyebrow" htmlFor="fc-gif-width">Width (px)</label>
-                  <input id="fc-gif-width" className="fc-field fc-field--num" type="number" min="16" max="2000" value={width} disabled={working}
+                  <label className="fc-eyebrow" htmlFor="fc-vid-width">Width (px)</label>
+                  <input id="fc-vid-width" className="fc-field fc-field--num" type="number" min="16" max="2000" value={width} disabled={working}
                     onChange={e => setWidth(Math.max(16, Math.min(2000, +e.target.value || 480)))} />
                 </div>
               </div>
               <p className="fc-note">Height follows the video&apos;s shape</p>
             </div>
             <div className="fc-insp-sec">
-              <label className="fc-eyebrow" htmlFor="fc-gif-quality">Quality</label>
-              <select id="fc-gif-quality" className="fc-field" value={quality} onChange={e => setQuality(e.target.value)} disabled={working}>
-                <option value="low">Low (smaller file)</option>
-                <option value="medium">Medium</option>
-                <option value="high">High (best dither)</option>
-              </select>
+              <div className="fc-pair">
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-quality">Quality</label>
+                  <select id="fc-vid-quality" className="fc-field" value={quality} onChange={e => setQuality(e.target.value)} disabled={working || fmt.id === 'apng'}>
+                    {QUALITY_LEVELS.map(q => <option key={q.id} value={q.id}>{q.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-loop">Loop</label>
+                  <select id="fc-vid-loop" className="fc-field" value={fmt.loops ? plays : 0} onChange={e => setPlays(+e.target.value)} disabled={working || !fmt.loops}>
+                    {PLAY_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
+              {!fmt.loops && <p className="fc-note">Video files store no loop count — the player decides</p>}
             </div>
             {duration > 0 && (
               <div className="fc-insp-sec">
@@ -1068,9 +957,9 @@ function VideoToGif({ toast }) {
             )}
             <div className="fc-insp-sec fc-actions">
               <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working}>
-                {working ? (engineState === 'loading' ? 'Loading engine…' : 'Converting…') : 'Convert to GIF'}
+                {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : `Convert to ${fmt.label}`}
               </button>
-              <EngineStatus progress={progress} engineBytes={engineBytes} engineState={engineState} />
+              <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />
             </div>
           </aside>
         </div>
@@ -1079,7 +968,7 @@ function VideoToGif({ toast }) {
   )
 }
 
-// ── Mode 3: Video → Frames (HTML5 video + canvas seek) ───────────────────────
+// ── Mode 4: Video → Frames (HTML5 video + canvas seek) ───────────────────────
 function VideoFrames({ toast }) {
   const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)

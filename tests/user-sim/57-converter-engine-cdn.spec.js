@@ -119,7 +119,7 @@ async function recordClip(page) {
 
 async function openVideoToGif(page) {
   await go(page, '/create/file-converter')
-  await page.getByRole('tab', { name: 'Video → GIF' }).click()
+  await page.getByRole('tab', { name: 'Video', exact: true }).click()
   await expect(page.locator('.fc-drop')).toBeVisible()
 }
 
@@ -198,7 +198,7 @@ test.describe('the converter engine loads from the CDN and still converts', () =
     // Positive control for the two silences above: the page did load, and the
     // listener does see requests. Without this, a page that never rendered
     // would pass all three assertions.
-    await expect(page.getByRole('tab', { name: 'Video → GIF' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('tab', { name: 'Video', exact: true })).toHaveAttribute('aria-selected', 'true')
     await expect(page.locator('.fc-drop-hint')).toContainText(/Drop a video/i)
   })
 

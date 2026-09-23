@@ -478,7 +478,7 @@ test('/create/file-converter · Video → GIF · the engine download shows bytes
     return route.fulfill({ status: 200, headers: { 'content-type': name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript', 'access-control-allow-origin': '*' }, body: fs.readFileSync(file) })
   })
   await go(page, '/create/file-converter')
-  await page.getByRole('tab', { name: 'Video → GIF' }).click()
+  await page.getByRole('tab', { name: 'Video', exact: true }).click()
   const clip = await page.evaluate(async () => {
     const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64
     const c = canvas.getContext('2d'); c.fillStyle = '#1c40f2'; c.fillRect(0, 0, 64, 64)
@@ -495,7 +495,7 @@ test('/create/file-converter · Video → GIF · the engine download shows bytes
     window.__seen = { bytes: [], bar: [] }
     new MutationObserver(() => {
       const b = document.querySelector('.fc-status-bytes'); if (b) window.__seen.bytes.push(b.textContent.trim())
-      const bar = document.querySelector('.fc-progress[role="progressbar"]'); if (bar) window.__seen.bar.push([+bar.getAttribute('aria-valuenow'), +bar.getAttribute('aria-valuemax')])
+      const bar = document.querySelector('.fc-progress[role="progressbar"][aria-label="Converter engine download"]'); if (bar) window.__seen.bar.push([+bar.getAttribute('aria-valuenow'), +bar.getAttribute('aria-valuemax')])
     }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true })
   })
   await page.getByRole('button', { name: 'Convert to GIF' }).click()
