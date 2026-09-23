@@ -567,3 +567,38 @@ test('the probe can see what it is looking for', async ({ page }) => {
   expect(card, 'the geometry probe returned nothing for a card that is on screen').not.toBeNull()
   expect(card.bottom, 'the geometry probe returned a zero-height box').toBeGreaterThan(card.top)
 })
+
+// WCAG 2.4.3. Each project row paints Load (or Restore) and then the ⋯ menu at
+// its end, but the DOM had ⋯ first, so Tab reached the menu before the button
+// painted to its left. Checked at a wide and a phone width: in DOM order, each
+// row's Load comes before its ⋯, and is painted before it in reading order
+// (left of it on the same line, or on an earlier line).
+test.describe('/projects rows tab in the order they are painted', () => {
+  for (const width of [1440, 390]) {
+    test(`Load before ⋯, in the DOM and on screen, at ${width}px`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width, height: 900 } })
+      const page = await context.newPage()
+      await signIn(page, { plan: 'free', projects: 2 })
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+      const rows = await page.locator('.uh-card').evaluateAll((cards) => cards.map((card) => {
+        const load = card.querySelector('.uh-card-foot button')
+        const menu = card.querySelector('.uh-actions-trigger')
+        if (!load || !menu) return null
+        const a = load.getBoundingClientRect()
+        const b = menu.getBoundingClientRect()
+        return {
+          domLoadFirst: !!(load.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING),
+          paintedLoadFirst: a.bottom <= b.top + 1 || (Math.abs(a.top - b.top) < a.height && a.left < b.left),
+        }
+      }))
+      // POSITIVE CONTROL: rows with both controls exist.
+      expect(rows.filter(Boolean).length, 'no project row carries both Load and ⋯').toBeGreaterThanOrEqual(2)
+      for (const r of rows.filter(Boolean)) {
+        expect(r.paintedLoadFirst, 'Load is not painted before ⋯').toBe(true)
+        expect(r.domLoadFirst, 'Tab reaches ⋯ before the Load painted ahead of it').toBe(true)
+      }
+      await context.close()
+    })
+  }
+})

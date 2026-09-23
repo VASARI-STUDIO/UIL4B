@@ -433,8 +433,10 @@
 @media (max-width: 900px) {
   .uh .uh-card {
     align-items: start;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: "art body acts" "parts parts foot" "when when when" "confirm confirm confirm";
+    /* Load and ⋯ share the second line, in that order, so the row is painted
+       in the order it is tabbed (and the two ways to act stay together). */
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "art body body body" "parts parts foot acts" "when when when when" "confirm confirm confirm confirm";
     column-gap: var(--s-3);
   }
   .uh .uh-card-art { width: 44px; height: 28px; margin-top: 2px; }

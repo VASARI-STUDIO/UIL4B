@@ -175,13 +175,32 @@ export default function ProjectCard({
           its contents. */}
       {when && <span className="uh-card-when">{when}</span>}
 
+      {!confirmDelete && (
+        /* NOT btn-accent any more. One filled control per screen, and on this
+           page it is "New Project" in the masthead — the action a person came
+           here to take that no row can offer. A filled blue pill repeated down
+           every row made the page's loudest mark its most repeated one, and
+           told a reader nothing about which project to open. */
+        <div className="uh-card-foot">
+          {!project.archived ? (
+            <button className="btn btn-s" onClick={() => onLoad(project.id)}>
+              {isCurrent ? 'Reload' : 'Load'}
+            </button>
+          ) : (
+            <button className="btn btn-s" onClick={() => onArchive(project.id)}>Restore</button>
+          )}
+        </div>
+      )}
       {/* BOTH WAYS TO ACT ON THIS PROJECT NOW LIVE AT THE END OF ITS ROW. The ⋯
           used to sit immediately after the name while the primary control sat at
           the far side of the card, so the two affordances for one record were as
           far apart as the card was wide. Vercel's project rows
           (mobbin.com/screens/e2a9b3a7-e0e6-485f-925a-2de04392aeb0) and Toggl's
           (mobbin.com/screens/dfbf80d8-999d-4267-b6ff-633d5b86443c) both put the
-          primary and the overflow together at the row's end; so does this. */}
+          primary and the overflow together at the row's end; so does this.
+          AFTER the Load / Restore foot in the DOM, because it is painted after it
+          at every width: Tab must meet the controls in the order they are seen
+          (WCAG 2.4.3). */}
       <ProjectActions
         project={project}
         digest={digest}
@@ -193,8 +212,7 @@ export default function ProjectCard({
         onArchive={onArchive}
         onDelete={() => setConfirmDelete(true)}
       />
-
-      {confirmDelete ? (
+      {confirmDelete && (
         /* Spans the whole row rather than sitting in the action column: it is a
            form with a field in it, and a field squeezed into the width of a
            button is how somebody mistypes the name of the thing they are about
@@ -218,21 +236,6 @@ export default function ProjectCard({
             </button>
             <button className="btn btn-s" onClick={() => { setConfirmDelete(false); setDeleteConfirmText('') }}>Cancel</button>
           </div>
-        </div>
-      ) : (
-        /* NOT btn-accent any more. One filled control per screen, and on this
-           page it is "New Project" in the masthead — the action a person came
-           here to take that no row can offer. A filled blue pill repeated down
-           every row made the page's loudest mark its most repeated one, and
-           told a reader nothing about which project to open. */
-        <div className="uh-card-foot">
-          {!project.archived ? (
-            <button className="btn btn-s" onClick={() => onLoad(project.id)}>
-              {isCurrent ? 'Reload' : 'Load'}
-            </button>
-          ) : (
-            <button className="btn btn-s" onClick={() => onArchive(project.id)}>Restore</button>
-          )}
         </div>
       )}
     </article>
