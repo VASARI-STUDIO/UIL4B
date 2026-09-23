@@ -1,0 +1,39 @@
+/* file-converter.css — the `fc` family, /create/file-converter's own sheet.
+ *
+ * Every selector is scoped under `.fc`, the page root. Importing this sheet
+ * last does NOT make it last: Vite orders chunk CSS by the dependency graph, so
+ * a shared deferred sheet can land after it (commit 8d30f37a measured exactly
+ * that on /create/gradient). The root scope is what makes these rules win. */
+
+/* ── Where 3D went ───────────────────────────────────────────────────────────
+   One line under the tabs, replacing a "3D → Blender · soon" tab that led to a
+   disabled button. The link is the only accent-coloured text on the line. */
+.fc .fc-3d {
+  margin: 0 0 var(--s-5);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--t2);
+}
+
+.fc .fc-3d a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  font-weight: 540;
+  /* --accent-mid, not the global link's --accent-strong: that one is a
+     per-theme literal that does not follow --accent. Contrast measured in
+     tests/user-sim/71-media-tools-breakpoints.spec.js. */
+  color: var(--accent-mid);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+
+.fc .fc-3d a:hover { color: var(--accent-text); }
+
+.fc .fc-3d a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (pointer: coarse) {
+  .fc .fc-3d a { min-height: 44px; }
+}

@@ -223,7 +223,7 @@ test('/create/emoji · at 320 the skin-tone popover still fits, and Escape retur
 // Two chips under AA in light
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('/create/emoji and /create/file-converter · the count chip and the SOON tag read at 4.5:1 in light', async ({ browser }) => {
+test('/create/emoji and /create/file-converter · the count chip and the 3D viewer line read at 4.5:1 in light', async ({ browser }) => {
   // Both are --t3 ink on a --bg-3 chip: 4.07:1 in light (#6c6c66 on #e4e2da)
   // at every width from 320 to 1920, on 10px and 8px type. --t2 is 4.95:1.
   // Dark measured clear before and after.
@@ -238,11 +238,28 @@ test('/create/emoji and /create/file-converter · the count chip and the SOON ta
   const a = await count.evaluate((el) => ({ fg: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor }))
   expect(contrast(a.fg, a.bg), `.emoji-section-count ${a.fg} on ${a.bg}`).toBeGreaterThanOrEqual(4.5)
 
+  // The converter's SOON tag is gone with the "3D → Blender" tab it sat on
+  // (2026-09-23). What replaced it is a line linking to the 3D viewer, and its
+  // two inks are held to the same floor here so this half does not go vacuous:
+  // the link, and the note beside it, both on the page ground.
+  // MUTATION: `.fc .fc-3d a{color:var(--accent)}` fails in light at ~4.2.
   await go(page, '/create/file-converter')
-  const soon = page.locator('.fc-soon')
-  await expect(soon).toBeVisible()
-  const b = await soon.evaluate((el) => ({ fg: getComputedStyle(el).color, bg: getComputedStyle(el).backgroundColor }))
-  expect(contrast(b.fg, b.bg), `.fc-soon ${b.fg} on ${b.bg}`).toBeGreaterThanOrEqual(4.5)
+  const link = page.locator('.fc-3d a')
+  await expect(link).toBeVisible()
+  await expect(link).toHaveAttribute('href', '/create/3d-viewer')
+  const pageGround = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
+  for (const [name, loc] of [['.fc-3d a', link], ['.fc-3d-note', page.locator('.fc-3d-note')]]) {
+    // Through a canvas: the link ink is a color-mix(), which Chromium
+    // serialises as `color(srgb …)` and the rgba parser above cannot read.
+    const fg = await loc.evaluate((el) => {
+      const c = document.createElement('canvas').getContext('2d')
+      c.fillStyle = getComputedStyle(el).color
+      c.fillRect(0, 0, 1, 1)
+      const [r, g, b2] = c.getImageData(0, 0, 1, 1).data
+      return `rgb(${r}, ${g}, ${b2})`
+    })
+    expect(contrast(fg, pageGround), `${name} ${fg} on ${pageGround}`).toBeGreaterThanOrEqual(4.5)
+  }
   await ctx.close()
 })
 

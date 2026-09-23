@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import JSZip from 'jszip'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
@@ -23,13 +24,13 @@ import useExportGate from '../hooks/useExportGate'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/studio.css'
 import '../styles/deferred/tool-shell.css'
+import '../styles/pages/file-converter.css'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MODES = [
   { id: 'image', label: 'Image' },
   { id: 'gif', label: 'Video → GIF' },
   { id: 'frames', label: 'Video → Frames' },
-  { id: '3d', label: '3D → Blender' },
 ]
 
 const OUTPUT_FORMATS = [
@@ -312,18 +313,26 @@ export default function FileConverter({ toast }) {
             className={`fc-tab${mode === m.id ? ' on' : ''}`}
             onClick={() => setMode(m.id)}
             aria-pressed={mode === m.id}
-            aria-label={`${m.label}${m.id === '3d' ? ' (coming soon)' : ''} converter`}
+            aria-label={`${m.label} converter`}
           >
             {m.label}
-            {m.id === '3d' && <span className="fc-soon">soon</span>}
           </button>
         ))}
       </div>
 
+      {/* WHERE 3D WENT. This was a fourth tab, "3D → Blender", that opened a
+          "Coming soon" card and a disabled button. Its one true statement is
+          kept: a .blend file needs Blender itself running on a server, which a
+          browser tool cannot do. What a person holding a 3D file CAN do here
+          is look at it, so the line points there instead of at a dead end. */}
+      <p className="fc-3d">
+        <Link to="/create/3d-viewer">Open a 3D model in the 3D viewer</Link>
+        <span className="fc-3d-note"> · Converting to Blender&apos;s .blend needs Blender running on a server, so it is not offered here.</span>
+      </p>
+
       {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
       {mode === 'gif' && <VideoToGif toast={toast} />}
       {mode === 'frames' && <VideoFrames toast={toast} />}
-      {mode === '3d' && <ThreeDComingSoon />}
     </div>
   )
 }
@@ -1410,28 +1419,5 @@ function VideoFrames({ toast }) {
         </div>
       )}
     </>
-  )
-}
-
-// ── Mode 4: 3D → Blender (coming soon) ───────────────────────────────────────
-function ThreeDComingSoon() {
-  return (
-    <div className="sub">
-      <div className="card fc-soon-card">
-        <div className="fc-soon-badge">Coming soon</div>
-        <h2 style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 500, marginBottom: 8, color: 'var(--t0)' }}>
-          3D model → Blender (.blend)
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--t1)', lineHeight: 1.65, maxWidth: 560 }}>
-          Converting 3D files (OBJ, FBX, glTF, STL…) into a native Blender <code>.blend</code> file
-          isn't possible purely in the browser — it requires Blender's Python engine running
-          server-side. We're planning a hosted pipeline for this. For now, use Blender's
-          built-in import/export, or import OBJ / glTF directly.
-        </p>
-        <button className="btn" disabled style={{ marginTop: 16, opacity: 0.55, cursor: 'not-allowed' }}>
-          Not available yet
-        </button>
-      </div>
-    </div>
   )
 }
