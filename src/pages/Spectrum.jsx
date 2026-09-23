@@ -484,7 +484,7 @@ export default function Spectrum() {
             </div>
 
             <p className="sp-disc-foot" data-sp-reveal>
-              Every set here is made by UI L4B and free to browse without an account.
+              Every set here is made by UI L4B.
             </p>
           </div>
         </section>

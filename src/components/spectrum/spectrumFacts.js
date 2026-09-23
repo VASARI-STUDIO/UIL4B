@@ -205,7 +205,7 @@ export const EXPORTS = {
  * that does not exist anywhere in this repository.
  */
 export const FREE_POINTS = [
-  `All ${numberWord(TOOL_COUNT)} tools, unmetered and without an account`,
+  `All ${numberWord(TOOL_COUNT)} tools, without an account`,
   `${AI_LIMITS.free.daily} AI generations a day, ${AI_LIMITS.free.monthly} a month`,
   `Style guide exports in ${EXPORTS.freeNames}`,
   `${FREE_SAVE_LIMITS.projects} saved projects and ${FREE_SAVE_LIMITS.customIcons} custom icons`,

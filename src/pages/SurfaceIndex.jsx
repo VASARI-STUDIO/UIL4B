@@ -61,7 +61,6 @@ const PREVIEWS = {
   // cannot show one library and count another — which is the failure the
   // comment at the top of this block already claimed was impossible.
   'palette-library': () => ({
-    meta: `${LIBRARY_PALETTES.length} palettes`,
     node: (
       <div className="scp-stack">
         {LIBRARY_PALETTES.slice(0, 3).map((p) => (
@@ -73,7 +72,6 @@ const PREVIEWS = {
     ),
   }),
   'gradient-gallery': () => ({
-    meta: `${GALLERY_GRADIENTS.length} gradients`,
     node: (
       <div className="scp-tiles">
         {GALLERY_GRADIENTS.slice(0, 3).map((g) => (
@@ -104,7 +102,6 @@ const PREVIEWS = {
     ),
   }),
   'icon-library': () => ({
-    meta: '200,000+ icons',
     node: (
       <div className="scp-icons" aria-hidden="true">
         {['palette', 'type', 'icons', 'imagery', 'ai', 'community-prompts'].map((id) => (
@@ -114,7 +111,6 @@ const PREVIEWS = {
     ),
   }),
   'community-prompts': () => ({
-    meta: `${PROMPT_COUNT} prompts`,
     node: (
       <div className="scp-lines" aria-hidden="true">
         {PROMPT_PREVIEW_TITLES.map((title) => (

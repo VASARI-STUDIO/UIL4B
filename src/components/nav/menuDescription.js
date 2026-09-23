@@ -31,7 +31,7 @@ const MENU_TOOL_COPY = {
   // The Discover surface lists the same page under its own group id, and a menu
   // row is one line — without this it would fall back to the group's full
   // sentence and run three lines deep beside its one-line neighbours.
-  'icon-library': 'Search and copy 200k+ SVG icons.',
+  'icon-library': 'Search and copy SVG icons.',
   emoji: '',
   'file-converter': 'Convert and compress files locally.',
   ratio: '',

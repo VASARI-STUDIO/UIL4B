@@ -110,9 +110,9 @@ export const PAGE_DESCRIPTIONS = {
   '/create/type-scale': 'Free modular type scale generator. Set a base size and a ratio, preview the whole scale in a real layout, and copy CSS custom properties, Tailwind or SCSS.',
   '/create/font-pair': 'Free font pairing tool. Pick a heading face and see which body faces work under it, with the reasoning, previewed as a real page. Copy the import and CSS.',
   '/create/font-gallery': 'Browse the Google Fonts catalogue with full specimens, category filters and side-by-side comparison, then carry a family into a pairing or a type scale.',
-  '/create/icons': 'Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
+  '/create/icons': 'Search icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.',
   '/create/imagery': 'Image tools for the web — convert and compress images, extract video frames, and calculate aspect ratios.',
-  '/create/icons-emoji': 'Search 200,000+ icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
+  '/create/icons-emoji': 'Search icons and browse every emoji by category. Copy SVG or emoji to your clipboard instantly.',
   // AWAITING THE FOUNDER'S WORD (proposed 2026-09-13, shipped so the false one
   // is not live while he reads it). The sentence this replaces said "The best
   // external design resources - gradients, palettes, fonts and inspiration -

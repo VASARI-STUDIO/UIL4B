@@ -38,7 +38,7 @@ export const CREATE_GROUPS = [
     label: 'Icons & Emoji',
     hue: 'icons',
     home: '/create/icons-emoji',
-    desc: '200k icons and every emoji, copy-ready.',
+    desc: 'Icons and every emoji, copy-ready.',
     soon: false,
     tools: [
       { id: 'icons', label: 'Icon Library', route: '/create/icons', soon: false },
@@ -353,7 +353,7 @@ const DISCOVER_SPEC = [
   // no redirect table entry and no change to the prerendered route count. The
   // Emoji Library is deliberately not a second entry — it is the other tab of
   // this same page, one click away inside the hero #306 shipped.
-  { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search 200,000+ icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
+  { id: 'icon-library', icon: 'icons', label: 'Icon Library', desc: 'Search icons from the popular open-source packs — preview, recolour, then copy SVG or JSX.', tool: 'icons' },
   // /community has been live since #472 and this row was still pointing at
   // /discover — the surface the visitor is already standing on — with a Soon
   // badge on it. The mega menu, the mobile sheet and the visual sitemap all

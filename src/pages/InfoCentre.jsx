@@ -148,7 +148,7 @@ const SECTIONS = [
     title: 'Imagery, Icons & Emoji',
     body: (
       <>
-        <p><strong>Imagery</strong> covers image conversion/compression, video-frame extraction, and an aspect-ratio calculator. <strong>Icons &amp; Emoji</strong> lets you search 200,000+ icons and copy any emoji by category.</p>
+        <p><strong>Imagery</strong> covers image conversion/compression, video-frame extraction, and an aspect-ratio calculator. <strong>Icons &amp; Emoji</strong> lets you search icons and copy any emoji by category.</p>
         <p>Everything is processed in your browser — no uploads, no waiting.</p>
       </>
     ),
