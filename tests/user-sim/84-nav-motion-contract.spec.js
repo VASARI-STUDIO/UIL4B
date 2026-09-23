@@ -47,12 +47,16 @@
 // seventh one grows back, and when one of the two the founder asked for goes
 // missing.
 //
-//   · `.pnav-search` 300 → 390px on hover. Founder-directed, and
+//   · `.pnav-search-field` 300 → 390px on hover. Founder-directed, and
 //     30-founder-requests-0808 holds the expansion, the typed placeholder and
-//     the fact that the three centre menus do not move when it happens
-//     (measured here again: 0px). `transform` cannot do this job — the field
-//     reflows its own text — and it moves nothing that is not the control the
-//     pointer is already on.
+//     the fact that the section menus and the theme cycle do not move when it
+//     happens — sampled every frame of the transition. `transform` cannot do
+//     this job — the field reflows its own text — and it moves nothing that is
+//     not the control the pointer is already on, because it grows inside a
+//     `.pnav-search` slot that already holds the expanded width. (This used to
+//     be the wrapper growing, and it pushed the menus 90px on every hover once
+//     the Spectrum flex row took away the grid's slack. The note here claimed
+//     "0px", read from a test that measured before the hover had rendered.)
 //   · `.pnav-cta`'s grid track. This one is NOT a hover: it is the sales-page
 //     scroll gate, it fires once, and 24-mobile-overhaul's S15 asserts the
 //     track interpolates rather than jump-cuts.
@@ -91,7 +95,7 @@ const LAYOUT_PROPS = [
 ]
 
 // The two documented exceptions, by the class that carries them.
-const ALLOWED = ['pnav-search', 'pnav-cta']
+const ALLOWED = ['pnav-search-field', 'pnav-cta']
 
 /**
  * Every element of the bar and the open panel that transitions a layout

@@ -60,15 +60,17 @@ test.describe('gradient randomiser weighting', () => {
 // ── 2 · the nav search field ─────────────────────────────────────────────────
 
 const FIELD = '.pnav-search-field'
-const WRAP = '.pnav-search'
 // NOT the homepage. `.pnav--sales .pnav-search-field{display:none}` hides the
 // field on desktop sales routes — the bar there leads with the three menus and
 // Get Pro — so a nav-search test pointed at /home measures a hidden element and
 // fails for the wrong reason. A Create route is where the field actually lives.
 const ROUTE = '/create/palette'
 
+// The FIELD, not the wrapper. The wrapper is a reserved slot that holds the
+// expanded width at all times (see global.css, `.pnav-search`); the field is the
+// box a visitor sees grow, so it is the one measured.
 async function fieldWidth(page) {
-  return page.locator(WRAP).evaluate(el => el.getBoundingClientRect().width)
+  return page.locator(FIELD).evaluate(el => el.getBoundingClientRect().width)
 }
 
 test.describe('nav search hover', () => {
@@ -87,17 +89,47 @@ test.describe('nav search hover', () => {
     await expect.poll(() => fieldWidth(page)).toBeLessThan(rest + 5)
   })
 
+  // THE WHOLE EXPANSION IS WATCHED, NOT ONE READ AFTER THE HOVER. This used to
+  // hover, poll `width > 0` — true before anything had happened — and read the
+  // menus once. On a fast machine that read landed before React had even
+  // applied `.is-hot`, so it passed while the menus were being shoved 90px to
+  // the right; CI's slower runner read them 73px into the slide. So: every
+  // frame from the hover until the field's own width transition has finished
+  // (the animation layer, not a stopwatch), the largest drift of the menus AND
+  // of the theme cycle beside them — and the expansion is proven to have
+  // happened, or "nothing moved" would be true of a hover that did nothing.
   test('the three centre menus do not move when it expands', async ({ page }) => {
     await go(page, ROUTE)
-    const items = page.locator('.pnav-items')
-    await expect(items).toBeVisible()
-    const before = await items.boundingBox()
+    await expect(page.locator('.pnav-items')).toBeVisible()
+    const rest = await fieldWidth(page)
+
+    const watching = page.evaluate(() => new Promise((done) => {
+      const x = (sel) => document.querySelector(sel).getBoundingClientRect().x
+      const field = document.querySelector('.pnav-search-field')
+      const start = { items: x('.pnav-items'), theme: x('.pnav-lead > :last-child') }
+      const drift = { items: 0, theme: 0 }
+      let frames = 0
+      const t0 = performance.now()
+      const tick = () => {
+        frames += 1
+        drift.items = Math.max(drift.items, Math.abs(x('.pnav-items') - start.items))
+        drift.theme = Math.max(drift.theme, Math.abs(x('.pnav-lead > :last-child') - start.theme))
+        const hot = !!document.querySelector('.pnav-search.is-hot')
+        const moving = field.getAnimations().some((a) => a.playState === 'running')
+        if ((hot && !moving) || performance.now() - t0 > 5000) {
+          return done({ drift, frames, hot, width: field.getBoundingClientRect().width })
+        }
+        return requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    }))
     await page.locator(FIELD).hover()
-    await expect.poll(() => fieldWidth(page)).toBeGreaterThan(0)
-    const after = await items.boundingBox()
-    // `1fr auto 1fr` is what guarantees this; the assertion is here because a
-    // later change to those tracks would silently make the nav jump on hover.
-    expect(Math.abs(after.x - before.x)).toBeLessThan(1)
+    const seen = await watching
+
+    expect(seen.hot, 'the hover never reached the field, so nothing was measured').toBe(true)
+    expect(seen.width, 'the field did not widen, so "nothing moved" proves nothing').toBeGreaterThan(rest + 40)
+    expect(seen.drift.items, `the section menus slid ${seen.drift.items}px while the search expanded`).toBeLessThan(1)
+    expect(seen.drift.theme, `the theme cycle slid ${seen.drift.theme}px while the search expanded`).toBeLessThan(1)
   })
 
   // Sampled inside the page rather than round-tripped: two Playwright reads a
