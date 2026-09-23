@@ -45,7 +45,7 @@
 .auth-gate-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:4px}
 .auth-gate-error{font-size:12px;color:var(--err-strong);background:rgba(239,68,68,.08);padding:8px 12px;border-radius:var(--radius-s);text-align:center}
 .auth-gate-footer{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
-.auth-gate-google-link,.auth-gate-switch{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-strong);cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 4px}
+.auth-gate-google-link,.auth-gate-switch{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-mid);cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 4px}
 .auth-gate-google-link:hover,.auth-gate-switch:hover{text-decoration:underline}
 .auth-gate-sep{color:var(--t3);font-size:11px}
 /* The File Converter's `fc` rules moved to src/styles/pages/file-converter.css
@@ -228,10 +228,17 @@
 .cs-csys-auto{display:flex;border-radius:var(--radius);overflow:hidden}
 .cs-csys-auto-tile{flex:1;height:40px;background:var(--cs-csys-tile,var(--bg-3))}
 .cs-csys-harm-chip:hover{background:var(--bh)}
-.quota-row{display:grid;gap:5px}
+/* ── QuotaMeter (components/QuotaMeter.jsx) — Spectrum pass, 2026-09-23 ─────
+   The meter is the one object here allowed a 999px radius: it is a meter.
+   The container's base rule (.quota) is in tool-shell.css, which this lane
+   does not own, so the card treatment is raised to `.quota.quota--tool` —
+   two classes, which outranks it wherever Vite puts the two sheets. The row
+   label takes the app file's mono section label; the count stays mono. */
+.quota.quota--tool{background:var(--card);border-radius:var(--radius-xl);box-shadow:none}
+.quota-row{display:grid;gap:6px}
 .quota-row-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.quota-label{font-size:12px;font-weight:600;color:var(--t1)}
-.quota-count{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums}
+.quota-label{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+.quota-count{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t1);font-variant-numeric:tabular-nums}
 .quota-track{position:relative;height:6px;border-radius:var(--radius-pill);background:var(--bg-3);overflow:hidden}
 .quota-fill{display:block;height:100%;width:var(--quota-pct,0%);border-radius:var(--radius-pill);background:var(--accent);transition:width var(--dur-3) var(--ease-out)}
 .quota-track--low .quota-fill{background:var(--warn)}
@@ -239,7 +246,7 @@
 .quota-msg{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .quota-msg--low{color:var(--warn-strong)}
 .quota-msg--out{color:var(--err-strong)}
-.quota-note{margin:0;font-size:11.5px;line-height:1.45;color:var(--t3)}
+.quota-note{margin:0;font-size:12px;line-height:1.45;color:var(--t2)}
 html[data-reduced-motion="true"] .quota-fill{transition:none}
 @media (prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .quota-fill{transition:none}
