@@ -294,12 +294,20 @@ export default function FontMatcher({ onCopy, toast }) {
           currently selected. It changes as you work and you cannot get it
           anywhere else on screen. That is the opposite of a catalogue counter,
           which is fixed, decorative, and tells you about the product rather
-          than about your work. */}
-      <header className="fpr-hero fpr-hero--premium" ref={varsRef(specimenVars)}>
+          than about your work.
+
+          SPECTRUM, 2026-09-23: NOT THE GALLERY'S SLAB ANY MORE. The
+          `fpr-hero--premium` modifier is gone, and with it global.css's
+          near-black slab, its purple-and-teal glow, the 124px white h1 and the
+          lilac hover — this page is a workbench, not a library, and now opens
+          like the other Create tools (pages/font-pair.css). The ghost "Aa"
+          behind the copy is deleted rather than restyled: it was a <p>, so a
+          screen reader read "Aa" aloud between the title and the lede. The
+          pair readout stays, and is now set in the two families it names. */}
+      <header className="fpr-hero" ref={varsRef(specimenVars)}>
         <div className="fpr-hero-copy">
           <div>
             <h1>Font Pair</h1>
-            <p className="fpr-hero-signature">Aa</p>
           </div>
           <div className="fpr-hero-intro">
             {/* THE THIRD INSTANCE OF THE LEDE MOTIF, and the worst of them.
