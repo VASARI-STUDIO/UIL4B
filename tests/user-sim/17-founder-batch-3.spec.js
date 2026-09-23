@@ -157,7 +157,14 @@ function measurePanel(page, selector) {
  */
 async function settleSticky(page, selector = '.fpr-config') {
   await expect.poll(async () => page.evaluate((sel) => {
-    window.scrollTo(0, 1400)
+    // PARKED RELATIVE TO THE GRID, NOT AT A FIXED 1400. The fixed figure
+    // assumed the old 377px near-black masthead; the Spectrum masthead is
+    // ~200px shorter, so y=1400 landed past the end of the sticky range and
+    // the grid's bottom edge was already pushing the panel up by 20px. 300px
+    // into the grid is inside the range at every viewport this file tests.
+    const grid = document.querySelector('.fpr-grid')
+    const gridTop = grid ? grid.getBoundingClientRect().top + window.scrollY : 1100
+    window.scrollTo(0, Math.round(gridTop + 300))
     const el = document.querySelector(sel)
     if (!el) return Number.POSITIVE_INFINITY
     const stickyTop = parseFloat(getComputedStyle(el).top)

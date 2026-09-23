@@ -24,6 +24,9 @@ import '../styles/deferred/colour.css'
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
+// This page's own Spectrum sheet. Rooted at .fg-page, so it outranks the
+// four shared sheets above however the chunk CSS is ordered.
+import '../styles/pages/font-gallery.css'
 
 // Font Gallery — the standalone /create/font-gallery page. Browse the Google Fonts
 // catalogue, read a specimen, then carry the choice into Font Pair or Type

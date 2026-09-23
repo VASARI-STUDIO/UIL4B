@@ -1,0 +1,430 @@
+/* type-scale.css — /create/type-scale (TypeScale.jsx), on Spectrum.
+ *
+ * The page's base rules are split across global.css (`.tsc-scale-bar`,
+ * `.tsc-row*`, `.tsc-width-btn`, `.tsc-bp`, `.tsc-panel-title`, `.seg-label`,
+ * `.card`) and deferred/type.css (the rest of `.tsc-*`). This sheet restyles
+ * them, and EVERY SELECTOR IS ROOTED AT `.tsc-page`: Vite orders chunk CSS by
+ * the dependency graph, so an imported-last sheet is not a loaded-last sheet
+ * (8d30f37a). One class more than the base rule is what makes order moot.
+ *
+ * ── WHAT CHANGED ────────────────────────────────────────────────────────────
+ *
+ * - THE MASTHEAD DOES NOT TAKE THE DISPLAY STEP the other Create tools open on
+ *   (clamp(38px,5.6vw,72px)), and that is deliberate. #386 cut this h1 to a
+ *   quiet size because on a page ABOUT type the largest type must be the
+ *   specimen, not the one string the visitor cannot change, and
+ *   54-type-scale-overhaul holds it under 40px and under the ladder's top
+ *   step. It takes Spectrum's weight and tracking (600, -.035em) at the size
+ *   it already had.
+ * - Panels are the flat card over a hairline at the 2xl radius, not `.card`'s
+ *   gradient ground, warm shadow, ring and `transition: all`.
+ * - Every switch on the page (preview width, output view, export format,
+ *   fluid/fixed) is one segmented control, the shape /create/tint uses. They
+ *   were four near-identical 10.5-11px/600 variants.
+ * - The step names (`--text-5xl` …) were `--accent-strong`: nine accent labels
+ *   down the left of the ladder, none of them an action. They are ink now; the
+ *   specimen is the content and the name is its caption.
+ * - The Save trigger was the shared accent `.btn` pill. It is a secondary
+ *   rectangle: "Copy CSS" is the page's primary action and keeps the one fill.
+ * - Section titles move from 16px/650 to the Spectrum section step (19/560).
+ *
+ * Selection (the chosen weight, the chosen switch segment) is ink or the
+ * raised card, never accent — see deferred/type.css for the weight chips.
+ *
+ * ── MOTION ──────────────────────────────────────────────────────────────────
+ *
+ * Colour, border and shadow transitions only. Nothing on this page moves a box
+ * except the press scale on the two copy buttons, which carries the house
+ * reduced-motion pair at the foot of the file. */
+
+.tsc-page {
+  --tsc-ease: cubic-bezier(.23, 1, .32, 1);
+  --tsc-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  padding-bottom: var(--s-7);
+}
+
+/* ── Masthead ─────────────────────────────────────────────────────────────── */
+
+.tsc-page .tsc-masthead {
+  align-items: flex-end;
+  gap: var(--s-5);
+  margin-bottom: var(--s-6);
+}
+
+.tsc-page .tsc-masthead-copy { max-width: none; }
+
+.tsc-page .tsc-masthead h1 {
+  font-family: var(--display);
+  font-size: clamp(28px, 3vw, 36px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+  color: var(--t0);
+  text-wrap: balance;
+}
+
+.tsc-page .tsc-masthead-copy > p {
+  max-width: 56ch;
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.62;
+  color: var(--t1);
+}
+
+.tsc-page .tsc-reset {
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--t1);
+  border-color: var(--bh);
+  border-radius: var(--radius-s);
+}
+
+.tsc-page .tsc-reset:hover { color: var(--t0); background: var(--hvr); border-color: color-mix(in srgb, var(--t0) 34%, transparent); }
+
+/* ── The scale bar and the panels ─────────────────────────────────────────── */
+
+.tsc-page .tsc-scale-bar,
+.tsc-page .tsc-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-s);
+}
+
+.tsc-page .tsc-scale-bar { padding: 18px 20px; margin-bottom: var(--s-5); }
+
+.tsc-page .tsc-panel {
+  padding: clamp(18px, 2.2vw, 26px);
+  transition: none;
+}
+
+.tsc-page .tsc-panel.card:hover { border-color: var(--border); }
+
+.tsc-page .tsc-grid { gap: var(--s-5); }
+
+.tsc-page .tsc-scale-custom {
+  padding: 14px 20px;
+  background: var(--card);
+  border-radius: var(--radius-xl);
+}
+
+.tsc-page .seg-label {
+  margin: 0 0 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  color: var(--t2);
+}
+
+.tsc-page .tsc-sample-row .seg-label { margin-bottom: 0; }
+
+/* The two terms and their product. The numbers are the page's subject, so
+   they read in the display face at 600 rather than a bold mono. */
+.tsc-page .tsc-scale-bar .snapv-value {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.tsc-page .tsc-scale-x,
+.tsc-page .tsc-scale-eq { color: var(--t2); }
+
+.tsc-page .tsc-scale-out { font-size: 12px; }
+
+.tsc-page .tsc-scale-out strong {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+}
+
+.tsc-page .tsc-scale-range { font-size: 12.5px; }
+
+.tsc-page .tsc-scale-hint { font-size: 12px; color: var(--t2); }
+
+.tsc-page .tsc-select {
+  font-size: 13.5px;
+  border-radius: var(--radius-s);
+  transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
+}
+
+.tsc-page .tsc-scale-bar .tsc-select { height: 42px; font-weight: 560; }
+
+.tsc-page .tsc-select:hover { border-color: var(--bh); }
+
+.tsc-page .tsc-select:focus-visible { box-shadow: 0 0 0 3px var(--accent-wash-4); }
+
+/* ── Section heads ────────────────────────────────────────────────────────── */
+
+.tsc-page .tsc-panel-title,
+.tsc-page .tsc-ladder-head h2,
+.tsc-page .tsc-delivery-head h2 {
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 560;
+  letter-spacing: -.02em;
+}
+
+.tsc-page .tsc-panel-note,
+.tsc-page .tsc-ladder-head p,
+.tsc-page .tsc-delivery-head p {
+  margin-top: 4px;
+  max-width: 56ch;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--t2);
+}
+
+/* ── Segmented controls ──────────────────────────────────────────────────── */
+
+.tsc-page .tsc-width-switch,
+.tsc-page .tsc-view-switch,
+.tsc-page .tsc-fmt {
+  gap: 3px;
+  padding: 3px;
+  background: var(--tsc-wash);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tsc-page .tsc-width-btn,
+.tsc-page .tsc-view-btn,
+.tsc-page .tsc-fmt-btn,
+.tsc-page .tsc-mode-btn {
+  min-height: 36px;
+  padding: 7px 12px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  box-shadow: none;
+  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
+}
+
+.tsc-page .tsc-width-btn:hover,
+.tsc-page .tsc-view-btn:hover,
+.tsc-page .tsc-fmt-btn:hover,
+.tsc-page .tsc-mode-btn:hover { color: var(--t0); }
+
+.tsc-page .tsc-width-btn--on,
+.tsc-page .tsc-view-btn--on,
+.tsc-page .tsc-fmt-btn--on,
+.tsc-page .tsc-mode-btn--on {
+  color: var(--t0);
+  font-weight: 560;
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
+}
+
+/* The fluid/fixed pair sits in its own wash, like the other three. */
+.tsc-page .tsc-bp-mode {
+  gap: 3px;
+  padding: 3px;
+  background: var(--tsc-wash);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* ── The ladder ───────────────────────────────────────────────────────────── */
+
+.tsc-page .tsc-sample-input {
+  height: 40px;
+  font-size: 13.5px;
+}
+
+.tsc-page .tsc-sample-input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash-4); }
+
+.tsc-page .tsc-ladder { border-radius: var(--radius); }
+
+.tsc-page .tsc-row { transition: background-color var(--dur-1) ease; }
+
+.tsc-page .tsc-row:hover { background: var(--tsc-wash); }
+
+.tsc-page .tsc-row-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--t0);
+}
+
+.tsc-page .tsc-row-num { color: var(--t2); }
+
+.tsc-page .tsc-row-sub { font-size: 9.5px; color: var(--t2); }
+
+.tsc-page .tsc-fit-note { color: var(--t1); }
+
+/* ── The rail ─────────────────────────────────────────────────────────────── */
+
+.tsc-page .tsc-weight {
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--t1);
+  background: transparent;
+  border-color: var(--border);
+  border-radius: var(--radius-s);
+}
+
+.tsc-page .tsc-weight:hover { border-color: var(--bh); color: var(--t0); }
+
+.tsc-page .tsc-weight--on,
+.tsc-page .tsc-weight--on:hover { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+
+.tsc-page .tsc-handoff {
+  min-height: 38px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  border-color: var(--bh);
+  border-radius: var(--radius-s);
+}
+
+.tsc-page .tsc-tuning-toggle { font-size: 12.5px; }
+
+.tsc-page .tsc-bp {
+  padding: 12px 14px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tsc-page .tsc-bp legend {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+}
+
+/* ── Delivery ─────────────────────────────────────────────────────────────── */
+
+.tsc-page .tsc-article { border-radius: var(--radius-l); }
+
+.tsc-page .tsc-export { border-radius: var(--radius); }
+
+.tsc-page .tsc-copy-all,
+.tsc-page .svt-trigger {
+  min-height: 38px;
+  padding: 8px 14px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 560;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-s);
+  box-shadow: none;
+}
+
+.tsc-page .tsc-copy-all:hover,
+.tsc-page .svt-trigger:hover {
+  color: var(--t0);
+  background: var(--hvr);
+  border-color: color-mix(in srgb, var(--t0) 34%, transparent);
+}
+
+.tsc-page .tsc-copy-primary {
+  min-height: 38px;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 560;
+  border-radius: var(--radius-s);
+}
+
+.tsc-page .tsc-keep-note { font-size: 12px; }
+
+/* ── More tools ───────────────────────────────────────────────────────────── */
+
+.tsc-page .tsc-more-link {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--t1);
+}
+
+/* ── Focus ────────────────────────────────────────────────────────────────── */
+
+.tsc-page .tsc-reset:focus-visible,
+.tsc-page .tsc-width-btn:focus-visible,
+.tsc-page .tsc-view-btn:focus-visible,
+.tsc-page .tsc-fmt-btn:focus-visible,
+.tsc-page .tsc-mode-btn:focus-visible,
+.tsc-page .tsc-weight:focus-visible,
+.tsc-page .tsc-handoff:focus-visible,
+.tsc-page .tsc-copy-all:focus-visible,
+.tsc-page .tsc-copy-primary:focus-visible,
+.tsc-page .svt-trigger:focus-visible,
+.tsc-page .tsc-more-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tsc-page .tsc-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── Widths ───────────────────────────────────────────────────────────────── */
+
+@media (max-width: 560px) {
+  .tsc-page .tsc-masthead { margin-bottom: var(--s-5); }
+  .tsc-page .tsc-masthead-copy > p { font-size: 14px; }
+  .tsc-page .tsc-scale-bar { padding: 16px; }
+  /* The width switch spans the head and splits it three ways, so its labels
+     get the column rather than their own padding. At 320 the padded labels
+     pushed the switch 15px past the viewport (21-reflow-320). */
+  .tsc-page .tsc-width-switch { width: 100%; }
+  .tsc-page .tsc-width-btn { flex: 1 1 0; min-width: 0; padding: 7px 4px; }
+  /* Stacked, the row is a column, and type.css's flex:1 on the field then
+     sized its HEIGHT from a zero basis: measured 20px tall at 390. */
+  .tsc-page .tsc-sample-row .tsc-sample-input { flex: 0 0 auto; }
+}
+
+@media (max-width: 380px) {
+  .tsc-page .tsc-ladder-head .tsc-width-btn { font-size: 11px; white-space: normal; line-height: 1.2; }
+}
+
+/* ── Touch floors ─────────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+  .tsc-page .tsc-width-btn,
+  .tsc-page .tsc-view-btn,
+  .tsc-page .tsc-fmt-btn,
+  .tsc-page .tsc-mode-btn,
+  .tsc-page .tsc-weight,
+  .tsc-page .tsc-reset,
+  .tsc-page .tsc-handoff,
+  .tsc-page .tsc-copy-all,
+  .tsc-page .tsc-copy-primary,
+  .tsc-page .svt-trigger,
+  .tsc-page .tsc-tuning-toggle,
+  .tsc-page .tsc-more-link { min-height: 44px; }
+  /* A weight numeral is three characters; the chip is square at the floor
+     rather than 41px wide. */
+  .tsc-page .tsc-weight { min-width: 44px; }
+  .tsc-page .tsc-more-link { display: inline-flex; align-items: center; }
+  .tsc-page .tsc-select,
+  .tsc-page .tsc-scale-bar .tsc-select,
+  .tsc-page .tsc-sample-input { height: 44px; }
+  .tsc-page .snapv-value { min-height: 44px; }
+}
+
+/* ── Press feedback, with the house reduced-motion pair ──────────────────── */
+
+.tsc-page .tsc-copy-primary:active,
+.tsc-page .tsc-copy-all:active { transform: scale(.97); }
+
+.tsc-page .tsc-copy-primary,
+.tsc-page .tsc-copy-all {
+  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease, transform var(--dur-1) var(--tsc-ease);
+}
+
+html[data-reduced-motion="true"] .tsc-page .tsc-copy-primary:active,
+html[data-reduced-motion="true"] .tsc-page .tsc-copy-all:active { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-copy-primary:active,
+  html:not([data-reduced-motion="false"]) .tsc-page .tsc-copy-all:active { transform: none; }
+}
