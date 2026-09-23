@@ -733,7 +733,17 @@ export async function ready(page, what) {
       // presence is what stops the two absences being trivially true on a page
       // that has rendered nothing; the boot-shell absence is what stops the
       // presence being true of markup the server wrote. See the note above.
-      const clear = !!(root && root.firstElementChild)
+      // The route's own signal: App.jsx stamps <html data-route> with the
+      // pathname of the route it has COMMITTED. React Router navigates in a
+      // transition, so the address bar changes while the OLD page is still
+      // painted — one frame locally, several on a slow CI runner, enough for
+      // three "clear" frames of the page being left (CI run 35910539677:
+      // /learn/colour-contrast measured as 0 characters, the new <main> having
+      // committed its spinner just after this returned). Before React has run
+      // there is no stamp, and the boot-shell check below covers that state.
+      const stamped = document.documentElement.dataset.route
+      const onRoute = !stamped || stamped === location.pathname
+      const clear = onRoute && !!(root && root.firstElementChild)
         && !document.getElementById('boot-shell')
         && !document.querySelector('.page-loading')
         && !document.querySelector('.typ-loading > .fg-loader')
