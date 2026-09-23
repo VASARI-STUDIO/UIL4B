@@ -218,8 +218,23 @@ test.describe('the nav does not animate layout', () => {
     // Sample per animation frame across the switch. A width transition shows up
     // here as many distinct widths and a row whose x keeps changing; a state
     // change shows up as one width and a row that is simply somewhere else.
+    //
+    // THE WINDOW ENDS WHEN THE PANEL HAS SETTLED, NOT AT A STOPWATCH. It used to
+    // stop at 500ms, and CI's runner painted 7 frames in that time, which is too
+    // few to say anything and failed "the sampler never ran". Now it samples
+    // until nothing finite is animating inside the panel AND it has seen at
+    // least MIN_FRAMES — counted in frames, so a runner that paints slowly buys
+    // itself proportionally more wall-clock time, and a width transition of any
+    // length is sampled to its end rather than cut off. The ms figure is only a
+    // backstop for a page that has stopped painting; it decides nothing on one
+    // that is still painting.
     const travel = await page.evaluate(async () => {
+      const MIN_FRAMES = 30
+      const MIN_MS = 500
+      const BACKSTOP_MS = 8000
       const row = () => document.querySelector('#pnav-mega .pnav-tool')
+      const settling = (menu) => menu.getAnimations({ subtree: true }).some((a) => a.playState === 'running'
+        && a.effect?.getComputedTiming().endTime !== Infinity)
       const xs = []
       const widths = []
       document.querySelectorAll('.pnav-trigger')[2].click() // Learn
@@ -231,7 +246,9 @@ test.describe('the nav does not animate layout', () => {
           widths.push(Math.round(menu.getBoundingClientRect().width))
           const r = row()
           if (r) xs.push(Math.round(r.getBoundingClientRect().x))
-          if (performance.now() - t0 > 500) return done()
+          const elapsed = performance.now() - t0
+          if (elapsed > BACKSTOP_MS) return done()
+          if (widths.length >= MIN_FRAMES && elapsed >= MIN_MS && !settling(menu)) return done()
           return requestAnimationFrame(tick)
         }
         requestAnimationFrame(tick)
