@@ -350,7 +350,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
       await updateDoc(doc(db, 'community-prompts', prompt.id), { ...updates, updatedAt: new Date().toISOString() })
       setPendingPrompts(prev => prev.map(p => p.id === prompt.id ? { ...p, ...updates } : p))
       toast('Prompt updated')
-    } catch { toast('Update failed') }
+    } catch { toast('Update failed', 'error') }
     setBusy(false)
   }
 
@@ -358,8 +358,8 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
     if (!file) return
     const isImage = file.type.startsWith('image/')
     const isVideo = file.type.startsWith('video/')
-    if (!isImage && !isVideo) { toast('Only images and videos'); return }
-    if (file.size > 10 * 1024 * 1024) { toast('File must be under 10 MB'); return }
+    if (!isImage && !isVideo) { toast('Only images and videos', 'error'); return }
+    if (file.size > 10 * 1024 * 1024) { toast('File must be under 10 MB', 'error'); return }
     setBusy(true)
     try {
       const mediaType = isImage ? 'image' : 'video'
@@ -394,10 +394,10 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
         if (dataUrl.length < 900_000) {
           await updatePrompt({ mediaType, mediaUrl: dataUrl })
         } else {
-          toast(isImage ? 'Image too large after compression' : 'Video too large for storage')
+          toast(isImage ? 'Image too large after compression' : 'Video too large for storage', 'error')
         }
       }
-    } catch { toast('Failed to process media') }
+    } catch { toast('Failed to process media', 'error') }
     setBusy(false)
   }
 
@@ -414,7 +414,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
       await deleteDoc(doc(db, 'community-prompts', prompt.id))
       setPendingPrompts(prev => prev.filter(p => p.id !== prompt.id))
       toast('Prompt deleted')
-    } catch { toast('Delete failed') }
+    } catch { toast('Delete failed', 'error') }
     setBusy(false)
     setConfirmingDelete(false)
   }
@@ -672,7 +672,7 @@ function StripeSetupPanel({ toast }) {
       toast?.('Prices saved to Stripe')
     } catch (err) {
       setError(err.message)
-      toast?.('Save failed: ' + err.message)
+      toast?.('Save failed: ' + err.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -1127,7 +1127,7 @@ function UsersPanel({ localUsers, toast, role }) {
         : data.note || 'Removed from the roster')
     } catch (err) {
       setRosterError(String(err?.message || err || 'Unknown error').slice(0, 200))
-      toast(grant ? 'Could not grant the role — the server refused' : 'Could not revoke the role — the server refused')
+      toast(grant ? 'Could not grant the role — the server refused' : 'Could not revoke the role — the server refused', 'error')
     } finally {
       setBusyUid(null)
     }
@@ -1820,7 +1820,7 @@ export default function Admin({ toast }) {
   const handleUnlock = (e) => {
     e.preventDefault()
     if (code.trim() === ADMIN_CODE) { setUnlocked(true); toast('Admin access granted') }
-    else toast('Invalid code')
+    else toast('Invalid code', 'error')
     setCode('')
   }
 
@@ -1856,7 +1856,7 @@ export default function Admin({ toast }) {
     } catch (err) {
       setFeedback(prev => prev.map(f => (f.id === id ? before : f)))
       setWriteError(String(err?.message || err || 'Unknown error').slice(0, 200))
-      toast('Could not save that — the server refused the change')
+      toast('Could not save that — the server refused the change', 'error')
     }
   }
 
@@ -1878,7 +1878,7 @@ export default function Admin({ toast }) {
     } catch (err) {
       setFeedback(prev => prev.map(f => (f.id === id ? before : f)))
       setWriteError(String(err?.message || err || 'Unknown error').slice(0, 200))
-      toast('Could not save those notes — the server refused the change')
+      toast('Could not save those notes — the server refused the change', 'error')
     }
   }
 
@@ -1900,7 +1900,7 @@ export default function Admin({ toast }) {
     } catch (err) {
       setFeedback(before)
       setWriteError(String(err?.message || err || 'Unknown error').slice(0, 200))
-      toast('Could not delete that — the server refused the change')
+      toast('Could not delete that — the server refused the change', 'error')
     }
   }
 
@@ -1926,7 +1926,7 @@ export default function Admin({ toast }) {
     const ok = await resetPageAnalytics()
     setResettingPages(false)
     setConfirmPageReset(false)
-    toast(ok ? 'Page analytics reset' : 'Local data cleared — server reset failed')
+    toast(ok ? 'Page analytics reset' : 'Local data cleared — server reset failed', ok ? 'success' : 'error')
     refresh()
   }
 
