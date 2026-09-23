@@ -945,11 +945,6 @@
 .fg-card-compare{position:static;opacity:1;transform:none}
 .fg-card-scripts{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--t3)}
 
-/* The hero is a near-black slab, which reads as a deliberate object on the
-   light page and as NOTHING on the dark one: #0a0a0b against a --bg-0 of
-   #0A0B0D is the same colour. Lift it clear of the page in dark instead. */
-[data-theme="dark"] .fg-hero--premium{background:linear-gradient(158deg,#191a1f,#0e0f13 64%);border-color:rgba(255,255,255,.16);box-shadow:0 30px 90px rgba(0,0,0,.5)}
-[data-theme="dark"] .fg-hero--premium::after{color:rgba(255,255,255,.05)}
 
 /* The shared loading strip reserves 320px because in the other two tools it
    stands alone. Here it sits above the skeleton, so the reserve is a hole. */
