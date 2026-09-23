@@ -376,11 +376,27 @@ export function cadToGroup(result) {
  * they are removed from what is drawn; meshes with no normals get computed
  * ones so lighting has something to work with.
  */
+// Many STLs in the wild store every facet normal as 0,0,0 — the format allows
+// it and slicers recompute them — and a zero normal lights as pure black. So a
+// normal attribute is only trusted when most of a sample of it has length.
+function normalsUsable(geometry) {
+  const n = geometry.attributes.normal
+  if (!n) return false
+  const step = Math.max(1, Math.floor(n.count / 512))
+  let seen = 0
+  let zero = 0
+  for (let i = 0; i < n.count; i += step) {
+    seen += 1
+    if (Math.abs(n.getX(i)) + Math.abs(n.getY(i)) + Math.abs(n.getZ(i)) < 1e-6) zero += 1
+  }
+  return zero * 2 < seen
+}
+
 export function normalise(object, warnings) {
   const strip = []
   object.traverse((o) => {
     if (o.isLight || o.isCamera) strip.push(o)
-    if (o.isMesh && o.geometry && !o.geometry.attributes.normal) o.geometry.computeVertexNormals()
+    if (o.isMesh && o.geometry?.attributes?.position && !normalsUsable(o.geometry)) o.geometry.computeVertexNormals()
   })
   for (const o of strip) o.parent?.remove(o)
   if (strip.length) warnings.push(`${strip.length} light${strip.length === 1 ? '' : 's'} or camera${strip.length === 1 ? '' : 's'} stored in the file ${strip.length === 1 ? 'was' : 'were'} not loaded; the viewer uses its own.`)
@@ -693,7 +709,14 @@ export function createViewer(canvas, frame) {
     const c = box.getCenter(new Vector3())
     const s = box.getSize(new Vector3())
     const extent = Math.max(s.x, s.y, s.z) || 1
-    const dist = (extent / (2 * Math.tan((camera.fov * Math.PI) / 360))) * 1.25
+    // Fit the bounding SPHERE, against whichever of the two fields of view is
+    // narrower, so the whole model is in frame from any orbit angle and on a
+    // portrait phone frame as well as a landscape one. 1.2 leaves room for
+    // the view controls along the bottom edge.
+    const radius = (s.length() / 2) || extent / 2
+    const vHalf = (camera.fov * Math.PI) / 360
+    const hHalf = Math.atan(Math.tan(vHalf) * camera.aspect)
+    const dist = (radius / Math.sin(Math.min(vHalf, hHalf))) * 1.2
     camera.near = Math.max(dist / 500, 1e-4)
     camera.far = dist * 60
     camera.position.set(c.x + dist * 0.58, c.y + dist * 0.44, c.z + dist * 0.72)

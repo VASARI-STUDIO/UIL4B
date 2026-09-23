@@ -478,7 +478,12 @@ export default function ThreeDViewer({ toast }) {
 
           <div className="v3d-sect">
             <h2 className="v3d-label" id={`${uid}-out`}>Convert to</h2>
-            <div className="v3d-outs" role="radiogroup" aria-labelledby={`${uid}-out`}>
+            {/* Six formats as a 3 x 2 grid of choices, and what the chosen one
+                keeps written ONCE underneath. The first cut gave every row its
+                own two-line note, which pushed Convert below the fold at
+                1440 x 900 — the page's one action out of sight to explain five
+                options nobody had picked. */}
+            <div className="v3d-outs" role="radiogroup" aria-labelledby={`${uid}-out`} aria-describedby={`${uid}-keeps`}>
               {OUTPUT_FORMATS.map((f) => {
                 const blocked = pointCloud && !f.points
                 return (
@@ -492,11 +497,14 @@ export default function ThreeDViewer({ toast }) {
                       onChange={() => { setOutId(f.id); setOutput(null) }}
                     />
                     <span className="v3d-out-l">{f.label}</span>
-                    <span className="v3d-out-n">{blocked ? 'Needs triangles; this model is a point cloud' : f.keeps}</span>
                   </label>
                 )
               })}
             </div>
+            <p className="v3d-keeps" id={`${uid}-keeps`} data-testid="v3d-keeps">
+              {outFormat?.keeps}.
+              {pointCloud && ` ${listForProse(OUTPUT_FORMATS.filter((f) => !f.points).map((f) => f.label))} need triangles, and this model is a point cloud.`}
+            </p>
             <div className="v3d-actions">
               <button
                 type="button"

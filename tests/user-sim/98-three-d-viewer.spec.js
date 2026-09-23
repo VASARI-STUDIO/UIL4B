@@ -58,12 +58,14 @@ async function drawnPixels(page) {
     ctx.drawImage(gl, 0, 0, c.width, c.height)
     const d = ctx.getImageData(0, 0, c.width, c.height).data
     let n = 0
+    let black = 0
     let hash = 0
     for (let i = 3; i < d.length; i += 4) {
       if (d[i] > 0) n += 1
+      if (d[i] > 200 && d[i - 3] + d[i - 2] + d[i - 1] < 30) black += 1
       hash = (hash * 31 + d[i - 3] + d[i]) | 0
     }
-    return { n, hash }
+    return { n, black, hash }
   })
 }
 
@@ -98,8 +100,12 @@ test.describe('3D Viewer', () => {
     // DRAWN, not merely loaded.
     await expect.poll(async () => (await drawnPixels(page)).n, { message: 'nothing was drawn on the canvas', timeout: 10000 }).toBeGreaterThan(300)
 
-    // The keyboard turns the view: the picture changes.
+    // LIT, not a silhouette. The fixture stores every facet normal as zero,
+    // which STL allows, and drawn as stored that is a black box.
     const before = await drawnPixels(page)
+    expect(before.black, `${before.black} of ${before.n} drawn pixels are black — the model is unlit`).toBeLessThan(before.n * 0.05)
+
+    // The keyboard turns the view: the picture changes.
     await canvas.focus()
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')

@@ -12,8 +12,8 @@
  *   - the stage and the panel are 18px (`--radius-2xl`) cards over a hairline;
  *   - panel sections split by hairlines, each headed by a mono 9.5px / .16em
  *     index label;
- *   - controls are 10–12px rounded RECTANGLES over a hairline. 999px is not
- *     used anywhere on this page (director decision: pills are for meters and
+ *   - controls are 10–12px rounded RECTANGLES over a hairline. 999px appears
+ *     once, on the loading meter (director decision: pills are for meters and
  *     the marketing page);
  *   - no accent anywhere except the one primary action and the selected
  *     output, because accent means "the next action".
@@ -424,17 +424,17 @@
   border-radius: 1px;
 }
 
-/* Output choices: real radios in labelled rows, so arrow keys move between
-   them and a screen reader hears "radio, 3 of 6". */
-.v3d .v3d-outs { display: grid; gap: 6px; }
+/* Output choices: real radios in a 3 x 2 grid, so arrow keys move between
+   them and a screen reader hears "radio, 3 of 6". What the chosen format
+   keeps is one line under the grid (`.v3d-keeps`), not a note per row. */
+.v3d .v3d-outs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 
 .v3d .v3d-out {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 10px;
-  row-gap: 1px;
-  align-items: baseline;
-  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 10px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-s);
@@ -451,8 +451,7 @@
 .v3d .v3d-out:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .v3d .v3d-out input {
-  grid-row: 1 / span 2;
-  align-self: center;
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
   margin: 0;
@@ -464,9 +463,9 @@
 
 .v3d .v3d-out-l { font-size: 13px; font-weight: 560; color: var(--t0); }
 
-.v3d .v3d-out-n { grid-column: 2; font-size: 11.5px; line-height: 1.45; color: var(--t2); }
+.v3d .v3d-out.is-off .v3d-out-l { color: var(--t2); text-decoration: line-through; }
 
-.v3d .v3d-out.is-off .v3d-out-l { color: var(--t2); }
+.v3d .v3d-keeps { min-height: 2.9em; margin: 0; font-size: 12px; line-height: 1.45; color: var(--t2); }
 
 .v3d .v3d-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 
@@ -532,7 +531,7 @@
     white-space: nowrap;
   }
   .v3d .v3d-seg button,
-  .v3d .v3d-tool { min-width: 40px; justify-content: center; padding: 0 10px; }
+  .v3d .v3d-tool { min-width: 44px; justify-content: center; padding: 0 10px; }
   .v3d .v3d-banner { flex-direction: column; align-items: stretch; }
 }
 

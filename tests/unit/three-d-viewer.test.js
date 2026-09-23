@@ -219,6 +219,23 @@ test('FBX: a hand-written text FBX 7.3 is read as one mesh of two triangles', as
   assert.deepEqual(stats.size.map((n) => Math.round(n * 1000) / 1000), [2, 3, 0])
 })
 
+test('an STL that stores every normal as zero is lit, not drawn black', async () => {
+  // Valid STL: the format allows zero facet normals and slicers recompute
+  // them. Lit as stored, every face is black — which is how the first
+  // rendered pass of this page drew its own test box.
+  const buf = new ArrayBuffer(84 + 50)
+  const view = new DataView(buf)
+  view.setUint32(80, 1, true)
+  const verts = [0, 0, 0, 1, 0, 0, 0, 1, 0]
+  verts.forEach((n, i) => view.setFloat32(84 + 12 + i * 4, n, true))
+  const { object, warnings } = await E.parseModel(input('stl'), buf)
+  const root = E.normalise(object, warnings)
+  let normal = null
+  root.traverse((o) => { if (o.isMesh) normal = o.geometry.attributes.normal })
+  assert.ok(normal, 'no normals at all')
+  assert.ok(Math.abs(normal.getZ(0)) > 0.99, `the zero normal was kept (z = ${normal.getZ(0)})`)
+})
+
 test('PLY with no faces is drawn as a point cloud and says so', async () => {
   const ply = 'ply\nformat ascii 1.0\nelement vertex 4\nproperty float x\nproperty float y\nproperty float z\nend_header\n0 0 0\n1 0 0\n0 1 0\n0 0 1\n'
   const { object, warnings } = await E.parseModel(input('ply'), bytesOf(ply).buffer)
