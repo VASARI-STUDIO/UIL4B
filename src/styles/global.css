@@ -848,8 +848,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .auth-submit{width:100%;justify-content:center;padding:13px;font-size:14px;font-weight:600;border-radius:var(--radius);transition:transform var(--dur-2) var(--ease-out),filter var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .auth-submit:disabled{opacity:.5;cursor:not-allowed;transform:none!important;filter:none!important;box-shadow:none!important}
 .auth-links{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px}
-.auth-links button{background:none;border:none;color:var(--accent-mid);font-size:13px;font-family:var(--font);cursor:pointer;transition:opacity var(--dur-2) var(--ease-out);opacity:.85;padding:10px 14px;min-height:36px;border-radius:var(--radius-s)}
-.auth-links button:hover{text-decoration:underline;opacity:1}
+/* --accent (#0F6FFF) measures 4.43:1 on white and 3.82:1 on the page ground,
+   so these 13px links read the derived family. They carried opacity:.85 once,
+   which lightened the fail further; dimming accent text to signal "quiet" buys
+   tone with legibility, and the hover underline already carries that job. */
+.auth-links button{background:none;border:none;color:var(--accent-mid);font-size:13px;font-family:var(--font);cursor:pointer;padding:10px 14px;min-height:36px;border-radius:var(--radius-s)}
+.auth-links button:hover{color:var(--accent-text);text-decoration:underline}
 .seg-cell{padding:18px 20px;border-right:1px solid var(--border);flex:1;min-width:140px}
 .seg-cell:last-child{border-right:none}
 
@@ -879,10 +883,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
 .toast-success.show .toast-ico svg path{animation:toast-draw var(--dur-3) var(--ease-entrance) 90ms forwards}
 @keyframes toast-draw{to{stroke-dashoffset:0}}
-html[data-reduced-motion="true"] .toast-success.show .toast-ico{animation:none}
 html[data-reduced-motion="true"] .toast-success .toast-ico svg path,html[data-reduced-motion="true"] .toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
 @media (prefers-reduced-motion:reduce){
-  html:not([data-reduced-motion="false"]) .toast-success.show .toast-ico{animation:none}
   html:not([data-reduced-motion="false"]) .toast-success .toast-ico svg path,html:not([data-reduced-motion="false"]) .toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
 }
 .nav-item-sub.is-pinned .nav-item-label{color:var(--accent-strong)}
@@ -3337,7 +3339,7 @@ html.lenis{scroll-behavior:auto!important}
    "A 19px glyph is large text" was the claim that used to sit here, and it is
    wrong: WCAG's large-text floor is ≥24px, or ≥18.66px at weight ≥700. This is
    19px/600, so the 4.5:1 floor for NORMAL text applies — the same floor the
-   note at .pnav-pop-item--accent below already states for small accent text.
+   note at .pnav-pop-item--accent already states for small accent text.
    Measured on the app header's real ground, plain --accent came to 4.36:1 on
    #FDFDFC in light and failed on all ten routes 39-accent-contrast samples, at
    1280 and at 390. Dark was never in trouble (#6FA8FF on #141518, 7.56:1), so
@@ -3582,9 +3584,14 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .pnav-pop-item svg{flex:0 0 auto;color:var(--t2)}
 .pnav-pop-kbd{margin-left:auto}
+/* Small accent TEXT reads the derived family, never bare --accent (3.82:1 on
+   the page, 4.43:1 on white) and never the --accent-strong literal, which a
+   premium accent does not reach. Measured light / dark: --accent-mid on the
+   popover's --bg-1 is 5.55 / 8.48; the hover sits on an 8% accent wash, so it
+   steps to --accent-text, 5.52 / 7.90. */
 .pnav-pop-item--accent{color:var(--accent-mid);font-weight:600}
-.pnav-pop-item--accent svg{color:var(--accent)}
-.pnav-pop-item--accent:hover{background:color-mix(in srgb,var(--accent) 12%,var(--bg-1));color:var(--accent-text)}
+.pnav-pop-item--accent svg{color:var(--accent-mid)}
+.pnav-pop-item--accent:hover{background:var(--accent-bg);color:var(--accent-text)}
 .pnav-pop-item--danger{color:var(--danger,#dc2626)}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--danger,#dc2626) 12%,var(--bg-1));color:var(--danger,#dc2626)}
 .pnav-pop--account{width:280px}
@@ -3592,7 +3599,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-avatar{width:40px;height:40px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:14px;font-weight:600;color:#fff}
 .pnav-pop-id-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent-mid);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:0 6px}
+.pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent-mid);border:1px solid var(--accent-mid);border-radius:var(--radius-pill);padding:0 6px}
 .pnav-pop-id-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Account-switcher rows — compact avatar + name/email stack per known account */
 .pnav-pop-acct{min-height:46px;padding:5px 10px}
@@ -6852,15 +6859,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .fbx-dismiss:hover{background:var(--hvr);color:var(--t2)}
 
 /* ── The nav popovers, brought onto the shared language ─────────────────── */
-/* Small accent TEXT reads the derived family, never bare --accent (3.82:1 on
-   the page, 4.43:1 on white) and never the --accent-strong literal, which a
-   premium accent does not reach. Measured light / dark: --accent-mid on the
-   popover's --bg-1 is 5.55 / 8.48; the hover sits on an 8% accent wash, so it
-   steps to --accent-text, 5.52 / 7.90. */
-.pnav-pop-item--accent{color:var(--accent-mid)}
-.pnav-pop-item--accent svg{color:var(--accent-mid)}
-.pnav-pop-item--accent:hover{background:var(--accent-bg);color:var(--accent-text)}
-.pnav-pop-tag{color:var(--accent-mid);border-color:var(--accent-mid)}
+/* (The accent row and tag take the derived family in their own rules.) */
 /* Rows pick up the shared radius so the nav popover and a tool micro-menu
    round their hover states identically. */
 .pnav-pop-item,.pnav-pop-acct{border-radius:var(--radius-s)}
@@ -7151,8 +7150,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 /* Accent TEXT below large size reads the derived family (see the popover note
    above). The promo eyebrow sits on the promo card's 8% accent wash, where
    --accent-mid drops to 4.32 in light, so it takes --accent-text: 4.78 light,
-   8.41 dark. The editorial link's hover sits on --bg-1: 6.14 / 8.92. */
-.pnav-promo-eyebrow{color:var(--accent-text)}
+   8.41 dark (set in .pnav-promo-eyebrow's own rule). The editorial link's
+   hover sits on --bg-1: 6.14 / 8.92. */
 .pnav-editorial-link:hover{color:var(--accent-text)}
 
 /* Motion: the panel is opened by HOVER, so its entrance has to keep up with the
@@ -7297,15 +7296,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 /* -- Accent-text rule enforcement on the auth + popup surfaces --------------
    --accent (#0F6FFF) measures 4.43:1 on white and 3.82:1 on the page ground:
    it fails AA for normal-size text everywhere in the light theme. It is for
-   fills, borders, icons, focus rings and LARGE display text only.
-
-   .auth-links button was the last failure on these surfaces — "Don't have an
-   account? Sign up" and "Forgot password?", 13px, measured 4.43:1 before the
-   rule's own opacity:.85 lightened it further against the white card. The
-   opacity goes with it: dimming accent text to signal "quiet" is buying tone
-   with legibility, and the underline on hover already carries that job. */
-.auth-links button{color:var(--accent-mid);opacity:1}
-.auth-links button:hover{color:var(--accent-text);text-decoration:underline}
+   fills, borders, icons, focus rings and LARGE display text only. (.auth-links
+   button, the last failure here, is fixed in its own rule.) */
 /* The inline sign-in gate's two text buttons (AuthGate, rules in studio.css).
    studio.css loads after this sheet at the same specificity, so the override
    carries its parent: --accent-mid on the gate's --bg-1 is 5.55 / 8.48. */

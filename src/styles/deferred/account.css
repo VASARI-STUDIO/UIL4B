@@ -153,16 +153,6 @@
   .ch-card-meta{gap:6px}
 }
 
-.system-cta-grid{position:absolute;z-index:-2;inset:0;opacity:.5;background-image:linear-gradient(color-mix(in srgb,var(--t0) 5%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--t0) 5%,transparent) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(circle at center,#000,transparent 74%)}
-.system-cta-beams{position:absolute;z-index:-1;inset:0;overflow:hidden}
-.system-cta-beams i{position:absolute;left:50%;bottom:-58%;width:70px;height:130%;border-radius:var(--radius-pill);background:linear-gradient(to top,color-mix(in srgb,var(--accent) 20%,transparent),transparent 68%);transform-origin:50% 100%}
-.system-cta-beams i:nth-child(1){transform:translateX(-50%) rotate(-62deg)}
-.system-cta-beams i:nth-child(2){transform:translateX(-50%) rotate(-42deg)}
-.system-cta-beams i:nth-child(3){transform:translateX(-50%) rotate(-21deg)}
-.system-cta-beams i:nth-child(4){transform:translateX(-50%)}
-.system-cta-beams i:nth-child(5){transform:translateX(-50%) rotate(21deg)}
-.system-cta-beams i:nth-child(6){transform:translateX(-50%) rotate(42deg)}
-.system-cta-beams i:nth-child(7){transform:translateX(-50%) rotate(62deg)}
 .system-cta-inner{max-width:690px;text-align:center}
 .system-cta-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--s-6)}
 .system-cta-hint{margin-top:var(--s-4);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
