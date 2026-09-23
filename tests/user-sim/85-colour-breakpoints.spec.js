@@ -329,4 +329,37 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       await ctx.close()
     }
   })
+  // create-tools-left-2026-09-15 (1): the page reported main | navigation |
+  // contentinfo and no region naming its content. Both panels are named
+  // sections now — the instrument by the page's own h1, the specimen by its
+  // "Live preview" h2 — so no new words were needed to name them.
+  test('both panels are named regions, instrument and specimen', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440)
+    await go(page, '/create/contrast')
+    await expect(page.locator('.cc-preview')).toBeVisible()
+    const instrument = page.getByRole('region', { name: 'Colour Contrast Checker' })
+    const specimen = page.getByRole('region', { name: /live preview/i })
+    await expect(instrument).toHaveCount(1)
+    await expect(specimen).toHaveCount(1)
+    // The instrument region holds the tool, not just its heading.
+    await expect(instrument.locator('#cc-fg')).toHaveCount(1)
+    await expect(specimen.locator('.cc-preview')).toHaveCount(1)
+    await ctx.close()
+  })
+
+  // App controls are rounded rectangles; 999px is for meters and the sales
+  // page. The AA/AAA switch and the verdict chips were both 999px pills.
+  test('no control or verdict chip on the checker is a pill', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440)
+    await go(page, '/create/contrast')
+    await expect(page.locator('.cc-level-opt')).toHaveCount(2)
+    const radii = await page.evaluate(() => [...document.querySelectorAll(
+      '.cc-page button, .cc-page input, .cc-level-opts, .cc-verdict')]
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => ({ cls: String(el.className), r: parseFloat(getComputedStyle(el).borderTopLeftRadius) })))
+    // POSITIVE CONTROL: the switch, both fields, swap and four chips at least.
+    expect(radii.length).toBeGreaterThan(8)
+    expect(radii.filter((x) => x.r >= 20), 'pill-shaped controls').toEqual([])
+    await ctx.close()
+  })
 })
