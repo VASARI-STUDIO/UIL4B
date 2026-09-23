@@ -258,9 +258,43 @@ test.describe('the animation builder', () => {
     await expect(page.locator('.toast.show')).toContainText('Build cancelled')
     await expect(page.locator('.fc-job')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Build GIF' })).toBeEnabled()
+    // Cancel unmounts itself; focus must land somewhere a keyboard user can
+    // act from, not fall to <body>. The Build button is where they started.
+    await expect(page.getByRole('button', { name: 'Build GIF' }), 'focus was dropped when Cancel went away').toBeFocused()
     // And nothing turns up later from the cancelled run.
     await page.waitForTimeout(5000)
     await expect(page.locator('img[alt="GIF result"]')).toHaveCount(0)
+  })
+
+  // The job line changes on every frame and every downloaded chunk. As the live
+  // region it made a screen reader start a new sentence for each; now it is
+  // plain text, and a separate polite region speaks only when the stage or the
+  // quarter of the way through changes.
+  test('a build is announced by stage and quarter, not on every frame', async ({ page }) => {
+    test.setTimeout(120_000)
+    watch(page, PERSONA)
+    await serveCore(page)
+    await openBuilder(page)
+    await page.evaluate(() => {
+      window.__spoken = []
+      window.__visualIsLive = false
+      new MutationObserver(() => {
+        const job = document.querySelector('.fc-job')
+        if (!job) return
+        if (job.querySelector('.fc-status')?.closest('[role="status"],[aria-live]')) window.__visualIsLive = true
+        for (const r of job.querySelectorAll('[role="status"],[aria-live]')) {
+          const t = r.textContent.trim()
+          if (t && window.__spoken[window.__spoken.length - 1] !== t) window.__spoken.push(t)
+        }
+      }).observe(document.body, { subtree: true, childList: true, characterData: true })
+    })
+    await page.getByRole('button', { name: 'Build GIF' }).click()
+    await expect(page.locator('img[alt="GIF result"]')).toBeVisible({ timeout: 120_000 })
+    const spoken = await page.evaluate(() => window.__spoken)
+    expect(await page.evaluate(() => window.__visualIsLive), 'the per-frame job line is still a live region').toBe(false)
+    // POSITIVE CONTROL: something was announced at all.
+    expect(spoken.length, 'nothing about the build was announced').toBeGreaterThan(0)
+    expect(spoken.length, `announced ${spoken.length} times: ${spoken.join(' | ')}`).toBeLessThanOrEqual(8)
   })
 
   // Cancel, then Build again before the first engine download lands. Both runs
