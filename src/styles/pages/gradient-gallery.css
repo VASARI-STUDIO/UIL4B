@@ -1,0 +1,27 @@
+/* ══ /discover/gradients — the page's own sheet ═════════════════════════════
+   Same arrangement as pages/palette-gallery.css: the shared shell is
+   deferred/library.css; this is the `.grg-*` remainder from colour.css and
+   global.css, rooted at `.lib-surface.grg-wrap` (both on the page root) so
+   every selector out-ranks the rule it restates regardless of chunk order.
+
+   What it replaces: "Open →" in `--accent-strong` with a `--brand-soft` hover
+   that also slid its arrow 3px (motion as decoration on 100 cards); a 999px
+   pill on the submissions-queue status; and a backdrop blur under the like
+   button. The like button keeps its circle — see palette-gallery.css. */
+
+/* "Open →" is the card's hand-off, a link-weight action beside "Copy CSS".
+   `--accent-mid` is 5.56:1 on the white card in light; the hover underlines
+   rather than re-colouring and widening. */
+.lib-surface.grg-wrap .grg-open{color:var(--accent-mid);min-height:24px}
+.lib-surface.grg-wrap .grg-open:hover{gap:5px;color:var(--accent-mid);text-decoration:underline;text-underline-offset:3px}
+.lib-surface.grg-wrap .grg-open:focus-visible,
+.lib-surface.grg-wrap .grg-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lib-surface.grg-wrap .grg-copy{min-height:32px}
+@media(pointer:coarse){
+  .lib-surface.grg-wrap .grg-copy,
+  .lib-surface.grg-wrap .grg-open{min-height:44px}
+}
+.lib-surface.grg-wrap .grg-like{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(10,10,14,.56)}
+.lib-surface.grg-wrap .grg-like:hover{background:rgba(10,10,14,.72)}
+.lib-surface.grg-wrap .grg-queue{border-radius:var(--radius-2xl)}
+.lib-surface.grg-wrap .grg-queue-status{border-radius:var(--radius-xs)}
