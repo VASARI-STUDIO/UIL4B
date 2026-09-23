@@ -746,7 +746,10 @@ function VideoConvert({ toast }) {
   const [job, setJob] = useState(null)
   const [engineFailed, setEngineFailed] = useState(false)
   const [result, setResult] = useState(null) // { url, blob, bytes, format }
-  const cancelled = useRef(false)
+  // One token per run. Cancel (and unmount) bumps it, and so does every new run,
+  // so a run can only ever act while it is the latest one. A shared boolean,
+  // which the next run reset to false, let a cancelled run wake up and encode.
+  const runRef = useRef(0)
   const fmt = findFormat(format)
   const working = !!job
 
@@ -759,7 +762,7 @@ function VideoConvert({ toast }) {
     const u = liveRef.current
     if (u.srcUrl) URL.revokeObjectURL(u.srcUrl)
     if (u.resultUrl) URL.revokeObjectURL(u.resultUrl)
-    if (u.job) { cancelled.current = true; resetFfmpeg() }
+    if (u.job) { runRef.current++; resetFfmpeg() }
   }, [])
 
   const onFiles = useCallback((files) => {
@@ -788,7 +791,8 @@ function VideoConvert({ toast }) {
       toast('You appear to be offline — the converter engine needs a connection to load', 'error')
       return
     }
-    cancelled.current = false
+    const run = ++runRef.current
+    const stale = () => runRef.current !== run
     setEngineFailed(false)
     setResult(prev => { if (prev?.url) URL.revokeObjectURL(prev.url); return null })
     const target = fmt
@@ -801,10 +805,10 @@ function VideoConvert({ toast }) {
       // the stated total whenever the CDN's total can be trusted.
       if (!engineLoaded()) setJob({ stage: 'engine', received: 0, bytesTotal: 0 })
       ffmpeg = await getFfmpeg(({ received, total }) => {
-        if (!cancelled.current) setJob({ stage: 'engine', received, bytesTotal: total })
+        if (!stale()) setJob({ stage: 'engine', received, bytesTotal: total })
       })
     } catch (err) {
-      if (cancelled.current) return
+      if (stale()) return
       setJob(null)
       setEngineFailed(true)
       // A core that fails its pinned SHA-256 was never run; say that, not "offline".
@@ -813,7 +817,7 @@ function VideoConvert({ toast }) {
         : 'Could not load the converter engine. Check your connection or try the Image tab.', 'error')
       return
     }
-    if (cancelled.current) return
+    if (stale()) return
 
     // Optional trim: -ss before -i seeks fast; -t caps the clip length.
     const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
@@ -830,22 +834,22 @@ function VideoConvert({ toast }) {
           start, length: trimmed ? clipLen : 0,
         }),
         output: `output.${target.ext}`,
-        onTime: (t) => { if (!cancelled.current) setJob({ stage: 'encode', done: t, total: clipLen, unit: 'time' }) },
+        onTime: (t) => { if (!stale()) setJob({ stage: 'encode', done: t, total: clipLen, unit: 'time' }) },
       })
-      if (cancelled.current) return
+      if (stale()) return
       const blob = new Blob([bytes], { type: target.mime })
       setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id })
       setJob(null)
       toast(`${target.label} ready`)
     } catch (err) {
-      if (cancelled.current) return
+      if (stale()) return
       setJob(null)
       toast('Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
   }, [file, working, fmt, width, fps, plays, quality, duration, trimStart, trimEnd, toast])
 
   const cancel = () => {
-    cancelled.current = true
+    runRef.current++
     resetFfmpeg()
     setJob(null)
     toast('Conversion cancelled', 'info')

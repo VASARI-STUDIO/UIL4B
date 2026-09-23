@@ -69,7 +69,10 @@ export default function AnimationBuilder({ toast }) {
   const [announce, setAnnounce] = useState('')
   const [dragFrom, setDragFrom] = useState(null)
   const canvasRef = useRef(null)
-  const cancelled = useRef(false)
+  // One token per run. Cancel (and unmount) bumps it, and so does every new run,
+  // so a run can only ever act while it is the latest one. A shared boolean,
+  // which the next run reset to false, let a cancelled run wake up and encode.
+  const runRef = useRef(0)
   const loops = useRef(0)
 
   const fmt = findFormat(format)
@@ -96,7 +99,7 @@ export default function AnimationBuilder({ toast }) {
     const urls = new Set(fs.map(f => f.url))
     urls.forEach(u => URL.revokeObjectURL(u))
     if (r?.url) URL.revokeObjectURL(r.url)
-    if (j) { cancelled.current = true; resetFfmpeg() }
+    if (j) { runRef.current++; resetFfmpeg() }
   }, [])
 
   // ── Adding frames ─────────────────────────────────────────────────────────
@@ -238,7 +241,8 @@ export default function AnimationBuilder({ toast }) {
       toast('You appear to be offline — the converter engine needs a connection to load', 'error')
       return
     }
-    cancelled.current = false
+    const run = ++runRef.current
+    const stale = () => runRef.current !== run
     setEngineFailed(false)
     const { w, h } = size
     const sig = signature
@@ -259,7 +263,7 @@ export default function AnimationBuilder({ toast }) {
           canvas.toBlob(b => (b ? resolve(b) : reject(new Error('a frame could not be drawn'))), 'image/png')
         })
         inputs.push({ name: frameName(i), data: new Uint8Array(await blob.arrayBuffer()) })
-        if (cancelled.current) return
+        if (stale()) return
         setJob({ stage: 'prepare', done: i + 1, total })
       }
     } catch (err) {
@@ -273,10 +277,10 @@ export default function AnimationBuilder({ toast }) {
     try {
       if (!engineLoaded()) setJob({ stage: 'engine', received: 0, bytesTotal: 0 })
       ffmpeg = await getFfmpeg(({ received, total: bytesTotal }) => {
-        if (!cancelled.current) setJob({ stage: 'engine', received, bytesTotal })
+        if (!stale()) setJob({ stage: 'engine', received, bytesTotal })
       })
     } catch (err) {
-      if (cancelled.current) return
+      if (stale()) return
       setJob(null)
       setEngineFailed(true)
       // A core that fails its pinned SHA-256 was never run; say that, not "offline".
@@ -285,7 +289,7 @@ export default function AnimationBuilder({ toast }) {
         : 'Could not load the converter engine. Check your connection or try the Image tab.', 'error')
       return
     }
-    if (cancelled.current) return
+    if (stale()) return
 
     // 3. Encode, with progress read from ffmpeg's own status lines.
     setJob({ stage: 'encode', done: 0, total, unit: 'frames' })
@@ -295,15 +299,15 @@ export default function AnimationBuilder({ toast }) {
         inputs,
         args: framesToAnimationArgs({ format: target.id, fps: fpsVal, plays: effPlays, quality }),
         output: `output.${target.ext}`,
-        onFrame: (f) => { if (!cancelled.current) setJob({ stage: 'encode', done: f, total, unit: 'frames' }) },
+        onFrame: (f) => { if (!stale()) setJob({ stage: 'encode', done: f, total, unit: 'frames' }) },
       })
     } catch (err) {
-      if (cancelled.current) return
+      if (stale()) return
       setJob(null)
       toast(`Could not build the animation: ${err?.message || 'the encoder stopped'}`, 'error')
       return
     }
-    if (cancelled.current) return
+    if (stale()) return
     const blob = new Blob([bytes], { type: target.mime })
     setResult(prev => {
       if (prev?.url) URL.revokeObjectURL(prev.url)
@@ -314,7 +318,7 @@ export default function AnimationBuilder({ toast }) {
   }
 
   const cancel = () => {
-    cancelled.current = true
+    runRef.current++
     // Terminating the worker is the only way to stop a wasm encode mid-run;
     // the next build fetches a fresh engine from the browser cache.
     resetFfmpeg()

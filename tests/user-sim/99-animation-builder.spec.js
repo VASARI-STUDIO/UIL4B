@@ -258,6 +258,46 @@ test.describe('the animation builder', () => {
     await expect(page.locator('img[alt="GIF result"]')).toHaveCount(0)
   })
 
+  // Cancel, then Build again before the first engine download lands. Both runs
+  // used to share one `cancelled` flag, which the second Build reset to false,
+  // so the first run woke up when its download finished and encoded too: two
+  // results, two engine workers, one of them never terminated. Each run now
+  // holds its own token, and a load that finishes after a reset is terminated
+  // instead of installed.
+  test('Cancel then Build again runs one job, not two', async ({ page }) => {
+    test.setTimeout(90_000)
+    watch(page, PERSONA)
+    await page.addInitScript(() => {
+      window.__workers = { made: 0, ended: 0 }
+      const Real = window.Worker
+      window.Worker = class extends Real {
+        constructor(...a) { super(...a); window.__workers.made++ }
+        terminate() { window.__workers.ended++; return super.terminate() }
+      }
+    })
+    await serveCore(page, { delayMs: 2500 })
+    await openBuilder(page)
+    await page.evaluate(() => {
+      window.__results = new Set()
+      new MutationObserver(() => {
+        const img = document.querySelector('img[alt="GIF result"]')
+        if (img?.src) window.__results.add(img.src)
+      }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['src'] })
+    })
+    await page.getByRole('button', { name: 'Build GIF' }).click()
+    await expect(page.locator('.fc-job .fc-status')).toContainText(/Loading converter engine/)
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await page.getByRole('button', { name: 'Build GIF' }).click()
+    await expect(page.locator('img[alt="GIF result"]')).toBeVisible({ timeout: 60_000 })
+    // Long enough for the first download (2.5 s) and a whole encode to land.
+    await page.waitForTimeout(6000)
+    expect(await page.evaluate(() => window.__results.size), 'the cancelled run produced a result too').toBe(1)
+    const w = await page.evaluate(() => window.__workers)
+    // POSITIVE CONTROL: the wrap saw the engine workers at all.
+    expect(w.made, 'no engine worker was ever constructed').toBeGreaterThanOrEqual(1)
+    expect(w.made - w.ended, 'an engine worker from the cancelled load is still alive').toBe(1)
+  })
+
   test('with reduced motion the preview waits on frame one for Play', async ({ page }) => {
     watch(page, PERSONA)
     await page.emulateMedia({ reducedMotion: 'reduce' })

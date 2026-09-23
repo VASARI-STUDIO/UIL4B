@@ -85,6 +85,11 @@ export const FFMPEG_CORE_SHA256 = Object.freeze({
 
 let ffmpegInstance = null
 let ffmpegLoadPromise = null
+// Bumped by resetFfmpeg(). A load that started under an older generation and
+// finishes after a reset is terminated on arrival rather than installed —
+// otherwise Cancel-during-download left that engine's worker alive, and a
+// second Build could end up with two instances.
+let generation = 0
 
 /** True once the engine is loaded and usable without a download. */
 export const engineLoaded = () => !!ffmpegInstance
@@ -131,7 +136,8 @@ async function loadCore(ffmpeg, { coreBytes, wasmBytes }) {
 export async function getFfmpeg(onBytes) {
   if (ffmpegInstance) return ffmpegInstance
   if (ffmpegLoadPromise) return ffmpegLoadPromise
-  ffmpegLoadPromise = (async () => {
+  const gen = generation
+  const load = (async () => {
     // Verified BEFORE the FFmpeg class is even constructed: a refused core
     // leaves no worker, no blob: URL, nothing that could run it.
     const core = await fetchCore(onBytes)
@@ -141,14 +147,23 @@ export async function getFfmpeg(onBytes) {
     ])
     const ffmpeg = new FFmpeg()
     await loadCore(ffmpeg, core)
+    if (gen !== generation) {
+      try { ffmpeg.terminate() } catch { /* already gone */ }
+      const e = new Error('the converter engine was reset while it loaded')
+      e.name = 'AbortError'
+      throw e
+    }
     ffmpeg._fetchFile = fetchFile
     ffmpegInstance = ffmpeg
     return ffmpeg
   })()
+  ffmpegLoadPromise = load
   try {
-    return await ffmpegLoadPromise
+    return await load
   } catch (err) {
-    ffmpegLoadPromise = null
+    // Only clear the slot if it is still this load's: after a reset a newer
+    // load may already be in it.
+    if (ffmpegLoadPromise === load) ffmpegLoadPromise = null
     throw err
   }
 }
@@ -161,6 +176,7 @@ export async function getFfmpeg(onBytes) {
  * heap corrupt, and reusing that instance fails in ways that look unrelated.
  */
 export function resetFfmpeg() {
+  generation++
   const ff = ffmpegInstance
   ffmpegInstance = null
   ffmpegLoadPromise = null
