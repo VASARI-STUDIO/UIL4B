@@ -1425,9 +1425,12 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 /* Skip-to-content link — offscreen until keyboard focus, then it slides in over
    everything (above the fixed PillNav's z-index:120). Mouse users never see it;
-   keyboard users get a one-Tab bypass of the nav (WCAG 2.4.1). */
-.skip-link{position:fixed;top:8px;left:8px;z-index:200;transform:translateY(calc(-100% - 16px));padding:10px 16px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-decoration:none;box-shadow:0 8px 24px -8px rgba(0,0,0,.4);transition:transform var(--dur-2) var(--ease-standard)}
-.skip-link:focus{transform:translateY(0);outline:2px solid var(--accent-fg);outline-offset:2px}
+   keyboard users get a one-Tab bypass of the nav (WCAG 2.4.1).
+   The shadow belongs to the FOCUSED state only. At rest the box sits 8px above
+   the viewport, and a 24px blur is longer than 8px: it bled a grey smudge
+   across x 16-160, y 0-5 of every page. */
+.skip-link{position:fixed;top:8px;left:8px;z-index:200;transform:translateY(calc(-100% - 16px));padding:10px 16px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-decoration:none;transition:transform var(--dur-2) var(--ease-standard)}
+.skip-link:focus{transform:translateY(0);box-shadow:0 8px 24px -8px rgba(0,0,0,.4);outline:2px solid var(--accent-fg);outline-offset:2px}
 html[data-reduced-motion="true"] .skip-link{transition:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .skip-link{transition:none}}
 /* Pro is centre-stage: lifted, scaled and the ONLY glowing CTA. Scoped to the
