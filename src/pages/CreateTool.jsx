@@ -119,9 +119,9 @@ function SoonState({ title, isPro }) {
         Thanks for being curious.
       </p>
       <div className="coming-actions">
-        <Link to="/home" className="ui-pill ui-pill-ink ui-pill-md">See what&rsquo;s ready</Link>
+        <Link to="/home" className="btn btn-inverse coming-act">See what&rsquo;s ready</Link>
         {!isPro && (
-          <Link to="/plans" className="ui-pill ui-pill-out ui-pill-md">Go Pro</Link>
+          <Link to="/plans" className="btn coming-act">Go Pro</Link>
         )}
       </div>
     </div>

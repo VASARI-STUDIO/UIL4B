@@ -1683,10 +1683,12 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* Error Boundary */
 .coming-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:70vh;max-width:520px;margin:0 auto;padding:24px}
 .coming-emoji{font-size:56px;line-height:1;margin-bottom:18px;animation:cp-rise var(--dur-4) var(--ease-entrance)}
-.coming-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:10px}
+.coming-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-mid);margin-bottom:10px}
 .coming-title{font-size:clamp(24px,4vw,32px);font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--t0);margin:0 0 12px}
 .coming-sub{font-size:14.5px;color:var(--t2);line-height:1.65;margin:0 0 24px}
 .coming-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+/* The two ways out, as the app's rectangle at the 44px the old .ui-pill-md held. */
+.coming-actions .coming-act{min-height:44px;padding:0 20px;font-size:14px;justify-content:center}
 .error-boundary{display:flex;align-items:center;justify-content:center;min-height:60vh;width:100%;padding:24px}
 .error-boundary-card{text-align:center;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);padding:48px 40px;max-width:440px;width:100%}
 .error-boundary-card h2{font-family:var(--font);font-size:20px;font-weight:600;color:var(--t0);margin-bottom:8px}
