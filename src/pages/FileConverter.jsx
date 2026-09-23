@@ -855,7 +855,14 @@ function VideoConvert({ toast }) {
     toast('Conversion cancelled', 'info')
   }
 
-  const clearFile = () => { setFile(null); if (srcUrl) URL.revokeObjectURL(srcUrl); setSrcUrl(null); setResult(null) }
+  // The result's blob: URL goes too: it pins the whole encoded file until
+  // revoked, and a replaced source leaves nothing that could show it again.
+  const clearFile = () => {
+    setFile(null)
+    if (srcUrl) URL.revokeObjectURL(srcUrl)
+    setSrcUrl(null)
+    setResult(prev => { if (prev?.url) URL.revokeObjectURL(prev.url); return null })
+  }
   const resultFmt = result ? findFormat(result.format) : null
   const base = (file?.name || 'video').replace(/\.[^.]+$/, '')
 
@@ -1032,7 +1039,9 @@ function VideoFrames({ toast }) {
     if (!srcUrl || !meta || extracting) return
     setExtracting(true)
     setProgress(0)
-    setFrames([])
+    // A second extraction replaces the first: revoke its thumbnails' blob: URLs
+    // rather than leaving every earlier frame pinned for the life of the page.
+    setFrames(prev => { prev.forEach(fr => URL.revokeObjectURL(fr.url)); return [] })
 
     const video = document.createElement('video')
     video.muted = true
