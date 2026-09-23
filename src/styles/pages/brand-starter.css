@@ -1,27 +1,137 @@
-/* brand-starter.css — the `bs` family, lifted out of global.css.
- * Imported by the page module that owns it, so Vite emits it as that page's
- * chunk stylesheet and only that route pays for it.
+/* brand-starter.css — the `bs` family, /create/auto-builder's own sheet.
  *
- * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
- * so anything here now outranks every global rule at equal specificity —
- * which is why a rule a later global rule overrides was left behind rather
- * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+ * ── SPECTRUM PASS, 2026-09-23 ───────────────────────────────────────────────
+ *
+ * Every selector is scoped under `.bs-page`, the page root: import order does
+ * not decide which sheet wins (Vite orders chunk CSS by the dependency graph —
+ * commit 8d30f37a measured it).
+ *
+ * The page's structure was already the right one and is kept: bands on
+ * hairlines rather than cards, status in words rather than motion, the quota
+ * wall as a strip on the composer rather than a modal (the Mobbin references
+ * for each are in the comments below, unchanged). What moved:
+ *
+ *   - `--accent-strong`, all three (the Beta tag's ink, the wall's link, the
+ *     bands' "Open in …" links). It is a per-theme literal beside `--accent`,
+ *     not derived from it. Link ink is `--accent-mid` now; the Beta tag is a
+ *     neutral hairline mono tag like the converter's Alpha, because a status
+ *     word is not the next action.
+ *   - The hero is the Spectrum step (clamp 38-72px / 600 / -.045em) that
+ *     /create/tint and /create/gradient use, instead of the global `.sec-h`.
+ *   - The Generate and Try again buttons were the global `.btn` family. They
+ *     are the app file's rectangles here: 12px radius, hairline, one filled
+ *     action in --accent-mid on --accent-ink (tint's measured pair).
+ *   - Manrope-era 650 weights are Geist's 560; the sample chip's rgba() inset
+ *     is a color-mix() of --t0 so it follows the theme.
+ *
+ * The four remaining inline styles in BrandStarter.jsx carry DATA — a
+ * generated swatch's hex, a generated family/weight/size — and stay inline. */
 
-.bs-head h1{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
-.bs-beta{font-size:var(--fs-micro);font-family:var(--mono);font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:var(--radius-pill);border:1px solid var(--accent);color:var(--accent-strong);background:var(--accent-bg);line-height:1;align-self:center}
+.bs-page { min-width: 0; padding-bottom: var(--s-7); }
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+
+.bs-page .bs-head { margin: 0 0 var(--s-6); }
+
+.bs-page .bs-head h1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0 0 var(--s-4);
+  font-family: var(--display);
+  font-size: clamp(38px, 5.6vw, 72px);
+  font-weight: 600;
+  line-height: .96;
+  letter-spacing: -.045em;
+  color: var(--t0);
+  text-wrap: balance;
+}
+
+.bs-page .bs-head > p {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--t1);
+  text-wrap: pretty;
+}
+
+.bs-page .bs-beta {
+  align-self: center;
+  padding: 4px 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t2);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+
 /* What beta MEANS, next to the word, rather than left for the reader to guess.
    A badge with no stated limit is a mood. */
-.bs-beta-note{margin:10px 0 0;font-size:var(--fs-caption);color:var(--t3);line-height:1.55;max-width:62ch}
+.bs-page .bs-head .bs-beta-note { margin: 10px 0 0; max-width: 62ch; font-size: var(--fs-caption); line-height: 1.55; color: var(--t2); }
 
-.bs{display:flex;flex-direction:column;gap:28px;margin-top:24px}
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.bs-page .bs-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 16px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 540;
+  line-height: 1.2;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) cubic-bezier(.23, 1, .32, 1);
+}
+
+.bs-page .bs-btn:hover:not(:disabled) { background: var(--hvr); border-color: var(--bh); }
+
+.bs-page .bs-btn:active:not(:disabled) { transform: scale(.98); }
+
+.bs-page .bs-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.bs-page .bs-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.bs-page .bs-btn--primary { color: var(--accent-ink); background: var(--accent-mid); border-color: transparent; }
+
+.bs-page .bs-btn--primary:hover:not(:disabled) { background: var(--accent-text); border-color: transparent; }
+
+/* ── The workbench ────────────────────────────────────────────────────────── */
+
+.bs-page .bs { display: flex; flex-direction: column; gap: 28px; margin-top: 24px; }
 
 /* The allowance, on a rule rather than in a panel: it is orientation, not an
    object. Above the field, because someone about to spend the only generation
    they will ever get should know that before they write the brief. */
-.bs-allowance{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px 14px;margin:0;padding-bottom:12px;border-bottom:1px solid var(--border);font-size:var(--fs-caption)}
-.bs-allowance-plan{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--t3)}
-.bs-allowance-figure{color:var(--t1)}
-.bs-allowance-left{margin-left:auto;font-family:var(--mono);color:var(--t2)}
+.bs-page .bs-allowance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+  margin: 0;
+  padding-bottom: 12px;
+  font-size: var(--fs-caption);
+  border-bottom: 1px solid var(--border);
+}
+
+.bs-page .bs-allowance-plan { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--t3); }
+
+.bs-page .bs-allowance-figure { color: var(--t1); }
+
+.bs-page .bs-allowance-left { margin-left: auto; font-family: var(--mono); color: var(--t2); }
 
 /* THE QUOTA WALL. A strip attached to the composer, not a modal over the tool.
    Mobbin: Base44 puts the month-limit notice on the top edge of the prompt
@@ -31,126 +141,254 @@
    (https://mobbin.com/screens/dffee797-6dd4-4dc2-8fb5-a26404efdf99), which is
    the "equally weighted rounded card" and "gradient as a premium signal"
    failures at the moment the user is least receptive to either. */
-.bs-wall{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px 20px;padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-s);background:var(--bg-2)}
-.bs-wall-text{margin:0;flex:1 1 260px;font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
-.bs-wall-actions{display:flex;align-items:center;gap:16px;flex:0 0 auto}
+.bs-page .bs-wall {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 20px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-s);
+}
+
+.bs-page .bs-wall-text { flex: 1 1 260px; margin: 0; font-size: var(--fs-body-s); line-height: 1.55; color: var(--t1); }
+
+.bs-page .bs-wall-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 16px; }
+
 /* Both are targets, and both measured under the 24px floor #413 applied to the
    shell (link 23.1px, Dismiss 21.4px at every width). Inline-flex with a
    min-height rather than padding, so the text baseline does not move. */
-.bs-wall-link{display:inline-flex;align-items:center;min-height:24px;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong)}
-.bs-wall-close{display:inline-flex;align-items:center;min-height:24px;border:0;background:none;padding:0;font:inherit;font-size:var(--fs-caption);color:var(--t3);cursor:pointer}
-.bs-wall-close:hover{color:var(--t1)}
+.bs-page .bs-wall-link,
+.bs-page .bs-band-open {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  font-size: var(--fs-body-s);
+  font-weight: 560;
+  color: var(--accent-mid);
+  white-space: nowrap;
+  border-radius: var(--radius-xs);
+}
 
-.bs-composer{display:flex;flex-direction:column;gap:8px}
-.bs-label{font-size:var(--fs-h5);font-weight:600;color:var(--t0)}
-.bs-hint{margin:0;font-size:var(--fs-caption);color:var(--t3);line-height:1.5}
-.bs-field{width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--inp);color:var(--t0);font:inherit;font-size:var(--fs-body);line-height:1.6;resize:vertical;min-height:96px}
-.bs-field:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
-.bs-field::placeholder{color:var(--t3)}
-.bs-field:disabled{opacity:.6;cursor:not-allowed}
-.bs-composer-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.bs-page .bs-wall-link:hover,
+.bs-page .bs-band-open:hover { color: var(--accent-text); }
+
+.bs-page .bs-wall-link:focus-visible,
+.bs-page .bs-band-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.bs-page .bs-wall-close {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-caption);
+  color: var(--t2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+
+.bs-page .bs-wall-close:hover { color: var(--t0); }
+
+.bs-page .bs-wall-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.bs-page .bs-composer { display: flex; flex-direction: column; gap: 8px; }
+
+.bs-page .bs-label { font-size: var(--fs-h5); font-weight: 560; color: var(--t0); }
+
+.bs-page .bs-hint { margin: 0; font-size: var(--fs-caption); line-height: 1.5; color: var(--t2); }
+
+.bs-page .bs-field {
+  width: 100%;
+  min-height: 96px;
+  padding: 14px 16px;
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--t0);
+  background: var(--inp);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  resize: vertical;
+}
+
+.bs-page .bs-field:hover:not(:disabled) { border-color: var(--bh); }
+
+.bs-page .bs-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+
+.bs-page .bs-field::placeholder { color: var(--t3); }
+
+.bs-page .bs-field:disabled { opacity: .6; cursor: not-allowed; }
+
+.bs-page .bs-composer-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+
 /* Mobbin: HubSpot's brand-voice input carries a live "541 / 10,000 words max".
    A field that silently stops accepting characters reads as broken, so the cap
    is rendered rather than only enforced.
    https://mobbin.com/flows/64163e57-f2de-456b-89d8-e6ff18316f55 */
-.bs-count{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
-.bs-note{margin:0;font-size:var(--fs-caption);color:var(--t3);line-height:1.55;max-width:70ch}
-.bs-note--warn{color:var(--warn-strong)}
+.bs-page .bs-count { font-family: var(--mono); font-size: 11px; color: var(--t2); }
+
+.bs-page .bs-note { max-width: 70ch; margin: 0; font-size: var(--fs-caption); line-height: 1.55; color: var(--t2); }
+
+.bs-page .bs-note--warn { color: var(--warn-strong); }
 
 /* Status in words, not in motion. The anti-slop bar names "loading effects
    imply intelligence without explaining system state" — so this says what is
    being done and roughly how long, and animates nothing. */
-.bs-working{margin:0;padding:14px 16px;border:1px dashed var(--border);border-radius:var(--radius-s);font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
+.bs-page .bs-working { margin: 0; padding: 14px 16px; font-size: var(--fs-body-s); line-height: 1.55; color: var(--t1); border: 1px dashed var(--bh); border-radius: var(--radius-s); }
 
-.bs-error{display:flex;align-items:flex-start;flex-wrap:wrap;gap:12px 20px;padding:14px 16px;border:1px solid var(--border);border-left:3px solid var(--err);border-radius:var(--radius-s);background:var(--bg-2)}
-.bs-error-text{margin:0;flex:1 1 260px;font-size:var(--fs-body-s);color:var(--t1);line-height:1.55}
+.bs-page .bs-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 20px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--err);
+  border-radius: var(--radius-s);
+}
 
-/* ── the result ─────────────────────────────────────────────────────────── */
+.bs-page .bs-error-text { flex: 1 1 260px; margin: 0; font-size: var(--fs-body-s); line-height: 1.55; color: var(--t1); }
+
+/* ── The result ───────────────────────────────────────────────────────────── */
 /* The radius is declared AT REST, not in the :focus-visible rule. A focus
    style that changes geometry is what tests/unit/focus-ring-geometry.test.js
-   exists to refuse -- the outline has to trace the shape the element already
-   has, or the ring appears to resize the thing it is pointing at. */
-.bs-result{display:flex;flex-direction:column;gap:0;border-radius:var(--radius-s)}
-.bs-result:focus-visible{outline:2px solid var(--accent);outline-offset:6px}
-.bs-result-h{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding-bottom:6px}
-.bs-result-name{margin:0;font-size:var(--fs-h3);font-weight:600;color:var(--t0);letter-spacing:-.01em}
-.bs-rationale{margin:0 0 4px;font-size:var(--fs-body-s);color:var(--t1);line-height:1.6;max-width:70ch}
+   exists to refuse. */
+.bs-page .bs-result { display: flex; flex-direction: column; gap: 0; border-radius: var(--radius-s); }
+
+.bs-page .bs-result:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+
+.bs-page .bs-result-h { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-bottom: 6px; }
+
+.bs-page .bs-result-name { margin: 0; font-size: var(--fs-h3); font-weight: 600; letter-spacing: -.02em; color: var(--t0); }
+
+.bs-page .bs-rationale { max-width: 70ch; margin: 0 0 4px; font-size: var(--fs-body-s); line-height: 1.6; color: var(--t1); }
 
 /* Bands, not cards. Mono numeral + label on a hairline rule, which is the
    orientation language the User Home settled on.
    Mobbin: Bloom's "Design Language" section sets Colors / Fonts / Tone under
    plain labels with the artefacts themselves as the only visual weight.
    https://mobbin.com/flows/ffbc50b7-dbf3-433c-a294-55e03799a693 */
-.bs-band{padding:22px 0;border-top:1px solid var(--border)}
-.bs-band-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.bs-band-n{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);letter-spacing:.1em}
-.bs-band-label{margin:0;font-size:var(--fs-h5);font-weight:600;color:var(--t0)}
-/* A target, measured 23.1px tall at every width — under the 24px floor. */
-.bs-band-open{display:inline-flex;align-items:center;min-height:24px;margin-left:auto;font-size:var(--fs-body-s);font-weight:600;color:var(--accent-strong);white-space:nowrap}
+.bs-page .bs-band { padding: 22px 0; border-top: 1px solid var(--border); }
 
-.bs-swatches{display:flex;flex-wrap:wrap;gap:14px;margin:0;padding:0;list-style:none}
-.bs-swatch{display:flex;flex-direction:column;gap:6px;min-width:92px}
+.bs-page .bs-band-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+
+.bs-page .bs-band-n { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; color: var(--t3); }
+
+.bs-page .bs-band-label { margin: 0; font-size: var(--fs-h5); font-weight: 560; color: var(--t0); }
+
+.bs-page .bs-band-open { margin-left: auto; }
+
+.bs-page .bs-swatches { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 0; list-style: none; }
+
+.bs-page .bs-swatch { display: flex; flex-direction: column; gap: 6px; min-width: 92px; }
+
 /* A swatch is a real object, so it is the one thing here that gets a border and
-   a radius. 56px tall rather than a dot: a colour has to be judged at a size,
-   and a role label under it is the difference between a palette and six dots. */
-.bs-chip{display:block;width:100%;height:56px;border-radius:var(--radius-xs);border:1px solid var(--border)}
-.bs-swatch-role{font-size:var(--fs-micro);font-weight:600;color:var(--t1);line-height:1.3}
-.bs-swatch-hex{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3)}
+   a radius. 56px tall rather than a dot: a colour has to be judged at a size. */
+.bs-page .bs-chip { display: block; width: 100%; height: 56px; border: 1px solid var(--border); border-radius: var(--radius-s); }
+
+.bs-page .bs-swatch-role { font-size: 12px; font-weight: 560; line-height: 1.3; color: var(--t1); }
+
+.bs-page .bs-swatch-hex { font-family: var(--mono); font-size: 11px; color: var(--t2); }
 
 /* The measured fact under the palette. Not a badge and not a tick — a sentence
    with a number in it, because the number is the evidence. */
-.bs-measure{margin:16px 0 0;font-size:var(--fs-caption);color:var(--t2);line-height:1.6;max-width:74ch}
-.bs-measure strong{color:var(--t0);font-weight:600}
+.bs-page .bs-measure { max-width: 74ch; margin: 16px 0 0; font-size: var(--fs-caption); line-height: 1.6; color: var(--t2); }
 
-.bs-specimen{padding:14px 0;border-bottom:1px solid var(--border)}
-.bs-specimen:last-of-type{border-bottom:0}
+.bs-page .bs-measure strong { font-weight: 600; color: var(--t0); }
+
+.bs-page .bs-specimen { padding: 14px 0; border-bottom: 1px solid var(--border); }
+
+.bs-page .bs-specimen:last-of-type { border-bottom: 0; }
+
 /* The specimen is set in the REAL family, loaded on arrival. A name rendered in
    the page's own face is a claim about a typeface nobody can see. */
-.bs-specimen-face{margin:0 0 6px;color:var(--t0);line-height:1.25;overflow-wrap:anywhere}
-.bs-specimen-meta{margin:0;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);letter-spacing:.04em}
+.bs-page .bs-specimen-face { margin: 0 0 6px; line-height: 1.25; color: var(--t0); overflow-wrap: anywhere; }
 
-.bs-scale-figure{margin:0 0 14px;font-family:var(--mono);font-size:var(--fs-body-s);color:var(--t1)}
-.bs-ladder{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
-.bs-ladder li{display:flex;align-items:baseline;gap:16px}
-.bs-ladder-px{flex:0 0 68px;font-family:var(--mono);font-size:var(--fs-micro);color:var(--t3);text-align:right}
-.bs-ladder-sample{color:var(--t0);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bs-page .bs-specimen-meta { margin: 0; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--t2); }
+
+.bs-page .bs-scale-figure { margin: 0 0 14px; font-family: var(--mono); font-size: var(--fs-body-s); color: var(--t1); }
+
+.bs-page .bs-ladder { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.bs-page .bs-ladder li { display: flex; align-items: baseline; gap: 16px; }
+
+.bs-page .bs-ladder-px { flex: 0 0 68px; font-family: var(--mono); font-size: 11px; text-align: right; color: var(--t2); }
+
+.bs-page .bs-ladder-sample { overflow: hidden; line-height: 1.2; color: var(--t0); text-overflow: ellipsis; white-space: nowrap; }
 
 /* Said out loud, at the end, because "did this just change my project?" is the
    question a generator has to answer before the user asks it. */
-.bs-result-foot{margin:0;padding-top:20px;border-top:1px solid var(--border);font-size:var(--fs-caption);color:var(--t3);line-height:1.6;max-width:74ch}
-
-@media(max-width:640px){
-  .bs-allowance-left{margin-left:0;width:100%}
-  .bs-band-open{margin-left:0;width:100%}
-  .bs-swatch{min-width:0;flex:1 1 84px}
-  .bs-ladder-px{flex-basis:52px}
-}
+.bs-page .bs-result-foot { max-width: 74ch; margin: 0; padding-top: 20px; font-size: var(--fs-caption); line-height: 1.6; color: var(--t2); border-top: 1px solid var(--border); }
 
 /* ── The signed-out example ──────────────────────────────────────────────────
    Shown ABOVE the auth gate so a visitor can see what the tool returns before
-   being asked to make an account. It deliberately reads as a specimen, not as a
-   result: no card chrome competing with the real `.bs-result`, a quieter ground,
-   and the three bands laid out in the same 01/02/03 order the generator uses so
-   the shape is already familiar when they get their own. */
-.bs-sample{margin:var(--s-6) 0 var(--s-5);padding:20px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-2)}
-.bs-sample-h{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em;color:var(--t0)}
-.bs-sample-note{margin:4px 0 18px;font-size:var(--fs-caption);line-height:1.55;color:var(--t2)}
-.bs-sample-bands{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:24px}
-.bs-sample-band{min-width:0}
-.bs-sample-n{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--t3)}
-.bs-sample-label{display:inline;margin:0 0 0 8px;font-size:12px;font-weight:650;color:var(--t1)}
-.bs-sample-swatches{list-style:none;display:flex;gap:8px;margin:12px 0 0;padding:0}
-.bs-sample-swatches li{display:flex;flex-direction:column;gap:4px;min-width:0}
-.bs-sample-chip{width:100%;min-width:34px;height:34px;border-radius:var(--radius-s);box-shadow:inset 0 0 0 1px rgba(16,16,20,.10)}
-.bs-sample-role{font-size:10px;font-weight:650;color:var(--t2);white-space:nowrap}
-.bs-sample-hex{font-family:var(--mono);font-size:9.5px;color:var(--t3)}
-.bs-sample-pair{margin:12px 0 0;font-size:13px;line-height:1.6;color:var(--t1)}
-.bs-sample-pair strong{color:var(--t0)}
-.bs-sample-scale{list-style:none;display:flex;flex-direction:column;gap:4px;margin:12px 0 0;padding:0}
-.bs-sample-scale li{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--t1)}
-.bs-sample-px{font-family:var(--mono);font-size:11px;color:var(--t3)}
+   being asked to make an account. It reads as a specimen, not as a result:
+   the three bands in the same 01/02/03 order the generator uses. */
+.bs-page .bs-sample { margin: var(--s-6) 0 var(--s-5); padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-2xl); }
+
+.bs-page .bs-sample-h { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
+
+.bs-page .bs-sample-note { margin: 4px 0 18px; font-size: var(--fs-caption); line-height: 1.55; color: var(--t2); }
+
+.bs-page .bs-sample-bands { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+
+.bs-page .bs-sample-band { min-width: 0; }
+
+.bs-page .bs-sample-n { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .14em; color: var(--t3); }
+
+.bs-page .bs-sample-label { display: inline; margin: 0 0 0 8px; font-size: 12.5px; font-weight: 560; color: var(--t1); }
+
+.bs-page .bs-sample-swatches { display: flex; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+
+.bs-page .bs-sample-swatches li { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.bs-page .bs-sample-chip { width: 100%; min-width: 34px; height: 34px; border-radius: var(--radius-s); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t0) 12%, transparent); }
+
+.bs-page .bs-sample-role { font-size: 10.5px; font-weight: 560; color: var(--t2); white-space: nowrap; }
+
+.bs-page .bs-sample-hex { font-family: var(--mono); font-size: 10px; color: var(--t2); }
+
+.bs-page .bs-sample-pair { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--t1); }
+
+.bs-page .bs-sample-pair strong { color: var(--t0); }
+
+.bs-page .bs-sample-scale { display: flex; flex-direction: column; gap: 4px; margin: 12px 0 0; padding: 0; list-style: none; }
+
+.bs-page .bs-sample-scale li { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--t1); }
+
+.bs-page .bs-sample-px { font-family: var(--mono); font-size: 11px; color: var(--t2); }
+
+/* ── Widths, touch, motion ────────────────────────────────────────────────── */
+
 /* One column below the tablet break: three bands side by side at 390 would give
    the palette 100px and the scale a column narrower than its own numbers. */
-@media(max-width:860px){
-  .bs-sample-bands{grid-template-columns:minmax(0,1fr);gap:20px}
+@media (max-width: 860px) {
+  .bs-page .bs-sample-bands { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+}
+
+@media (max-width: 640px) {
+  .bs-page .bs-head > p { font-size: 14.5px; }
+  .bs-page .bs-allowance-left { width: 100%; margin-left: 0; }
+  .bs-page .bs-band-open { width: 100%; margin-left: 0; }
+  .bs-page .bs-swatch { flex: 1 1 84px; min-width: 0; }
+  .bs-page .bs-ladder-px { flex-basis: 52px; }
+}
+
+@media (pointer: coarse) {
+  .bs-page .bs-btn,
+  .bs-page .bs-wall-link,
+  .bs-page .bs-wall-close,
+  .bs-page .bs-band-open { min-height: 44px; }
+}
+
+html[data-reduced-motion="true"] .bs-page .bs-btn:active:not(:disabled) { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .bs-page .bs-btn:active:not(:disabled) { transform: none; }
 }
