@@ -363,3 +363,23 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
     await ctx.close()
   })
 })
+
+// The stop row's lock and remove buttons were 26px with a 34px pseudo-element
+// hit area, because in the old two-up grid a real 44px squeezed the hex field.
+// The list is one column now and they take a real 44px under a coarse pointer.
+test.describe('the gradient stop row under a thumb', () => {
+  test('every stop control is 44px on a phone', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 390)
+    await go(page, '/create/gradient')
+    await expect(page.locator('.ggn-stop')).toHaveCount(3)
+    const read = await page.evaluate(() => ({
+      coarse: matchMedia('(pointer: coarse)').matches,
+      boxes: [...document.querySelectorAll('.ggn-stop-lock, .ggn-stop-x, .ggn-stop-swatch .cpk-trigger')]
+        .map((el) => { const b = el.getBoundingClientRect(); return { cls: String(el.className), w: Math.round(b.width), h: Math.round(b.height) } }),
+    }))
+    expect(read.coarse, 'the context must present a coarse pointer').toBe(true)
+    expect(read.boxes.length, 'three stops x three controls').toBe(9)
+    expect(read.boxes.filter((b) => b.w < 44 || b.h < 44), 'stop controls under 44px').toEqual([])
+    await ctx.close()
+  })
+})
