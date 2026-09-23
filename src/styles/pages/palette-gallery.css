@@ -44,7 +44,12 @@
 /* The "Create a palette" ink button in the toolbar. Its hover was a jump to
    `--brand` blue; the design's ink CTA deepens toward the page instead. */
 .lib-surface.pgl-page .pgl-build-link{border-radius:var(--radius)}
-.lib-surface.pgl-page .pgl-build-link:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-1))}
+/* The inverse-ink primary (--t0 fill, --bg-0 label) in BOTH themes: it was a
+   hard-coded #111113 that vanished on the dark card (1.01:1). Hover steps to
+   --t1 under the same label, as .btn-inverse does: 6.99:1 light, 10.86:1 dark.
+   It used to mix toward --t0, which in dark is near-white — 1.53:1 under a
+   white label. */
+.lib-surface.pgl-page .pgl-build-link:hover{background:var(--t1);color:var(--bg-0)}
 .lib-surface.pgl-page .pgl-build-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* Section counts are values, not toggles. */

@@ -6081,7 +6081,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    language (.lbry-, below) — this page was the better of the two reference
    implementations, so the shared toolbar is largely this one, generalised to
    take any number of filter groups instead of exactly one. */
-.pgl-build-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;color:#fff;background:#111113;border-radius:var(--radius-xl);font-size:11px;font-weight:700;text-decoration:none}
+.pgl-build-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;color:var(--bg-0);background:var(--t0);border-radius:var(--radius-xl);font-size:11px;font-weight:700;text-decoration:none}
 .pgl-page .pgal-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:34px 18px}
 .pgl-page .pgal-stripes,.pgl-page .lockt-stripes{height:260px;border-radius:18px;box-shadow:0 8px 26px rgba(10,10,18,.06)}
 .pgl-page .pgal-card:hover .pgal-stripes{transform:translateY(-4px);box-shadow:0 22px 48px rgba(10,10,18,.14)}
