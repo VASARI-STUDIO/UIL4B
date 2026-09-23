@@ -6853,7 +6853,12 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    Deliberately NOT taken: any "most popular" ribbon that isn't backed by real
    data, and every save badge that only appears once you hover the cheaper tab. */
 /* Mono eyebrow - V2's tool texture. --accent-strong because it is 11px. */
-.ui-pro-eyebrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+/* Accent text and glyphs in the Pro dialog read the derived family, never the
+   --accent-strong literal. Measured light / dark: the eyebrow's --accent-mid on
+   the card is 5.55 / 8.15; the chosen plan's name sits on the 8% accent wash and
+   steps to --accent-text, 5.52 / 7.90; the trial tag and tick carry
+   --accent-ink on --accent-mid, 5.18 / 9.17. */
+.ui-pro-eyebrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .ui-pro-title{margin:8px 0 0;font-size:var(--fs-h3);font-weight:700;line-height:1.12;letter-spacing:-.03em;color:var(--t0);text-wrap:balance}
 .ui-pro-sub{margin:8px 0 0;max-width:46ch;font-size:14px;line-height:1.55;color:var(--t2);text-wrap:pretty}
 
@@ -6865,7 +6870,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 .ui-pro-list{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
 .ui-pro-li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--t1)}
-.ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-strong);color:var(--accent-fg)}
+.ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-mid);color:var(--accent-ink)}
 
 /* The ladder. Two tiles at rest, stacking into Glide-style rows on a phone. */
 /* STACKED ROWS. As a 2-up grid at minmax(180px,1fr) this held exactly two
@@ -6875,8 +6880,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    is not a footnote. */
 .ui-pro-plans{display:flex;flex-direction:column;gap:8px;margin:20px 0 0;padding:0;border:none;min-width:0}
 .ui-pro-plans-skel{height:186px;border-radius:var(--radius-l)}
-.ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-/* The shared V2 card-hover language: border to ink AND a 3px lift, together. */
+.ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+/* Hover is the border going to ink; the tile does not lift. */
 .ui-pro-plan:hover{border-color:var(--t0)}
 .ui-pro-plan.is-chosen{border-color:var(--accent);background:var(--accent-bg);box-shadow:inset 0 0 0 1px var(--accent)}
 /* The radio is the real control; the tile is its label. Focus has to be visible
@@ -6886,7 +6891,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-plan-main{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
 .ui-pro-plan-id{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
 .ui-pro-plan-name{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
-.ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-strong)}
+.ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-text)}
 /* The one --hi element on this surface, and the only place it appears in the
    whole modal - the marker-pen budget is one per viewport. */
 .ui-pro-plan-save{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:var(--radius-pill);background:var(--hi);color:var(--hi-fg)}
@@ -6900,7 +6905,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    outlined "Save N%" pill sits beside it and the trial must win that pairing:
    a discount is a reason to prefer a cadence, a free trial is a reason to
    start at all. */
-.ui-pro-plan-trial{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);background:var(--accent);color:var(--accent-fg);white-space:nowrap}
+.ui-pro-plan-trial{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);background:var(--accent-mid);color:var(--accent-ink);white-space:nowrap}
 
 .ui-pro-plans-err{margin:20px 0 0;padding:14px;border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius-l);background:color-mix(in srgb,var(--err) 8%,transparent)}
 .ui-pro-plans-err p{margin:0 0 10px;font-size:13px;color:var(--t1)}
@@ -7194,7 +7199,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-rail-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:11px}
 .ui-pro-rail-row{display:flex;flex-direction:column;gap:5px;min-width:0}
 .ui-pro-rail-name{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--t1)}
-.ui-pro-rail-lock{display:inline-grid;place-items:center;color:var(--accent-strong)}
+.ui-pro-rail-lock{display:inline-grid;place-items:center;color:var(--accent-mid)}
 .ui-pro-rail-free{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;border-radius:var(--radius-pill);border:1px solid var(--border);color:var(--t2);background:var(--bg-1)}
 /* The strip is the product. Five swatches because that is what the palette
    tools build - a four-swatch preview would be showing a system that does not
@@ -7207,7 +7212,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 /* Actions: accept and decline at the same weight of legibility. */
 .ui-pro-cta{margin-top:16px;display:flex;flex-direction:column;gap:8px}
-.ui-pro-later{align-self:center;padding:8px 14px;border:none;border-radius:var(--radius-pill);background:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.ui-pro-later{align-self:center;padding:8px 14px;border:none;border-radius:var(--radius);background:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .ui-pro-later:hover{background:var(--hvr);color:var(--t0)}
 .ui-pro-later:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
