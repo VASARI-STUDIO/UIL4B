@@ -217,6 +217,30 @@ test.describe('3D Viewer', () => {
     await openBox(page)
   })
 
+  test('a CAD engine that arrives altered is never run, and the page says so', async ({ page }) => {
+    watch(page, 'visitor whose CAD engine arrives tampered with')
+    // A 200 with plausible bytes that are not the pinned ones — what a
+    // compromised CDN looks like. The script body would announce itself if it
+    // ever executed.
+    const served = []
+    await page.route((u) => u.href.startsWith('https://cdn.jsdelivr.net/npm/occt-import-js'), (route) => {
+      const name = route.request().url().split('/').pop()
+      served.push(name)
+      return route.fulfill({
+        status: 200,
+        headers: { 'content-type': name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript', 'access-control-allow-origin': '*' },
+        body: name.endsWith('.wasm') ? Buffer.from([0, 0x61, 0x73, 0x6d, 1, 0, 0, 0]) : 'self.postMessage({ id: 0, type: "tampered-code-ran" })',
+      })
+    })
+    await go(page, ROUTE)
+    await input(page).setInputFiles({ name: 'bracket.step', mimeType: 'model/step', buffer: Buffer.from('ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\n') })
+    await expect(page.getByTestId('v3d-error')).toContainText('did not match its pinned fingerprint', { timeout: 20000 })
+    // POSITIVE CONTROL: both altered files were fetched, so the refusal was
+    // the check at work and not a request that never happened.
+    expect(served.sort()).toEqual(['occt-import-js.js', 'occt-import-js.wasm'])
+    await openBox(page)
+  })
+
   test('no horizontal overflow from 320 to 1920, in both themes, with a model open', async ({ browser }) => {
     for (const theme of ['light', 'dark']) {
       const context = await browser.newContext({ colorScheme: theme, viewport: { width: 1440, height: 900 } })

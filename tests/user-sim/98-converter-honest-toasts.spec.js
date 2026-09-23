@@ -125,6 +125,32 @@ test.describe('failure toasts are errors', () => {
     await page.getByRole('button', { name: /^convert to /i }).click()
     await expectErrorToast(page, 'Could not load the converter engine')
   })
+
+  test('Video: an engine that arrives altered is refused, and says so', async ({ page }) => {
+    // The real core, with ONE byte flipped in each file. Served with a 200 and
+    // the right headers, so the only thing wrong is the bytes — which is what
+    // a compromised CDN looks like. The page must refuse to run it.
+    const dir = `${process.cwd()}/node_modules/@ffmpeg/core/dist/esm`
+    const served = []
+    await page.route((url) => url.href.startsWith('https://cdn.jsdelivr.net/'), (route) => {
+      const name = route.request().url().split('/').pop()
+      served.push(name)
+      const body = fs.readFileSync(`${dir}/${name}`)
+      body[body.length >> 1] ^= 0x01
+      return route.fulfill({
+        status: 200,
+        headers: { 'content-type': name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript', 'access-control-allow-origin': '*' },
+        body,
+      })
+    })
+    await openTab(page, 'Video')
+    await page.locator('.fc-drop input[type="file"]')
+      .setInputFiles([{ name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.from('x') }])
+    await page.getByRole('button', { name: /^convert to /i }).click()
+    await expectErrorToast(page, 'did not match its pinned fingerprint')
+    // POSITIVE CONTROL: the altered files really were what the page fetched.
+    expect(served.sort()).toEqual(['ffmpeg-core.js', 'ffmpeg-core.wasm'])
+  })
 })
 
 test.describe('a caution is not a success', () => {

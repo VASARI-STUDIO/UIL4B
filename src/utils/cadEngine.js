@@ -16,15 +16,17 @@
 // package.json — tests/unit/three-d-viewer.test.js fails if anything under src/
 // imports it.
 //
-// PINNED TO AN EXACT VERSION, with the bytes hashed on 2026-09-23 so the pin
-// means something:
-//   occt-import-js.js    sha256 3fb44ce11d00611f9b3f3c5775d520ebab48930c1f08279b7b1316f05f0d3379
-//   occt-import-js.wasm  sha256 33391fc9d94ea5c869a6718488bf0a9a464222bac9bdc764dfe1690cef281952
+// PINNED TO AN EXACT VERSION, and to the bytes: OCCT_SHA256 below holds the
+// SHA-256 of both files (hashed against jsDelivr on 2026-09-23), and it is
+// ENFORCED. The engine runs in a worker on our origin — IndexedDB auth tokens,
+// credentialed /api — so this module fetches both files itself, checks them
+// with utils/integrity.js, and posts only verified bytes to the worker, which
+// fetches nothing. A mismatch throws an IntegrityError before any worker is
+// started. tests/unit/cdn-engine-integrity feeds it one changed byte.
 // jsDelivr serves both with `access-control-allow-origin: *` and an immutable
-// one-year cache-control. vercel.json sets no Content-Security-Policy, so
-// nothing blocks the cross-origin script or the wasm compile; if a CSP is ever
-// added it must allow cdn.jsdelivr.net for script and connect, and
-// 'wasm-unsafe-eval'.
+// one-year cache-control. vercel.json sets no Content-Security-Policy; if one
+// is ever added it must allow cdn.jsdelivr.net for connect, blob: for the
+// worker's importScripts, and 'wasm-unsafe-eval'.
 //
 // IN A WORKER, because OpenCascade's reader is synchronous: a large STEP holds
 // the thread for seconds, and on the main thread that freezes the page with the
@@ -37,10 +39,16 @@
 // failure is built instead — the page says the CAD engine could not be fetched,
 // and every mesh format still works.
 
+import { fetchVerified } from './integrity.js'
+
 export const OCCT_VERSION = '0.0.23'
 export const OCCT_BASE = `https://cdn.jsdelivr.net/npm/occt-import-js@${OCCT_VERSION}/dist`
 export const occtScriptURL = `${OCCT_BASE}/occt-import-js.js`
 export const occtWasmURL = `${OCCT_BASE}/occt-import-js.wasm`
+export const OCCT_SHA256 = Object.freeze({
+  js: '3fb44ce11d00611f9b3f3c5775d520ebab48930c1f08279b7b1316f05f0d3379',
+  wasm: '33391fc9d94ea5c869a6718488bf0a9a464222bac9bdc764dfe1690cef281952',
+})
 
 // Tessellation. `bounding_box_ratio` makes the linear deflection a fraction of
 // the model's own size, so a 2 mm bracket and a 2 m chassis both come out
@@ -59,6 +67,10 @@ export const CAD_READERS = Object.freeze({ step: 'ReadStepFile', iges: 'ReadIges
 // starts a fresh one, and the browser's HTTP cache makes that refetch cheap.
 let worker = null
 let nextId = 1
+// Whether the current worker has been handed the verified engine. A new
+// worker (after Cancel or a crash) needs it again; the HTTP cache makes the
+// refetch cheap, and the bytes are re-verified every time.
+let engineDelivery = null
 
 function getWorker() {
   if (!worker) {
@@ -73,6 +85,36 @@ function getWorker() {
 function stopWorker() {
   if (worker) worker.terminate()
   worker = null
+  engineDelivery = null
+}
+
+// Fetch and verify the engine, then hand the verified bytes to the worker.
+// Nothing is posted — and no worker is even started — unless both match.
+function deliverEngine(onStage, signal) {
+  if (engineDelivery) return engineDelivery
+  const onBytes = ({ received, total }) => onStage?.({ stage: 'engine', loaded: received, total })
+  engineDelivery = (async () => {
+    let script, wasm
+    try {
+      ;[script, wasm] = await Promise.all([
+        fetchVerified(occtScriptURL, OCCT_SHA256.js, { label: 'The CAD engine script', signal }),
+        fetchVerified(occtWasmURL, OCCT_SHA256.wasm, { label: 'The CAD engine', signal, onBytes }),
+      ])
+    } catch (err) {
+      if (err?.name === 'IntegrityError' || err?.name === 'AbortError') throw err
+      throw new Error(`the CAD engine could not be fetched (${err?.message || err})`)
+    }
+    let w
+    try {
+      w = getWorker()
+    } catch (err) {
+      throw new Error(`the CAD engine could not start in this browser (${err?.message || err})`)
+    }
+    w.postMessage({ type: 'engine', script, wasm }, [script, wasm])
+    return w
+  })()
+  engineDelivery.catch(() => { engineDelivery = null })
+  return engineDelivery
 }
 
 function abortError() {
@@ -90,19 +132,22 @@ function abortError() {
  * @param {AbortSignal} [signal]
  * @returns {Promise<{ meshes: Array<{ name: string, position: Float32Array, normal: Float32Array|null, index: Uint32Array|null, color: number[]|null, faces: Array<{ first: number, last: number, color: number[] }> }> }>}
  */
-export function readCad(bytes, formatId, onStage, signal) {
+export async function readCad(bytes, formatId, onStage, signal) {
   const reader = CAD_READERS[formatId]
-  if (!reader) return Promise.reject(new Error(`${formatId} is not a CAD format this engine reads`))
-  if (signal?.aborted) return Promise.reject(abortError())
+  if (!reader) throw new Error(`${formatId} is not a CAD format this engine reads`)
+  if (signal?.aborted) throw abortError()
+
+  onStage?.({ stage: 'engine', loaded: 0, total: 0 })
+  let w
+  try {
+    w = await deliverEngine(onStage, signal)
+  } catch (err) {
+    if (err?.name === 'AbortError' || signal?.aborted) throw abortError()
+    throw err
+  }
+  if (signal?.aborted) throw abortError()
 
   return new Promise((resolve, reject) => {
-    let w
-    try {
-      w = getWorker()
-    } catch (err) {
-      reject(new Error(`the CAD engine could not start in this browser (${err?.message || err})`))
-      return
-    }
     const id = nextId++
     const cleanup = () => {
       w.removeEventListener('message', onMessage)
@@ -132,6 +177,6 @@ export function readCad(bytes, formatId, onStage, signal) {
     signal?.addEventListener('abort', onAbort, { once: true })
     // The bytes are copied rather than transferred: the caller may still hold
     // them, and a CAD file is small next to the engine.
-    w.postMessage({ id, reader, bytes, params: TESSELLATION, scriptURL: occtScriptURL, wasmURL: occtWasmURL })
+    w.postMessage({ id, reader, bytes, params: TESSELLATION })
   })
 }

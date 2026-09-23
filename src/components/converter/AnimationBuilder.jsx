@@ -275,11 +275,14 @@ export default function AnimationBuilder({ toast }) {
       ffmpeg = await getFfmpeg(({ received, total: bytesTotal }) => {
         if (!cancelled.current) setJob({ stage: 'engine', received, bytesTotal })
       })
-    } catch {
+    } catch (err) {
       if (cancelled.current) return
       setJob(null)
       setEngineFailed(true)
-      toast('Could not load the converter engine. Check your connection or try the Image tab.', 'error')
+      // A core that fails its pinned SHA-256 was never run; say that, not "offline".
+      toast(err?.name === 'IntegrityError'
+        ? 'The converter engine that arrived did not match its pinned fingerprint, so it was not run. Try again later, or use the Image tab.'
+        : 'Could not load the converter engine. Check your connection or try the Image tab.', 'error')
       return
     }
     if (cancelled.current) return

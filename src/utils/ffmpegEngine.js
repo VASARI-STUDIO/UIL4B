@@ -31,8 +31,15 @@
 //   ffmpeg-core.js   sha256 c972f5abeafcd5f3949e54edfbdc74a9badb27025809feb1945d468ffbcfb7f1
 //   ffmpeg-core.wasm sha256 2390efa7fb66e7e42dbae15427571a5ffc96b829480904c30f471f0a78967f61
 // jsDelivr serves them with `access-control-allow-origin: *` and `immutable`
-// caching, so `toBlobURL` below can read them cross-origin and the browser
-// keeps them for a year.
+// caching, so the loader below can read them cross-origin and the browser
+// keeps them for a year. Re-hashed against jsDelivr on 2026-09-23: unchanged.
+//
+// AND THE HASHES ARE ENFORCED, NOT JUST RECORDED (FFMPEG_CORE_SHA256). The core
+// runs in a worker on OUR origin, which can read the auth token in IndexedDB
+// and make credentialed /api calls. Both files are fetched as bytes and checked
+// with utils/integrity.js before either becomes a blob: URL; a mismatch throws
+// an IntegrityError and nothing is executed. tests/unit/cdn-engine-integrity
+// feeds the loader one changed byte and requires exactly that.
 //
 // WHY A PINNED VERSION AND NOT A RANGE. `@ffmpeg/core@0.12.6` names one
 // immutable artifact. A floating tag (`@latest`, `@0.12`) would let a
@@ -63,11 +70,18 @@
 // converter — or the homepage workbench, which mounts the same image panel —
 // downloads none of it.
 import { parseFrame, parseTime } from './mediaEncode.js'
+import { fetchVerified } from './integrity.js'
 
 const FFMPEG_CORE_VERSION = '0.12.6'
 const FFMPEG_CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`
 const ffmpegCoreURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.js`
 const ffmpegWasmURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`
+// SHA-256 of the two files at FFMPEG_CORE_VERSION, from jsDelivr and from the
+// installed package (identical). Enforced by loadCore() below.
+export const FFMPEG_CORE_SHA256 = Object.freeze({
+  js: 'c972f5abeafcd5f3949e54edfbdc74a9badb27025809feb1945d468ffbcfb7f1',
+  wasm: '2390efa7fb66e7e42dbae15427571a5ffc96b829480904c30f471f0a78967f61',
+})
 
 let ffmpegInstance = null
 let ffmpegLoadPromise = null
@@ -75,63 +89,58 @@ let ffmpegLoadPromise = null
 /** True once the engine is loaded and usable without a download. */
 export const engineLoaded = () => !!ffmpegInstance
 
-// Fetch one core file and report bytes as they arrive. @ffmpeg/util's own
-// toBlobURL(url, type, true, cb) was NOT used for this: it throws when the
-// byte count disagrees with Content-Length and then re-reads a body it has
-// already consumed — which is exactly what happens when a CDN serves the wasm
-// gzipped (Content-Length is the compressed size, the reader yields the
-// decompressed bytes). This reader asserts nothing about the total: it hands
-// back whatever arrived and lets the caller decide whether the total is
-// usable. Falls back to a plain arrayBuffer() when streaming is unavailable.
-async function fetchCoreFile(url, mimeType, onBytes) {
-  const resp = await fetch(url)
-  if (!resp.ok) throw new Error(`${url}: HTTP ${resp.status}`)
-  const total = Number(resp.headers.get('content-length')) || 0
-  const reader = resp.body?.getReader?.()
-  let buf
-  if (!reader) {
-    buf = await resp.arrayBuffer()
-    onBytes?.({ received: buf.byteLength, total: buf.byteLength })
-  } else {
-    const chunks = []
-    let received = 0
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
-      received += value.length
-      onBytes?.({ received, total })
-    }
-    const data = new Uint8Array(received)
-    let at = 0
-    for (const c of chunks) { data.set(c, at); at += c.length }
-    buf = data.buffer
+// Fetch and VERIFY both core files, then load the engine from blob: URLs made
+// only from the verified bytes. @ffmpeg/util's toBlobURL was not used for the
+// wasm even before the hash check: it throws when the byte count disagrees
+// with Content-Length and then re-reads a consumed body — exactly what happens
+// when a CDN gzips the wasm. fetchVerified asserts nothing about the total.
+//
+// The blob: URLs are revoked as soon as load() settles. The worker has read
+// both by then, and an unrevoked URL pins its Blob — 32 MB for the wasm — for
+// the life of the page, once per engine reset.
+async function fetchCore(onBytes) {
+  const [coreBytes, wasmBytes] = await Promise.all([
+    fetchVerified(ffmpegCoreURL, FFMPEG_CORE_SHA256.js, { label: 'The converter engine script' }),
+    // The wasm is the download (32 MB raw, ~9 MB compressed); the .js core is
+    // a few KB and not worth a second progress line.
+    fetchVerified(ffmpegWasmURL, FFMPEG_CORE_SHA256.wasm, {
+      label: 'The converter engine',
+      onBytes: (b) => onBytes?.({ received: b.received, total: b.total >= b.received ? b.total : 0 }),
+    }),
+  ])
+  return { coreBytes, wasmBytes }
+}
+
+async function loadCore(ffmpeg, { coreBytes, wasmBytes }) {
+  const coreURL = URL.createObjectURL(new Blob([coreBytes], { type: 'text/javascript' }))
+  const wasmURL = URL.createObjectURL(new Blob([wasmBytes], { type: 'application/wasm' }))
+  try {
+    await ffmpeg.load({ coreURL, wasmURL })
+  } finally {
+    URL.revokeObjectURL(coreURL)
+    URL.revokeObjectURL(wasmURL)
   }
-  return URL.createObjectURL(new Blob([buf], { type: mimeType }))
 }
 
 /**
  * The loaded engine, loading it on first use. `onBytes({ received, total })`
  * reports the wasm download; `total` is 0 when the host's Content-Length
- * cannot be trusted as the decompressed size.
+ * cannot be trusted as the decompressed size. Rejects with an IntegrityError,
+ * having executed nothing, if either core file is not the pinned one.
  */
 export async function getFfmpeg(onBytes) {
   if (ffmpegInstance) return ffmpegInstance
   if (ffmpegLoadPromise) return ffmpegLoadPromise
   ffmpegLoadPromise = (async () => {
-    const [{ FFmpeg }, { toBlobURL, fetchFile }] = await Promise.all([
+    // Verified BEFORE the FFmpeg class is even constructed: a refused core
+    // leaves no worker, no blob: URL, nothing that could run it.
+    const core = await fetchCore(onBytes)
+    const [{ FFmpeg }, { fetchFile }] = await Promise.all([
       import('@ffmpeg/ffmpeg'),
       import('@ffmpeg/util'),
     ])
     const ffmpeg = new FFmpeg()
-    // The wasm is the download (32 MB raw, ~9 MB compressed); the .js core is
-    // a few KB and not worth a second progress line.
-    await ffmpeg.load({
-      coreURL: await toBlobURL(ffmpegCoreURL, 'text/javascript'),
-      wasmURL: await fetchCoreFile(ffmpegWasmURL, 'application/wasm', (b) => {
-        onBytes?.({ received: b.received, total: b.total >= b.received ? b.total : 0 })
-      }),
-    })
+    await loadCore(ffmpeg, core)
     ffmpeg._fetchFile = fetchFile
     ffmpegInstance = ffmpeg
     return ffmpeg
