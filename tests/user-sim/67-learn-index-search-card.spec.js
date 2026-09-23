@@ -277,7 +277,7 @@ test.describe('the Learn index', () => {
     const clear = page.getByRole('button', { name: 'Clear search' })
     const clearBox = await clear.boundingBox()
     expect(Math.min(clearBox.width, clearBox.height)).toBeGreaterThanOrEqual(24)
-    await expect(page.locator('.lidx-empty .ui-pill')).toBeVisible()
+    await expect(page.locator('.lidx-empty .lidx-reset')).toBeVisible()
     await input.fill(phrase)
     await expect(page.locator('.lidx-hit')).toBeVisible()
   })
@@ -308,7 +308,7 @@ test.describe('the Learn index', () => {
       }
       await input.fill('qzxvw')
       await settled(page)
-      for (const sel of ['.lidx-empty-h', '.lidx-empty-p', '.lidx-empty .ui-pill']) {
+      for (const sel of ['.lidx-empty-h', '.lidx-empty-p', '.lidx-empty .lidx-reset']) {
         const c = await contrastOf(page, sel)
         expect(c.ratio, `${theme}: ${sel} at ${c.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
       }

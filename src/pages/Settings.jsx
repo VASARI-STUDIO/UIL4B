@@ -98,9 +98,9 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
   if (!editing) {
     return (
       <div className="settings-row">
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="settings-row-main">
           <div className="settings-row-label">{label}</div>
-          <div className="settings-row-value">{value || <span style={{ color: 'var(--t3)' }}>—</span>}</div>
+          <div className="settings-row-value">{value || <span className="settings-row-empty">—</span>}</div>
         </div>
         <button className="btn btn-s" onClick={() => { setVal(value || ''); setEditing(true) }}>Edit</button>
       </div>
@@ -108,9 +108,9 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
   }
 
   return (
-    <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <div className="settings-row-label" style={{ marginBottom: 8 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+    <div className="settings-row settings-row--open">
+      <div className="settings-row-label">{label}</div>
+      <div className="settings-edit-line">
         <div className="settings-suggest-wrap">
           <input
             type={type}
@@ -148,7 +148,7 @@ function EditField({ label, value, onSave, type = 'text', placeholder, options }
         <button className="btn btn-accent btn-s" onClick={handleSave}>Save</button>
         <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
       </div>
-      {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 6 }}>{error}</div>}
+      {error && <div className="settings-field-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -168,12 +168,12 @@ function FlairPicker({ value, displayName, email, onSave }) {
   if (!open) {
     return (
       <div className="settings-row">
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="settings-row-main">
           <div className="settings-row-label">Flair</div>
           <div className="settings-row-value">
             {current
               ? <span className={`flair flair--${current.tone}`}>{current.label}</span>
-              : <span style={{ color: 'var(--t3)' }}>No flair set</span>}
+              : <span className="settings-row-empty">No flair set</span>}
           </div>
         </div>
         <button className="btn btn-s" onClick={() => setOpen(true)}>
@@ -184,8 +184,8 @@ function FlairPicker({ value, displayName, email, onSave }) {
   }
 
   return (
-    <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <div className="settings-row-label" style={{ marginBottom: 8 }}>Flair</div>
+    <div className="settings-row settings-row--open">
+      <div className="settings-row-label">Flair</div>
       <p className="flairpick-hint">A small tag shown next to your name across the community.</p>
 
       <div className="flairpick-preview">
@@ -233,7 +233,7 @@ function FlairPicker({ value, displayName, email, onSave }) {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+      <div className="settings-edit-actions">
         <button className="btn btn-accent btn-s" onClick={() => setOpen(false)}>Done</button>
         {value && (
           <button className="btn btn-s" onClick={() => onSave('')}>Clear flair</button>
@@ -269,7 +269,7 @@ function PasswordChange({ onSave }) {
   if (!open) {
     return (
       <div className="settings-row">
-        <div style={{ flex: 1 }}>
+        <div className="settings-row-main">
           <div className="settings-row-label">Password</div>
           <div className="settings-row-value">••••••••</div>
         </div>
@@ -279,19 +279,19 @@ function PasswordChange({ onSave }) {
   }
 
   return (
-    <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <div className="settings-row-label" style={{ marginBottom: 10 }}>Change password</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="settings-row settings-row--open">
+      <div className="settings-row-label">Change password</div>
+      <div className="settings-edit-stack">
         <input type="password" placeholder="Current password" value={current} onChange={e => setCurrent(e.target.value)} autoFocus />
         <input type="password" placeholder="New password (min. 6 characters)" value={next} onChange={e => setNext(e.target.value)} />
         <input type="password" placeholder="Confirm new password" value={confirm} onChange={e => setConfirm(e.target.value)} />
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+      <div className="settings-edit-actions">
         <button className="btn btn-accent btn-s" onClick={handleSave}>Update password</button>
         <button className="btn btn-s" onClick={() => { setOpen(false); setError('') }}>Cancel</button>
       </div>
-      {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 8 }}>{error}</div>}
-      {success && <div style={{ fontSize: 12, color: 'var(--ok)', marginTop: 8 }}>Password updated successfully</div>}
+      {error && <div className="settings-field-err" role="alert">{error}</div>}
+      {success && <div className="settings-field-ok" role="status">Password updated successfully</div>}
     </div>
   )
 }
@@ -326,7 +326,7 @@ function EmailEditField({ value, onSave }) {
   if (!editing) {
     return (
       <div className="settings-row">
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="settings-row-main">
           <div className="settings-row-label">Email address</div>
           <div className="settings-row-value">{value || '—'}</div>
         </div>
@@ -336,24 +336,24 @@ function EmailEditField({ value, onSave }) {
   }
 
   return (
-    <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-      <div className="settings-row-label" style={{ marginBottom: 8 }}>
+    <div className="settings-row settings-row--open">
+      <div className="settings-row-label">
         {step === 'email' ? 'Email address' : 'Confirm password'}
       </div>
       {step === 'email' ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter new email" style={{ flex: 1 }} autoFocus />
+        <div className="settings-edit-line">
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter new email" autoFocus />
           <button className="btn btn-accent btn-s" onClick={handleNext}>Next</button>
           <button className="btn btn-s" onClick={() => { setEditing(false); setError('') }}>Cancel</button>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password to confirm" style={{ flex: 1 }} autoFocus />
+        <div className="settings-edit-line">
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password to confirm" autoFocus />
           <button className="btn btn-accent btn-s" onClick={handleSave}>Save</button>
           <button className="btn btn-s" onClick={() => { setStep('email'); setPassword(''); setError('') }}>Back</button>
         </div>
       )}
-      {error && <div style={{ fontSize: 12, color: 'var(--err)', marginTop: 6 }}>{error}</div>}
+      {error && <div className="settings-field-err" role="alert">{error}</div>}
     </div>
   )
 }
@@ -678,8 +678,8 @@ export default function Settings({ toast }) {
   }
 
   return (
-    <div className="sec">
-      <div className="sec-h">
+    <div className="sec stg">
+      <div className="sec-h stg-head">
         {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
             common AI trait, scan the whole site and remove alot of them where
             applied." This continues #382 and #386, where he marked this exact
@@ -735,7 +735,7 @@ export default function Settings({ toast }) {
               <div className="sub-active">
                 <div className="sub-active-top">
                   <div className="sub-active-badge">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
                     Pro
                   </div>
                   <div className="sub-active-info">
@@ -758,10 +758,10 @@ export default function Settings({ toast }) {
                 {/* Admins without a real Stripe subscription have no billing
                     portal to open — hide the buttons instead of 500ing. */}
                 {!!subscription && (
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="sub-active-actions">
                     <button className="btn" onClick={() => openPortal()}>Manage billing</button>
                     {!subscription?.cancelAtPeriodEnd && (
-                      <button className="btn btn-ghost" style={{ fontSize: 12, color: 'var(--t2)' }} onClick={() => openPortal({ flow: 'cancel' })}>Cancel plan</button>
+                      <button className="btn btn-ghost sub-active-cancel" onClick={() => openPortal({ flow: 'cancel' })}>Cancel plan</button>
                     )}
                   </div>
                 )}
@@ -810,10 +810,19 @@ export default function Settings({ toast }) {
                     <div className="sub-tier-head">
                       <div className="sub-tier-name">Pro</div>
                       <div className="sub-tier-price">
-                        <span className="sub-tier-amount">{proPrice.loaded ? (billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly) : '—'}</span>
+                        {/* `amount || 'Unavailable'` and the outage line are
+                            Plans.jsx's and Checkout.jsx's, for the reason they
+                            give: `loaded` means the fetch SETTLED, not that a
+                            price is known. With /api/get-prices down this panel
+                            printed a blank amount over "USD · null/mo". */}
+                        <span className={`sub-tier-amount${proPrice.loaded && !(billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly) ? ' is-word' : ''}`}>{!proPrice.loaded ? '—' : (billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly) || 'Unavailable'}</span>
                         <span className="sub-tier-per">{billing === 'yearly' ? 'per year' : 'per month'}</span>
                       </div>
-                      <div className="sub-tier-sub">{!proPrice.loaded ? 'Checking live price…' : billing === 'yearly' ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? `, save ${proPrice.savingsPct}%` : ''} · 7-day free trial` : `${proPrice.currencyLabel} · billed monthly`}</div>
+                      <div className="sub-tier-sub">{!proPrice.loaded ? 'Checking live price…'
+                        : !proPrice.serviceAvailable ? ((billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly)
+                          ? `Live pricing is unreachable · showing the canonical ${proPrice.currencyLabel} amount`
+                          : 'Live pricing is unreachable · no price can be shown right now')
+                        : billing === 'yearly' ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? `, save ${proPrice.savingsPct}%` : ''} · 7-day free trial` : `${proPrice.currencyLabel} · billed monthly`}</div>
                     </div>
                     <ul className="sub-tier-list">
                       <li><Check /> <strong>Everything in Free, plus:</strong></li>
@@ -878,23 +887,24 @@ export default function Settings({ toast }) {
               <p>Choose the interface language. Affects all menus, labels, and copy.</p>
             </div>
             <div className="settings-card">
-              <div className="settings-card-body" style={{ padding: '16px' }}>
+              <div className="settings-card-body settings-card-body--grid">
                 <div className="lang-grid">
                   {languages.map(l => (
                     <button
                       key={l.code}
                       className={`lang-tile${lang === l.code ? ' active' : ''}`}
+                      aria-pressed={lang === l.code}
                       onClick={() => { setLang(l.code); toast(`Language: ${l.native}`) }}
                     >
                       <span className="lang-flag">
-                        <img src={`https://flagcdn.com/w40/${l.region.toLowerCase()}.png`} alt={l.region} width="28" height="21" style={{ objectFit: 'cover', borderRadius: 2 }} />
+                        <img src={`https://flagcdn.com/w40/${l.region.toLowerCase()}.png`} alt={l.region} width="28" height="21" />
                       </span>
                       <div className="lang-tile-info">
                         <span className="lang-tile-label">{l.native}</span>
                         <span className="lang-tile-code">{l.label}</span>
                       </div>
                       {lang === l.code && (
-                        <svg className="lang-tile-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="lang-tile-check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                       )}
@@ -1028,12 +1038,12 @@ export default function Settings({ toast }) {
                     </div>
                   </div>
                   {confirmClear ? (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button className="btn btn-s" onClick={deleteAllData} style={{ color: '#fff', background: 'var(--err)', borderColor: 'var(--err)' }}>Confirm clear</button>
+                    <div className="settings-edit-actions settings-edit-actions--tight">
+                      <button className="btn btn-s settings-danger-go" onClick={deleteAllData}>Confirm clear</button>
                       <button className="btn btn-s" onClick={() => setConfirmClear(false)}>Cancel</button>
                     </div>
                   ) : (
-                    <button className="btn btn-s" onClick={() => setConfirmClear(true)} style={{ color: 'var(--err)', borderColor: 'var(--err)' }}>Clear data</button>
+                    <button className="btn btn-s settings-danger" onClick={() => setConfirmClear(true)}>Clear data</button>
                   )}
                 </div>
               </div>
@@ -1048,15 +1058,15 @@ export default function Settings({ toast }) {
             </div>
             <div className="settings-card">
               <div className="settings-card-body">
-                <ul style={{ listStyle: 'none', padding: '14px 0', margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <ul className="settings-facts">
                   {[
                     'No analytics trackers, no third-party cookies, no ad networks.',
                     'Authentication is handled securely by Firebase Auth (Google).',
                     'Your data is stored locally and optionally synced via Firestore when signed in.',
                     'You can export or delete your data at any time, with no requests.',
                   ].map((line, i) => (
-                    <li key={i} style={{ display: 'flex', gap: 10, fontSize: 13.5, color: 'var(--t1)', lineHeight: 1.55 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                    <li key={i}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       {line}
@@ -1074,8 +1084,8 @@ export default function Settings({ toast }) {
         </div>
       </div>
 
-      <div style={{ textAlign: 'center', padding: '24px 0 12px', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--t3)', letterSpacing: '.03em' }}>
-        UIL4B · <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-strong)', textDecoration: 'none' }}>Dylan Coleman</a>
+      <div className="stg-credit">
+        UIL4B · <a href="https://dylan-coleman.com/" target="_blank" rel="noopener noreferrer">Dylan Coleman</a>
       </div>
     </div>
   )

@@ -11,6 +11,9 @@ import { PLAN_LADDER } from '../config/planLadder'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
+// This page's own sheet: every rule under `.checkout-page`, so it wins by
+// specificity rather than by a chunk order Vite does not promise.
+import '../styles/pages/checkout.css'
 
 // THE TRIAL SENTENCE IS DERIVED, NOT TYPED.
 //
@@ -76,7 +79,7 @@ const FEATURES = [
 
 function Check() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0, marginTop: 1 }}>
+    <svg className="checkout-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   )
@@ -165,7 +168,7 @@ export default function Checkout() {
 
   return (
     <div className="sec checkout-page">
-      <div className="sec-h">
+      <div className="sec-h checkout-head">
         {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
             common AI trait, scan the whole site and remove alot of them where
             applied." This continues #382 and #386, where he marked this exact
@@ -190,7 +193,7 @@ export default function Checkout() {
               <div className="checkout-plan-price">
                 {/* `amount || 'Unavailable'` is Plans.jsx's line 306, for the
                     reason given above: `loaded` means settled, not known. */}
-                <span className="checkout-plan-amount">{!proPrice.loaded ? '—' : amount || 'Unavailable'}</span>
+                <span className={`checkout-plan-amount${proPrice.loaded && !amount ? ' is-word' : ''}`}>{!proPrice.loaded ? '—' : amount || 'Unavailable'}</span>
                 <span className="checkout-plan-per">{plan.per}</span>
               </div>
             </div>
@@ -208,7 +211,7 @@ export default function Checkout() {
 
             {plan.trial && (
               <div className="checkout-trial">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                 {plan.trial}
               </div>
             )}
@@ -231,8 +234,8 @@ export default function Checkout() {
             <div className="checkout-error">Checking the live Stripe price…</div>
           ) : planKey === 'lifetime' && !proPrice.availability.lifetime ? (
             <div className="checkout-error">
-              <strong style={{ display: 'block', marginBottom: 6 }}>One-off checkout is temporarily unavailable</strong>
-              <span style={{ fontSize: 12, color: 'var(--t2)' }}>No payment session was created. Return to Plans and try again after the live {proPrice.currencyLabel} price is activated.</span>
+              <strong className="checkout-error-h">One-off checkout is temporarily unavailable</strong>
+              <span className="checkout-error-p">No payment session was created. Return to Plans and try again after the live {proPrice.currencyLabel} price is activated.</span>
             </div>
           ) : !hasStripeKey ? (
             <div className="checkout-error">
@@ -240,15 +243,15 @@ export default function Checkout() {
             </div>
           ) : error ? (
             <div className="checkout-error">
-              <strong style={{ display: 'block', marginBottom: 6 }}>Checkout unavailable</strong>
-              <span style={{ fontSize: 12, color: 'var(--t2)' }}>{error}</span>
+              <strong className="checkout-error-h">Checkout unavailable</strong>
+              <span className="checkout-error-p">{error}</span>
               {error.includes('Server configuration') && (
-                <p style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8 }}>
+                <p className="checkout-error-note">
                   This usually means the Firebase service account key isn't configured on the server.
                   If you're the site owner, check Vercel environment variables.
                 </p>
               )}
-              <button className="btn btn-s" style={{ marginTop: 12 }} onClick={() => { setError(''); }}>Try again</button>
+              <button className="btn btn-s checkout-error-retry" onClick={() => { setError(''); }}>Try again</button>
             </div>
           ) : (
             <EmbeddedCheckoutProvider stripe={stripePromise} options={{ fetchClientSecret }}>

@@ -1,0 +1,128 @@
+/* checkout.css — /checkout and /checkout/return on the Spectrum ground.
+ *
+ * STYLING ONLY. Nothing here, and nothing in the two page files that import
+ * it, touches the payment path: the plan table, the Stripe embed, the
+ * session call, the redirects and every state are exactly what they were.
+ * This sheet replaces the `.checkout-*` block that sat in deferred/account.css
+ * (shared with six other routes) and the seven inline `style={{}}` objects in
+ * the two pages.
+ *
+ * Every selector is scoped under `.checkout-page`, the root both pages
+ * render, because Vite orders chunk CSS by the dependency graph: tool-shell.css
+ * and global.css restate `.checkout-return*` and `.card` at equal specificity.
+ * Nothing on these pages moves except the confirmation spinner, a loading
+ * state, which global.css's reduced-motion clamp already freezes.
+ *
+ * ── The shape ────────────────────────────────────────────────────────────────
+ * The summary beside the form is the pattern every subscription checkout in
+ * the reference set uses — Dropbox Dash
+ * (mobbin.com/screens/8716add5-01a8-4d04-adc8-d5deaf4da331), Perplexity
+ * (mobbin.com/screens/91f7d5d2-65cd-45ee-99a3-6c52bca19944), Descript
+ * (mobbin.com/screens/0679f8fc-5125-429f-80a3-2769f94083b6): plan, price as a
+ * figure, what is included as a plain list, the trial as a tinted notice. So
+ * the structure stays and the surface changes: `UIL4B App.dc.html`'s 18px
+ * panels over a hairline with no shadow, the price in the display face with
+ * tabular figures, a tick with no tinted chip behind it, the app's rectangle
+ * controls. The accent is the derived family — never --accent-strong, which
+ * the plan note, the "Compare" link and the primary button all used.        */
+
+.checkout-page {
+  --co-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --co-hair-2: color-mix(in srgb, var(--t0) 13%, transparent);
+  --co-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  max-width: 1040px;
+}
+
+/* ── Controls: the app's rectangles ──────────────────────────────────────── */
+.checkout-page .btn { min-height: 40px; padding: 0 16px; border-radius: var(--radius-s); border-color: var(--co-hair-2); background: transparent; color: var(--t0); font-size: 13.5px; font-weight: 500; transition: background var(--dur-1) ease, border-color var(--dur-1) ease; }
+.checkout-page .btn:hover { background: var(--co-wash); border-color: var(--bh); color: var(--t0); }
+.checkout-page .btn-s { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+/* --accent-mid under --accent-ink (5.18:1 light, 9.17:1 dark), hovering to
+   --accent-text, which moves away from the ground in both themes. */
+.checkout-page .btn-accent { min-height: 44px; padding: 0 18px; border-radius: var(--radius); border-color: var(--accent-mid); background: var(--accent-mid); color: var(--accent-ink); font-weight: 560; }
+.checkout-page .btn-accent:hover { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent-ink); }
+@media (pointer: coarse) {
+  .checkout-page .btn, .checkout-page .btn-s { min-height: 44px; }
+}
+
+/* ── Head ───────────────────────────────────────────────────────────────────
+   The app scale, not .sec-h's 52px/1.3 content-page title. */
+.checkout-page .checkout-head { margin-bottom: clamp(20px, 3vw, 32px); }
+.checkout-page .checkout-head h1 { margin: 0; padding: 0; font-family: var(--display); font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -.035em; line-height: 1.04; color: var(--t0); }
+.checkout-page .checkout-head p { margin: 10px 0 0; max-width: 60ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
+
+/* ── Panels ─────────────────────────────────────────────────────────────── */
+.checkout-page .card { padding: 22px; border: 1px solid var(--co-hair); border-radius: var(--radius-2xl); background: var(--card); box-shadow: none; overflow: visible; transition: none; }
+.checkout-page .card:hover { border-color: var(--co-hair); }
+
+.checkout-page .checkout-grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.checkout-page .checkout-summary { position: sticky; top: calc(var(--nav-clear) + 12px); display: flex; flex-direction: column; gap: 14px; }
+
+.checkout-page .checkout-plan-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--co-hair); }
+.checkout-page .checkout-plan-name { font-size: 16px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
+.checkout-page .checkout-plan-cadence { margin-top: 3px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t1); }
+.checkout-page .checkout-plan-price { text-align: right; white-space: nowrap; }
+.checkout-page .checkout-plan-amount { display: block; font-family: var(--display); font-size: 32px; font-weight: 600; letter-spacing: -.035em; line-height: 1; color: var(--t0); font-variant-numeric: tabular-nums; }
+.checkout-page .checkout-plan-per { font-size: 12px; color: var(--t1); }
+/* "Unavailable" is a word, not a figure: at the price's display size it
+   filled the summary's head. Same treatment /plans gives it. */
+.checkout-page .checkout-plan-amount.is-word { font-family: var(--font); font-size: 17px; font-weight: 560; letter-spacing: -.01em; }
+/* The note is a fact about the price (currency, cadence, or that live
+   pricing is unreachable), not an offer, so it is ink, not accent. */
+.checkout-page .checkout-plan-note { margin-top: 14px; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
+.checkout-page .checkout-price-retry { align-self: flex-start; margin-top: 10px; }
+/* The trial is the one tinted object: it is a state the buyer needs to see
+   before paying (nothing charged today). --ok-strong on the 12% --ok wash. */
+.checkout-page .checkout-trial { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 12px; border-radius: var(--radius); background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok-strong); font-size: 12.5px; font-weight: 560; line-height: 1.4; }
+.checkout-page .checkout-trial svg { flex: 0 0 auto; }
+.checkout-page .checkout-features { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 0; padding: 18px 0 0; border-top: 1px solid var(--co-hair); list-style: none; }
+.checkout-page .checkout-features li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; color: var(--t1); }
+.checkout-page .checkout-check { flex-shrink: 0; margin-top: 3px; color: var(--accent-mid); }
+.checkout-page .checkout-switch { margin-top: 16px; }
+.checkout-page .checkout-switch a { display: inline-flex; align-items: center; min-height: 24px; font-size: 13px; font-weight: 560; color: var(--accent-mid); text-decoration: none; }
+.checkout-page .checkout-switch a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.checkout-page .checkout-back { display: inline-flex; align-items: center; align-self: flex-start; min-height: 32px; padding: 0 2px; font-size: 13px; color: var(--t1); text-decoration: none; }
+.checkout-page .checkout-back:hover { color: var(--t0); }
+
+/* The Stripe embed's frame. It paints its own contents; this is the panel. */
+.checkout-page .checkout-form { min-height: 420px; padding: 20px; }
+.checkout-page .checkout-error { padding: 24px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--t1); }
+.checkout-page .checkout-error code { padding: 2px 6px; border-radius: var(--radius-xs); background: var(--co-wash); font-family: var(--mono); font-size: 12px; color: var(--t0); }
+.checkout-page .checkout-error-h { display: block; margin-bottom: 6px; font-size: 15px; font-weight: 560; color: var(--t0); }
+.checkout-page .checkout-error-p { font-size: 13px; color: var(--t1); }
+.checkout-page .checkout-error-note { margin-top: 8px; font-size: 12px; color: var(--t2); }
+.checkout-page .checkout-error-retry { margin-top: 12px; }
+
+/* ── The return page, and the invalid-selection state ─────────────────────────
+   Left-aligned in one panel, the state carried by the heading's words and a
+   glyph in the state colour — not by a 64px tinted circle, which is the stock
+   confirmation screen. */
+.checkout-page .checkout-return { display: flex; justify-content: flex-start; padding: 8px 0 24px; }
+.checkout-page .checkout-return-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: 100%; max-width: 520px; padding: clamp(22px, 3.4vw, 34px); text-align: left; }
+.checkout-page .checkout-return-card h1 { margin: 4px 0 0; font-family: var(--display); font-size: clamp(24px, 3vw, 30px); font-weight: 600; letter-spacing: -.03em; line-height: 1.1; color: var(--t0); }
+.checkout-page .checkout-return-card p { max-width: 46ch; margin: 0; font-size: 14px; line-height: 1.6; color: var(--t1); }
+.checkout-page .checkout-return-card p strong { color: var(--t0); font-weight: 560; }
+.checkout-page .checkout-success-icon,
+.checkout-page .checkout-error-icon { display: flex; align-items: center; justify-content: flex-start; width: auto; height: auto; border-radius: 0; background: none; font-family: var(--display); font-size: 26px; font-weight: 600; line-height: 1; }
+.checkout-page .checkout-success-icon { color: var(--ok-strong); }
+.checkout-page .checkout-error-icon { color: var(--err-strong); }
+.checkout-page .checkout-success-icon svg,
+.checkout-page .checkout-error-icon svg { width: 28px; height: 28px; }
+.checkout-page .checkout-spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--co-hair-2); border-top-color: var(--accent-mid); animation: checkout-spin .8s linear infinite; }
+/* A reference a customer may be asked for: mono, selectable in one gesture,
+   and allowed to wrap because a Stripe session id has no spaces. */
+.checkout-page .checkout-return-ref { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; width: 100%; max-width: 100%; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--co-hair); border-radius: var(--radius); background: var(--co-wash); }
+.checkout-page .checkout-return-ref-label { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+.checkout-page .checkout-return-ref-code { font-family: var(--mono); font-size: 12px; line-height: 1.45; color: var(--t0); word-break: break-all; user-select: all; }
+.checkout-page .checkout-return-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-start; margin-top: 14px; }
+
+.checkout-page :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .checkout-page .checkout-grid { grid-template-columns: minmax(0, 1fr); }
+  .checkout-page .checkout-summary { position: static; }
+}
+@media (max-width: 420px) {
+  .checkout-page .card { padding: 18px; }
+  .checkout-page .checkout-plan-amount { font-size: 28px; }
+}
