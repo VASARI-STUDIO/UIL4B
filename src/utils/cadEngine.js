@@ -126,7 +126,7 @@ function abortError() {
 /**
  * Tessellate a CAD file off the main thread.
  *
- * @param {Uint8Array} bytes  the whole file
+ * @param {Uint8Array} bytes  the whole file; its buffer is transferred to the worker
  * @param {'step'|'iges'} formatId
  * @param {(p: { stage: 'engine'|'parsing', loaded?: number, total?: number }) => void} onStage
  * @param {AbortSignal} [signal]
@@ -179,8 +179,9 @@ export async function readCad(bytes, formatId, onStage, signal) {
     w.addEventListener('message', onMessage)
     w.addEventListener('error', onError)
     signal?.addEventListener('abort', onAbort, { once: true })
-    // The bytes are copied rather than transferred: the caller may still hold
-    // them, and a CAD file is small next to the engine.
-    w.postMessage({ id, reader, bytes, params: TESSELLATION })
+    // TRANSFERRED, not copied: meshEngine.loadModel reads the file into a
+    // buffer for this call alone and never touches it again, and a STEP file
+    // can run to tens of megabytes. After this the caller's view is detached.
+    w.postMessage({ id, reader, bytes, params: TESSELLATION }, [bytes.buffer])
   })
 }
