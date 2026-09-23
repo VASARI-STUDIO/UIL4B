@@ -484,7 +484,7 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
    trigger sits at the left edge of the toolbar (default .cpk-pop is right:0). */
 .plb-seedpick{flex:0 0 auto}
 .plb-hexfield{width:96px;padding:0 10px;font-family:var(--mono);font-size:13px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);transition:border-color var(--t)}
-.plb-hexfield:focus{outline:none;border-color:var(--brand)}
+.plb-hexfield:focus{outline:none;border-color:var(--accent)}
 .plb-hexfield--bad{border-color:#D64545}
 /* System + Vision toolbar triggers ride on .btn btn-s; these only add the
    eyebrow label + no-wrap so every toolbar control shares one button system. */
@@ -498,7 +498,7 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .plb-menu-title{font-size:12px;font-weight:700;color:var(--t0);margin:2px 2px 10px}
 .plb-menu-row{display:flex;gap:8px}
 .plb-menu-row input{flex:1;min-width:0;padding:8px 10px;font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
-.plb-menu-row input:focus{outline:none;border-color:var(--brand)}
+.plb-menu-row input:focus{outline:none;border-color:var(--accent)}
 .plb-menu-sub{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:12px 2px 6px}
 .plb-menu-item{display:block;width:100%;padding:8px 10px;font-size:13px;font-weight:500;text-align:left;color:var(--t1);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plb-menu-item:hover{background:var(--bg-2);color:var(--t0)}
@@ -507,13 +507,13 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .plb-harm-opt:hover{background:var(--bg-2);color:var(--t0)}
 .plb-harm-opt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
 .plb-harm-opt>svg{flex-shrink:0;color:var(--t2)}
-.plb-harm-opt--on>svg{color:var(--brand)}
+.plb-harm-opt--on>svg{color:var(--accent)}
 .plb-harm-opt-l{flex:1;text-align:left}
 .plb-visopt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;font-size:13px;font-weight:600;text-align:left;color:var(--t1);background:none;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:all var(--t)}
 .plb-visopt>svg{flex-shrink:0;color:var(--t2)}
 .plb-visopt:hover{background:var(--bg-2);color:var(--t0)}
 .plb-visopt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
-.plb-visopt--on>svg{color:var(--brand)}
+.plb-visopt--on>svg{color:var(--accent)}
 .plb-visopt-l{flex:1}
 /* 9px bold on a 15% green tint: #16A34A measured 2.69:1 in light and 4.07:1
    in dark (2026-09-09). --ok-strong is the text companion of the state token
@@ -521,8 +521,8 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
 button.plb-varrow:hover{background:var(--bg-2)}
 .plb-varrow--locked{opacity:.55}
-.plb-varrow--active{background:var(--brand-weak,var(--bg-2))}
-.plb-varrow-tick{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--brand)}
+.plb-varrow--active{background:var(--bg-2)}
+.plb-varrow-tick{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
 .plb-varrow-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:7px 8px;background:none;border:none;border-radius:var(--radius-s);text-align:left;cursor:pointer;transition:background var(--t)}
 .plb-varrow-main:hover{background:var(--bg-2)}
 .plb-varrow-cmp{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;color:var(--t1);background:none;border:none;border-radius:8px;cursor:pointer;transition:all var(--t)}
@@ -537,7 +537,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
    300px dropdown was too small to see where the markers were landing. */
 .plb-imgcard{width:min(720px,100%);gap:10px}
 .plb-imgdrop{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px;text-align:center;color:var(--t2);background:var(--bg-1);border:1.5px dashed var(--border);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
-.plb-imgdrop:hover,.plb-imgdrop--over{border-color:var(--brand);background:var(--bg-2);color:var(--t1)}
+.plb-imgdrop:hover,.plb-imgdrop--over{border-color:var(--accent);background:var(--bg-2);color:var(--t1)}
 .plb-imgdrop>svg{color:var(--t2)}
 .plb-imgdrop-t{font-size:13px;font-weight:600;color:var(--t0)}
 .plb-imgdrop-s{font-size:11px;font-weight:500;color:var(--t2)}
@@ -549,8 +549,8 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-imgpoint:active{cursor:grabbing}
 /* The active marker reads as the one being worked on — a keyboard user gets
    this from focus, so the ring is the same cue for both input methods. */
-.plb-imgpoint--on{border-color:var(--brand);box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 0 0 4px color-mix(in srgb,var(--brand) 45%,transparent),0 2px 6px rgba(0,0,0,.4);z-index:3}
-.plb-imgpoint:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.plb-imgpoint--on{border-color:var(--accent);box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 0 0 4px color-mix(in srgb,var(--accent) 45%,transparent),0 2px 6px rgba(0,0,0,.4);z-index:3}
+.plb-imgpoint:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 /* ── The eyedropper loupe ──────────────────────────────────────────────────
    Parked in a stage corner (Mobbin: Alan crop) rather than tracking the
    pointer, so it never covers the region it magnifies; `data-side` flips it
@@ -577,7 +577,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-imgactions{display:flex;gap:6px;margin-top:12px}
 .plb-imgclear{display:block;width:100%;margin-top:8px;padding:6px;font-size:11.5px;font-weight:600;color:var(--t2);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
 .plb-imgclear:hover{color:#B91C1C;background:var(--bg-2)}
-.plb-tgl--on{color:var(--brand);border-color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,transparent)}
+.plb-tgl--on{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
 /* Vision type split: top half the real palette colour, bottom half the
    colour-vision simulation. Content sits in the bottom half (justify-end), so
    --plb-ink is computed against --plb-sim. */
@@ -612,7 +612,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-picker-hexrow{display:flex;align-items:center;gap:8px;margin-top:8px}
 .plb-picker-chip{width:28px;height:28px;flex-shrink:0;background:var(--plb-rc);border:1px solid var(--border);border-radius:8px}
 .plb-picker-hex{flex:1;min-width:0;padding:7px 9px;font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
-.plb-picker-hex:focus{outline:none;border-color:var(--brand)}
+.plb-picker-hex:focus{outline:none;border-color:var(--accent)}
 .plb-picker-evidence{display:grid;gap:2px;margin:8px 0 2px;font-size:9px;line-height:1.4;color:var(--t2)}
 .plb-picker-evidence strong{font-weight:650;color:#8B5C08}
 .plb-help{position:relative;display:inline-flex;margin-left:auto}
@@ -636,7 +636,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-ctx-sep{height:1px;margin:5px 4px;background:var(--border)}
 .plb-ctx-item--muted{color:var(--t3);cursor:default}
 .plb-ctx-item--muted:hover{background:none;color:var(--t3)}
-.plb-ctx-pro{margin-left:auto;padding:1px 6px;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--accent-strong);border:1px solid var(--brand);border-radius:var(--radius-pill)}
+.plb-ctx-pro{margin-left:auto;padding:1px 6px;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--accent-text);border:1px solid var(--accent);border-radius:var(--radius-pill)}
 
 /* Preview modal + mini UI scene painted from --pv-* role props */
 .plb-modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px);background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -652,11 +652,11 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-preview-item{position:relative;min-width:0;padding:12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius)}
 .plb-preview-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
 .plb-preview-label strong{font-size:12px;font-weight:700;color:var(--t0)}
-.plb-preview-label span{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-strong)}
+.plb-preview-label span{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-text)}
 .plb-preview-grid .plb-pv{min-height:260px}
 .plb-preview-item--locked .plb-pv{opacity:.62}
 .plb-preview-gate{position:absolute;right:22px;bottom:22px;z-index:2;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-s);cursor:pointer}
-.plb-preview-gate:hover{color:var(--accent-strong);border-color:var(--brand)}
+.plb-preview-gate:hover{color:var(--accent-text);border-color:var(--accent)}
 .plb-pv--v1 .plb-pv-side{order:2;border-right:0;border-left:1px solid var(--pv-border)}
 .plb-pv--v2 .plb-pv-cards{grid-template-columns:1fr 1fr}
 .plb-pv--v2 .plb-pv-card:last-child{grid-column:1/-1}
@@ -749,7 +749,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-submit-err{font-size:12px;font-weight:600;color:var(--danger,#D64545);margin:2px 2px 0}
 .plb-submit-as{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2)}
 .plb-submit-as strong{color:var(--t0);font-weight:700}
-.plb-linkbtn{font-size:12px;font-weight:600;color:var(--accent-strong);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.plb-linkbtn{font-size:12px;font-weight:600;color:var(--accent-text);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .plb-linkbtn:hover{opacity:.8}
 .plb-dsbcard{width:min(420px,100%)}
 .plb-dsb-body{text-align:center;padding:6px 4px 2px}
@@ -759,7 +759,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 /* DSB coming-soon popup — quick links into the tools the walkthrough will connect */
 .plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
 .plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-.plb-dsb-link:hover{border-color:var(--brand);color:var(--accent-strong);background:color-mix(in srgb,var(--brand) 6%,transparent)}
+.plb-dsb-link:hover{border-color:var(--accent);color:var(--accent-text);background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .plb-icobtn:hover,.plb-icobtn:focus-visible,.plb-icobtn[aria-expanded="true"]{z-index:4}
 .plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{grid-template-columns:1fr;padding-left:7px;opacity:1}
 
@@ -771,9 +771,9 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-galtab>svg{flex-shrink:0;opacity:.75}
 .plb-galtab:hover{color:var(--t0)}
 .plb-galtab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
-.plb-galtab--on>svg{opacity:1;color:var(--brand)}
+.plb-galtab--on>svg{opacity:1;color:var(--accent)}
 .plb-galpopup-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font-size:12px;font-weight:600;color:var(--t2)}
-.plb-galpopup-body .plb-menu-sub a{color:var(--accent-strong);text-decoration:none}
+.plb-galpopup-body .plb-menu-sub a{color:var(--accent-text);text-decoration:none}
 .plb-galpopup-body .plb-menu-sub a:hover{text-decoration:underline}
 .plb-histclear{margin-top:6px;color:var(--t2);font-size:12px}
 .plb-histclear:hover{color:var(--warn-strong)}
@@ -1229,6 +1229,6 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
    A free user opening a board saved on a paid system used to get Auto silently
    — the chip still read "Analogous" while the board rendered something else, so
    the product looked unreliable rather than paid. */
-.plb-collapsed{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 var(--page-inline) 12px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--brand) 55%,transparent);border-radius:var(--radius-l);background:var(--brand-bg);font-size:12.5px;line-height:1.5;color:var(--t1)}
+.plb-collapsed{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 var(--page-inline) 12px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:var(--radius-l);background:var(--accent-wash);font-size:12.5px;line-height:1.5;color:var(--t1)}
 .plb-collapsed strong{color:var(--t0);font-weight:650}
-.plb-collapsed-cta:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
+.plb-collapsed-cta:hover{background:var(--accent-mid);border-color:var(--accent-mid);color:var(--accent-ink)}

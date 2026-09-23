@@ -225,6 +225,50 @@
 
 .plb .plb-col:focus-visible{ outline: 2px solid var(--accent); outline-offset: -3px; }
 
+/* ── Structural pass, lane 1, 2026-09-23 ─────────────────────────────────────
+   Earlier passes here were colour, radius and focus only, by design (see the
+   header). This one changes composition on the board, and still leaves the
+   toolbar's metrics (bar one touch-only floor, below) and the column ink
+   alone.
+
+   CONSIDERED AND LEFT: "Copy CSS" wraps alone under the adjust sliders below
+   about 1590px. Keeping it inline costs the four slider tracks the width —
+   measured 51px each at 1181 and 102 at 1440, against 134 wrapped — and a
+   51px hue slider is worse than a wrapped button. */
+
+/* THE COLUMN READS FROM ITS LEFT EDGE, the way the founder's App design draws
+   it: ramp, then name, hex and role stacked flush-left at the foot of the
+   colour, with the column's tools at its top-left. Centred, five columns of
+   centred text made the board read as five posters rather than one palette
+   with five labelled slots, and a centred label drifts sideways every time a
+   name is a word longer or shorter than its neighbour.
+   From 769px only. At 768 and under global.css lays each colour out as a
+   ROW, already left-aligned, and none of this applies. Weights, sizes and
+   ink are untouched: see "AND NOT THE INK ON A COLOUR COLUMN" above. */
+@media (min-width: 769px) {
+  .plb .plb-col{ align-items: flex-start; padding-inline: clamp(12px, 1.4vw, 20px); }
+  .plb .plb-col-tools{ align-self: flex-start; }
+  .plb .plb-name{ padding: 0; text-align: left; }
+  /* The hex keeps its hover wash, so it keeps its padding; the negative margin
+     puts its TEXT on the same left edge as the name above it. */
+  .plb .plb-hex{ margin-left: -8px; }
+  .plb .plb-badges{ justify-content: flex-start; }
+}
+@media (min-width: 769px) and (hover: none) {
+  .plb .plb-col-tools{ justify-content: flex-start; }
+}
+
+/* The ramp lifted 2px on hover. Hover carried more personality than
+   feedback; the ramp is a button, and its focus ring and cursor say so. */
+.plb .plb-ramp:hover .plb-ramp-bar{ transform: none; }
+
+/* The two `.plb` rules in global.css that still spelled a legacy token. The
+   rest (twenty, all in deferred/colour.css) are fixed at source now; the root
+   re-point above stays only as the net for shared components drawn inside
+   this page (`.btn-accent` and friends), which belong to another lane. */
+.plb .plb-varrow--active .plb-varrow-name{ color: var(--accent-text); }
+.plb .plb-collapsed-cta{ border-color: var(--accent); color: var(--accent-text); }
+
 /* ── Coarse pointers ─────────────────────────────────────────────────────────
    44px, and min-HEIGHT only. toolbarFit.js measures the rail's intrinsic
    WIDTH; a height floor is invisible to it, so the touch target can be raised
@@ -237,7 +281,21 @@
   .plb .plb-seedpick .cpk-trigger,
   .plb .plb-collapsed-cta,
   .plb .plb-menu-row,
-  .plb .plb-hex{ min-height: 44px; }
+  .plb .plb-hex,
+  .plb .plb-copycss,
+  .plb .plb-adjust .snapv-value,
+  .plb .plb-adjust input[type="range"]{ min-height: 44px; }
+  /* The column's lock / copy / more were 32x32 on a phone, where they are the
+     only way to reach those actions. The rows they sit in are taller than 44
+     already, so the size costs no layout. */
+  .plb .plb-tool{ width: 44px; height: 44px; }
+  /* WIDTH on the three narrowest toolbar controls, measured 39-40px wide at
+     390. This is the one metric the header says not to move lightly:
+     toolbarFit.js measures the rail's intrinsic width. It measures, it does not
+     assume, so a wider touch control moves the collapse to where the controls
+     actually stop fitting; 53-palette-toolbar-fit holds the result. */
+  .plb .plb-seedpick .cpk-trigger,
+  .plb .plb-icobtn{ min-width: 44px; }
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
