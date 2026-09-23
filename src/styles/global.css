@@ -225,6 +225,13 @@
   --accent-wash:color-mix(in srgb,var(--accent) 8%,transparent);
   --accent-wash-4:color-mix(in srgb,var(--accent) 20%,transparent);
   --accent-ink-wash:color-mix(in srgb,var(--accent-ink) 16%,transparent);
+  /* The default avatar: the design file's accent disc with the initials on
+     --accent-ink, the same pair Settings' profile avatar and .btn-accent use.
+     Declared HERE, for both themes. It used to live only in the light block,
+     so in dark every disc was invalid and the initials floated with nothing
+     behind them. Measured: 5.18:1 light, 9.17:1 dark (avatar-disc-both-themes). */
+  --avatar-grad:var(--accent-mid);
+  --avatar-ink:var(--accent-ink);
 }
 /* Dark ground: the accent LIFTS toward paper rather than deepening, and the
    brand's dark-theme blue (#6FA8FF) is light enough that near-black is the
@@ -320,7 +327,7 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .topbar-btn-export-label{display:grid;grid-template-columns:0fr;opacity:0;margin-left:-6px;transition:grid-template-columns var(--dur-3) var(--ease-entrance),opacity var(--dur-2) var(--ease-standard),margin-left var(--dur-3) var(--ease-entrance)}
 .topbar-btn-export-chev.is-open{transform:rotate(180deg)}
 .export-dropdown{position:absolute;top:calc(100% + 6px);right:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:200;min-width:280px;padding:6px;animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.topbar-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:#fff;font-weight:700;font-size:13px;text-decoration:none!important;flex-shrink:0;transition:all var(--dur-2) var(--ease-standard);border:2px solid var(--border)}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:var(--avatar-ink);font-weight:700;font-size:13px;text-decoration:none!important;flex-shrink:0;transition:all var(--dur-2) var(--ease-standard);border:2px solid var(--border)}
 .topbar-avatar img{width:100%;height:100%;object-fit:cover}
 /* Profile quick menu */
 .profile-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:240px;max-width:calc(100vw - 16px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:200;padding:6px;animation:cp-rise var(--dur-2) var(--ease-entrance)}
@@ -2815,8 +2822,6 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   --brand:#0F6FFF;--brand-soft:#4D90FF;--brand-bg:rgba(15,111,255,.08);--brand-glow:rgba(15,111,255,.12);--info:#0F6FFF;--info-bg:rgba(15,111,255,.08);
   /* Same value as dark — the highlight does not lighten. See the dark block. */
   --hi:#E9FF64;--hi-fg:#0F0F10;
-  /* Default-avatar background: brand-blue → darker. References --brand/--accent-strong so it resolves per-theme at use-site. */
-  --avatar-grad:linear-gradient(140deg,var(--accent),var(--accent-text));
   /* STATE COLOURS — three tokens per role, and they are NOT interchangeable.
      These light values are already darker than the ones in the early
      [data-theme="light"] block at the top of this file; THIS block wins, because
@@ -3257,7 +3262,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-cta{display:inline-grid;grid-template-columns:1fr;align-items:center;justify-items:center;transition:opacity var(--dur-3) var(--ease-out),transform var(--dur-3) var(--ease-out),grid-template-columns var(--dur-3) var(--ease-inout),padding var(--dur-3) var(--ease-inout),margin var(--dur-3) var(--ease-inout),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .pnav-cta-i{overflow:hidden;min-width:0;white-space:nowrap}
 .pnav-cta.is-waiting{opacity:0;transform:translateY(-6px);grid-template-columns:0fr;padding-left:0;padding-right:0;margin-left:-8px;pointer-events:none}
-.pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;flex:0 0 auto}
+.pnav-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:12px;font-weight:600;color:var(--avatar-ink);flex:0 0 auto}
 /* THE MENU BUTTON IS A CONTROL, NOT A GLYPH ON THE BACKGROUND.
    Founder, 2026-09-05, marked screenshot at 662px: the search circle, the
    avatar and the hamburger "are misaligned". Their BOXES are not — all three
@@ -3428,14 +3433,14 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--danger,#dc2626) 12%,var(--bg-1));color:var(--danger,#dc2626)}
 .pnav-pop--account{width:280px}
 .pnav-pop-id{display:flex;align-items:center;gap:12px;padding:10px}
-.pnav-pop-avatar{width:40px;height:40px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:14px;font-weight:600;color:#fff}
+.pnav-pop-avatar{width:40px;height:40px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:14px;font-weight:600;color:var(--avatar-ink)}
 .pnav-pop-id-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent-mid);border:1px solid var(--accent-mid);border-radius:var(--radius-pill);padding:0 6px}
 .pnav-pop-id-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Account-switcher rows — compact avatar + name/email stack per known account */
 .pnav-pop-acct{min-height:46px;padding:5px 10px}
-.pnav-pop-acct-avatar{width:26px;height:26px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:10px;font-weight:600;color:#fff}
+.pnav-pop-acct-avatar{width:26px;height:26px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:10px;font-weight:600;color:var(--avatar-ink)}
 .pnav-pop-acct-text{display:flex;flex-direction:column;gap:1px;min-width:0}
 .pnav-pop-acct-name{font-size:var(--fs-body-s);font-weight:560;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pnav-pop-acct:hover .pnav-pop-acct-name{color:var(--t0)}
