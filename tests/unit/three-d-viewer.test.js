@@ -362,3 +362,13 @@ test('a production build keeps three.js out of the entry chunk and out of the pa
   assert.ok(files.some((f) => /^cadWorker-.*\.js$/.test(f)), `no cadWorker asset among ${files.length} files`)
   assert.deepEqual(files.filter((f) => /occt|\.wasm$/i.test(f) && !/ffmpeg/i.test(f)), [])
 })
+
+// An MTL written on Windows names its textures with backslashes
+// (`C:\models\tex\Wood.PNG`). The sidecar lookup keys files by basename, so a
+// basename that only split on "/" never matched the dropped wood.png.
+test('a sidecar path resolves to its file name on either separator', () => {
+  assert.equal(E.basename('C:\\models\\tex\\Wood.PNG'), 'wood.png')
+  assert.equal(E.basename('..\\tex\\wood.png'), 'wood.png')
+  assert.equal(E.basename('tex/sub/wood.png?v=2#x'), 'wood.png')
+  assert.equal(E.basename('wood%20grain.png'), 'wood grain.png')
+})

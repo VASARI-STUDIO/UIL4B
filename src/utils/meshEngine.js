@@ -170,9 +170,11 @@ const yieldToPaint = () => new Promise((r) => {
 
 const decode = (buffer) => new TextDecoder().decode(buffer)
 
-function basename(url) {
+export function basename(url) {
   const clean = String(url).split(/[?#]/)[0]
-  let name = clean.slice(clean.lastIndexOf('/') + 1)
+  // Either separator: an MTL or glTF written on Windows names its textures
+  // with backslashes, and the dropped file is keyed by its bare name.
+  let name = clean.split(/[\\/]/).pop()
   try { name = decodeURIComponent(name) } catch { /* keep it raw */ }
   return name.toLowerCase()
 }
