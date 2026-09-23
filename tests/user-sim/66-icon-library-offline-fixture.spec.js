@@ -536,3 +536,63 @@ test('My Icons is never gated, and the Logo.dev pack is', async ({ browser }) =>
   await expect(page.locator('.ig-gate')).toBeVisible()
   await ctx.close()
 })
+
+// THE GROUP CHIPS ANNOUNCE THE GATE BEFORE IT IS CLICKED (Spectrum, 2026-09-23).
+//
+// SPECTRUM-REVIEW's follow-up for the rebuilt toolbar: "put a marker back on
+// the locked group chips — that is the one place the gate is currently
+// discovered by clicking rather than announced." The marker is a padlock badge
+// POSITIONED on the chip (no width) with the tier word in the accessible name.
+//
+// Three things are held, one per rung, and the last is the reason the marker
+// is a badge at all: the tray is the SAME WIDTH for a gated viewer as for a
+// Pro one, so the gate never reshapes the toolbar for the people it gates.
+//
+// MUTATION: drop `lock` from groupOptions in IconLibrary.jsx — the signed-out
+// rung fails on "at least one chip carries the lock". Render the lock inline
+// (position:static) in library.css — the width comparison fails.
+async function groupChips(page) {
+  const tray = page.getByRole('group', { name: 'Filter by icon group' }).first()
+  await expect(tray).toBeVisible({ timeout: 20000 })
+  await page.evaluate(() => document.fonts.ready)
+  return tray.evaluate((el) => ({
+    width: (() => { const p = el.style.flexWrap; el.style.flexWrap = 'nowrap'; const w = el.scrollWidth; el.style.flexWrap = p; return w })(),
+    chips: [...el.querySelectorAll('.lbry-filter')].map((b) => ({
+      name: (b.getAttribute('aria-label') || b.textContent).replace(/\s+/g, ' ').trim(),
+      badge: !!b.querySelector('.lbry-filter-lock svg') && b.querySelector('.lbry-filter-lock').getBoundingClientRect().width > 0,
+    })),
+  }))
+}
+
+test('the group chips mark a locked group before it is clicked, at no cost in width', async ({ browser }) => {
+  test.skip(isLiveIconify(), LIVE)
+  const read = async (plan) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 950 } })
+    const page = await ctx.newPage()
+    watch(page, plan ? `designer on the ${plan} plan` : 'visitor who has not signed in')
+    if (plan) await signIn(page, { plan })
+    await go(page, '/create/icons')
+    const r = await groupChips(page)
+    await ctx.close()
+    return r
+  }
+  const anon = await read(null)
+  const free = await read('free')
+  const pro = await read('pro')
+
+  const locked = (r) => r.chips.filter((c) => c.badge)
+  // PRESENCE first, so a tray that rendered no chips cannot pass the rest.
+  expect(anon.chips.length, 'the group tray rendered').toBe(7)
+  expect(locked(anon).length, 'signed out, at least one chip carries the lock').toBeGreaterThan(0)
+  for (const c of anon.chips) {
+    expect(c.badge, `${c.name}: the padlock and the tier word travel together`)
+      .toBe(/ · (Pro|Log in)$/.test(c.name))
+  }
+  for (const open of ['My Icons', 'Outlined']) {
+    expect(anon.chips.find((c) => c.name.startsWith(open)).badge, `${open} is open signed out`).toBe(false)
+  }
+  expect(locked(free).length, 'an account opens groups, so it sees fewer locks').toBeLessThan(locked(anon).length)
+  expect(free.chips.filter((c) => / · Log in$/.test(c.name)), 'a signed-in viewer is never told to log in').toEqual([])
+  expect(locked(pro), 'Pro sees no locks at all').toEqual([])
+  expect(Math.abs(anon.width - pro.width), `the tray is ${anon.width}px signed out and ${pro.width}px for Pro`).toBeLessThanOrEqual(1)
+})

@@ -1257,8 +1257,8 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             />
             {pasteErr && <p className="icust-err">That doesn’t look like valid SVG. Paste the full &lt;svg&gt;…&lt;/svg&gt;.</p>}
             <div className="icust-foot">
-              <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={onClose}>Cancel</button>
-              <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={applyPaste}>Add to stage</button>
+              <button type="button" className="lib-btn" onClick={onClose}>Cancel</button>
+              <button type="button" className="lib-btn lib-btn--primary" onClick={applyPaste}>Add to stage</button>
             </div>
           </div>
         ) : (
@@ -1418,13 +1418,13 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
             </div>
 
             <div className="icust-foot">
-              <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={handleCopySvg}>
+              <button type="button" className="lib-btn lib-btn--primary" onClick={handleCopySvg}>
                 {copied === 'svg' ? 'Copied!' : 'Copy SVG'}
               </button>
 
               <button
                 type="button"
-                className="ui-pill ui-pill-out ui-pill-md"
+                className="lib-btn"
                 onClick={handleSave}
                 onMouseEnter={() => setSaveHover(true)}
                 onMouseLeave={() => setSaveHover(false)}
@@ -1434,9 +1434,9 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                 {saveLabel}
               </button>
 
-              <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={handleDownload}>Download</button>
+              <button type="button" className="lib-btn" onClick={handleDownload}>Download</button>
 
-              <button type="button" className="ui-pill ui-pill-out ui-pill-md icust-reset" onClick={handleReset}>Reset to default</button>
+              <button type="button" className="lib-btn icust-reset" onClick={handleReset}>Reset to default</button>
             </div>
 
             {savedInProjects.length > 0 && (
@@ -1531,7 +1531,7 @@ function IconCustomizer({ icon, addMode, isPro, saveLimit = Infinity, onClose, o
                   />
                   <button
                     type="button"
-                    className="ui-pill ui-pill-accent ui-pill-md"
+                    className="lib-btn lib-btn--primary"
                     disabled={!newProjName.trim()}
                     onClick={handleCreateAndSave}
                   >
@@ -1791,8 +1791,7 @@ function IconGateWall({ heading, body, action, onAction, kind }) {
       <div className="lockt-cta-copy">
         <p className="lockt-cta-head">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-            style={{ verticalAlign: '-1px', marginInlineEnd: 6 }}>
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="ig-gate-lock">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
           {heading}
@@ -2507,9 +2506,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      active button and re-runs that measurement whenever the options array
      changes identity. Per-tier is a handful of times in a session. Per-render
      would be every keystroke, and the indicator would never settle. */
-  /* THE GROUP TRAY CARRIES NO TIER MARKER, AND THAT IS MEASURED RATHER THAN
-     PREFERRED — it is the one place this gate could not be shown without
-     charging the gated viewer for it.
+  /* UNTIL 2026-09-23 THE GROUP TRAY CARRIED NO TIER MARKER, AND THAT WAS
+     MEASURED RATHER THAN PREFERRED — it was the one place this gate could not
+     be shown without charging the gated viewer for it. (The history below is
+     kept because it is WHY the marker that replaced it takes no width.)
 
      Jasper's library (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd)
      badges the CATEGORY as well as the card, which is the right instinct, and
@@ -2538,10 +2538,24 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
      active button and re-runs that measurement whenever the options array
      changes identity. Per tier is a handful of times in a session; per render
      would be every keystroke, and the indicator would never settle. */
+  /* 2026-09-23 — THE ROW HAS SLACK NOW, AND THE MARKER IS BACK. The Spectrum
+     toolbar gives the filters a full-width row of their own, and the marker
+     is a padlock badge positioned on the chip's corner rather than a word laid
+     out inside it (see `lock` in LibraryFilterGroup), so it costs the tray no
+     width at all: the tray a gated viewer gets is the same width, and
+     collapses at the same breakpoints, as the one a Pro viewer gets. The
+     rule is the pack menu's: a group is marked only when EVERY pack in it is
+     out of reach, and the word is the cheapest tier that opens one of them —
+     the same answer `needFor` gives the wall. */
   const groupOptions = useMemo(() => [
     { id: 'custom', label: 'My Icons' },
-    ...GROUP_ORDER.map((key) => ({ id: key, label: ICON_GROUPS[key].label })),
-  ], [])
+    ...GROUP_ORDER.map((key) => {
+      const { label, packs } = ICON_GROUPS[key]
+      const locked = packs.every((p) => !canSeePack(p, tier))
+      if (!locked) return { id: key, label }
+      return { id: key, label, lock: packs.some((p) => tierOf(p) === 'free') ? 'Log in' : 'Pro' }
+    }),
+  ], [tier])
 
   // Batch in the markup for whatever the grid is about to draw. Demand-driven:
   // the effect re-runs when `shown` grows (the sentinel raises `visible`) or the
@@ -3032,7 +3046,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               // library connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
-                <button type="button" className="ui-pill ui-pill-out ui-pill-sm" onClick={() => retryRef.current?.()}>Try again</button>
+                <button type="button" className="lib-btn ig-notice-btn" onClick={() => retryRef.current?.()}>Try again</button>
               </div>
             )}
 

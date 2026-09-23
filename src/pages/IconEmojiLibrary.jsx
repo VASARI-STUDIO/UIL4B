@@ -8,6 +8,9 @@ import DiscoverGalleryHero from '../components/discover/DiscoverGalleryHero'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
+// This page's own sheet — every selector rooted at `.iel-page`, so it wins on
+// specificity rather than on whichever chunk the bundler emits last.
+import '../styles/pages/icon-emoji-library.css'
 
 const IconLibrary = lazy(() => import('./IconLibrary'))
 const EmojiLibrary = lazy(() => import('./EmojiLibrary'))
@@ -78,7 +81,7 @@ export default function IconEmojiLibrary({ onCopy }) {
 
   return (
     <>
-    <div className="sec lib-surface">
+    <div className="sec lib-surface iel-page">
       {/* THE SHARED LIBRARY MASTHEAD. #292 moved this surface's browse language
           onto the Palette/Gradient components; the hero was not part of that,
           so it stayed on a bespoke `.lib-head` — light, flush, 56px/720-weight

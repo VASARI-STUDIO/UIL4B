@@ -1114,7 +1114,12 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    slack the review asked for: at 1280 the icons row-1 now carries the search,
    the pack select and the action with ~500px spare, where before the seven
    group chips shared it. */
+/* The seam under the panel is the design's, not the old clamp(28px,4vw,52px):
+   `clamp(22px,3vw,34px)` down to the result head on the galleries (Palette
+   Library, line 249). The icons page, where the grid follows the panel with
+   no head between them, takes its own 14px in pages/icon-emoji-library.css. */
 .lib-surface .lbry-toolbar{
+  margin-bottom:clamp(22px,3vw,34px);
   padding:12px;background:var(--card);
   box-shadow:var(--shadow-s);
   -webkit-backdrop-filter:none;backdrop-filter:none;
@@ -1254,3 +1259,129 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   border:1px solid var(--border);border-radius:var(--radius-2xl);
 }
 .lib-surface .ic:hover{background:var(--hvr);border-color:var(--bh)}
+
+
+/* ── The tier marker on a locked group chip ────────────────────────────────
+   The follow-up SPECTRUM-REVIEW left on the icons page: "when the toolbar is
+   rebuilt with slack, put a marker back on the locked group chips — that is
+   the one place the gate is currently discovered by clicking rather than
+   announced." The word ("Pro" / "Log in") is in the accessible name; what a
+   sighted viewer gets is a padlock badge on the chip's corner.
+
+   POSITIONED, NOT LAID OUT, and that is the whole design: a badge adds no
+   width, so the tray's intrinsic width — which LibraryFilterGroup's `fit`
+   uses to decide chips-or-menu — is the same for a gated viewer as for a Pro
+   one. A laid-out marker measured +186px on this row once, and wrapped the
+   toolbar for exactly the people the gate was already costing.
+
+   It straddles the chip's TOP edge, inset from the right, rather than
+   hanging off the corner: a badge past the chip's right side is content past
+   the tray's right side on the row's last chip, and 25-defect-sweep's S4
+   check reads that as the row turning back into a horizontal scroller
+   (measured 4px over at 320, 390 and 1180). Upward overflow is not
+   scrollable overflow, and the 6px row gap clears it.
+
+   In the collapsed MENU a row has room, so the padlock sits inline at the
+   row's end like the count does there. */
+.lib-surface .lbry-filter-lock{
+  position:absolute;top:-7px;right:8px;z-index:2;
+  display:grid;place-items:center;width:18px;height:18px;
+  border:1px solid var(--bh);border-radius:50%;
+  background:var(--card);color:var(--t1);pointer-events:none;
+}
+.lib-surface .lbry-filter-lock svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.lib-surface .lbry-filtermenu .lbry-filter-lock{position:static;margin-left:auto;border:0;background:none;width:auto;height:auto}
+.lib-surface .lbry-filtermenu .lbry-filter-lock svg{width:12px;height:12px}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   APP CONTROLS on every library surface
+   ══════════════════════════════════════════════════════════════════════════
+   DECISION (director, 2026-09-23, from `UIL4B App.dc.html`): app controls —
+   toolbar buttons, fields, secondary buttons — are 10–12px rectangles over a
+   hairline; 999px is kept for meters, for the marketing page, and here for
+   the two things the app file itself draws as pills because they TOGGLE (the
+   filter chips and the Icons/Emoji tabs, above).
+
+   `.btn` in global.css is still a 999px pill and belongs to another lane, so
+   the shape is restated for these seven surfaces only, at `.lib-surface`.
+   `--radius` rather than 12px: rounding is a user setting (vs-appearance), and
+   a hard-coded radius would make that setting do nothing here.
+
+   The accent fill is `--accent-mid` under `--accent-ink`, MEASURED rather than
+   read from the names (they read backwards in light): 5.2:1 in light and 8.9:1
+   in dark; the hover, `--accent-text`, is 5.8:1 and 9.7:1. `--accent-mid` is
+   the member nearest the plain accent in BOTH themes — `--accent-bright`
+   passed too, but in dark it is a washed pastel beside the nav's own blue. Both are
+   derived from `--accent`, so a premium theme moving the accent moves these —
+   which `--accent-strong`, a per-theme literal, would not. The hover no longer
+   lifts the button a pixel with a coloured shadow: the fill change is the
+   feedback. */
+.lib-surface .btn{border-radius:var(--radius)}
+.lib-surface .btn-accent,
+.lib-surface .btn-primary{background:var(--accent-mid);color:var(--accent-ink);border-color:transparent}
+.lib-surface .btn-accent:hover,
+.lib-surface .btn-primary:hover{background:var(--accent-text);color:var(--accent-ink);transform:none;box-shadow:none}
+.lib-surface .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* The shared app button — the rectangle every library surface's own dialogs
+   and footers use (IconLibrary's customizer, the Prompt Library's modal).
+   A hairline at rest; the ONE primary in a group is an ink fill, which is the
+   app design's own in-task CTA ("Create a palette" on the library screens:
+   `background:var(--ink);color:var(--page)`) and is ink-on-paper in both
+   themes with no patch. Accent fills stay for the account and upgrade asks,
+   so blue keeps meaning "the product is asking you for something".
+
+   Mobbin, for a detail dialog's actions: Bloom's image detail
+   (mobbin.com/screens/6e00a735-3e9f-4bdd-9d17-5dd1bba60907), Magnific's icon
+   detail (mobbin.com/screens/3d8c2256-598b-46f4-b79b-1831ba0a0ddb) and
+   Descript's prompt template (mobbin.com/screens/34c75374-2f13-4b12-b47a-80d2e9f156fa)
+   — one filled rectangle, hairline rectangles beside it, no pills. */
+.lib-surface .lib-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:40px;padding:0 16px;
+  border:1px solid var(--bh);border-radius:var(--radius);
+  background:transparent;color:var(--t0);
+  font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
+  cursor:pointer;text-decoration:none;
+  transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard);
+}
+.lib-surface .lib-btn:hover{background:var(--hvr);border-color:color-mix(in srgb,var(--t0) 34%,transparent)}
+.lib-surface .lib-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lib-surface .lib-btn:disabled{opacity:.5;cursor:not-allowed}
+.lib-surface .lib-btn--primary{background:var(--t0);border-color:var(--t0);color:var(--bg-1)}
+.lib-surface .lib-btn--primary:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-1));border-color:transparent}
+.lib-surface .lib-btn--primary:disabled:hover{background:var(--t0);border-color:var(--t0)}
+.lib-surface .lib-btn svg{flex-shrink:0}
+@media(pointer:coarse){.lib-surface .lib-btn{min-height:44px}}
+
+/* The masthead's one action ("Submit prompt", "Open the Gradient Generator",
+   "Suggest a resource"). The slab is a fixed dark surface in BOTH themes, so
+   its paper values are literal, like the h1 above. The global hover repainted
+   it in `--brand` with white text; on the slab the hover is the paper dimming
+   instead. */
+/* Restated at (0,3,0) because `.lib-surface .btn-accent` above is (0,2,0) and
+   in a later sheet than global's `.dgh-action .btn`: without this the Prompt
+   Library's "Add prompt" (a .btn-accent) would lose the paper fill on the slab. */
+.lib-surface .dgh-action .btn{min-height:44px;padding:0 18px;border-radius:var(--radius);color:#0a0a0b;background:#fff;border-color:#fff}
+.lib-surface .dgh-action .btn:hover{color:#0a0a0b;background:rgba(247,247,244,.84);border-color:transparent}
+
+/* The result head's eyebrow ("Everything you can browse", "Curated
+   collection") was accent mono caps above an h2 that already says the same
+   thing louder. Quiet ink: `--t2` measures 5.5:1 on the light page. */
+.lib-surface .drh-head span{color:var(--t2)}
+
+/* Search focus was `--brand`. The ring is non-text, so the plain accent is
+   right for it; the halo is the derived wash. */
+.lib-surface .lbry-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+
+/* The empty state's one action. It was an `--accent-strong` fill; an empty
+   result is the user's own filter talking back, not the product asking for
+   something, so it is the ink primary. */
+.lib-surface .lbry-empty-clear{background:var(--t0);color:var(--bg-1)}
+.lib-surface .lbry-empty-clear:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-1))}
+
+/* A bare link on these pages inherited global `a{color:--accent-strong}`.
+   `:where()` keeps this at the element's own specificity, so every classed
+   link rule (.cur-link, .grg-open, ...) still decides its own colour. */
+:where(.lib-surface) a{color:var(--accent-mid)}
