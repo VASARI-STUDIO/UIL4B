@@ -302,7 +302,7 @@ for (const [width, status, body] of [
     await expect(page.locator('.alt-dropzone')).toBeVisible({ timeout: 15000 })
     await page.locator('.alt-dropzone input[type="file"]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: await pngBytes(page) })
     await expect(page.locator('.alt-card-ready')).toBeVisible({ timeout: 10000 })
-    await page.locator('.alt-toolbar .btn-primary').click()
+    await page.locator('.alt-toolbar .alt-btn--primary').click()
 
     const card = page.locator('.alt-card.alt-card-error')
     await expect(card).toBeVisible({ timeout: 15000 })
@@ -322,7 +322,7 @@ for (const [width, status, body] of [
 
     // The batch is over when the toolbar's primary is pressable again. If the
     // old toast fired it is on screen right now — toasts stay for seconds.
-    await expect(page.locator('.alt-toolbar .btn-primary')).toBeEnabled({ timeout: 10000 })
+    await expect(page.locator('.alt-toolbar .alt-btn--primary')).toBeEnabled({ timeout: 10000 })
     await expect(page.locator('.toast'), 'nothing was generated, so nothing says it was').not.toContainText(/Generated \d+ alt text/)
     await ctx.close()
   })

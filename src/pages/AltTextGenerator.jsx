@@ -301,8 +301,8 @@ export default function AltTextGenerator({ toast }) {
   const activeTone = TONES.find(t => t.id === tone) || TONES[0]
 
   return (
-    <div className="sec">
-      <div className="sec-h">
+    <div className="sec alt-page">
+      <header className="alt-hero">
         {/* NO TAXONOMY EYEBROW. It read "AI Tools" at y=102 — the Create group
             the visitor clicked through, above an h1 that names the tool.
             #surface-headers-read-as-ai. */}
@@ -312,7 +312,7 @@ export default function AltTextGenerator({ toast }) {
             was selling something that does not exist. Pro buys CAPACITY. A
             unit test fails if this claim comes back while the models match. */}
         <p>Batch-upload images and generate WCAG-compliant alt text that also earns search relevance — by describing images accurately, not by stuffing keywords. {isPro ? 'Pro capacity active.' : 'Pro raises your daily and monthly generation limits.'}</p>
-      </div>
+      </header>
 
       <AuthGate featureLabel="generate alt text">
       {/* Above the dropzone, not beside the button: the allowance is something
@@ -333,19 +333,21 @@ export default function AltTextGenerator({ toast }) {
           accept={ACCEPT}
           multiple
           onChange={onInputChange}
-          style={{ display: 'none' }}
+          hidden
         />
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
-          <polyline points="21 15 16 10 5 21" />
-        </svg>
+        <span className="alt-dropzone-ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        </span>
         <div className="alt-dropzone-title">Drop images here or click to upload</div>
         <div className="alt-dropzone-sub">JPG · PNG · WebP · HEIC · multiple files supported</div>
       </div>
 
       <div className="alt-options">
-        <div className="alt-context" style={{ flex: 1 }}>
+        <div className="alt-context">
           <label htmlFor="alt-context-input">Page context (optional)</label>
           <input
             id="alt-context-input"
@@ -363,13 +365,13 @@ export default function AltTextGenerator({ toast }) {
           </p>
         </div>
         <div className="alt-context">
-          <label id="alt-tone-label">Length</label>
-          <div className="aipg-chips" role="group" aria-labelledby="alt-tone-label">
+          <span className="alt-label" id="alt-tone-label">Length</span>
+          <div className="alt-seg" role="group" aria-labelledby="alt-tone-label">
             {TONES.map(t => (
               <button
                 key={t.id}
                 type="button"
-                className={`pl-chip${tone === t.id ? ' active' : ''}`}
+                className="alt-seg-btn"
                 onClick={() => setTone(t.id)}
                 // The chips were styled-selected only. Without aria-pressed a
                 // screen-reader user cannot tell which length is active.
@@ -422,14 +424,14 @@ export default function AltTextGenerator({ toast }) {
             {doneCount > 0 && <> · <strong>{doneCount}</strong> generated</>}
           </div>
           <div className="alt-toolbar-actions">
-            <button className="btn btn-s" onClick={clearAll} disabled={busy}>Clear</button>
+            <button type="button" className="alt-btn" onClick={clearAll} disabled={busy}>Clear</button>
             {doneCount > 0 && (
               <>
-                <button className="btn btn-s" onClick={copyAll} disabled={busy}>Copy all</button>
-                <button className="btn btn-s" onClick={downloadCSV} disabled={busy}>Download CSV</button>
+                <button type="button" className="alt-btn" onClick={copyAll} disabled={busy}>Copy all</button>
+                <button type="button" className="alt-btn" onClick={downloadCSV} disabled={busy}>Download CSV</button>
               </>
             )}
-            <button className="btn btn-primary btn-s" onClick={generateAll} disabled={busy || readyCount === 0}>
+            <button type="button" className="alt-btn alt-btn--primary" onClick={generateAll} disabled={busy || readyCount === 0}>
               {busy ? 'Generating…' : `Generate ${readyCount > 0 ? `(${readyCount})` : 'all'}`}
             </button>
           </div>
@@ -445,7 +447,7 @@ export default function AltTextGenerator({ toast }) {
               ) : (
                 <div className="alt-card-preview-pending">Loading…</div>
               )}
-              <button className="alt-card-remove" onClick={() => removeItem(it.id)} aria-label="Remove">
+              <button type="button" className="alt-card-remove" onClick={() => removeItem(it.id)} aria-label={`Remove ${it.name}`}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -498,13 +500,13 @@ export default function AltTextGenerator({ toast }) {
                     <span className={`alt-card-count${it.altText.length > 125 ? ' over' : ''}`}>
                       {it.altText.length} chars
                     </span>
-                    <button className="btn btn-s" onClick={() => copyOne(it)}>Copy</button>
-                    <button className="btn btn-s" onClick={() => generateForItem(it)} disabled={busy}>Retry</button>
+                    <button type="button" className="alt-btn" onClick={() => copyOne(it)}>Copy</button>
+                    <button type="button" className="alt-btn" onClick={() => generateForItem(it)} disabled={busy}>Retry</button>
                   </div>
                 </>
               )}
               {!it.altText && it.status !== 'generating' && it.status !== 'error' && (
-                <button className="btn btn-s" onClick={() => generateForItem(it)} disabled={busy || !it.base64}>
+                <button type="button" className="alt-btn" onClick={() => generateForItem(it)} disabled={busy || !it.base64}>
                   Generate
                 </button>
               )}
