@@ -818,10 +818,15 @@ export default function Settings({ toast }) {
                         <span className={`sub-tier-amount${proPrice.loaded && !(billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly) ? ' is-word' : ''}`}>{!proPrice.loaded ? '—' : (billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly) || 'Unavailable'}</span>
                         <span className="sub-tier-per">{billing === 'yearly' ? 'per year' : 'per month'}</span>
                       </div>
+                      {/* Three states, and the amount is checked in every one of them:
+                          usePrices only formats a NUMBER, so with the service down
+                          (no recurring amount exists) or up but silent on this
+                          currency, the amount is null — and the yearly line used to
+                          print "USD · null/mo". The per-month figure is only ever
+                          shown beside a price, as Plans.jsx does. */}
                       <div className="sub-tier-sub">{!proPrice.loaded ? 'Checking live price…'
-                        : !proPrice.serviceAvailable ? ((billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly)
-                          ? `Live pricing is unreachable · showing the canonical ${proPrice.currencyLabel} amount`
-                          : 'Live pricing is unreachable · no price can be shown right now')
+                        : !proPrice.serviceAvailable ? 'Live pricing is unreachable · no price can be shown right now'
+                        : !(billing === 'yearly' ? proPrice.yearlyTotal : proPrice.monthly) ? `No ${proPrice.currencyLabel} price for this billing period right now`
                         : billing === 'yearly' ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? `, save ${proPrice.savingsPct}%` : ''} · 7-day free trial` : `${proPrice.currencyLabel} · billed monthly`}</div>
                     </div>
                     <ul className="sub-tier-list">

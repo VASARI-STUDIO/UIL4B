@@ -88,4 +88,28 @@ test.describe('settings panels', () => {
       await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Live pricing is unreachable')
     }
   })
+
+  // THE SERVICE ANSWERS, BUT NOT FOR THIS CURRENCY. `serviceAvailable` is true
+  // and the amount is still null (usePrices only formats a number), and the
+  // yearly line printed "AUD · null/mo" under "Unavailable". The monthly one
+  // claimed "billed monthly" for a price it could not show.
+  test('signed in, a live price list without this currency never prints "null"', async ({ page }) => {
+    watch(page, 'a free account whose currency the price service does not list')
+    await page.route('**/api/get-prices*', (r) => r.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ monthly: {}, quarterly: {}, yearly: {} }),
+    }))
+    await page.addInitScript(() => { try { localStorage.setItem('vs-settings-section', 'support') } catch { /* private mode */ } })
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+
+    const pro = page.locator('.sub-tier-pro')
+    await expect(pro).toBeVisible()
+    for (const billing of ['Yearly', 'Monthly']) {
+      await page.getByRole('tab', { name: new RegExp(billing) }).click()
+      // POSITIVE CONTROL: this is the no-amount state, not a loaded price.
+      await expect(pro.locator('.sub-tier-amount'), `${billing}: a price was found after all`).toHaveText('Unavailable')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the price line prints "null"`).not.toContainText('null')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the missing price is not said`).toContainText('price for this billing period')
+    }
+  })
 })
