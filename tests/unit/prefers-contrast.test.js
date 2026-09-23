@@ -76,12 +76,12 @@ const declared = (themeSelector, token) => {
 
 // The grounds each theme actually paints text on.
 const LIGHT_GROUNDS = ['#FFFFFF', '#EFEEE9', '#F6F5F1']
-const DARK_GROUNDS = ['#101012', '#151619', '#191A1D', '#212327']
+const DARK_GROUNDS = ['#0A0A0C', '#111215', '#16171A', '#1E2024']
 
 // The defaults these override, so "stronger" can be checked rather than assumed.
 const BASE = {
   light: { '--t1': '#50504A', '--t2': '#5F5F59', '--t3': '#6C6C66', '--border': '#DAD8CF', '--bh': '#C0BDB0', '--accent': '#0F6FFF', '--accent-strong': '#0B5ED7' },
-  dark: { '--t1': '#BFBEB6', '--t2': '#9F9F98', '--t3': '#8E8E88', '--border': '#2A2B2F', '--bh': '#3C3D42', '--accent': '#6FA8FF', '--accent-strong': '#4A90FF' },
+  dark: { '--t1': '#BFBEB6', '--t2': '#9F9F98', '--t3': '#8E8E88', '--border': '#28292D', '--bh': '#393A3F', '--accent': '#6FA8FF', '--accent-strong': '#4A90FF' },
 }
 const GROUNDS = { light: LIGHT_GROUNDS, dark: DARK_GROUNDS }
 
@@ -181,7 +181,7 @@ test('the accent pair is lifted per theme, not swapped blind', () => {
   // In DARK, --accent (#6FA8FF, 6.54) is stronger than --accent-strong (#4A90FF,
   // 5.04). The note prescribed swapping --accent FOR --accent-strong, which in
   // dark would have LOWERED contrast for the one user who asked for more.
-  assert.ok(ratio(declared('dark', '--accent'), '#212327') > ratio('#4A90FF', '#212327'),
+  assert.ok(ratio(declared('dark', '--accent'), '#1E2024') > ratio('#4A90FF', '#1E2024'),
     'the dark accent under prefers-contrast is weaker than plain --accent-strong;\n'
     + 'that is the blind swap the note prescribed, and it is backwards in dark.')
   // And the filled-control mirror, which a text-only lift would break.

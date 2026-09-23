@@ -100,7 +100,7 @@ test.describe('the dark theme is reachable', () => {
     expect(await themeOf(page), 'a dark device was served the light theme').toBe('dark')
     // The page must actually be painted dark, not merely carry the attribute.
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-    expect(bg, 'html[data-theme=dark] was set but the dark tokens did not apply').toBe('rgb(16, 16, 18)')
+    expect(bg, 'html[data-theme=dark] was set but the dark tokens did not apply').toBe('rgb(10, 10, 12)')
     await ctx.close()
   })
 
@@ -216,7 +216,7 @@ await ready(page)
     }
   })
 
-  for (const [scheme, expected, bg] of [['dark', 'dark', 'rgb(16, 16, 18)'], ['light', 'light', 'rgb(239, 238, 233)']]) {
+  for (const [scheme, expected, bg] of [['dark', 'dark', 'rgb(10, 10, 12)'], ['light', 'light', 'rgb(239, 238, 233)']]) {
     test(`on a ${scheme} device the FIRST painted frame is already ${expected}`, async ({ browser }) => {
       // The whole reason the theme is resolved in a synchronous boot script
       // rather than left to React. If the boot script and ThemeContext ever

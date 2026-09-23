@@ -92,7 +92,7 @@ const AA = 4.5
 
 /** The grounds each theme actually paints these on: --bg-0..--bg-3 plus the card. */
 const LIGHT_GROUNDS = ['#FFFFFF', '#EFEEE9', '#F6F5F1']
-const DARK_GROUNDS = ['#101012', '#151619', '#191A1D', '#212327']
+const DARK_GROUNDS = ['#0A0A0C', '#111215', '#16171A', '#1E2024']
 
 /**
  * Bodies are found by BRACE MATCHING, not by regex.
@@ -139,7 +139,7 @@ const darkValue = (t) => resolve(t, '\\[data-theme="dark"\\]')
 test('every category hue has a light AND a dark value', () => {
   for (const t of HUES) {
     assert.ok(lightValue(t), `${t} has no light value`)
-    assert.ok(darkValue(t), `${t} has no dark value — it will paint the light one on #101012`)
+    assert.ok(darkValue(t), `${t} has no dark value — it will paint the light one on #0A0A0C`)
   }
 })
 
@@ -211,7 +211,7 @@ const mixT = (a, b, t) => '#' + hexToRgbT(a)
 test('every category hue has a readable -strong companion in BOTH themes', () => {
   for (const t of STRONG) {
     assert.ok(lightValue(t), `${t} has no light value`)
-    assert.ok(darkValue(t), `${t} has no dark value - it will paint the light one on #101012`)
+    assert.ok(darkValue(t), `${t} has no dark value - it will paint the light one on #0A0A0C`)
   }
 })
 

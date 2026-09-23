@@ -1032,7 +1032,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    for a horizontal strip; in a column it would leave every label floating in
    the middle of its own row with no common left edge to read down. */
 .lbry-filtermenu .lbry-filter{width:100%;justify-content:flex-start;border-radius:var(--radius)}
-/* IN DARK, --card AND --bg-2 ARE THE SAME HEX (#191A1D), so every "raised
+/* IN DARK, --card AND --bg-2 ARE THE SAME HEX (#16171A), so every "raised
    surface on the tray" fill above paints nothing there: the tray's sliding
    indicator is --card on a --bg-2 tray, and the menu's active and hover rows
    are --bg-2 on a --card menu. Measured 2026-09-08 on /discover/palettes with

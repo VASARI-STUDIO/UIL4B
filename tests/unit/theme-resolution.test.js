@@ -43,7 +43,7 @@ function makeDom({
   // that a media-less theme-color tag is created, put first, and kept in step
   // with the resolved theme. That the values match the real grounds is asserted
   // against index.html in tests/unit/brand-icons.test.js.
-  grounds = { light: '#EFEEE9', dark: '#101012' },
+  grounds = { light: '#EFEEE9', dark: '#0A0A0C' },
 } = {}) {
   const attrs = new Map()
   const store = new Map()
@@ -474,7 +474,7 @@ test('ThemeContext · the browser chrome follows an explicit choice, not the OS'
   const provider = mountProvider(dom)
 
   assert.equal(provider.value.theme, 'dark', 'the explicit choice must win over the OS')
-  assert.equal(dom.themeColor(), '#101012',
+  assert.equal(dom.themeColor(), '#0A0A0C',
     'the chrome tint still shows the light ground while the page is painted dark')
   assert.ok(dom.themeColorIsFirst(),
     'the media-less theme-color is not first in head, so the media-scoped tags outrank it')
@@ -489,7 +489,7 @@ test('ThemeContext · the chrome tint follows the theme and never accumulates ta
   assert.equal(dom.themeColor(), '#EFEEE9')
 
   provider.value.setTheme('dark')
-  assert.equal(dom.themeColor(), '#101012', 'the tint did not follow the theme')
+  assert.equal(dom.themeColor(), '#0A0A0C', 'the tint did not follow the theme')
   provider.value.setTheme('light')
   assert.equal(dom.themeColor(), '#EFEEE9', 'the tint did not follow the theme back')
 
