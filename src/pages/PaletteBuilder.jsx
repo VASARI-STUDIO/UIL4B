@@ -629,8 +629,8 @@ export function HctPicker({ hex, label, onChange, onClose }) {
         </div>
       ))}
       <div className="plb-picker-evidence" aria-live="polite">
-        <span>Requested H {requested.h}Â° Â· C {requested.c} Â· T {requested.t}</span>
-        <span>Achieved H {achieved.h}Â° Â· C {achieved.c} Â· T {achieved.t}</span>
+        <span>Requested H {requested.h}° · C {requested.c} · T {requested.t}</span>
+        <span>Achieved H {achieved.h}° · C {achieved.c} · T {achieved.t}</span>
         {limited && <strong>Display gamut limited; controls retain your requested HCT.</strong>}
       </div>
       <div className="plb-picker-hexrow">

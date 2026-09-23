@@ -787,7 +787,13 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
 /* The in-product hand-off on a compact row. A link, not a button: it is a
    navigation, and it must not out-weigh the lead item's real button. */
-.cur-go{font-size:12px;font-weight:650;color:var(--accent);text-decoration:none;
+/* --accent-mid, not --accent: nine "Open in <tool>" links measured 3.82:1 on
+   the light page against the 4.5:1 floor, and 12px/650 is not large text. Not
+   --accent-strong either, though it would also pass — global.css states at the
+   head of the accent family that it is a per-theme LITERAL outside the
+   derivation, so a theme that moves --accent would leave these nine links
+   behind on stock blue. The outline below is non-text and stays on --accent. */
+.cur-go{font-size:12px;font-weight:650;color:var(--accent-mid);text-decoration:none;
   white-space:nowrap;border-radius:2px}
 .cur-go:hover{text-decoration:underline}
 .cur-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

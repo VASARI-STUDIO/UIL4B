@@ -100,11 +100,11 @@ export const LEARN_ARTICLES = Object.freeze([
     toolTo: '/create/type-scale',
     toolLabel: 'Type Scale Generator',
     sources: [
-      { label: 'WCAG 2.2 â SC 1.4.4 Resize Text', href: 'https://www.w3.org/TR/WCAG22/#resize-text' },
-      { label: 'WCAG 2.2 â SC 1.4.12 Text Spacing', href: 'https://www.w3.org/TR/WCAG22/#text-spacing' },
-      { label: 'Bringhurst, The Elements of Typographic Style â 2.1.2, Choose a comfortable measure', href: 'http://webtypography.net/2.1.2' },
-      { label: 'MDN â CSS length units, including the ch definition and its 0.5em fallback', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/length' },
-      { label: 'MDN â clamp()', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/clamp' },
+      { label: 'WCAG 2.2 — SC 1.4.4 Resize Text', href: 'https://www.w3.org/TR/WCAG22/#resize-text' },
+      { label: 'WCAG 2.2 — SC 1.4.12 Text Spacing', href: 'https://www.w3.org/TR/WCAG22/#text-spacing' },
+      { label: 'Bringhurst, The Elements of Typographic Style — 2.1.2, Choose a comfortable measure', href: 'http://webtypography.net/2.1.2' },
+      { label: 'MDN — CSS length units, including the ch definition and its 0.5em fallback', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/length' },
+      { label: 'MDN — clamp()', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/clamp' },
     ],
     sections: [
       { id: 'the-formula', title: 'The formula' },
@@ -184,11 +184,11 @@ export const LEARN_ARTICLES = Object.freeze([
     toolTo: '/create/tint',
     toolLabel: 'Tint Scale Generator',
     sources: [
-      { label: 'CSS Color Module Level 4 â oklab() and oklch()', href: 'https://www.w3.org/TR/css-color-4/#ok-lab' },
-      { label: 'CSS Color Module Level 5 â color-mix()', href: 'https://www.w3.org/TR/css-color-5/#color-mix' },
-      { label: 'BjÃ¶rn Ottosson â A perceptual color space for image processing (Oklab, 2020)', href: 'https://bottosson.github.io/posts/oklab/' },
-      { label: 'MDN â the oklch() colour function', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/oklch' },
-      { label: 'WCAG 2.2 â relative luminance, for the contrast figures used here', href: 'https://www.w3.org/TR/WCAG22/#dfn-relative-luminance' },
+      { label: 'CSS Color Module Level 4 — oklab() and oklch()', href: 'https://www.w3.org/TR/css-color-4/#ok-lab' },
+      { label: 'CSS Color Module Level 5 — color-mix()', href: 'https://www.w3.org/TR/css-color-5/#color-mix' },
+      { label: 'Björn Ottosson — A perceptual color space for image processing (Oklab, 2020)', href: 'https://bottosson.github.io/posts/oklab/' },
+      { label: 'MDN — the oklch() colour function', href: 'https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/oklch' },
+      { label: 'WCAG 2.2 — relative luminance, for the contrast figures used here', href: 'https://www.w3.org/TR/WCAG22/#dfn-relative-luminance' },
     ],
     sections: [
       { id: 'one-screen', title: 'One screen, several coordinate systems' },

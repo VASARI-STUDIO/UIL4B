@@ -39,9 +39,23 @@
 // 66,000. With them, two runs differ on 0 of 65,373. That zero is what makes a
 // single differing value here worth reading as a regression.
 //
-// Geometry (`width`, `height`) is out on purpose: it is the one family of values
-// that moves with font loading, and it is already covered by the sweeps named
-// above.
+// Geometry (`width`, `height`) is out on purpose: it moves with font loading,
+// and it is already covered by the sweeps named above.
+//
+//   · Values the ENGINE resolved rather than an author wrote. `margin-left`,
+//     `margin-right` and `grid-template-columns` keep their structure and lose
+//     their pixels — see the block above `normalise()` for the measured reason
+//     and for what that does and does not still catch. This is the same
+//     exclusion `width`/`height` already had; it simply had not been followed
+//     as far as it goes.
+//
+// THE THIRD EXCLUSION WAS FOUND BY RUNNING THIS ON A SECOND MACHINE, WHICH IS
+// THE ONLY WAY IT COULD HAVE BEEN. The baseline is generated on the machine
+// that checks it, so anything platform-dependent is frozen INTO the fixture and
+// agrees with itself forever. The first CI run moved fifteen values on fourteen
+// routes; all fifteen were scrollbar width, text measurement or a live-fetched
+// font face, and none was a stylesheet. If this file is ever regenerated on a
+// new platform, expect the same class of noise and read it before believing it.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // MUTATION EVIDENCE
@@ -156,6 +170,49 @@ test('the baseline under test is not empty', async () => {
  * comparison then reports as a disappearance rather than skipping.
  */
 const measureOnce = (page, selectors) => page.evaluate(({ selectors, props }) => {
+  /* THREE PROPERTIES REPORT A LAYOUT RESULT, NOT AN AUTHORED VALUE, AND THE
+   * PIXELS IN THEM ARE NOT PORTABLE BETWEEN MACHINES.
+   *
+   * The header above already drops `width` and `height` for being "the one
+   * family of values that moves with font loading". It is not one family. The
+   * first run of this suite on the Linux CI runner moved fifteen values across
+   * fourteen routes, and every one of them was a used value the engine had
+   * computed rather than a declaration anyone wrote:
+   *
+   *   .lart-head     margin-left  142.406px -> 150px      `margin: 0 auto`, and
+   *   .lart-crumb    margin-right 142.422px -> 150px      the difference IS the
+   *                                                       scrollbar: Windows
+   *                                                       reserves ~15px, the
+   *                                                       headless Linux build
+   *                                                       reserves none, so the
+   *                                                       centring splits 285px
+   *                                                       here and 300px there.
+   *   .hlp-start-go  margin-left  388.234px -> 423.281px  `margin-left: auto`
+   *                                                       in a flex row — the
+   *                                                       value is the leftover
+   *                                                       space, so it moves by
+   *                                                       whatever the siblings'
+   *                                                       text measures.
+   *   .lart-layout   grid-template-columns  200px 631.172px -> 200px 616px
+   *   .fg-command-text  75.6094px 223.391px -> 70.8125px 228.188px
+   *                                                       `1fr` and `auto`
+   *                                                       tracks resolved.
+   *
+   * So the numbers are dropped and the STRUCTURE is kept. A track appearing or
+   * disappearing, a `1fr` becoming `auto`, a margin becoming or ceasing to be
+   * `auto` — all still fail. What no longer fails is a horizontal margin moving
+   * from one length to another; `padding-left`, `padding-right` and `gap` carry
+   * authored horizontal spacing and are untouched, as are `margin-top` and
+   * `margin-bottom`, which do not resolve from `auto` on any element here.
+   *
+   * Do NOT widen this to the vertical properties or to anything in the colour,
+   * type, radius or shadow families. Those were stable across both platforms on
+   * the same run — 65,358 of 65,373 values agreed — which is what makes a single
+   * differing value in them worth reading as a regression. */
+  const LAYOUT_RESOLVED = new Set(['margin-left', 'margin-right', 'grid-template-columns'])
+  const normalise = (prop, value) => (
+    LAYOUT_RESOLVED.has(prop) ? value.replace(/-?\d*\.?\d+px/g, '<len>') : value
+  )
   const out = {}
   for (const s of selectors) {
     // The first PAINTED match, not the first match. Inactive views stay mounted
@@ -180,9 +237,14 @@ const measureOnce = (page, selectors) => page.evaluate(({ selectors, props }) =>
       for (const p of n.style) if (p.startsWith('--')) { tinted = true; break }
       if (tinted) break
     }
-    if (tinted) for (const p of ['color', 'background-color', 'border-top-color', 'box-shadow']) inline.add(p)
+    // `font-family` joins the colour list, and for exactly the reason the list
+    // exists. `.fg-card-preview` is `font-family: var(--fg-ff)` and FontGallery
+    // sets `--fg-ff` inline per card, so the measured value is WHICHEVER FACE
+    // the catalogue happened to serve — Geist on this machine, Roboto on the
+    // Linux runner. That is the page's content changing, not its stylesheet.
+    if (tinted) for (const p of ['color', 'background-color', 'border-top-color', 'box-shadow', 'font-family']) inline.add(p)
     const rec = {}
-    for (const p of props) if (!inline.has(p)) rec[p] = cs.getPropertyValue(p)
+    for (const p of props) if (!inline.has(p)) rec[p] = normalise(p, cs.getPropertyValue(p))
     out[s] = rec
   }
   return out

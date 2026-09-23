@@ -254,14 +254,29 @@ test.describe('the Discover surfaces say what they are made of', () => {
 
   // ── FAULT 3 ──────────────────────────────────────────────────────────────
   //
-  // A CROSS-PAGE assertion, on purpose. Pinning the card's number to a
-  // constant would have to be edited every time a palette is added, and a
-  // number a test rewrites on demand proves nothing. This reads the count off
-  // the CARD and the count off the PAGE THE CARD LINKS TO, and requires them
-  // to agree — signed in as Pro, because that is the state in which the whole
-  // library is on screen and the two numbers are describing the same set.
-  test('every Discover card counts the library it links to', async ({ page }) => {
-    watch(page, 'a Pro subscriber checking the index against the libraries')
+  // THIS USED TO BE A CROSS-PAGE COUNT CHECK, AND THE THING IT CHECKED IS GONE.
+  //
+  // It read the number off the Discover card and the number off the page the
+  // card links to and required them to agree, signed in as Pro because that is
+  // the state in which both numbers describe the same set. Then the B2 claims
+  // pass DELETED all four count badges — "101 palettes", "100 gradients",
+  // "200,000+ icons" and the prompt count — because each was the figure a
+  // SIGNED-OUT visitor buys into before clicking through to three rows. The
+  // deletion was right. This test was not re-pointed with it, and went red
+  // reading `got []`.
+  //
+  // So the cross-page arithmetic has nothing left to compare, and what is worth
+  // guarding now is the deletion itself: the cards must still be there, must
+  // still link where they say, and must not quietly re-grow a number.
+  //
+  // "No card claims a count" is an assertion of ABSENCE, and an absence is
+  // satisfied by the cards not existing at all — the exact trap that let four
+  // guards on this branch go green while testing nothing. The two positive
+  // controls below are what stop that: the library cards are found BY HREF
+  // first and the run fails if either is missing, and `probed` counts the meta
+  // elements actually examined so a silent selector rename cannot pass.
+  test('the Discover cards link where they say, and none of them claims a count', async ({ page }) => {
+    watch(page, 'a Pro subscriber reading the index after the count badges came off')
     await signIn(page, { plan: 'pro' })
     await go(page, '/discover')
     await arrived(page, 'Discover')
@@ -270,29 +285,48 @@ test.describe('the Discover surfaces say what they are made of', () => {
       [...document.querySelectorAll('a.surface-card--link')]
         .map((a) => ({
           href: a.getAttribute('href'),
-          title: a.querySelector('.surface-card-title')?.innerText.trim(),
+          title: a.querySelector('.surface-card-title')?.innerText.trim() || null,
           meta: a.querySelector('.surface-card-meta')?.innerText.trim() || null,
-        }))
-        .filter((c) => c.meta && /^\d/.test(c.meta)))
+          hasMetaEl: !!a.querySelector('.surface-card-meta'),
+        })))
 
-    // Both libraries that live under /discover and announce a live count.
-    const checked = cards.filter((c) => ['/discover/palettes', '/discover/gradients'].includes(c.href))
-    expect(checked.length, `expected two counted library cards, got ${JSON.stringify(cards)}`).toBe(2)
+    // POSITIVE CONTROL ONE: the two library cards are on the page, by href.
+    for (const href of ['/discover/palettes', '/discover/gradients']) {
+      const card = cards.find((c) => c.href === href)
+      expect(card, `the Discover index no longer carries a card linking to ${href}`).toBeTruthy()
+      expect(card.title, `the card for ${href} renders no title`).toBeTruthy()
+    }
 
-    for (const card of checked) {
-      const claimed = Number.parseInt(card.meta, 10)
-      expect(claimed, `card "${card.title}" has no numeric count`).toBeGreaterThan(0)
+    // POSITIVE CONTROL TWO: the run examined a real number of cards.
+    expect(cards.length, 'the Discover index rendered no linked cards at all').toBeGreaterThan(4)
 
-      await go(page, card.href)
-      const announced = (await page.locator('.drh-head p').innerText()).trim()
-      const actual = Number.parseInt(announced, 10)
-      expect(actual, `${card.href} announced no count`).toBeGreaterThan(0)
-
+    // The deletion holds. A count would read "101 palettes", "100 gradients",
+    // "200,000+ icons" — a leading digit is the shape of all four.
+    for (const c of cards) {
       expect(
-        claimed,
-        `the /discover card for ${card.href} claims ${claimed} but that page holds ${actual}`,
-      ).toBe(actual)
+        c.meta === null || !/^[\d,]/.test(c.meta),
+        `the card for ${c.href} is claiming a count again: "${c.meta}"`,
+      ).toBe(true)
+    }
 
+    // AND THE SPAN ITSELF IS GONE, not merely empty. `{preview && <span/>}`
+    // rendered an empty `.surface-card-meta` in four card feet once the strings
+    // came off; this is what fails if that comes back.
+    const empties = cards.filter((c) => c.hasMetaEl && c.meta === null).map((c) => c.href)
+    expect(empties, 'these cards render an EMPTY meta element in the card foot').toEqual([])
+
+    // "Live specimens" is not a count and was deliberately kept, so it is the
+    // control that proves the rule above is not simply matching everything.
+    const specimens = cards.find((c) => c.href === '/create/font-gallery')
+    expect(specimens?.meta, 'the Font Gallery card lost the one meta line that is not a count').toBe('Live specimens')
+
+    // The libraries still announce their own size on their OWN page, where the
+    // number describes what the reader is looking at rather than what they are
+    // being sold. That half was never the problem and must not be lost with it.
+    for (const href of ['/discover/palettes', '/discover/gradients']) {
+      await go(page, href)
+      const announced = (await page.locator('.drh-head p').innerText()).trim()
+      expect(Number.parseInt(announced, 10), `${href} announced no count of its own`).toBeGreaterThan(0)
       await go(page, '/discover')
     }
   })

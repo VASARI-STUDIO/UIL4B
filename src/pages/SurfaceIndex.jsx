@@ -320,7 +320,13 @@ export default function SurfaceIndex({ surface }) {
                     {g.soon
                       ? <span className="soon-badge">Soon</span>
                       : <span className="surface-card-go">Browse&nbsp;&rarr;</span>}
-                    {preview && <span className="surface-card-meta">{preview.meta}</span>}
+                    {/* `preview.meta`, not `preview`. The four count badges were
+                        deleted in the B2 claims pass because a signed-out
+                        visitor reaches three rows, not the hundred the number
+                        promised — but the span was still rendered for every
+                        previewed card, so Palette, Gradient, Icon and Prompt
+                        each carried an EMPTY meta element in the card foot. */}
+                    {preview?.meta && <span className="surface-card-meta">{preview.meta}</span>}
                   </span>
                 </>
               )

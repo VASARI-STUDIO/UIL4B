@@ -486,7 +486,13 @@ function AppInner() {
                   Gradient Generator (?gs= scheme). Renders inside the app-shell. */}
               <Route path="/discover/gradients" element={<GradientGallery toast={toast} />} />
               <Route path="/discover/palettes" element={<PaletteGallery toast={toast} />} />
-              <Route path="/discover/prompts" element={<PromptLibrary toast={toast} />} />
+              {/* `onCopy` is not optional here. PromptLibrary destructures it
+                  and copyPrompt calls it bare, so without it BOTH copy paths in
+                  the modal — the body click and the "Copy prompt" button —
+                  threw `onCopy is not a function`, silently: no text, no toast,
+                  no visible error, on the page whose whole product is the text
+                  you came to copy. Same helper /seo is given below. */}
+              <Route path="/discover/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
               {/* Curated Resources — the hand-picked external set in
                   src/data/discoverResources.js. The nav has advertised this as
                   “Soon” since Slice 2 while the data sat unrendered; this is the

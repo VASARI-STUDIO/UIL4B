@@ -396,5 +396,62 @@ for (const rung of RUNGS) {
       await page.getByLabel('Search community prompts').fill('')
       await expect(page.locator('.lockt-cta')).toBeVisible()
     })
+
+    /* THE GATE HELD AND THE PRODUCT DID NOT.
+     *
+     * Everything above this proves a visitor cannot read a prompt they have not
+     * paid for. None of it noticed that a visitor who HAS paid could not read
+     * one either: App.jsx mounted `<PromptLibrary toast={toast} />` with no
+     * `onCopy`, PromptLibrary destructures it and `copyPrompt` calls it bare, so
+     * both copy paths in the modal threw `onCopy is not a function` — silently.
+     * No text, no toast, no visible error, on the page whose entire product is
+     * the text you came to copy. Every gate test still passed, because refusing
+     * to hand over a prompt is exactly what they were written to check.
+     *
+     * So this asserts the OTHER direction, and it is the direction a suite full
+     * of gate tests structurally forgets. The sentinel is what makes it real: a
+     * clipboard that was never written and a clipboard that was written with
+     * the wrong thing both fail, and an assertion that the clipboard merely
+     * "has something in it" would have passed against the broken build. */
+    test('a prompt the visitor IS entitled to actually reaches the clipboard', async ({ page, context }) => {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+      const SENTINEL = 'SENTINEL-CLIPBOARD-NOT-WRITTEN'
+      await page.evaluate((s) => navigator.clipboard.writeText(s), SENTINEL)
+
+      // `.pl-card` renders only the rows this rung may read, so the first one
+      // is open by construction. Which one it is depends on the sort, so the
+      // expectation is read OFF THE OPEN MODAL rather than assumed to be
+      // OPEN[0] — pinning it to a source index made this fail against a working
+      // build, which is the wrong kind of red.
+      const card = page.locator('.pl-card').first()
+      await expect(card, 'no open prompt card rendered — this assertion is vacuous').toBeVisible()
+      await card.click()
+
+      const shown = page.locator('.pl-modal-prompt pre')
+      await expect(shown, 'the modal rendered no prompt body').toBeVisible()
+      /* Invisible whitespace only, and it is TWO differences, not one.
+       *
+       * Several prompts in communityPrompts.js carry trailing spaces at the end
+       * of a line, and `innerText` drops them — so the raw string and the
+       * rendered one differ by characters nobody can see. And `innerText`
+       * returns CRLF here, which is why stripping `[ \t]+$` alone did nothing:
+       * in "text   \r\n" the `\r` sits BETWEEN the spaces and the line end, so
+       * `$` never lines up with them. Line endings are normalised first. */
+      const flat = (s) => s.replace(/\r\n?/g, '\n').replace(/[ \t]+$/gm, '').trim()
+      const expected = flat(await shown.innerText())
+      // Positive control: the modal is showing a real prompt, not an empty box,
+      // so `toBe(expected)` below cannot be satisfied by two empty strings.
+      expect(expected.length, 'the open modal shows no prompt text').toBeGreaterThan(80)
+      expect(OPEN.map((p) => flat(p.text)),
+        'the modal opened a prompt this rung may not read').toContain(expected)
+
+      const copy = page.getByRole('button', { name: /Copy prompt/ })
+      await expect(copy, 'the modal offers no way to copy the prompt').toBeVisible()
+      await copy.click()
+
+      const clip = await page.evaluate(() => navigator.clipboard.readText())
+      expect(clip, 'the copy button ran and wrote nothing — onCopy is missing again').not.toBe(SENTINEL)
+      expect(flat(clip), 'the clipboard holds something other than the prompt that was open').toBe(expected)
+    })
   })
 }
