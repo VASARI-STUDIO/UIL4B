@@ -138,7 +138,6 @@ test('every value a person reads is in the mono face', () => {
     '.adm-user-view-n',
     '.adm-bar-value',
     '.adm-donut-count',
-    '.adm-list-value',
     '.adm-user-count',
     '.adm-copy-value',
     '.adm-plan-interval',

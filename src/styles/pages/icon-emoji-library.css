@@ -148,4 +148,3 @@
 /* The count stays a filled chip — 71-media-tools-breakpoints measures it as
    ink on its OWN ground — but as a 6px rectangle, not a pill. */
 .iel-page .emoji-section-count{border-radius:var(--radius-xs)}
-.iel-page .lbry-filter .emoji-chip-count{border-radius:var(--radius-xs)}

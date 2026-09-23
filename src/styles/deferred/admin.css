@@ -19,7 +19,6 @@
  */
 
 
-
 /* ─── Admin Dashboard ─── */
 .adm{max-width:1200px}
 .adm-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:24px}
@@ -81,7 +80,6 @@
 .adm-list-row:last-child{border-bottom:none}
 .adm-list-rank{width:20px;font-size:10px;font-weight:700;color:var(--t3);text-align:center;flex-shrink:0}
 .adm-list-name{font-size:12px;font-weight:500;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.adm-list-value{font-size:12px;font-weight:700;color:var(--accent-strong);font-family:var(--mono);flex-shrink:0}
 
 /* Activity feed */
 .adm-feed{display:flex;flex-direction:column;gap:0}
@@ -501,7 +499,6 @@
 .adm-user-view-n,
 .adm-bar-value,
 .adm-donut-count,
-.adm-list-value,
 .adm-list-rank,
 .adm-user-count,
 .adm-tab-badge,

@@ -19,7 +19,6 @@
  */
 
 
-
 /* ─── Merged Icon + Emoji library — the library switch and its status ─── */
 /* The masthead itself is now the shared .dgh-hero (see DiscoverGalleryHero);
    this surface's own header rules — .lib-head, .lib-head-copy, .lib-eyebrow —
@@ -76,14 +75,6 @@
 
 /* Swatch rail (CS#3.1/3.3) */
 .cs-pb-rail{display:flex;gap:var(--s-2);margin-bottom:var(--s-3);flex-wrap:wrap}
-.cs-pb-swatch.cs-d0{animation-delay:0ms}
-.cs-pb-swatch.cs-d1{animation-delay:48ms}
-.cs-pb-swatch.cs-d2{animation-delay:96ms}
-.cs-pb-swatch.cs-d3{animation-delay:144ms}
-.cs-pb-swatch.cs-d4{animation-delay:192ms}
-.cs-pb-swatch.cs-d5{animation-delay:240ms}
-.cs-pb-swatch:active{cursor:grabbing}
-.cs-pb-swatch.skeleton{background:linear-gradient(100deg,var(--bg-1) 30%,var(--bg-2) 50%,var(--bg-1) 70%);background-size:200% 100%;animation:cs-shimmer 1.2s ease-in-out infinite;border-color:var(--border)}
 .cs-pb-swatch-meta{padding:var(--s-3) var(--s-3) var(--s-2)}
 .cs-pb-role{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.65}
 .cs-pb-hex{position:relative;display:inline-block;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.02em;cursor:pointer;background:none;border:none;padding:0;color:inherit;text-align:left}
