@@ -514,9 +514,11 @@
    emulation: "#7C3AE", the wrong-but-plausible clip 25-defect-sweep N2 exists
    to catch. From 640 down the row now takes both lines at every pointer. */
 @media (max-width: 640px) {
-  .ggn .ggn-stop{ display: grid; grid-template-columns: 20px 32px minmax(0, 1fr) auto auto; }
+  .ggn .ggn-stop{ display: grid; grid-template-columns: 20px 32px minmax(0, 1fr) auto auto; gap: 6px 8px; }
   .ggn .ggn-stop-hex-field{ grid-column: 3 / -1; }
-  .ggn .ggn-stop-pos{ grid-column: 3 / 4; margin-left: 0; }
+  /* Under the swatch as well as column 3: with 44px lock and remove buttons
+     column 3 alone measured 8px at 320, narrower than the field it holds. */
+  .ggn .ggn-stop-pos{ grid-column: 2 / 4; margin-left: 0; }
   .ggn .ggn-stop-lock{ grid-column: 4; }
   .ggn .ggn-stop-x{ grid-column: 5; }
 }
