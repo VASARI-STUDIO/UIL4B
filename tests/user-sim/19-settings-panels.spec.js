@@ -113,3 +113,17 @@ test.describe('settings panels', () => {
     }
   })
 })
+
+// Every section tab carries its icon. The Subscription tab's section id is
+// 'support' (Plans.jsx deep-links to it), but NavIcon matched 'subscription',
+// so that one tab alone rendered without a glyph.
+test('every Settings section tab has its icon', async ({ page }) => {
+  watch(page, 'a free account scanning the settings sections')
+  await signIn(page, { plan: 'free' })
+  await go(page, '/settings')
+  const tabs = page.locator('.settings-nav-item')
+  // POSITIVE CONTROL: the tab list rendered, Subscription among it.
+  await expect(tabs.filter({ hasText: 'Subscription' })).toHaveCount(1)
+  const bare = await tabs.evaluateAll((els) => els.filter((el) => !el.querySelector('svg')).map((el) => el.textContent.trim()))
+  expect(bare, 'these section tabs have no icon').toEqual([])
+})
