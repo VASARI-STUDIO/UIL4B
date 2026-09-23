@@ -1,0 +1,157 @@
+/* ══ /discover/resources — the page's own sheet ═════════════════════════════
+   MOVED, not rewritten: these are the Curated Resources rules that lived in
+   deferred/library.css, now rooted at `.lib-surface.cur-wrap` (the page root
+   carries both) so each selector out-ranks any shared rule it meets, whatever
+   order the chunks load in (SPECTRUM-REVIEW, standing finding 16). The
+   editorial decisions recorded below are unchanged; the Spectrum changes are
+   in the block at the end. */
+
+/* ══ Curated Resources (/discover/resources) ═══════════════════════════════
+   A hand-picked set is SMALL and has to look edited at that size. So the
+   catalogue is hairline-ruled rows, not a card grid: Mobbin's "AI in Design
+   Report 2026" resource list and Webflow's rule-separated index both hold up
+   at five items where a four-up grid of the same five reads as a grid that
+   failed to fill. It is also this repo's own answer already — the Font Gallery
+   dropped card borders, radius and ground for hairline rules in
+   #font-gallery-one-per-row.
+
+   Pacing comes from inside each category band (one opened-up lead over compact
+   rows, after Upwork's Resource Centre), not from decoration. The only colour
+   a band carries is its own category hue on the head rule, via [data-cat] →
+   --cur-c, matching the discoverCategories map every other Discover surface
+   reads. */
+.lib-surface.cur-wrap{padding-bottom:64px}
+
+/* Category hue. Mirrors the --dsc-c pattern the Discover card face already
+   uses, so the two never disagree about what colour "gradients" is. */
+.lib-surface.cur-wrap .cur-band[data-cat="gradients"]{--cur-c:#8b5cf6}
+.lib-surface.cur-wrap .cur-band[data-cat="palettes"]{--cur-c:#ec4899}
+.lib-surface.cur-wrap .cur-band[data-cat="inspiration"]{--cur-c:#3b82f6}
+.lib-surface.cur-wrap .cur-band[data-cat="dev-tools"]{--cur-c:#10b981}
+.lib-surface.cur-wrap .cur-band[data-cat="free-assets"]{--cur-c:#f59e0b}
+.lib-surface.cur-wrap .cur-band[data-cat="fonts"]{--cur-c:#06b6d4}
+.lib-surface.cur-wrap .cur-band[data-cat="components"]{--cur-c:#f43f5e}
+
+.lib-surface.cur-wrap .cur-bands{display:flex;flex-direction:column;gap:44px;margin-top:8px}
+.lib-surface.cur-wrap .cur-band{--cur-c:var(--accent)}
+
+/* The head is a rule the category colours, not a chip or a pill — the page
+   already has enough pills, and a 2px coloured rule reads as a section edge
+   rather than as another badge competing with the Free/Paid marker. */
+.lib-surface.cur-wrap .cur-band-head{display:flex;align-items:center;gap:10px;padding-bottom:10px;
+  border-bottom:2px solid color-mix(in srgb,var(--cur-c) 55%,transparent)}
+.lib-surface.cur-wrap .cur-band-glyph{display:inline-flex;color:var(--cur-c)}
+.lib-surface.cur-wrap .cur-band-title{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--t0)}
+.lib-surface.cur-wrap .cur-band-count{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--t3);
+  font-variant-numeric:tabular-nums}
+
+/* ── The lead item ──
+   Opened up: the full `whyUseful` reasoning rather than the two-line clamp,
+   the use-case and difficulty it actually carries, and the hand-off as a real
+   button. It sits on a faint tint of its own category so it is legible as the
+   head of the band without a border box around it. */
+.lib-surface.cur-wrap .cur-lead{padding:16px 16px 14px;margin-top:14px;border-radius:var(--radius-l);
+  background:color-mix(in srgb,var(--cur-c) 5%,var(--bg-1));
+  border:1px solid color-mix(in srgb,var(--cur-c) 16%,transparent)}
+.lib-surface.cur-wrap .cur-lead-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.lib-surface.cur-wrap .cur-lead-title{margin:0;font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.25}
+.lib-surface.cur-wrap .cur-why{margin:10px 0 0;font-size:13.5px;line-height:1.6;color:var(--t1);max-width:68ch}
+.lib-surface.cur-wrap .cur-lead-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* ── Compact rows ──
+   No border, no radius, no ground. A row separated by a hairline is the
+   content; a card around it is chrome around the content. */
+.lib-surface.cur-wrap .cur-list{list-style:none;margin:0;padding:0}
+.lib-surface.cur-wrap .cur-row{display:flex;align-items:flex-start;gap:20px;padding:14px 2px;
+  border-bottom:1px solid var(--border)}
+.lib-surface.cur-wrap .cur-row:last-child{border-bottom:0}
+.lib-surface.cur-wrap .cur-row-main{flex:1;min-width:0}
+.lib-surface.cur-wrap .cur-row-title{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0;
+  font-size:14.5px;font-weight:650;letter-spacing:-.01em;line-height:1.3}
+.lib-surface.cur-wrap .cur-row-desc{margin:5px 0 0;font-size:12.75px;line-height:1.55;color:var(--t2);max-width:74ch}
+.lib-surface.cur-wrap .cur-row-aside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;
+  flex-shrink:0;text-align:right}
+
+.lib-surface.cur-wrap .cur-host{margin:4px 0 0;font-family:var(--mono);font-size:11.5px;color:var(--t3);
+  overflow-wrap:anywhere}
+.lib-surface.cur-wrap .cur-row-aside .cur-host{margin:0}
+
+.lib-surface.cur-wrap .cur-link{color:var(--t0);text-decoration:none;border-radius:2px;
+  border-bottom:1px solid color-mix(in srgb,currentColor 32%,transparent)}
+.lib-surface.cur-wrap .cur-link:hover{color:var(--cur-c,var(--accent));border-bottom-color:currentColor}
+/* The radius sits on the element at rest so the focus outline traces the shape
+   the control actually has — a radius introduced by :focus-visible changes the
+   geometry at the moment the ring appears. */
+.lib-surface.cur-wrap .cur-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+/* SC 2.5.8: the lead title holds only this link, so the Inline exception does
+   not apply to it (the row title's does — it also carries a PriceTag). At the
+   16px this title takes below 640px the inline box measured 23.0px, one pixel
+   under, at 320 and 390. inline-block gives it a height of its own and still
+   wraps internally; inline-flex would not have. */
+.lib-surface.cur-wrap .cur-lead-title .cur-link{display:inline-block;min-height:24px}
+/* ...AND SO DOES THE ROW TITLE'S (2026-09-13). The comment above used to end
+   "the row title's does - it also carries a PriceTag", and that reading of the
+   Inline exception is wrong. SC 2.5.8 exempts a target that is "in a sentence
+   or whose size is otherwise constrained by the line-height of non-target
+   text". .cur-row-title is a flex container holding exactly two items, a link
+   and a tag; the link is not inside a run of text and nothing else sets its
+   line box. Measured on the shipped build it was 19.8px tall at EVERY width -
+   19 of them, the whole outbound half of the page, and the smallest thing to
+   hit on a phone. Same technique, same type size. */
+.lib-surface.cur-wrap .cur-row-title .cur-link{display:inline-flex;align-items:center;min-height:24px}
+/* The in-product hand-off is the clearer half of the same failure: .cur-go is
+   alone in .cur-row-aside with no text around it at all, so no reading of the
+   Inline exception reaches it. 5 links, 19.8px at every width. */
+.lib-surface.cur-wrap .cur-go{display:inline-flex;align-items:center;min-height:24px}
+/* Resting, not hover-only: founder direction 2026-09-02 rules out hover-only
+   affordances on touch, and this arrow is how an outbound link says it leaves. */
+.lib-surface.cur-wrap .cur-ext{display:inline-block;margin-left:3px;font-size:.82em;color:var(--t3);vertical-align:baseline}
+
+/* Free / Paid. The only metric on the page, and it is a fact from the record
+   rather than a count nobody has generated yet. */
+.lib-surface.cur-wrap .cur-tag{flex-shrink:0;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;
+  letter-spacing:.03em;text-transform:uppercase;color:var(--ok-strong);
+  background:color-mix(in srgb,var(--ok) 13%,transparent)}
+.lib-surface.cur-wrap .cur-tag--paid{color:var(--t2);background:color-mix(in srgb,var(--t2) 12%,transparent)}
+
+.lib-surface.cur-wrap .cur-chips{display:flex;gap:6px;flex-wrap:wrap}
+.lib-surface.cur-wrap .cur-chip{padding:3px 9px;border-radius:999px;border:1px solid var(--border);
+  font-size:11px;color:var(--t2);white-space:nowrap}
+
+/* The in-product hand-off on a compact row. A link, not a button: it is a
+   navigation, and it must not out-weigh the lead item's real button. */
+/* --accent-mid, not --accent: nine "Open in <tool>" links measured 3.82:1 on
+   the light page against the 4.5:1 floor, and 12px/650 is not large text. Not
+   --accent-strong either, though it would also pass — global.css states at the
+   head of the accent family that it is a per-theme LITERAL outside the
+   derivation, so a theme that moves --accent would leave these nine links
+   behind on stock blue. The outline below is non-text and stays on --accent. */
+.lib-surface.cur-wrap .cur-go{font-size:12px;font-weight:650;color:var(--accent-mid);text-decoration:none;
+  white-space:nowrap;border-radius:2px}
+.lib-surface.cur-wrap .cur-go:hover{text-decoration:underline}
+.lib-surface.cur-wrap .cur-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* The real sample swatches a palette resource carries in its own record.
+   Rendered only where they exist (3 of 22) — a strip under a resource with no
+   colours would be decoration pretending to be content. */
+.lib-surface.cur-wrap .cur-pal{display:flex;gap:3px;margin-top:9px;max-width:260px}
+.lib-surface.cur-wrap .cur-pal-chip{flex:1;height:22px;border-radius:3px;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
+
+/* ── Narrow ──
+   The aside stops being a right-hand column and becomes a line under the copy:
+   at 390px a right-aligned column leaves the description four words wide. */
+@media (max-width:640px){
+  .lib-surface.cur-wrap .cur-row{flex-direction:column;gap:8px}
+  .lib-surface.cur-wrap .cur-row-aside{flex-direction:row;align-items:center;justify-content:space-between;
+    width:100%;text-align:left;gap:12px}
+  .lib-surface.cur-wrap .cur-bands{gap:36px}
+  .lib-surface.cur-wrap .cur-lead{padding:14px}
+  .lib-surface.cur-wrap .cur-lead-title{font-size:16px}
+}
+
+/* ── Spectrum ──────────────────────────────────────────────────────────────
+   Two metadata marks were 999px pills — the Free/Paid tag and the use-case
+   chips. Neither toggles; they are values, so they take the 6px value chip
+   the app file uses for hexes. */
+.lib-surface.cur-wrap .cur-tag,
+.lib-surface.cur-wrap .cur-chip{border-radius:var(--radius-xs)}

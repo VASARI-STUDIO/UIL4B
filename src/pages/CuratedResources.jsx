@@ -15,6 +15,8 @@ import { primaryAvailableTool, buildToolHandoffUrl } from '../components/discove
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
+// This page's own sheet — every selector rooted at `.lib-surface.cur-wrap`.
+import '../styles/pages/curated-resources.css'
 
 // /discover/resources — the Curated Resources library.
 //
