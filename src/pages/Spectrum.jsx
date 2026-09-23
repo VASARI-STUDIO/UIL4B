@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import PillNav from '../components/PillNav'
 import HomeCommandBar from '../components/HomeCommandBar'
@@ -329,13 +329,23 @@ export default function Spectrum() {
   // existed, re-running the entrance would be a second arrival of something that
   // never left — a visible dive-and-rise. So the animation is skipped there, and
   // the page is correct either way.
-  const [heroLit, setHeroLit] = useState(false)
-  useEffect(() => {
-    if (document.documentElement.hasAttribute('data-hero-prepainted')) return undefined
-    if (prefersReducedMotion()) return undefined
-    const id = requestAnimationFrame(() => setHeroLit(true))
-    return () => cancelAnimationFrame(id)
-  }, [])
+  //
+  // DECIDED AT THE FIRST RENDER, NOT A FRAME LATER. This was a useEffect that
+  // set the class from a requestAnimationFrame, so the hero always committed
+  // WITHOUT `.is-in` first. That is the same dive-and-rise, on the path meant
+  // to have a clean entrance: sampled per frame on an in-session arrival, the
+  // headline sat whole and settled for one to three frames (up to 50ms), then
+  // the class landed, every word dropped to translateY(112%) under its mask and
+  // rose again. It also made 65-hero-first-paint intermittently read the words
+  // in that window and report the entrance missing (CI run 35827912049).
+  // Nothing here needs a frame to have passed: a CSS animation starts from its
+  // `from` keyframe on the first style resolution, so the words' first paint is
+  // already the start of the entrance. There is no hydration to disagree with —
+  // main.jsx uses createRoot — and prefersReducedMotion() already returns false
+  // without a document, so a string render is unchanged.
+  const [heroLit] = useState(() => typeof document !== 'undefined'
+    && !document.documentElement.hasAttribute('data-hero-prepainted')
+    && !prefersReducedMotion())
 
   const plan = LADDER.find((p) => p.id === billing) || LADDER[0]
   const activeTab = DISCOVER_TABS.find((t) => t.id === tab) || DISCOVER_TABS[0]
