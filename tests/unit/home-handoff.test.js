@@ -263,7 +263,7 @@ test('an invalid draft is never staged', () => {
  * scroller, so any control that lands there is painted over at every scroll
  * position but the last.
  *
- * tests/user-sim/49-workbench-handoff-clearance.spec.js measures the rendered
+ * 49-workbench-handoff-clearance.spec.js (DELETED with HomeWorkbench) measured the rendered
  * geometry. This is the cheap half: it reads the JSX and fails the BUILD, in
  * milliseconds, if the foot is ever nested back inside the scroller — which is
  * the single structural fact the whole defect class depends on.

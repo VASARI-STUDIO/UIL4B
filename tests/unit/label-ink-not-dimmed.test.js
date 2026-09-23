@@ -26,7 +26,7 @@
 // the moment a dimming property returns to either, it fails here.
 //
 // WHY THIS IS A UNIT TEST WHEN A RENDERED ONE EXISTS.
-// tests/user-sim/63-workbench-ink-search.spec.js measures the composited alpha
+// 63-workbench-ink-search.spec.js (DELETED with HomeWorkbench) measured the composited alpha
 // on a real board in both themes, which is the stronger proof and the slower
 // one. This reads the declarations and fails in milliseconds, and it covers the
 // case the rendered sweep structurally cannot: `.ggn-pill` sits on a gradient,
