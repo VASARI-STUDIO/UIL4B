@@ -1282,34 +1282,6 @@ html[data-reduced-motion="true"] .adm-status-dot {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── THE BUTTONS ARE THE APP'S, NOT THE MARKETING PAGE'S ───────────────────
- *
- * `.btn` in the critical sheet is a 999px pill, which is right for the sales
- * page and wrong here. `UIL4B App.dc.html` gives its secondary button
- * `height:32px;padding:0 13px;border:1px solid rgba(var(--ink-rgb),.11);
- * border-radius:10px;font-size:12.5px` and its primary `border-radius:12px;
- * font-weight:560;min-height:44px` — rectangles on the same 10/12 radius scale
- * as every other control in the app.
- *
- * Scoped to this surface rather than changed globally: `.btn` belongs to the
- * critical sheet, which is another workstream's file, and every other page
- * still wants the pill.
- *
- * The SIZE is deliberately not reduced to the design's 32px here. These
- * buttons sit in table rows and confirmation panels where they are the only
- * target, and the accessibility sweeps hold a ≥24px minimum that the existing
- * padding already clears with room. Shrinking them would be adopting a number
- * rather than a design. */
-.adm .btn,
-.adm-lock .btn {
-  border-radius: var(--radius);
-}
-
-.adm .btn-s,
-.adm-lock .btn-s {
-  border-radius: var(--radius-s);
-}
-
 /* The lock screen's field matches the toolbar field's shape for the same
    reason: it is the same object doing the same job. */
 .adm-lock input {
