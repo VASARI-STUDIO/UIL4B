@@ -2048,7 +2048,8 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 /* ─── Onboarding ─── */
 .onb{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:var(--bg-0)}
-.onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:36px;position:relative;overflow:hidden}
+/* The app file's panel: 18px radius over a hairline, no lift. */
+.onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:none;padding:36px;position:relative;overflow:hidden}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .onb-brand{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
 
@@ -2063,9 +2064,9 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 .onb-options{display:flex;flex-direction:column;gap:8px}
 .onb-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:all var(--dur-2) var(--ease-out);text-align:left}
-.onb-option:hover{border-color:var(--bh);background:var(--hvr);transform:translateX(3px)}
+.onb-option:hover{border-color:var(--bh);background:var(--hvr)}
 .onb-option-arrow{color:var(--t3);transition:color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.onb-option:hover .onb-option-arrow{color:var(--accent);transform:translateX(3px)}
+.onb-option:hover .onb-option-arrow{color:var(--accent-mid);transform:translateX(3px)}
 
 .onb-back{display:inline-flex;align-items:center;gap:6px;margin-top:18px;background:none;border:none;color:var(--t2);font-size:13px;font-family:var(--font);cursor:pointer;padding:8px 0;transition:color var(--dur-2) var(--ease-standard)}
 .onb-back:hover{color:var(--t0)}
@@ -2085,7 +2086,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    who has not made anything yet. */
 .onb-firstwin-foot{margin:18px 0 0;font-size:12px;color:var(--t3)}
 .onb-firstwin-foot a{color:var(--t1);text-decoration:underline;text-underline-offset:2px}
-.onb-firstwin-foot a:hover{color:var(--accent-strong)}
+.onb-firstwin-foot a:hover{color:var(--accent-mid)}
 
 
 @media(max-width:520px){
