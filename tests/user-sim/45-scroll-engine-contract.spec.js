@@ -46,6 +46,16 @@ import { go, restingScrollY, restAfterMove, watch } from './helpers.js'
 const PANEL = '#pnav-account-pop'
 const TRIGGER = '.pnav-more'
 
+// THE PAGE THE POPOVER TESTS DRIVE, which is no longer `/`.
+//
+// Both tests below opened the panel on the homepage. `/` renders
+// src/pages/Spectrum.jsx since the route swap and mounts SpectrumNav instead of
+// the app header, so `.pnav-more` is not on that page and both timed out on it.
+// /help is what the two tests above this already use, it renders the app header
+// unchanged, and it is 3048px tall against a 900px viewport — so a 700px and a
+// 900px wheel both have somewhere to go, which is what these measure.
+const SCROLL_ROUTE = '/help'
+
 // The account panel hangs off the top right (measured: x 1134-1394, y 58-451
 // at 1440x900). This point is well clear of it, so a wheel here is aimed at
 // the PAGE and the panel's own containment is not what is under test.
@@ -160,13 +170,13 @@ test.describe('an open popover and the page behind it', () => {
   // to arrive. What this test is, then, is a live smoke check that the page
   // still scrolls with a panel open, and a record of those four mutations.
   test('a wheel aimed at the page still scrolls it while the panel is open', async ({ page }) => {
-    await go(page, '/')
+    await go(page, SCROLL_ROUTE)
     await openPanel(page)
 
-    const before = await restingScrollY(page, 'the home page before the wheel')
+    const before = await restingScrollY(page, 'the page before the wheel')
     await page.mouse.move(OVER_THE_PAGE.x, OVER_THE_PAGE.y)
     await page.mouse.wheel(0, 700)
-    const after = await restAfterMove(page, before, 'the home page after a wheel aimed past the open panel')
+    const after = await restAfterMove(page, before, 'the page after a wheel aimed past the open panel')
 
     await expect(page.locator(PANEL), 'the panel must still be open, or this measured nothing').toBeVisible()
     expect(
@@ -178,7 +188,7 @@ test.describe('an open popover and the page behind it', () => {
   })
 
   test('an open panel does not rewrite its placement on every scroll event', async ({ page }) => {
-    await go(page, '/')
+    await go(page, SCROLL_ROUTE)
     await openPanel(page)
 
     // placePopover writes data-pop-align, data-pop-side and --pop-max-h. The
@@ -196,10 +206,10 @@ test.describe('an open popover and the page behind it', () => {
       })
     }, PANEL)
 
-    const before = await restingScrollY(page, 'the home page before the wheel')
+    const before = await restingScrollY(page, 'the page before the wheel')
     await page.mouse.move(OVER_THE_PAGE.x, OVER_THE_PAGE.y)
     await page.mouse.wheel(0, 900)
-    const after = await restAfterMove(page, before, 'the home page after the wheel')
+    const after = await restAfterMove(page, before, 'the page after the wheel')
 
     const writes = await page.evaluate(() => {
       window.__placementObserver.disconnect()

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import ProjectCard from '../../../src/components/userhome/ProjectCard'
 import DailyBand from '../../../src/components/userhome/DailyBand'
 import StarterRow from '../../../src/components/userhome/StarterRow'
+import LocalClock from '../../../src/components/LocalClock'
 import { DEFAULT_DESIGN } from '../../../src/data/designDefaults'
 import { nextToolSuggestion } from '../../../src/utils/userHome'
 import '../../../src/styles/global.css'
@@ -93,6 +94,10 @@ export function UserHomeFixture() {
           <div className="sec uh">
             <header className="sec-h uh-head">
               <div className="uh-head-main">
+                {/* The real component, mounted as the real header mounts it —
+                    this fixture is the only place the signed-in dashboard
+                    renders in the suite. */}
+                <LocalClock className="uh-clock" />
                 <h1>Projects</h1>
                 <p className="uh-sub">Your saved design systems — palette, fonts, type scale, and tints.</p>
                 <ul className="uh-stats">

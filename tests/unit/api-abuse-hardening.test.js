@@ -12,8 +12,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { clientIp, hashKey, consume } from '../../api/_lib/rateLimit.js'
-import { ADMIN_EMAILS } from '../../api/_lib/admin.js'
+import { adminEmails, isAdminEmail } from '../../api/_lib/adminEmails.js'
 import { stripJs } from '../helpers/strip-comments.js'
 
 const API = path.join(process.cwd(), 'api')
@@ -43,14 +44,50 @@ test('the diagnostic requires a verified administrator, and its break-glass has 
   assert.match(ai, /timingSafeEqual/, 'the break-glass is compared with ===')
 })
 
-test('the admin allowlist exists in exactly one place', () => {
-  const copies = fs.readdirSync(API)
-    .filter(f => f.endsWith('.js'))
-    .filter(f => /ADMIN_EMAILS\s*=\s*\[/.test(read(f)))
-  assert.deepEqual(copies, [], 'an /api route declares its own admin allowlist instead of importing the shared one')
-  assert.ok(ADMIN_EMAILS.length > 0, 'the shared allowlist is empty')
-  assert.ok(ADMIN_EMAILS.every(e => e === e.toLowerCase()),
-    'an entry is not lowercase — requireAdmin lowercases the token email before comparing, so it could never match')
+test('the admin allowlist exists in exactly one place, and it is the environment', () => {
+  // It used to be a literal, written out twice — and this test asserted it was
+  // non-empty, which is precisely the property it no longer may have: it is the
+  // ADMIN_EMAILS env var now, unset in this process, and an unset one grants
+  // admin to nobody. tests/unit/admin-allowlist.test.js is where that is
+  // asserted against the real requireAdmin(). What stays here is the SHAPE.
+  const files = []
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, entry.name)
+      if (entry.isDirectory()) { walk(p); continue }
+      // COMMENTS STRIPPED. Both patterns below appear in prose in these files —
+      // api/_lib/adminEmails.js quotes the literal it replaced, and half of
+      // /api explains where the list now comes from. A guard that read the
+      // explanation would fail on the fix.
+      if (entry.name.endsWith('.js')) files.push({ rel: path.relative(API, p).split(path.sep).join('/'), text: stripJs(fs.readFileSync(p, 'utf8')) })
+    }
+  }
+  walk(API)
+  assert.ok(files.length > 10, `only ${files.length} files under /api — this test is reading the wrong directory`)
+
+  const literals = files.filter(f => /ADMIN_EMAILS\s*=\s*\[/.test(f.text)).map(f => f.rel)
+  assert.deepEqual(literals, [],
+    'a file under /api declares its own admin allowlist as a literal instead of reading the environment:\n  '
+    + literals.join('\n  '))
+
+  const readers = files.filter(f => /process\.env\.ADMIN_EMAILS/.test(f.text)).map(f => f.rel)
+  assert.deepEqual(readers, ['_lib/adminEmails.js'],
+    'the ADMIN_EMAILS variable is parsed somewhere other than the one module that owns it. Two parses of the '
+    + 'same variable is two chances to disagree about trimming, case or the empty string — which is the exact '
+    + 'defect the two hard-coded copies had:\n  ' + readers.join('\n  '))
+
+  // The comparison is lowercase on both sides. requireAdmin lowercases the
+  // token's email before asking, so an allowlist entry that kept its capitals
+  // could never match and the founder would be locked out by a typo in a
+  // Vercel field.
+  assert.equal(isAdminEmail('SOMEBODY@Example.Test'), false, 'nothing is configured, so nothing may match')
+  process.env.ADMIN_EMAILS = 'SomeBody@Example.Test'
+  try {
+    assert.deepEqual(adminEmails(), ['somebody@example.test'])
+    assert.equal(isAdminEmail('somebody@EXAMPLE.test'), true)
+  } finally {
+    delete process.env.ADMIN_EMAILS
+  }
 })
 
 // ── /api/support ─────────────────────────────────────────────────────────────
@@ -60,6 +97,51 @@ test('support no longer answers every origin on the internet', () => {
   assert.doesNotMatch(support, /Access-Control-Allow-Origin'\s*,\s*'\*'/, 'CORS is still wide open')
   assert.match(support, /allowedOrigins\(\)/, 'the origin allowlist is not consulted')
   assert.match(support, /'Vary',\s*'Origin'/, 'a per-origin ACAO without Vary is a cache-poisoning trap')
+})
+
+// ── and the same question asked of every other route ─────────────────────────
+//
+// support.js was fixed alone and the other seven kept `'*'` for another month.
+// Written as a SWEEP rather than seven named assertions so the next route to
+// grow a CORS header is covered on the day it is written: any file under /api
+// that answers with an Access-Control-Allow-Origin at all has to answer with an
+// allowlisted one.
+//
+// WHAT THIS IS AND IS NOT WORTH. None of these routes authenticates with a
+// cookie — every one of them reads a bearer token the browser never attaches by
+// itself — so `'*'` was not an ambient-credential CSRF hole and this closes no
+// live exploit. It removes reach: with `'*'` any page on the internet could read
+// these responses out of a visitor's browser, including the one that deletes an
+// account and the one that lists every user. CORS is a browser protection and
+// does nothing against curl, which is what the rate limiter and the bearer token
+// are for; the three are not interchangeable.
+test('no /api route answers every origin on the internet', () => {
+  const withCors = fs.readdirSync(API)
+    .filter(f => f.endsWith('.js'))
+    .map(f => ({ file: f, source: stripJs(read(f)) }))
+    .filter(({ source }) => source.includes('Access-Control-Allow-Origin'))
+
+  // The sweep has to be looking at something. Eight routes set CORS headers
+  // today; a walk that found one or none would report every route clean.
+  assert.ok(withCors.length >= 8,
+    `only ${withCors.length} /api routes set a CORS header — this sweep is reading the wrong directory`)
+
+  const wildcards = withCors
+    .filter(({ source }) => /Access-Control-Allow-Origin'\s*,\s*'\*'/.test(source))
+    .map(({ file }) => file)
+  assert.deepEqual(wildcards, [],
+    'these routes invite every page on the internet to call them from a visitor\'s browser:\n  '
+    + wildcards.join('\n  '))
+
+  const unlisted = withCors.filter(({ source }) => !/allowedOrigins\(\)/.test(source)).map(({ file }) => file)
+  assert.deepEqual(unlisted, [],
+    'these routes set an Access-Control-Allow-Origin without consulting the shared allowlist in '
+    + 'api/_lib/origins.js — a second mechanism is a second thing to get wrong:\n  ' + unlisted.join('\n  '))
+
+  const unvaried = withCors.filter(({ source }) => !/'Vary',\s*'Origin'/.test(source)).map(({ file }) => file)
+  assert.deepEqual(unvaried, [],
+    'these routes reflect a per-origin ACAO with no Vary: Origin, so a shared cache can serve one origin\'s '
+    + 'header to another:\n  ' + unvaried.join('\n  '))
 })
 
 test('support rate-limits before it does any work', () => {
@@ -100,6 +182,56 @@ test('the counter key is a hash, so no IP is stored', () => {
   assert.match(key, /^[0-9a-f]{32}$/)
   assert.equal(key, hashKey(ip), 'the same IP must hash to the same bucket or the limiter counts nothing')
   assert.notEqual(key, hashKey('203.0.113.8'))
+})
+
+// ── the salt ─────────────────────────────────────────────────────────────────
+//
+// A hash of an IP is only not-an-IP while the salt is unknown. This repository
+// is public, so `process.env.RATE_LIMIT_SALT || 'uil4b-rate-limit'` — which is
+// what this file used to read — published the salt with the code and made every
+// stored hash reversible by 4.3 billion SHA-256s of the IPv4 space. Both halves
+// are asserted: the constant must not come back, and the env var must still be
+// the thing that decides.
+
+test('an unset salt does not fall back to a constant anybody can read', () => {
+  // RATE_LIMIT_SALT is unset in this process — which is the whole point, since
+  // it is the misconfigured deployment that the old fallback silently served.
+  assert.equal(process.env.RATE_LIMIT_SALT, undefined,
+    'this test needs RATE_LIMIT_SALT unset to mean anything; something in the suite set it')
+
+  const ip = '203.0.113.7'
+  const withOldConstant = createHash('sha256').update(`uil4b-rate-limit:${ip}`).digest('hex').slice(0, 32)
+  assert.notEqual(hashKey(ip), withOldConstant,
+    'the limiter is hashing with the published constant again — every counter document in Firestore is a '
+    + 'reversible IP address, recoverable by anybody who can read this repository')
+
+  // Written against the CODE as well, because a future `|| 'something'` would
+  // reintroduce the fault in the exact form that looks like configuration —
+  // the same assertion DIAG_CODE already carries at the top of this file.
+  const limiter = stripJs(fs.readFileSync(path.join(API, '_lib/rateLimit.js'), 'utf8'))
+  assert.doesNotMatch(limiter, /RATE_LIMIT_SALT\s*(\|\||\?\?)\s*['"`]/,
+    'RATE_LIMIT_SALT has a literal fallback again — an unset salt must mean "generate one", never "use this string"')
+})
+
+test('the salt still comes from the environment when it is set', async () => {
+  // The fallback is the only thing that changed. If the env var stopped being
+  // read, every instance would salt itself randomly, counters would never be
+  // shared between them, and the limiter would silently become per-instance —
+  // the exact defect the module header gives for not using an in-memory Map.
+  const ip = '203.0.113.7'
+  process.env.RATE_LIMIT_SALT = 'salt-from-the-environment'
+  try {
+    // A fresh module instance: the salt is read once at load, so the import
+    // cache has to be stepped around with a query string.
+    const { hashKey: saltedHashKey } = await import('../../api/_lib/rateLimit.js?salted')
+    assert.equal(
+      saltedHashKey(ip),
+      createHash('sha256').update(`salt-from-the-environment:${ip}`).digest('hex').slice(0, 32),
+      'RATE_LIMIT_SALT is set and the limiter is not using it',
+    )
+  } finally {
+    delete process.env.RATE_LIMIT_SALT
+  }
 })
 
 // ── the limiter itself ───────────────────────────────────────────────────────

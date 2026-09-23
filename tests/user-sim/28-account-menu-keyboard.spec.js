@@ -24,6 +24,20 @@ import { go, restAfterMove, restingScrollY, watch } from './helpers.js'
 const PANEL = '#pnav-account-pop'
 const TRIGGER = '.pnav-more'
 
+// WHERE THE APP HEADER IS, which is no longer `/`.
+//
+// Every test here opened the panel on the homepage. `/` and `/home` render
+// src/pages/Spectrum.jsx since the route swap, and Spectrum mounts
+// `<PillNav variant="spectrum" />` — PillNav early-returns SpectrumNav before
+// its first hook, so the meatball, `#pnav-account-pop` and the whole
+// `usePopover(..., { arrowNav: true })` call site this file is about are simply
+// not on that page. All six tests timed out on `.pnav-more`.
+//
+// /discover renders the app header unchanged: measured, one `.pnav-more`, a
+// panel with nine focusable controls, and 1835px of scroll height against a
+// 900px viewport — which the two tests that measure a page scroll need.
+const ROUTE = '/discover'
+
 /**
  * Which of the panel's own focusable controls currently has focus.
  *
@@ -96,7 +110,7 @@ async function pressAndInspect(page, key) {
 }
 
 async function openPanel(page) {
-  await go(page, '/')
+  await go(page, ROUTE)
   await page.locator(TRIGGER).click()
   await expect(page.locator(PANEL)).toBeVisible()
   // usePopover focuses on a rAF, so the first control is not focused the
@@ -195,7 +209,7 @@ test.describe('nav popover keyboard movement', () => {
     // At rest, so the baseline is a position and not a frame of something else's
     // animation — a baseline caught mid-scroll would measure the arrow key
     // against the tail of THAT scroll rather than against a still page.
-    const before = await restingScrollY(page, 'the home page before the arrow key')
+    const before = await restingScrollY(page, 'the page before the arrow key')
 
     await page.evaluate(() => document.getElementById('main')?.focus())
     expect(await page.evaluate(() => document.activeElement?.id)).toBe('main')
@@ -210,16 +224,16 @@ test.describe('nav popover keyboard movement', () => {
     const openPress = await pressAndInspect(page, 'ArrowDown')
     expect(openPress.defaultPrevented, 'the open panel called preventDefault on an arrow key aimed past it').toBe(false)
     expect(openPress.activeId, 'the open panel dragged focus back into itself from an arrow key aimed past it').toBe('main')
-    const openY = await restAfterMove(page, before, 'the home page after an arrow key aimed past the open panel')
+    const openY = await restAfterMove(page, before, 'the page after an arrow key aimed past the open panel')
 
     // …and it lets go completely once the panel closes, rather than leaking a
     // document listener that outlives the panel it belongs to.
     await page.locator('h1').first().click()          // focus leaves → panel closes
     await expect(page.locator(PANEL)).toHaveCount(0)
-    const afterClose = await restingScrollY(page, 'the home page once the panel closed')
+    const afterClose = await restingScrollY(page, 'the page once the panel closed')
     const closedPress = await pressAndInspect(page, 'ArrowDown')
     expect(closedPress.defaultPrevented, 'a closed panel was still holding on to the arrow keys').toBe(false)
-    const closedY = await restAfterMove(page, afterClose, 'the home page after the panel closed')
+    const closedY = await restAfterMove(page, afterClose, 'the page after the panel closed')
 
     // ── The scroll: still measured, REPORTED rather than asserted ────────────
     //

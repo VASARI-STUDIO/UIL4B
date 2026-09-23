@@ -60,6 +60,16 @@ const FOOTER_GROUPS = [
       ['/feedback', 'Send feedback'],
       ['/privacy', 'Privacy'],
       ['/terms', 'Terms'],
+      // ADDED 2026-09-23, and it is a licence condition rather than a
+      // navigation opinion. Four of the icon sets the Icon Library renders are
+      // Creative Commons Attribution sets and two of those are on the free
+      // tier; the six typefaces are SIL OFL; the Firebase SDK is Apache-2.0.
+      // All three of those licences ask that the notice be reachable wherever
+      // the work is, and a footer link on every page is how a website answers
+      // that. It sits beside Privacy and Terms because those are the other two
+      // pages a reader goes looking for deliberately, and because
+      // SpectrumFooter gives all three a column of their own.
+      ['/credits', 'Credits'],
     ],
   },
 ]
@@ -81,7 +91,16 @@ export default function AppFooter({ compact = false }) {
               it — the four founder lines each already have a surface, and a
               footer that repeats one of them under every page would be the
               "all over the place" he named. The wordmark and the way in stay. */}
-          <Link className="app-footer-start" to="/create/color">
+          {/* READ FROM THE TREE, not typed. This said `/create/color` until
+              2026-09-18, which was correct while that was the one Create
+              category home that rendered a page. The founder deleted the colour
+              landing when Spectrum became `/`, so the URL now answers a 301 at
+              the edge and a bounce in the client — exactly the defect the
+              comment on FOOTER_CREATE above describes ("Imagery" pointing at
+              /create/imagery). categoryDestination() answers it from
+              CreateTool.jsx's own rule, so this link cannot go stale again.
+              tests/unit/tool-tree-surfaces.test.js fails the build if it does. */}
+          <Link className="app-footer-start" to={categoryDestination('colour')}>
             Start with colour <span aria-hidden="true">&rarr;</span>
           </Link>
         </div>

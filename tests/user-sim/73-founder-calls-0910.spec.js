@@ -94,6 +94,38 @@ const THEMES = ['light', 'dark']
 const APPROVED = 'Build and export UI and brand design kits, in one unified location.'
 const APPROVED_MARK = 'in one unified location'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// HOW THE SENTENCE IS READ OFF SPECTRUM, AND WHY IT IS NOT `h1.innerText()`
+// ─────────────────────────────────────────────────────────────────────────────
+// Home.jsx painted the headline as two `.home-hero-line-in` spans and the h1's
+// innerText WAS the sentence. `<SpectrumWords>` paints it twice on purpose: a
+// `.sr-only` span carrying the whole sentence once for a screen reader, and an
+// `aria-hidden` visual split of one `.sp-w` per word inside a `.sp-wm` clipping
+// mask, because there is no CSS that can clip and offset individual words of a
+// text node. So `h1.innerText()` now returns the approved sentence CONCATENATED
+// WITH ITSELF — measured, and it is exactly what this test failed on after the
+// route swap.
+//
+// Reading the words is therefore the right subject and the stronger one: the
+// visual split is what a sighted visitor reads, and joining `.sp-w` proves the
+// split itself is intact — a lost space, a dropped word or a word rendered out
+// of order all fail here, and none of them would move `innerText`. The sr-only
+// copy is asserted separately below, because a screen-reader user and a sighted
+// one must be given the SAME sentence and nothing before this checked that.
+//
+// SCOPED TO `.sp-hero-h1`, always. `<SpectrumWords>` paints the section
+// headings too; an unscoped `.sp-w` matches 47 elements on this page.
+const HERO_WORDS = '.sp-hero-h1 .sp-words-visual .sp-w'
+const HERO_MARKED = '.sp-hero-h1 .sp-words-visual .sp-w--mark'
+
+// `textContent`, not `innerText`, and that is not tidiness: innerText applies
+// `text-transform`, so a stylesheet that uppercased the hero would turn an
+// equality against his sentence into a failure about CSS rather than about
+// copy — and the claim here is what the page SAYS.
+const joinWords = async (locator) =>
+  (await locator.evaluateAll((els) => els.map((el) => (el.textContent || '').trim())))
+    .filter(Boolean).join(' ')
+
 /** A context at one width, in one theme — the shape 72-flow-followups uses. */
 async function open(browser, [w, h], theme = 'light') {
   const context = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: theme })
@@ -122,9 +154,15 @@ test.describe('the hero headline the founder approved on 2026-09-10 is the one t
       // <h1> of their own.
       await expectRendered(page, '/')
 
-      const h1 = page.locator('main h1').first()
+      const h1 = page.locator('main h1.sp-hero-h1')
       await expect(h1).toBeVisible()
-      const text = (await h1.innerText()).replace(/\s+/g, ' ').trim()
+
+      const words = page.locator(HERO_WORDS)
+      // POSITIVE CONTROL for the join below: a headline that rendered no words
+      // would join to '' and every equality here would be reporting on nothing.
+      await expect(words, 'the hero headline painted no words at all')
+        .toHaveCount(APPROVED.split(/\s+/).length)
+      const text = await joinWords(words)
 
       expect(text,
         'the hero headline is not the sentence the founder approved on 2026-09-10. It is '
@@ -136,13 +174,38 @@ test.describe('the hero headline the founder approved on 2026-09-10 is the one t
       // than having grown a typed copy that happens to match today.
       expect(text, 'the hero no longer renders src/data/positioning.js').toBe(heroHeadlineText())
 
+      // THE SCREEN READER IS GIVEN THE SAME SENTENCE. `<SpectrumWords>` carries
+      // it once in a `.sr-only` span precisely because the visual split would
+      // otherwise be announced one word per line; if that copy ever drifts from
+      // the words beside it, two readers meet two different headlines and only
+      // one of them is the one he approved.
+      const spoken = await h1.locator('.sr-only').evaluate((el) => el.textContent || '')
+      expect(spoken.replace(/\s+/g, ' ').trim(),
+        'the headline a screen reader is given is not the one on screen',
+      ).toBe(APPROVED)
+
       // THE HIGHLIGHT IS PART OF WHAT HE APPROVED. Moving a word across the
       // lead/mark boundary leaves the sentence identical and changes what the
-      // page paints and what the share card paints. design-language-v2.md
-      // budgets one --hi element per viewport, so there must be exactly one.
-      const marks = page.locator('main h1 mark')
-      await expect(marks, 'the hero must highlight exactly one run').toHaveCount(1)
-      expect((await marks.innerText()).replace(/\s+/g, ' ').trim()).toBe(APPROVED_MARK)
+      // page paints and what the share card paints.
+      //
+      // ONE RUN, NOT ONE ELEMENT. Home.jsx wrapped the run in a single <mark>;
+      // SpectrumWords marks it a word at a time, so the design-language budget
+      // of one --hi run per viewport is now a statement about CONTIGUITY rather
+      // than about node count. Asserted as both: the marked words join to his
+      // phrase, and they are consecutive in the headline — a second highlighted
+      // run elsewhere in the sentence would satisfy neither.
+      const marked = page.locator(HERO_MARKED)
+      await expect(marked, 'the hero highlights no run at all').toHaveCount(APPROVED_MARK.split(/\s+/).length)
+      // Trailing punctuation belongs to the sentence, not to the run: the mark
+      // ends the headline, so its last word renders as "location." while the
+      // run he approved is "…location". SpectrumWords matches it the same way.
+      expect((await joinWords(marked)).replace(/[.,;:!?]+$/, '')).toBe(APPROVED_MARK)
+      const contiguous = await page.locator('.sp-hero-h1 .sp-words-visual').evaluate((el) => {
+        const all = [...el.querySelectorAll('.sp-w')]
+        const hit = all.map((w, i) => (w.classList.contains('sp-w--mark') ? i : -1)).filter((i) => i > -1)
+        return hit.length > 0 && hit[hit.length - 1] - hit[0] === hit.length - 1
+      })
+      expect(contiguous, 'the highlighted words are not one contiguous run').toBe(true)
       expect(HERO_HEADLINE.mark).toBe(APPROVED_MARK)
 
       await context.close()

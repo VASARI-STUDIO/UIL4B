@@ -49,9 +49,23 @@ test('a revocation beats the seven-day past-due grace', () => {
 })
 
 test('planForUser honours it too, and admins are still exempt', () => {
-  const revoked = { ...ACTIVE, accessRevoked: true }
-  assert.equal(planForUser({ subscription: revoked }).id, 'free')
-  assert.equal(planForUser({ subscription: revoked, email: 'dylanjacob1100@gmail.com' }).id, 'pro')
+  // The admin allowlist is the ADMIN_EMAILS environment variable now — it used
+  // to be the founder's personal address written into api/_lib/plans.js, and
+  // into this test. Set here rather than assumed, so the exemption is measured
+  // against a configured administrator instead of against whatever the machine
+  // running the suite happens to have in its environment.
+  const before = process.env.ADMIN_EMAILS
+  process.env.ADMIN_EMAILS = 'owner@uil4b-test.example'
+  try {
+    const revoked = { ...ACTIVE, accessRevoked: true }
+    assert.equal(planForUser({ subscription: revoked }).id, 'free')
+    assert.equal(planForUser({ subscription: revoked, email: 'owner@uil4b-test.example' }).id, 'pro')
+    assert.equal(planForUser({ subscription: revoked, email: 'someone@else.example' }).id, 'free',
+      'the exemption is not reading the allowlist — it is exempting everybody')
+  } finally {
+    if (before === undefined) delete process.env.ADMIN_EMAILS
+    else process.env.ADMIN_EMAILS = before
+  }
 })
 
 // A live lifetime entitlement is a separate purchase. Reversing a subscription

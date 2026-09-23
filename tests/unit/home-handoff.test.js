@@ -6,7 +6,6 @@
 // as-is, and the icon draft can never carry markup, URLs, colours or plan data.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { read, stripComments } from './helpers/source-text.js'
 import { createHandoffSlot } from '../../src/utils/handoffSlot.js'
 import {
   DEFAULT_IMAGE_DRAFT,
@@ -263,33 +262,18 @@ test('an invalid draft is never staged', () => {
  * scroller, so any control that lands there is painted over at every scroll
  * position but the last.
  *
- * tests/user-sim/49-workbench-handoff-clearance.spec.js measures the rendered
+ * 49-workbench-handoff-clearance.spec.js (DELETED with HomeWorkbench) measured the rendered
  * geometry. This is the cheap half: it reads the JSX and fails the BUILD, in
  * milliseconds, if the foot is ever nested back inside the scroller — which is
  * the single structural fact the whole defect class depends on.
  */
-test('the hand-off is a sibling of the scrolling control zone, never a child of it', () => {
-  const src = stripComments(read('src/components/HomeWorkbench.jsx'))
-  assert.ok(src.includes('hw-controls'), 'stripping ate the workbench own JSX')
-
-  const opens = [...src.matchAll(/<div className="hw-controls/g)].map((m) => m.index)
-  assert.equal(opens.length, 5, `expected five control zones, found ${opens.length}`)
-
-  for (const start of opens) {
-    // Walk the tags from the zone's opening <div> to the </div> that closes it.
-    let depth = 0
-    let end = -1
-    // A self-closing <div /> opens and closes in one token; counting it as an
-    // open leaves every later zone unbalanced, so it is matched first and
-    // scores nothing.
-    for (const m of src.slice(start).matchAll(/<div[^>]*\/>|<div|<\/div>/g)) {
-      if (m[0].endsWith('/>')) continue
-      depth += m[0] === '</div>' ? -1 : 1
-      if (depth === 0) { end = start + m.index; break }
-    }
-    assert.ok(end > start, 'a .hw-controls block is unbalanced')
-    assert.ok(!src.slice(start, end).includes('className="hw-foot"'),
-      'a .hw-foot is nested inside .hw-controls again — a sticky last child covers '
-      + 'the bottom of the only zone that scrolls, and every control that lands there')
-  }
-})
+// ONE TEST IS DELETED HERE: "the hand-off is a sibling of the scrolling control
+// zone, never a child of it". It read src/components/HomeWorkbench.jsx, which
+// was deleted on 2026-09-18 with src/pages/Home.jsx when Spectrum became `/`.
+//
+// The SLOTS are not deleted and neither is the rest of this file: the hand-off
+// records are still written by the tools and still consumed by
+// PaletteBuilder.jsx and IconLibrary.jsx, so every contract about their shape,
+// versioning, single consumption and bounds still has both ends. What went is
+// the one assertion about where a button sat inside a component that no longer
+// exists.

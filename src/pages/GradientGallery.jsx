@@ -6,16 +6,22 @@ import DiscoverResultHead from '../components/discover/DiscoverResultHead'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
 import LibraryEmpty from '../components/library/LibraryEmpty'
+import LibraryGrid from '../components/library/LibraryGrid'
+import { LockedPaletteCard, LockedTeaseCta } from '../components/library/LockedTease'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import { GALLERY_GRADIENTS, GRADIENT_TAGS, gradientCss, gradientToolUrl } from '../data/gradientGallery'
 import { readGradientSubmissions, withdrawGradientSubmission } from '../utils/gradientSubmissions'
 import { mergeSubmissions } from '../utils/communityQueue'
 import { listMySubmissions } from '../utils/communityQueueApi'
+import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import { useAuth } from '../contexts/AuthContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/colour.css'
+import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 
 // /discover/gradients — the Gradient Library. A designgradients-style browse
@@ -54,6 +60,12 @@ const TYPE_OPTIONS = [
 
 export default function GradientGallery({ toast }) {
   const { user } = useAuth()
+  const { isPro } = useSubscription()
+  const { requireLogin } = useLoginPrompt()
+  // Anonymous → free account → Pro, exactly as on the Palette Library. Both
+  // inputs must be an exact `true` to climb a rung: an entitlement or an auth
+  // state still resolving shows the tier below, never the one above.
+  const tier = galleryTier({ isPro, signedIn: user != null })
   const [rawQuery, setRawQuery] = useState('')
   const [tag, setTag] = useState('all')
   // An ARRAY, because the type tray is multi-select (founder request,
@@ -99,7 +111,34 @@ export default function GradientGallery({ toast }) {
   }, [user?.uid])
   const query = rawQuery.trim().toLowerCase()
 
-  const visible = useMemo(() => GALLERY_GRADIENTS.filter(g => {
+  // THE GATE, BEFORE THE DATA IS PRODUCED — not on a control, not in CSS.
+  //
+  // Every gradient is eligible (`isOpen` is unconditional): unlike the palette
+  // and prompt libraries this collection has no per-row paid flag, so the tier
+  // CAP is the whole gate here. It still runs over GALLERY_GRADIENTS in its own
+  // order, before the filters and the search see anything, which is what stops
+  // it being the positional gate utils/lockedPreview.js was written after.
+  //
+  // Closing the search oracle is the reason it has to sit here rather than in
+  // the grid: the haystack below indexes every stop's HEX, so filtering the
+  // full collection would let a signed-out visitor confirm a withheld
+  // gradient's colours by typing them, and read its name back from the result.
+  const { open: browsable, locked: lockedPreviews, remaining: lockedCount, eligible } = useMemo(() => (
+    splitLockedLibrary(GALLERY_GRADIENTS, {
+      unlocked: isPro === true,
+      isOpen: () => true,
+      // A gradient's NAME is the tease and its stops are the product — the same
+      // split as a brand palette, and the opposite of a community prompt, whose
+      // title IS the thing being sold. `slots` is the stop count: how many
+      // values the row holds, never the values.
+      preview: (g) => ({ id: g.id, label: g.name, slots: g.stops.length }),
+      limit: galleryLimit(tier),
+    })
+  ), [isPro, tier])
+
+  const accountAdds = accountTierGain({ tier, eligible, shown: browsable.length })
+
+  const visible = useMemo(() => browsable.filter(g => {
     if (tag !== 'all' && !g.tags.includes(tag)) return false
     if (!types.includes('all') && !types.includes(g.type)) return false
     if (query) {
@@ -107,12 +146,64 @@ export default function GradientGallery({ toast }) {
       if (!hay.includes(query)) return false
     }
     return true
-  }), [query, tag, types])
+  }), [browsable, query, tag, types])
 
   const clearAll = () => { setRawQuery(''); setTag('all'); setTypes(['all']) }
 
+  // The teased tail. Shown only while the view is unnarrowed: under a search or
+  // a filter the visitor has asked a narrower question, and answering it with a
+  // paywall is an interruption rather than an offer (same rule as the Palette
+  // and Prompt libraries).
+  //
+  // The anonymous rung gets the wall WITHOUT placeholders, because
+  // LockedPaletteCard stamps every placeholder "Pro" and the next rows are not
+  // Pro's — they come with a free account. See the longer note in
+  // PaletteGallery.jsx.
+  const anonymous = tier === 'anonymous'
+  const teaseVisible = lockedCount > 0 && !query && tag === 'all' && types.includes('all')
+  const lockedBlock = teaseVisible ? (
+    anonymous ? (
+      <div className="lockt-cta">
+        <div className="lockt-cta-copy">
+          <p className="lockt-cta-head">{`Another ${accountAdds} ${accountAdds === 1 ? 'gradient' : 'gradients'} with a free account`}</p>
+          <p className="lockt-cta-body">{`A free account opens ${browsable.length + accountAdds} of the ${GALLERY_GRADIENTS.length} gradients. Pro opens all ${GALLERY_GRADIENTS.length}.`}</p>
+        </div>
+        <button
+          type="button"
+          className="btn btn-accent lockt-cta-btn"
+          onClick={() => requireLogin('browse more of the gradient library', { free: true, signup: true })}
+        >
+          Create your free account
+        </button>
+      </div>
+    ) : (
+      <>
+        {/* The locked grid names itself. A screen-reader user meets three more
+            cards after the open ones and needs to know why they differ; without
+            a name this is an unexplained second grid. The placeholder SHAPES are
+            hidden inside the card, and the name it does carry is the gradient's
+            own — a fact, not an invention. */}
+        <h2 className="sr-only" id="grg-locked-more">Gradients included with Pro</h2>
+        <LibraryGrid className="grg-grid" min={280} labelledBy="grg-locked-more">
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} />)}
+        </LibraryGrid>
+        <LockedTeaseCta
+          gate="gradient-library-tier-lock"
+          heading={`Another ${lockedCount} ${lockedCount === 1 ? 'gradient' : 'gradients'} with Pro`}
+          body={`Free covers ${browsable.length} of the ${GALLERY_GRADIENTS.length}. Pro opens the remaining ${lockedCount}, each one editable in the Gradient Generator.`}
+          action="See what Pro includes"
+          modal={{
+            eyebrow: 'Pro colour tools',
+            title: 'The full gradient library',
+            subtitle: `Free covers ${browsable.length} of the ${GALLERY_GRADIENTS.length} gradients. Pro opens the remaining ${lockedCount}, each one with its CSS to copy and its stops to edit.`,
+          }}
+        />
+      </>
+    )
+  ) : null
+
   return (
-    <div className="sec grg-wrap">
+    <div className="sec lib-surface grg-wrap">
       {/* NO `description` (founder decision, 2026-09-13): the sentence here ran
           the same template as the Palette Library’s — "…with a point of view …
           make it yours." — which is what held both pages at 7 on
@@ -253,6 +344,11 @@ export default function GradientGallery({ toast }) {
           />
         )}
       </section>
+
+      {/* The tier wall, after the grid and before the closing line — the reading
+          order Savee's paywall uses and the one the Palette and Prompt libraries
+          already run: what you have, then a glimpse of more, then how to get it. */}
+      {lockedBlock}
 
       {/* The closing line, last child of the page. Same reasoning as the Palette
           Library: the Gradient Generator is where a gradient gets made and where

@@ -80,6 +80,12 @@ const PALETTE_LEDE = ''
 import '../styles/deferred/account.css'
 import '../styles/deferred/colour.css'
 import '../styles/deferred/tool-shell.css'
+// This page's OWN sheet, and it must stay LAST. The `plb` family's base rules
+// live in global.css and in the shared deferred/colour.css, neither of which
+// this route may edit. Importing last means this sheet loads after both and
+// wins at equal specificity — which is also what lets it re-point the
+// `--accent-strong` and `--brand` aliases for the whole page in one place.
+import '../styles/pages/palette-builder.css'
 
 // Palette Builder — the standalone /create/palette workbench. A full-bleed
 // board so the columns are the page, not a panel floating in chrome: a
@@ -623,8 +629,8 @@ export function HctPicker({ hex, label, onChange, onClose }) {
         </div>
       ))}
       <div className="plb-picker-evidence" aria-live="polite">
-        <span>Requested H {requested.h}Â° Â· C {requested.c} Â· T {requested.t}</span>
-        <span>Achieved H {achieved.h}Â° Â· C {achieved.c} Â· T {achieved.t}</span>
+        <span>Requested H {requested.h}° · C {requested.c} · T {requested.t}</span>
+        <span>Achieved H {achieved.h}° · C {achieved.c} · T {achieved.t}</span>
         {limited && <strong>Display gamut limited; controls retain your requested HCT.</strong>}
       </div>
       <div className="plb-picker-hexrow">
@@ -1896,8 +1902,32 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
 
   // Social-card PNG (1200×630) of the palette — the shareable mini version,
   // rendered client-side so it needs no serverless function.
-  const downloadPng = () => {
+  const downloadPng = async () => {
     try {
+      /* THE EXPORT IS DRAWN IN THE PRODUCT'S TYPEFACE, READ FROM THE TOKEN.
+       *
+       * These two `g.font` lines said `Outfit`, and Outfit has had no
+       * @font-face since the Geist foundation landed — so every palette card
+       * anyone exported was silently drawn in system-ui. Nothing on screen
+       * showed it: the canvas just resolves the next family in the list. A
+       * paid export in the wrong face is the kind of defect that only ever
+       * gets noticed by the customer.
+       *
+       * Read from `--font` rather than naming Geist, so the next foundation
+       * change carries here without anyone remembering this file exists. */
+      const uiFont = getComputedStyle(document.documentElement)
+        .getPropertyValue('--font').trim() || 'system-ui, sans-serif'
+      const swatchFont = `600 26px ${uiFont}`
+      const markFont = `700 22px ${uiFont}`
+      /* AND THE FACE HAS TO BE LOADED BEFORE ANYTHING IS DRAWN. Canvas does
+       * not wait for a webfont the way layout does — it paints whatever is
+       * resolved at that instant and there is no second chance once toBlob
+       * has run. `document.fonts.load` is the wait; if it rejects we draw
+       * anyway rather than refuse the export. */
+      try {
+        await Promise.all([document.fonts.load(swatchFont), document.fonts.load(markFont)])
+      } catch { /* fall back to whatever the family list resolves to */ }
+
       const w = 1200, h = 630
       const canvas = document.createElement('canvas')
       canvas.width = w
@@ -1908,14 +1938,14 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         g.fillStyle = c
         g.fillRect(Math.floor(i * cw), 0, Math.ceil(cw) + 1, h)
         g.fillStyle = textColorForBg(c) === 'rgba(0,0,0,.85)' ? '#000000' : '#FFFFFF'
-        g.font = '600 26px Outfit, system-ui, sans-serif'
+        g.font = swatchFont
         g.textAlign = 'center'
         g.fillText(c, i * cw + cw / 2, h - 42)
       })
       // Free exports carry a small brand watermark; Pro exports stay clean.
       if (!isPro) {
         const label = 'Made with UIL4B'
-        g.font = '700 22px Outfit, system-ui, sans-serif'
+        g.font = markFont
         const tw = g.measureText(label).width
         const padX = 14, bh = 34, margin = 22, bw = tw + padX * 2
         const bx = w - margin - bw, by = margin

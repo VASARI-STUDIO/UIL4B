@@ -25,6 +25,9 @@ import { useI18n } from '../contexts/I18nContext'
 import { isAdminEmail } from '../utils/constants'
 import NavIcon from './NavIcon'
 import ThemeChoice from './ThemeChoice'
+import ThemeCycle from './nav/ThemeCycle'
+import SpectrumNav from './SpectrumNav'
+import { menuDescription } from './nav/menuDescription'
 
 // Overlays are code-split: the command palette and the export shell only load
 // the first time a visitor actually opens them, so they never weigh on the nav's
@@ -52,86 +55,6 @@ const ExportPanel = lazy(() => import('./ExportPanel'))
 // instead (matches the sales-page nav reference).
 const SALES_PATHS = new Set(['/', '/home', '/plans', '/pricing'])
 
-const MENU_TOOL_COPY = {
-  palette: 'Build a usable palette from one seed.',
-  gradient: 'Compose and copy production CSS.',
-  contrast: 'Check WCAG pairs and repair failures.',
-  tint: 'Tune a complete 50–950 scale.',
-  semantic: 'Map intent across light and dark modes.',
-  'font-gallery': '',
-  'font-pair': '',
-  'type-scale': '',
-  'component-designer': 'Shape components and their states.',
-  'box-shadow': 'Build deliberate depth systems.',
-  // Says what comes OUT, because that is the only honest way to describe a
-  // generator: the old line promised 'a connected UI foundation', which is
-  // three abstractions and no artefact.
-  'auto-builder': 'Describe it; get a palette, fonts and a scale.',
-  // '' is deliberate and is NOT the same as deleting the key -- see
-  // menuDescription. These seven labels are already the sentence: a gallery of
-  // fonts, a pairing of fonts, a scale of type, a library of icons, a library of
-  // emoji, a calculator of aspect ratios, the text of an alt attribute. The
-  // Discover row for the same icon page keeps ITS line because "200k+" is a
-  // count, not a restatement.
-  icons: '',
-  // The Discover surface lists the same page under its own group id, and a menu
-  // row is one line — without this it would fall back to the group's full
-  // sentence and run three lines deep beside its one-line neighbours.
-  'icon-library': 'Search and copy 200k+ SVG icons.',
-  emoji: '',
-  'file-converter': 'Convert and compress files locally.',
-  ratio: '',
-  'ai-prompt': 'Structure production-ready image prompts.',
-  'landing-prompts': 'Plan a page around a clear outcome.',
-  'alt-text': '',
-  prompts: 'Reuse prompts proven by the community.',
-  // Discover rows. Without these the row falls back to the group's `desc` in
-  // toolTree.js, which is page copy — a full sentence written for the card on
-  // /discover, not for a menu row. Measured in the browser at 1440: Gradient
-  // Library and Prompt Library each ran THREE lines, making an 84px row next to
-  // a 54px neighbour and pushing the panel past the bottom of a 768px screen.
-  // A menu row is one line (the Higgsfield and Hers mega-menus on Mobbin are
-  // both strictly one), so these are the one-line forms of the same promise.
-  // The two Learn rows that stopped saying Soon on 2026-09-18. While they were
-  // Soon, menuDescription returned '' for them on the first line and the
-  // question never arose; live, they fell through to their LEARN_GROUPS `desc`
-  // — "The rules behind interfaces that work." and "Everything to get
-  // productive fast." — which is landing-page copy in a 180px menu column, the
-  // exact fall-through the note above this table warns about. '' rather than a
-  // new sentence, for the same reason as the seven below it: the label already
-  // is the sentence. Design Principles is the principles; Help & Getting
-  // Started is the help.
-  principles: '',
-  help: '',
-  'palette-library': 'Copy a curated colour system.',
-  'gradient-gallery': 'Production-ready CSS gradients.',
-  'community-prompts': 'Proven by the community, not scraped.',
-  inspiration: 'Community UI systems, curated.',
-  curated: 'External tools that earn a tab.',
-  collections: 'Save and organise what you find.',
-}
-
-// A row's second line has to EARN its place. Two rules decide it, and both
-// read data the row already carries rather than adding an eighth hand-kept list.
-//
-// ONE: A SOON ROW GETS NO DESCRIPTION. Describing what an unbuilt tool will do
-// is a sentence about something that does not exist -- the same fault #352 took
-// out of the card, where a drawing of a UI stood in for a UI. Withholding the
-// line is also what makes live and unbuilt read apart straight down a column
-// without hunting for a badge, which is the reasoning that already governs
-// Learn getting no preview. It keys off `t.soon`, so a tool shipping is the
-// only edit needed to give its line back -- the copy below stays put meanwhile.
-//
-// TWO: AN EXPLICIT '' MEANS THE LABEL ALREADY SAYS IT. Note the `in` test and
-// not a truthy one: DELETING a key would not drop the line, it would fall
-// through to the group's `desc` -- page copy written for a card on /discover,
-// which is exactly how "Reuse prompts proven by the community." came to be
-// clipped mid-phrase to "...proven by the" in a 196px column.
-function menuDescription(section, tool) {
-  if (tool.soon) return ''
-  if (tool.id in MENU_TOOL_COPY) return MENU_TOOL_COPY[tool.id]
-  return section.groups?.find((group) => group.id === tool.id)?.desc || ''
-}
 
 // Small inline chevron so the nav has zero asset dependencies.
 function Chevron() {
@@ -445,7 +368,31 @@ function previewFor(section) {
   return null
 }
 
-export default function PillNav() {
+// THE ONE MOUNT POINT FOR BOTH NAVS.
+//
+// `variant="spectrum"` renders the marketing nav instead of the app header.
+// It is a prop rather than a route test on purpose: which nav a page wants is
+// the PAGE's decision, and a `SALES_PATHS`-style list inside this component is
+// exactly the kind of second copy of the router that `toolTree.js` exists to
+// stop. Everything about the app header below is unchanged when the prop is
+// absent, which is every route but the sales page.
+//
+// The early return is before the first hook, so no hook is ever called
+// conditionally: a mounted PillNav keeps the same variant for its whole life
+// (the prop is written at the call site, not derived from state).
+//
+// A STATIC IMPORT, NOT A LAZY ONE. The marketing nav is the first paint of the
+// product's busiest route, so a Suspense fallback there would blank the bar on
+// the prerendered shell. The cost is SpectrumNav's own JSX in the main chunk
+// on every route; everything it imports (NAV_SECTIONS, NavIcon, ThemeChoice,
+// ThemeCycle, menuDescription) is already there for the app header, and its
+// one heavy dependency — the command palette — stays lazy in both navs.
+export default function PillNav({ variant }) {
+  if (variant === 'spectrum') return <SpectrumNav />
+  return <AppHeader />
+}
+
+function AppHeader() {
   const { user, userProfile, logout, knownAccounts, switchAccount } = useAuth()
   const { openLogin } = useLoginPrompt()
   const { isPro } = useSubscription()
@@ -860,8 +807,19 @@ export default function PillNav() {
       >
         <div className="pnav-inner">
           <div className="pnav-lead">
+            {/* The wordmark sets the "4" in the accent, which is how BOTH design
+                sources draw it (Spectrum marketing nav line 221, App header line
+                102). It is a <span> inside the existing word rather than a
+                second element beside it, so the logotype is still one run of
+                text with one ink bound — 52-header-optical-alignment.spec.js
+                measures .pnav-logo's painted left edge against the right-hand
+                cluster, and a second box would move it.
+
+                aria-label on the Link already says "UIL4B home", so the split
+                is invisible to assistive tech; a screen reader never meets
+                "UIL" "4" "B" as three runs. */}
             <Link className="pnav-logo" to="/home" onClick={closeAll} aria-label="UIL4B home">
-              <span className="pnav-word">UIL4B</span>
+              <span className="pnav-word">UIL<span className="pnav-word-mark">4</span>B</span>
             </Link>
 
             {/* Search — lives beside the logo so the three section menus can sit
@@ -887,6 +845,13 @@ export default function PillNav() {
                 <kbd className="pnav-search-kbd" aria-hidden="true">/</kbd>
               </button>
             </div>
+
+            {/* The theme cycle, sitting between the search field and the section
+                nav exactly as `UIL4B App.dc.html` line 108 places it. ADDITIVE:
+                the three-way ThemeChoice segment is untouched in the account
+                popover, the compact menu and the sheet, so nothing that could
+                reach the theme before has lost its way in. See nav/ThemeCycle. */}
+            <ThemeCycle />
           </div>
 
           {/* The three section menus — centred in the bar (grid middle column). */}
@@ -1191,147 +1156,191 @@ export default function PillNav() {
           onMouseLeave={hoverLeave}
           onKeyDown={onMenuKeyDown}
         >
-          <div className="pnav-menu-body">
-            <div className="pnav-menu-cols">
-              <aside className="pnav-editorial">
-                {/* Renders nothing at all where the section has no real
-                    contents to show -- frame included. See MenuPreview. */}
-                <MenuPreview section={activeSection.id} />
-                <span className="pnav-promo-eyebrow">{activeSection.promo?.eyebrow || activeSection.label}</span>
-                <p className="pnav-editorial-title">{activeSection.promo?.title}</p>
-                <p className="pnav-editorial-blurb">{activeSection.promo?.blurb}</p>
-                {/* THE ANSWER TO "WHICH ONE DO I OPEN FIRST".
-                    The founder’s complaint was that nothing in the panel says
-                    where a new visitor should start. The product already has an
-                    opinion and the desktop menu was the one place not stating
-                    it: promo.guide + promo.cta are honoured by the MOBILE SHEET
-                    (which renders a "Build a brand kit" button calling
-                    launchBrandKit) and were dropped on desktop, where the card
-                    headed "Build your brand kit, step by step" offered a single
-                    link to /sitemap instead.
-                    The steps are DERIVED from UIKIT_STEPS, the same exported
-                    array the guide itself walks, so this can never drift into an
-                    eighth hand-kept copy of an ordered list. Numbers and labels
-                    only -- the blurbs are in the guide, and a four-line card in a
-                    260px column is a wall. Reference: Retool’s nav sequence
-                    (01-05, collapsed to number + label) and Homerun’s "5 steps"
-                    rail with step 1 carried forward. */}
-                {activeSection.promo?.guide && (
-                  // The numeral is aria-hidden because <ol> already conveys the
-                  // order; without the label a screen reader would meet a bare
-                  // four-item list sitting between a blurb and a button and have
-                  // to infer what it enumerates.
-                  <ol className="pnav-steps" aria-label={`${activeSection.promo.cta || 'Guided flow'}: steps`}>
-                    {BRAND_KIT_STEPS.map((s, i) => (
-                      <li className="pnav-step" key={s.id}>
-                        <span className="pnav-step-n" aria-hidden="true">{i + 1}</span>
-                        <span className="pnav-step-label">{s.label}</span>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-                {/* Both of these are data-pnav-menuitem, and that is a FIX
-                    rather than a side effect: the Tab bridge jumps from the
-                    trigger straight to the first TOOL and back again, so the
-                    card’s only call to action was unreachable by keyboard for
-                    as long as it has existed. In DOM order the card precedes
-                    the columns, so the ring now opens on the recommended
-                    starting point -- which is what ArrowDown should land on. */}
-                <div className="pnav-editorial-actions">
-                  {activeSection.promo?.guide && (
-                    <button
-                      type="button"
-                      className="ui-pill ui-pill-accent ui-pill-sm pnav-editorial-cta"
-                      onClick={launchBrandKit}
-                      data-pnav-menuitem
-                    >
-                      {/* The label reports which of the two things this button
-                          is about to do. A control that says "Build a brand kit"
-                          and then drops you three steps in has lied to you. */}
-                      {brandKitEntry.resume
-                        ? `Resume: ${brandKitEntry.step.label}`
-                        : (activeSection.promo.cta || 'Start building')}
-                    </button>
-                  )}
-                  <Link className="pnav-editorial-link" to={activeSection.viewAllHref} onClick={closeAll} data-pnav-menuitem>
-                    Explore {activeSection.label} <span aria-hidden="true">&rarr;</span>
-                  </Link>
-                </div>
-              </aside>
-              <div className="pnav-grid">
-                {/* Each stack = one grid column; a stack can hold several
-                    captioned groups top-to-bottom (Create: Icons above
-                    Media & AI) so a small subcategory never forces an extra
-                    cramped grid column. */}
-                {activeSection.columns.map((stack) => (
-                  <div className="pnav-colstack" key={stack[0].label}>
-                    {stack.map((col) => (
-                      // Six column heads all drew the same --accent rule while the
-                      // icons directly beneath them were already hue-coded, so the
-                      // panel read as one undifferentiated field. The hue is read
-                      // off the column’s own tools -- no new data, and Discover /
-                      // Learn (whose rows carry no category hue) fall back to accent.
-                      // The RULE takes the hue, never the label text: these tokens
-                      // are measured for non-text contrast, and #331 swept small
-                      // accent text out of this surface for good reason.
-                      <div
-                        className="pnav-col"
-                        key={col.label}
-                        data-hue={col.tools.find((t) => t.hue)?.hue}
-                        data-soon={col.tools.length > 0 && col.tools.every((t) => t.soon) ? 'true' : undefined}
-                      >
-                        <p className="pnav-col-label">{col.label}</p>
-                        <ul className="pnav-toollist">
-                          {col.tools.map((t) => (
-                            <li key={t.id}>
-                              <Link
-                                className="pnav-tool"
-                                to={t.route}
-                                data-hue={t.hue}
-                                data-soon={t.soon ? 'true' : undefined}
-                                aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
-                                onClick={closeAll}
-                                data-pnav-menuitem
-                              >
-                                <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
-                                <span className="pnav-tool-copy">
-                                  {/* Label and badge share a row so "Soon" reads as
-                                      part of the tool's name. It used to be a
-                                      sibling of this block with margin-left:auto,
-                                      which parked it against the far edge of the
-                                      column — up to 80px of gap between the word it
-                                      qualifies and the badge. Hers, Fiverr and
-                                      Higgsfield all set the badge immediately after
-                                      the label. */}
-                                  <span className="pnav-tool-line">
-                                    <span className="pnav-tool-label">{t.label}</span>
-                                    {t.soon && <span className="soon-badge">Soon</span>}
-                                    {/* Beta and Soon can never both render: a tool
-                                        the tree marks Soon is not mounted, so there
-                                        is nothing to be in beta. They deliberately
-                                        share the badge SHAPE and differ only in
-                                        colour -- one is 'not yet', the other is
-                                        'yes, with a stated limit'. */}
-                                    {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
+          {/* THE CARD INSIDE THE TRAY. `UIL4B App.dc.html` builds the mega
+              menu as two nested surfaces: an outer tray (line 127) that is 7px
+              of padding, a 26px radius and a blurred translucent ground, and
+              an inner card (line 128) at 18px radius on --card2 that clips the
+              column grid, the promo pane and the view-all foot into one solid
+              block. The old panel was a single box with the foot painted on it.
+          
+              The card is also what makes the foot STICK: .pnav-menu-body is the
+              scroller (min-height:0 inside this flex column), so a Create menu
+              taller than the viewport scrolls its tools while the view-all bar
+              stays on screen. */}
+          <div className="pnav-menu-card">
+            <div className="pnav-menu-body">
+              <div className="pnav-menu-cols">
+                <div className="pnav-grid">
+                  {/* Each stack = one grid column; a stack can hold several
+                      captioned groups top-to-bottom (Create: Icons above
+                      Media & AI) so a small subcategory never forces an extra
+                      cramped grid column. */}
+                  {activeSection.columns.map((stack) => (
+                    <div className="pnav-colstack" key={stack[0].label}>
+                      {stack.map((col) => (
+                        // Six column heads all drew the same --accent rule while the
+                        // icons directly beneath them were already hue-coded, so the
+                        // panel read as one undifferentiated field. The hue is read
+                        // off the column’s own tools -- no new data, and Discover /
+                        // Learn (whose rows carry no category hue) fall back to accent.
+                        // The RULE takes the hue, never the label text: these tokens
+                        // are measured for non-text contrast, and #331 swept small
+                        // accent text out of this surface for good reason.
+                        <div
+                          className="pnav-col"
+                          key={col.label}
+                          data-hue={col.tools.find((t) => t.hue)?.hue}
+                          data-soon={col.tools.length > 0 && col.tools.every((t) => t.soon) ? 'true' : undefined}
+                        >
+                          <p className="pnav-col-label">{col.label}</p>
+                          <ul className="pnav-toollist">
+                            {col.tools.map((t) => (
+                              <li key={t.id}>
+                                <Link
+                                  className="pnav-tool"
+                                  to={t.route}
+                                  data-hue={t.hue}
+                                  data-soon={t.soon ? 'true' : undefined}
+                                  aria-label={t.soon ? `${t.label} — coming soon` : t.beta ? `${t.label} — beta` : undefined}
+                                  onClick={closeAll}
+                                  data-pnav-menuitem
+                                >
+                                  <span className="pnav-tool-ico" aria-hidden="true"><NavIcon id={t.icon} /></span>
+                                  <span className="pnav-tool-copy">
+                                    {/* Label and badge share a row so "Soon" reads as
+                                        part of the tool's name. It used to be a
+                                        sibling of this block with margin-left:auto,
+                                        which parked it against the far edge of the
+                                        column — up to 80px of gap between the word it
+                                        qualifies and the badge. Hers, Fiverr and
+                                        Higgsfield all set the badge immediately after
+                                        the label. */}
+                                    <span className="pnav-tool-line">
+                                      <span className="pnav-tool-label">{t.label}</span>
+                                      {t.soon && <span className="soon-badge">Soon</span>}
+                                      {/* Beta and Soon can never both render: a tool
+                                          the tree marks Soon is not mounted, so there
+                                          is nothing to be in beta. They deliberately
+                                          share the badge SHAPE and differ only in
+                                          colour -- one is 'not yet', the other is
+                                          'yes, with a stated limit'. */}
+                                      {!t.soon && t.beta && <span className="beta-badge">Beta</span>}
+                                    </span>
+                                    {menuDescription(activeSection, t) && <span className="pnav-tool-desc">{menuDescription(activeSection, t)}</span>}
                                   </span>
-                                  {menuDescription(activeSection, t) && <span className="pnav-tool-desc">{menuDescription(activeSection, t)}</span>}
-                                </span>
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                {/* THE PROMO PANE, rebuilt to `UIL4B App.dc.html` lines 151-206:
+                    a fixed-width right-hand pane on its own --bg-1 ground with a
+                    hairline down its left edge, reading heading → blurb → the
+                    section's own visual → CTA pinned to the bottom with
+                    `margin-top:auto`.
+
+                    THE ORDER FLIPPED. It used to open with the visual and put the
+                    heading under it, which is the one arrangement the design does
+                    not use: the pane's job is to say what the section is for
+                    before it shows you a sample of it. */}
+                <aside className="pnav-editorial">
+                  <span className="pnav-promo-eyebrow">{activeSection.promo?.eyebrow || activeSection.label}</span>
+                  <p className="pnav-editorial-title">{activeSection.promo?.title}</p>
+                  <p className="pnav-editorial-blurb">{activeSection.promo?.blurb}</p>
+                  {/* Renders nothing at all where the section has no real
+                      contents to show -- frame included. See MenuPreview. */}
+                  <MenuPreview section={activeSection.id} />
+                  {/* THE ANSWER TO "WHICH ONE DO I OPEN FIRST".
+                      The founder’s complaint was that nothing in the panel says
+                      where a new visitor should start. The product already has an
+                      opinion and the desktop menu was the one place not stating
+                      it: promo.guide + promo.cta are honoured by the MOBILE SHEET
+                      (which renders a "Build a brand kit" button calling
+                      launchBrandKit) and were dropped on desktop, where the card
+                      headed "Build your brand kit, step by step" offered a single
+                      link to /sitemap instead.
+                      The steps are DERIVED from UIKIT_STEPS, the same exported
+                      array the guide itself walks, so this can never drift into an
+                      eighth hand-kept copy of an ordered list. Numbers and labels
+                      only -- the blurbs are in the guide, and a four-line card in a
+                      260px column is a wall. Reference: Retool’s nav sequence
+                      (01-05, collapsed to number + label) and Homerun’s "5 steps"
+                      rail with step 1 carried forward. */}
+                  {activeSection.promo?.guide && (
+                    // The numeral is aria-hidden because <ol> already conveys the
+                    // order; without the label a screen reader would meet a bare
+                    // four-item list sitting between a blurb and a button and have
+                    // to infer what it enumerates.
+                    <ol className="pnav-steps" aria-label={`${activeSection.promo.cta || 'Guided flow'}: steps`}>
+                      {BRAND_KIT_STEPS.map((s, i) => (
+                        <li className="pnav-step" key={s.id}>
+                          <span className="pnav-step-n" aria-hidden="true">{i + 1}</span>
+                          <span className="pnav-step-label">{s.label}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  {/* Both of these are data-pnav-menuitem, and that is a FIX
+                      rather than a side effect: the Tab bridge jumps from the
+                      trigger straight to the first TOOL and back again, so the
+                      card’s only call to action was unreachable by keyboard for
+                      as long as it has existed. That reachability is the whole
+                      contract and it is unchanged.
+
+                      THE CARD MOVED, 2026-09-18 (Spectrum). `UIL4B App.dc.html`
+                      line 151 puts the promo pane on the RIGHT of the panel, and
+                      this aside used to be the first child of .pnav-menu-cols so
+                      that the ring opened on it. Placing it right with `order` or
+                      `grid-column` while leaving it first in the DOM would have
+                      bought fidelity with a focus-order defect: a keyboard user
+                      Tabbing in would jump to the far right of a 1260px panel and
+                      then back to the left column (WCAG 2.4.3). So the DOM moved
+                      with the pixels and the ring now opens on the first TOOL.
+                      Nothing left the ring — 43-mega-menu-contents.spec.js names
+                      the card's CTA and the panel's last link by text rather than
+                      by index for exactly this reason. */}
+                  <div className="pnav-editorial-actions">
+                    {activeSection.promo?.guide && (
+                      <button
+                        type="button"
+                        className="ui-pill ui-pill-accent ui-pill-sm pnav-editorial-cta"
+                        onClick={launchBrandKit}
+                        data-pnav-menuitem
+                      >
+                        {/* The label reports which of the two things this button
+                            is about to do. A control that says "Build a brand kit"
+                            and then drops you three steps in has lied to you. */}
+                        {brandKitEntry.resume
+                          ? `Resume: ${brandKitEntry.step.label}`
+                          : (activeSection.promo.cta || 'Start building')}
+                      </button>
+                    )}
+                    <Link className="pnav-editorial-link" to="/home" onClick={closeAll} data-pnav-menuitem>
+                      How UIL4B works <span aria-hidden="true">&rarr;</span>
+                    </Link>
                   </div>
-                ))}
+                </aside>
               </div>
             </div>
-          </div>
-          <div className="pnav-menu-foot">
-            <span className="pnav-menu-foot-note">Every {activeSection.label} tool · one workspace</span>
-            <Link className="pnav-menu-foot-link" to="/home" onClick={closeAll} data-pnav-menuitem>
-              How UIL4B works &rarr;
-            </Link>
+            {/* THE FOOT IS THE DESIGN'S "VIEW ALL" BAR — `UIL4B App.dc.html`
+                lines 209-214: a note on the left, the section's own view-all on
+                the right, on the card2 ground with a hairline above it.
+
+                The two links SWAPPED PLACES rather than one being dropped. The
+                view-all (`section.viewAllHref`) used to sit in the promo pane and
+                "How UIL4B works" in the foot, which put the panel's most specific
+                exit in its least prominent corner. Both still render, both are
+                still in the keyboard ring, and neither changed destination. */}
+            <div className="pnav-menu-foot">
+              <span className="pnav-menu-foot-note">Every {activeSection.label} tool · one workspace</span>
+              <Link className="pnav-menu-foot-link" to={activeSection.viewAllHref} onClick={closeAll} data-pnav-menuitem>
+                Explore {activeSection.label} <span aria-hidden="true">&rarr;</span>
+              </Link>
+            </div>
           </div>
         </div>
       )}

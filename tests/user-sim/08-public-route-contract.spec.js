@@ -1,12 +1,13 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_ROADMAP } from '../../src/data/toolTree.js'
-import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
+import { GALLERY_TIER_LIMITS } from '../../src/utils/lockedPreview.js'
 import { LEARN_ARTICLES, LEARN_ARTICLE_ROUTES } from '../../src/data/learnIndex.js'
 
 const STATIC_INDEXABLE_ROUTES = [
   '/',
-  '/create/color',
+  // '/create/color' moved to RETIRED_OR_THIN_ROUTES with the colour landing's
+  // deletion — see the note there.
   '/discover',
   '/plans',
   '/community',
@@ -14,6 +15,12 @@ const STATIC_INDEXABLE_ROUTES = [
   '/info',
   '/seo',
   '/feedback',
+  // The third-party attribution page. A real, indexable surface rather than a
+  // legal footnote: four of the icon packs it credits are CC-BY and REQUIRE
+  // visible attribution, and two of those are on the free tier — so this is
+  // owed to a signed-out visitor, and a crawler should find it advertised
+  // rather than treated as an orphan. Reached from both footers.
+  '/credits',
   '/privacy',
   '/terms',
   // The HTML sitemap. Low priority, but it is a real page and the 404 links to
@@ -49,6 +56,13 @@ const EXPECTED_CRAWLER_ROUTES = [
 
 const RETIRED_OR_THIN_ROUTES = [
   '/color/ui',
+  // The colour landing (ColorLanding) was DELETED with the other two landings.
+  // '/create/color' is now a category home that bounces to '/create/palette'
+  // exactly like the other four — App.jsx says so, and CREATE_HOMES_THAT_RENDER
+  // in toolTree.js is empty. A redirect destination has no business in the
+  // crawler sitemap, and scripts/sync-sitemap.mjs already leaves it out; this
+  // list was the last place still calling it an indexable page.
+  '/create/color',
   '/create/box-shadow',
   '/create/component-designer',
   // '/create/auto-builder' was here while it was a workshop placeholder. It
@@ -91,12 +105,18 @@ test.describe('public route contract', () => {
 
     await go(page, '/discover/palettes')
     await expect(page.getByRole('heading', { level: 1, name: 'Palette Library' })).toBeVisible()
-    // The browsable count, not the library size: the Pro brand systems are
-    // withheld from a signed-out visitor rather than rendered and styled as
-    // locked, so they produce no card. The hero mark still states the full
-    // library size, and the wall states how many of it are Pro.
-    await expect(page.locator('.pgal-card'))
-      .toHaveCount(LIBRARY_PALETTES.filter((palette) => palette.pro !== true).length)
+    // The browsable count, not the library size: withheld palettes are absent
+    // rather than rendered and styled as locked, so they produce no card.
+    //
+    // THE CAP, NOT THE ELIGIBLE SET. This asserted every non-Pro palette (71)
+    // until the galleries gained the 3 / 10 / full ladder; a signed-out visitor
+    // now sees `GALLERY_TIER_LIMITS.anonymous`. Read from the same table the
+    // page caps with, never typed — 44-locked-library-tease.spec.js proves the
+    // ladder itself at all three rungs, and this file only needs the route to
+    // serve the library at all.
+    await expect(page.locator('.pgal-card')).toHaveCount(GALLERY_TIER_LIMITS.anonymous)
+    // Midnight Teal is the first eligible palette, so it is inside the
+    // anonymous cap and the search still has something to narrow to.
     await page.getByPlaceholder('Search by name, hex, colour or mood…').fill('Midnight Teal')
     await expect(page.locator('.pgal-card')).toHaveCount(1)
   })
@@ -172,11 +192,17 @@ test.describe('public route contract', () => {
     }
   })
 
-  test('retired UI Colour redirects to the live colour landing without re-entering the tool dispatcher', async ({ page }) => {
+  test('retired UI Colour lands on a real tool in ONE hop, not on a category that bounces again', async ({ page }) => {
     watch(page, 'visitor following an old colour-tool bookmark')
     await go(page, '/color/ui')
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/color')
-    await expect(page.getByRole('heading', { name: 'One colour system, start to finish.' })).toBeVisible()
+    // '/create/color', not '/create/palette', until the colour landing was
+    // deleted. It is now a category home that bounces like the other four, so
+    // sending an old bookmark there would be a two-hop redirect — the exact
+    // defect src/data/legacyRoutes.js exists to prevent. App.jsx's early return
+    // names '/create/palette' for that reason, and this asserts the hop count
+    // by landing on the tool itself.
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
+    await expect(page.getByRole('heading', { level: 1, name: 'Palette Generator' })).toBeVisible()
   })
 
   test('generic social card is a real 1200 by 630 PNG response', async ({ request }) => {

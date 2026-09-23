@@ -248,7 +248,37 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     expect(after.slider).toEqual(before.slider)
     expect(after.footer).toEqual(before.footer)
     await expect(reset).toBeVisible()
-    await expect(temperature.locator('xpath=..').locator('.snapv-value')).toHaveCSS('font-weight', '800')
+
+    // THE EDITED VALUE IS EMPHASISED — asserted as a COMPARISON against an
+    // untouched sibling rather than against a typed weight.
+    //
+    // This said `toHaveCSS('font-weight', '800')` and measured 700. That is not
+    // a regression: the Spectrum foundation swapped the type stack, and
+    // `.snapv-value` is set in `var(--mono)`, which is Geist Mono — a variable
+    // face whose weight axis stops at 600 (read off the page's own @font-face
+    // rules: `Geist Mono 300 600`, against `Geist 300 700`). Asking a browser
+    // for 800 there buys a synthetic bold, not a cut, so the rule moved to 700
+    // with the foundation. The number was never the guarantee; the guarantee is
+    // that a value you have MOVED reads differently from one you have not, and
+    // there are three untouched sliders on this strip to prove it against.
+    const value = temperature.locator('xpath=..').locator('.snapv-value')
+    const weights = await page.locator('.snapv').evaluateAll((wraps) => wraps.map((w) => ({
+      edited: w.classList.contains('snapv--edited'),
+      weight: Number(getComputedStyle(w.querySelector('.snapv-value')).fontWeight),
+    })))
+    const edited = weights.filter((w) => w.edited)
+    const resting = weights.filter((w) => !w.edited)
+    // ANTI-VACUITY, both ways: one drag must have marked exactly one control as
+    // edited, and there must be an untouched one left to compare it with.
+    expect(edited.length, 'the drag did not mark its own control as edited').toBe(1)
+    expect(resting.length, 'every control reads as edited, so there is nothing to compare against').toBeGreaterThan(0)
+    await expect(value).toBeVisible()
+    expect(
+      edited[0].weight,
+      `the edited value is set at ${edited[0].weight} and the untouched ones at`
+      + ` ${[...new Set(resting.map((r) => r.weight))].join(', ')} — a moved control reads exactly like an unmoved one`,
+    ).toBeGreaterThan(Math.max(...resting.map((r) => r.weight)))
+
     await expect(page.locator('label[for="plb-temp"]')).not.toHaveCSS('text-shadow', 'none')
   })
 

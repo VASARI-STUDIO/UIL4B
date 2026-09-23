@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listQueue, decideSubmission, deleteSubmission } from '../../utils/communityQueueApi'
 import { gradientCss } from '../../data/gradientGallery'
+import IconSubmissionPreview from '../discover/IconSubmissionPreview'
 
 // The community review queue — the thing that did not exist.
 //
@@ -21,6 +22,22 @@ const FILTERS = [
 
 function Preview({ item }) {
   const p = item.payload || {}
+  // AN ICON IS THE ONLY SUBMISSION A REVIEWER CANNOT JUDGE FROM ITS METADATA.
+  //
+  // A gradient is its stops and a palette is its colours, so the row can draw
+  // them from values. An icon is a document, and approving one without having
+  // seen it is approving artwork sight unseen — which is the whole job.
+  //
+  // It renders through IconSubmissionPreview, which is the ONE place in the
+  // product that decides how submitted markup is drawn: always as the `src` of
+  // an <img>, never inlined. That matters more here than anywhere else, because
+  // this row is rendered inside the ADMIN, in a session carrying the `admin`
+  // custom claim — the single most valuable session on the site to run script
+  // in. It also shows the icon on a light AND a dark ground, so "does this read
+  // on both themes" is answered before Approve is pressed rather than after.
+  if (item.kind === 'icon' && typeof p.svg === 'string' && p.svg) {
+    return <IconSubmissionPreview svg={p.svg} name={item.name} size={30} />
+  }
   if (item.kind === 'gradient' && Array.isArray(p.stops) && p.stops.length >= 2) {
     // Rendered with the same gradientCss the library uses, so a reviewer sees
     // exactly what would be published rather than an approximation.
@@ -109,6 +126,8 @@ export default function CommunityQueue({ toast }) {
               key={f.id}
               role="tab"
               aria-selected={status === f.id}
+              id={`cq-filter-${f.id}`}
+              aria-controls="cq-panel"
               className={`cq-filter${status === f.id ? ' is-on' : ''}`}
               onClick={() => setStatus(f.id)}
             >
@@ -121,6 +140,24 @@ export default function CommunityQueue({ toast }) {
           {state === 'loading' ? 'Loading…' : 'Refresh'}
         </button>
       </div>
+
+      {/* THE ROLE WAS LYING. These filters carried role="tab" with no tabpanel
+          and no aria-controls anywhere in the file, so a screen reader was told
+          "tab, selected" and given nothing to move into — the same defect the
+          2026-09-18 review found on the Admin tablist, and this was its second
+          instance.
+
+          They ARE tabs rather than toggles: choosing one replaces everything
+          below it, which is a panel swap, not a filter applied in place. So the
+          role stays and the missing half is supplied. One panel, because only
+          the selected status is ever fetched and rendered; its accessible name
+          follows the selection. */}
+      <div
+        id="cq-panel"
+        role="tabpanel"
+        aria-labelledby={`cq-filter-${status}`}
+        tabIndex={-1}
+      >
 
       {state === 'loading' && <div className="cq-msg">Reading the queue…</div>}
 
@@ -150,7 +187,9 @@ export default function CommunityQueue({ toast }) {
                 <p className="cq-item-meta">
                   <span className="cq-kind">{item.kind}</span>
                   {item.authorName || 'Unknown'}
-                  {item.createdAt && <> · {new Date(item.createdAt).toLocaleDateString()}</>}
+                  {/* The date is a value, so it carries the dashboard's mono
+                      treatment like every other figure on the surface. */}
+                  {item.createdAt && <> · <span className="mono">{new Date(item.createdAt).toLocaleDateString()}</span></>}
                 </p>
               </div>
               <div className="cq-item-actions">
@@ -173,6 +212,7 @@ export default function CommunityQueue({ toast }) {
           ))}
         </ul>
       )}
+      </div>
     </div>
   )
 }

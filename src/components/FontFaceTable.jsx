@@ -33,7 +33,7 @@ import { useEffect, useState } from 'react'
 /** Below this, code points are controls and separators rather than characters. */
 const FIRST_PRINTABLE = 0x21
 
-/** `'Manrope'` → `Manrope`. The CSSOM keeps the quotes the author wrote. */
+/** `'Geist'` → `Geist`. The CSSOM keeps the quotes the author wrote. */
 const unquote = (value) => String(value || '').trim().replace(/^['"]|['"]$/g, '')
 
 /**

@@ -28,7 +28,13 @@ export const SUBMIT_INTENT_VERSION = 1
 
 // Every community submission entry point in the product. An unknown surface is
 // dropped rather than guessed at — a bogus name would re-open the wrong form.
-export const SUBMIT_SURFACES = ['community', 'gradient', 'palette', 'prompt']
+//
+// 'community-icon' is its OWN surface rather than a flag on 'community',
+// because the whole job of a record here is to re-open the form the user was
+// standing in front of. /community now has two — a design form and an icon form
+// — and one name for both would sign somebody in for an icon and hand them back
+// the design form, which is the exact failure the intent exists to prevent.
+export const SUBMIT_SURFACES = ['community', 'community-icon', 'gradient', 'palette', 'prompt']
 
 // The plain-language "why do I need an account" answer, shared by every entry
 // point so the promise is identical wherever the user meets it.

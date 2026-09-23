@@ -31,7 +31,7 @@ test.describe('the front door', () => {
     await expect(page).toHaveURL(/\/$/)
     // The hero, not the dashboard. Asserted on the landing's own root element so
     // this cannot be satisfied by shared chrome.
-    await expect(page.locator('.home')).toBeVisible()
+    await expect(page.locator('.spectrum')).toBeVisible()
     await expect(page.locator('.uh-tip')).toHaveCount(0)
   })
 
@@ -43,9 +43,15 @@ test.describe('the front door', () => {
     await expect(page, 'the root must hand a returning visitor to the User Home').toHaveURL(/\/projects$/)
     // THE FLASH TEST. The sales page must never have rendered on the way: the
     // decision is made in the first render, from the hint, before Firebase has
-    // loaded at all. If it were made after auth resolved, .home would paint
-    // first and this would catch it.
-    await expect(page.locator('.home')).toHaveCount(0)
+    // loaded at all. If it were made after auth resolved, the sales page would
+    // paint first and this would catch it.
+    //
+    // THIS ONE WENT VACUOUS AND STILL REPORTED GREEN. It read `.home` — the old
+    // Home.jsx root — which stopped existing the moment Spectrum took `/`. A
+    // count of zero was then true of every page in the app, so the flash test
+    // was asserting nothing at all while passing. It names the element that
+    // would actually flash now.
+    await expect(page.locator('.spectrum')).toHaveCount(0)
   })
 
   test('/home is the sales page for EVERYONE, session or not', async ({ page }) => {
@@ -58,12 +64,12 @@ test.describe('the front door', () => {
     watch(page, 'a visitor at /home')
     await go(page, '/home')
     await expect(page, '/home must never redirect for a signed-out visitor').toHaveURL(/\/home$/)
-    await expect(page.locator('.home')).toBeVisible()
+    await expect(page.locator('.spectrum')).toBeVisible()
 
     await withSessionHint(page)
     await go(page, '/home')
     await expect(page, '/home must never redirect for a signed-in visitor either').toHaveURL(/\/home$/)
-    await expect(page.locator('.home')).toBeVisible()
+    await expect(page.locator('.spectrum')).toBeVisible()
   })
 
   test('the nav Home control reaches the sales page from inside the app', async ({ page }) => {
@@ -74,7 +80,7 @@ test.describe('the front door', () => {
     await expect(page).toHaveURL(/\/projects$/)
     await page.getByRole('link', { name: 'UIL4B home' }).first().click()
     await expect(page, 'the Home control must land on the sales page and stay there').toHaveURL(/\/home$/)
-    await expect(page.locator('.home')).toBeVisible()
+    await expect(page.locator('.spectrum')).toBeVisible()
   })
 
   test('a stale hint settles without looping', async ({ page }) => {
@@ -411,4 +417,53 @@ test.describe('the projects empty state puts its control on the first screen', (
       await context.close()
     })
   }
+})
+
+/* ── The dashboard's date and time ────────────────────────────────────────── */
+
+test.describe('the dashboard says what day it is, from the viewer\u2019s own machine', () => {
+  // Founder request, 2026-09-18: "in the dashboard page lets show a date and
+  // time make it connect to their browser / computer."
+  test('the clock renders a real local date and time, and does not announce itself', async ({ page }) => {
+    watch(page, 'a returning user glancing at the dashboard')
+    await go(page, FIXTURE)
+    await expectRendered(page, FIXTURE)
+
+    const clock = page.locator('.uh-clock')
+    await expect(clock, 'the dashboard shows no date or time').toBeVisible()
+
+    const read = await clock.evaluate((el) => ({
+      tag: el.tagName,
+      text: el.textContent,
+      dt: el.getAttribute('datetime'),
+      live: el.getAttribute('aria-live'),
+      tabular: getComputedStyle(el).fontVariantNumeric,
+    }))
+
+    // A <time> with a machine-readable value, not a styled <span>.
+    expect(read.tag).toBe('TIME')
+    expect(read.dt, 'no machine-readable datetime').toMatch(/^\d{4}-\d{2}-\d{2}T/)
+
+    // The rendered value must be THIS machine's, not the build's. Parsing the
+    // dateTime and comparing it to the runner's own clock is what proves the
+    // component read the browser rather than a timestamp baked in at build
+    // time — the failure this design exists to prevent, because 39 route
+    // shells are prerendered and a formatted date would have been frozen into
+    // them.
+    const skewMs = Math.abs(Date.now() - Date.parse(read.dt))
+    expect(skewMs, `the clock is ${Math.round(skewMs / 1000)}s from this machine's time`)
+      .toBeLessThan(5 * 60 * 1000)
+
+    // It says both halves.
+    expect(read.text.trim().length, 'the clock rendered empty').toBeGreaterThan(6)
+    expect(read.text).toMatch(/\d/)
+
+    // NO LIVE REGION, deliberately. A live region here would interrupt a screen
+    // reader every minute to deliver something the reader did not ask for and
+    // already has from their own OS.
+    expect(read.live, 'the clock announces itself to screen readers every minute').toBeNull()
+
+    // Tabular figures, so the line does not reflow as the minute ticks over.
+    expect(read.tabular).toContain('tabular-nums')
+  })
 })

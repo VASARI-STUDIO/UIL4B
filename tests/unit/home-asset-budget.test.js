@@ -11,10 +11,6 @@
 // reference thumbnail for a nicer photo, the file triples, and nothing says so
 // until a phone on a slow link pays for it. That is what this file catches.
 //
-// Measured on 2026-09-06, on the throttled profile named on the pipeline item:
-// none of these three images is fetched on a cold homepage load at all — they
-// belong to the converter tab. The budget is still real, because the moment the
-// visitor opens that tab they are fetched together.
 import test, { after } from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -23,42 +19,24 @@ import path from 'node:path'
 const ROOT = process.cwd()
 const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8')
 
-const THUMB_DIR = 'public/previews/home-image-converter'
-// 180 KB, the figure the retired homepage acceptance contract set. Decimal KB,
-// as file sizes are quoted everywhere else in this repo.
-const THUMB_BUDGET_BYTES = 180_000
-
-test('the bundled reference thumbnails exist and are still three', () => {
-  // Positive control. The size assertion below is trivially satisfied by an
-  // empty directory, which is exactly how a budget check quietly stops
-  // checking anything.
-  const files = fs.readdirSync(path.join(ROOT, THUMB_DIR)).filter(f => f.endsWith('.webp'))
-  assert.equal(files.length, 3, `expected three reference thumbnails, found ${files.length}: ${files.join(', ')}`)
-  for (const f of files) {
-    assert.ok(fs.statSync(path.join(ROOT, THUMB_DIR, f)).size > 1000, `${f} is suspiciously small — is it a placeholder?`)
-  }
-})
-
-test('the three reference thumbnails stay within 180 KB encoded, in total', () => {
-  const files = fs.readdirSync(path.join(ROOT, THUMB_DIR)).filter(f => f.endsWith('.webp'))
-  const sizes = files.map(f => ({ f, bytes: fs.statSync(path.join(ROOT, THUMB_DIR, f)).size }))
-  const total = sizes.reduce((n, s) => n + s.bytes, 0)
-  assert.ok(
-    total <= THUMB_BUDGET_BYTES,
-    `the reference thumbnails total ${total} bytes, over the ${THUMB_BUDGET_BYTES}-byte budget:\n  `
-    + sizes.map(s => `${s.bytes} ${s.f}`).join('\n  '),
-  )
-})
-
-test('the homepage still names those thumbnails, so the budget guards something live', () => {
-  // A budget on files nothing references is not a budget. If the workbench
-  // stops using these, this test should be deleted along with them rather than
-  // left passing on dead weight.
-  const workbench = read('src/components/HomeWorkbench.jsx')
-  for (const name of ['architecture', 'people', 'nature']) {
-    assert.match(workbench, new RegExp(`/previews/home-image-converter/${name}\\.webp`), `the workbench no longer references ${name}.webp`)
-  }
-})
+// THE THREE REFERENCE THUMBNAILS ARE GONE, AND SO ARE THEIR THREE TESTS.
+//
+// They were 173 KB of .webp under public/previews/home-image-converter/, loaded
+// by the homepage mini-workbench's converter tab. src/pages/Home.jsx and
+// src/components/HomeWorkbench.jsx were deleted on 2026-09-18 when Spectrum
+// became `/`, and nothing else in src/ names them.
+//
+// Deleted rather than re-pointed, on this file's own instruction: "A budget on
+// files nothing references is not a budget. If the workbench stops using these,
+// this test should be deleted along with them rather than left passing on dead
+// weight." A budget that guards three orphaned files is the thing it warned
+// about, and the third test — the positive control that made the other two mean
+// anything — could not be re-pointed at all, because there is no surface left
+// that names them.
+//
+// The other three budgets in this file are untouched and are the ones that
+// matter: the self-hosted faces, the render-blocking stylesheet and the entry
+// chunk.
 
 test('every declared face is served from /fonts, never from a catalogue', () => {
   // One of the budgets that is already MET and must stay met: "the homepage
@@ -166,8 +144,17 @@ test('the render-blocking stylesheet stays inside its byte budget', async () => 
 
   const css = fs.readFileSync(path.join(assets, entrySheets[0]), 'utf8')
   // It is the app's sheet: the design tokens and the homepage hero are in it.
+  //
+  // THE CONTROL MOVED WITH THE HOMEPAGE, and it was re-pointed rather than
+  // deleted. It read `.home-hero-h1` while Home.jsx was the front door; Spectrum
+  // is the front door now and its sheet is `src/styles/pages/spectrum.css`,
+  // imported statically, so `.sp-hero-h1` is the rule that proves this is the
+  // sheet the first paint actually blocks on. Dropping the assertion instead
+  // would have left both budgets below passing against whichever stylesheet the
+  // build happened to name `index-*.css` — which is the failure mode the
+  // positive controls above exist to stop.
   assert.match(css, /--bg-0:/, 'the entry stylesheet carries no design tokens — is this the right file?')
-  assert.match(css, /\.home-hero-h1/, 'the entry stylesheet does not style the homepage headline')
+  assert.match(css, /\.sp-hero-h1/, 'the entry stylesheet does not style the sales page headline')
 
   const raw = Buffer.byteLength(css)
   const gzip = zlib.gzipSync(Buffer.from(css), { level: 9 }).length
@@ -211,7 +198,7 @@ test('no eagerly loaded module imports a deferred stylesheet', () => {
   }
   // Positive control: the walk reached the app, not just its entry point.
   assert.ok(seen.size > 50, `the import walk only reached ${seen.size} modules — it is not seeing the app`)
-  assert.ok(seen.has('src/pages/Home.jsx'), 'the import walk never reached the homepage')
+  assert.ok(seen.has('src/pages/Spectrum.jsx'), 'the import walk never reached the homepage')
   assert.deepEqual(offenders, [], 'a deferred stylesheet is reachable from the entry chunk by static import')
 })
 

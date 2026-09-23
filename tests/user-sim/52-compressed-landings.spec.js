@@ -12,29 +12,44 @@
 //      of the three depths offered: value prop plus link, nothing else.
 //
 //   2. [homepage-hero-buffer-reference] — the drawn "give it a try" pointing at
-//      the command bar, and the five step ticks beside the tools heading.
+//      the command bar, and the step marker beside the tools heading.
 //
 // WHAT THESE DELIBERATELY DO NOT ASSERT: any sentence. Copy on these pages is
 // still being worked and a test that pins a phrase would fail the next honest
 // rewrite. What is pinned is the page having no pitch section left, its counts
 // coming from the data, and each mark being attached to the thing it points at.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// WHAT THE ROUTE SWAP TOOK, AND WHAT IT DID NOT
+// ─────────────────────────────────────────────────────────────────────────────
+// · /create/color IS NO LONGER A PAGE. ColorLanding.jsx was deleted with
+//   Home.jsx, and the path now falls through to <CreateTool /> and bounces to
+//   /create/palette like the other four Create category homes. There is no
+//   landing left to be compressed, so it is out of every table below rather
+//   than re-pointed — a tool shell is not a secondary sales page and asserting
+//   "two bands under main" of one would be measuring the wrong thing.
+// · The two remaining landings COMPRESSED FURTHER, by the founder's own
+//   2026-09-18 decision quoted in SurfaceIndex.jsx: "/discover and /learn lose
+//   their sales intro and go straight to the real library/guide index." The
+//   eyebrow, the pitch headline, the lede and the single hero CTA all went. So
+//   the hero's "exactly one way in" rule is now "no pitch in the head at all",
+//   which is the same request taken one notch deeper — see the test.
 import { test, expect } from './base.js'
-import { go, watch } from './helpers.js'
-import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
+import { go, restingScrollY, watch, wheelToRest } from './helpers.js'
+import { DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/toolTree.js'
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 
-const COMPRESSED = ['/create/color', '/discover', '/learn']
+const COMPRESSED = ['/discover', '/learn']
 
-// The three landings each render a hero and their grid, and NOTHING between the
-// two or after the grid. Counted as top-level children of <main>, because that
-// is the unit a reader scrolls past: one <header> plus one <section> on
-// /create/color and /discover, and one extra on /learn for the guides that
-// exist (which are links, so they belong).
-const EXPECTED_BANDS = { '/create/color': 2, '/discover': 2, '/learn': 3 }
+// Each landing renders a head and its grid, and NOTHING between the two or
+// after the grid. Counted as top-level children of <main>, because that is the
+// unit a reader scrolls past: one <header> plus one <section> on /discover, and
+// one extra on /learn for the guides that exist (which are links, so they
+// belong).
+const EXPECTED_BANDS = { '/discover': 2, '/learn': 3 }
 
 // Where each page's real destinations live.
 const LINKS = {
-  '/create/color': '.surface-card--link',
   '/discover': '.surface-card--link',
   '/learn': '.lidx-card',
 }
@@ -57,10 +72,25 @@ test.describe('the secondary landings stay compressed', () => {
         await expect(page.locator(gone), `${route} brought back ${gone}`).toHaveCount(0)
       }
 
-      // ONE primary way in from the hero. The second hero button on all three
-      // pages pointed OUT of the surface the visitor had just arrived at.
-      await expect(page.locator('.home-hero .ui-pill'), `${route} hero has more than one link`)
-        .toHaveCount(1)
+      // NO PITCH IN THE HEAD. This used to read "exactly one `.ui-pill`",
+      // because the fault it caught was a SECOND hero button pointing OUT of
+      // the surface the visitor had just arrived at. The founder took it a
+      // notch deeper on 2026-09-18 — the head is now the surface's own name and
+      // one derived count line, with no call to action at all, on the grounds
+      // that a visitor who clicked Discover has already decided to browse.
+      //
+      // So the rule is the absence, PAIRED WITH THE PRESENCE that makes it mean
+      // something: a head that rendered nothing would satisfy "no links" for
+      // free, and that is the failure mode this whole file is written against.
+      const head = page.locator('.home-hero')
+      await expect(head.locator('.home-hero-h1'), `${route} lost the name of the surface`).toHaveCount(1)
+      await expect(head.locator('.home-hero-hint'), `${route} lost its derived count line`).toHaveCount(1)
+      await expect(
+        head.locator('a, button'),
+        `${route} has grown a call to action back into its head — the founder removed the sales `
+        + 'intro from both index pages on 2026-09-18, and a pitch above the index is the toll on a '
+        + 'decision the visitor already made in the nav',
+      ).toHaveCount(0)
 
       // And the grid is real links, not a list of names. On /learn that is the
       // guide cards rather than the surface grid: every LEARN_GROUPS row is
@@ -96,26 +126,35 @@ test.describe('the secondary landings stay compressed', () => {
     await expect(page.locator('.surface-card:not(.surface-card--link)'))
       .toHaveCount(LEARN_GROUPS.filter((g) => g.soon).length)
 
-    // /create/color renders one card per LIVE colour tool and no more, so the
-    // page cannot advertise a tool the tree has taken back into the workshop.
-    await go(page, '/create/color')
-    const colour = CREATE_GROUPS.find((g) => g.id === 'colour')
-    await expect(page.locator('.surface-card--link'))
-      .toHaveCount(colour.tools.filter((t) => !t.soon).length)
+    // /create/color's third assertion is gone with the page. It read one
+    // `.surface-card--link` per LIVE colour tool, so the landing could not
+    // advertise a tool the tree had taken back into the workshop. That honesty
+    // rule now has no page to break: the path is a category home that bounces
+    // to /create/palette, and the only inventory it could have misstated is the
+    // Create mega-menu's, which 43-mega-menu-contents counts against the same
+    // CREATE_GROUPS rows on /discover.
   })
 
-  test('each colour tool card names its own next action, not a shared Open', async ({ page }) => {
-    watch(page, 'visitor deciding which colour tool to open')
-    await go(page, '/create/color')
-    const gos = await page.locator('.surface-card--link .surface-card-go').allInnerTexts()
-    expect(gos.length).toBeGreaterThan(1)
-    // Shopify's Explore Tools index is the reference: every tile's link text is
-    // that tool's own verb. A page whose remaining job is linking has nowhere
-    // else left to say what happens next, so identical link text is a defect.
-    const normalised = gos.map((t) => t.replace(/\s+/g, ' ').trim().toLowerCase())
-    expect(new Set(normalised).size, `link text repeats: ${normalised.join(' | ')}`)
-      .toBe(normalised.length)
-  })
+  // ── DELETED: 'each colour tool card names its own next action' ────────────
+  //
+  // WHAT IT GUARDED. /create/color's grid gave every tile its own verb —
+  // "Build a palette", "Check contrast" — instead of six identical "Open"s, on
+  // the Shopify Explore Tools reasoning quoted in the old body: a page whose
+  // remaining job is LINKING has nowhere else left to say what happens next, so
+  // repeated link text is a defect rather than consistency.
+  //
+  // WHY IT IS GONE. ColorLanding.jsx was deleted with Home.jsx and
+  // /create/color is now a redirect, so there is no grid of colour tool cards
+  // anywhere in the app. Re-pointing it at /discover was considered and
+  // rejected: that grid's foot is one shared "Browse →" by design — six library
+  // indexes genuinely take the same action, and the tile's own name carries the
+  // difference — so moving the rule there would fail a page behaving as its
+  // author intended, which is the opposite of what this test was for.
+  //
+  // WHERE THE SURVIVING PART LIVES. The claim that the colour tools are each
+  // reachable and each named is now made where the tools are: the bench panel
+  // on `/` (`.sp-panel-tools`, one named link per tool, counted in
+  // 04-premium-home) and the Create mega-menu (43-mega-menu-contents).
 })
 
 test.describe('the homepage marks point at something real', () => {
@@ -164,39 +203,73 @@ test.describe('the homepage marks point at something real', () => {
     }
   })
 
-  test('the tools heading shows the five it claims, and marks the one you are on', async ({ page }) => {
+  // ── THE STEP MARKER MOVED FROM A DECORATION TO THE NAVIGATION ─────────────
+  //
+  // Home had TWO markers of scroll position in the tools narrative: the rail of
+  // `.hstep` rows, and a strip of `.hsteps-tick` marks beside the heading that
+  // duplicated it. This test held them to one answer, and asserted the strip
+  // was `aria-hidden` because a decorative second copy of the rail must not be
+  // announced twice.
+  //
+  // Spectrum has ONE. `<SpectrumBench>` draws `.sp-rail-row` buttons inside a
+  // real `<nav aria-label="Jump to a tool group">` — not a tablist, because all
+  // five panels are rendered and reachable by scrolling past the rail entirely
+  // — and marks the row for the panel the reader is on with `is-on` and
+  // `aria-current="true"`. So there is no second source to agree with, and the
+  // aria-hidden assertion has been dropped rather than moved: the rail is
+  // navigation now and hiding it would be the defect.
+  //
+  // WHAT SURVIVES, AND IT IS THE HALF THAT ACTUALLY CAUGHT THINGS: one row is
+  // marked, never two, the marked row corresponds to a real panel, and IT MOVES
+  // as the page scrolls. A mark frozen on step one says the section is a list
+  // when it is a walkthrough.
+  //
+  // THE SCROLL IS DRIVEN THROUGH THE HELPERS, NOT `scrollIntoViewIfNeeded()`.
+  // Lenis owns the scroll on this route and re-asserts its virtual position
+  // every frame, so a native scroll is undone before the next paint —
+  // SpectrumBench.jsx records measuring exactly that (scrollY 0 before a rail
+  // click, scrollY 0 1.6s after it). `wheelToRest()` sends a real gesture and
+  // waits on the scroll layer rather than on a stopwatch.
+  test('the bench rail marks the tool group you are on, and the mark moves', async ({ page }) => {
     watch(page, 'visitor scrolling into the tools narrative')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/')
 
-    const ticks = page.locator('.hsteps-tick')
-    // Five ticks and five steps, from one source. The heading says "Five tools"
-    // and a reader meeting one sticky panel at a time cannot check that; this
-    // is what lets them.
-    await expect(ticks).toHaveCount(await page.locator('.hstep').count())
-    await expect(page.locator('.hsteps-ticks')).toHaveAttribute('aria-hidden', 'true')
-
-    // Exactly one is marked, and it is the same one the rail below marks. Two
-    // active rows, or a mark that disagrees with the rail, would be a second
-    // source of truth for scroll position.
-    const agrees = async () => page.evaluate(() => {
-      const t = [...document.querySelectorAll('.hsteps-tick')].map((el) => el.hasAttribute('data-active'))
-      const s = [...document.querySelectorAll('.hstep')].map((el) => el.dataset.active === 'true')
-      return { tick: t.indexOf(true), step: s.indexOf(true), marked: t.filter(Boolean).length }
+    const state = async () => page.evaluate(() => {
+      const rows = [...document.querySelectorAll('.sp-rail-row')]
+      return {
+        rows: rows.length,
+        panels: document.querySelectorAll('.sp-step').length,
+        // Both spellings, because they are two halves of one claim: `is-on`
+        // is what a sighted reader sees and `aria-current` is what a screen
+        // reader is told. A row that carried one without the other would be
+        // telling two readers different things about where they are.
+        lit: rows.map((el) => el.classList.contains('is-on')).indexOf(true),
+        current: rows.map((el) => el.getAttribute('aria-current') === 'true').indexOf(true),
+        marked: rows.filter((el) => el.classList.contains('is-on')).length,
+      }
     })
 
-    await page.locator('#workbench').scrollIntoViewIfNeeded()
-    await expect.poll(async () => (await agrees()).marked).toBe(1)
-    const first = await agrees()
-    expect(first.tick, 'the tick and the rail disagree about the active step').toBe(first.step)
+    const before = await state()
+    // One row per panel, from one source. Five panels and four rows would mean
+    // a tool group a reader meeting one panel at a time can never find.
+    expect(before.rows, 'the bench rail rendered no rows, so everything below is vacuous')
+      .toBeGreaterThan(0)
+    expect(before.rows, 'the rail and the panels disagree about how many tool groups there are')
+      .toBe(before.panels)
 
-    // And it MOVES. A mark frozen on step one is worse than no mark: it says
-    // the section is a list when it is a walkthrough.
-    await page.mouse.wheel(0, 2600)
-    await expect.poll(async () => (await agrees()).tick, { timeout: 8000 })
-      .not.toBe(first.tick)
-    const later = await agrees()
-    expect(later.marked, 'more than one tick is marked active').toBe(1)
-    expect(later.tick, 'the tick and the rail disagree after scrolling').toBe(later.step)
+    await restingScrollY(page, 'the front door at the top')
+    await expect.poll(async () => (await state()).marked,
+      { message: 'exactly one rail row is lit' }).toBe(1)
+    const first = await state()
+    expect(first.current, 'the lit row and the aria-current row are not the same row').toBe(first.lit)
+
+    // …and it MOVES. Far enough to clear the hero and the ramp above the bench.
+    await wheelToRest(page, 3200, 'the front door after scrolling into the bench')
+    await expect.poll(async () => (await state()).lit, { timeout: 8000 })
+      .not.toBe(first.lit)
+    const later = await state()
+    expect(later.marked, 'more than one rail row is lit at once').toBe(1)
+    expect(later.current, 'the lit row and the aria-current row disagree after scrolling').toBe(later.lit)
   })
 })

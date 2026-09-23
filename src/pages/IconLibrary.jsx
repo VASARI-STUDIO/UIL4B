@@ -22,11 +22,26 @@ import {
   stickyStrokePx, strokeAttrForPx, viewBoxOf,
 } from '../utils/iconStroke'
 import { WIDE_INK, inkShape } from '../utils/glyphShape'
+// WHO SEES WHICH PACK. One editable table, no pack name in this file's logic —
+// see src/data/iconPackTiers.js for the founder's rule and for how to move a
+// pack between tiers with a one-word edit.
+import {
+  ANON_ICON_CAP, ICON_GATE_COPY, anonPerPack, canSeePack, tierOf, viewerTier, visiblePacks,
+} from '../data/iconPackTiers'
+// WHAT IS OWED TO THE PEOPLE WHO DREW THEM. Four of the sets below are Creative
+// Commons Attribution sets and two of those are free-tier, so the credit under
+// this grid is a licence CONDITION and not a nicety — see iconPackCredits.js.
+import { ICON_PACK_CREDITS, iconifyCredit, packCredit } from '../data/iconPackCredits'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
+// The attribution line's own sheet. It is NOT in library.css, deliberately: a
+// licence condition should be editable — and reviewable — without opening a
+// 900-line shared stylesheet, and a rule that disappears by accident here is a
+// rule that takes a credit off the screen with it.
+import '../styles/pages/icon-attribution.css'
 
 const API_LIMIT = 999
 
@@ -75,16 +90,19 @@ const PER_PACK_CAP = 1500
 // Every pack across every group, de-duped — the default "All packs" aggregate.
 const ALL_PACKS = [...new Set(GROUP_ORDER.flatMap(k => ICON_GROUPS[k].packs))]
 
-// Built once at module scope so LibraryFilterGroup is not handed a new array
-// identity on every keystroke — it measures its sliding indicator off the
-// active button, and a fresh options array re-runs that measurement.
+// The group tray's options were built HERE, at module scope, so that
+// LibraryFilterGroup was not handed a new array identity on every keystroke —
+// it measures its sliding indicator off the active button, and a fresh options
+// array re-runs that measurement.
+//
+// They are now built inside the component (`groupOptions`) because a locked
+// chip has to say which tier opens it, and the tier is not a module-level fact.
+// The identity guarantee is kept by memoising on the tier alone: a handful of
+// changes in a session rather than one per render. Do not move this back to a
+// plain expression in the JSX.
 //
 // "My Icons" leads because it is the user's own collection rather than one of
 // the catalogue's groups; `custom` is not a member of GROUP_ORDER and never was.
-const GROUP_OPTIONS = [
-  { id: 'custom', label: 'My Icons' },
-  ...GROUP_ORDER.map((key) => ({ id: key, label: ICON_GROUPS[key].label })),
-]
 // Cap per pack for the default aggregate so we hold ~5k lightweight refs, not ~36k.
 const ALL_INITIAL_PER_PACK = 250
 // Packs whose default style is genuinely stroke-based (the stroke slider applies).
@@ -1559,20 +1577,290 @@ function collectionToNames(d) {
 // RAW de-duped name list + title; each caller still applies its own style filter.
 const COLLECTION_CACHE = new Map()
 
+/* ── `&info=1`, AND IT COSTS NOTHING ────────────────────────────────────────
+ *
+ * The bare `/collection?prefix=x` response carries the names and the title and
+ * no licence at all. `&info=1` adds an `info` block with the set's author and
+ * its licence as { title, spdx, url } — MEASURED against the live API on
+ * 2026-09-23 — on the SAME request. No second round trip, no new host, no extra
+ * entry in the rate-limit budget this page was rescued from on 2026-09-18.
+ *
+ * That matters because a licence table typed into this repository goes stale on
+ * the day a pack relicenses, silently, in the direction of us making a claim
+ * about somebody else's terms that they have withdrawn. Read from the registry,
+ * the credit under the grid is whatever the registry is publishing today.
+ *
+ * src/data/iconPackCredits.js is the floor under it — the committed fixtures
+ * the acceptance suite serves carry no `info` block, and neither does the
+ * refused/offline state, and an attribution that only appears when a third
+ * party is up is not an attribution. */
 async function getCollectionNames(pack) {
   const hit = COLLECTION_CACHE.get(pack)
   if (hit) return hit
-  const r = await fetchWithFallback(`/collection?prefix=${pack}`, 6000)
+  const r = await fetchWithFallback(`/collection?prefix=${pack}&info=1`, 6000)
   const d = await r.json()
-  const entry = { names: collectionToNames(d), title: d.title || pack }
+  const entry = { names: collectionToNames(d), title: d.title || pack, credit: iconifyCredit(d) }
   COLLECTION_CACHE.set(pack, entry)
   return entry
 }
 
+/** The licence the registry answered for this pack, or null if it never has. */
+const liveCredit = (pack) => COLLECTION_CACHE.get(pack)?.credit || null
+
 const PAGE_SIZE = 120
+
+/* ── THE PACK MENU, AS DATA ──────────────────────────────────────────────────
+
+   It was twenty-four hand-written <option> elements. Tiering it that way would
+   have meant writing the lock marker onto each one by hand — twenty-four places
+   to forget one, and nothing to stop a new pack being added to the menu without
+   a marker. As a list the marker is applied in ONE expression, driven by the
+   table, so a pack's menu entry and its gate can never disagree.
+
+   The second job: the locked panel has to NAME the pack the visitor picked, and
+   these are the only human names the product has for them. `iconPackTiers.js`
+   deliberately holds no labels — it is about entitlement, not vocabulary.
+
+   Order and labels are byte-for-byte what the hand-written menu rendered.
+   `vscode-icons` and `token-branded` are in ICON_GROUPS but were never offered
+   here as individual packs; they reach the grid through the Coloured chip, and
+   that is unchanged. */
+const PACK_MENU = [
+  {
+    label: 'Interface (outlined)',
+    packs: [['lucide', 'Lucide'], ['tabler', 'Tabler'], ['iconoir', 'Iconoir'], ['heroicons', 'Heroicons'], ['ph', 'Phosphor']],
+  },
+  {
+    label: 'Interface (solid)',
+    packs: [['mdi', 'Material Design'], ['material-symbols', 'Material Symbols'], ['solar', 'Solar'], ['fa6-solid', 'Font Awesome'], ['bxs', 'BoxIcons']],
+  },
+  {
+    label: 'Brand logos (coloured)',
+    packs: [['logodev', 'Real brand logos (Logo.dev)'], ['simple-icons', 'Simple Icons'], ['logos', 'Logos (colour)'], ['devicon', 'Devicon'], ['skill-icons', 'Skill Icons']],
+  },
+  {
+    label: 'Flags',
+    packs: [['circle-flags', 'Circle Flags'], ['flag', 'Flag Icons'], ['flagpack', 'Flagpack'], ['cif', 'Currency Flags']],
+  },
+  {
+    label: 'Flat & emoji',
+    packs: [['flat-color-icons', 'Flat Color Icons'], ['twemoji', 'Twemoji'], ['noto', 'Noto Emoji'], ['fluent-emoji', 'Fluent Emoji'], ['openmoji', 'OpenMoji']],
+  },
+]
+const PACK_LABELS = Object.fromEntries(PACK_MENU.flatMap(g => g.packs))
+const packLabel = (p) => PACK_LABELS[p] || p
+
+/* ── THE CREDIT UNDER THE GRID ───────────────────────────────────────────────
+
+   WHAT THIS REPLACES. Until 2026-09-23 the whole product carried one
+   attribution string: the `<p className="ig-attrib">` further down, rendered
+   only when `pack === 'logodev'`. Every other set on this screen was uncredited,
+   and the one credit that existed vanished the moment the visitor changed packs.
+
+   THAT IS NOT A STYLE POINT. `solar` and `fa6-solid` are CC-BY-4.0 and both sit
+   on the FREE tier, so a signed-out visitor is shown Attribution-licensed work
+   on first paint; `twemoji` (CC-BY-4.0) and `openmoji` (CC-BY-SA-4.0) are the
+   same obligation on Pro. Attribution is a condition of those grants. logo.dev's
+   free tier separately requires its link wherever its logos appear — which is
+   why this line names the packs ON SCREEN rather than a fixed list, and why it
+   renders in every state of the surface including the gated one, the empty one
+   and the offline one. A credit with a condition on it is not a credit.
+
+   WHY IT NAMES WHAT IS IN VIEW RATHER THAN ALL 25. Crediting a set whose icons
+   are not on the screen is noise, and noise is what teaches people to stop
+   reading the line that also carries the four that matter. /credits carries the
+   full list, permanently, and this line links to it. */
+
+/* The fallback grid names its packs by LABEL rather than by prefix:
+   renderLocal() sets `pack: PACKS[i.p]`, and window.PACKS maps 'L' to 'Lucide'.
+   Those 120 built-in icons are still Lucide, Tabler, Iconoir, Heroicons and
+   Simple Icons and still owe their notices, so a label is resolved back to its
+   prefix instead of five packs going uncredited on the one screen that is
+   already apologising for something. */
+const PREFIX_BY_LABEL = Object.fromEntries(
+  Object.entries(PACK_LABELS).map(([prefix, label]) => [label, prefix]),
+)
+const toPrefix = (p) => (ICON_PACK_CREDITS[p] ? p : PREFIX_BY_LABEL[p] || p)
+
+/** Every pack represented in the given lists, in first-appearance order. */
+function packsOnScreen(...lists) {
+  const seen = new Set()
+  const out = []
+  for (const list of lists) {
+    for (const icon of list || []) {
+      if (!icon?.pack) continue
+      const prefix = toPrefix(icon.pack)
+      if (seen.has(prefix)) continue
+      seen.add(prefix)
+      out.push(prefix)
+    }
+  }
+  return out
+}
+
+/**
+ * The persistent licence line.
+ *
+ * A pack with no row in iconPackCredits.js is one a Pro search reached outside
+ * the twenty-five this product curates — the /search endpoint answers from the
+ * whole registry when it is left unscoped, which is what a Pro search has always
+ * done. It is credited by its prefix, linked to the Iconify set page, which
+ * states that set's licence. Firing a /collection for it would be more precise
+ * and would also put an unbounded number of extra requests behind a keystroke,
+ * on the one surface in this app with a measured history of being rate-limited.
+ */
+function IconPackCredit({ packs }) {
+  const rows = packs.map((prefix) => packCredit(prefix, liveCredit(prefix)) || {
+    prefix,
+    name: prefix,
+    url: `https://icon-sets.iconify.design/${prefix}/`,
+    licenceName: 'licence on Iconify',
+  })
+  return (
+    <aside className="ig-credit" aria-label="Icon set licences">
+      {rows.length > 0 && (
+        <p className="ig-credit-packs">
+          {rows.map((row, i) => (
+            <span className="ig-credit-pack" key={row.prefix}>
+              {i > 0 && <span className="ig-credit-sep" aria-hidden="true"> · </span>}
+              <a href={row.url} target="_blank" rel="noopener noreferrer">{row.name}</a>
+              {' '}
+              <span className="ig-credit-lic">{row.licenceName}</span>
+            </span>
+          ))}
+        </p>
+      )}
+      <p className="ig-credit-more">
+        <Link to="/credits">Every set, its author and its licence in full</Link>
+      </p>
+    </aside>
+  )
+}
+
+// The word a locked control carries. 'Pro' and 'Log in' are both already this
+// app's own labels — 'Pro' is the tag LockedTease prints on every locked row,
+// 'Log in' is what the nav trigger says — so nothing new is being coined here.
+// A pack the viewer CAN see carries no marker at all: a badge on everything is
+// a badge that says nothing.
+const lockMark = (prefix, tier) => (canSeePack(prefix, tier) ? '' : tierOf(prefix) === 'paid' ? ' · Pro' : ' · Log in')
+
+/* ── THE WALL ────────────────────────────────────────────────────────────────
+
+   The same band the Palette and Prompt libraries put at the end of their free
+   rows (`.lockt-cta`, global.css), rendered here rather than through
+   components/library/LockedTease because that component hard-wires its button
+   to openProModal — and half of this surface's walls ask for a free ACCOUNT,
+   not a purchase. The class names are shared so the three libraries look like
+   one product.
+
+   References, and what each decided:
+
+   Discord Shop (mobbin.com/screens/97aac9b3-d4a7-474a-8724-032fe870507a) is the
+     capped grid exactly: three real rows, then one line and one button. Nothing
+     is blurred and nothing is faked — what you can see, you can use. That is
+     why the signed-out grid holds 60 REAL, fully working icons rather than 60
+     teasers, and why the wall sits after them rather than over them.
+
+   Jasper (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd) puts the
+     plan word on the FILTER as well as on the card — its left-hand category
+     list carries a "Business" badge next to the category itself. That is
+     `lockMark` above: the pack menu and the group chips say which tier a set
+     needs BEFORE it is chosen, so nothing is a dead end you discover by
+     clicking.
+
+   Pinterest (mobbin.com/screens/4bf2a5e2-acb3-49ea-bf63-e711ba6377bc) is the
+     signed-out cap, and also the counter-example: its real grid sits behind a
+     "Log in to see more" dialog raised the moment you scroll. This wall raises
+     nothing on its own — the account dialog opens when the button is PRESSED,
+     never on arrival or on scroll.
+
+   Descript (mobbin.com/screens/a20d8888-d4cb-47af-a0e1-9dde567f13e7) is the
+     other counter-example: a permanent "You're on a Free plan" strip across the
+     top of the app. There is no persistent banner here. A signed-in free
+     viewer sees markers on the controls and nothing else until they reach for
+     a locked set.
+
+   NOT A FAILED LOAD, and not the refused state either. `.ig-notice` — "Couldn't
+   reach the icon service" — is a plain row with a Try again button and means
+   the network said no. This is an accent band with a padlock and a plan word
+   and means the product said no. The two never render together: a gated scope
+   never asks for anything, so there is nothing for the service to refuse. */
+function IconGateWall({ heading, body, action, onAction, kind }) {
+  return (
+    <div className={`lockt-cta ig-gate ig-gate--${kind}`} data-gate={kind} role="status">
+      <div className="lockt-cta-copy">
+        <p className="lockt-cta-head">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+            style={{ verticalAlign: '-1px', marginInlineEnd: 6 }}>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          {heading}
+        </p>
+        <p className="lockt-cta-body">{body}</p>
+      </div>
+      <button type="button" className="btn btn-accent lockt-cta-btn" onClick={onAction}>{action}</button>
+    </div>
+  )
+}
 
 export default function IconLibrary({ onCopy, onCatalogue }) {
   const { isPro, plan } = useSubscription()
+  const { user, loading: authLoading } = useAuth()
+  const { openProModal } = useProModal()
+  const { requireLogin } = useLoginPrompt()
+
+  /* ── WHAT THIS VIEWER MAY ASK FOR ────────────────────────────────────────
+     Derived once, here, and every fetch path below is scoped by it. The check
+     sits BEFORE the request rather than on the rendered cell, which is the
+     discipline src/utils/lockedPreview.js exists to enforce: a locked thing's
+     payload never reaches the browser. Fetch-then-hide would leak the markup
+     AND spend the rate limit this page was rescued from on 2026-09-18.
+
+     TWO RESOLUTIONS, AND ONLY ONE IS WORTH WAITING FOR.
+
+     `authLoading` is local and fast — onAuthStateChanged answers from the
+     persisted session — and until it does, "is there an account" is genuinely
+     unknown, so the first browse waits for it (the init effect below). Guessing
+     would paint a signed-in visitor the 60-icon sample and the "free account"
+     wall for a beat, which is the product telling them something untrue.
+
+     BILLING IS NOT WAITED FOR, deliberately. `isPro` arrives from a Firestore
+     snapshot that can be slow, and on a hung connection it never arrives at
+     all; blocking the grid on it would trade a working page for a correct one.
+     It does not need to be waited for, because a loading `isPro` is FALSE, and
+     false lands on 'free' — narrower than the truth, never wider. A Pro viewer
+     browses ten packs for a moment and then twenty-five when the snapshot
+     lands, and the widening costs nothing: COLLECTION_CACHE and GLYPH_ASKED
+     dedupe every pack the first pass already fetched. */
+  const tier = viewerTier({ user, isPro, resolving: authLoading })
+  const allowedPacks = useMemo(() => visiblePacks(ALL_PACKS, tier), [tier])
+  const canSee = useCallback((p) => canSeePack(p, tier), [tier])
+  // The signed-out cap. 60 icons, spread evenly so all five outlined packs are
+  // represented — see ANON_ICON_CAP for why it is not a flat slice.
+  const capped = tier === 'anon'
+  const perPackCap = capped ? anonPerPack(ALL_PACKS) : ALL_INITIAL_PER_PACK
+  const capList = useCallback((list) => (capped ? list.slice(0, ANON_ICON_CAP) : list), [capped])
+
+  /* ── "ALL PACKS" IS A CLAIM, AND FOR A GATED VIEWER IT IS FALSE ──────────
+     MEASURED signed out at 1440 before this existed, the status line read
+     "Showing 60 of 60 · All packs · 60 icons · 5 sets" — forty pixels above a
+     wall saying the grid holds the first 60 icons of the outlined packs. Two
+     sentences on one screen disagreeing about what the library is, and the one
+     in the smaller type was the true one.
+
+     The label is DROPPED rather than reworded. "Showing X of Y" immediately
+     before it already carries both counts, so a viewer loses no information —
+     and no new sentence is invented to describe a scope the product has never
+     had a word for. Whoever really can browse every pack still gets the line
+     they have always had, unchanged.
+
+     Derived from the pack counts, not from the tier: move a pack in the table
+     and this follows, with no second place to remember. */
+  const seesEverything = allowedPacks.length === ALL_PACKS.length
+  const scopeLine = useCallback((count, sets) => (
+    seesEverything ? `All packs · ${count.toLocaleString()} icons · ${sets} sets` : `${sets} sets`
+  ), [seesEverything])
   // Free-tier custom-icon allowance (Pro → Infinity). Single source: the plan.
   const customIconLimit = plan?.limits?.['custom-icons'] ?? Infinity
   const [query, setQuery] = useState('')
@@ -1585,6 +1873,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const [pack, setPack] = useState('')
   const [group, setGroup] = useState(null)   // active cross-pack collection, or null
   const [source, setSource] = useState('all')  // all | group | pack | custom | search
+  /* The pack or group the viewer chose and may not have: `{ kind, label, need }`
+     where `need` is 'free' (an account opens it) or 'paid' (Pro does). Set by
+     the browse functions INSTEAD of fetching, never after one — so a gated
+     scope costs zero requests and `loadError` stays false, which is what keeps
+     "you cannot have this" and "the service refused" two distinguishable
+     states. Null whenever the current scope is one the viewer may browse. */
+  const [gated, setGated] = useState(null)
   // An ephemeral draft handed over from the homepage icon preview. Read during
   // render and re-validated HERE before anything is applied, so a tampered,
   // stale or already-consumed record simply opens the normal editor state
@@ -1612,18 +1907,31 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const didInit = useRef(false)
   const sentinelRef = useRef(null)
   const retryRef = useRef(null)     // re-runs the last browse for the error banner
+  const lastTier = useRef(null)     // the tier the current listing was fetched at
 
   const renderLocal = useCallback((q, packFilter) => {
     const localIcons = window.icons || []
     const PACKS = window.PACKS || {}
     const pm = { tabler: 'T', lucide: 'L', iconoir: 'I', heroicons: 'H', 'simple-icons': 'S' }
+    // THE BUILT-IN SET IS TIERED TOO, and it has to be read through the CODE
+    // rather than through `PACKS`: window.PACKS maps 'L' to the display name
+    // 'Lucide', not to the Iconify prefix the tier table is keyed on. The five
+    // codes invert to five prefixes, and `simple-icons` — the only brand pack
+    // in the fallback — is the one this actually removes for a non-Pro viewer.
+    //
+    // No request is involved either way (these are path strings compiled into
+    // the bundle), so this is not about the network. It is about the fallback
+    // showing the same library the catalogue would have: a viewer who cannot
+    // browse Simple Icons online must not find it here when the service blinks.
+    const prefixOf = { T: 'tabler', L: 'lucide', I: 'iconoir', H: 'heroicons', S: 'simple-icons' }
     const pc = pm[packFilter] || ''
     q = (q || '').toLowerCase()
-    const filtered = localIcons.filter(i =>
+    const filtered = capList(localIcons.filter(i =>
       (activeCat === 'all' || i.c === activeCat) &&
       (!packFilter || i.p === pc) &&
+      canSee(prefixOf[i.p] || i.p) &&
       (!q || i.n.indexOf(q) !== -1 || i.c.indexOf(q) !== -1)
-    )
+    ))
     setIcons(filtered.map(i => ({
       id: i.n,
       name: i.n,
@@ -1639,7 +1947,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     // happened; this line says what is being shown.
     setMode(cdnOk.current === false ? 'Built-in icons' : 'Embedded')
     setLoading(false)
-  }, [activeCat])
+  }, [activeCat, canSee, capList])
 
   /* ── WHEN THE CATALOGUE ANSWERS AND THE GLYPHS DO NOT ────────────────────
 
@@ -1681,23 +1989,26 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const browseAll = useCallback(() => {
     const rid = ++reqId.current
     retryRef.current = browseAll
-    setSource('all'); setGroup(null); setPack('')
+    setSource('all'); setGroup(null); setPack(''); setGated(null)
     setLoadError(false)
     setVisible(PAGE_SIZE); setMode('')
-    const lists = ALL_PACKS.map(() => [])
+    // ALLOWED, NOT ALL. This is the line that decides how many third-party
+    // requests a visit costs: a signed-out visit asks five hosts for a
+    // catalogue instead of twenty-five, and never names a gated pack in a URL.
+    const lists = allowedPacks.map(() => [])
 
     // Warm-cache fast path: if every pack is already cached (e.g. returning to
     // "All packs" after browsing a single pack), paint synchronously with no
     // network and no skeleton flash.
-    if (ALL_PACKS.every(p => COLLECTION_CACHE.has(p))) {
+    if (allowedPacks.every(p => COLLECTION_CACHE.has(p))) {
       cdnOk.current = true
-      ALL_PACKS.forEach((p, idx) => {
-        const names = keepStyle(p, COLLECTION_CACHE.get(p).names, PACK_STYLE[p]).slice(0, ALL_INITIAL_PER_PACK)
+      allowedPacks.forEach((p, idx) => {
+        const names = keepStyle(p, COLLECTION_CACHE.get(p).names, PACK_STYLE[p]).slice(0, perPackCap)
         lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
       })
-      const merged = lists.flat()
+      const merged = capList(lists.flat())
       setIcons(merged)
-      setMode(`All packs · ${merged.length.toLocaleString()} icons · ${ALL_PACKS.length} sets`)
+      setMode(scopeLine(merged.length, allowedPacks.length))
       setLoading(false)
       return
     }
@@ -1706,42 +2017,80 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     setIcons([])
     let settled = 0
     let okCount = 0
-    ALL_PACKS.forEach((p, idx) => {
+    allowedPacks.forEach((p, idx) => {
       getCollectionNames(p)
         .then(({ names: raw }) => {
           if (rid !== reqId.current) return
           cdnOk.current = true
           okCount++
-          const names = keepStyle(p, raw, PACK_STYLE[p]).slice(0, ALL_INITIAL_PER_PACK)
+          const names = keepStyle(p, raw, PACK_STYLE[p]).slice(0, perPackCap)
           lists[idx] = names.map(n => ({ id: `${p}:${n}`, pack: p, name: n, cdn: true }))
-          // Default sort = pack-by-pack: lists stays in ALL_PACKS order and each
-          // pack's icons are contiguous, so flat() groups every pack together
-          // (Lucide block, then Tabler, …) regardless of which request resolves
-          // first — no round-robin interleave.
-          const merged = lists.flat()
+          // Default sort = pack-by-pack: lists stays in allowedPacks order and
+          // each pack's icons are contiguous, so flat() groups every pack
+          // together (Lucide block, then Tabler, …) regardless of which request
+          // resolves first — no round-robin interleave.
+          //
+          // AND THAT IS WHY THE SIGNED-OUT CAP IS PER PACK, not a slice of the
+          // merged list: at 250 a pack a flat slice(0, 60) is sixty consecutive
+          // Lucide icons and the sample shows one set of the five it is meant
+          // to introduce. `perPackCap` is 12 for a signed-out viewer, so all
+          // five land inside the cap.
+          const merged = capList(lists.flat())
           setIcons(merged)
           const sets = lists.filter(l => l.length).length
-          setMode(`All packs · ${merged.length.toLocaleString()} icons · ${sets} sets`)
+          setMode(scopeLine(merged.length, sets))
           if (merged.length) setLoading(false)
         })
         .catch(() => { /* this pack failed — others may still resolve */ })
         .finally(() => {
           if (rid !== reqId.current) return
           settled++
-          if (settled === ALL_PACKS.length) {
+          if (settled === allowedPacks.length) {
             setLoading(false)
             if (okCount === 0) { cdnOk.current = false; setLoadError(true); renderLocal('', '') }
           }
         })
     })
-  }, [renderLocal])
+  }, [renderLocal, allowedPacks, perPackCap, capList, scopeLine])
+
+  /* ── REFUSING A SCOPE COSTS NOTHING ──────────────────────────────────────
+     The whole point of the gate: the browse functions call this INSTEAD of
+     fetching, so a locked pack is never named in a URL and the rate limit is
+     never touched on its behalf.
+
+     `reqId` is bumped first. A browse that was already in flight when the
+     visitor picked a locked pack would otherwise resolve a moment later and
+     paint its icons straight over the wall — the stale-response hazard this
+     file already guards everywhere else, reached by a new route.
+
+     `retryRef` is cleared for the same reason the notice is suppressed below:
+     there is nothing to retry. Leaving the previous browse's retry armed would
+     hand the "Try again" button a function that fetches a pack the viewer
+     cannot have.
+
+     `need` is the tier that would OPEN it — 'free' when an account is enough,
+     'paid' when it is Pro — not the tier the viewer is in. */
+  const refuseScope = useCallback((label, need) => {
+    reqId.current++
+    retryRef.current = null
+    setGated({ label, need })
+    setIcons([]); setVisible(PAGE_SIZE); setMode('')
+    setLoading(false); setLoadError(false)
+  }, [])
+
+  // The narrowest tier that would open at least one of these packs. A group
+  // whose every pack is Pro asks for Pro; one that mixes asks for the cheaper
+  // of the two, because that is the true answer to "what do I need for this?"
+  const needFor = useCallback((packs) => (
+    packs.some(p => !canSee(p) && tierOf(p) === 'free') ? 'free' : 'paid'
+  ), [canSee])
 
   // Logo.dev pack — a curated grid of popular brands. No network: the logos are
   // <img> URLs resolved lazily by the browser as cells scroll into view.
   const browseLogos = useCallback(() => {
     reqId.current++            // cancel any in-flight browse
     retryRef.current = browseLogos
-    setSource('pack'); setGroup(null); setPack('logodev')
+    setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
     setLoadError(false)
     setIcons(LOGODEV_BRANDS.map(b => ({ id: `logodev:${b.domain}`, pack: 'logodev', name: b.name, ref: b.domain, logo: true })))
     setVisible(PAGE_SIZE)
@@ -1754,7 +2103,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // (deduped), meaning even brands not in the curated list still resolve.
   const searchLogos = useCallback((q) => {
     reqId.current++
-    setSource('pack'); setGroup(null); setPack('logodev')
+    setSource('pack'); setGroup(null); setPack('logodev'); setGated(null)
     setLoadError(false)
     const term = (q || '').trim()
     if (term.length < 2) { browseLogos(); return }
@@ -1776,8 +2125,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // and chip are independent filters that compose (chip = style within pack).
   const browsePack = useCallback((packFilter, groupKey = null) => {
     setSource('pack'); setGroup(groupKey || null)
-    if (packFilter === 'logodev') { browseLogos(); return }
+    // "All packs" first: the empty string is not a pack and must never be put
+    // to the tier table, which would read it as an unknown prefix and refuse it.
     if (!packFilter) { browseAll(); return }
+    // BEFORE the logodev branch and before any fetch. Logo.dev makes no Iconify
+    // request, but it does resolve 48 <img> from img.logo.dev — a payload for a
+    // paid pack, on a commercial API keyed to our token. Same gate, same place.
+    if (!canSee(packFilter)) { refuseScope(packLabel(packFilter), tierOf(packFilter) === 'free' ? 'free' : 'paid'); return }
+    setGated(null)
+    if (packFilter === 'logodev') { browseLogos(); return }
     const rid = ++reqId.current
     retryRef.current = () => browsePack(packFilter, groupKey)
     setLoading(true); setLoadError(false); glyphFails.current = 0
@@ -1785,7 +2141,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       .then(({ names: raw, title }) => {
         if (rid !== reqId.current) return
         cdnOk.current = true
-        const names = keepStyle(packFilter, raw, groupKey || PACK_STYLE[packFilter])
+        const names = capList(keepStyle(packFilter, raw, groupKey || PACK_STYLE[packFilter]))
         if (!names.length) { renderLocal('', packFilter); return }
         setIcons(names.map(n => ({ id: `${packFilter}:${n}`, pack: packFilter, name: n, cdn: true })))
         setVisible(PAGE_SIZE)
@@ -1798,18 +2154,28 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', packFilter)
       })
-  }, [renderLocal, browseAll, browseLogos])
+  }, [renderLocal, browseAll, browseLogos, canSee, capList, refuseScope])
 
   // Browse a whole collection (chip): fetch every pack in the group and
   // round-robin interleave them so the grid mixes packs.
   const browseGroup = useCallback((groupKey) => {
     const g = ICON_GROUPS[groupKey]
     if (!g) return
+    // A GROUP IS GATED PACK BY PACK, NOT AS A BLOCK. "Brand logos" is four packs
+    // and a free viewer may have none of them, so the chip is a wall; a mixed
+    // group would fetch only the members the viewer is entitled to and say so
+    // in its own "· N packs" count. There is no mixed group today — the founder's
+    // line happens to fall on group boundaries — but the arithmetic is written
+    // for the table rather than for today's contents, so moving one pack in
+    // iconPackTiers.js cannot silently produce a group that fetches what it
+    // must not.
+    const packs = g.packs.filter(canSee)
+    if (!packs.length) { setSource('group'); setGroup(groupKey); setPack(''); refuseScope(g.label, needFor(g.packs)); return }
     const rid = ++reqId.current
     retryRef.current = () => browseGroup(groupKey)
-    setSource('group'); setGroup(groupKey); setPack('')
+    setSource('group'); setGroup(groupKey); setPack(''); setGated(null)
     setLoading(true); setLoadError(false); glyphFails.current = 0
-    Promise.all(g.packs.map(p =>
+    Promise.all(packs.map(p =>
       getCollectionNames(p)
         .then(({ names }) => ({ names: keepStyle(p, names, groupKey).slice(0, PER_PACK_CAP), pack: p, ok: true }))
         .catch(() => ({ names: [], pack: p, ok: false }))
@@ -1819,7 +2185,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         if (!results.some(r => r.ok)) { cdnOk.current = false; setLoadError(true); renderLocal('', ''); return }
         cdnOk.current = true
         const lists = results.map(r => r.names.map(n => ({ id: `${r.pack}:${n}`, pack: r.pack, name: n, cdn: true })))
-        const merged = interleavePacks(lists)
+        const merged = capList(interleavePacks(lists))
         if (!merged.length) { renderLocal('', ''); return }
         setIcons(merged)
         setVisible(PAGE_SIZE)
@@ -1833,14 +2199,20 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal('', '')
       })
-  }, [renderLocal])
+  }, [renderLocal, canSee, capList, needFor, refuseScope])
 
   // Custom Icons category. Free accounts get a real allowance (see
   // customIconLimit), so the store is read for everyone; Pro just lifts the cap.
+  //
+  // NEVER GATED BY PACK TIER, at any tier, and that is deliberate rather than
+  // an omission: these are the visitor's OWN icons. They carry their own inline
+  // markup (`icon.svg`), so nothing here is fetched and nothing here belongs to
+  // a pack we sell. `setGated(null)` is the line that guarantees it — reaching
+  // My Icons always clears a wall rather than inheriting one.
   const browseCustom = useCallback(() => {
     retryRef.current = browseCustom
     reqId.current++            // cancel any in-flight browse
-    setSource('custom'); setGroup(null); setPack('')
+    setSource('custom'); setGroup(null); setPack(''); setGated(null)
     setQuery(''); setLoadError(false)
     const list = readCustomIcons()
     setIcons(list.map(c => ({ ...c, custom: true, id: c.key })))
@@ -1852,6 +2224,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const doSearch = useCallback((q, scope = {}) => {
     q = (q || '').trim()
     const { pack: packFilter = '', group: groupKey = null } = scope
+    // THE SEARCH BOX WAS THE HOLE. Left unscoped, /search answers from the whole
+    // Iconify registry — type "apple" signed out and the old code would have
+    // handed back simple-icons:apple, logos:apple and twemoji:apple, three packs
+    // this viewer may not browse, fetched and painted. So the scope is decided
+    // HERE, before the request, and again on the way back.
+    if (packFilter && !canSee(packFilter)) { setSource('search'); refuseScope(packLabel(packFilter), tierOf(packFilter) === 'free' ? 'free' : 'paid'); return }
+    if (groupKey && !ICON_GROUPS[groupKey].packs.some(canSee)) { setSource('search'); refuseScope(ICON_GROUPS[groupKey].label, needFor(ICON_GROUPS[groupKey].packs)); return }
+    setGated(null)
     // Brand logos resolve locally (curated list + name/domain lookup) — never
     // hit the Iconify /search endpoint for the Logo.dev pack.
     if (packFilter === 'logodev') { searchLogos(q); return }
@@ -1874,7 +2254,13 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     // whole collection's packs.
     const params = new URLSearchParams()
     if (packFilter) params.set('prefix', packFilter)
-    else if (groupKey) params.set('prefixes', ICON_GROUPS[groupKey].packs.join(','))
+    else if (groupKey) params.set('prefixes', ICON_GROUPS[groupKey].packs.filter(canSee).join(','))
+    // NO `prefixes` FOR PRO, and that is not an oversight. An unscoped search
+    // reaches every set Iconify carries, not only our twenty-five, and a Pro
+    // visitor has always had that — narrowing it here to "our list" would be
+    // taking a capability away in the name of a gate that does not apply to
+    // them. Every narrower tier is scoped to exactly what it may browse.
+    else if (tier !== 'paid') params.set('prefixes', allowedPacks.join(','))
     params.set('query', q)
     params.set('limit', String(API_LIMIT))
     fetchWithFallback(`/search?${params.toString()}`)
@@ -1887,13 +2273,22 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           return
         }
         const style = groupKey || PACK_STYLE[packFilter]
-        const items = d.icons
+        // THE SECOND CHECK, on the way back. `prefixes` above is a request the
+        // API is asked to honour; this is the one we enforce. A proxy that drops
+        // the parameter, a future API that widens it, a cached answer from a
+        // wider scope — none of them can put a gated pack into the grid, because
+        // the filter is applied to what ARRIVED rather than to what was asked
+        // for. Same reasoning as the SANITISE_KEYS whitelist in lockedPreview.js:
+        // the gate is the filter, the request is only a convenience.
+        const items = capList(d.icons
           .map(id => { const [p, n] = id.split(':'); return { id, pack: p, name: n, cdn: true } })
-          .filter(ic => matchesStyle(ic.pack, ic.name, style))
+          .filter(ic => canSee(ic.pack))
+          .filter(ic => matchesStyle(ic.pack, ic.name, style)))
         if (!items.length) { renderLocal(q, packFilter); return }
         setIcons(items)
         setVisible(PAGE_SIZE)
-        const scopeLabel = [packFilter, groupKey ? ICON_GROUPS[groupKey].label : ''].filter(Boolean).join(' · ') || 'All packs'
+        const scopeLabel = [packFilter, groupKey ? ICON_GROUPS[groupKey].label : ''].filter(Boolean).join(' · ')
+          || (seesEverything ? 'All packs' : `${allowedPacks.length} sets`)
         setMode(`${items.length.toLocaleString()} matches${d.total > items.length ? '+' : ''} · ${scopeLabel}`)
         setLoading(false)
       })
@@ -1903,7 +2298,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
         setLoadError(true)
         renderLocal(q, packFilter)
       })
-  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos])
+  }, [renderLocal, browsePack, browseGroup, browseAll, searchLogos, canSee, capList, needFor, refuseScope, tier, allowedPacks, seesEverything])
 
   // Consume the homepage draft on commit — see the `selected` initialiser above.
   useEffect(() => { consumeIconDraft() }, [])
@@ -1918,16 +2313,52 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // because the fetch lifecycle (reqId, cdnOk, the retry ref) lives here.
   useEffect(() => { onCatalogue?.(loadError ? 'fallback' : 'live') }, [loadError, onCatalogue])
 
-  // Initial load: all packs, so the grid shows catalogue breadth on first paint.
+  // Initial load: every pack this viewer may browse, so the grid shows the
+  // breadth they actually have on first paint.
+  //
+  // `authLoading` is the one thing held for — see the note at the top of this
+  // component. The skeleton the grid already draws covers the wait, which is a
+  // local read of the persisted session rather than a round trip.
   useEffect(() => {
-    if (didInit.current) return
+    if (didInit.current || authLoading) return
     didInit.current = true
+    lastTier.current = tier
     // Call browseAll directly — not via setTimeout. A deferred timer gets
     // cancelled by this effect's StrictMode cleanup before it can fire, and the
     // didInit guard then blocks the remount from rescheduling, so the initial
     // browse never runs (grid stuck on skeletons). browseAll dedupes via reqId.
     browseAll()
-  }, [browseAll])
+  }, [browseAll, authLoading, tier])
+
+  /* ── WHEN ENTITLEMENT CHANGES UNDER A LIVE PAGE ──────────────────────────
+     Signing in, signing out and the billing snapshot landing all move the tier
+     without a navigation, and the grid must follow — otherwise a visitor who
+     signs in from the wall's own button watches the wall stay put, which reads
+     as the button not working.
+
+     It re-runs the CURRENT scope rather than resetting to "All packs": the
+     whole point of signing in at the Simple Icons wall is to see Simple Icons,
+     and `pack` still holds it. Same shape as handleClearSearch, for the same
+     reason — these four lines are the one place that knows how to restore a
+     listing from the filter state.
+
+     A narrowing tier (sign-out, a lapsed subscription) goes through exactly the
+     same path, and lands on the wall instead of the grid because the browse
+     functions ask the table again. Nothing needs to know which direction it
+     moved. */
+  useEffect(() => {
+    if (!didInit.current || lastTier.current === tier) return
+    lastTier.current = tier
+    if (source === 'custom') browseCustom()
+    else if (query.trim().length >= 2) doSearch(query, { pack, group })
+    else if (pack) browsePack(pack, group)
+    else if (group) browseGroup(group)
+    else browseAll()
+    // The scope is READ here, not depended on: this effect fires on a tier
+    // change and on nothing else. Adding pack/group/query to the array would
+    // re-browse on every keystroke, which is what the debounce exists to stop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tier])
 
   // Infinite scroll — reveal another page as the sentinel comes into view. The
   // `visible` dep makes the observer reconnect after each reveal so it keeps
@@ -2045,6 +2476,73 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   const hasMore = visible < icons.length
   const isMyIcons = source === 'custom'
 
+  /* ── MY ICONS IS NOT GATED. THE RECENT RAIL IS A DIFFERENT THING. ────────
+     The SAVED half of My Icons carries each icon's own markup in the record
+     (`icon.svg`) — it is the visitor's work, it asks the network for nothing,
+     and no tier is consulted for it anywhere in this file. That is the rule the
+     brief sets and it is kept literally.
+
+     `recents` is not that. It is a list of REFERENCES — pack plus name — held
+     in localStorage, which outlives a sign-out and a lapsed subscription. A
+     reference to a pack the viewer can no longer browse cannot be drawn: the
+     batch loader (correctly) refuses to fetch it, so the cell would sit on its
+     `ig-glyph-wait` placeholder for ever. A permanent skeleton is the single
+     worst outcome available here — it is the "cell that failed to load" this
+     file has twice been fixed for — so the reference is dropped instead.
+     Nothing of the visitor's is destroyed: recentIcons.js still holds it, and
+     it reappears the moment the tier does. */
+  const visibleRecents = useMemo(
+    () => recents.filter(r => !r.cdn || canSee(r.pack)),
+    [recents, canSee],
+  )
+
+  /* The group tray, marked the same way the pack menu is. A chip whose every
+     pack is locked says which tier opens it; a chip the viewer can browse says
+     nothing, because a badge on everything is a badge that says nothing.
+     "My Icons" never carries one — it is not a catalogue group and it is not
+     gated.
+
+     MEMOISED ON THE TIER, which is what the module-level GROUP_OPTIONS existed
+     to guarantee: LibraryFilterGroup measures its sliding indicator off the
+     active button and re-runs that measurement whenever the options array
+     changes identity. Per-tier is a handful of times in a session. Per-render
+     would be every keystroke, and the indicator would never settle. */
+  /* THE GROUP TRAY CARRIES NO TIER MARKER, AND THAT IS MEASURED RATHER THAN
+     PREFERRED — it is the one place this gate could not be shown without
+     charging the gated viewer for it.
+
+     Jasper's library (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd)
+     badges the CATEGORY as well as the card, which is the right instinct, and
+     its categories are a vertical list with room to spare. This tray is a
+     horizontal row inside a 68px toolbar. MEASURED at 1280, signed out:
+       · " · Log in" / " · Pro" appended to five of the seven labels added 186px
+         to a 474px row and wrapped the toolbar to two lines (118px).
+       · Moved into `count`, LibraryFilterGroup's 10px trailing pill, it still
+         added ~150px: same wrap at 1280, and at 1180 the tray collapsed to a
+         trigger where a Pro viewer keeps chips.
+       · A leading `icon` character costs ~17px a chip, which is 85px, which is
+         more slack than 1180 has.
+     A gate that reshapes the page for the people it gates is a gate that
+     punishes them for being gated, so the marker went where it is free: the
+     pack <select>, which offers every pack individually, spells the tier out in
+     its optgroup labels and has a 220px cap the browser honours.
+
+     Nothing is a dead end without it. Choosing a locked chip costs no request
+     and answers immediately with a wall that names the group and the tier — the
+     Zapier pattern quoted in components/library/LockedTease.jsx, where the
+     locked thing is simply a different card. A marker on the chip itself is
+     worth revisiting when the toolbar is redesigned and the row has slack.
+
+     MEMOISED ON THE TIER, which is what the module-level GROUP_OPTIONS existed
+     to guarantee: LibraryFilterGroup measures its sliding indicator off the
+     active button and re-runs that measurement whenever the options array
+     changes identity. Per tier is a handful of times in a session; per render
+     would be every keystroke, and the indicator would never settle. */
+  const groupOptions = useMemo(() => [
+    { id: 'custom', label: 'My Icons' },
+    ...GROUP_ORDER.map((key) => ({ id: key, label: ICON_GROUPS[key].label })),
+  ], [])
+
   // Batch in the markup for whatever the grid is about to draw. Demand-driven:
   // the effect re-runs when `shown` grows (the sentinel raises `visible`) or the
   // browse changes, and `GLYPH_ASKED` means a pack is only ever asked for the
@@ -2098,6 +2596,17 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       // `icons`, so it has to be named here or its glyphs would wait forever.
       for (const icon of [...icons.slice(0, visible), ...recents]) {
         if (!icon.cdn || icon.custom || icon.logo) continue
+        // THE LAST LINE OF DEFENCE, and the only one that is unconditional.
+        // Every browse path above already refuses to put a gated pack into
+        // `icons`, so in a correct build this never fires. It is here because
+        // this is the single function in the file that turns a pack name into a
+        // request to api.iconify.design, and a gate that lives only in the four
+        // callers is a gate a fifth caller can walk around. The Recent rail is
+        // the concrete case: it is drawn from a DIFFERENT list, kept in
+        // localStorage, which survives signing out — so a viewer who was Pro
+        // yesterday has simple-icons names in there today, and without this
+        // line the rail would fetch them.
+        if (!canSee(icon.pack)) continue
         const key = svgKey(icon.pack, icon.name)
         if (GLYPH_BODY.has(key)) continue
         const asked = askedFor(icon.pack)
@@ -2134,7 +2643,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       })
     }, 120)
     return () => clearTimeout(t)
-  }, [icons, visible, recents, renderLocal])
+  }, [icons, visible, recents, renderLocal, canSee])
 
   // The one read of `glyphTick`. The caches above are module-level Maps, so a
   // tranche landing changes nothing React can see; tying this callback's
@@ -2186,8 +2695,44 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
   // the block below already carries "No icons to show — try another pack or
   // search." for the query-less case, which is exactly true here and blames
   // nobody. The outage notice stays above it and still explains the cause.
-  const searchEmpty = !isMyIcons && !loading && icons.length === 0
+  //
+  // 2026-09-18: AND NOT WHEN THE GRID IS EMPTY BECAUSE THE VIEWER MAY NOT HAVE
+  // IT. "No icons to show — try another pack or search" is true of a pack that
+  // holds nothing and false of one that holds thousands the visitor is not
+  // entitled to; printing it over a gate would be the page blaming the
+  // catalogue for a decision the product made. A gated scope has its own panel,
+  // which says what it is and how to open it.
+  const searchEmpty = !isMyIcons && !gated && !loading && icons.length === 0
     && (!loadError || query.trim().length > 0 || !!pack || !!group)
+
+  /* ── THE THREE WALLS, AND WHICH ONE IS ON SCREEN ─────────────────────────
+     `gated` replaces the grid: the viewer asked for a set they may not have, so
+     there is nothing to show and one thing to say.
+     `capWall` sits UNDER the grid: the viewer has everything they asked for,
+     there is simply less of it, and the sentence says why. Savee's placement
+     (cited in components/library/LockedTease.jsx) — what you have, then how to
+     get more — and Discord Shop's shape: real content, then one line, one
+     button.
+     A signed-in free viewer gets NEITHER until they reach for something. No
+     standing banner; see the Descript note on IconGateWall. */
+  const capWall = tier === 'anon' && !isMyIcons && !gated && !loading && icons.length > 0
+  const gateCopy = gated ? (gated.need === 'free' ? ICON_GATE_COPY.lockedFree : ICON_GATE_COPY.lockedPro) : null
+  // How many packs sit on the other side of the account boundary. Read off the
+  // table rather than typed, so moving a pack moves the number.
+  const packsBehindLogin = useMemo(
+    () => visiblePacks(ALL_PACKS, 'free').length - visiblePacks(ALL_PACKS, 'anon').length,
+    [],
+  )
+  const openGate = useCallback((need) => {
+    // The reason string follows the convention every gate in this app uses — a
+    // short lowercase verb phrase naming the action, which LoginPopup renders
+    // as "log in to <reason>". See hooks/useExportGate.js: no marketing
+    // sentence is written at a call site.
+    if (need === 'free') { requireLogin('browse every icon pack'); return }
+    // `gate` is what trackUpgradeGate measures this wall as. Without it the
+    // whole surface would report as the modal's own title.
+    openProModal({ gate: 'icon-pack-tier' })
+  }, [requireLogin, openProModal])
 
   // Shared glyph renderer — one code path for custom (saved), CDN and embedded
   // icons, reused by the main grid and both My Icons sections.
@@ -2248,6 +2793,10 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
     return list.map((icon, idx) => renderCell(icon, idx, showPack))
   }
 
+  // The hover prefetch is the customizer's head start, and it is the one
+  // remaining path from a cell to api.iconify.design. A cell for a gated pack
+  // should never be on screen; if one ever is, hovering it must not be what
+  // fetches the markup every other path in this file refused to.
   const renderCell = (icon, idx, showPack = false) => (
     <div
       key={icon.id || icon.key || `${idx}-${icon.name || ''}`}
@@ -2257,8 +2806,8 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
       aria-label={icon.logo ? `Copy ${icon.name} logo URL` : `Customise ${icon.name}`}
       onClick={() => handleIconClick(icon)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleIconClick(icon) } }}
-      onMouseEnter={() => prefetchIconSvg(icon)}
-      onFocus={() => prefetchIconSvg(icon)}
+      onMouseEnter={() => { if (canSee(icon.pack)) prefetchIconSvg(icon) }}
+      onFocus={() => { if (canSee(icon.pack)) prefetchIconSvg(icon) }}
     >
       {iconGlyph(icon)}
       <span>{icon.name}</span>
@@ -2283,7 +2832,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           masthead it reached. A retired motif that cannot be rendered still
           reads as live code to the next person to open the file. */}
 
-      {recents.length > 0 && !isMyIcons && (
+      {visibleRecents.length > 0 && !isMyIcons && (
         <div className="ig-rail">
           <div className="ig-rail-head">
             Recent
@@ -2299,7 +2848,7 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             </button>
           </div>
           <div className="ig-rail-track rail-overflow">
-            {recents.map((r) => (
+            {visibleRecents.map((r) => (
               <button
                 key={r.key}
                 type="button"
@@ -2368,47 +2917,53 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             <optgroup label="Yours">
               <option value="custom">My Icons</option>
             </optgroup>
-            <optgroup label="Interface (outlined)">
-              <option value="lucide">Lucide</option>
-              <option value="tabler">Tabler</option>
-              <option value="iconoir">Iconoir</option>
-              <option value="heroicons">Heroicons</option>
-              <option value="ph">Phosphor</option>
-            </optgroup>
-            <optgroup label="Interface (solid)">
-              <option value="mdi">Material Design</option>
-              <option value="material-symbols">Material Symbols</option>
-              <option value="solar">Solar</option>
-              <option value="fa6-solid">Font Awesome</option>
-              <option value="bxs">BoxIcons</option>
-            </optgroup>
-            <optgroup label="Brand logos (coloured)">
-              <option value="logodev">Real brand logos (Logo.dev)</option>
-              <option value="simple-icons">Simple Icons</option>
-              <option value="logos">Logos (colour)</option>
-              <option value="devicon">Devicon</option>
-              <option value="skill-icons">Skill Icons</option>
-            </optgroup>
-            <optgroup label="Flags">
-              <option value="circle-flags">Circle Flags</option>
-              <option value="flag">Flag Icons</option>
-              <option value="flagpack">Flagpack</option>
-              <option value="cif">Currency Flags</option>
-            </optgroup>
-            <optgroup label="Flat & emoji">
-              <option value="flat-color-icons">Flat Color Icons</option>
-              <option value="twemoji">Twemoji</option>
-              <option value="noto">Noto Emoji</option>
-              <option value="fluent-emoji">Fluent Emoji</option>
-              <option value="openmoji">OpenMoji</option>
-            </optgroup>
+            {/* THE MENU SAYS WHAT A SET COSTS BEFORE IT IS CHOSEN.
+                Jasper's library (mobbin.com/screens/392fef89-f78f-44d4-83a7-72de3d3e5fcd)
+                badges the CATEGORY in its left-hand list, not only the locked
+                cards inside it — so the visitor learns the boundary from the
+                control rather than from a wall they walked into. That is the
+                whole reason the marker is here and not only on the panel below.
+
+                THE LOCKED OPTIONS ARE STILL SELECTABLE, deliberately. `disabled`
+                would be tidier and it would be a dead end: a control that
+                cannot be operated cannot explain itself, and there would be
+                nowhere to put the way out. Choosing one costs no request (see
+                browsePack) and answers with the panel that names the tier and
+                carries the button. */}
+            {PACK_MENU.map(g => {
+              /* THE MARKER RIDES THE OPTGROUP WHEN THE WHOLE GROUP AGREES, AND
+                 THAT IS A WIDTH DECISION AS MUCH AS A READING ONE.
+
+                 `.lbry-select` is capped at 220px and the longest option —
+                 "Real brand logos (Logo.dev)" — already sits just under it.
+                 MEASURED: appending " · Pro" to that option took the control to
+                 the cap and wrapped the whole toolbar row to two lines at 641px
+                 (118px against the 68px this surface holds everywhere else).
+                 A browser sizes a closed <select> on its widest OPTION, not on
+                 its group labels, so saying it once on the group costs nothing
+                 and reads better besides: five "· Pro"s down one list is noise.
+
+                 MIXED GROUPS FALL BACK TO PER-OPTION, and that branch is not
+                 hypothetical housekeeping — it is what keeps this honest the
+                 first time the founder moves one pack in iconPackTiers.js and
+                 a group stops agreeing with itself. */
+              const marks = [...new Set(g.packs.map(([value]) => lockMark(value, tier)))]
+              const uniform = marks.length === 1
+              return (
+                <optgroup key={g.label} label={uniform ? g.label + marks[0] : g.label}>
+                  {g.packs.map(([value, label]) => (
+                    <option key={value} value={value}>{label}{uniform ? '' : lockMark(value, tier)}</option>
+                  ))}
+                </optgroup>
+              )
+            })}
           </select>
           <LibraryFilterGroup
             label="Filter by icon group"
             triggerLabel="Group"
             value={source === 'custom' ? 'custom' : group}
             onChange={(id) => (id === 'custom' ? browseCustom() : handleGroupToggle(id))}
-            options={GROUP_OPTIONS}
+            options={groupOptions}
           />
         </LibraryToolbar>
 
@@ -2443,15 +2998,15 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
             <section className="ig-mysec">
               <div className="ig-mysec-head">
                 <h3 className="ig-mysec-title">Recently copied</h3>
-                {recents.length > 0 && (
+                {visibleRecents.length > 0 && (
                   <button type="button" className="ig-rail-clear" onClick={handleClearRecents} title="Clear recently copied">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     Clear all
                   </button>
                 )}
               </div>
-              {recents.length > 0 ? (
-                <div className="ig">{renderGrid(recents)}</div>
+              {visibleRecents.length > 0 ? (
+                <div className="ig">{renderGrid(visibleRecents)}</div>
               ) : (
                 <div className="ig-custom-empty">Icons you copy show up here for quick reuse.</div>
               )}
@@ -2459,29 +3014,54 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           </div>
         ) : (
           <>
-            {loadError && (
+            {loadError && !gated && (
               // role="status": the sentence is the only thing telling a
               // screen-reader user that the grid under it is the built-in set
               // rather than the catalogue they searched. Rendered with every
               // Iconify host refused (429/403) on 2026-09-08 the state was
               // otherwise complete — the sentence, Try again and the built-in
               // grid — but nothing announced it.
+              //
+              // `!gated` KEEPS THE TWO REFUSALS APART, which is the whole point
+              // of having both. A gated scope asks for nothing, so nothing can
+              // have refused it; carrying a stale "couldn't reach the icon
+              // service" over a Pro wall would tell the visitor the network
+              // broke when the product simply said no — and would hand the Try
+              // again button a retry for a pack they may not have. This is the
+              // same class of error as #435, where the masthead pill said "Live
+              // library connected" directly above this notice.
               <div className="ig-notice" role="status">
                 <span>Couldn’t reach the icon service — showing built-in icons.</span>
                 <button type="button" className="ui-pill ui-pill-out ui-pill-sm" onClick={() => retryRef.current?.()}>Try again</button>
               </div>
             )}
 
-            <div className="ig">
-              {loading && icons.length === 0
-                ? Array.from({ length: 24 }).map((_, i) => (
-                  <div key={`skel-${i}`} className="ig-skel" aria-hidden="true">
-                    <div className="sk ig-skel-glyph" />
-                    <div className="sk ig-skel-label" />
-                  </div>
-                ))
-                : renderGrid(shown)}
-            </div>
+            {gated && (
+              <IconGateWall
+                kind={gated.need}
+                heading={gateCopy.heading(gated.label)}
+                body={gateCopy.body}
+                action={gateCopy.action}
+                onAction={() => openGate(gated.need)}
+              />
+            )}
+
+            {/* NO EMPTY `.ig` UNDER A WALL. A gated scope holds no icons, and an
+                empty grid container still occupies its gap and reads as a grid
+                that failed to fill — the "cell that failed to load" shape this
+                file has been fixed for twice. The wall is the whole answer. */}
+            {!gated && (
+              <div className="ig">
+                {loading && icons.length === 0
+                  ? Array.from({ length: 24 }).map((_, i) => (
+                    <div key={`skel-${i}`} className="ig-skel" aria-hidden="true">
+                      <div className="sk ig-skel-glyph" />
+                      <div className="sk ig-skel-label" />
+                    </div>
+                  ))
+                  : renderGrid(shown)}
+              </div>
+            )}
 
             {hasMore && <div ref={sentinelRef} className="ig-sentinel" />}
 
@@ -2526,6 +3106,28 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
               </p>
             )}
 
+            {/* THE SIGNED-OUT CAP, SAID OUT LOUD. The status line above counts
+                what is on screen; it cannot say that the number is a rule
+                rather than the size of the library, and a count with no
+                explanation is the thing that makes a cap feel punitive. This
+                sentence states the rule and the button is the way past it. */}
+            {capWall && (
+              <IconGateWall
+                kind="anon"
+                heading={ICON_GATE_COPY.anon.heading(packsBehindLogin)}
+                body={ICON_GATE_COPY.anon.body(ANON_ICON_CAP)}
+                action={ICON_GATE_COPY.anon.action}
+                onAction={() => openGate('free')}
+              />
+            )}
+
+            {/* THE LOGO.DEV USAGE HINT, which is product copy and stays
+                conditional — it explains a control that only exists on this
+                pack. It is no longer the only place logo.dev is credited: the
+                unconditional line below carries that link in every state, which
+                is what their free tier actually asks for. Both are kept; a
+                second credit on the screen that is all logo.dev costs nothing,
+                and removing it would be removing a working sentence. */}
             {pack === 'logodev' && (
               <p className="ig-attrib">
                 Search any brand by name or domain (e.g. <code>notion.so</code>) — click a logo to copy its
@@ -2536,6 +3138,14 @@ export default function IconLibrary({ onCopy, onCatalogue }) {
           </>
         )}
       </div>
+      {/* OUTSIDE THE `isMyIcons` BRANCH, AND OUTSIDE EVERY OTHER CONDITION ON
+          this surface. The saved and recently-copied grids under My Icons are
+          the same third-party glyphs under another heading, the Recent rail
+          sits above every state including the gated one, and the offline grid
+          is Lucide, Tabler, Iconoir, Heroicons and Simple Icons. There is no
+          state of this page that shows somebody else's work and owes nothing,
+          so there is no condition here. */}
+      <IconPackCredit packs={packsOnScreen(icons, recents)} />
       <UIKitGuide step="icons" />
 
       {(selected || addMode) && (

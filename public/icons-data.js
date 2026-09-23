@@ -1,3 +1,63 @@
+/*!
+ * THIRD-PARTY ICON DATA — 259 icons from five open-source projects.
+ *
+ * The path data below is NOT ours. It is redrawn verbatim from the projects
+ * named in PACKS (see the legend further down), and MIT and ISC both require
+ * their copyright and permission notice to travel with "all copies or
+ * substantial portions" — which is what this file is. That is why this header
+ * exists and why it must not be stripped by a minifier or a build step.
+ *
+ * The repository's own LICENSE covers UIL4B's code. It does NOT cover the 259
+ * icons in this file; each pack keeps its own licence, listed here.
+ *
+ *   Lucide        147 icons  ISC          https://lucide.dev
+ *                 Copyright (c) for portions of Lucide are held by Cole Bemis
+ *                 2013-2022 as part of Feather (MIT). All other copyright (c)
+ *                 for Lucide are held by Lucide Contributors 2022.
+ *
+ *   Tabler Icons   81 icons  MIT          https://tabler.io/icons
+ *                 Copyright (c) 2020-2024 Pawel Kuna
+ *
+ *   Simple Icons   16 icons  CC0-1.0      https://simpleicons.org
+ *                 Public domain dedication. NOTE: CC0 waives COPYRIGHT only.
+ *                 It is not a trademark licence, and every icon from this pack
+ *                 is a company brand mark. Simple Icons' own DISCLAIMER.md
+ *                 asks users to "seek the correct permissions to use the icons
+ *                 relevant to their project".
+ *
+ *   Iconoir         8 icons  MIT          https://iconoir.com
+ *                 Copyright (c) 2021 Luca Burgio
+ *
+ *   Heroicons       7 icons  MIT          https://heroicons.com
+ *                 Copyright (c) Tailwind Labs, Inc.
+ *
+ * THE MIT AND ISC PERMISSION NOTICE, which covers Lucide, Tabler, Iconoir and
+ * Heroicons above:
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining a
+ *   copy of this software and associated documentation files (the "Software"),
+ *   to deal in the Software without restriction, including without limitation
+ *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *   and/or sell copies of the Software, and to permit persons to whom the
+ *   Software is furnished to do so, subject to the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be included in
+ *   all copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ *   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ *   DEALINGS IN THE SOFTWARE.
+ *
+ * (ISC's text differs in wording but not in effect; Lucide's full licence is at
+ * https://github.com/lucide-icons/lucide/blob/main/LICENSE.)
+ *
+ * The runtime Icon Library fetches many more packs from Iconify and owes its
+ * own attribution — see the credits surface, not this file.
+ */
 const icons=[
 // ═══ NAVIGATION (30) ═══
 {n:'arrow-right',c:'nav',p:'L',d:'M5 12h14M12 5l7 7-7 7'},{n:'arrow-left',c:'nav',p:'L',d:'M19 12H5M12 19l-7-7 7-7'},{n:'arrow-up',c:'nav',p:'L',d:'M12 19V5M5 12l7-7 7 7'},{n:'arrow-down',c:'nav',p:'L',d:'M12 5v14M19 12l-7 7-7-7'},

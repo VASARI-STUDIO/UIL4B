@@ -42,7 +42,7 @@ import path from 'node:path'
 // rule must not be read as copy that breaks it.
 const PUBLIC_COPY = [
   'index.html',
-  'src/pages/Home.jsx',
+  'src/pages/Spectrum.jsx',
   'src/pages/Plans.jsx',
   'src/pages/SiteMap.jsx',
   'src/pages/HelpCentre.jsx',

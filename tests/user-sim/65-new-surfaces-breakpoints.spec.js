@@ -350,33 +350,30 @@ for (const theme of ['light', 'dark']) {
 // ─────────────────────────────────────────────────────────────────────────────
 // The homepage export section
 // ─────────────────────────────────────────────────────────────────────────────
-
-test('/ · the export section’s hand-off pill keeps its whole label inside itself at 320', async ({ browser }) => {
-  // `.ui-pill` is nowrap and "Open the export panel with this system →" needs
-  // 302px of the 286px the pill has at 320, so the arrow rendered outside the
-  // pill (measured 2026-09-08, both themes). Everything else in the section
-  // was clean at every width: one column to 980, the page strip scrolls inside
-  // itself, no document overflow, and reduced motion paints the grid at
-  // opacity 1 with no transform.
-  //
-  // MUTATION: drop the ≤359 `.hkit-cta` block — `overflow` is 16 again.
-  const { ctx, page } = await phone(browser, 320)
-  watch(page, 'a visitor on a small phone reaching the export section')
-  await go(page, '/')
-  const cta = page.locator('.hkit-cta')
-  await cta.scrollIntoViewIfNeeded()
-  await expect(cta).toBeVisible()
-  await settle(page)
-  const m = await cta.evaluate((el) => {
-    const r = el.getBoundingClientRect()
-    return { overflow: el.scrollWidth - el.clientWidth, h: Math.round(r.height), right: Math.round(r.right), text: el.textContent.trim() }
-  })
-  await ctx.close()
-  expect(m.text).toMatch(/^Open the export panel with this system/)
-  expect(m.overflow, 'the label runs past the pill').toBeLessThanOrEqual(0)
-  expect(m.right).toBeLessThanOrEqual(320)
-  expect(m.h, 'still a 44px target').toBeGreaterThanOrEqual(44)
-})
+//
+// ── DELETED: '/ · the export section's hand-off pill keeps its whole label
+//    inside itself at 320' ──────────────────────────────────────────────────
+//
+// What it guarded: that `.hkit-cta` — "Open the export panel with this system
+// →", the hand-off out of the old homepage's export section — kept its whole
+// nowrap label inside its own box at 320px, and stayed a 44px target doing it.
+// The measured defect was 302px of label in a 286px pill, so the arrow painted
+// outside the pill in both themes.
+//
+// Why it is gone: the section is gone. `/` and `/home` render
+// src/pages/Spectrum.jsx since the route swap and src/pages/Home.jsx is
+// deleted, taking the HomeKit export section with it — measured on the built
+// front door, `.hkit-cta` has count 0, and nothing under src/ matches `hkit`
+// at all. There is no surviving element to re-point this at.
+//
+// Where the guarantee still lives: the RULE it encoded — a nowrap pill must not
+// overrun its own box at 320 — is not homepage-specific and is still enforced
+// on every route this file walks, plus by 21-reflow-320, which sweeps `/`
+// itself at 320 for any element that overflows the viewport with no scrollable
+// ancestor. That sweep is currently RED on `/` for the Spectrum bench panels'
+// own `.sp-cta--ink` buttons, which is the same class of defect on the page
+// that replaced this one; it is reported as a product defect rather than
+// absorbed here.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // /settings and /projects

@@ -44,7 +44,31 @@ import { buildLlmsTxt } from './llms-txt.mjs'
 import { HOME_SHELL_ROUTES, applyHomeShell, assertHomeShellApplied } from './home-shell.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const dist = path.join(root, 'dist')
+/* WHICH BUILD TO PRERENDER. Defaults to `dist`, so `npm run build` and every
+ * existing caller are unchanged.
+ *
+ * It is overridable because several agents run the acceptance suite in ONE
+ * checkout, each serving its own `dist-<LANE>` on its own port (pw-lane.config.js).
+ * A lane that needs its source change reflected had no way to finish the build:
+ * `vite build --outDir dist-lane` works, and then this script wrote 39 shells
+ * into `dist/` — the shared directory — which is both wrong for the lane and a
+ * way to corrupt everyone else's ground mid-run. One lane worked around it by
+ * running a rewritten copy from a scratchpad, which is the signal that the
+ * script wanted this flag.
+ *
+ * Accepts `--out <dir>` or `PRERENDER_OUT`, resolved against the repo root so a
+ * lane cannot accidentally address something outside it. */
+function resolveOutDir() {
+  const flag = process.argv.indexOf('--out')
+  const raw = (flag > -1 && process.argv[flag + 1]) || process.env.PRERENDER_OUT || 'dist'
+  const resolved = path.resolve(root, raw)
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    console.error(`prerender: --out must stay inside the repository; got ${raw}`)
+    process.exit(1)
+  }
+  return resolved
+}
+const dist = resolveOutDir()
 // Imported, never retyped. A second spelling of the origin here is exactly
 // how 40 shells came to advertise a hostname that does not answer.
 const ORIGIN = SITE_ORIGIN

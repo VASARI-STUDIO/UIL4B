@@ -27,10 +27,23 @@
 // ⌘K badge at the other end, and not on the sign-up button, which is a link out
 // rather than something you can try.
 //
-// The letters are STROKES, not a font. Two families are self-hosted (Manrope and
-// JetBrains Mono) and adding a third for eleven characters would cost a webfont
-// request and a FOUT for an aside. Drawing them also means the mark cannot fall
-// back to something generic on a machine that lacks the face.
+// The letters were STROKES until 2026-09-18. Both self-hosted families were
+// sans, and a third webfont for one aside would have cost a request and a FOUT
+// to say something no reader needs. Spectrum paid that cost on purpose: Caveat
+// ships in public/fonts as the `--hand` token — one static 500 weight, added
+// beside Geist and Geist Mono for this mark and asked for nowhere else. The
+// paths below were an imitation of a face the product now serves, so they go,
+// and the token is read rather than the family named again.
+//
+// Caveat is deliberately NOT preloaded (index.html): an aside must not compete
+// with the hero's own faces for the first-paint budget. So the phrase is pinned
+// with `textLength` to the 158 viewBox units the drawn letters occupied,
+// whether Caveat has arrived or the fallback cursive is still standing in — and
+// `lengthAdjust="spacing"` moves the tracking and never the glyph shapes, so
+// nothing distorts and the swap cannot resize the mark or shift the margin it
+// hangs in. 40px against that 158 is the size Caveat sets the phrase at
+// naturally, measured rather than guessed, so the pinning is a guard and not a
+// squeeze. The arrow stays drawn, because an arrow is not a letter.
 //
 // aria-hidden, deliberately: the input it points at already carries its own
 // accessible name ("Search every tool", the sr-only label in Home.jsx), so a
@@ -47,35 +60,17 @@ export default function TryItMark() {
   return (
     <span className="tim" aria-hidden="true">
       <svg className="tim-svg" viewBox="0 0 196 132" fill="none" role="presentation">
-        <g
+        <text
           className="tim-ink"
-          stroke="currentColor"
-          strokeWidth="2.1"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          x="12"
+          y="42"
+          textLength="158"
+          lengthAdjust="spacing"
+          fill="currentColor"
+          style={{ fontFamily: 'var(--hand)', fontSize: 40, fontWeight: 500 }}
         >
-          {/* give */}
-          <path d="M20 30c-4-3-10-1-11 4s3 9 8 8c3-1 4-4 4-7v-7" />
-          <path d="M21 28v20c0 6-4 9-9 8" />
-          <path d="M30 42V29" />
-          <path d="M30 22v.6" />
-          <path d="M37 28l5 14 5-14" />
-          <path d="M52 36c5-1 8-1 9-3 0-3-3-5-6-4-4 1-6 6-4 10 2 3 6 3 9 1" />
-          {/* it */}
-          <path d="M75 42V29" />
-          <path d="M75 22v.6" />
-          <path d="M83 19v19c0 4 3 5 6 3" />
-          <path d="M78 28h10" />
-          {/* a */}
-          <path d="M112 31c-3-3-8-2-9 3s1 9 5 9c3 0 4-3 4-6v-8" />
-          <path d="M112 29v13" />
-          {/* try */}
-          <path d="M131 19v19c0 4 3 5 6 3" />
-          <path d="M126 28h10" />
-          <path d="M142 42V29c2-2 5-3 8-2" />
-          <path d="M155 29l5 13 5-13" />
-          <path d="M165 29l-8 22c-2 5-6 6-10 4" />
-        </g>
+          give it a try
+        </text>
         {/* The arrow. One unbroken sweep from under the words, bellying down and
             to the right, landing on the left end of the bar — the prompt end,
             where you type, rather than the ⌘K badge at the far end. Drawn as a

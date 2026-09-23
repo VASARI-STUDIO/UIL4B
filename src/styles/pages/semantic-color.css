@@ -5,7 +5,61 @@
  * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
  * so anything here now outranks every global rule at equal specificity —
  * which is why a rule a later global rule overrides was left behind rather
- * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+ * than moved. See the note in the splitter, and 23-responsive-mid-band.
+ *
+ * ── SPECTRUM PASS, 2026-09-23 ───────────────────────────────────────────────
+ *
+ * DELETED: the single `--accent-strong` (`.stc-bundle--on .stc-bundle-top>span`,
+ * the SELECTED marker on the chosen bundle card). It is a per-theme literal
+ * declared beside `--accent` rather than derived from it, so a premium theme
+ * template that moves `--accent` alone would have left the one element saying
+ * WHICH BUNDLE IS ON stranded on the old brand blue. `--accent-text` is
+ * `color-mix()` off `--accent` and follows it. Measured on the composited
+ * ground rather than the declared one — that marker does not sit on `--card`,
+ * it sits on `--accent-bg` over `--bg-1` — 5.51:1 light, 8.74:1 dark.
+ *
+ * DELETED: the 650/700 weights on headings and the 22px h2 step. Geist carries
+ * at 540/560 where Manrope needed 650, and the section heads now take the
+ * display face at Spectrum's tracking. 700 is KEPT on the tone labels inside a
+ * swatch — see the note above `.stc-cell-hex`, where the weight is part of a
+ * measured contrast guarantee and not a style choice.
+ *
+ * ── THE PROOF SCENE'S HEXES ARE CONTENT, NOT A TOKEN BYPASS ─────────────────
+ *
+ * `--stc-paper-*` below are fixed. This page shows a light interface and a dark
+ * interface SIDE BY SIDE, in one viewport, so the reader can see a state colour
+ * work on both grounds without changing their own theme. Two panels that both
+ * resolved to `--bg-1` would be the same panel twice and the comparison would
+ * state nothing. They are a picture of someone else's UI, the way spectrum.css
+ * keeps three fixed hues for its window dots, and they are declared once at the
+ * top as a named set rather than scattered as nine literals through the sheet.
+ *
+ * Measured at 390 / 834 / 1440 in both themes: zero horizontal page overflow,
+ * zero text nodes under their contrast floor on the composited ground. */
+
+/* Declared on :root, which is safe here precisely BECAUSE this sheet is a
+   route chunk — it is only ever in the document on /create/semantic-color, so
+   nothing outside this page can see these names. */
+:root {
+  /* Spectrum's house curve, and the page's own hairline wash as a mix off the
+     ink token so it tracks the theme without a second RGB triple. */
+  --stc-ease: cubic-bezier(.23, 1, .32, 1);
+  --stc-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  /* The two grounds the proof scene paints, and the ink each one carries.
+     Fixed on purpose — see the header. */
+  --stc-paper-light: #f7f8fa;
+  --stc-paper-light-ink: #172033;
+  --stc-paper-dark: #111318;
+  --stc-paper-dark-ink: #f3f5f7;
+  /* The light panel's raised surface (a field, a switch knob) sits ABOVE its
+     paper, so it is white rather than the paper colour. The dark panel
+     overrides both to its own ground further down. */
+  --stc-paper-light-surface: #ffffff;
+  /* Ink for a label on a SATURATED state fill — the error button. It is white
+     because the fill is a 500/600 state colour in every bundle, not because it
+     is a theme value. */
+  --stc-on-solid: #ffffff;
+}
 
 /* ─── UI State Colours section (ColorStudio States) ─── */
 /* ── The solo Semantic Colours tool header ──────────────────────────────────
@@ -20,8 +74,11 @@
    site-wide. */
 .stc-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-6);flex-wrap:wrap;margin-bottom:var(--s-5)}
 .stc-hero-id{max-width:680px;min-width:0}
-.stc-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5vw,64px);font-weight:500;line-height:1.04;letter-spacing:-.035em;color:var(--t0)}
-.stc-hero-id>p{max-width:600px;margin:12px 0 0;font-size:15px;line-height:1.65;color:var(--t1)}
+/* Spectrum's hero metrics — 600 at -.045em under a line-height below 1. The
+   old 500/-.035em is the h2 step, which left the page's one h1 reading as a
+   section heading. */
+.stc-hero h1{margin:0;font-family:var(--display);font-size:clamp(38px,5.6vw,72px);font-weight:600;line-height:.96;letter-spacing:-.045em;color:var(--t0);text-wrap:balance}
+.stc-hero-id>p{max-width:52ch;margin:16px 0 0;font-size:15.5px;line-height:1.62;color:var(--t1);text-wrap:pretty}
 .stc-hero-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
 /* The action is already a button with its own metrics; the hero must not also
    push it right with `margin-left:auto`, which is what `.stc-copy-btn` does for
@@ -34,11 +91,24 @@
 
 .stc-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
 
-.stc-kicker{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
+/* --t2, and it STAYS --t2. The first cut of this pass moved it to --t3 along
+   with the rest of the mono micro-labels, which was a regression measured at
+   4.55:1 — this kicker sits on --bg-0, the PAGE ground, where --t3 is #6C6C66
+   on #EFEEE9. It passes by five hundredths, which is the contrast version of
+   the 23px control this page already shipped once. The --t3 labels that are
+   fine are the ones inside a --card panel (.stc-bundle-top>span), where the
+   same token measures 5.28:1. --t2 here is 6.37:1 light / 6.21:1 dark. */
+.stc-kicker{font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--t2)}
 
-.stc-copy-btn{margin-left:auto;padding:7px 14px;border:none;border-radius:var(--radius-s);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;transition:opacity var(--t)}
+/* Spectrum's ink CTA: the ink token as the ground, the page colour as the
+   label, on a pill. 40px min-height so it clears the target floor without the
+   padding having to carry it, and `opacity` is gone as the hover — dimming a
+   button dims its LABEL too, which walks a 16.9:1 pair toward the floor for no
+   reason. The hover mixes the GROUND instead, which is what spectrum.css's
+   `.sp-cta--ink` does. */
+.stc-copy-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-left:auto;min-height:40px;padding:9px 18px;border:1px solid var(--t0);border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:12px;font-weight:560;cursor:pointer;transition:background var(--dur-1) ease,border-color var(--dur-1) ease}
 
-.stc-copy-btn:hover{opacity:.85}
+.stc-copy-btn:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));border-color:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0)}
 
 .stc-copy-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -52,7 +122,7 @@
 
 .stc-role-presets{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 
-.stc-ramp{display:flex;border-radius:var(--radius-s);overflow:hidden;border:1px solid var(--border)}
+.stc-ramp{display:flex;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
 
 .stc-cell{flex:1;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:filter var(--dur-1) var(--ease-standard);min-width:0}
 
@@ -82,21 +152,21 @@
 
 .stc-hue-row{display:flex;align-items:center;gap:12px}
 
-.stc-hue-val{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t1);min-width:34px;text-align:right}
+.stc-hue-val{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--t1);min-width:34px;text-align:right}
 
 @media(max-width:640px){.stc-cell{min-height:52px}}
 
 .stc-toolbar-copy{display:flex;min-width:0;flex-direction:column;gap:3px}
 
-.stc-toolbar-copy>span:last-child{font-size:11px;color:var(--t2)}
+.stc-toolbar-copy>span:last-child{font-size:11.5px;color:var(--t2)}
 
 .stc-bundles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 var(--s-6)}
 
 .stc-bundle:first-child{grid-column:span 2}
 
-.stc-bundle{display:flex;min-width:0;min-height:128px;flex-direction:column;gap:10px;padding:14px;text-align:left;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t),box-shadow var(--t)}
+.stc-bundle{display:flex;min-width:0;min-height:128px;flex-direction:column;gap:10px;padding:16px;text-align:left;font-family:var(--font);color:var(--t1);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);cursor:pointer;transition:border-color var(--dur-2) ease,background var(--dur-2) ease,color var(--dur-2) ease,box-shadow var(--dur-2) ease,transform var(--dur-2) var(--stc-ease)}
 
-.stc-bundle:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
+.stc-bundle:hover{color:var(--t0);border-color:var(--bh);background:var(--stc-wash);transform:translateY(-2px)}
 
 .stc-bundle--on{color:var(--t0);border-color:color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-bg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 16%,transparent)}
 
@@ -104,19 +174,25 @@
 
 .stc-bundle-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 
-.stc-bundle-top strong{font-size:12px;font-weight:650}
+.stc-bundle-top strong{font-family:var(--display);font-size:13px;font-weight:560;letter-spacing:-.01em}
 
-.stc-bundle-top>span{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
+.stc-bundle-top>span{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
 
-.stc-bundle--on .stc-bundle-top>span{color:var(--accent-strong)}
+/* --accent-text, NOT --accent-strong. This is the one element that says which
+   bundle is selected, and --accent-strong is a per-theme literal that would not
+   follow a premium theme moving --accent alone. Measured on the COMPOSITED
+   ground — this marker sits on --accent-bg over --bg-1, not on --bg-1 —
+   #0E5BCF on #EDF3FF = 5.51:1 light, #8AB8FF on #1A1D24 = 8.74:1 dark, against
+   a 4.5 floor for 8px text with no large-text exemption to fall back on. */
+.stc-bundle--on .stc-bundle-top>span{color:var(--accent-text)}
 
 .stc-bundle-swatches{display:flex;height:12px;overflow:hidden;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent);border-radius:var(--radius-xs)}
 
 .stc-bundle-swatches i{flex:1;background:var(--stc-bundle-c)}
 
-.stc-bundle small{font-size:10.5px;line-height:1.45;color:var(--t2)}
+.stc-bundle small{font-size:11.5px;line-height:1.5;color:var(--t2)}
 
-.stc-role{margin-bottom:0;padding:var(--s-5);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l)}
+.stc-role{margin-bottom:0;padding:var(--s-5);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-xs)}
 
 .stc-role+.stc-role{margin-top:12px}
 
@@ -126,11 +202,11 @@
 
 .stc-role-id>span:last-child{display:flex;flex-direction:column;gap:3px}
 
-.stc-role-id small{font-size:10px;color:var(--t2)}
+.stc-role-id small{font-size:11px;line-height:1.4;color:var(--t2)}
 
-.stc-role-cue{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex:0 0 auto;font-family:var(--mono);font-size:14px;font-weight:750;color:var(--t0);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs)}
+.stc-role-cue{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex:0 0 auto;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--t0);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-xs)}
 
-.stc-role-name{font-size:13px;font-weight:700;text-transform:none}
+.stc-role-name{font-family:var(--display);font-size:14.5px;font-weight:560;letter-spacing:-.015em;text-transform:none}
 
 .stc-ramp{overflow-x:auto;scrollbar-width:thin}
 
@@ -140,23 +216,23 @@
 
 .stc-subhead{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s-5);margin-bottom:var(--s-5)}
 
-.stc-subhead h2,.stc-handoff h2{margin:5px 0 5px;font-size:22px;font-weight:650;letter-spacing:-.025em;color:var(--t0)}
+.stc-subhead h2,.stc-handoff h2{margin:6px 0;font-family:var(--display);font-size:clamp(22px,2.4vw,30px);font-weight:560;line-height:1.06;letter-spacing:-.03em;color:var(--t0);text-wrap:balance}
 
-.stc-subhead p,.stc-handoff p{max-width:650px;margin:0;font-size:12px;line-height:1.55;color:var(--t2)}
+.stc-subhead p,.stc-handoff p{max-width:58ch;margin:0;font-size:13.5px;line-height:1.6;color:var(--t2)}
 
-.stc-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-l)}
+.stc-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-2xl)}
 
-.stc-preview{padding:var(--s-5);color:#172033;background:#f7f8fa}
+.stc-preview{padding:var(--s-5);color:var(--stc-paper-light-ink);background:var(--stc-paper-light)}
 
 .stc-preview+.stc-preview{border-left:1px solid var(--border)}
 
-.stc-preview--dark{color:#f3f5f7;background:#111318}
+.stc-preview--dark{color:var(--stc-paper-dark-ink);background:var(--stc-paper-dark)}
 
 .stc-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid color-mix(in srgb,currentColor 14%,transparent)}
 
-.stc-preview-head strong{font-size:12px}
+.stc-preview-head strong{font-family:var(--display);font-size:13px;font-weight:560;letter-spacing:-.01em}
 
-.stc-preview-head span{font-size:9px;letter-spacing:.04em;text-transform:uppercase;opacity:.6}
+.stc-preview-head span{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:color-mix(in srgb,currentColor 62%,transparent)}
 
 .stc-scene-list{display:flex;flex-direction:column;gap:10px}
 
@@ -177,12 +253,12 @@
 /* SUCCESS - a switch. The track is the 600 so the control reads as filled. */
 .stc-sc-switch{position:relative;display:inline-flex;flex:0 0 auto;width:34px;height:20px;padding:2px;border-radius:999px;background:color-mix(in srgb,var(--stc-ink) 22%,transparent)}
 .stc-sc-switch--on{background:var(--stc-solid);justify-content:flex-end}
-.stc-sc-switch i{width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.stc-sc-switch i{width:16px;height:16px;border-radius:50%;background:var(--stc-paper-light-surface);box-shadow:0 1px 2px rgba(0,0,0,.3)}
 
 /* WARNING - an advisory field. The border carries it and the action stays live. */
 .stc-sc-field{display:flex;flex-direction:column;gap:5px;padding:11px 12px;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:var(--stc-soft);color:var(--stc-ink)}
 .stc-sc-label{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.72}
-.stc-sc-input{width:100%;padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--stc-ink);background:#fff;border:1.5px solid var(--stc-strong);border-radius:var(--radius-xs);pointer-events:none}
+.stc-sc-input{width:100%;padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--stc-ink);background:var(--stc-paper-light-surface);border:1.5px solid var(--stc-strong);border-radius:var(--radius-xs);pointer-events:none}
 .stc-sc-help{display:flex;align-items:center;gap:6px;font-size:10px;line-height:1.3;color:var(--stc-ink)}
 /* text-align:center and line-height:normal are the UA defaults a <button>
    carried and a <span> does not. These three stopped being buttons on
@@ -195,7 +271,7 @@
 
 /* ERROR - the alert, and the only solid fill in the set. */
 .stc-sc-alert-ico{display:inline-flex;color:var(--stc-strong)}
-.stc-sc-solid{flex:0 0 auto;padding:6px 11px;font-family:var(--font);font-size:10px;font-weight:700;color:#fff;background:var(--stc-solid);border:1px solid var(--stc-solid);border-radius:var(--radius-xs);cursor:default;white-space:nowrap;text-align:center;line-height:normal}
+.stc-sc-solid{flex:0 0 auto;padding:6px 11px;font-family:var(--font);font-size:10px;font-weight:700;color:var(--stc-on-solid);background:var(--stc-solid);border:1px solid var(--stc-solid);border-radius:var(--radius-xs);cursor:default;white-space:nowrap;text-align:center;line-height:normal}
 
 /* INFO - the quietest object here, deliberately. No fill, a hairline only. */
 .stc-sc-note{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:10.5px;line-height:1.4;border-radius:var(--radius-s);border:1px solid var(--stc-border);background:transparent;color:var(--stc-onpanel)}
@@ -208,12 +284,12 @@
 
 .stc-preview--dark .stc-sc-row,
 .stc-preview--dark .stc-sc-alert,
-.stc-preview--dark .stc-sc-field{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 15%,#111318);border-color:color-mix(in srgb,var(--stc-liftd) 38%,#111318)}
+.stc-preview--dark .stc-sc-field{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 15%,var(--stc-paper-dark));border-color:color-mix(in srgb,var(--stc-liftd) 38%,var(--stc-paper-dark))}
 
 .stc-preview--dark .stc-sc-help,
 .stc-preview--dark .stc-sc-label{color:var(--stc-inkd)}
 
-.stc-preview--dark .stc-sc-note{color:var(--stc-onpaneld);border-color:color-mix(in srgb,var(--stc-liftd) 38%,#111318)}
+.stc-preview--dark .stc-sc-note{color:var(--stc-onpaneld);border-color:color-mix(in srgb,var(--stc-liftd) 38%,var(--stc-paper-dark))}
 
 .stc-preview--dark .stc-sc-note .stc-scene-ico{color:var(--stc-onpaneld)}
 
@@ -222,21 +298,21 @@
 
 .stc-preview--dark .stc-sc-link{color:var(--stc-onpaneld)}
 
-.stc-preview--dark .stc-sc-input{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 10%,#111318);border-color:var(--stc-liftd)}
+.stc-preview--dark .stc-sc-input{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 10%,var(--stc-paper-dark));border-color:var(--stc-liftd)}
 
 .stc-preview--dark .stc-sc-ghost{color:var(--stc-inkd);border-color:var(--stc-liftd)}
 
-.stc-preview--dark .stc-sc-badge{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 26%,#111318);border-color:color-mix(in srgb,var(--stc-liftd) 45%,#111318)}
+.stc-preview--dark .stc-sc-badge{color:var(--stc-inkd);background:color-mix(in srgb,var(--stc-strong) 26%,var(--stc-paper-dark));border-color:color-mix(in srgb,var(--stc-liftd) 45%,var(--stc-paper-dark))}
 
 .stc-preview--dark .stc-sc-switch{background:color-mix(in srgb,var(--stc-inkd) 22%,transparent)}
 
 .stc-preview--dark .stc-sc-switch--on{background:var(--stc-solidd)}
 
-.stc-preview--dark .stc-sc-switch i{background:#111318}
+.stc-preview--dark .stc-sc-switch i{background:var(--stc-paper-dark)}
 
-.stc-preview--dark .stc-sc-solid{color:#111318;background:var(--stc-solidd);border-color:var(--stc-solidd)}
+.stc-preview--dark .stc-sc-solid{color:var(--stc-paper-dark);background:var(--stc-solidd);border-color:var(--stc-solidd)}
 
-.stc-handoff{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.25fr);gap:var(--s-6);align-items:start;margin-top:var(--s-5);padding:var(--s-6);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-l)}
+.stc-handoff{display:grid;grid-template-columns:minmax(min(260px,100%),.75fr) minmax(0,1.25fr);gap:var(--s-6);align-items:start;margin-top:var(--s-5);padding:clamp(20px,2.6vw,32px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-xs)}
 
 .stc-handoff-copy{display:flex;align-items:flex-start;flex-direction:column}
 
@@ -244,7 +320,7 @@
 
 .stc-handoff .stc-copy-btn{margin:var(--s-5) 0 0}
 
-.stc-code{max-height:360px;margin:0;padding:16px;font-family:var(--mono);font-size:10px;line-height:1.65;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);overflow:auto}
+.stc-code{max-height:360px;margin:0;padding:18px;font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);overflow:auto}
 
 .stc-code:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -326,4 +402,43 @@
 .stc-save-panel .uh-save-refusal{max-width:none}
 @media(max-width:640px){
   .stc-save-panel{width:min(280px,calc(100vw - 2 * var(--s-4)))}
+}
+
+/* ── Coarse pointers ─────────────────────────────────────────────────────────
+   44px on the CONTROLS, not a blanket floor on the page. The tone cells are
+   already 64px tall and the five-column phone grid divides the width exactly;
+   inflating them here would push a ten-tone ramp back off the screen, which is
+   the defect the 768px rule above exists to fix. */
+@media (pointer: coarse) {
+  .stc-copy-btn,
+  .stc-save-item,
+  .stc-save-go,
+  .stc-save-input { min-height: 44px; }
+  .stc-save-chip { min-height: 44px; }
+  .stc-bundle { min-height: 132px; }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   global.css's blanket rule clamps every DURATION under both spellings — the
+   Settings choice and the OS query for anyone who has not made one. A clamp
+   makes movement instant rather than absent, so the one rule on this page that
+   MOVES a box gets a companion that removes the movement itself. The spinner
+   is the other motion here and it is deliberately left alone: it is the only
+   thing on the page saying "pending" still means pending, and the blanket rule
+   already holds it to a single iteration. */
+/* NOT `:where()`, and this was measured rather than assumed.
+   `:where()` contributes ZERO specificity, which is the right call in
+   spectrum.css because the rule it overrides lives in the same file and wins on
+   order alone. It is the WRONG call here: Vite emits this page sheet as its own
+   chunk, and the runtime <link> order is
+       global.css -> index.css -> THIS SHEET -> colour.css -> tool-shell.css
+   so the shared `deferred/colour.css` actually loads AFTER this file. Against a
+   base rule of equal specificity sitting in colour.css, a `:where()`-wrapped
+   companion loses, and the movement it was supposed to remove stayed on — the
+   hover still measured translateY(-2px) with reduced motion on, in BOTH
+   spellings. The bare attribute selector adds (0,1,1) and carries it. */
+html[data-reduced-motion="true"] .stc-bundle:hover { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .stc-bundle:hover { transform: none; }
 }

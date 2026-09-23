@@ -787,7 +787,13 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
 /* The in-product hand-off on a compact row. A link, not a button: it is a
    navigation, and it must not out-weigh the lead item's real button. */
-.cur-go{font-size:12px;font-weight:650;color:var(--accent);text-decoration:none;
+/* --accent-mid, not --accent: nine "Open in <tool>" links measured 3.82:1 on
+   the light page against the 4.5:1 floor, and 12px/650 is not large text. Not
+   --accent-strong either, though it would also pass — global.css states at the
+   head of the accent family that it is a per-theme LITERAL outside the
+   derivation, so a theme that moves --accent would leave these nine links
+   behind on stock blue. The outline below is non-text and stays on --accent. */
+.cur-go{font-size:12px;font-weight:650;color:var(--accent-mid);text-decoration:none;
   white-space:nowrap;border-radius:2px}
 .cur-go:hover{text-decoration:underline}
 .cur-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -809,3 +815,442 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
   .cur-lead{padding:14px}
   .cur-lead-title{font-size:16px}
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SPECTRUM — the library surfaces take the app design's anatomy
+   ══════════════════════════════════════════════════════════════════════════
+   Source: `UIL4B App.dc.html`, the Palette Library screen (lines 219–282) and
+   the icons page (lines 284–327). Those two screens ARE this app's browse
+   language; where they and the shipping stylesheet disagree, they win.
+
+   WHY THE RULES LIVE HERE AND NOT WHERE THE ORIGINALS DO. The shared browse
+   vocabulary (`.dgh-`, `.lbry-`, `.ig`/`.ic`) is split across `global.css` and
+   `deferred/tool-shell.css`, neither of which belongs to this stream. So every
+   rule below is written in this sheet — which all six browse surfaces now
+   import — and scoped to `.lib-surface`, the one class the six page roots
+   carry. That buys two things at once: the cascade no longer depends on which
+   CSS chunk the bundler happens to emit first (every selector here carries at
+   least one class more than the rule it restates), and nothing outside a
+   library page is touched.
+
+   THE ONE THING THAT IS NOT A RESTYLE is S4 — see the block below the slab.
+
+   The `pointer:coarse` floors from tool-shell.css are RESTATED at this
+   specificity. They are `.lbry-filter{min-height:44px}` at (0,1,0); a scoped
+   override here would otherwise win and quietly take a WCAG 2.5.8 target back
+   under the floor on every touch device. */
+
+
+/* ── The masthead slab ─────────────────────────────────────────────────────
+   Design: 26px radius on `#0B0C0E` (= `--accent-deep`, the same value the
+   token layer already carries for the Spectrum ground), with TWO radial mesh
+   gradients rather than the one blurred glow this surface shipped.
+
+   The mesh colours are the design's `meshA`/`meshB`, derived rather than
+   pasted: `alphaOf(accent,.55)` and `alphaOf(mix(accent,#3FAFA0,.62),.32)`.
+   `--accent-hover` is the accent lifted toward paper, which is what the accent
+   family already means by "the accent on a dark ground" — and this slab is a
+   fixed dark surface in BOTH themes, so the paper-ward member is the one that
+   holds up in light mode too. `#3FAFA0` is the design's own second hue (one of
+   its four `accentColor` options); there is no token for it because the app
+   has never had a second decorative hue.
+
+   `::before` is switched off rather than restyled: tests/user-sim/
+   40-gallery-hero.spec.js suppresses it to prove nothing REAL overflows, and
+   the replacement is `inset:0` so the figure is zero either way. */
+.lib-surface .dgh-hero{
+  --dgh-mesh-a:color-mix(in srgb,var(--accent-hover) 55%,transparent);
+  --dgh-mesh-b:color-mix(in srgb,color-mix(in srgb,#3FAFA0 62%,var(--accent-hover)) 32%,transparent);
+  padding:clamp(30px,5.6vw,72px) clamp(20px,3.6vw,48px);
+  background:var(--accent-deep);
+  border-color:rgba(255,255,255,.09);
+  border-radius:26px;
+  box-shadow:0 22px 64px rgba(6,6,10,.16);
+}
+.lib-surface .dgh-hero::before{content:none}
+.lib-surface .dgh-hero::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(120% 140% at 88% 52%,var(--dgh-mesh-a),transparent 58%),
+    radial-gradient(90% 120% at 66% 8%,var(--dgh-mesh-b),transparent 62%);
+}
+/* The design's own h1 metric. The shipping one was clamp(54px,8vw,110px)/500 at
+   -.065em/.88 — 102px at 1280, a display setting borrowed from the sales page.
+   The app file sets its screen titles 24px smaller, one step heavier and less
+   tightly tracked, which is what makes a library title read as a page rather
+   than as a poster. #F7F7F4 is the design's paper on this slab. */
+.lib-surface .dgh-hero h1{
+  max-width:min(20ch,100%);
+  font-size:clamp(34px,7.6vw,78px);font-weight:600;
+  letter-spacing:-.045em;line-height:.92;color:#F7F7F4;
+}
+.lib-surface .dgh-hero p{
+  max-width:min(46ch,100%);margin:16px 0 0;
+  font-size:clamp(14.5px,1.5vw,16.5px);line-height:1.55;
+  color:rgba(247,247,244,.68);
+}
+/* The 2-line clamp below 641 survives untouched: it is `.dgh-copy>p` in
+   global.css and nothing here sets `display` on that element. It exists
+   because this masthead was 453px of an 844px screen. */
+@media(max-width:720px){
+  .lib-surface .dgh-hero{border-radius:20px}
+}
+
+/* ── The Icons / Emoji tabs move into the slab ─────────────────────────────
+   Design: the tabs sit INSIDE the card, under the blurb, as a wrapping row of
+   999px pills — glyph plus a 13.5px label, 11px/18px, 44px floor.
+
+   THEY KEEP `role="tab"` AND `aria-selected`, and that is a deliberate
+   departure from the design's `aria-pressed`. The design's tabs are plain
+   buttons with no panels; ours control two real `role="tabpanel"` regions and
+   carry `aria-controls`, roving `tabindex` and ←/→ navigation. Swapping the
+   state attribute would leave two tabpanels named by something that is no
+   longer a tab — a role that lies, which is the one thing the scorecard's a11y
+   axis calls out by name. `aria-selected` on a tab is the same statement.
+
+   The sub-label ("SVG and JSX", "Unicode, copy-ready") stays in the accessible
+   name and becomes the control's tooltip, but leaves the pill: the design's own
+   tab renders the glyph and the label only, and a two-line 999px pill is not
+   the shape it draws. Nothing is removed from the DOM. */
+.lib-surface .dgh-hero--controls{grid-template-columns:minmax(0,1fr);gap:26px}
+.lib-surface .dgh-aside{align-self:start}
+.lib-surface .lib-switch{
+  display:flex;flex-wrap:wrap;gap:8px;width:auto;
+  padding:0;background:none;border:0;border-radius:0;
+}
+.lib-surface .lib-switch-btn{
+  gap:10px;min-height:44px;padding:11px 18px;
+  border:1px solid rgba(247,247,244,.14);border-radius:var(--radius-pill);
+  background:rgba(247,247,244,.05);color:rgba(247,247,244,.74);
+}
+.lib-surface .lib-switch-btn:hover{
+  background:rgba(247,247,244,.1);border-color:rgba(247,247,244,.24);color:#F7F7F4;
+}
+.lib-surface .lib-switch-btn.is-active{
+  background:rgba(247,247,244,.14);border-color:rgba(247,247,244,.34);color:#F7F7F4;
+}
+.lib-surface .lib-switch-btn>svg{width:16px;height:16px;color:rgba(247,247,244,.7)}
+.lib-surface .lib-switch-btn.is-active>svg{color:var(--accent-hover)}
+.lib-surface .lib-switch-emoji{font-size:15px}
+.lib-surface .lib-switch-btn>span:last-child{flex-direction:row;gap:0}
+.lib-surface .lib-switch-btn strong{font-size:13.5px;font-weight:560;white-space:nowrap}
+.lib-surface .lib-switch-btn small{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+}
+
+
+/* ── S4 · THE RESTING FILTER GETS AN AFFORDANCE ────────────────────────────
+   THE DEFECT, measured on the shipped build at 1280 before this change:
+   `.lbry-filter` unselected computed `border: 0px none; background:
+   rgba(0,0,0,0)`, on a `.lbry-filters` rail whose fill is `--bg-2` — #191A1D
+   on a #101012 toolbar in dark, #F6F5F1 on #EFEEE9 in light. So the rail is
+   about two per cent of contrast and the options themselves paint nothing at
+   all. On /create/icons all SEVEN options read `data-active="false"` on
+   arrival, so there is not even a selected sibling to imply the row is a
+   control: "My Icons · Outlined · Solid · Coloured · Brand logos · Flags ·
+   Emoji" is seven adjacent words. One shared class, six surfaces.
+
+   THE FIX IS THE DESIGN'S OWN ANSWER, not an invention. `UIL4B App.dc.html`
+   line 307 gives every icon filter `border:1px solid {{ f.border }}` where the
+   resting border is `rgba(ink,.12)` and the selected one inverts to a solid
+   `PAPER` fill with `var(--page)` ink. So: a hairline chip at rest, a solid
+   ink chip when on, and the rail goes away — with a border on every option the
+   tray fill is a second, weaker statement of the same thing.
+
+   MOBBIN, and the citation is the argument rather than decoration:
+     · ElevenLabs Voices/Explore — mobbin.com/screens/609210af-c2ba-4d78-8176-3b41197e5dc2
+       every resting filter carries a visible border plus an icon, next to an
+       explicit rail control. Resting state is a control, not a word.
+     · PlayAI — mobbin.com/screens/afeb4284-ec4b-4d62-bd1c-7106f8f152cf
+       removable chips with Clear All: the chip is the unit, and it is outlined.
+     · WRITER — mobbin.com/screens/1c2a36be-2d18-467a-905f-8baec911f81d
+       unselected rows stay plainly rows. Which is why the collapsed MENU here
+       is deliberately NOT given chips — a list row is a row.
+     · Google Ads Asset studio — mobbin.com/screens/41430f1a-8fb3-4b1f-81d5-6af768f99cb0
+       (searched fresh for this change) a full-width chip row under the tabs
+       where selected AND unselected both carry the pill border; the selected
+       one adds fill and a check.
+     · Air — mobbin.com/screens/b28a4a1f-979e-49c1-a83f-7f0ac454e614
+       the same row, plus the quiet count line above the grid.
+     · Perplexity Artifacts — mobbin.com/screens/7e18e989-a84f-45de-94b8-4816e3f63024
+       the counter-example, and the useful one: bare-text options with a filled
+       selection read fine THERE because one is always selected. That is the
+       exact condition /create/icons does not meet.
+
+   THE SLIDING INDICATOR STAYS and becomes the fill it is now pointing at.
+   15-discover-library-parity pins that it measures itself onto the active
+   option and resolves to opacity 1, so it cannot be dropped — and it should
+   not be: it is the one piece of motion this control has. `color` transitions
+   on the same duration and curve as the indicator's travel, so the incoming
+   label darkens as the fill arrives instead of flashing invisible. */
+/* THE FILTER ROW IS ITS OWN ROW, and `order` is what makes that a ROW rather
+   than a BREAK: with the container simply at 100% the action ("Add icon",
+   "Create a palette") fell PAST it onto a third line — measured 170px of
+   toolbar on /create/icons at 1280, in three rows. Ordering the filters last
+   puts the search, the count and the action back on one line with the filters
+   under them, which is the design's two-row panel.
+
+   UNCONDITIONAL, including for the collapsed trigger form, and that is a
+   decision rather than an oversight: /create/icons keeps an expanded tray at
+   1280 while /create/emoji's twelve categories collapse, so a rule that gave a
+   row to chips but not to a trigger would make the two tabs of ONE page
+   different heights — the exact defect 25-defect-sweep measures (68px against
+   213px, the page moving 145px under the cursor when you switch tab). */
+.lib-surface .lbry-toolbar-filters{flex:1 1 100%;order:9;gap:10px}
+.lib-surface .lbry-filters{gap:6px;padding:0;background:none;border-radius:0}
+.lib-surface .lbry-filters .lbry-filter{
+  min-height:40px;padding:9px 15px;
+  border:1px solid var(--bh);border-radius:var(--radius-pill);
+  background:transparent;color:var(--t1);
+  font-size:12.5px;font-weight:560;
+  transition:
+    color var(--dur-2) var(--ease-standard),
+    background var(--dur-1) var(--ease-standard),
+    border-color var(--dur-1) var(--ease-standard);
+}
+.lib-surface .lbry-filters .lbry-filter:hover{
+  color:var(--t0);border-color:color-mix(in srgb,var(--t0) 34%,transparent);background:var(--hvr);
+}
+/* THE PRESSED CHIP PAINTS ITS OWN FILL as well as being covered by the sliding
+   one. Belt and braces on purpose: the indicator is placed by JavaScript from a
+   measurement, and its fallback before that measurement lands is
+   `--lbry-ind-opacity:0` — which, with ink-coloured text and no fill of its
+   own, would be `--bg-0` on `--bg-2` for a frame. The two are the same colour
+   when settled, so what is actually visible is one solid pill sliding. */
+.lib-surface .lbry-filters .lbry-filter[data-active="true"]{
+  color:var(--bg-0);border-color:var(--t0);background:var(--t0);
+}
+/* Once more than one option is on the indicator hides itself — one box cannot
+   point at three things — so each pressed chip carries its own fill. */
+.lib-surface .lbry-filters[data-active-count="multi"] .lbry-filter[data-active="true"]{
+  background:var(--t0);box-shadow:none;
+}
+/* The fill. `--card` on `--bg-2` was invisible in dark (identical hex) and was
+   already patched once with `--bg-3`; ink is the design's value and needs no
+   per-theme patch. */
+.lib-surface .lbry-filters .lbry-filter-ind{
+  background:var(--t0);border-radius:var(--radius-pill);box-shadow:none;
+}
+/* The count badge sits on an inverted chip when its option is on. */
+.lib-surface .lbry-filters .lbry-filter[data-active="true"] .lbry-filter-count{
+  background:color-mix(in srgb,var(--bg-0) 82%,transparent);color:var(--bg-0);
+}
+/* The collapsed trigger is the same control in one line, so it takes the same
+   resting affordance — this is the form the 641–980 band and every
+   nine-option group (Mood, Emoji categories) actually render. */
+.lib-surface .lbry-filtertrig{
+  min-height:40px;padding:0 14px;
+  border:1px solid var(--bh);border-radius:var(--radius-pill);
+  background:transparent;color:var(--t1);font-size:12.5px;font-weight:560;
+}
+.lib-surface .lbry-filtertrig:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
+.lib-surface .lbry-filtertrig[aria-expanded="true"],
+.lib-surface .lbry-filtertrig[data-active="true"]{
+  color:var(--t0);border-color:var(--bh);background:var(--card);box-shadow:none;
+}
+.lib-surface .lbry-filtertrig-k{font-size:10px;letter-spacing:.06em}
+/* The menu keeps rows as rows (WRITER, above): no chip border in a list. */
+.lib-surface .lbry-filtermenu .lbry-filter{
+  border-color:transparent;border-radius:var(--radius-s);
+  min-height:38px;background:transparent;
+}
+.lib-surface .lbry-filtermenu .lbry-filter[data-active="true"]{
+  color:var(--t0);background:var(--bg-2);border-color:var(--border);
+}
+/* AND THE DARK ANSWER TRAVELS WITH IT. In dark `--bg-2` and `--card` are the
+   same hex, and `--card` is the menu's own ground, so the rule above paints the
+   chosen row in exactly the colour beneath it: rgb(25,26,29) on rgb(25,26,29),
+   a selection that differs from an unselected row by text colour alone.
+   global.css has carried the dark value since 2026-09-08
+   (`[data-theme="dark"] .lbry-filtermenu .lbry-filter[data-active="true"]`,
+   `--bg-3`) — but that is (0,4,0), EQUAL to the rule above, and this sheet
+   loads after it, so the restyle silently took the fix back and
+   65-new-surfaces-breakpoints:300 went red on the identical two numbers.
+   Restating it at (0,5,0) HERE, rather than raising the global rule, is what
+   stops load order deciding it a third time: the sheet that introduces a
+   theme-blind fill is the sheet that owes the theme its exception. The tray's
+   sliding indicator needs none — it is painted `--t0`, which is ink in both
+   themes. */
+[data-theme="dark"] .lib-surface .lbry-filtermenu .lbry-filter[data-active="true"]{
+  background:var(--bg-3);
+}
+/* RESTATED, not inherited: the base floors are (0,1,0) and everything above is
+   (0,3,0), so without this the touch target would have gone from 44 to 40. */
+@media(pointer:coarse){
+  .lib-surface .lbry-filters .lbry-filter{min-width:44px;min-height:44px;justify-content:center}
+  .lib-surface .lbry-filtertrig{min-height:44px}
+  .lib-surface .lbry-filtermenu .lbry-filter{min-height:44px}
+}
+/* Press feedback is the design's `button:active{transform:scale(.97)}`, with
+   the house reduced-motion PAIR — an explicit in-app choice beats the OS in
+   both directions (see AppearanceContext.jsx and reduced-motion-guard). */
+.lib-surface .lbry-filters .lbry-filter:active,
+.lib-surface .lbry-filtertrig:active,
+.lib-surface .lib-switch-btn:active{transform:scale(.97)}
+html[data-reduced-motion="true"] .lib-surface .lbry-filters .lbry-filter:active,
+html[data-reduced-motion="true"] .lib-surface .lbry-filtertrig:active,
+html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:none}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .lib-surface .lbry-filters .lbry-filter:active,
+  html:not([data-reduced-motion="false"]) .lib-surface .lbry-filtertrig:active,
+  html:not([data-reduced-motion="false"]) .lib-surface .lib-switch-btn:active{transform:none}
+}
+
+
+/* ── The toolbar panel ─────────────────────────────────────────────────────
+   Design (icons page, line 300): ONE 18px panel on `var(--card)` over a
+   hairline, 12px padding, a 12px-radius search field recessed into it, and the
+   filters on their own full-width row.
+
+   It stays STICKY. The design draws a static panel, but sticky here is a
+   measured decision this app already paid for (a ~100-card grid whose filters
+   scroll away exactly when you want them) and 15-discover-library-parity pins
+   it. An opaque `--card` ground is what lets the blur go.
+
+   THE FILTER ROW IS FULL WIDTH — `flex:1 1 100%` above. That is the design's
+   `flex:1 1 100%` on its own filter div, and it is also what gives the row the
+   slack the review asked for: at 1280 the icons row-1 now carries the search,
+   the pack select and the action with ~500px spare, where before the seven
+   group chips shared it. */
+.lib-surface .lbry-toolbar{
+  padding:12px;background:var(--card);
+  box-shadow:var(--shadow-s);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+.lib-surface .lbry-search{
+  min-height:44px;padding:0 13px;
+  border-radius:var(--radius);
+  background:color-mix(in srgb,var(--t0) 4.5%,transparent);
+}
+.lib-surface .lbry-search input{font-size:15px}
+/* The Icon Library's pack `<select>` shares the filter row with the chips, so
+   it takes their height and their hairline. NOT their 999px radius: this one
+   opens a list, and the design keeps 999px for things that toggle. */
+.lib-surface .lbry-select{
+  height:40px;padding:0 12px;
+  border-radius:var(--radius);background:transparent;
+  color:var(--t1);font-size:12.5px;font-weight:560;
+}
+.lib-surface .lbry-select:hover{color:var(--t0);border-color:var(--bh)}
+@media(pointer:coarse){.lib-surface .lbry-select{height:44px}}
+.lib-surface .lbry-select{border-color:var(--bh)}
+/* The Palette Library's inline CTA is the only control on the row still
+   carrying the old 46px, which is what made that one toolbar 2px taller than
+   every other one at every width. */
+.lib-surface .lbry-toolbar-action .btn,
+.lib-surface .pgl-build-link{min-height:44px}
+@media(max-width:640px){
+  .lib-surface .lbry-toolbar{padding:10px}
+}
+/* The count line the design puts beside the search. Rendered only when a
+   surface hands `LibraryToolbar` a `count` — see the note in that file. */
+.lib-surface .lbry-count{
+  flex:0 0 auto;font-size:13px;color:var(--t2);
+  white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+
+
+/* ── The result head ───────────────────────────────────────────────────────
+   Design (Palette Library, line 250): the heading and the count on one
+   baseline over a hairline. Ours already is that row; the metrics were a
+   clamp(28,3.5vw,46) display serif against the design's clamp(19,2.6vw,30) at
+   560, and a 10px mono count against a 13px one. */
+.lib-surface .drh-head{padding-bottom:14px;margin:0 0 18px}
+.lib-surface .drh-head h2{
+  font-size:clamp(19px,2.6vw,30px);font-weight:560;letter-spacing:-.03em;
+}
+.lib-surface .drh-head p{font-family:var(--font);font-size:13px;color:var(--t2)}
+
+
+/* ── The gallery card ──────────────────────────────────────────────────────
+   Design (Palette Library, line 256): an 18px `var(--card)` card over a
+   hairline with `overflow:hidden`, the preview flush to its top edge and the
+   name/meta foot INSIDE the card at 16/18/18. The shipping card was a bare
+   column — a floating preview with a caption underneath and no container at
+   all — and its hover lifted the preview out of a card that was not there.
+
+   The hover is the design's `[data-lift]`: the border warms and the ground
+   lifts by 4.5%. That replaces `translateY(-3px)`, which cannot work once the
+   preview is clipped by the card it lives in. */
+.lib-surface .lbry-card{
+  gap:0;overflow:hidden;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-2xl);
+  transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard);
+}
+.lib-surface .lbry-card:hover{
+  border-color:var(--bh);
+  background:color-mix(in srgb,var(--t0) 4.5%,var(--card));
+}
+.lib-surface .lbry-card:hover .lbry-card-shot{transform:none;box-shadow:none}
+.lib-surface .lbry-card .lbry-card-shot{border-radius:0}
+/* THE FOOT IS TWO THINGS COMPETING FOR ONE LINE, AND THE NAME LOSES.
+   `.lbry-card-tail` is `flex-shrink:0`, so it holds the same width at every
+   card size — 141px of "Copy CSS" and "Open →" on the Gradient Library — while
+   `.lbry-card-id` is `flex:1 1 0` and simply absorbs whatever is left. That left
+   the name 97px at 320, 103px at 640 and 104px at 1280, against a widest curated
+   name ("Harmonic Energy") of 127px: 20 of 100 names ellipsized at 320, 15 at
+   640 and 13 at 1280 — the last of those at a width 25-defect-sweep:942 does not
+   even walk, so the founder's "no gradient name or meta line is truncated at any
+   width" was failing wider than its own guard could see.
+
+   THE TYPE IS NOT THE FIX, though the 16px below is what exposed it. Rendered
+   with the name put back to the base `--fs-body-s`, the same widest name asks
+   127px→113px against the same 97px column and 10 of 100 are STILL cut at 320,
+   3 at 640, 2 at 1280. A smaller face loses the same argument more slowly. What
+   is actually wrong is that the card gives its own identity a third of its width
+   so that two secondary buttons can sit beside it.
+
+   So the line gets a floor and is allowed to break. `1 1 128px` says the name
+   and meta have first claim on 128px of any line they share — one past the 127px
+   this library asks for, so the ellipsis has nothing left to do — and
+   `flex-wrap:wrap` sends the actions to their own full-width row on the cards
+   too narrow to honour that, which is the right anatomy on a phone anyway. It
+   reads as one decision because it is taken per CARD width, not per viewport:
+   every card in the grid is the same width, so they all wrap or none do (checked
+   — a single distinct card height at each of 19 widths from 320 to 1920). A
+   `max-width` query cannot do that. The 2-column band alone runs from ~612 to
+   ~912 and the cards inside it pass through 280→420px, so a viewport breakpoint
+   would have left the middle of every band truncating exactly as before.
+
+   `white-space:normal` is the floor under both. A name wider than the whole
+   card cannot be fixed by any share of the line, and the founder's rule has no
+   width exception — so the last resort is two lines, never three dots. */
+.lib-surface .lbry-card .lbry-card-foot{padding:16px 18px 18px;flex-wrap:wrap}
+.lib-surface .lbry-card .lbry-card-id{flex:1 1 128px}
+.lib-surface .lbry-card .lbry-card-name{
+  font-size:16px;font-weight:540;
+  white-space:normal;overflow-wrap:break-word;
+}
+.lib-surface .lbry-card .lbry-card-meta{font-size:12.5px}
+/* The two surfaces that had already hand-tuned the old anatomy, put back onto
+   the shared one. `.pgl-page`/`.grg-*` set these at (0,2,0). */
+.lib-surface .pgl-page .lbry-card-foot,
+.lib-surface.pgl-page .lbry-card .lbry-card-foot{padding:16px 18px 18px}
+.lib-surface .lbry-card .pgal-stripes,
+.lib-surface .lbry-card .lockt-stripes{border-radius:0;box-shadow:none}
+.lib-surface .lbry-card:hover .pgal-stripes{transform:none;box-shadow:none}
+
+
+/* ── The icon grid ─────────────────────────────────────────────────────────
+   Design (icons page, line 313): `minmax(min(92px,30vw),1fr)` at a 10px gap,
+   with 18px cells over a hairline and a 92px floor. The shipping grid was a
+   4px gap between borderless 80px cells, which is a contact sheet rather than
+   a set of objects you can pick one of.
+
+   `calc((100% - 20px)/3)` rather than the design's flat `30vw` in the `min()`:
+   at 320px the page column is 288px and three 92px cells plus two 10px gaps
+   want 296, so the literal rule drops a phone from three columns to two. This
+   keeps the design's cell size everywhere it fits and its COLUMN COUNT where
+   it does not. */
+.lib-surface .ig{
+  grid-template-columns:repeat(auto-fill,minmax(min(92px,30vw,calc((100% - 20px)/3)),1fr));
+  gap:10px;
+}
+.lib-surface .ic{
+  gap:9px;padding:16px 8px;min-height:92px;
+  border:1px solid var(--border);border-radius:var(--radius-2xl);
+}
+.lib-surface .ic:hover{background:var(--hvr);border-color:var(--bh)}

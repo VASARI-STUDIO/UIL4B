@@ -149,8 +149,8 @@ c = 19.51px`}
 
         <p>
           A variable font declares the span it actually contains. The face this
-          page is set in declares <code>font-weight: 200 800</code> on its
-          <code> @font-face</code> rule: 600 units of the 999 the property
+          page is set in declares <code>font-weight: 300 700</code> on its
+          <code> @font-face</code> rule: 400 units of the 999 the property
           allows, continuous rather than stepped, so <code>font-weight: 437</code>
           is a real instruction and not a rounding to 400.
         </p>

@@ -167,77 +167,43 @@ for (const path of ['/color/palette', '/settings']) {
   })
 }
 
-test('S15 · the .is-waiting reveal still animates its grid track open', async ({ browser }) => {
-  // The fix pins flex-shrink and raises the actions cluster's min-width. Neither
-  // may disturb the deliberate hide-on-load state, which collapses the SAME
-  // `grid-template-columns` track to 0fr and animates it back. 834x700 is inside
-  // the previously-broken band and short enough that #workbench starts below the
-  // 60%-of-viewport trigger, so the pill really does start hidden.
-  const { ctx, page } = await openTouch(browser, 834, 700, '/', true)
-
-  const read = () => page.evaluate(() => {
-    const b = document.querySelector('.pnav-cta')
-    const cs = getComputedStyle(b)
-    return {
-      waiting: b.classList.contains('is-waiting'),
-      track: Math.round(parseFloat(cs.gridTemplateColumns) * 100) / 100,
-      opacity: Math.round(parseFloat(cs.opacity) * 100) / 100,
-      tabIndex: b.tabIndex,
-    }
-  })
-
-  const atRest = await read()
-  expect(atRest.waiting, 'the CTA should start in its waiting state at the top of a sales page').toBe(true)
-  expect(atRest.track, 'the waiting track must still collapse to 0').toBe(0)
-  expect(atRest.opacity).toBe(0)
-  expect(atRest.tabIndex, 'a hidden CTA must stay out of the tab order').toBe(-1)
-
-  // The track must INTERPOLATE, not jump-cut. A snap would mean the transition
-  // stopped running (see css-conventions.md — a composite already carries its
-  // easing, so a stray `ease` kills it).
-  //
-  // This used to scroll, sleep 110ms, and read once. That is a CLOCK deciding
-  // whether the thing under test has started, and it is the same mistake S15's
-  // width tests made. MEASURED at 834x700: the scroll listener → setState →
-  // re-render → class removal chain does not put the transition on screen until
-  // +55–76ms after the scroll on an idle machine, so the 110ms sample was
-  // reading the first ~40ms of a 280ms transition. Under runner contention that
-  // start latency passes 110ms and the sample reads a flat 0 — CI, twice.
-  //
-  // So catch the FIRST non-zero frame instead of a frame at a fixed offset, and
-  // assert it is well short of the finished width. That is strictly stronger
-  // than the old pair: `mid > 0` alone would pass on a jump-cut sampled after
-  // the cut, whereas a first non-zero frame that already equals the final width
-  // IS the jump-cut, and fails here. Nothing about the assertion is loosened —
-  // only the moment of the reading is now decided by the page, not the clock.
-  const reveal = await page.evaluate(async () => {
-    const b = document.querySelector('.pnav-cta')
-    const track = () => parseFloat(getComputedStyle(b).gridTemplateColumns)
-    const sec = document.getElementById('workbench') || document.getElementById('create')
-    window.scrollTo({ top: sec.offsetTop, behavior: 'instant' })
-    const frame = () => new Promise((r) => requestAnimationFrame(r))
-    const deadline = performance.now() + 5000
-    let first = null
-    while (performance.now() < deadline) {
-      const v = track()
-      if (v > 0) { first = Math.round(v * 100) / 100; break }
-      await frame()
-    }
-    return { first }
-  })
-  expect(reveal.first, 'the reveal never left a 0px track — it did not run at all').not.toBeNull()
-
-  await page.waitForTimeout(800)
-  const shown = await read()
-  expect(shown.waiting).toBe(false)
-  expect(shown.opacity).toBe(1)
-  expect(shown.tabIndex, 'a revealed CTA must be reachable by keyboard').toBe(0)
-  const g = await ctaGeometry(page)
-  expect(g.outside, 'the revealed CTA must be fully painted').toBe(0)
-  expect(reveal.first, `the first painted frame of the reveal was already ${reveal.first}px of ${shown.track}px — it jump-cut instead of easing`).toBeLessThan(shown.track)
-
-  await ctx.close()
-})
+// ── DELETED: 'S15 · the .is-waiting reveal still animates its grid track open'
+//
+// WHAT IT GUARDED. The S15 fix pinned flex-shrink and raised the actions
+// cluster's min-width, and neither was allowed to disturb the deliberate
+// hide-on-load state the sales page used: `.pnav-cta.is-waiting` collapses the
+// SAME `grid-template-columns` track to 0fr, at opacity 0 and tabIndex -1, and
+// animates it back once the visitor reaches the tools section. The test drove
+// `/` at 834x700, caught the FIRST non-zero frame of the track rather than a
+// frame at a fixed offset, and asserted it was well short of the finished
+// width — so a jump-cut (the transition having stopped running) failed, and so
+// did a reveal that never started.
+//
+// WHY IT IS GONE. The gate has no route left to fire on. PillNav reveals the
+// waiting CTA from `document.getElementById('workbench') || …('create')`, and
+// after the route swap NOTHING in src/ renders either id: Home.jsx carried
+// `#workbench` and is deleted, Spectrum's bench is `#bench`, and `/` does not
+// mount the app header at all — it mounts the marketing pill
+// (`PillNav variant="spectrum"`), which has no "Start for Free" pill to hide.
+// The remaining SALES_PATHS entries (/plans, /pricing) have no gate section
+// either, so `ctaReady`'s effect flips it true on its first synchronous call
+// and the waiting state is never observable.
+//
+// Re-pointing it at /plans was tried and rejected for exactly that reason: the
+// `atRest` reading there is a race against an effect that has already run, so
+// the test would be flaky in the good case and green in the bad one. A test
+// that cannot fail is the thing this file's header is written against.
+//
+// WHERE THE SURVIVING PART LIVES. The two `S15 · the CTA is painted on arrival`
+// tests above, which now describe every route rather than the non-sales ones:
+// no waiting class, full label track, not aria-hidden and in the tab order,
+// read the instant the pill attaches. They are the half that was about the
+// VISITOR; this one was about the animation of a state the product can no
+// longer enter.
+//
+// The `is-waiting` rules in the stylesheet and the `ctaReady` gate in
+// PillNav.jsx are now unreachable code. That has been reported to the director
+// rather than removed here — this lane does not edit src/.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // S11 / S12 / S14 · nothing may be invisible at rest AND still take taps

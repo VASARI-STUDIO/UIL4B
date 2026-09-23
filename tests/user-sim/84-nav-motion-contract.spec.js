@@ -47,12 +47,16 @@
 // seventh one grows back, and when one of the two the founder asked for goes
 // missing.
 //
-//   · `.pnav-search` 300 → 390px on hover. Founder-directed, and
+//   · `.pnav-search-field` 300 → 390px on hover. Founder-directed, and
 //     30-founder-requests-0808 holds the expansion, the typed placeholder and
-//     the fact that the three centre menus do not move when it happens
-//     (measured here again: 0px). `transform` cannot do this job — the field
-//     reflows its own text — and it moves nothing that is not the control the
-//     pointer is already on.
+//     the fact that the section menus and the theme cycle do not move when it
+//     happens — sampled every frame of the transition. `transform` cannot do
+//     this job — the field reflows its own text — and it moves nothing that is
+//     not the control the pointer is already on, because it grows inside a
+//     `.pnav-search` slot that already holds the expanded width. (This used to
+//     be the wrapper growing, and it pushed the menus 90px on every hover once
+//     the Spectrum flex row took away the grid's slack. The note here claimed
+//     "0px", read from a test that measured before the hover had rendered.)
 //   · `.pnav-cta`'s grid track. This one is NOT a hover: it is the sales-page
 //     scroll gate, it fires once, and 24-mobile-overhaul's S15 asserts the
 //     track interpolates rather than jump-cuts.
@@ -91,7 +95,7 @@ const LAYOUT_PROPS = [
 ]
 
 // The two documented exceptions, by the class that carries them.
-const ALLOWED = ['pnav-search', 'pnav-cta']
+const ALLOWED = ['pnav-search-field', 'pnav-cta']
 
 /**
  * Every element of the bar and the open panel that transitions a layout
@@ -214,8 +218,23 @@ test.describe('the nav does not animate layout', () => {
     // Sample per animation frame across the switch. A width transition shows up
     // here as many distinct widths and a row whose x keeps changing; a state
     // change shows up as one width and a row that is simply somewhere else.
+    //
+    // THE WINDOW ENDS WHEN THE PANEL HAS SETTLED, NOT AT A STOPWATCH. It used to
+    // stop at 500ms, and CI's runner painted 7 frames in that time, which is too
+    // few to say anything and failed "the sampler never ran". Now it samples
+    // until nothing finite is animating inside the panel AND it has seen at
+    // least MIN_FRAMES — counted in frames, so a runner that paints slowly buys
+    // itself proportionally more wall-clock time, and a width transition of any
+    // length is sampled to its end rather than cut off. The ms figure is only a
+    // backstop for a page that has stopped painting; it decides nothing on one
+    // that is still painting.
     const travel = await page.evaluate(async () => {
+      const MIN_FRAMES = 30
+      const MIN_MS = 500
+      const BACKSTOP_MS = 8000
       const row = () => document.querySelector('#pnav-mega .pnav-tool')
+      const settling = (menu) => menu.getAnimations({ subtree: true }).some((a) => a.playState === 'running'
+        && a.effect?.getComputedTiming().endTime !== Infinity)
       const xs = []
       const widths = []
       document.querySelectorAll('.pnav-trigger')[2].click() // Learn
@@ -227,7 +246,9 @@ test.describe('the nav does not animate layout', () => {
           widths.push(Math.round(menu.getBoundingClientRect().width))
           const r = row()
           if (r) xs.push(Math.round(r.getBoundingClientRect().x))
-          if (performance.now() - t0 > 500) return done()
+          const elapsed = performance.now() - t0
+          if (elapsed > BACKSTOP_MS) return done()
+          if (widths.length >= MIN_FRAMES && elapsed >= MIN_MS && !settling(menu)) return done()
           return requestAnimationFrame(tick)
         }
         requestAnimationFrame(tick)

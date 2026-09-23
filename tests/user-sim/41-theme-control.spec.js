@@ -30,6 +30,27 @@ import { go, ready } from './helpers.js'
 const SEG = '.theme-seg'
 const btn = (v) => `${SEG} [data-theme-choice="${v}"]`
 
+// WHERE THE APP HEADER'S COPY OF THE CONTROL LIVES, which is no longer `/`.
+//
+// The four tests that drive `.pnav-more` / `.pnav-sheet-theme` ran on the
+// homepage. `/` and `/home` render src/pages/Spectrum.jsx since the route swap,
+// and Spectrum mounts `<PillNav variant="spectrum" />` — SpectrumNav — so there
+// is no meatball and no `.pnav-sheet` on that page at all.
+//
+// THE PHONE TEST HAD ALREADY GONE HALF-VACUOUS because of it: its first
+// assertion is that `.pnav-more` is NOT visible at 390, and that became true of
+// the front door at EVERY width the moment Home.jsx was deleted — so it would
+// have reported "the popover is correctly hidden on a phone" about a page with
+// no popover on it. Re-pointing restores the measurement it was making.
+//
+// /discover renders the app header unchanged: measured, one `.pnav-more`, one
+// `.theme-seg` in its panel, and at 390 the meatball hidden with the sheet's
+// `.pnav-sheet-theme .theme-seg` behind [aria-label="Open menu"].
+//
+// The front door's OWN copy of the control is not dropped — it is pinned by
+// 'the front door carries the control too' at the foot of this file.
+const NAV_ROUTE = '/discover'
+
 const themeOf = (page) => page.evaluate(() => document.documentElement.getAttribute('data-theme'))
 const storedOf = (page) => page.evaluate(() => {
   try { return localStorage.getItem('vs-t') } catch { return 'THREW' }
@@ -94,7 +115,7 @@ test.describe('the dark theme is reachable', () => {
   test('the signed-out nav popover switches the theme and the choice survives a reload', async ({ browser }) => {
     const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
-    await go(page, '/')
+    await go(page, NAV_ROUTE)
     expect(await themeOf(page)).toBe('light')
 
     await page.click('.pnav-more')
@@ -121,7 +142,7 @@ await ready(page)
     // first click.
     const ctx = await browser.newContext({ colorScheme: 'dark', viewport: { width: 1280, height: 900 } })
     const page = await ctx.newPage()
-    await go(page, '/')
+    await go(page, NAV_ROUTE)
 
     await page.click('.pnav-more')
     await page.click(btn('light'))
@@ -146,7 +167,7 @@ await ready(page)
       colorScheme: 'light', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
     })
     const page = await ctx.newPage()
-    await go(page, '/')
+    await go(page, NAV_ROUTE)
 
     expect(await page.locator('.pnav-more').isVisible().catch(() => false),
       'the meatball is visible at 390 — this test is no longer measuring the phone case').toBe(false)
@@ -181,7 +202,7 @@ await ready(page)
   })
 
   test('all three states are offered, and exactly one reads as chosen', async ({ page }) => {
-    await go(page, '/')
+    await go(page, NAV_ROUTE)
     await page.click('.pnav-more')
     const seg = page.locator(SEG).first()
     await expect(seg.locator('button')).toHaveCount(3)
@@ -238,6 +259,38 @@ await ready(page)
       try { return Object.keys(localStorage) } catch { return ['THREW'] }
     })
     expect(keys, `localStorage holds ${JSON.stringify(keys)}`).not.toContain('vs-t-lightreset')
+    await ctx.close()
+  })
+
+  // THE FRONT DOOR'S OWN COPY, and it is here so re-pointing the four tests
+  // above onto /discover does not quietly drop the page every visitor lands on.
+  //
+  // `/` is SpectrumNav now, and it carries the control in a different place: a
+  // `<ThemeCycle>` on the bar and the same `<ThemeChoice>` (the `.theme-seg`
+  // every test above drives) inside the full-screen menu, under "Appearance".
+  // That is a THIRD home for the control on top of the popover, the sheet and
+  // /settings, so what this file exists to say — a visitor can reach the dark
+  // theme from where they are — has to be said about it too.
+  test('the front door carries the control too, inside the Spectrum menu', async ({ browser }) => {
+    const ctx = await browser.newContext({ colorScheme: 'light', viewport: { width: 1280, height: 900 } })
+    const page = await ctx.newPage()
+    await go(page, '/')
+    expect(await themeOf(page)).toBe('light')
+
+    // Not on the bar: the menu is where the segmented control lives, which is
+    // the fact that makes the click below a reach rather than a tap.
+    expect(await visibleSegments(page), 'the segmented control is behind the menu, not on the bar').toBe(0)
+
+    await page.click('[aria-label="Open menu"]')
+    await expect(page.locator(`.spnav-util-theme ${SEG}`)).toBeVisible()
+    await page.locator(`.spnav-util-theme ${btn('dark')}`).click()
+    await expect.poll(() => themeOf(page), { message: 'the front door could not switch the theme' }).toBe('dark')
+
+    // Persistence, for the same reason as every other case here: a fabricated
+    // write looks identical until the next visit.
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await ready(page)
+    expect(await themeOf(page), 'the chosen theme did not survive a reload').toBe('dark')
     await ctx.close()
   })
 })

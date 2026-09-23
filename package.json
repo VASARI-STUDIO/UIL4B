@@ -19,6 +19,7 @@
     "sync:rewrites": "node scripts/sync-vercel-rewrites.mjs",
     "sync:sitemap": "node scripts/sync-sitemap.mjs",
     "sync:llms": "node scripts/llms-txt.mjs",
+    "sync:credits": "node scripts/sync-credits.mjs",
     "icons": "node scripts/brand-icons.mjs",
     "design:md": "node scripts/design-md.mjs"
   },

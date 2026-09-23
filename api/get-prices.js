@@ -1,4 +1,5 @@
 import { getStripeServer } from './_lib/stripe.js'
+import { allowedOrigins } from './_lib/origins.js'
 import {
   BILLING_INTERVALS,
   CURRENCY_CODES,
@@ -103,7 +104,16 @@ async function fetchPrices() {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // An allowlisted origin is reflected, anything else gets no CORS header at
+  // all — the same allowlist and the same shape as api/support.js, which
+  // records the reasoning. Nothing here is secret (these are the prices on the
+  // pricing page), so `*` leaked nothing; it simply invited every page on the
+  // internet to spend this route's Stripe rate limit from a visitor's browser.
+  const origin = req.headers.origin
+  if (origin && allowedOrigins().includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 

@@ -20,7 +20,7 @@
 // A typed count is a second copy of the data; #396's whole failure was a number
 // that had quietly stopped describing the view.
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch } from './helpers.js'
+import { go, restingScrollY, watch, signIn } from './helpers.js'
 import { LIBRARY_PALETTES } from '../../src/data/paletteLibrary.js'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../../src/utils/paletteMood.js'
 import { splitLockedLibrary } from '../../src/utils/lockedPreview.js'
@@ -49,15 +49,22 @@ async function pickMood(page, label) {
   return chip
 }
 
-// What a signed-out visitor's page is built from — the page's own gate, not a
+// What a PRO viewer's page is built from — the page's own gate, not a
 // re-implementation of it. Every expected number below is derived from this.
-const FREE = splitLockedLibrary(LIBRARY_PALETTES, {
-  unlocked: false,
+//
+// SIGNED IN AS PRO SINCE 2026-09-18, and the reason is the point of the file:
+// these are FILTER assertions ("Warm narrows the grid to eleven"), and below
+// the top rung the tier cap leaves three or ten palettes on the page, so most
+// moods would select nothing and every number here would be measuring the cap
+// instead of the classifier. The cap has its own coverage in 44 and in the unit
+// suite. `unlocked: true` is how the page itself answers for a subscriber.
+const BROWSABLE = splitLockedLibrary(LIBRARY_PALETTES, {
+  unlocked: true,
   isOpen: (p) => p.pro !== true,
   preview: (p) => ({ id: p.id, label: p.name, slots: p.colors.length }),
 }).open.map((p) => ({ ...p, mood: classifyPalette(p.colors) }))
 
-const expectedFor = (mood, kind = null) => FREE.filter(
+const expectedFor = (mood, kind = null) => BROWSABLE.filter(
   (p) => (mood === 'any' || p.mood[mood]) && (kind === null || p.kind === kind),
 ).length
 
@@ -65,18 +72,20 @@ const expectedFor = (mood, kind = null) => FREE.filter(
 
 test.describe('palette mood filters', () => {
   test.beforeEach(async ({ page }) => {
-    watch(page, 'someone looking for a palette with a particular feel')
+    watch(page, 'a Pro subscriber looking for a palette with a particular feel')
+    await signIn(page, { plan: 'pro' })
     await go(page, PALETTES)
     await expect(page.locator(CARD).first()).toBeVisible()
   })
 
   // POSITIVE CONTROL. Everything below is "the filter narrowed the grid to N",
   // which is satisfiable by a page that renders nothing at all if N is allowed
-  // to be zero. This says the unfiltered page really does show the whole free
-  // library first, so a narrowing is a narrowing.
-  test('the unfiltered gallery shows the whole free library', async ({ page }) => {
+  // to be zero. This says the unfiltered page really does show the whole
+  // library this viewer is entitled to, so a narrowing is a narrowing — and it
+  // is also where a tier cap leaking into a Pro session would be caught.
+  test('the unfiltered gallery shows the whole library this viewer has', async ({ page }) => {
     await expect(page.locator(CARD)).toHaveCount(expectedFor('any'))
-    expect(expectedFor('any'), 'the free library has collapsed').toBeGreaterThan(50)
+    expect(expectedFor('any'), 'the library has collapsed').toBeGreaterThan(50)
   })
 
   test('every mood chip is present, and every one of them selects palettes', async ({ page }) => {
@@ -226,6 +235,12 @@ test.describe('the closing CTA on every gallery', () => {
   for (const gallery of GALLERIES) {
     test(`${gallery.route} closes with the founder's question and one action`, async ({ page }) => {
       watch(page, `someone who reached the bottom of ${gallery.route}`)
+      // Pro, so the three gated galleries render a full grid: the geometry
+      // assertion below is "the CTA sits under the LAST CARD", and its own
+      // positive control demands more than three cards — which is exactly the
+      // number a signed-out visitor now sees on those three surfaces. The
+      // ungated ones (resources, community) are unaffected either way.
+      await signIn(page, { plan: 'pro' })
       await go(page, gallery.route)
 
       // POSITIVE CONTROL, and it is the whole reason this test is not trivial.
@@ -282,7 +297,19 @@ test.describe('the closing CTA on every gallery', () => {
 
 const WIDTHS = [320, 360, 390, 414, 480, 540, 600, 640, 680, 768, 834, 900, 980, 1024, 1180, 1280, 1366, 1440, 1600, 1920]
 
+// THE BUDGET IS PER WIDTH, because the cost is. Timed locally, every width costs
+// the same ~0.65s — a fresh context, the route, and restingScrollY's wait for a
+// run of still FRAMES — with no width standing out, so there is no slow page
+// hiding in here: twenty of them came to 13.6s against a 30s default. CI's
+// runner paints fewer frames a second and went past 30s at the eighteenth
+// width; 6x CPU throttling reproduces exactly that locally (1366px, 29.8s).
+// Each wait inside the loop keeps its own backstop, so a width that genuinely
+// hangs still fails there, by name — this only stops twenty healthy widths
+// being charged one width's budget.
+const PER_WIDTH_MS = 4000
+
 test('the closing CTA clears the feedback button at twenty widths', async ({ browser }) => {
+  test.setTimeout(WIDTHS.length * PER_WIDTH_MS)
   const damage = []
   for (const width of WIDTHS) {
     const context = await browser.newContext({ viewport: { width, height: 800 } })

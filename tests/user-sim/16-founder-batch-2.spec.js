@@ -241,140 +241,51 @@ test.describe('Palette Builder · toolbar labels expand the button', () => {
   })
 })
 
-/* ── 2 · The homepage hand-off lands on the Auto colour system ────────────────
- * Founder: "make the mini palette builder on the homepage use the auto system
- * — when you click continue in Palette Builder it's set to analogous."
- * Was: Continue was a bare <Link> carrying nothing, so the board fell through
- * to its own default of 'analogous' — a PAID system for a signed-out visitor. */
-
-test.describe('Home mini-builder · Continue in Palette Builder', () => {
-  test('the board opens on Auto, carrying the swatches the visitor generated', async ({ page }) => {
-    watch(page, 'first-time visitor continuing from the homepage')
-    await go(page, '/')
-
-    await page.locator('.hw-tab[data-tab="palette"]').click()
-    // `.hw-board .plb-hex` since 2026-09-05: the homepage mini renders the
-    // product's own board rather than a bespoke swatch strip. That makes the
-    // hand-off assertion at the end of this test a stronger statement than it
-    // used to be - the SAME selector, reading the SAME values, on both pages.
-    const swatches = page.locator('.hw-board .plb-hex')
-    await expect(swatches).toHaveCount(5)
-    const handedOver = await swatches.allInnerTexts()
-
-    const cont = page.getByRole('link', { name: /Continue in Palette Builder/ })
-    // The link keeps a real href, so open-in-new-tab still works.
-    await expect(cont).toHaveAttribute('href', '/create/palette')
-    await cont.click()
-
-    await page.waitForURL('**/create/palette')
-    await expect(page.locator('.plb-col').first()).toBeVisible()
-
-    // THE regression: the colour system the board lands on.
-    await expect(page.locator('.plb-harm')).toContainText('Auto')
-    await expect(page.locator('.plb-harm')).not.toContainText('Analogous')
-
-    // …and Continue actually continued.
-    expect(await page.locator('.plb-hex').allInnerTexts()).toEqual(handedOver)
-
-    // THE POSITIVE CONTROL for the modified-click test below. That test asserts
-    // the board did NOT come from the hand-off, which would also be true if the
-    // hand-off had simply stopped working, or if the attribute never read
-    // `handoff` at all. This is the half that says the instrument responds:
-    // when a hand-off really happens, the board says so.
-    await expect(page.locator('.plb')).toHaveAttribute('data-board-source', 'handoff')
-  })
-
-  /* ── The modified click (palette-opens-with-wrong-state) ──────────────────
-   *
-   * Founder: "somtimes i open the pallete builder and it has added many colours
-   * and its a different swatch."
-   *
-   * React Router's Link calls the caller's onClick UNCONDITIONALLY and only
-   * then asks its own shouldProcessLinkClick whether to navigate — which for a
-   * Ctrl/Cmd/Shift/Alt click, or any non-primary button, is no, because the
-   * browser is opening a new tab instead. The new tab starts a fresh module
-   * instance and correctly finds nothing. THIS tab was left holding a draft
-   * nothing would ever consume, in a slot with no expiry, and it ambushed
-   * whatever visit to /create/palette came next.
-   *
-   * WHY THIS TEST EXISTS SEPARATELY FROM THE UNIT TESTS. tests/unit/
-   * board-handoff.test.js proves `navigatesThisTab` gives the right answer for
-   * every modifier. It cannot prove the homepage ASKS IT — and the defect was
-   * never in the helper, it was in the call site. Reverting
-   * HomeWorkbench.jsx's onClick to its unconditional form left the whole unit
-   * suite green (1190 pass) and 16-founder-batch-2 green (13 passed), which is
-   * the gap this closes.
-   *
-   * TWO THINGS THIS TEST HAS TO GET RIGHT OR IT ASSERTS NOTHING:
-   *   · the second visit must be an IN-APP navigation. A reload starts a fresh
-   *     module instance, which finds no staged draft whether or not the bug is
-   *     present, and the test would pass on the broken build.
-   *   · it must arrive by a DIFFERENT link. Clicking Continue again would stage
-   *     a fresh, legitimate draft and `handoff` would be the correct answer.
-   */
-  test('a click that opens a NEW TAB must not arm the board in THIS one', async ({ page }) => {
-    watch(page, 'visitor ctrl-clicking Continue to keep the homepage open')
-    await go(page, '/')
-    await page.locator('.hw-tab[data-tab="palette"]').click()
-    await expect(page.locator('.hw-board .plb-hex')).toHaveCount(5)
-
-    const cont = page.getByRole('link', { name: /Continue in Palette Builder/ })
-    const [popup] = await Promise.all([
-      page.context().waitForEvent('page'),
-      cont.click({ modifiers: ['ControlOrMeta'] }),
-    ])
-    // The browser opened the link somewhere else, which is what the visitor
-    // asked for and is not the problem.
-    await expect(popup).toHaveURL(/\/create\/palette/)
-    await popup.close()
-    // …and THIS tab did not move, which is the whole setup.
-    await expect(page).not.toHaveURL(/\/create\/palette/)
-
-    // Reach the builder later, by another route, in the same module instance —
-    // the nav, a gallery link or, here, the homepage's own step CTA.
-    const other = page.getByRole('link', { name: /Open Palette Builder/ })
-    await expect(other, 'the second route must not be the Continue link').toHaveClass(/hstep-cta/)
-    await other.click()
-    await page.waitForURL('**/create/palette')
-
-    const board = page.locator('.plb')
-    await expect(board).toBeVisible()
-    // The founder's bug, in one attribute: `handoff` here means this board was
-    // painted from swatches the visitor generated somewhere else, minutes ago,
-    // on a page they never navigated away from.
-    await expect(
-      board,
-      'a draft staged by a click that opened a new tab was delivered to this one',
-    ).not.toHaveAttribute('data-board-source', 'handoff')
-  })
-
-  test('the hand-off does not fire again when the visitor keeps working', async ({ page }) => {
-    watch(page, 'visitor moving between tools after the hand-off')
-    await go(page, '/')
-    await page.locator('.hw-tab[data-tab="palette"]').click()
-    await expect(page.locator('.hw-board .plb-hex')).toHaveCount(5)
-    await page.getByRole('link', { name: /Continue in Palette Builder/ }).click()
-    await page.waitForURL('**/create/palette')
-    await expect(page.locator('.plb-harm')).toContainText('Auto')
-    const delivered = await page.locator('.plb-hex').allInnerTexts()
-
-    // Edit the board, leave for another tool, come back — all inside the same
-    // module instance, so a slot that had NOT been consumed would re-import the
-    // homepage swatches over the visitor's edit. (The consume-once contract
-    // itself is asserted directly in tests/unit/board-handoff.test.js.)
-    await page.getByRole('button', { name: 'Randomise' }).click()
-    await expect.poll(async () => (await page.locator('.plb-hex').allInnerTexts()).join()).not.toBe(delivered.join())
-    const edited = await page.locator('.plb-hex').allInnerTexts()
-    await page.waitForTimeout(400)   // the debounced write into the shared design
-
-    await page.goBack()              // client-side: back to the homepage
-    await expect(page.locator('.hw-shell')).toBeVisible()
-    await page.goForward()           // …and back onto the board, same module instance
-    await expect(page).toHaveURL(/\/create\/palette/)
-    await expect(page.locator('.plb-col').first()).toBeVisible()
-    expect(await page.locator('.plb-hex').allInnerTexts(), 'the draft was not re-delivered').toEqual(edited)
-  })
-})
+/* ── 2 · DELETED: 'Home mini-builder · Continue in Palette Builder' ──────────
+ *
+ * Three tests, all three driven from `/`, all three gone with the page they
+ * drove. This is the record of what they held, because the mechanism under
+ * them is not all dead and the difference matters to whoever reads this next.
+ *
+ * WHAT THEY GUARDED.
+ *   a. 'the board opens on Auto' — the founder's own report: "make the mini
+ *      palette builder on the homepage use the auto system — when you click
+ *      continue in Palette Builder it's set to analogous." Continue was a bare
+ *      <Link> carrying nothing, so the board fell through to its own default of
+ *      'analogous', a PAID system handed to a signed-out visitor.
+ *   b. 'a click that opens a NEW TAB must not arm the board in THIS one' — his
+ *      "somtimes i open the pallete builder and it has added many colours and
+ *      its a different swatch." React Router's Link calls the caller's onClick
+ *      unconditionally and only then asks whether it will navigate, so a
+ *      Ctrl/Cmd/Shift-click staged a draft in a tab that never moved, in a slot
+ *      with no expiry, which then ambushed the next visit to /create/palette.
+ *   c. 'the hand-off does not fire again' — the consume-once contract, observed
+ *      from the rendered page rather than from the module.
+ *
+ * WHY THEY ARE GONE, AND IT IS NOT MERELY THAT THE ROUTE MOVED.
+ * HomeWorkbench.jsx is deleted, and it was the ONLY caller of
+ * `setBoardDraft()` in the app. Nothing can stage the board slot any more, so
+ * `data-board-source` can never read 'handoff' — every one of these tests would
+ * now be asserting on a state the product cannot enter, which is worse than no
+ * test: (b) in particular asserts an ABSENCE, and would have gone green and
+ * silent the moment the producer disappeared. That is the vacuous pass this
+ * suite keeps paying for, and it is why they are removed rather than skipped.
+ *
+ * WHAT IS *NOT* DEAD, and where it is covered. The front door still hands
+ * palettes to the builder — Spectrum's Discover cards and
+ * `PaletteGalleryGrid` both open it through `paletteBuilderUrl()`, a URL rather
+ * than a staged slot, which is immune to (b) by construction because a new tab
+ * carries the URL with it. That path is asserted by
+ * tests/unit/discover-handoff.test.js, and rendered on this very page by the
+ * colour-titles test below, which loads its fixed board through `?c=`.
+ *
+ * The SLOT's own contract — versioned, bounded, consumed exactly once, TTL —
+ * is still proved in full by tests/unit/board-handoff.test.js and
+ * tests/unit/home-handoff.test.js. What has no coverage left is the CALL SITE,
+ * because there is no longer a call site; `setBoardDraft` and the board slot
+ * are dead exports awaiting a decision, and that has been reported rather than
+ * fixed here (this lane does not edit src/).
+ */
 
 /* ── 3 · Column titles describe the colour in the slot ────────────────────────
  * Founder: "when I change the colour system the title of each colour should
@@ -474,6 +385,26 @@ test.describe('Palette Builder · colour titles', () => {
  * yielded `snap + step`, inside snapRadius, so it snapped straight back —
  * forever. A keyboard user could not move these sliders at all. */
 
+/* THE EDITED-VALUE WEIGHT IS READ AS A DIFFERENCE, NOT AS A LITERAL.
+ *
+ * This used to assert `fontWeight === '800'`, and the Spectrum foundation
+ * commit made that false everywhere in one stroke: Manrope ran 200..800, Geist
+ * runs 300..700, and a weight outside a variable font's axis is not an error —
+ * the browser clamps it and draws something nobody chose. So all twenty-one
+ * call sites at 720/750/800/900 were REMAPPED to 700 on purpose, because a
+ * remap is a decision an author made and a clamp is one the renderer makes
+ * invisibly. `.snapv--edited .snapv-value` is one of them.
+ *
+ * The guarantee was never the number. It is that an edited value is visibly
+ * heavier than a resting one, so a keyboard user can see which tracks they have
+ * moved — and a literal could only ever be re-typed to whatever shipped, which
+ * is how a test stops being evidence. Read as resting-vs-edited it survives the
+ * next family change, and it FAILS if the rule is emptied rather than remapped:
+ * equal weights are not a visible difference. */
+const editedWeight = (slider) => slider.evaluate(
+  (el) => Number(getComputedStyle(el.closest('.snapv').querySelector('.snapv-value')).fontWeight),
+)
+
 test.describe('SnapSlider · keyboard stepping', () => {
   test('THE TRAP: an arrow key moves the slider off a snap point and it stays there', async ({ page }) => {
     watch(page, 'keyboard-only designer adjusting a palette')
@@ -484,12 +415,14 @@ test.describe('SnapSlider · keyboard stepping', () => {
     await hue.focus()
     await expect(hue).toBeFocused()
     await expect(hue, '0 is a snap point on this track').toHaveValue('0')
+    const resting = await editedWeight(hue)
 
     await page.keyboard.press('ArrowRight')
     await expect(hue, 'one step off the snap').toHaveValue('1')
     await expect(hue.locator('xpath=..'), 'the shared slider exposes its edited state').toHaveAttribute('data-edited', 'true')
-    await expect.poll(() => hue.evaluate(el => getComputedStyle(el.closest('.snapv').querySelector('.snapv-value')).fontWeight),
-      { message: 'an edited value is visibly bold' }).toBe('800')
+    await expect.poll(() => editedWeight(hue),
+      { message: `an edited value is visibly bolder than the ${resting} it rests at` })
+      .toBeGreaterThan(resting)
     await expect.poll(() => page.locator('label[for="plb-h"]').evaluate(el => getComputedStyle(el).textShadow),
       { message: 'the edited palette field label is visibly emphasised without changing its width' }).not.toBe('none')
     // It must STAY moved. The old behaviour re-snapped on the same event, so a
@@ -608,10 +541,12 @@ test.describe('SnapSlider · keyboard stepping', () => {
     await expect(shift).toBeVisible()
     await shift.focus()
     await expect(shift).toHaveValue('0')
+    const resting = await editedWeight(shift)
     await page.keyboard.press('ArrowRight')
     await expect(shift).toHaveValue('1')
-    await expect.poll(() => shift.evaluate(el => getComputedStyle(el.closest('.snapv').querySelector('.snapv-value')).fontWeight),
-      { message: 'the edited-value treatment is shared by every SnapSlider' }).toBe('800')
+    await expect.poll(() => editedWeight(shift),
+      { message: 'the edited-value treatment is shared by every SnapSlider' })
+      .toBeGreaterThan(resting)
     await page.waitForTimeout(350)
     await expect(shift, 'it stays off the snap here too').toHaveValue('1')
   })

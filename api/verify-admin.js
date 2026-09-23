@@ -1,7 +1,9 @@
 import { adminAuth, adminDb, credentialProblem } from './_lib/firebase-admin.js'
 // One list, shared with /api/ai's diagnostic. Two copies of an allowlist is one
 // copy too many — the day they disagree, the disagreement is a hole.
-import { ADMIN_EMAILS } from './_lib/admin.js'
+import { isAdminEmail } from './_lib/adminEmails.js'
+// The CORS allowlist, shared with /api/support and the Stripe flows.
+import { allowedOrigins } from './_lib/origins.js'
 // The moderator roster. api/_lib/ is underscore-prefixed and NOT deployed as a
 // route, so this adds nothing to the 12-function budget — the same reason the
 // cross-user list below piggybacks on this handshake instead of taking a route
@@ -56,7 +58,17 @@ async function listAllUsers() {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // An allowlisted origin is reflected, anything else gets no CORS header at
+  // all — the same allowlist and the same shape as api/support.js, which
+  // records the reasoning. `*` was not a CSRF hole here (the bearer token below
+  // is the only credential and a browser never attaches it by itself), it was
+  // simply wider than anything that needs it — and this route answers who is an
+  // administrator and can list every user.
+  const origin = req.headers.origin
+  if (origin && allowedOrigins().includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
@@ -73,7 +85,7 @@ export default async function handler(req, res) {
     const email = decoded.email?.toLowerCase()
     // Require a Firebase-verified email — an unverified signup could
     // otherwise register the admin address and pass the allowlist check.
-    const isAdmin = !!email && !!decoded.email_verified && ADMIN_EMAILS.includes(email)
+    const isAdmin = !!email && !!decoded.email_verified && isAdminEmail(email)
 
     // ── Grant the `admin` custom claim ────────────────────────────────────
     // firestore.rules gates every moderation write on

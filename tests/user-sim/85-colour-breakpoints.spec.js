@@ -40,6 +40,18 @@ const ROW_BAND = WIDTHS.filter((w) => w <= 768)
 /** WCAG 2.2 AA 2.5.8 (Target Size, Minimum). */
 const MIN_TARGET = 24
 
+// THE BUDGET IS PER PAGE LOAD, the same derivation 25-defect-sweep and
+// 37-toolbar-tablet-band already use and for the same reason: the 30s default
+// is a budget for a test that opens ONE page, and the matrix tests here open a
+// fresh context and navigate once per width — twenty-two times for the role
+// test, which runs both themes. On CI that test passed at 29.8s on one run and
+// timed out at 30.0s on the next with nothing failing; locally it is 13.6s.
+// Derived off the arrays that drive the loops, so adding a width raises the
+// budget in the same edit. Each load's own waits keep their backstops, so a
+// width that hangs still fails there, by name.
+const LOAD_BUDGET_MS = 6000
+const budget = (loads) => test.setTimeout(15000 + loads * LOAD_BUDGET_MS)
+
 /** A context at an exact width: real touch metrics under 700, desktop above. */
 async function at(browser, width, { theme = 'light', reducedMotion } = {}) {
   const ctx = await browser.newContext({
@@ -138,6 +150,7 @@ const readBoard = () => {
 
 test.describe('the palette board across the width matrix', () => {
   test('a swatch row is two controls and a named menu, never seven icons', async ({ browser }) => {
+    budget(ROW_BAND.length)
     for (const width of ROW_BAND) {
       const { ctx, page } = await at(browser, width)
       watch(page, `phone-sized visitor at ${width}px`)
@@ -193,7 +206,9 @@ test.describe('the palette board across the width matrix', () => {
     // `.plb-role` was `display:none` below 769px. The role is the SLOT — it is
     // what the exports, the tint scales and the UI preview key off — and the
     // name above it describes the colour, not the job.
-    for (const theme of ['light', 'dark']) {
+    const THEMES = ['light', 'dark']
+    budget(THEMES.length * WIDTHS.length)
+    for (const theme of THEMES) {
       for (const width of WIDTHS) {
         const { ctx, page } = await at(browser, width, { theme })
         await go(page, '/create/palette')
@@ -217,6 +232,7 @@ test.describe('the palette board across the width matrix', () => {
   test('the page is named as a page, not as a hex value', async ({ browser }) => {
     // The h1 was 15px/700 in the toolbar and `.plb-hex` is 15px/700 on every
     // swatch, so the page's own name was set identically to a colour value.
+    budget(WIDTHS.length)
     for (const width of WIDTHS) {
       const { ctx, page } = await at(browser, width)
       await go(page, '/create/palette')

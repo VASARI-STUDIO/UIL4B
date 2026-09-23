@@ -207,7 +207,7 @@ export const CREATE_TOOL_SEARCH = {
     keywords: ['contrast', 'contrast checker', 'checker', 'wcag', 'aa', 'aaa', 'accessibility', 'a11y', 'ratio', 'legibility', 'readable'],
   },
   icons: {
-    description: 'Search 200,000+ icons from the open-source packs, then copy SVG or JSX.',
+    description: 'Search icons from the open-source packs, then copy SVG or JSX.',
     keywords: ['icon', 'icons', 'icon library', 'svg', 'jsx', 'symbol', 'glyph', 'iconify', 'pictogram'],
   },
   emoji: {

@@ -162,12 +162,35 @@ test('the claim NAMES match across the boundary too, not just the logic', () => 
 test('the founder allowlist outranks a missing claim, but not a missing verification', () => {
   // The allowlist is the stronger fact server-side: it does not depend on a
   // claim having been minted yet. It still requires a Firebase-verified email.
-  assert.equal(isFounderEmail('dylanjacob1100@gmail.com'), true)
-  assert.equal(isFounderEmail(' DylanJacob1100@Gmail.com '), true)
-  assert.equal(isFounderEmail('someone@example.com'), false)
-  assert.equal(roleFromDecodedToken({ email: 'dylanjacob1100@gmail.com', email_verified: true }), 'founder')
-  assert.equal(roleFromDecodedToken({ email: 'dylanjacob1100@gmail.com', email_verified: false }), 'user')
-  assert.equal(roleFromDecodedToken(null), 'user')
+  //
+  // It is the ADMIN_EMAILS environment variable now, set here for the duration
+  // — it used to be the founder's personal address, hard-coded in
+  // api/_lib/admin.js and repeated in this file, in a public repository. The
+  // empty case ("an unset variable grants admin to nobody") is asserted in
+  // tests/unit/admin-allowlist.test.js against the real requireAdmin.
+  // Spelled out rather than read from FOUNDER_EMAIL below: this file top-level
+  // awaits the gated route source, so the tests declared above that await run
+  // before the constants after it are initialised.
+  const configured = 'owner@uil4b-test.example'
+  const before = process.env.ADMIN_EMAILS
+  process.env.ADMIN_EMAILS = configured
+  try {
+    assert.equal(isFounderEmail(configured), true)
+    assert.equal(isFounderEmail(` ${configured.toUpperCase()} `), true)
+    assert.equal(isFounderEmail('someone@example.com'), false)
+    assert.equal(roleFromDecodedToken({ email: configured, email_verified: true }), 'founder')
+    assert.equal(roleFromDecodedToken({ email: configured, email_verified: false }), 'user')
+    assert.equal(roleFromDecodedToken(null), 'user')
+  } finally {
+    if (before === undefined) delete process.env.ADMIN_EMAILS
+    else process.env.ADMIN_EMAILS = before
+  }
+
+  // And with nothing configured, the same address is nobody.
+  assert.equal(isFounderEmail(configured), false,
+    'the founder allowlist answers yes with no allowlist configured')
+  assert.equal(roleFromDecodedToken({ email: configured, email_verified: true }), 'user',
+    'an unconfigured allowlist still called somebody the founder')
 })
 
 test('the roster is keyed by uid, because an email can change hands', () => {
@@ -449,7 +472,11 @@ const ROSTER_MODULE = 'api/_lib/moderators.js'
 const routeSource = await fileTextThrough('moderator-role', ROUTE)
 const rosterSource = fs.readFileSync(path.join(process.cwd(), ROSTER_MODULE), 'utf8')
 
-const FOUNDER_EMAIL = 'dylanjacob1100@gmail.com'
+// Any configured administrator. It used to be the founder's real address,
+// written into this file and into api/_lib/admin.js; the allowlist is the
+// ADMIN_EMAILS environment variable now, so what this file needs is simply
+// "an address that is on it" — see the sandbox note in loadRoute.
+const FOUNDER_EMAIL = 'owner@uil4b-test.example'
 const FOUNDER_UID = 'founder-uid'
 
 /** Every import stripped, every export unwrapped — the ai.js harness's rule. */
@@ -515,7 +542,18 @@ function loadRoute({ roster = [], accounts = {}, rosterFails = false } = {}) {
 
   const sandbox = {
     console: { error: (...a) => errors.push(a.map(String).join(' ')), log() {}, warn() {} },
-    ADMIN_EMAILS: [FOUNDER_EMAIL],
+    // The allowlist, as an INPUT to the route — the same thing the old
+    // `ADMIN_EMAILS: [FOUNDER_EMAIL]` was, one refactor later: the list became
+    // the ADMIN_EMAILS environment variable and the route now asks
+    // api/_lib/adminEmails.js a question instead of searching an array.
+    //
+    // Pinned here rather than by setting the real env var, so that the tests in
+    // this file which assert what an UNSET allowlist does are not steered by
+    // the harness. What the real parse makes of a real variable — including the
+    // empty case, which is the one that could hand the site away — belongs to
+    // tests/unit/admin-allowlist.test.js and is asserted there against the
+    // shipped function.
+    isAdminEmail: (email) => typeof email === 'string' && email.trim().toLowerCase() === FOUNDER_EMAIL,
     credentialProblem: () => null,
     adminDb: () => ({ collection }),
     adminAuth: () => ({

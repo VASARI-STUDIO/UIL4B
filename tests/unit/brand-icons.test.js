@@ -4,8 +4,8 @@
 //
 // public/favicon.svg was 491 bytes and the ONLY icon the site shipped, and it
 // drew its mark with <text>L4B</text> in `font-family: Inter, system-ui, …`.
-// Inter is not one of the faces this project ships — it self-hosts Manrope and
-// JetBrains Mono — so the mark fell back to whatever the visitor's OS supplied
+// Inter is not one of the faces this project ships — it self-hosts Geist, Geist
+// Mono and Caveat — so the mark fell back to whatever the visitor's OS supplied
 // and rendered a DIFFERENT SHAPE ON EVERY MACHINE. Three glyphs set at 248px in
 // a 512 viewport, then shown at 16px, is a smudge whichever face won.
 //

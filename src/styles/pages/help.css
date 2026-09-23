@@ -1,0 +1,311 @@
+/* help.css — the `hlp` family, on the Spectrum ground.
+ *
+ * Imported by src/pages/HelpCentre.jsx beside content.css, which carries the
+ * shared content-page system. This sheet is only what is particular to /help.
+ *
+ * ── It replaces the `.hlp-*` block in src/styles/deferred/reading.css ───────
+ *
+ * HelpCentre.jsx no longer imports reading.css. See the note in the page file
+ * for why both cannot be loaded at once and why the dead block over there is a
+ * follow-up rather than this lane's edit.
+ *
+ * ── The shape was right and is kept ─────────────────────────────────────────
+ *
+ * One large visual, one main point, a few plain points — the founder's own
+ * direction, 2026-08-20. The bands hold their heading in a column of its own
+ * with the set beside it (Buffer), and the rows under each band are separated
+ * by a rule rather than enclosed in cards. That is the register every help
+ * index in the Mobbin corpus that reads as built rather than generated uses,
+ * and it is why the icon-tile grid was refused when this page was written:
+ *   https://mobbin.com/screens/42990c6e-5536-41b6-b2bb-5332fbe87768   Buffer
+ *   https://mobbin.com/sites/sections/3f77d37e-d2ba-47c2-b4b6-3dc10bb6d9f2  Figma
+ *   https://mobbin.com/sites/sections/bd0c6bd0-c1cc-4f33-a0b1-65e3ff136401  Readymag
+ *   https://mobbin.com/sites/sections/543f3b6e-e6c9-41c4-883f-c5eca59ab1ec  Deel
+ *
+ * What made the page look pre-Spectrum was the surface: the old `--fs-h1`
+ * scale at 1.16 leading, the retired `.ui-pill` family, and `--accent-strong`
+ * — the one accent token that does not track `--accent` — on every row hover
+ * and every answer link.
+ *
+ * ── What this sheet must not set ────────────────────────────────────────────
+ *
+ *   .hlp-run-chip    background   the seed colour
+ *   .hlp-run-bar     background   the eleven generated stops
+ *
+ * Both are written inline by SystemProofs.jsx and read back out of the
+ * computed style by tests/user-sim/57-help-and-principles.spec.js, which
+ * compares all eleven to `generateTintScale()`. A rule here that won the
+ * cascade would make the page show a ramp it did not generate.
+ *
+ * `.hlp-run-files li` carries no `text-transform` and no `::before` for the
+ * same reason: the same spec compares those strings to `FREE_FORMATS` names.
+ */
+
+/* ── The hero ── */
+
+.hlp-hero { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); width: 100%; min-width: 0; }
+/* No max-width on the hero itself — `ch` on a flex container resolves against
+ * the container's font size, not the display face of the h1 inside it. The
+ * children carry their own measure. */
+.hlp-h1 {
+  margin: 0;
+  max-width: 17ch;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(34px, 5.4vw, 64px);
+  line-height: .99;
+  letter-spacing: -.04em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+/* The accent run, not the acid highlighter. The full argument is in
+ * principles.css beside the same rule; the short version is that a painted
+ * inline background needs ~1.15 leading and Spectrum's display setting is .99,
+ * and that the front door marks its own headline run with a colour. The class
+ * name stays — 57-help-and-principles asserts exactly one `.home-mark` inside
+ * `.hlp-hero`, which is about the page having one emphasised phrase and is
+ * still true. global.css is untouched. */
+.hlp .home-mark {
+  background: none;
+  color: var(--accent-mid);
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  line-height: inherit;
+}
+
+.hlp-lede {
+  margin: 0;
+  max-width: 54ch;
+  font-size: clamp(15.5px, 1.3vw, 17px);
+  line-height: 1.6;
+  color: var(--cpg-dim);
+  text-wrap: pretty;
+}
+.hlp-hero-cta { margin-top: var(--s-2); }
+/* Counted, not typed — the tool tallies. A mono line under the call to action,
+ * at the caption family's own size and tracking. --cpg-faint on the page
+ * ground: 5.62:1 light, 8.1:1 dark. */
+.hlp-hint {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: .1em;
+  color: var(--cpg-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The opening visual ──────────────────────────────────────────────────────
+ * One value in, the eleven stops the product generates from it, the files
+ * those stops leave as. The page's only full-bleed object, on Spectrum's panel
+ * geometry: `--radius-3xl` on `--card` with `--shadow-l`, which is exactly
+ * `.sp-panel`. It was `--bg-1` with `--shadow-cmd` — a soft 12px/40px drop at
+ * 7% that reads as a floating pane rather than as a window. */
+.hlp-run {
+  display: grid;
+  grid-template-columns: minmax(148px, auto) minmax(0, 1fr) minmax(196px, auto);
+  gap: var(--s-5) var(--s-6);
+  align-items: center;
+  margin: 0;
+  min-width: 0;
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius-3xl);
+  background: var(--cpg-card);
+  box-shadow: var(--shadow-l);
+}
+.hlp-run-seed { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+/* Background is inline — the seed. */
+.hlp-run-chip { flex: 0 0 auto; width: 48px; height: 48px; border-radius: var(--radius); border: 1px solid var(--cpg-line); }
+.hlp-run-seed-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hlp-run-hex { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--cpg-ink); }
+/* --cpg-faint, not --cpg-quiet: 11px uppercase mono on `--card`. --t3 clears
+ * 5.34:1 there and would pass, but this label also appears over the panel's
+ * own ground on the narrow layout below, so one token for both is the version
+ * that cannot drift. */
+.hlp-run-cap {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--cpg-faint);
+  line-height: 1.4;
+}
+
+.hlp-run-ramp { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 3px; list-style: none; margin: 0; padding: 0; min-width: 0; }
+.hlp-run-stop { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* Background is inline — the generated stop. */
+.hlp-run-bar { display: block; height: clamp(76px, 9vw, 124px); border-radius: var(--radius-xs); }
+.hlp-run-stop-name { font-family: var(--mono); font-size: 10.5px; font-weight: 500; color: var(--cpg-dim); line-height: 1; }
+.hlp-run-stop-hex { font-family: var(--mono); font-size: 10.5px; color: var(--cpg-faint); line-height: 1; }
+
+.hlp-run-out { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+/* No text-transform and no generated content — these strings are compared to
+ * the export registry. */
+.hlp-run-files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--cpg-dim); line-height: 1.4; }
+
+/* The caption under the visual, under a rule inside the panel — `.sp-fig-foot`. */
+.hlp-run-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--cpg-line);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--cpg-faint);
+}
+.hlp-run-note code { font-family: var(--mono); font-size: .92em; color: var(--cpg-dim); }
+
+/* ── The bands ───────────────────────────────────────────────────────────────
+ * Heading held in its own column, the set beside it. The numeral above each
+ * heading is a counter on `.hlp` rather than a typed digit, so a band added or
+ * removed cannot leave a hole in the sequence. */
+.hlp { counter-reset: hlp; }
+.hlp-band {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: var(--s-6) clamp(32px, 5vw, 72px);
+  align-items: start;
+  min-width: 0;
+  counter-increment: hlp;
+}
+.hlp-band-head { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.hlp-h2 {
+  margin: 0;
+  max-width: 16ch;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(26px, 3.2vw, 40px);
+  line-height: 1.02;
+  letter-spacing: -.03em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+.hlp-h2::before {
+  content: counter(hlp, decimal-leading-zero);
+  display: block;
+  margin-bottom: var(--s-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  color: var(--cpg-faint);
+}
+.hlp-band-lede { margin: 0; font-size: 14px; line-height: 1.65; color: var(--cpg-dim); max-width: 44ch; }
+
+/* Capped at a reading measure rather than filling the 1fr column: without it
+ * the row rule ran the full ~900px and `margin-left:auto` parked each row's
+ * arrow that far from the label it belongs to, which read as two unrelated
+ * things rather than one link. */
+.hlp-starts, .hlp-answers { max-width: 68ch; min-width: 0; }
+.hlp-starts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.hlp-start { padding: var(--s-5) 0; border-top: 1px solid var(--cpg-line); min-width: 0; }
+.hlp-start:first-child { border-top: 0; padding-top: 0; }
+.hlp-start-link { display: flex; align-items: baseline; gap: var(--s-3); text-decoration: none; color: var(--cpg-ink); min-width: 0; }
+.hlp-start-link:hover { text-decoration: none; }
+.hlp-start-label {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 560;
+  letter-spacing: -.02em;
+  color: var(--cpg-ink);
+  transition: color var(--dur-1) ease;
+}
+/* --accent-text, not --accent-strong. Derived from --accent, and measured at
+ * 6.33:1 on --card in light and 9.40:1 in dark. */
+.hlp-start-link:hover .hlp-start-label,
+.hlp-start-link:focus-visible .hlp-start-label { color: var(--accent-text); }
+.hlp-start-opens { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--cpg-faint); }
+.hlp-start-go {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  color: var(--cpg-faint);
+  transition: transform var(--dur-2) var(--cpg-ease), color var(--dur-1) ease;
+}
+.hlp-start-link:hover .hlp-start-go,
+.hlp-start-link:focus-visible .hlp-start-go { transform: translateX(3px); color: var(--accent-text); }
+.hlp-start-body { margin: var(--s-2) 0 0; font-size: 14px; line-height: 1.7; color: var(--cpg-dim); max-width: 64ch; }
+
+.hlp-answers { margin: 0; display: flex; flex-direction: column; }
+.hlp-answer { padding: var(--s-5) 0; border-top: 1px solid var(--cpg-line); min-width: 0; }
+.hlp-answer:first-child { border-top: 0; padding-top: 0; }
+.hlp-answer-q { font-size: 16.5px; font-weight: 560; color: var(--cpg-ink); line-height: 1.4; }
+.hlp-answer-a { margin: var(--s-2) 0 0; font-size: 14px; line-height: 1.75; color: var(--cpg-dim); max-width: 68ch; }
+/* Underlined at rest. This is a link inside a sentence, which is where a
+ * reader cannot see a link that only reveals itself on hover — and on touch
+ * there is nothing to hover with. Same recipe the footers use. */
+.hlp-answer-link {
+  color: var(--accent-text);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 70%, transparent);
+  text-underline-offset: 3px;
+}
+.hlp-answer-link:hover { color: var(--accent-mid); text-decoration-color: currentColor; }
+
+/* The closing band has no heading column — it is one statement and one
+ * destination, so it takes the full width and keeps its numeral. */
+.hlp-band--close { grid-template-columns: minmax(0, 1fr); }
+.hlp-close { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); padding-top: var(--s-6); border-top: 1px solid var(--cpg-line-strong); min-width: 0; }
+.hlp-close .hlp-band-lede { max-width: 56ch; }
+
+/* ── Narrow ──────────────────────────────────────────────────────────────────
+ * The ramp is eleven columns of type and cannot compress; below the desktop
+ * band it becomes a scroller inside its own box rather than shrinking its
+ * stops into unreadable slivers or pushing the page sideways. 24-mobile
+ * -overhaul's overflow sweep allows a child past the viewport edge only when
+ * an ancestor is genuinely scrollable, which is what `overflow-x:auto` here
+ * makes true. */
+@media (max-width: 1180px) {
+  .hlp-run-stop-hex { display: none; }
+}
+@media (max-width: 960px) {
+  .hlp-run { grid-template-columns: minmax(0, 1fr); gap: var(--s-5); }
+  .hlp-run-ramp { display: flex; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: var(--s-2); }
+  .hlp-run-stop { flex: 0 0 clamp(46px, 11vw, 72px); }
+  .hlp-run-bar { height: 88px; }
+  .hlp-run-stop-hex { display: block; }
+  .hlp-band { grid-template-columns: minmax(0, 1fr); }
+  .hlp-h2 { max-width: 22ch; }
+}
+@media (max-width: 560px) {
+  .hlp-h1, .hlp-lede, .hlp-h2 { max-width: none; }
+  .hlp-start-link { flex-wrap: wrap; gap: var(--s-2); }
+  .hlp-start-go { margin-left: 0; }
+  .hlp-run { border-radius: var(--radius-xl); }
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
+   The two things on this page that move: the arrow at the end of each "where
+   to start" row, which slides 3px on hover, and the colour transition on the
+   row's label. content.css covers the shared CTA and rail; these are this
+   page's own.
+
+   global.css's blanket clamp already takes both to 0.01ms. These rules remove
+   the MOVEMENT, which a duration clamp does not — spectrum.css's house rule.
+
+   Both spellings, and the pair is not optional:
+   tests/unit/reduced-motion-guard.test.js fails the build on a
+   `prefers-reduced-motion` block whose selector lacks the
+   `html:not([data-reduced-motion="false"])` guard or has no
+   `html[data-reduced-motion="true"]` companion. */
+:where(html[data-reduced-motion="true"]) .hlp .hlp-start-go,
+:where(html[data-reduced-motion="true"]) .hlp .hlp-start-label {
+  transition: none !important;
+}
+:where(html[data-reduced-motion="true"]) .hlp .hlp-start-link:hover .hlp-start-go,
+:where(html[data-reduced-motion="true"]) .hlp .hlp-start-link:focus-visible .hlp-start-go {
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .hlp .hlp-start-go,
+  :where(html:not([data-reduced-motion="false"])) .hlp .hlp-start-label {
+    transition: none !important;
+  }
+  :where(html:not([data-reduced-motion="false"])) .hlp .hlp-start-link:hover .hlp-start-go,
+  :where(html:not([data-reduced-motion="false"])) .hlp .hlp-start-link:focus-visible .hlp-start-go {
+    transform: none !important;
+  }
+}

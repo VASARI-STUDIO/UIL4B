@@ -276,8 +276,17 @@ test.describe('every standalone control on the marketing set clears 24px', () =>
 
 // ── Landmarks and headings, from Chrome's accessibility tree ────────────────
 test.describe('the marketing set exposes a usable landmark list', () => {
+  // THE BUDGET IS PER ROUTE. Each test walks all eleven marketing routes —
+  // navigate, scroll the whole page for its reveals, read Chrome's tree — which
+  // is ~1.8s a route on CI (20.1s at 390 and 17.3s at 1440 on run 35826022497,
+  // against a 30s default meant for one page). Derived from MARKETING_ROUTES,
+  // the same shape as 25-defect-sweep's `budget()`, so a new route raises it in
+  // the same edit. A route that hangs still fails inside the loop, on go()'s
+  // own readiness backstop, by name.
+  const PER_ROUTE_MS = 6000
   for (const width of [390, 1440]) {
     test(`at ${width}px every landmark is named or is not a landmark`, async ({ browser }) => {
+      test.setTimeout(15000 + MARKETING_ROUTES.length * PER_ROUTE_MS)
       const ctx = await browser.newContext({
         viewport: { width, height: 900 }, isMobile: width <= 834, hasTouch: width <= 834,
       })
@@ -419,14 +428,22 @@ test.describe('the homepage headline keeps its proportion on a short desktop', (
       const ctx = await browser.newContext({ viewport: { width, height } })
       const page = await ctx.newPage()
       await go(page, '/')
-      const h1 = page.locator('.home-hero-h1')
+      // `.home-hero-h1` until the front door became Spectrum. The RULE did not
+      // move — a display headline must not eat a short desktop — and it still
+      // holds with the ceiling unchanged: measured 2026-09-22 across these nine
+      // viewports, Spectrum's hero reports 25–34%, so 38 is still a ceiling
+      // with room in it rather than a number refitted around the new page.
+      //
+      // The above-the-fold marker is now the hero's CTA, which is the lowest
+      // element of the hero block the way `.home-hero-hint` was on the old one.
+      const h1 = page.locator('.sp-hero-h1')
       await expect(h1).toBeVisible()
       await page.waitForTimeout(160)
 
       const m = await page.evaluate(() => {
-        const el = document.querySelector('.home-hero-h1')
+        const el = document.querySelector('.sp-hero-h1')
         const r = el.getBoundingClientRect()
-        const hint = document.querySelector('.home-hero-hint')?.getBoundingClientRect()
+        const hint = document.querySelector('.sp-hero .sp-cta')?.getBoundingClientRect()
         return {
           fs: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
           height: Math.round(r.height),

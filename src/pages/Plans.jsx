@@ -340,7 +340,19 @@ export default function Plans() {
           <div className="sub-tier-head">
             <div className="sub-tier-top"><span className="sub-tier-icon"><TierIcon pro /></span><div className="sub-tier-name">Pro</div></div>
             <div className="sub-tier-price plans-price-slot" aria-live="polite">
-              <span className={`sub-tier-amount${!price.loaded ? ' is-loading' : ''}`}>
+              {/* `is-word` — A WORD IS NOT A PRICE AND MUST NOT BE SET LIKE ONE.
+                  The Spectrum treatment gives this slot a 62px display face,
+                  which is right for "$4" and wrong for "Unavailable": rendered
+                  at 1440 the word filled the card, collided with "per year" and
+                  read as the headline of the Pro tier. That state is reachable
+                  — it is what a visitor sees whenever /api/get-prices cannot
+                  answer — and the page already designs for it elsewhere, with
+                  the retry button and the "no checkout will be started" note.
+                  The marker is a class rather than a length so nothing here
+                  types a size the stylesheet then has to agree with, and it is
+                  derived from the same condition the button below branches on.
+                  `is-loading` is untouched: it marks the em dash. */}
+              <span className={`sub-tier-amount${!price.loaded ? ' is-loading' : ''}${price.loaded && !amount ? ' is-word' : ''}`}>
                 {!price.loaded ? '—' : amount || 'Unavailable'}
               </span>
               <span className="sub-tier-per">{cadence}</span>

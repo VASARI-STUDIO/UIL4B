@@ -38,11 +38,15 @@ import { detectCanvasFontRendered } from '../utils/fontDetection'
  * value would do arithmetically — but not to the precision this table prints.
  *
  * At 100px Chromium returns the ink extents already rounded to whole pixels:
- * Manrope's x came back as exactly 54 and its H as exactly 72, which is 0.540
- * and 0.720 per em and two of those three decimal places were invented. At
- * 1000px the same measurements are 546.875 and 718.75, so 0.547 and 0.719 are
- * measured rather than rounded. Three decimals is what the table shows, and
- * this is what makes the third one real.
+ * Geist's x came back as exactly 53 and its H as exactly 71, which is 0.530
+ * and 0.710 per em, a third decimal place invented in both. At 1000px the same
+ * measurements are 531.25 and 718.75, so 0.531 and 0.719 are measured rather
+ * than rounded. Three decimals is what the table shows, and this is what makes
+ * the third one real.
+ *
+ * That is Chromium on Windows. On Linux FreeType rounds ink bounds to whole
+ * pixels at EVERY size (CI measured 532 and 719), and 1000px still suffices:
+ * a whole pixel at 1000px is a thousandth of an em, which is the third place.
  */
 const EM = 1000
 
@@ -52,7 +56,7 @@ const AT_PX = 16
 /**
  * The product's own two families, by the custom property that holds each stack.
  * --display is deliberately absent: global.css defines it as an alias of --font
- * (the same Manrope, named for the job), so a row for it would be a second copy
+ * (the same Geist, named for the job), so a row for it would be a second copy
  * of the first row's measurements wearing a different label.
  */
 const PRODUCT_FACES = [
@@ -67,7 +71,7 @@ const GENERIC_FACES = [
   { id: 'monospace', role: 'Your system mono', stack: 'monospace', name: 'monospace' },
 ]
 
-/** The first family in a CSS font stack, unquoted. `'JetBrains Mono',ui-…` → JetBrains Mono. */
+/** The first family in a CSS font stack, unquoted. `'Geist Mono',ui-…` → Geist Mono. */
 function firstFamily(stack) {
   const first = String(stack).split(',')[0].trim()
   return first.replace(/^['"]|['"]$/g, '')
@@ -184,7 +188,8 @@ export default function TypeMetricsTable() {
       </div>
       <figcaption className="lart-table-cap">
         Measured in this browser at render: each face is painted to a canvas at {EM}px — large
-        enough that the ink extents come back unrounded — and the height above the baseline is
+        enough that even a browser that rounds ink to whole pixels is exact to a thousandth of an
+        em, the third decimal shown — and the height above the baseline is
         read off <code>x</code> and <code>H</code>, then divided by the em.
         The first two rows are the stacks in <code>--font</code> and <code>--mono</code>; the last
         three are whatever this machine supplies for the generic families, so they differ from one

@@ -9,8 +9,10 @@ import LibraryEmpty from '../components/library/LibraryEmpty'
 import LibraryGrid from '../components/library/LibraryGrid'
 import { LockedPaletteCard, LockedTeaseCta } from '../components/library/LockedTease'
 import { useSubscription } from '../contexts/SubscriptionContext'
+import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import GalleryCloseCta from '../components/discover/GalleryCloseCta'
-import { splitLockedLibrary } from '../utils/lockedPreview'
+import { splitLockedLibrary, accountTierGain, galleryLimit, galleryTier } from '../utils/lockedPreview'
 import { classifyPalette, MOOD_IDS, MOOD_LABELS } from '../utils/paletteMood'
 import { paletteHaystack } from '../utils/paletteSearch'
 import { LIBRARY_PALETTES } from '../data/paletteLibrary'
@@ -18,6 +20,7 @@ import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/colour.css'
+import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 
 // ── TWO QUESTIONS, TWO TRAYS ────────────────────────────────────────
@@ -153,22 +156,37 @@ export default function PaletteGallery({ toast }) {
   const [group, setGroup] = useState('all')
   const [mood, setMood] = useState('all')
   const { isPro } = useSubscription()
+  const { user } = useAuth()
+  const { requireLogin } = useLoginPrompt()
+  // Three rungs: anonymous → free account → Pro (utils/lockedPreview.js). Both
+  // inputs must be an exact `true` to climb, so an entitlement or an auth state
+  // that is still resolving shows the tier BELOW rather than the one above.
+  const tier = galleryTier({ isPro, signedIn: user != null })
 
   // The gate, before the data is produced rather than on a control.
   //
   // `browsable` is what this viewer may have; the Pro brand systems are not in
-  // it at all. Everything downstream — the filters, the search haystack, the
-  // grid — reads from `browsable`, so a locked palette has no route to the
-  // page. That closes the search oracle in particular: the haystack indexes
-  // each palette's hex values, so filtering the FULL library would have let a
-  // signed-out visitor confirm a locked brand's colours by typing them.
-  const { open: browsable, locked: lockedBrands, remaining: lockedCount } = useMemo(() => (
+  // it at all, and neither is anything past this tier's cap. Everything
+  // downstream — the filters, the search haystack, the grid — reads from
+  // `browsable`, so a locked palette has no route to the page. That closes the
+  // search oracle in particular: the haystack indexes each palette's hex
+  // values, so filtering the FULL library would have let a signed-out visitor
+  // confirm a locked brand's colours by typing them.
+  //
+  // LIBRARY_PALETTES is handed in whole and in its own order. The cap counts
+  // down THAT list, never the filtered one — the distinction is the whole of
+  // the prompt-library defect this module was written after.
+  const { open: browsable, locked: lockedPreviews, remaining: lockedCount, eligible } = useMemo(() => (
     splitLockedLibrary(LIBRARY_PALETTES, {
       unlocked: isPro === true,
       isOpen: (palette) => palette.pro !== true,
       preview: (palette) => ({ id: palette.id, label: palette.name, slots: palette.colors.length }),
+      limit: galleryLimit(tier),
     })
-  ), [isPro])
+  ), [isPro, tier])
+
+  // How many more a free account opens. Zero above the anonymous rung.
+  const accountAdds = accountTierGain({ tier, eligible, shown: browsable.length })
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -236,43 +254,78 @@ export default function PaletteGallery({ toast }) {
       : browsing ? 'Everything you can browse'
         : 'Across both collections'
 
-  // The teased tail of the Brand systems group: three placeholders, then one
-  // wall. Three is the gallery's desktop column count, so the tease reads as
-  // the next ROW of the collection rather than as a stub — see LOCKED_TEASE.
+  // The teased tail of the library: on the Pro rung's near side, three
+  // placeholders and one wall. Three is the gallery's desktop column count, so
+  // the tease reads as the next ROW of the collection rather than as a stub —
+  // see LOCKED_TEASE.
   //
-  // Shown only where the brand group is shown whole. Under a search or a mood
-  // filter the user has asked a narrower question, and answering it with a
-  // paywall would be an interruption rather than an offer.
+  // Shown only while the view is unnarrowed. Under a search or a mood filter
+  // the user has asked a narrower question, and answering it with a paywall
+  // would be an interruption rather than an offer.
+  //
+  // ── WHY A SIGNED-OUT VISITOR GETS THE WALL AND NO PLACEHOLDERS ────────────
+  //
+  // LockedPaletteCard stamps every placeholder "Pro". For a signed-in free
+  // viewer that is true — the next rows really are the paid ones. For a
+  // signed-out visitor it is NOT: the next seven arrive with a free account
+  // that costs nothing, so three cards reading "Pro" would price them wrong on
+  // the one screen where the offer is being made. The pill is inside
+  // components/library/LockedTease.jsx and is not this stream's file, so rather
+  // than mislabel the rows, the anonymous rung ships the wall alone and states
+  // the two numbers. If that card ever takes a tier-aware label, the
+  // placeholders belong here too — see the report note.
+  const anonymous = tier === 'anonymous'
   const lockedBlock = lockedCount > 0 ? (
-    <>
-      {/* NOT aria-hidden as a group. The placeholder SHAPES are hidden inside
-          the card, but a brand's name is a real fact and the whole tease, so a
-          screen-reader user hears "Figma · Pro" exactly as a sighted one reads
-          it. Nothing announced here is invented, because the card holds no
-          values to invent. */}
-      {/* The locked grid names itself too. A screen-reader user meets three
-          more cards after the free ones and needs to know why they differ;
-          without a name this is an unexplained second grid. */}
-      <h4 className="sr-only" id="pgl-locked-brands">Brand systems included with Pro</h4>
-      <LibraryGrid className="pgal-grid" labelledBy="pgl-locked-brands">
-        {lockedBrands.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} />)}
-      </LibraryGrid>
-      <LockedTeaseCta
-        gate="palette-library-brand-lock"
-        heading={`Another ${lockedCount} brand ${lockedCount === 1 ? 'system' : 'systems'} with Pro`}
-        body="Each one loads the brand’s whole colour system into the Palette Builder — its harmony and its roles, not only the five swatches."
-        action="See what Pro includes"
-        modal={{
-          eyebrow: 'Pro colour tools',
-          title: 'The full brand library',
-          subtitle: `Free covers ${LIBRARY_PALETTES.length - lockedCount} palettes including a handful of starter brands. Pro opens the remaining ${lockedCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
-        }}
-      />
-    </>
+    anonymous ? (
+      // Same shape and the same stylesheet as LockedTeaseCta, with the one
+      // difference that makes it a different rung: the action opens the app's
+      // own sign-in gate (LoginPromptContext, `free: true` — a free account, not
+      // a purchase) instead of the Pro modal. Nothing here is a second gate;
+      // the data was already withheld above.
+      <div className="lockt-cta">
+        <div className="lockt-cta-copy">
+          <p className="lockt-cta-head">{`Another ${accountAdds} ${accountAdds === 1 ? 'palette' : 'palettes'} with a free account`}</p>
+          <p className="lockt-cta-body">{`A free account opens ${browsable.length + accountAdds} of the ${LIBRARY_PALETTES.length} palettes. Pro opens all ${LIBRARY_PALETTES.length}.`}</p>
+        </div>
+        <button
+          type="button"
+          className="btn btn-accent lockt-cta-btn"
+          onClick={() => requireLogin('browse more of the palette library', { free: true, signup: true })}
+        >
+          Create your free account
+        </button>
+      </div>
+    ) : (
+      <>
+        {/* NOT aria-hidden as a group. The placeholder SHAPES are hidden inside
+            the card, but a palette's name is a real fact and the whole tease, so
+            a screen-reader user hears "Figma · Pro" exactly as a sighted one
+            reads it. Nothing announced here is invented, because the card holds
+            no values to invent. */}
+        {/* The locked grid names itself too. A screen-reader user meets three
+            more cards after the free ones and needs to know why they differ;
+            without a name this is an unexplained second grid. */}
+        <h4 className="sr-only" id="pgl-locked-more">Palettes included with Pro</h4>
+        <LibraryGrid className="pgal-grid" labelledBy="pgl-locked-more">
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} />)}
+        </LibraryGrid>
+        <LockedTeaseCta
+          gate="palette-library-brand-lock"
+          heading={`Another ${lockedCount} ${lockedCount === 1 ? 'palette' : 'palettes'} with Pro`}
+          body={`Free covers ${browsable.length} of the ${LIBRARY_PALETTES.length}. Pro opens the remaining ${lockedCount}, including every brand system.`}
+          action="See what Pro includes"
+          modal={{
+            eyebrow: 'Pro colour tools',
+            title: 'The full brand library',
+            subtitle: `Free covers ${browsable.length} of the ${LIBRARY_PALETTES.length} palettes. Pro opens the remaining ${lockedCount}, and a brand system applies the brand’s whole colour system rather than its swatches alone.`,
+          }}
+        />
+      </>
+    )
   ) : null
 
   return (
-    <div className="sec pgl-page">
+    <div className="sec lib-surface pgl-page">
       {/* NO `description` (founder decision, 2026-09-13). The sentence that sat
           here — "Colour systems with a point of view … make it yours." — was the
           same template line the Gradient Library ran, word for word in its second
@@ -357,24 +410,33 @@ export default function PaletteGallery({ toast }) {
         {visible.length ? (
           <>
             {browsing ? (
-              grouped.map((section) => (
-                <div className="pgl-section" key={section.id}>
-                  {/* Sticky, so the category you are inside stays legible while
-                      you scroll a hundred cards — which is the whole point of
-                      sectioning a list this long rather than filtering it. */}
-                  <div className="pgl-section-head">
-                    <h3 id={`pgl-section-${section.id}`}>{section.label}</h3>
-                    <span className="pgl-section-count">{section.palettes.length}</span>
-                    <p className="pgl-section-blurb">{section.blurb}</p>
+              <>
+                {grouped.map((section) => (
+                  <div className="pgl-section" key={section.id}>
+                    {/* Sticky, so the category you are inside stays legible while
+                        you scroll a hundred cards — which is the whole point of
+                        sectioning a list this long rather than filtering it. */}
+                    <div className="pgl-section-head">
+                      <h3 id={`pgl-section-${section.id}`}>{section.label}</h3>
+                      <span className="pgl-section-count">{section.palettes.length}</span>
+                      <p className="pgl-section-blurb">{section.blurb}</p>
+                    </div>
+                    <PaletteGalleryGrid
+                      toast={toast}
+                      palettes={section.palettes}
+                      labelledBy={`pgl-section-${section.id}`}
+                    />
                   </div>
-                  <PaletteGalleryGrid
-                    toast={toast}
-                    palettes={section.palettes}
-                    labelledBy={`pgl-section-${section.id}`}
-                  />
-                  {section.id === 'brand' && lockedBlock}
-                </div>
-              ))
+                ))}
+                {/* AFTER the sections, not inside the last one. It used to hang
+                    off the Brand systems group, because the only locked rows
+                    were brands and that group was always rendered. Under the
+                    tier cap neither is true: the withheld tail starts in
+                    whichever group the cap fell in, and a group with nothing
+                    open is not rendered at all — so a wall nested in it would
+                    vanish exactly when it is the only thing left to say. */}
+                {lockedBlock}
+              </>
             ) : (
               <>
                 {brandCount > 0 && group !== 'brand' && (
@@ -389,17 +451,24 @@ export default function PaletteGallery({ toast }) {
                     the rule two comments above ("under a search or a mood filter
                     the user has asked a narrower question") has to be stated or
                     it silently stops being true. */}
-                {group === 'brand' && mood === 'all' && !query.trim() && lockedBlock}
+                {mood === 'all' && !query.trim() && lockedBlock}
               </>
             )}
           </>
         ) : (
-          <LibraryEmpty
-            className="pgl-empty"
-            title="No palettes match that combination."
-            detail="Try a broader search, or reset the mood and collection filters."
-            onClear={clear}
-          />
+          <>
+            <LibraryEmpty
+              className="pgl-empty"
+              title="No palettes match that combination."
+              detail="Try a broader search, or reset the mood and collection filters."
+              onClear={clear}
+            />
+            {/* A collection can now be empty because the cap fell before it —
+                pick Brand signed out and every brand system is still withheld.
+                The empty state alone would read as "there are none", which is
+                false, so the wall stays and says how many there are. */}
+            {mood === 'all' && !query.trim() && lockedBlock}
+          </>
         )}
       </section>
 

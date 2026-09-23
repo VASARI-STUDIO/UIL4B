@@ -240,12 +240,18 @@ test('/info makes no client-side promise while the AI tools send work to the ser
 
 test('the /info Preview link goes to the tool that has a Preview control', () => {
   const builder = stripComments(read('src/pages/PaletteBuilder.jsx'))
-  const landing = stripComments(read('src/pages/ColorLanding.jsx'))
-  // The control is real, and it is not on the page the link used to name —
-  // both halves, so the assertion below is about something.
+  // The control is real, and it is on ONE page — both halves, so the assertion
+  // below is about something.
+  //
+  // The negative half used to read ColorLanding.jsx, the page the link wrongly
+  // named. That page was deleted on 2026-09-18 when Spectrum became `/`, so the
+  // counter-example is now the tool the link would most plausibly drift to
+  // instead: /create/contrast is the other colour surface with a swatch and no
+  // Preview control of its own.
+  const contrast = stripComments(read('src/pages/ContrastChecker.jsx'))
   assert.ok(builder.includes('aria-label="Preview"'), 'PaletteBuilder.jsx has lost its Preview control')
-  assert.ok(!landing.includes('aria-label="Preview"'),
-    'ColorLanding.jsx now has a Preview control, so the old link target was not wrong; revisit this test')
+  assert.ok(!contrast.includes('aria-label="Preview"'),
+    'ContrastChecker.jsx now has a Preview control too, so the link target is ambiguous; revisit this test')
 
   const link = INFO.match(/<Link to=(\{[^}]+\}|"[^"]+")>Preview<\/Link>/)
   assert.ok(link, '/info no longer renders a Preview link')
@@ -306,7 +312,7 @@ test('/sitemap does not promise a Soon group in its Create lede or type a Discov
 test('/community does not promise a submission will appear while nothing shows the queue', () => {
   // A public feed would call listQueue() outside the admin. Read the callers:
   // the day one exists, the sentence is true and this check retires itself.
-  const files = ['src/pages/Community.jsx', 'src/pages/SurfaceLanding.jsx', 'src/components/discover/CommunityCard.jsx']
+  const files = ['src/pages/Community.jsx', 'src/pages/SurfaceIndex.jsx', 'src/components/discover/CommunityCard.jsx']
   const publicFeed = files.some((f) => stripComments(read(f)).includes('listQueue('))
   if (publicFeed) return
   const community = stripComments(read('src/pages/Community.jsx'))

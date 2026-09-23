@@ -37,6 +37,24 @@ import { GALLERY_GRADIENTS, gradientCss } from '../../src/data/gradientGallery.j
 import { LEARN_ARTICLES } from '../../src/data/learnIndex.js'
 import { LEARN_GROUPS } from '../../src/data/toolTree.js'
 
+// ── DRIVEN FROM AN APP ROUTE, NOT FROM '/' (2026-09-22) ───────────────────
+//
+// This panel belongs to the APP HEADER (PillNav). The front door is Spectrum
+// now and mounts <PillNav variant="spectrum" />, which is a different nav
+// with a full-screen menu and no .pnav-* markup at all, so every test here
+// was asserting the app header on the one page that deliberately does not
+// have it.
+//
+// /discover is the route used because it is chromeless (the header renders
+// full-width, exactly as it did on the old homepage), it is public, and it is
+// not one of the surfaces these tests read data from. The panel is built from
+// the tool tree and is identical on every route that mounts it.
+//
+// The front door's own navigation is covered by 96-spectrum-nav.spec.js, and
+// 01-first-time-visitor drives the same find-a-tool journey through it.
+const MENU_ROUTE = '/discover'
+
+
 // Derived, never hand-listed. A literal copy of these labels here would be the
 // eighth hand-kept list in a codebase that has spent two PRs deleting the first
 // seven, and it would pass while the guide itself changed underneath it.
@@ -109,7 +127,7 @@ async function enterDark(page) {
   await page.addInitScript(() => {
     try { localStorage.setItem('vs-t', 'dark') } catch { /* blocked storage */ }
   })
-  await go(page, '/')
+  await go(page, MENU_ROUTE)
   await expect.poll(() => page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark')
 }
 
@@ -118,7 +136,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('the Create card previews a page of the real export, not a drawing of one', async ({ page }) => {
     watch(page, 'a first-time visitor deciding whether this product is for them')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
 
     // FOUNDER, 2026-09-14: "the build a brand kit graphic should show a page of
@@ -168,7 +186,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('the Discover card previews real gradients at their stored angles', async ({ page }) => {
     watch(page, 'a designer scanning for something worth a tab')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Discover')
 
     const tiles = page.locator('.pnav-prev--discover .pnav-prev-grad')
@@ -196,7 +214,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('Learn gets no preview at all, because Learn is not built', async ({ page }) => {
     watch(page, 'a visitor checking whether the guides exist yet')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Learn')
 
     // Not "an empty box" and not "a book illustration" -- no frame either. The
@@ -211,7 +229,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('the Create card names the guided path and launches it', async ({ page }) => {
     watch(page, 'a new visitor asking which tool to open first')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
 
     const labels = guideStepLabels()
@@ -246,7 +264,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('column heads wear their own category hue instead of one shared accent', async ({ page }) => {
     watch(page, 'a scanner trying to tell six columns apart')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
 
     const rules = await page.locator('#pnav-mega .pnav-col-label').evaluateAll(
@@ -261,7 +279,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('the full keyboard contract survives the restructure', async ({ page }) => {
     watch(page, 'a keyboard-first designer')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
 
     const create = page.getByRole('button', { name: 'Create', exact: true })
     const discover = page.getByRole('button', { name: 'Discover', exact: true })
@@ -286,12 +304,29 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     // WHAT IS IN THE RING, not just how many. Every assertion below reads
     // items[0] and items[at end] back out of the live DOM, so on its own the
     // walk would happily pass against a ring that had silently lost members --
-    // mutation-checked, and it did. These two names are the contract: the
-    // card's primary action and the panel's last link were BOTH unreachable by
+    // mutation-checked, and it did. These three names are the contract: the
+    // card's primary action and the panel's two exits were ALL unreachable by
     // keyboard before this pass, jumped over in each direction by the Tab
     // bridge, so naming them is what stops that regressing quietly.
-    expect(items[0]).toContain('Build a brand kit')
-    expect(items[items.length - 1]).toContain('How UIL4B works')
+    //
+    // BY NAME, NOT BY INDEX, since the Spectrum rebuild (2026-09-18). This read
+    // `items[0]` for the guided CTA, which encoded the old DOM order: the promo
+    // card was the FIRST child of .pnav-menu-cols and the tool columns came
+    // after it. `UIL4B App.dc.html` puts the promo pane on the right, and the
+    // aside moved in the DOM as well as on screen rather than being placed
+    // there with `order` -- a keyboard user must not Tab into a 1260px panel at
+    // its far right and then walk back left (WCAG 2.4.3). So the ring opens on
+    // the first TOOL now. The thing this test exists to catch is a ring that
+    // has silently LOST a member, and that is what these three assert; the
+    // endpoints are pinned separately below.
+    const names = items.join(' | ')
+    expect(names, 'the guided CTA fell out of the keyboard ring again').toMatch(/Build a brand kit|Resume:/)
+    expect(names, 'the "how it works" link fell out of the keyboard ring').toContain('How UIL4B works')
+    expect(names, 'the view-all fell out of the keyboard ring').toContain('Explore Create')
+    // The ring still opens on a real destination and ends on the panel's
+    // view-all, which is the last thing in the card's DOM.
+    expect(items[0]).toContain('Palette')
+    expect(items[items.length - 1]).toContain('Explore Create')
     // The trigger handler focuses inside requestAnimationFrame twice over, so
     // every assertion that follows a trigger key has to settle rather than read
     // the first frame. Arrow keys WITHIN the panel move focus synchronously and
@@ -359,7 +394,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('the Soon badge adds no focus stop', async ({ page }) => {
     watch(page, 'a keyboard user tabbing past what is not built yet')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
 
     const soonRow = page.locator('#pnav-mega .pnav-tool[data-soon]').first()
@@ -384,7 +419,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     // subtree and .focus() on one is a silent no-op, so an unfiltered ring would
     // make ArrowDown appear to do nothing at all in this band.
     await page.setViewportSize({ width: 1200, height: 860 })
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
 
     const create = page.getByRole('button', { name: 'Create', exact: true })
     await create.focus()
@@ -452,7 +487,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
     test.setTimeout(15000 + DESKTOP_MATRIX.length * 9000)
     for (const size of DESKTOP_MATRIX) {
       await page.setViewportSize(size)
-      await go(page, '/')
+      await go(page, MENU_ROUTE)
       for (const name of TRIGGERS) {
         await openWithPointer(page, name)
         const panel = page.locator('#pnav-mega')
@@ -499,7 +534,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('a Soon row never describes what it will do once it exists', async ({ page }) => {
     watch(page, 'a visitor deciding what is worth clicking')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
 
     for (const name of TRIGGERS) {
       await openWithPointer(page, name)
@@ -517,7 +552,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('Learn separates the guides that exist from the topics that do not', async ({ page }) => {
     watch(page, 'a visitor checking whether the guides exist yet')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Learn')
 
     // THIS TEST USED TO ASSERT THAT EVERY LEARN ROW WAS SOON, and its own
@@ -550,7 +585,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('an emptied description does not fall through to the page copy behind it', async ({ page }) => {
     watch(page, 'a visitor reading the Typography column')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
 
     // THIS IS THE SUBTLE ONE. menuDescription used a truthiness test, so setting a
@@ -591,7 +626,7 @@ test.describe('the mega menu shows real contents and keeps its keyboard contract
 
   test('the rows stop tiling: a row without a second line is visibly shorter', async ({ page }) => {
     watch(page, 'a visitor scanning for the thing that matters')
-    await go(page, '/')
+    await go(page, MENU_ROUTE)
     await openWithPointer(page, 'Create')
 
     // min-height:50px was holding every row at a measured 54px whether it had

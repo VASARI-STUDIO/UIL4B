@@ -8,7 +8,7 @@
 - [Tint Scale Generator](https://uil4b.com/create/tint): Turn any colour into a production-ready 50–950 tint scale. Tune the curve, hue drift, and end stops, then copy swatches or CSS variables.
 - [Gradient Generator](https://uil4b.com/create/gradient): Design CSS gradients across your palette. Linear, radial, and conic, with editable stops and angle — copy production-ready CSS in one click.
 - [Colour Contrast Checker](https://uil4b.com/create/contrast): Free WCAG colour contrast checker. Test text and background pairs against AA and AAA, preview the pair live, and get one-click fixes that pass.
-- [Icon Library](https://uil4b.com/create/icons): Search 200,000+ icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.
+- [Icon Library](https://uil4b.com/create/icons): Search icons from popular packs. Preview, customize colours, and copy SVG or JSX code instantly.
 - [Emoji Library](https://uil4b.com/create/emoji): Browse, search, and copy emojis by category. Preview skin tones and find the perfect emoji for any context.
 - [Font Gallery](https://uil4b.com/create/font-gallery): Browse the Google Fonts catalogue with full specimens, category filters and side-by-side comparison, then carry a family into a pairing or a type scale.
 - [Font Pair](https://uil4b.com/create/font-pair): Free font pairing tool. Pick a heading face and see which body faces work under it, with the reasoning, previewed as a real page. Copy the import and CSS.
@@ -51,6 +51,7 @@
 - [Sitemap](https://uil4b.com/sitemap): The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.
 - [Privacy](https://uil4b.com/privacy): UI L4B privacy policy. Learn how we handle your data, cookies, and third-party services.
 - [Terms](https://uil4b.com/terms): UI L4B terms of service. Usage rules, intellectual property, and account policies.
+- [Credits & Licences](https://uil4b.com/credits): Every icon set, typeface and package UI L4B is built on, with its licence — CC BY, MIT, Apache 2.0 and the SIL Open Font License — and a link to each project.
 
 ## Optional
 Not yet built. These routes resolve to an honest "still in the workshop" state rather than a working tool, and should not be described as available:

@@ -21,6 +21,7 @@ import { setPairDraft, setScaleDraft } from '../utils/typeHandoff'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/colour.css'
+import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
 
@@ -885,7 +886,7 @@ export default function FontGallery({ onCopy, toast }) {
   // geometry are not, so the page has an identity and a shape from first paint.
   if (status === 'loading') {
     return (
-      <div className="sec fg-page">
+      <div className="sec lib-surface fg-page">
         <GalleryHero />
         <FontCatalogLoading label="Opening the Font Gallery" />
         <SkeletonRows />
@@ -894,7 +895,7 @@ export default function FontGallery({ onCopy, toast }) {
   }
 
   return (
-    <div className="sec fg-page">
+    <div className="sec lib-surface fg-page">
       <GalleryHero />
 
       <FontCatalogNotice

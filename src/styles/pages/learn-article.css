@@ -95,12 +95,38 @@
 /* ── Aside: a clarification to one side of the sentence above it. No icon, no
       label, no tint — it is not more important than the paragraph, it is next
       to it. The rule is the only marker. ── */
-.lart-aside{max-width:60ch;margin:var(--s-5) 0;padding-left:var(--s-4);border-left:1px solid var(--border);font-size:14.5px;line-height:1.65;color:var(--t3)}
+/* 36.5em, NOT 60ch — and the two are not the same promise.
+   `ch` is the advance of the `0` glyph, which no reader ever meets in a
+   sentence; a measure counts LOWERCASE. In Geist the digit is 0.663em wide
+   against a 0.505em average lowercase advance, so `60ch` = 39.8em = 79
+   characters a line here (measured at 768, 1097, 1440 and 1920 — identical at
+   all four, because the column is the fixed --lart-measure), over this repo's
+   own 75 ceiling in 77-content-quality:143. Under Manrope the same 60ch was
+   inside it: the cap did not change, the font did.
+   `em` is tied to the size the type is actually set at, so the measure tracks
+   the type instead of tracking a glyph the prose does not contain. 36.5em at
+   14.5px = 529px = 72 characters, three under the ceiling and short of the
+   prose's own 73 — which is the order these two blocks should read in. */
+.lart-aside{max-width:36.5em;margin:var(--s-5) 0;padding-left:var(--s-4);border-left:1px solid var(--border);font-size:14.5px;line-height:1.65;color:var(--t3)}
 .lart-aside code{font-size:.9em}
 
 /* ── Spec: a requirement in the standard's own words, attributed. ── */
 .lart-spec{margin:var(--s-5) 0;padding:var(--s-4) 0 var(--s-4) var(--s-5);border-left:2px solid var(--bh)}
-.lart-spec-quote{font-size:15.5px;line-height:1.62;color:var(--t0)}
+/* A CAP, BECAUSE THIS IS RUNNING PROSE AND HAD NONE.
+ *
+ * Measured 77 characters a line at 768, 1097, 1440 and 1920 — identical at all
+ * four, because it simply took the prose column at a larger size than the prose
+ * does. Over this file's own 75 ceiling, which 77-content-quality enforces on
+ * the blocks it knows about and never knew about this one.
+ *
+ * It is the same font-swap regression as the aside and the next-step lede
+ * above: Geist's advances differ from Manrope's, so a column tuned for one face
+ * reads wider in the other. A spec quote is the standard's own words set for
+ * reading — the measure rule applies to it exactly as it applies to a paragraph.
+ *
+ * In `em` like its neighbours, not `ch`: `ch` is the `0` advance, which is a
+ * poor proxy for lowercase text and is what armed this trap in the first place. */
+.lart-spec-quote{font-size:15.5px;line-height:1.62;color:var(--t0);max-width:35.5em}
 .lart-spec-quote b{font-weight:700}
 .lart-spec-cite{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:var(--s-3);font-family:var(--mono);font-size:11px;letter-spacing:.03em}
 .lart-spec-cite a{color:var(--t2);text-decoration:none;border-bottom:1px solid var(--border)}
@@ -213,7 +239,11 @@
 
 .lart-next{margin-top:var(--s-6);padding-top:var(--s-5);border-top:1px solid var(--border);display:flex;flex-direction:column;align-items:flex-start;gap:var(--s-4)}
 
-.lart-next-lede{max-width:60ch;font-size:15px;line-height:1.6;color:var(--t1);margin:0}
+/* The same 36.5em as .lart-aside, for the same reason and to the same number:
+   60ch at 15px was 597px = 79 characters a line; 36.5em is 548px = 72. One cap
+   in em keeps both blocks at one measure whatever size each is set at, which is
+   what `60ch` on both was reaching for and what a `ch` cannot hold. */
+.lart-next-lede{max-width:36.5em;font-size:15px;line-height:1.6;color:var(--t1);margin:0}
 
 .lart-onward{margin-top:var(--s-6)}
 .lart-onward-label{display:block;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:var(--s-3)}

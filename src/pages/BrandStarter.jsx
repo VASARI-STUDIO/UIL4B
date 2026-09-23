@@ -126,6 +126,36 @@ import '../styles/pages/brand-starter.css'
 const EXAMPLE_BRIEF = 'A booking app for independent dog groomers. Calm and practical, '
   + 'not corporate. Most of the screen is a schedule, so it has to stay readable all day.'
 
+/**
+ * The first family in a CSS font stack, with its quotes taken off.
+ *
+ * NO REGEX, and that is not a style preference. The obvious
+ * `.replace(/^['"]|['"]$/g, '')` puts a lone apostrophe in a character class,
+ * which desyncs tests/helpers/strip-comments.js — it is not a parser, says so,
+ * and reads from that apostrophe to the next one as a string. Every comment in
+ * the span stops being stripped, and ai-generation-truth.test.js then reads this
+ * page's own note about what it must not ship as the page shipping it. It went
+ * red exactly that way once.
+ */
+const QUOTE_CHARS = ['"', "'"]
+function firstFamily(stack) {
+  let s = String(stack || '').split(',')[0].trim()
+  if (QUOTE_CHARS.includes(s.slice(0, 1))) s = s.slice(1)
+  if (QUOTE_CHARS.includes(s.slice(-1))) s = s.slice(0, -1)
+  return s
+}
+
+/**
+ * The face a type token resolves to right now, read from the running stylesheet.
+ * `system-ui` is the last resort rather than a face name: on a render with no
+ * document to read it is also what the browser would paint, so unlike a stale
+ * family name it cannot be false.
+ */
+function tokenFace(varName) {
+  if (typeof document === 'undefined' || !document.documentElement) return 'system-ui'
+  return firstFamily(getComputedStyle(document.documentElement).getPropertyValue(varName)) || 'system-ui'
+}
+
 /** Where the result's own numbers come from, so no band invents a heading. */
 const BANDS = [
   { n: '01', id: 'palette', label: 'Palette' },
@@ -138,9 +168,12 @@ const BANDS = [
 // Not a random draw and not a live call: a signed-out page must not spend an AI
 // allowance, and a specimen that changed on every reload would be decoration
 // rather than an example. The hexes are a real ramp, the two families are the
-// two that genuinely ship (the same constraint the Font Pair preview documents
-// — `--display` resolves to Manrope, so a third "family" would be a duplicate
-// passed off as variety), and the steps are a real 1.25 scale off a 16px base:
+// two that genuinely ship — READ from `--display` and `--mono` at render rather
+// than typed, because a family name written into this file is a second
+// declaration of the product's typeface and the last one survived two
+// migrations of the first (the same constraint the Font Pair preview documents:
+// `--display` is an alias of `--font`, so a third "family" would be a duplicate
+// passed off as variety) — and the steps are a real 1.25 scale off a 16px base:
 // 16, 20, 25, 31, 39.
 //
 // `brief` is printed beside it so the example is attributed to an input rather
@@ -154,7 +187,6 @@ const SAMPLE_STARTER = Object.freeze({
     Object.freeze({ role: 'Subtle', hex: '#E8E4DC' }),
     Object.freeze({ role: 'Deep', hex: '#12202F' }),
   ]),
-  fonts: Object.freeze({ heading: 'Manrope', body: 'JetBrains Mono' }),
   scale: Object.freeze([
     Object.freeze({ name: 'Body', px: 16 }),
     Object.freeze({ name: 'H4', px: 20 }),
@@ -672,7 +704,7 @@ export default function BrandStarter({ toast }) {
               <span className="bs-sample-n" aria-hidden="true">{BANDS[1].n}</span>
               <h3 className="bs-sample-label">{BANDS[1].label}</h3>
               <p className="bs-sample-pair">
-                <strong>{SAMPLE_STARTER.fonts.heading}</strong> over {SAMPLE_STARTER.fonts.body}
+                <strong>{tokenFace('--display')}</strong> over {tokenFace('--mono')}
               </p>
             </div>
 

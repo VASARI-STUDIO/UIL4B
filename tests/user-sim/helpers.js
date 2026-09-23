@@ -29,13 +29,40 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { expect } from '@playwright/test'
 import { DEFAULT_DESIGN } from '../../src/data/designDefaults.js'
-// The founder's address, from the SERVER-side allowlist. src/utils/constants.js
-// used to export it and no longer can: it ships in the browser bundle, so it
-// holds a digest now. api/_lib/plans.js is never bundled and keeps the
-// plaintext, and reading it here means an admin fixture and the real server
-// gate cannot drift apart without this suite noticing.
-import { ADMIN_EMAILS } from '../../api/_lib/plans.js'
+// THE ALLOWLIST IS AN ENVIRONMENT VARIABLE NOW, so there is no longer a literal
+// in server source for this fixture to stay in step with.
+//
+// It used to read `ADMIN_EMAILS` out of api/_lib/plans.js, and the argument for
+// doing so was real: the fixture and the live gate could not drift apart
+// without this suite noticing. That coupling went when the founder's personal
+// address came out of tracked source — it is set in Vercel now, and a public
+// repo has nothing to read.
+//
+// So the fixture supplies its own address and CONFIGURES the allowlist with it,
+// which keeps the same property by construction rather than by coincidence: the
+// value this suite signs in as is, by definition, the value the gate allows.
+// `adminEmails()` is still the one parser, so the trimming and lower-casing
+// rules cannot diverge between the fixture and the server.
+import { adminEmails } from '../../api/_lib/adminEmails.js'
 import { resolveReportDir } from './report-dir.js'
+
+// A RESERVED TEST DOMAIN, never the founder's real address. The whole point
+// of moving the allowlist out of source was that his personal address stopped
+// being published; reinstating it here would put it straight back into a
+// public repo through the test suite.
+//
+// Setting the variable rather than only reading it is what keeps the fixture
+// and the gate in agreement: any server code this suite exercises resolves the
+// same allowlist the fixture signs in as. An already-set value wins, so a real
+// environment is never overwritten.
+const TEST_ADMIN_EMAIL = 'admin@uil4b.test'
+if (!process.env.ADMIN_EMAILS) process.env.ADMIN_EMAILS = TEST_ADMIN_EMAIL
+if (!adminEmails().includes(TEST_ADMIN_EMAIL)) {
+  throw new Error(
+    'ADMIN_EMAILS is set in this environment but does not include ' + TEST_ADMIN_EMAIL
+    + ' — the admin fixture would sign in as an address the gate does not allow.'
+  )
+}
 
 // Keyed on PLAYWRIGHT_PORT, the same way playwright.config.js keys its
 // outputDir and JSON report, so one run's five evidence files share a
@@ -284,7 +311,7 @@ export async function signIn(page, opts = {}) {
     displayName,
   } = opts
 
-  const email = (opts.email || (admin ? ADMIN_EMAILS[0] : `${plan}.user@uil4b.test`)).toLowerCase()
+  const email = (opts.email || (admin ? TEST_ADMIN_EMAIL : `${plan}.user@uil4b.test`)).toLowerCase()
   const uid = opts.uid || `test-uid-${admin ? 'admin' : plan}`
   const name = displayName || (admin ? 'Founder' : plan === 'pro' ? 'Pia Pro' : 'Freya Free')
 

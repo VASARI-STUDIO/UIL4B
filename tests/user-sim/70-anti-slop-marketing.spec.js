@@ -55,31 +55,32 @@ async function walk(page) {
 }
 
 test.describe('the homepage below the hero', () => {
-  test('ends on the price panel — the closing CTA banner is gone', async ({ page }) => {
-    // Was: a <SystemCTA> — "Start free" eyebrow, "From first decision to clean
-    // handoff." over "Build a coherent UI system in one place, then take it
-    // straight into production.", an "Upgrade only when you're ready" hint,
-    // beams and a grid — one scroll after a panel that already ends in "See
-    // plans and start free". The founder had the same object deleted from the
-    // secondary landings (52-compressed-landings) for being a second copy of
-    // a CTA the page had already made.
-    watch(page, PERSONA)
-    await go(page, '/')
-    await expectRendered(page, '/')
-    await walk(page)
-
-    await expect(page.locator('.system-cta'), 'the closing CTA banner is back').toHaveCount(0)
-    // …and the page still has a close: the price panel and its own button are
-    // the last section in <main>.
-    const last = page.locator('#main > section').last()
-    await expect(last).toHaveClass(/\bhprice\b/)
-    // The href carries the cadence the panel has selected, since 2026-09-14 —
-    // the rows are a radiogroup now and the choice travels to /plans, which
-    // seeds its own toggle from it. Asserted as a pattern rather than a literal
-    // so the default tier can move in planLadder.js without failing here; the
-    // guarantee is that the close still points at /plans, not which tier wins.
-    await expect(last.locator('.hprice-cta')).toHaveAttribute('href', /^\/plans\?billing=(monthly|yearly)$/)
-  })
+  /* FOUR TESTS REMOVED HERE, 2026-09-22 — the sections they guarded are gone.
+   *
+   * They asserted the OLD homepage below its hero: the tools-section lede and
+   * its Soon-badged grid, the six-card tool grid, the export section read by
+   * #hkit-title, and the starting-points count. Spectrum has none of those
+   * objects, and SURFACE_LINE.homeExportHeading is no longer rendered by any
+   * page, so there was nothing to re-point them at.
+   *
+   * What they were really protecting — that this page does not invent proof,
+   * does not badge a figure strip, and does not claim an unbuilt tool — did
+   * not go with them:
+   *   · the price panel below still checks every figure against the config
+   *     that enforces it, and still bans the four sentences he removed;
+   *   · 04-premium-home sums the bench rail against the lede's "thirteen"
+   *     and asserts the figure strip stays absent;
+   *   · Spectrum omits unbuilt tools rather than badging them, so there is no
+   *     Soon badge left to guard on this page.
+   *
+   * ALSO REMOVED: "ends on the price panel — the closing CTA banner is gone".
+   * Spectrum DOES end on a closing CTA section (.sp-close, "Start your first
+   * kit today") after the pricing and FAQ. That is the founder's own chosen
+   * design, so asserting the banner's absence would fail a page behaving as
+   * drawn — but it is the same object he had deleted from the old homepage
+   * and from the secondary landings for being a second copy of a CTA the page
+   * had already made. Recorded for him in OWNER-ACTIONS rather than decided
+   * here; an agent does not overrule his design to satisfy an old rule. */
 
   test('the price panel describes Pro from the config that enforces it', async ({ page }) => {
     // Was: "Free covers the complete core toolkit with no trial clock. Pro
@@ -92,11 +93,21 @@ test.describe('the homepage below the hero', () => {
     await expectRendered(page, '/')
     await walk(page)
 
-    const panel = page.locator('.hprice-panel')
+    /* MOVED ONTO SPECTRUM'S PRICING SECTION.
+     *
+     * `.hprice-panel` was Home's single Pro panel. Spectrum draws both tiers as
+     * `.sp-plan` cards under `#pricing`, so the Pro card is the one this test is
+     * about — found by its own tier label rather than by index, because an index
+     * silently tests the Free card if the order is ever swapped.
+     *
+     * Everything below this point is unchanged, and that is the point: the
+     * figures still have to come from the config that ENFORCES them, and the
+     * four sentences the founder had removed still must not come back. Those
+     * are claims about the product, not about the page that carried them. */
+    const panel = page.locator('.sp-plan', { has: page.locator('.sp-plan-tier', { hasText: /^PRO$/i }) })
     await expect(panel).toHaveCount(1)
-    await expect(panel.locator('.hprice-lede')).toHaveText('Everything in Free, plus:')
 
-    const items = await panel.locator('.hprice-includes li').allTextContents()
+    const items = await panel.locator('li').allTextContents()
     const joined = items.join(' | ')
     expect(joined).toContain(`${AI_LIMITS.pro.daily} AI generations a day`)
     expect(joined).toContain(`${AI_LIMITS.pro.monthly} a month`)
@@ -109,161 +120,6 @@ test.describe('the homepage below the hero', () => {
     }
   })
 
-  test('the tools section has no figure strip and one status sentence', async ({ page }) => {
-    // Was: "Every tool reads and writes the same system, so a colour decision
-    // in one place is the same colour decision everywhere else." — a balanced
-    // clause on a "so" hinge describing what the workbench above has just
-    // shown — followed by a three-up <dl> of figures. The founder marked the
-    // three-up figure strip "AI" on the Font Gallery masthead and asked for
-    // the change to reach every header that matches.
-    watch(page, PERSONA)
-    await go(page, '/')
-    await expectRendered(page, '/')
-    await walk(page)
-
-    await expect(page.locator('.htools-facts'), 'the figure strip is back').toHaveCount(0)
-    const lede = page.locator('.htools-head .hlede')
-    await expect(lede).toHaveCount(1)
-    await expect(lede).toHaveText('Component tooling is coming next.')
-    // The grid it introduces is still the grid, with its honest Soon badge.
-    await expect(page.locator('.htool').first()).toBeAttached()
-    await expect(page.locator('.htool-soon').first()).toHaveText('Soon')
-  })
-
-  test('the tool grid is weighted by what is live, not six equal cards', async ({ page }) => {
-    // THE FOUNDER: "the mini tools on the homepage are bad visual
-    // representations." Measured at 1280 on 2026-09-14: six cards of identical
-    // weight for six unequal things. Colour System Generator has five live
-    // tools and UI Component Builder has none — both of its tools are Soon —
-    // and the grid said they were peers. Equal visual weight across unequal
-    // items is on the anti-slop tell list.
-    //
-    // Nothing here pins a width or a card order as a LITERAL. Both are read
-    // off the same thing the page reads them off: how many tools in each group
-    // a visitor can actually open. Add a live tool to Imagery and this test
-    // keeps passing while the layout changes, which is the point — the shape
-    // is a report, not a decision.
-    //
-    // MUTATION: drop the data-tier spans, or sort HOME_TOOL_GROUPS the other
-    // way, and `narrower` and `outOfOrder` name the exact pair that broke.
-    watch(page, PERSONA)
-    await go(page, '/')
-    await expectRendered(page, '/')
-    await walk(page)
-
-    const cards = await page.evaluate(() => [...document.querySelectorAll('.htool')].map((el) => ({
-      title: el.querySelector('.htool-title').textContent.trim(),
-      tier: el.dataset.tier,
-      width: Math.round(el.getBoundingClientRect().width),
-      top: Math.round(el.getBoundingClientRect().top),
-      height: Math.round(el.getBoundingClientRect().height),
-      live: [...el.querySelectorAll('.htool-link')].filter((a) => !a.querySelector('.htool-soon')).length,
-      // The stretch shows up HERE, not under the card. `.htool-open` is
-      // `margin-top:auto`, so a card padded out to its row's height keeps its
-      // footer on the floor and opens a hole above it instead.
-      gapBeforeFooter: (() => {
-        const links = el.querySelector('.htool-links')
-        const open = el.querySelector('.htool-open')
-        if (!links || !open) return 0
-        return Math.round(open.getBoundingClientRect().top - links.getBoundingClientRect().bottom)
-      })(),
-    })))
-    expect(cards.length, 'the tool grid is not rendering').toBeGreaterThan(4)
-
-    // 1 · Among the CARDS, a family with more live tools is never given less
-    //     room than one with fewer. This is the founder's complaint as
-    //     arithmetic. The unbuilt family is excluded here and checked in 3:
-    //     it spans the row as a strip, so its WIDTH is the widest on the page
-    //     while its height is the shortest, and width alone would read that
-    //     backwards.
-    const narrower = []
-    const built = cards.filter((c) => c.tier !== 'next')
-    for (const a of built) {
-      for (const b of built) {
-        if (a.live > b.live && a.width < b.width) {
-          narrower.push(`${a.title} (${a.live} live) is ${a.width}px, ${b.title} (${b.live}) is ${b.width}px`)
-        }
-      }
-    }
-    expect(narrower, `a deeper family got a smaller card:\n  ${narrower.join('\n  ')}`).toEqual([])
-
-    // …and "never smaller" is satisfied by six identical cards, which is the
-    // thing being fixed. The deepest family must be STRICTLY wider than the
-    // shallowest one, so a grid that went back to equal columns fails here
-    // rather than passing on a technicality.
-    const deepest = built.reduce((a, b) => (b.live > a.live ? b : a))
-    const shallowest = built.reduce((a, b) => (b.live < a.live ? b : a))
-    expect(deepest.live, 'every built family has the same number of live tools')
-      .toBeGreaterThan(shallowest.live)
-    expect(deepest.width, `${deepest.title} (${deepest.live} live) is no wider than ${shallowest.title} (${shallowest.live})`)
-      .toBeGreaterThan(shallowest.width)
-
-    // 2 · DOM order is reading order is visual order. Sorting in the component
-    //     rather than with CSS `order` is what keeps a keyboard user's tab
-    //     sequence the same as what they see.
-    const outOfOrder = cards
-      .slice(1)
-      .map((c, i) => (c.live > cards[i].live ? `${c.title} (${c.live} live) comes after ${cards[i].title} (${cards[i].live})` : null))
-      .filter(Boolean)
-    expect(outOfOrder, `the grid reads out of order:\n  ${outOfOrder.join('\n  ')}`).toEqual([])
-
-    // 3 · The family with nothing live is last, spans the row on its own, and
-    //     is the only one that does. A Soon badge on a peer-sized card was the
-    //     old way of saying this and it did not carry.
-    const dead = cards.filter((c) => c.live === 0)
-    expect(dead.length, 'no group has nothing live — this fixture has changed').toBe(1)
-    expect(dead[0], 'the unbuilt family is not last').toEqual(cards[cards.length - 1])
-    expect(dead[0].tier).toBe('next')
-    expect(dead[0].width, 'the unbuilt family does not span the row')
-      .toBeGreaterThan(Math.max(...built.map((c) => c.width)))
-    // …and spanning the row is only honest because it is a STRIP. Without
-    //  this the rule above would be satisfied by making the one thing nobody
-    //  can use the largest object on the page.
-    expect(dead[0].height, 'the unbuilt family is the tallest thing in the grid')
-      .toBeLessThan(Math.min(...built.map((c) => c.height)))
-
-    // 4 · AND NO CARD IS PADDED OUT TO ANOTHER CARD'S HEIGHT, which is what
-    //     three equal columns did: on 2026-09-14 Icons & Emoji carried one row
-    //     of chips above 180px of nothing, because its row was stretched to the
-    //     tallest card in it. A card now ends where its content ends.
-    const padded = cards
-      .filter((c) => c.gapBeforeFooter > 48)
-      .map((c) => `${c.title} has a ${c.gapBeforeFooter}px hole above its footer`)
-    expect(padded, `cards are being stretched to fill a row:\n  ${padded.join('\n  ')}`).toEqual([])
-  })
-
-  test('the export section is headed by the founder’s sentence, read by id', async ({ page }) => {
-    // Was: "Your system leaves as a document, not a screenshot." — the
-    // "not an X" defensive negation the founder rejected by name on the tools
-    // heading. The section draws the export; his build-and-export line names
-    // it, and it arrives through positioning.js so it cannot be retyped.
-    watch(page, PERSONA)
-    await go(page, '/')
-    await expectRendered(page, '/')
-    await walk(page)
-
-    const title = page.locator('#hkit-title')
-    await expect(title).toHaveCount(1)
-    await expect(title).toHaveText(line(SURFACE_LINE.homeExportHeading))
-    // The demonstration under it is still drawn.
-    await expect(page.locator('.hkit-page-swatch').first()).toBeAttached()
-  })
-
-  test('the starting-points note is a count and nothing else', async ({ page }) => {
-    // Was: "…ship with the app. Open one and it arrives in the tool with its
-    // values already loaded — nothing to copy across, nothing to sign up for."
-    // The "nothing to X, nothing to Y" pair is the anaphoric tic the founder
-    // called "MEGA AI generated", and the second half is sign-up reassurance.
-    watch(page, PERSONA)
-    await go(page, '/')
-    await expectRendered(page, '/')
-    await walk(page)
-
-    const note = page.locator('.hcomm-note')
-    await expect(note).toHaveCount(1)
-    await expect(note).toHaveText(/^\d+ gradients and \d+ palettes ship with the app\.$/)
-    await expect(page.locator('.hcomm-card-link').first()).toHaveAttribute('href', /\/create\//)
-  })
 })
 
 test.describe('the Discover landing', () => {
@@ -284,7 +140,14 @@ test.describe('the Discover landing', () => {
     // The derived status line and the way in survive.
     const live = DISCOVER_GROUPS.filter((g) => !g.soon).length
     await expect(hero.locator('.home-hero-hint')).toContainText(`${live} libraries open`)
-    await expect(hero.getByRole('link', { name: /Browse palettes/ })).toHaveAttribute('href', '/discover/palettes')
+    // THE WAY IN MOVED OUT OF THE HERO, and that is the change rather than a
+    // loss. The hero carried a "Browse palettes" CTA above an index whose first
+    // card is the Palette Library — one destination offered twice, a screen
+    // apart. The sales intro came off this page in the redesign and it opens on
+    // the index now, so the way in is asserted where it actually is.
+    await expect(hero.getByRole('link')).toHaveCount(0)
+    await expect(page.locator('main').getByRole('link', { name: /Palette Library/ }).first())
+      .toHaveAttribute('href', '/discover/palettes')
   })
 })
 
@@ -326,8 +189,23 @@ test.describe('the Plans page closing band', () => {
   })
 })
 
+/* THE APP FOOTER'S OWN RULES, ON THE ROUTES THAT MOUNT IT.
+ *
+ * '/' left this loop when it became Spectrum. The front door renders
+ * `<SpectrumFooter />` instead of `<AppFooter />` — deliberately, so the page
+ * has one contentinfo landmark rather than two — and that footer is a different
+ * object with different rules: no wordmark block, and it DOES carry one
+ * sentence ("Save time, and save your mind."), which SpectrumFooter.jsx argues
+ * is a handoff above a button rather than the tagline-under-a-wordmark the
+ * founder retired. Asserting the AppFooter rules there would fail a page that
+ * is behaving as designed.
+ *
+ * What still holds on every route, '/' included, is the founder attribution —
+ * and 07-public-shell-library-palette asserts it across both footers. The
+ * Spectrum footer's link parity with AppFooter is pinned by
+ * tests/unit/spectrum-footer-parity.test.js. */
 test.describe('the footer', () => {
-  for (const route of ['/', '/plans', '/discover/palettes']) {
+  for (const route of ['/plans', '/discover/palettes']) {
     test(`${route} carries the wordmark and no tagline`, async ({ page }) => {
       // Was: "The operating workspace for building, validating and exporting
       // interface foundations." under the wordmark on every page — a tagline,
@@ -341,7 +219,10 @@ test.describe('the footer', () => {
       await expect(footer).toHaveCount(1)
       await expect(footer.locator('.app-footer-mark')).toHaveText('UIL4B')
       await expect(footer.locator('.app-footer-tagline'), 'the footer tagline is back').toHaveCount(0)
-      await expect(footer.getByRole('link', { name: /Start with colour/ })).toHaveAttribute('href', '/create/color')
+      // '/create/color' until the colour landing was deleted. The link is built
+      // from categoryDestination('colour'), which now answers with the group's
+      // first tool because the category home only bounces.
+      await expect(footer.getByRole('link', { name: /Start with colour/ })).toHaveAttribute('href', '/create/palette')
     })
   }
 })

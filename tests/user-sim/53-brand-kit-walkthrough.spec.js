@@ -51,6 +51,25 @@ async function seedDesign(page, patch) {
 }
 
 /**
+ * Where the Create mega menu actually lives now.
+ *
+ * Every test below started on `/home`, which was the app shell wearing the old
+ * homepage. `/` and `/home` both render src/pages/Spectrum.jsx since the route
+ * swap, and Spectrum mounts `<PillNav variant="spectrum" />` — SpectrumNav,
+ * a marketing pill with its own full-screen menu — so there is no `.pnav-*`
+ * mega menu on the front door at all, and `getByRole('button', {name:'Create'})`
+ * timed out on all seven. The menu itself did not change: the app header still
+ * renders on /discover, /learn and every /create/* route, with the same three
+ * triggers and the same `.pnav-editorial-cta`. Verified in a browser on
+ * /discover before this was re-pointed — the CTA reads "Build a brand kit",
+ * 249px wide, exactly as it did on /home.
+ *
+ * This is the walkthrough's entry point, not a page under test: what matters is
+ * that the visitor starts somewhere the mega menu exists.
+ */
+const MENU_ROUTE = '/discover'
+
+/**
  * Press the brand-kit button in the Create mega menu — the real front door.
  *
  * The panel is hover/focus driven and closes on mouse leave, so the trigger is
@@ -122,7 +141,7 @@ test.describe('Brand kit walkthrough', () => {
   test('the nav CTA lands on a working step one, not on a sales page', async ({ page }) => {
     watch(page, 'designer starting a brand system from the navigation')
     await fresh(page)
-    await go(page, '/home')
+    await go(page, MENU_ROUTE)
 
     const label = await pressBrandKit(page)
     expect(label).toBe('Build a brand kit')
@@ -154,7 +173,7 @@ test.describe('Brand kit walkthrough', () => {
   test('the orientation card is offered over step one and does NOT block it', async ({ page }) => {
     watch(page, 'designer reading the explanation while the tool stays live')
     await fresh(page)
-    await go(page, '/home')
+    await go(page, MENU_ROUTE)
     await pressBrandKit(page)
 
     await expect(card(page)).toBeVisible()
@@ -188,7 +207,7 @@ test.describe('Brand kit walkthrough', () => {
   test('Escape closes the card and focus comes back to a real control', async ({ page }) => {
     watch(page, 'keyboard user dismissing the explanation')
     await fresh(page)
-    await go(page, '/home')
+    await go(page, MENU_ROUTE)
     await pressBrandKit(page)
 
     await expect(card(page)).toBeVisible()
@@ -208,7 +227,7 @@ test.describe('Brand kit walkthrough', () => {
   test('the card is offered once, and stays reachable afterwards', async ({ page }) => {
     watch(page, 'returning designer who does not want to be re-taught')
     await fresh(page)
-    await go(page, '/home')
+    await go(page, MENU_ROUTE)
     await pressBrandKit(page)
     await expect(card(page)).toBeVisible()
     await page.keyboard.press('Escape')
@@ -228,7 +247,7 @@ test.describe('Brand kit walkthrough', () => {
   test('state carries between steps: step four can see what step one built', async ({ page }) => {
     watch(page, 'designer checking the system holds together across steps')
     await fresh(page)
-    await go(page, '/home')
+    await go(page, MENU_ROUTE)
     await pressBrandKit(page)
     await expect(card(page)).toBeVisible()
     await page.keyboard.press('Escape')
@@ -274,7 +293,7 @@ test.describe('Brand kit walkthrough', () => {
     })
     await page.addInitScript((k) => { try { localStorage.setItem(k, '1') } catch { /* ignore */ } }, GUIDE_KEY)
 
-    await go(page, '/home')
+    await go(page, MENU_ROUTE)
     const label = await pressBrandKit(page)
 
     // The control says which of the two things it is about to do. A button
@@ -290,7 +309,7 @@ test.describe('Brand kit walkthrough', () => {
   test('leaving the walkthrough ends it and lands on the review', async ({ page }) => {
     watch(page, 'designer stopping part-way through')
     await fresh(page)
-    await go(page, '/home')
+    await go(page, MENU_ROUTE)
     await pressBrandKit(page)
     await page.keyboard.press('Escape')
 

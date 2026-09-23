@@ -30,8 +30,39 @@
 // ink centroid: the centre of mass of the pixels that depart from the bar's
 // own background, weighted by how far they depart. That is the quantity an eye
 // aligns, and it is the only one that separates the two builds.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// WHY THIS MEASURES /discover AND NOT `/` ANY MORE
+// ─────────────────────────────────────────────────────────────────────────────
+// The founder's screenshot was taken on the homepage, but the subject of the
+// complaint was never the homepage — it was the APP HEADER's right-hand
+// cluster, which is one component rendered identically on every route that
+// mounts it. The route swap gave `/` the marketing pill instead
+// (`PillNav variant="spectrum"` → `<SpectrumNav />`: wordmark, three quiet
+// links, theme cycle, burger — no search disc, no avatar), so `.pnav-*` is
+// simply not on the front door and every reading below came back null.
+//
+// So the measurement moves to /discover, which renders the same `<PillNav />`
+// at the same widths with the same three controls. PillNav.jsx's own comment
+// above `.pnav-logo` names this file as the thing that measures its painted
+// left edge, which is the contract being kept: the bar is the subject, the
+// route is only where it is standing. /discover is also the right choice over a
+// Create tool shell — it is not in SALES_PATHS, so the search field is rendered
+// at every width in the band rather than hidden on desktop.
+//
+// (That sentence used to name the shell with a wildcard path. Written inside a
+// line comment, the slash-star in it opens a BLOCK comment as far as any naive
+// stripper is concerned, and tests/unit/one-tap-stub.test.js strips comments
+// before checking that every spec imports `test` from ./base.js — so the two
+// imports below vanished and the guard reported this file as importing from
+// the wrong place. The rule is worth remembering: no wildcard paths in a line
+// comment in this repo.)
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+
+// The app header's own route. Any route outside SALES_PATHS renders the same
+// bar; this one is the cheapest to paint.
+const BAR_ROUTE = '/discover'
 
 // 662 is the founder's own capture. The rest bracket it: 480 and 390 are the
 // phone band, 700 and 768 the rest of the band where the compact bar shows.
@@ -86,7 +117,7 @@ test.describe('header controls sit on one optical line', () => {
   test.beforeEach(async ({ page }) => { watch(page, 'visitor on a narrow laptop') })
 
   test('every control in the cluster paints the same optical mass', async ({ page }) => {
-    await go(page, '/')
+    await go(page, BAR_ROUTE)
     const bad = []
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 800 })
@@ -109,7 +140,7 @@ test.describe('header controls sit on one optical line', () => {
   })
 
   test('the row ends where the logotype begins, measured as ink', async ({ page }) => {
-    await go(page, '/')
+    await go(page, BAR_ROUTE)
     const bad = []
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 800 })

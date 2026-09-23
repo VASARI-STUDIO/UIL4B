@@ -1,0 +1,251 @@
+/* palette-builder.css — the Spectrum pass on `/create/palette`.
+ *
+ * ── THIS PAGE IS AUTHORED. THE PASS IS DELIBERATELY SMALL ───────────────────
+ *
+ * The 2026-09-16 audit called `/create/palette` one of the few surfaces on the
+ * site with real character, and it is right: the whole viewport IS the palette.
+ * Five full-bleed colour columns from the top of the work area to the bottom, a
+ * sticky tool rail above them and a sticky adjust bar below — no cards, no
+ * panels, no hero. That is the design and this file does not touch it.
+ *
+ * What was pre-Spectrum here was never the composition. It was the CHROME: an
+ * accent family that did not track `--accent`, focus rings drawn in a literal,
+ * and a handful of radii and micro-labels from the Manrope era. So this sheet
+ * changes colour, radius, focus and target size, and leaves every layout
+ * decision, every measurement and every piece of type inside a colour column
+ * exactly where the people who authored them put them.
+ *
+ * ── WHY IT IS A NEW FILE ────────────────────────────────────────────────────
+ *
+ * The `plb` family's rules live in `global.css` (249 of them) and in
+ * `deferred/colour.css` (332), neither of which this lane may edit — colour.css
+ * alone is imported by ten pages, two of which another agent is editing right
+ * now. This sheet is imported LAST by PaletteBuilder.jsx. Nothing is renamed:
+ * `11-palette-recovery` and `50-palette-preview-ink` assert twenty-odd
+ * `.plb-*` classes by name.
+ *
+ * EVERY SELECTOR HERE IS SCOPED `.plb …`. Importing last does not put the
+ * sheet last: measured in a browser, the runtime <link> order is
+ * global.css -> index.css -> THIS SHEET -> colour.css -> tool-shell.css,
+ * because Vite orders chunk CSS by the dependency graph and not by the order of
+ * the `import` statements. So this file beats global.css but LOSES to
+ * `deferred/colour.css` at equal specificity, and four of the rules below also
+ * exist there. The root prefix takes each to (0,2,0) against (0,1,0) and
+ * settles it by construction rather than by load order.
+ *
+ * The two ALIAS declarations are the exception that needs no prefix: they are
+ * on `.plb` itself, nothing in colour.css sets them, and a custom property
+ * resolves wherever it is read — which is why the remap reaches all twenty-one
+ * rules without this sheet having to outrank any of them.
+ *
+ * ── THE TWO DECLARATIONS THAT DO MOST OF THE WORK ───────────────────────────
+ *
+ * Twenty-one `.plb-*` rules across the two base sheets read `--accent-strong`
+ * or `--brand`. BOTH are per-theme literals declared beside `--accent` rather
+ * than derived from it:
+ *
+ *     --accent:        #0F6FFF light   #6FA8FF dark
+ *     --accent-strong: #0B5ED7 light   #4A90FF dark   <- literal, does not track
+ *     --brand:         #0F6FFF light   #6FA8FF dark   <- literal, does not track
+ *
+ * A premium theme template moves `--accent` alone. Under it, every focus ring,
+ * every selected-harmony tick, the image-picker points, the Pro chip and the
+ * collapsed-rail CTA on this page would have stayed brand blue while the rest
+ * of the app moved — twenty-one elements stranded, and no single rule to point
+ * at afterwards.
+ *
+ * Rather than restate twenty-one rules, the two ALIASES are re-pointed once at
+ * the page root. Every rule below them resolves through the derived family
+ * without being touched, which also means a rule added to colour.css tomorrow
+ * inherits the fix instead of reintroducing the bug.
+ *
+ * The mapping is not arbitrary. Read across the twenty-one call sites:
+ *   · `--brand` is used for BORDERS, ICON FILLS and FOCUS RINGS — structure.
+ *     `--accent` is the exact structural equivalent and is the root token.
+ *   · `--accent-strong` is used for small accent TEXT, plus one button fill
+ *     (`.plb-collapsed-cta:hover`, which pairs it with `--accent-fg`).
+ *     `--accent-text` is the derived text step and carries both: measured on
+ *     `--bg-0`, 6.02:1 light / 9.71:1 dark as text; and as that one fill,
+ *     `--accent-fg` on it is 6.61:1 light (white on #0E5BCF) and 10.4:1 dark
+ *     (#101012 on #8AB8FF) — `--accent-fg` is itself theme-aware, which is why
+ *     the fill survives the swap in both directions.
+ *
+ * ── WHAT THIS FILE MUST NOT DO: THE TOOLBAR IS MEASURED ─────────────────────
+ *
+ * `src/utils/toolbarFit.js` decides whether the exploratory cluster collapses
+ * behind one trigger by comparing the rail's INTRINSIC WIDTH against a budget,
+ * band by band, because a breakpoint was tried here and left the fault sitting
+ * outside it. Any change to a toolbar control's padding, font-size or
+ * font-weight changes that intrinsic width and moves the collapse band — a
+ * functional change wearing a style change's clothes.
+ *
+ * So no metric on `.plb-toolbar` or anything inside it is touched here. Colour,
+ * radius and focus only. The `(pointer: coarse)` block at the foot raises
+ * min-HEIGHT, which toolbarFit does not measure.
+ *
+ * ── AND NOT THE INK ON A COLOUR COLUMN ──────────────────────────────────────
+ *
+ * `.plb-hex` and `.plb-role` sit on `--plb-ink`, which PaletteBuilder.jsx sets
+ * per column to whichever of black or white carries more contrast on the colour
+ * the USER chose. Their weights are part of that guarantee, not a style choice:
+ * `.plb-role` once spent an opacity of .6 on the same ink and broke AA on
+ * 89.51% of possible grounds. Restyling 700 to 560 would move the worst-ground
+ * figure without anyone re-running the sweep, so the type inside a column is
+ * left alone. It is already mono, tracked and small, which is Spectrum's own
+ * idiom for a measurement.
+ *
+ * ── MEASURED ────────────────────────────────────────────────────────────────
+ *
+ * Rendered at 390 / 834 / 1440, light and dark. Zero horizontal page overflow
+ * at each; zero text nodes under their contrast floor on the COMPOSITED ground.
+ */
+
+.plb {
+  /* Spectrum's house curve. */
+  --plb-ease: cubic-bezier(.23, 1, .32, 1);
+
+  /* THE REMAP. See the header. Two declarations, twenty-one rules. */
+  --accent-strong: var(--accent-text);
+  --brand: var(--accent);
+  /* The two washes derived from the same literals, for the same reason. */
+  --brand-bg: var(--accent-wash);
+  --brand-glow: var(--accent-wash-4);
+}
+
+/* ── The heading slot ────────────────────────────────────────────────────────
+   Renders only when `PALETTE_LEDE` is non-empty — today it is `''`, so the h1
+   is `sr-only` and this rule paints nothing. It is here so that the day the
+   founder writes the line, the heading arrives already on Spectrum's metrics
+   rather than on the 500/-.035em h2 step it currently declares. */
+.plb .plb-hero h1{
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(38px, 5.6vw, 72px);
+  font-weight: 600;
+  line-height: .96;
+  letter-spacing: -.045em;
+  color: var(--t0);
+  text-wrap: balance;
+}
+
+.plb .plb-hero-lede{
+  max-width: 52ch;
+  margin: 16px 0 0;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--t1);
+  text-wrap: pretty;
+}
+
+/* ── The rails ───────────────────────────────────────────────────────────────
+   Both bars keep their position, height, padding and every control metric. The
+   hairline is the only thing that changes: `--border` against `--bg-0` is the
+   Spectrum separator, and the top bar gains the matching one so the board reads
+   as held between two rules rather than sitting under one. */
+
+.plb .plb-toolbar{ border-bottom: 1px solid var(--border); }
+
+.plb .plb-adjust{ border-top: 1px solid var(--border); }
+
+/* The adjust bar's own title — "ADJUST ALL" — is a section label on a rail, so
+   it takes the mono micro-label Spectrum uses for exactly that job rather than
+   a bolded sans caps run. It KEEPS `--t0`: this bar sits directly under five
+   full-height columns of arbitrary colour, and the title is the one word that
+   says what the four sliders below it do.
+
+   `.plb-adjust-label` — the HUE / SATURATION / TONE / TEMPERATURE labels — is
+   deliberately NOT included, and the first cut of this file got that wrong. It
+   had them at `--t3`, which passes 4.5:1 and is still a regression: colour.css
+   sets them to `--t0` AND paints a .35px text-shadow in currentColor as a faux
+   bold. Somebody solved a legibility problem on that rail on purpose. Dimming
+   them to a quiet grey is the exact shape of the four AA failures already found
+   on this branch, arriving one step early. They are left alone. */
+.plb .plb-adjust-title{
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--t0);
+}
+
+/* ── The ADD column ──────────────────────────────────────────────────────────
+   The dashed column at the right end of the board. It is an invitation, not an
+   action bar, so it reads as mono micro-type in the quiet ink — the same
+   treatment the board's own role labels get, which is what makes it sit WITH
+   the columns instead of beside them. `--t2`, not `--t3`: this one is on
+   `--card` at 11px and has to clear 4.5:1, which `--t2` does at 6.37:1 light /
+   6.21:1 dark while `--t3` is 5.24 / 5.86 — both pass, and `--t2` is the one
+   that still reads as a label you can press. */
+.plb .plb-add{
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .18em;
+  color: var(--t2);
+  border-left: 1px dashed var(--border);
+  transition: color var(--dur-1) ease, background var(--dur-1) ease;
+}
+
+.plb .plb-add:hover{ color: var(--t0); background: var(--hvr); }
+
+.plb .plb-add:focus-visible{ outline: 2px solid var(--accent); outline-offset: -3px; }
+
+/* ── The collapsed rail ─────────────────────────────────────────────────────
+   Shown when toolbarFit decides the exploratory cluster cannot have the row.
+   Radius only — its metrics belong to the same measured system as the rail. */
+
+.plb .plb-collapsed{ border-radius: var(--radius); }
+
+.plb .plb-collapsed strong{ font-weight: 560; }
+
+/* ── Popovers and menus ──────────────────────────────────────────────────────
+   Spectrum's card radius, so a menu opening off the rail matches the panels on
+   every neighbouring tool. Padding and width are untouched: the picker's
+   geometry is asserted by `50-palette-preview-ink`. */
+
+.plb .plb-menu,
+.plb .plb-pop,
+.plb .plb-picker{ border-radius: var(--radius-xl); box-shadow: var(--shadow-l); }
+
+.plb .plb-menu-sub a,
+.plb .plb-linkbtn{ border-radius: var(--radius-xs); }
+
+/* ── Focus ───────────────────────────────────────────────────────────────────
+   Never removed, only drawn, and drawn in `--accent` so it follows a premium
+   theme. `outline-offset` is positive everywhere except on a swatch, where a
+   ring outside the box would be painted on the neighbouring colour and become
+   invisible against it. */
+
+.plb .plb-icobtn:focus-visible,
+.plb .plb-hexfield:focus-visible,
+.plb .plb-hex:focus-visible,
+.plb .plb-linkbtn:focus-visible,
+.plb .plb-collapsed-cta:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.plb .plb-col:focus-visible{ outline: 2px solid var(--accent); outline-offset: -3px; }
+
+/* ── Coarse pointers ─────────────────────────────────────────────────────────
+   44px, and min-HEIGHT only. toolbarFit.js measures the rail's intrinsic
+   WIDTH; a height floor is invisible to it, so the touch target can be raised
+   without moving the band at which the cluster collapses. The colour columns
+   are not listed: they are already the full height of the work area. */
+@media (pointer: coarse) {
+  .plb .plb-toolbar .btn-s,
+  .plb .plb-icobtn,
+  .plb .plb-hexfield,
+  .plb .plb-seedpick .cpk-trigger,
+  .plb .plb-collapsed-cta,
+  .plb .plb-menu-row,
+  .plb .plb-hex{ min-height: 44px; }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   global.css's blanket rule clamps every DURATION under both spellings the app
+   uses — the Settings choice and the OS query for anyone who has not made one.
+   The one piece of MOVEMENT this page owns is `.plb-icobtn`'s label, which
+   expands a `grid-template-columns: 0fr` track on hover. A duration clamp makes
+   that snap rather than removes it, which is the right outcome — the label must
+   still appear, because for an icon-only control it is the only text there is.
+   So there is no companion turning it off: it is a disclosure, not decoration.
+   Recorded here so the next reader knows it was considered rather than missed. */

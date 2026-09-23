@@ -224,10 +224,15 @@ test.describe('the front door', () => {
     // Sample every frame from the first one, so a sales page that appeared and
     // was replaced is caught. Polling after the fact would miss exactly the
     // flash this asserts against.
+    // `.home-hero` until the route swap. `/` renders src/pages/Spectrum.jsx
+    // now, whose hero is `.sp-hero` on a `.spectrum` page root — and this is
+    // the half of the pair that would have gone SILENTLY green: `.home-hero`
+    // never matching anything is indistinguishable from a sales page that
+    // never painted, which is exactly what the control below exists to catch.
     await page.addInitScript(() => {
       window.__salesPageSeen = false
       const tick = () => {
-        if (document.querySelector('.home-hero')) window.__salesPageSeen = true
+        if (document.querySelector('.sp-hero')) window.__salesPageSeen = true
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
@@ -253,11 +258,13 @@ test.describe('the front door', () => {
   })
 
   test('a signed-out visitor gets the sales page at the same URL — the control', async ({ page }) => {
-    // The test above is worthless without this: `.home-hero` never appearing is
-    // also what a broken selector looks like.
+    // The test above is worthless without this: `.sp-hero` never appearing is
+    // also what a broken selector looks like — and it was exactly that for one
+    // run, when the route swap replaced Home.jsx with Spectrum.jsx and left
+    // both halves of this pair pointed at `.home-hero`.
     watch(page, 'a stranger opening the site')
     await go(page, '/')
-    await expect(page.locator('.home-hero'), 'the sales page must still be what a stranger gets')
+    await expect(page.locator('.sp-hero'), 'the sales page must still be what a stranger gets')
       .toBeVisible()
   })
 })

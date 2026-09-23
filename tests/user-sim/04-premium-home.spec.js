@@ -2,6 +2,7 @@
 // responsive information hierarchy must remain usable without animation.
 import { test, expect } from './base.js'
 import { go, goRaw, ready, watch } from './helpers.js'
+import { heroHeadlineText } from '../../src/data/positioning.js'
 
 const PERSONA = 'prospective UI-system builder'
 
@@ -79,9 +80,15 @@ test.describe('premium homepage', () => {
    * 1024, 1280 and 1920 were also measured identical by hand when this landed;
    * these two are the ones worth a place in the suite.
    */
-  const HERO_GEOMETRY = () => [...document.querySelectorAll('.home-hero-line-in')].map((el) => {
+  /* THE UNIT IS A WORD, NOT A LINE. Home.jsx split its headline into two
+   * `.home-hero-line-in` spans; Spectrum's `<SpectrumWords>` splits it per word
+   * into `.sp-w` inside a `.sp-wm` mask, and scripts/home-shell.mjs mirrors that
+   * structure into the served shell. Measuring per word is strictly stronger
+   * than per line: a re-wrap moves individual words before it moves a line box,
+   * so this now catches a drift the two-line version could not see. */
+  const HERO_GEOMETRY = () => [...document.querySelectorAll('.sp-hero-h1 .sp-w')].map((el) => {
     const b = el.getBoundingClientRect()
-    const h1 = getComputedStyle(el.closest('.home-hero-h1'))
+    const h1 = getComputedStyle(el.closest('.sp-hero-h1'))
     const round = (n) => Math.round(n * 100) / 100
     return {
       text: el.textContent.replace(/\s+/g, ' ').trim(),
@@ -104,7 +111,7 @@ test.describe('premium homepage', () => {
       let shell
       try {
         await goRaw(page, '/', { waitUntil: 'commit' })
-        await page.waitForSelector('#boot-shell .home-hero-line-in')
+        await page.waitForSelector('#boot-shell .sp-hero-h1 .sp-w')
         // The render-blocking sheet, then the fonts. Nothing paints before the
         // first and a late second is the classic cause of a re-wrap.
         //
@@ -128,7 +135,13 @@ test.describe('premium homepage', () => {
         // Asserted as "not the UA default" rather than against global.css's
         // actual value, so it stays a control instead of becoming a second place
         // the hero's tracking is written down.
-        expect(shell.length, 'the served `/` shell carries no headline — prerender did not write one').toBe(2)
+        // DERIVED FROM THE HEADLINE, never typed: one `.sp-w` per word. A shell
+        // that writes half the headline still paints something, so a bare
+        // "greater than zero" would pass on a truncated hero.
+        expect(
+          shell.length,
+          'the served `/` shell headline is not the founder headline word for word — prerender wrote a different one, or none',
+        ).toBe(heroHeadlineText().trim().split(/\s+/).length)
         expect(shell[0].letterSpacing, 'the shell headline was read before the stylesheet applied').not.toBe('normal')
       } finally {
         release()
@@ -142,7 +155,7 @@ test.describe('premium homepage', () => {
         hydrated,
         `at ${width}px the headline React renders is not the headline the shell painted. `
         + 'Every property here is produced by one set of rules in global.css, so a difference '
-        + 'means the shell markup and src/pages/Home.jsx have drifted apart — which costs a '
+        + 'means the shell markup and src/pages/Spectrum.jsx have drifted apart — which costs a '
         + 'layout shift AND hands Chrome a second, later LCP candidate.',
       ).toEqual(shell)
     })
@@ -193,24 +206,50 @@ test.describe('premium homepage', () => {
     // 70-anti-slop-marketing.spec.js owns the rendered absence.
     await expect(page.locator('.htools-facts'), 'the figure strip is back').toHaveCount(0)
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
-    await expect(page.getByText(/Component tooling is coming next/)).toBeVisible()
 
-    // V2 retired the Export roadmap section, but the honesty rule it guarded —
-    // unbuilt things are visibly marked Soon, never claimed as live — now lives
-    // on the tools grid. Component tooling is the unbuilt category.
-    const componentCard = page.locator('.htool', { hasText: 'UI Component Builder' })
-    await expect(componentCard.locator('.htool-soon').first()).toBeVisible()
-    await expect(page.locator('.htool-soon').first()).toHaveText('Soon')
+    /* ── THE BENCH IS THE PROOF, AND ITS ARITHMETIC MUST AGREE WITH ITSELF ───
+     *
+     * The old page argued "eleven tools, five ways of working" with a tabbed
+     * workbench. Spectrum argues the same thing with a numbered rail: five
+     * category rows, each carrying a count, over five panels that each end at
+     * the real tool.
+     *
+     * THE RAIL'S COUNTS MUST SUM TO THE HEADLINE'S NUMBER. This is the S6
+     * defect written down as a test: the rail printed `panel.tools.length`
+     * (live only) while the lede counted live-and-not-beta, so five rows summed
+     * to fourteen a finger-width from a sentence saying thirteen. Summed here
+     * rather than pinned per row, so re-tiering a tool moves both or fails.
+     *
+     * THE UNBUILT TOOL IS NOT ON THIS PAGE AT ALL. The old grid carried a "UI
+     * Component Builder" card marked Soon, and this spec asserted the Soon
+     * badge. Spectrum omits unbuilt tools instead of badging them, which keeps
+     * the same honesty rule by a different route — nothing here claims a tool
+     * that does not exist. The one shipped-but-unfinished tool DOES appear and
+     * says so, which is the case worth guarding. */
+    const rail = page.locator('.sp-rail-row')
+    await expect(rail).toHaveCount(5)
 
-    // Every live tool reachable above; five ways of working below. The
-    // relationship is the page's argument, so both are regression-guarded.
-    await expect(page.locator('.htool-link')).toHaveCount(18)
-    await expect(page.locator('.htool')).toHaveCount(6)
-    const workbench = page.locator('.hw-shell')
-    await workbench.scrollIntoViewIfNeeded()
-    await expect(workbench).toBeVisible()
-    await expect(page.locator('.hw-tab')).toHaveCount(5)
-    await expect(page.getByRole('link', { name: /Continue in Palette Builder/ }))
+    const counts = await rail.locator('.sp-rail-count').allTextContents()
+    const summed = counts.reduce((total, n) => total + Number(n), 0)
+    const lede = await page.locator('.sp-lede').first().innerText()
+    expect(
+      lede.toLowerCase(),
+      'the bench lede no longer states a tool count, so the rail has nothing to agree with',
+    ).toContain('thirteen')
+    expect(
+      summed,
+      `the rail's five counts sum to ${summed} while the lede beside them says thirteen`,
+    ).toBe(13)
+
+    // Shipped but unfinished is declared, not hidden — the founder's rule is
+    // that a tool on the shelf is never dressed up as more finished than it is.
+    await expect(page.locator('.sp-beta')).toHaveText('Beta')
+
+    // Each panel ends at the real tool rather than at a screenshot of it.
+    const bench = page.locator('#bench')
+    await bench.scrollIntoViewIfNeeded()
+    await expect(page.locator('.sp-panel')).toHaveCount(5)
+    await expect(page.getByRole('link', { name: /Open Colour System Generator/ }))
       .toHaveAttribute('href', '/create/palette')
 
     const overflow = await page.evaluate(
@@ -226,12 +265,16 @@ test.describe('premium homepage', () => {
     await go(page, '/')
 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Start building free' }).first()).toBeVisible()
-    await expect(page.locator('.htool-link')).toHaveCount(18)
-    // The phone gets the calm stacked arrangement: the demo panel does not
-    // stick, so the narrative reads as one column of prose. Same guarantee the
-    // satellite field's `position: static` used to give.
-    const stickyPosition = await page.locator('.hsteps-sticky').evaluate(
+    // The hero's own call to action. Signed out it is a real <Link> to the
+    // sign-up, not a button — Home.jsx's reasoning, which Spectrum kept: a link
+    // survives middle-click, "open in new tab" and a JS failure.
+    await expect(page.locator('.sp-hero .sp-cta').first()).toBeVisible()
+    // Every category still reachable from the front door on a phone.
+    await expect(page.locator('.sp-rail-row')).toHaveCount(5)
+    // The phone gets the calm stacked arrangement: the rail does not stick, so
+    // the bench reads as one column instead of pinning a third of a small
+    // screen. Same guarantee `.hsteps-sticky` used to give on the old page.
+    const stickyPosition = await page.locator('.sp-rail-col').evaluate(
       (element) => getComputedStyle(element).position,
     )
     expect(stickyPosition).toBe('static')
@@ -241,5 +284,56 @@ test.describe('premium homepage', () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )
     expect(overflow).toBeLessThanOrEqual(1)
+  })
+
+  /* ── Carried over from 10-home-chaos-to-calm, which was deleted with Home.jsx
+   *
+   * That file's 25 tests described the old homepage's tabbed workbench — a page
+   * the founder replaced. Most of what it asserted went with the page. These
+   * two did not: the command bar and the width sweep are guarantees the FRONT
+   * DOOR makes, whichever page is behind it, so they move here rather than die
+   * with the file. */
+
+  test('the ⌘K keycap names a shortcut that actually works', async ({ page }) => {
+    await useReducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    // A keycap drawn on a control that does not answer the key is a lie the
+    // user only discovers by pressing it. HomeCommandBar survived the redesign
+    // — Spectrum mounts the same component in its hero — so the contract it
+    // advertises has to survive with it.
+    const keycap = page.locator('.hcmd-kbd').first()
+    await expect(keycap).toBeVisible()
+    const label = (await keycap.innerText()).trim()
+    expect(label, 'the hero keycap no longer names a key').toMatch(/K$/i)
+
+    // Control+K on this platform; the component accepts either modifier, and
+    // the suite's Chromium reports a non-Apple platform.
+    await page.keyboard.press('Control+k')
+    await expect(page.locator('.hcmd-input')).toBeFocused()
+  })
+
+  test('holds from 320px to 4K with no sideways scroll', async ({ page }) => {
+    await useReducedMotion(page)
+    watch(page, PERSONA)
+    await go(page, '/')
+
+    // The four widths the old file swept, kept because the front door is the
+    // one page every visitor lands on. 320 is the narrowest phone still in the
+    // support matrix; 3840 is where a fluid clamp stops being tested by any
+    // other spec in this suite.
+    for (const width of [320, 768, 1440, 3840]) {
+      await page.setViewportSize({ width, height: 900 })
+      // The reveal observer and the hero's word stagger both move boxes, so the
+      // measurement waits on the animation layer rather than on a stopwatch.
+      await page.evaluate(async () => {
+        await Promise.all((document.getAnimations?.() || []).map((a) => a.finished.catch(() => {})))
+      })
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      )
+      expect(overflow, `the front door scrolls sideways at ${width}px`).toBeLessThanOrEqual(1)
+    }
   })
 })

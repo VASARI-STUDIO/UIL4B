@@ -38,7 +38,13 @@ import { pendingRulesText } from './pending-firestore-rules.mjs'
 
 const ALICE = 'alice-uid'
 const BOB = 'bob-uid'
-const OWNER_EMAIL = 'dylanjacob1100@gmail.com'
+// The administrator is a CLAIM now, not an address. `analytics-daily` read used
+// to be gated on `request.auth.token.email == '<the founder's gmail>'` — a
+// personal address written into a rules file in a public repository, naming the
+// one account whose compromise yields site-wide admin. api/verify-admin.js has
+// minted the `admin` claim since #241, so the rule matches on that instead and
+// nothing here needs to know anybody's address.
+const ADMIN_CLAIM = { admin: true }
 
 let testEnv
 let rules
@@ -61,8 +67,13 @@ const aliceDb = () => testEnv.authenticatedContext(ALICE).firestore()
 const bobDb = () => testEnv.authenticatedContext(BOB).firestore()
 const anonDb = () => testEnv.unauthenticatedContext().firestore()
 const adminDb = () =>
-  testEnv.authenticatedContext('admin-uid', { admin: true, email: OWNER_EMAIL }).firestore()
-const ownerDb = () => testEnv.authenticatedContext('owner-uid', { email: OWNER_EMAIL }).firestore()
+  testEnv.authenticatedContext('admin-uid', { ...ADMIN_CLAIM }).firestore()
+const ownerDb = () => testEnv.authenticatedContext('owner-uid', { ...ADMIN_CLAIM }).firestore()
+// Signed in, carrying an email and no claim — what every ordinary account looks
+// like, and what the founder's own session looked like before the handshake
+// minted his claim.
+const emailOnlyDb = () =>
+  testEnv.authenticatedContext('email-only-uid', { email: 'someone@example.com' }).firestore()
 
 async function seed(collection, id, data) {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
@@ -368,11 +379,17 @@ test('the founder\'s reset sweep still works against a seeded day', async () => 
   await assertSucceeds(setDoc(dayDoc(ownerDb(), DAY), { day: DAY, views: 0, view__home: 0 }, { merge: true }))
 })
 
-test('reading the counters is still owner-only — nothing here widened the read', async () => {
+test('reading the counters is still admin-only — nothing here widened the read', async () => {
   await seed('analytics-daily', DAY, counters())
   await assertSucceeds(getDoc(dayDoc(ownerDb(), DAY)))
   await assertFails(getDoc(dayDoc(aliceDb(), DAY)))
   await assertFails(getDoc(dayDoc(anonDb(), DAY)))
+  // NARROWER THAN IT WAS, deliberately: the rule used to accept any token whose
+  // `email` matched a literal. It now requires the `admin` claim, which is
+  // minted by api/verify-admin.js from a server-verified email against the
+  // server-side allowlist — so a session that merely carries the right address
+  // is refused until the handshake has granted it.
+  await assertFails(getDoc(dayDoc(emailOnlyDb(), DAY)))
 })
 
 test('a signed-out client still cannot write a counter', async () => {

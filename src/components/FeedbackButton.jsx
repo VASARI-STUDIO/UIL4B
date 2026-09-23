@@ -34,6 +34,17 @@ import { chromelessRoutes } from '../data/toolTree'
 // where the page already IS the form.
 const NO_BUTTON = new Set([
   ...chromelessRoutes(),
+  // '/spectrum' HAS GONE FROM THIS LIST because the route has gone. Spectrum is
+  // the sales page at '/' and '/home' now, and both were already named here —
+  // they are chromeless marketing surfaces that mount their own nav and their
+  // own footer, so neither takes the fixed bottom-right button.
+  //
+  // Not optional, and not tidiness: tests/unit/feedback-reach.test.js requires
+  // every path App.jsx early-returns on BY NAME to appear here, and equally
+  // fails on a name App.jsx no longer returns on, because hoisting the feedback
+  // mount out of the app shell would otherwise give a new early-return route a
+  // button it never had, in a corner global.css already records as colliding
+  // with the footer attribution.
   '/', '/home', '/welcome', '/onboarding', '/feedback',
 ])
 

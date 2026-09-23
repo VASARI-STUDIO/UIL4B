@@ -173,24 +173,50 @@ test.describe('the palette board is a named set, not a list of landmarks', () =>
     expect(landmarked.map((n) => `${n.role}("${n.name}")`)).toEqual([])
   })
 
-  test('the homepage board has the same semantics as the tool it previews', async ({ page }) => {
+  // ── HALF DELETED, HALF KEPT: 'the homepage board has the same semantics as
+  //    the tool it previews' ────────────────────────────────────────────────
+  //
+  // What the deleted half guarded: HomeWorkbench.jsx rendered the SAME palette
+  // board on `/` as /create/palette does, and it had the same fault — five of
+  // the ten landmarks on the homepage were colour swatches named with raw hex.
+  // This asserted the fix held on the copy as well as on the original.
+  //
+  // Why it is gone: the board is gone. `/` and `/home` render
+  // src/pages/Spectrum.jsx since the route swap and src/pages/Home.jsx is
+  // deleted, taking HomeWorkbench with it — measured on the built front door,
+  // `.hw-board` and `.plb-col` both have count 0, so there is no second copy of
+  // the board anywhere in the app. The board's own semantics are still pinned
+  // by the four /create/palette tests above, which is where the board now
+  // exclusively lives.
+  //
+  // What is KEPT, below: the POSITIVE CONTROL. It was there so a change that
+  // stripped every region from the page could not satisfy "no swatch is a
+  // landmark" by having no landmarks at all — and it is a statement about the
+  // FRONT DOOR'S landmark list, which is this file's subject (a non-visual
+  // reader's answer to "what is this page made of" on arrival) and survives the
+  // page being replaced. Dropping it with the board would have quietly removed
+  // the only landmark coverage the homepage has in this file.
+  test('the front door answers "what is this page made of" in its landmarks', async ({ page }) => {
     await go(page, '/')
-    await expect(page.locator('.hw-board .plb-col').first()).toBeVisible()
+    await expect(page.locator('.sp-hero-h1')).toBeVisible()
 
     const nodes = await axNodes(page)
-    const hexNamed = nodes.filter((n) => HEX_NAME.test(n.name))
-    expect(hexNamed.length, 'the homepage swatches still carry their colour names').toBeGreaterThanOrEqual(5)
+    // Nothing on this page is named by a raw hex value, and nothing that is
+    // named by one may be a landmark. Stated in both halves because the front
+    // door does paint colour (the ramp, the discover-card art) and a future
+    // section that labelled a swatch would land here first.
     expect(
-      hexNamed.filter((n) => LANDMARKS.includes(n.role)).map((n) => `${n.role}("${n.name}")`),
-      'the homepage board must not spend five of the page landmarks on swatches',
+      nodes.filter((n) => HEX_NAME.test(n.name) && LANDMARKS.includes(n.role))
+        .map((n) => `${n.role}("${n.name}")`),
+      'the front door must not spend its landmarks on colour values',
     ).toEqual([])
 
-    // POSITIVE CONTROL, and the reason this is not simply `=== 0` above: the
-    // homepage's REAL regions, the ones named by its own h2s, must survive. A
-    // change that stripped every region from the page would satisfy the
-    // assertion above and break the homepage's structure.
     const regions = nodes.filter((n) => n.role === 'region' && n.name)
-    expect(regions.length, 'the homepage keeps the regions named by its h2s').toBeGreaterThanOrEqual(4)
+    expect(
+      regions.length,
+      `the front door reached a reader as ${regions.length} named region(s) — the page is built from`
+      + ' <section aria-labelledby> blocks, so a count this low means the headings stopped naming them',
+    ).toBeGreaterThanOrEqual(4)
   })
 })
 

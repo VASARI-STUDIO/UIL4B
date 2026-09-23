@@ -82,7 +82,17 @@ test.describe('signup intent', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    const hero = page.getByRole('link', { name: /Start building free/ })
+    // BY POSITION, NOT BY LABEL. This matched the words "Start building free",
+    // which was the old homepage's hero CTA; `/` renders src/pages/Spectrum.jsx
+    // now and its hero CTA reads "Open the toolkit" (Spectrum.jsx: `toolkitTo =
+    // user ? '/projects' : '/login?signup=1'`). The GUARANTEE is unchanged and
+    // is the one thing this test is for: whatever the primary hero control
+    // says, for a signed-out visitor it must carry the signup intent in the URL
+    // rather than drop them on a "Welcome Back" form. Anchoring on the hero's
+    // own first CTA rather than on its copy is what stops the next headline
+    // rewrite turning this into a test of nothing.
+    const hero = page.locator('.sp-hero-cta .sp-cta').first()
+    await expect(hero).toBeVisible()
     await expect(hero).toHaveAttribute('href', '/login?signup=1')
 
     await go(page, '/login?signup=1')

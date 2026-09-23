@@ -27,21 +27,31 @@ import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES } from './data/legacyRoutes'
 
 // Static imports — small or always-visited pages (instant load)
-import Home from './pages/Home'
+//
+// SPECTRUM IS THE FRONT DOOR AND THEREFORE STATIC. It was `lazy()` while it
+// lived on a preview route; the front door is the first paint and must not wait
+// on a chunk, which is the same reason <Home /> was static here for as long as
+// it existed. Its sheet moved out of `styles/deferred/` in the same commit, and
+// the ~22 KB of `.home-*` rules that were deleted from global.css alongside it
+// are what pays for that on the render-blocking budget.
+import Spectrum from './pages/Spectrum'
 import Onboarding from './pages/Onboarding'
 import CreateTool from './pages/CreateTool'
-import SurfaceLanding from './pages/SurfaceLanding'
-import ColorLanding from './pages/ColorLanding'
 
 // Lazy imports — the account, billing, legal and system pages (code-split),
 // rendered inside the PillNav app-shell. The Create tool pages, Discover and
-// Learn route through CreateTool / SurfaceLanding, so their old per-page imports
+// Learn route through CreateTool / SurfaceIndex, so their old per-page imports
 // are gone until Phase 2 wires each tool's real logic back in.
 const Settings = lazy(() => import('./pages/Settings'))
 const Community = lazy(() => import('./pages/Community'))
 const Feedback = lazy(() => import('./pages/Feedback'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
+// /credits — the colophon. Lazy for the same reason /privacy and /terms are:
+// it is a reading surface nobody arrives on, and it pulls the whole credits
+// manifest (every font notice, every package licence) with it. That manifest
+// must never reach the entry chunk — see tests/unit/home-asset-budget.test.js.
+const Credits = lazy(() => import('./pages/Credits'))
 const SiteMap = lazy(() => import('./pages/SiteMap'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Projects = lazy(() => import('./pages/Projects'))
@@ -63,14 +73,23 @@ const PaletteGallery = lazy(() => import('./pages/PaletteGallery'))
 const PromptLibrary = lazy(() => import('./pages/PromptLibrary'))
 const CuratedResources = lazy(() => import('./pages/CuratedResources'))
 // One Learn article, rendered inside the PillNav app-shell. /learn itself is
-// chromeless (SurfaceLanding mounts its own nav); its articles are not, the same
+// chromeless (SurfaceIndex mounts its own nav); its articles are not, the same
 // way /discover is chromeless and /discover/palettes is not.
 const LearnArticle = lazy(() => import('./pages/LearnArticle'))
 const NotFound = lazy(() => import('./pages/NotFound'))
+// /discover and /learn — the two surface INDEXES, in one component.
+//
+// STATIC UNTIL 2026-09-18, and it was static for a reason that expired: it
+// shared `.home-*` with the homepage, so its rules were in the render-blocking
+// sheet whether it was eager or not and laziness bought nothing. Home is gone,
+// those rules moved into src/styles/pages/surface.css, and an eager import
+// would drag that sheet straight back into the entry chunk. Neither of these
+// routes is a first paint.
+const SurfaceIndex = lazy(() => import('./pages/SurfaceIndex'))
 
 // Create tool routes come straight from the single tool-tree source, so adding a
 // tool never needs a hand-edited <Route>. These paths — plus /discover and
-// /learn — render full-screen with their own PillNav (CreateTool / SurfaceLanding
+// /learn — render full-screen with their own PillNav (CreateTool / SurfaceIndex
 // mount it themselves). Every other route renders inside the shared PillNav
 // app-shell below; the old Sidebar + TopBar chrome is retired.
 // Same membership it always had (the Create routes plus /discover and /learn),
@@ -266,7 +285,7 @@ function AppInner() {
 
   useEffect(() => {
     document.querySelector('.main')?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-    // Chromeless surfaces (Home / Create tools / Discover / Learn) scroll the
+    // Chromeless surfaces (the sales page / Create tools / Discover / Learn) scroll the
     // window itself, not `.main`, so reset it too. When Lenis owns the scroll we
     // must reset through it (a raw window.scrollTo desyncs its virtual position);
     // when it's absent (reduced motion / teardown) fall back to native.
@@ -337,18 +356,35 @@ function AppInner() {
   //          indexable root is unchanged and first paint is unchanged). Signed in
   //          it hands over to the User Home.
   //
+  // THE SALES PAGE IS SPECTRUM, AND IT RENDERS ITS OWN FOOTER.
+  //
+  // No <AppFooter /> beside it, deliberately: <SpectrumFooter /> is part of the
+  // page. Mounting both would give the front door two `contentinfo` landmarks
+  // and two copyright lines, which is a defect a landmark list shows
+  // immediately and a screenshot does not. The one thing AppFooter carried that
+  // had to survive is <FounderNote />, and SpectrumFooter mounts it.
+  //
+  // The '/spectrum' preview route is GONE. It existed only so the page could be
+  // built and reviewed while Home still owned '/'; keeping it would leave a
+  // second URL serving the front door, indexable, with no canonical of its own.
+  //
   // /welcome is the legacy path — redirect it to /home so old links keep working.
   if (location.pathname === '/welcome') {
     return <Navigate to="/home" replace />
   }
   if (location.pathname === '/home') {
-    return <><Home /><AppFooter /><GoogleOneTap /></>
+    return <><Spectrum /><GoogleOneTap /></>
   }
   if (location.pathname === '/onboarding') {
     return <Onboarding />
   }
+  // Retargeted with the colour landing's deletion: /create/color is no longer a
+  // page, it is a category home that bounces to its first tool like the other
+  // four. Pointing this at it would have been a two-hop redirect, which is the
+  // exact defect src/data/legacyRoutes.js exists to prevent — so both this early
+  // return and the table's four other entries now name /create/palette.
   if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/color/ui') {
-    return <Navigate to="/create/color" replace />
+    return <Navigate to="/create/palette" replace />
   }
   if (location.pathname === '/') {
     // FIRST PAINT MUST NOT WAIT ON FIREBASE. The obvious implementation of this
@@ -384,25 +420,39 @@ function AppInner() {
     // it is byte-identical to this URL, and redirecting `/` to `/home` would move
     // every signed-out visitor and every crawler off the canonical root.
     if (destination !== '/home') return <Navigate to={destination} replace />
-    return <><Home /><AppFooter /><GoogleOneTap /></>
+    return <><Spectrum /><GoogleOneTap /></>
   }
 
-  // Create tool shells + the Discover / Learn landings render full-screen with the
+  // Create tool shells + the Discover / Learn indexes render full-screen with the
   // floating PillNav, outside the legacy app chrome. Matched on a normalised path
   // so a trailing slash or casing can't leak a chromeless route into the chrome
   // router below. Discover / Learn get a per-surface key so the scroll-reveal
   // observer re-scans when switching between them (they share one component).
   const bare = location.pathname.toLowerCase().replace(/\/+$/, '') || '/'
   if (CHROMELESS_PATHS.has(bare)) {
-    // /create/color is the colour sales page (the old merged studio is being reworked
-    // into the Design System Builder walkthrough); /discover and /learn are the
-    // surface landings; everything else is a live Create tool shell.
+    // /discover and /learn are the two surface INDEXES; everything else here is a
+    // live Create tool shell.
+    //
+    // /create/color IS NO LONGER INTERCEPTED. It was the one Create category home
+    // that rendered a page — ColorLanding, the colour sales page — and the founder
+    // deleted it with the other two landings. It now falls through to <CreateTool />
+    // and bounces to /create/palette exactly like /create/typography,
+    // /create/imagery, /create/ai-tools and /create/icons-emoji already do.
+    // CREATE_HOMES_THAT_RENDER in toolTree.js is the fact that says so, and it is
+    // now empty; tests/unit/prerender-routes.test.js reads it against this file.
     const surface = bare === '/discover' ? 'discover' : bare === '/learn' ? 'learn' : null
     return (
       <>
-        {bare === '/create/color'
-          ? <><ColorLanding /><AppFooter /></>
-          : surface ? <><SurfaceLanding key={surface} surface={surface} /><AppFooter /></> : <CreateTool />}
+        {surface
+          // Its own Suspense boundary: this branch returns ABOVE the app shell,
+          // and the shell's <Suspense> is what every other lazy page leans on.
+          ? (
+            <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+              <SurfaceIndex key={surface} surface={surface} />
+              <AppFooter />
+            </Suspense>
+          )
+          : <CreateTool />}
         <GoogleOneTap />
       </>
     )
@@ -436,7 +486,13 @@ function AppInner() {
                   Gradient Generator (?gs= scheme). Renders inside the app-shell. */}
               <Route path="/discover/gradients" element={<GradientGallery toast={toast} />} />
               <Route path="/discover/palettes" element={<PaletteGallery toast={toast} />} />
-              <Route path="/discover/prompts" element={<PromptLibrary toast={toast} />} />
+              {/* `onCopy` is not optional here. PromptLibrary destructures it
+                  and copyPrompt calls it bare, so without it BOTH copy paths in
+                  the modal — the body click and the "Copy prompt" button —
+                  threw `onCopy is not a function`, silently: no text, no toast,
+                  no visible error, on the page whose whole product is the text
+                  you came to copy. Same helper /seo is given below. */}
+              <Route path="/discover/prompts" element={<PromptLibrary onCopy={copy} toast={toast} />} />
               {/* Curated Resources — the hand-picked external set in
                   src/data/discoverResources.js. The nav has advertised this as
                   “Soon” since Slice 2 while the data sat unrendered; this is the
@@ -483,6 +539,7 @@ function AppInner() {
               <Route path="/feedback" element={<Feedback toast={toast} />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/credits" element={<Credits />} />
               <Route path="/sitemap" element={<SiteMap />} />
               <Route path="/help" element={<HelpCentre />} />
               <Route path="/principles" element={<DesignPrinciples />} />

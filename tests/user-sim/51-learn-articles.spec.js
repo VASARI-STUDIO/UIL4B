@@ -276,25 +276,40 @@ test.describe('Learn articles', () => {
       .toBe(false)
 
     // And the direct form of the same check, against the browser rather than
-    // against the rendered digits: re-measure at the em the component uses and
-    // at the em that was wrong, and confirm the small one is the one that
-    // rounds. If Chromium ever stopped rounding at 100px this would go red and
-    // the guard above would become untestable rather than merely unnecessary.
+    // against the rendered digits: re-measure at the em that was wrong and at
+    // the em the component uses. If Chromium ever stopped rounding at 100px the
+    // first half would go red and the guard above would become untestable
+    // rather than merely unnecessary.
+    //
+    // WHAT THE LARGER EM BUYS IS A THIRD DECIMAL, NOT A FRACTIONAL PIXEL. This
+    // used to assert that the 1000px extent is not a whole pixel, which is true
+    // of Chromium on Windows (Geist's x is 531.25) and false on Linux, where
+    // FreeType rounds ink bounds to whole pixels at every size (CI read 532 and
+    // 719). Rounding to a whole pixel at 1000px is still rounding to a
+    // thousandth of an em — exactly the three places the table prints — so the
+    // claim that matters is that the 1000px measurements carry a third decimal
+    // the 100px ones cannot: across the x and H of both product faces, at least
+    // one must not land on a multiple of 10px. At 100px every one of them does,
+    // by construction, which is the defect this guards.
     const rounding = await page.evaluate(() => {
       const ctx = document.createElement('canvas').getContext('2d')
-      const stack = getComputedStyle(document.documentElement).getPropertyValue('--font').trim()
-      const at = (em) => {
+      const root = getComputedStyle(document.documentElement)
+      const stacks = ['--font', '--mono'].map((v) => root.getPropertyValue(v).trim())
+      const at = (em, stack, glyph) => {
         ctx.font = `${em}px ${stack}`
-        return ctx.measureText('x').actualBoundingBoxAscent / em
+        return ctx.measureText(glyph).actualBoundingBoxAscent / em
       }
-      return { small: at(100), large: at(1000) }
+      const all = (em) => stacks.flatMap((s) => ['x', 'H'].map((g) => at(em, s, g)))
+      return { small: all(100), large: all(1000) }
     })
-    expect(Number.isInteger(rounding.small * 100),
-      `an ink extent measured at 100px came back as ${rounding.small * 100}px rather than a whole`
-      + ' pixel — the premise of the precision guard above no longer holds').toBe(true)
-    expect(rounding.large * 1000 % 1,
-      'the same measurement at 1000px is also a whole pixel, so the larger em buys no precision')
-      .not.toBe(0)
+    expect(rounding.small.every((r) => Number.isInteger(Math.round(r * 100 * 1e6) / 1e6)),
+      `an ink extent measured at 100px came back as ${rounding.small.map((r) => r * 100).join(', ')}px`
+      + ' rather than whole pixels — the premise of the precision guard above no longer holds').toBe(true)
+    const thirdPlaces = rounding.large.map((r) => Math.round(r * 1000) % 10)
+    expect(thirdPlaces.length, 'nothing was re-measured at 1000px, so this guard is vacuous').toBe(4)
+    expect(thirdPlaces.every((d) => d === 0),
+      `every extent measured at 1000px (${rounding.large.map((r) => r * 1000).join(', ')}px) is a`
+      + ' multiple of 10px, so the larger em buys no third decimal place').toBe(false)
 
     // ── /learn/font-loading ────────────────────────────────────────────────
     await go(page, '/learn/font-loading')
@@ -305,9 +320,35 @@ test.describe('Learn articles', () => {
     const faces = page.locator('[aria-label*="has been downloaded"]')
     await expect(faces, 'FontFaceTable rendered nothing — no @font-face rule was readable').toBeVisible()
     const faceRows = faces.locator('tbody tr')
-    await expect(faceRows).toHaveCount(4)
+
+    // THE ROW COUNT IS READ OFF THE PAGE'S OWN CSSOM, not typed.
+    //
+    // It was `toHaveCount(4)` and the Spectrum foundation made that wrong: the
+    // UI face moved from Manrope to Geist and the mono from its old stack to
+    // Geist Mono, so the page now declares THREE families (Geist, Geist Mono,
+    // Caveat) split over two unicode-ranges each — six rows, not four. The
+    // number was never this test's subject; the subject is that FontFaceTable
+    // renders ONE ROW PER DECLARED FACE and computes each one's range
+    // separately. Counting the CSSFontFaceRules is counting the same thing
+    // FontFaceTable itself counts, so a family added or dropped moves both
+    // sides together and this cannot go stale again — while a table that
+    // rendered the wrong number of rows still fails, which is the point.
+    const declared = await page.evaluate(() => {
+      let n = 0
+      for (const sheet of document.styleSheets) {
+        let rules
+        try { rules = sheet.cssRules } catch { continue }   // cross-origin sheet
+        for (const rule of rules) if (rule instanceof CSSFontFaceRule) n += 1
+      }
+      return n
+    })
+    // ANTI-VACUITY: a CSSOM that returned nothing would make every assertion
+    // below pass on a table with no rows.
+    expect(declared, 'no @font-face rule was readable from this page at all').toBeGreaterThan(1)
+    await expect(faceRows).toHaveCount(declared)
+
     const counts = []
-    for (let i = 0; i < 4; i += 1) {
+    for (let i = 0; i < declared; i += 1) {
       const row = faceRows.nth(i)
       const nums = await row.locator('td[data-num]').allInnerTexts()
       expect(nums, `face row ${i} does not print a weight range and a code-point count`).toHaveLength(2)
@@ -319,11 +360,20 @@ test.describe('Learn articles', () => {
       await expect(row.locator('td').nth(1)).toHaveText('swap')
       await expect(row.locator('td').last()).toContainText(/^(Yes|No)/)
     }
-    // The section's premise: a family is split, and the two halves are not the
-    // same size. One count repeated four times means the range is not being read.
-    expect(new Set(counts).size,
-      `the four faces report ${[...new Set(counts)].join(', ')} code points — the ranges are not being computed separately`)
-      .toBe(2)
+    // The section's premise: a family is split, and the halves are not the same
+    // size. One count repeated for every row means the range is not being read
+    // at all; a distinct count for every row would mean the families are not
+    // sharing the two subsets the premise is about. Both bounds are derived
+    // from the row count rather than from the `2` that was typed here when
+    // exactly two families were declared.
+    const distinct = new Set(counts).size
+    expect(distinct,
+      `all ${declared} faces report the same ${counts[0]} code points — the ranges are not being computed separately`)
+      .toBeGreaterThan(1)
+    expect(distinct,
+      `the ${declared} faces report ${declared} different code-point counts (${[...new Set(counts)].join(', ')})`
+      + ' — the families are no longer split over one shared pair of subsets, which is what the section explains')
+      .toBeLessThan(declared)
 
     // FallbackShiftTable paints the same sentence in the declared stack and in
     // the stack with its webfont removed. The section's whole argument is that

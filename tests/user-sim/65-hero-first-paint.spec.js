@@ -2,13 +2,34 @@
 // and it must not arrive twice.
 //
 // ─────────────────────────────────────────────────────────────────────────────
+// MIGRATED TO THE SPECTRUM HERO, 2026-09-22
+// ─────────────────────────────────────────────────────────────────────────────
+// `/` is Spectrum now and `src/pages/Home.jsx` is deleted. Every selector and
+// animation name below moved with it, one for one, because the MECHANISM is the
+// same and so is the thing worth guarding:
+//
+//     .home-hero-line     → .sp-wm   the clipping wrapper (overflow:hidden)
+//     .home-hero-line-in  → .sp-w    the inner span that starts pushed down
+//     .home-hero-h1       → .sp-hero-h1
+//     home-hero-clip-up   → sp-word-up
+//
+// The one real difference: Home split its headline into two LINES and Spectrum
+// splits it into WORDS (SpectrumWords wraps each word in that pair), so the
+// per-element assertions below now run per word. That is strictly stronger —
+// a re-wrap moves a word before it moves a line box.
+//
+// The history above and below is kept as history. It describes the old hero,
+// which is why the LCP question exists at all; it is not a claim about the
+// current markup.
+//
+// ─────────────────────────────────────────────────────────────────────────────
 // WHAT THIS FILE USED TO GUARD, AND WHY THE QUESTION MOVED
 // ─────────────────────────────────────────────────────────────────────────────
 // Until 2026-09-13 the headline did not exist in the served HTML. It was painted
 // by React, so the hero's FIRST FRAME was the first frame of the `home-hero-
 // clip-up` entrance, and the only reason LCP was not a further ~100 ms behind
 // hydration was a geometric accident worth pinning: the clip-up starts at
-// translate 110% behind `.home-hero-line`'s overflow:hidden, and the `.28em` of
+// translate 110% behind `.sp-wm`'s overflow:hidden, and the `.28em` of
 // descender padding INSIDE that mask left ~.18em of the line box painted on
 // frame 0. Chrome records a text block the first time it paints with non-zero
 // area inside its clip and never re-sizes it, so LCP was pinned to that frame —
@@ -49,6 +70,13 @@
 // identity of the LCP element — all exact, all machine-independent.
 import { test, expect } from './base.js'
 import { go, ready, watch } from './helpers.js'
+import { heroHeadlineText } from '../../src/data/positioning.js'
+
+// One `.sp-w` per word of the headline. DERIVED, and the selectors below are
+// SCOPED to `.sp-hero-h1`, because `<SpectrumWords>` is used for the section
+// headings too — an unscoped `.sp-w` matches 47 elements on this page, most of
+// them nowhere near the hero.
+const HERO_WORDS = heroHeadlineText().trim().split(/\s+/).length
 
 // Installed before any page script, buffered so nothing painted before the
 // observer attached is missed. Records every candidate, not just the last one,
@@ -69,7 +97,7 @@ const seen = new WeakSet()
 const scan = () => {
   try {
     for (const a of document.getAnimations()) {
-      if (a.animationName !== 'home-hero-clip-up' || seen.has(a)) continue
+      if (a.animationName !== 'sp-word-up' || seen.has(a)) continue
       seen.add(a)
       window.__clipUps.push(Math.round(performance.now()))
     }
@@ -100,7 +128,7 @@ const MEASURE = (els) => els.map((el) => {
 // Rewind each line's clip-up to ITS OWN time 0 and measure there. Restores the
 // animation afterwards. Only used on the path where the entrance still runs.
 const FIRST_FRAME = (els) => els.map((el) => {
-  const anim = el.getAnimations().find((a) => a.animationName === 'home-hero-clip-up')
+  const anim = el.getAnimations().find((a) => a.animationName === 'sp-word-up')
   const clip = el.parentElement
   const measure = () => {
     const c = clip.getBoundingClientRect()
@@ -150,8 +178,8 @@ test('a cold homepage load paints the whole headline, and does not animate it in
     + 'headline a LARGER LCP candidate than the shell\'s, which moves LCP back to hydration.',
   ).toBe(0)
 
-  const lines = page.locator('.home-hero-line-in')
-  await expect(lines).toHaveCount(2)
+  const lines = page.locator('.sp-hero-h1 .sp-w')
+  await expect(lines).toHaveCount(HERO_WORDS)
   const now = await lines.evaluateAll(MEASURE)
   for (const [i, f] of now.entries()) {
     expect(f.animationName, `line ${i + 1} still has an animation-name on a pre-painted hero`).toBe('none')
@@ -177,35 +205,47 @@ test('the headline is the LCP element of a homepage load, recorded at its full s
   // never resolves. On this path there are none to wait for, which is the point
   // of the test above; this stays so the check does not depend on that.
   await page.evaluate(() => Promise.allSettled(
-    document.getAnimations().filter((a) => /^home-hero-/.test(a.animationName || '')).map((a) => a.finished),
+    document.getAnimations().filter((a) => /^sp-word-/.test(a.animationName || '')).map((a) => a.finished),
   ))
 
   const entries = await page.evaluate(() => window.__lcpEntries)
   expect(entries.length, 'no largest-contentful-paint entry at all — the probe never attached').toBeGreaterThan(0)
   const list = entries.map((e) => `${e.el}@${e.t}ms/${e.size}px²`).join(', ')
 
+  /* THE CANDIDATE IS THE H1, NOT A LINE SPAN, AND THAT IS AN IMPROVEMENT.
+   *
+   * Home split its headline into two `.home-hero-line-in` spans and Chrome
+   * picked one of them, so the recorded candidate was always a fraction of the
+   * headline. Spectrum's words sit inside one `.sp-hero-h1` text block, which
+   * Chrome records whole: measured 2026-09-22, H1.sp-hero-h1 @192ms /
+   * 197,136px² — the entire headline, on the shell's paint.
+   *
+   * That is the stronger version of what this test has always wanted. The
+   * size assertion below is what does the real work either way. */
   // FIRST, because that is the one the served shell produced.
   expect(entries[0].el, `the first LCP candidate is ${entries[0].el}, not the headline. Candidates: ${list}`)
-    .toBe('SPAN.home-hero-line-in')
+    .toBe('H1.sp-hero-h1')
   // LAST, because a later, larger candidate is exactly how this regresses.
   expect(entries[entries.length - 1].el, `the last LCP candidate is not the headline. Candidates: ${list}`)
-    .toBe('SPAN.home-hero-line-in')
+    .toBe('H1.sp-hero-h1')
 
   // AND AT FULL SIZE. This is the assertion that would catch the entrance
   // coming back to the shell: a clipped first frame is recorded at roughly 2% of
   // the headline's box (2369 px² was the measured figure), and Chrome never
   // re-sizes it — so the settled hydrated headline becomes a larger candidate
   // and LCP silently returns to hydration with the page looking identical.
-  const boxes = await page.locator('.home-hero-line-in').evaluateAll(
-    (els) => els.map((el) => {
-      const b = el.getBoundingClientRect()
-      return Math.round(b.width * b.height)
-    }),
-  )
-  const biggest = Math.max(...boxes)
+  //
+  // MEASURED AGAINST THE H1'S OWN SETTLED BOX, since the H1 is what Chrome
+  // records. Comparing against the largest single `.sp-w` would be comparing
+  // the whole headline against one word of it — a ratio near 10, which passes
+  // whatever happens and tests nothing.
+  const biggest = await page.locator('.sp-hero-h1').evaluate((el) => {
+    const b = el.getBoundingClientRect()
+    return Math.round(b.width * b.height)
+  })
   expect(
     entries[0].size,
-    `the headline's LCP was recorded at ${entries[0].size} px² against a settled line box of `
+    `the headline's LCP was recorded at ${entries[0].size} px² against a settled headline box of `
     + `${biggest} px². That is a clipped first frame, not the painted headline. Candidates: ${list}`,
   ).toBeGreaterThan(biggest * 0.3)
 })
@@ -240,24 +280,83 @@ async function arriveFromAnotherRoute(page) {
 }
 
 test("arriving at the homepage in-session still plays the entrance, and still paints inside its clip on frame 0", async ({ page }) => {
+  // EVERY FRAME, FROM BEFORE THE CLICK. The hero used to commit without `.is-in`
+  // and get it one requestAnimationFrame later, so for one to three frames the
+  // headline painted whole and settled, then every word dropped under its mask
+  // and rose — and a single read after the words appeared could land in that
+  // window and see no entrance at all (CI run 35827912049). A read cannot rule
+  // that out; only a per-frame scan can. It is installed on the document the
+  // visitor starts on, which survives the in-session route change, and counts
+  // the frames on which the hero's words existed with no entrance on them before
+  // the entrance first appeared.
+  await page.addInitScript(() => {
+    window.__heroBare = 0
+    window.__heroEntered = false
+    const scan = () => {
+      const w = document.querySelector('.sp-hero-h1 .sp-w')
+      if (w && !window.__heroEntered) {
+        if (w.getAnimations().some((a) => a.animationName === 'sp-word-up')) window.__heroEntered = true
+        else window.__heroBare += 1
+      }
+      requestAnimationFrame(scan)
+    }
+    requestAnimationFrame(scan)
+  })
   watch(page, 'a visitor who reaches the homepage from a tool, for whom the hero really does arrive')
   await arriveFromAnotherRoute(page)
 
-  const lines = page.locator('.home-hero-line-in')
-  await expect(lines).toHaveCount(2)
+  const lines = page.locator('.sp-hero-h1 .sp-w')
+  await expect(lines).toHaveCount(HERO_WORDS)
+  // Wait on the animation layer rather than on a single read: the scan must have
+  // seen the entrance. If it never arrives this times out and the assertion
+  // below names why.
+  await page.waitForFunction(() => window.__heroEntered, null, { polling: 'raf', timeout: 5000 }).catch(() => {})
+  const scan = await page.evaluate(() => ({ entered: window.__heroEntered, bare: window.__heroBare }))
+  expect(scan.entered, 'the per-frame scan never saw an sp-word-up entrance on the hero').toBe(true)
+  expect(scan.bare, `the headline painted settled for ${scan.bare} frame(s) before its entrance started — `
+    + 'a visible flash, then every word dives under its mask and rises').toBe(0)
+
   const frame0 = await lines.evaluateAll(FIRST_FRAME)
 
   for (const [i, f] of frame0.entries()) {
-    expect(f.animated, `headline line ${i + 1} has no home-hero-clip-up animation — the entrance is gone from the one path where it is still an entrance`).toBe(true)
+    expect(f.animated, `headline line ${i + 1} has no sp-word-up animation — the entrance is gone from the one path where it is still an entrance`).toBe(true)
     // Positive control: the rewind put the `from` keyframe in effect.
     expect(f.transform, `line ${i + 1}: at time 0 the clip-up's from-transform should apply; got 'none', so this measured the settled headline`).not.toBe('none')
-    expect(f.inViewport, `line ${i + 1} is outside the viewport at time 0`).toBe(true)
+    expect(f.inViewport, `word ${i + 1} is outside the viewport at time 0`).toBe(true)
+  }
+
+  /* THE FRAME-0 SLIVER REQUIREMENT IS GONE, DELIBERATELY, AND THIS REPLACES IT.
+   *
+   * It used to require `visibleArea > 0` on the entrance's first keyframe. That
+   * mattered when the entrance was the hero's FIRST paint on a cold load: a
+   * fully-clipped frame 0 meant Chrome either recorded a sliver as the LCP
+   * candidate or recorded nothing, and LCP walked back to hydration.
+   *
+   * Neither is true any more. A cold load never plays this entrance — the shell
+   * paints the headline and `data-hero-prepainted` turns the animation off, and
+   * the test above proves the LCP candidate is the whole H1 at full size. The
+   * only path left is this one, an in-session route change, which produces no
+   * LCP entry at all.
+   *
+   * Meanwhile Spectrum's words deliberately START fully hidden:
+   * `translateY(112%)` inside the mask, which SpectrumWords.jsx documents as
+   * invisible on purpose so the stagger reads as words arriving. Keeping the
+   * old assertion would fail the design for satisfying a constraint that no
+   * longer has anything behind it.
+   *
+   * What still has to be true is that the entrance ENDS — a word left stuck
+   * under its mask is a headline nobody can read, and that failure would be
+   * silent. So the entrance is played out and the headline measured settled. */
+  await page.evaluate(() => Promise.allSettled(
+    document.getAnimations().filter((a) => /^sp-word-/.test(a.animationName || '')).map((a) => a.finished),
+  ))
+  const settled = await lines.evaluateAll(MEASURE)
+  for (const [i, s] of settled.entries()) {
     expect(
-      f.visibleArea,
-      `line ${i + 1}: on the entrance's first keyframe 0 px² of the headline is inside its clip `
-      + `(box ${f.boxArea} px²). Keep the clip-up's from-translate under 100% + `
-      + ".home-hero-line's padding-block, or the headline is invisible for the 80 ms delay plus a frame.",
-    ).toBeGreaterThan(0)
+      s.visibleArea,
+      `word ${i + 1} is still clipped after its entrance finished: ${s.visibleArea} px² of a `
+      + `${s.boxArea} px² box is inside the mask. The headline never became readable.`,
+    ).toBeGreaterThan(s.boxArea * 0.9)
   }
 })
 
@@ -273,8 +372,8 @@ test('under reduced motion the headline is fully inside its clip with no entranc
   watch(page, 'a visitor who turned motion off and must get the headline instantly, whole')
   await arriveFromAnotherRoute(page)
 
-  const lines = page.locator('.home-hero-line-in')
-  await expect(lines).toHaveCount(2)
+  const lines = page.locator('.sp-hero-h1 .sp-w')
+  await expect(lines).toHaveCount(HERO_WORDS)
   const frame0 = await lines.evaluateAll(FIRST_FRAME)
   for (const [i, f] of frame0.entries()) {
     expect(f.animated, `line ${i + 1} still runs the clip-up under reduced motion`).toBe(false)

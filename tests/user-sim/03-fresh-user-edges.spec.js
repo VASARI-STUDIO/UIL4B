@@ -13,11 +13,16 @@ test.describe('mobile (390×844)', () => {
     const fb = watch(page, PERSONA)
     await go(page, '/')
     await expectRendered(page, '/')
-    // Some form of nav affordance must be visible: mobile burger or the pill
-    // triggers. NB: `.first()` on a comma selector returns first-in-DOM (which
-    // may be a hidden desktop trigger) — count the VISIBLE matches instead.
+    // Some form of nav affordance must be visible: the app header's mobile
+    // burger, its pill triggers, or — on the front door, which is Spectrum now
+    // — the marketing pill's own burger. Deliberately a list of affordances
+    // rather than a route-specific selector: the rule is "a phone visitor can
+    // always see a way into the product", and it should hold whichever header
+    // the route mounts. NB: `.first()` on a comma selector returns
+    // first-in-DOM (which may be a hidden desktop trigger) — count the VISIBLE
+    // matches instead.
     const visibleNav = await page
-      .locator('.pnav-mobile:visible, .pnav-trigger:visible')
+      .locator('.pnav-mobile:visible, .pnav-trigger:visible, .spnav-burger:visible')
       .count()
       .catch(() => 0)
     if (!visibleNav) {

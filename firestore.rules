@@ -286,15 +286,28 @@ service cloud.firestore {
 
     // Aggregate usage analytics — per-day counter docs ({YYYY-MM-DD}).
     // Any signed-in user may create/update (increment) the counters so the
-    // admin dashboard can reflect ALL users' usage. Read is gated to the owner
-    // email. (The `admin` custom claim IS set — api/verify-admin.js has minted it
-    // since #241 — but this rule predates that and still matches on email. It is
-    // deliberately NOT widened to isReviewer(): reviewing submissions is not a
-    // reason to hand a volunteer site-wide usage analytics.)
+    // admin dashboard can reflect ALL users' usage. Read is gated to an
+    // administrator.
+    //
+    // It is the `admin` CLAIM, not an email literal. This rule used to compare
+    // against the founder's personal address: api/verify-admin.js has minted
+    // the claim since #241, and the comment here recorded that the rule merely
+    // predated it. That was a tidiness note while the repository was private
+    // and stopped being one when it went public — the literal named, in a file
+    // anyone can read, the single account whose compromise yields both
+    // site-wide admin and the full user list. The claim is also the stronger
+    // fact: it is minted from a server-verified email against the server-side
+    // allowlist (ADMIN_EMAILS), so it can never be carried by a token whose
+    // `email` was set some other way, and the allowlist can change without a
+    // rules deploy.
+    //
+    // Still deliberately NOT widened to isReviewer(): reviewing submissions is
+    // not a reason to hand a volunteer site-wide usage analytics.
+    //
     // Note: this cannot fully prevent a signed-in user inflating counters —
     // accepted limitation for an internal, non-billing dashboard.
     match /analytics-daily/{day} {
-      allow read: if request.auth != null && request.auth.token.email == 'dylanjacob1100@gmail.com';
+      allow read: if request.auth != null && request.auth.token.admin == true;
 
       // Two bounds this never had, and one it deliberately still does not.
       //

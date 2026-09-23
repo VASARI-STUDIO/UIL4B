@@ -6,6 +6,26 @@ import { appendCommunitySubmission, readCommunitySubmissions } from '../../src/u
 import { buildCommunityPromptRecord, resolvePromptProfileLink } from '../../src/utils/promptSubmission.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
 
+/* THE FOUNDER'S REAL ADDRESS, AND IT HAS TO BE THE LITERAL.
+ *
+ * These fixtures exercise the legacy-record scrub: a community submission that
+ * still carries his email must come back showing his PUBLIC HANDLE and never
+ * the address. The lookup that does it is keyed by a SHA-256 DIGEST of the
+ * address (src/utils/constants.js, OWNER_HANDLES) precisely so the plaintext
+ * stopped shipping in the browser bundle — and a digest is one-way, so no
+ * substitute address can be made to match. A reserved @uil4b.test address was
+ * tried here and the scrub simply does not fire for it, which turns a real
+ * test into a green one that proves nothing.
+ *
+ * So it stays, in ONE place rather than four, with the reason written down.
+ * This is a known residue of the 2026-09-22 exposure review: the address is
+ * already in this repository's git history and in the digest's pre-image, so
+ * the marginal disclosure here is nil — but it IS still a plaintext copy in a
+ * public repo, and the only real fixes are the founder changing the address or
+ * re-keying OWNER_HANDLES on something else. Recorded in OWNER-ACTIONS.
+ */
+const FOUNDER_EMAIL = 'dylanjacob1100@gmail.com'
+
 /**
  * Fire the connectivity event and read back what the library's status pill
  * actually says.
@@ -25,9 +45,17 @@ async function readNetPill(page, type = 'offline') {
 }
 
 test.describe('public UI quality release', () => {
+  /* DRIVEN FROM AN APP ROUTE, NOT FROM '/'.
+   *
+   * The front door is Spectrum now and it mounts `<PillNav variant="spectrum" />`
+   * — the floating marketing pill, whose navigation is a full-screen menu with
+   * no mega-menu and no `.pnav-*` markup at all. The app header this test is
+   * about still renders on every Create/Discover/Learn route, so the test moves
+   * to one instead of asserting the app header on a page that deliberately does
+   * not have it. `96-spectrum-nav.spec.js` owns the front door's own nav. */
   test('mega-menu supports directional entry and retired UI Colour links redirect safely', async ({ page }) => {
     watch(page, 'keyboard-first designer')
-    await go(page, '/')
+    await go(page, '/discover')
 
     const create = page.getByRole('button', { name: 'Create' })
     await create.focus()
@@ -43,13 +71,18 @@ test.describe('public UI quality release', () => {
     await expect(create).toBeFocused()
 
     await go(page, '/color/ui')
-    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/color')
+    // '/create/color' until the colour landing was deleted; it is a category
+    // home that bounces now, so the old bookmark goes straight to the tool.
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/create/palette')
   })
 
+  // Same move, same reason: `.pnav-mobile` is the app header's control and the
+  // front door no longer mounts it. SpectrumNav's own burger, its focus-in and
+  // its Escape-returns-focus are covered by 96-spectrum-nav.spec.js.
   test('mobile menu restores focus and keeps every route inside the viewport', async ({ page }) => {
     watch(page, 'mobile first-time visitor')
     await page.setViewportSize({ width: 390, height: 844 })
-    await go(page, '/')
+    await go(page, '/discover')
 
     const menuButton = page.locator('.pnav-mobile')
     await menuButton.click()
@@ -63,11 +96,33 @@ test.describe('public UI quality release', () => {
     expect(overflow).toBeLessThanOrEqual(1)
   })
 
-  test('every public surface has one shared footer and a persistent Plans route', async ({ page }) => {
+  /* ONE FOOTER LANDMARK, COUNTED AS A LANDMARK.
+   *
+   * This asserted `.app-footer` on every route until `/` became Spectrum, which
+   * renders its own `<footer>` (`.sp-footer`) instead of AppFooter — deliberately,
+   * because mounting both would give the front door TWO contentinfo landmarks
+   * and two copyright lines. Counting the class would now fail on a correct page
+   * and, worse, would pass on the actual defect it exists to catch: two footers
+   * stacked, one of each kind.
+   *
+   * So it counts the `contentinfo` LANDMARK, which is the thing the rule is
+   * actually about and what a screen reader's landmark list shows.
+   *
+   * NOT `footer` elements — that was the first attempt and it over-counted.
+   * `/create/palette` renders a second `<footer class="plb-adjust">` for the
+   * ADJUST ALL toolbar, but it sits inside `<main>` and carries an explicit
+   * `role="group"`, so per HTML-AAM it is not a contentinfo landmark at all.
+   * A `<footer>` only maps to contentinfo when it is NOT nested in article,
+   * aside, main, nav or section — counting tags would have failed a page whose
+   * markup is right.
+   *
+   * '/create/color' left the loop with the colour landing's deletion — it is a
+   * redirect now, so it was asserting the footer of '/create/palette' twice. */
+  test('every public surface has exactly one footer landmark and a persistent Plans route', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/create/color', '/discover', '/learn', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
+    for (const route of ['/', '/discover', '/learn', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
       await go(page, route)
-      await expect(page.locator('.app-footer'), `${route} should render one shared footer`).toHaveCount(1)
+      await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
       if (['/create/palette', '/create/icons', '/create/aspect-ratio'].includes(route)) {
         await expect(page.locator('.app-footer')).toHaveClass(/app-footer--compact/)
@@ -91,8 +146,14 @@ test.describe('public UI quality release', () => {
     watch(page, 'visitor wondering who made this')
     for (const route of ['/', '/discover', '/create/palette']) {
       await go(page, route)
-      const footer = page.locator('.app-footer')
-      const attrib = footer.locator('.app-footer-attrib')
+      // BOTH footers, because '/' is Spectrum and mounts `.sp-footer` while the
+      // app routes mount `.app-footer`. The credit is the founder's own ask and
+      // it is owed on every route, so the selector covers whichever one the
+      // route renders rather than quietly skipping the front door.
+      // The landmark, not the tag: /create/palette also has a `<footer>` inside
+      // <main> for its ADJUST toolbar, which is not a contentinfo landmark.
+      const footer = page.getByRole('contentinfo')
+      const attrib = footer.locator('.app-footer-attrib, .sp-footer-attrib')
       await attrib.waitFor()
 
       await expect(footer, `${route} should credit the founder`).toContainText('Built in Brisbane by Dylan Coleman')
@@ -138,7 +199,10 @@ test.describe('public UI quality release', () => {
           // The underline is semi-transparent, so composite it over the footer
           // ground before measuring — the painted colour is what a user sees.
           const deco = toRgba(style.textDecorationColor)
-          const bg = toRgba(getComputedStyle(el.closest('.app-footer')).backgroundColor)
+          // `.app-footer` until '/' became Spectrum, where this returned null
+          // and getComputedStyle threw. The ground is whichever footer the link
+          // is actually painted on.
+          const bg = toRgba(getComputedStyle(el.closest('footer')).backgroundColor)
           const over = [0, 1, 2].map((i) => deco[i] * deco[3] + bg[i] * (1 - deco[3]))
           const [a, b2] = [lum(over) + 0.05, lum(bg) + 0.05]
           if (previous === null) root.removeAttribute('data-theme')
@@ -319,19 +383,25 @@ test.describe('public UI quality release', () => {
 
   test('community records are scrubbed and unsafe external URLs never become links', async ({ page }) => {
     watch(page, 'privacy-conscious community visitor')
-    await page.addInitScript(() => {
+    // PASSED AS AN ARGUMENT, never closed over. `addInitScript` serialises this
+    // function and runs it in the BROWSER, where a module constant from this
+    // Node file does not exist — the callback throws ReferenceError, the seed
+    // never lands, and the test fails as "no card rendered", which reads like a
+    // page defect rather than a harness one. Cost an hour of looking at the
+    // wrong file.
+    await page.addInitScript((email) => {
       localStorage.setItem('vs-community-submissions', JSON.stringify([{
         id: 'unsafe-owner-record',
         name: 'Unsafe link test',
         author: 'Old profile name',
-        authorEmail: 'dylanjacob1100@gmail.com',
+        authorEmail: email,
         category: 'Landing',
         url: 'javascript:alert(1)',
         c1: '#111111',
         c2: '#333333',
         saves: 0,
       }]))
-    })
+    }, FOUNDER_EMAIL)
     await go(page, '/community')
 
     const card = page.locator('.ch-card', { hasText: 'Unsafe link test' })
@@ -346,19 +416,19 @@ test.describe('public UI quality release', () => {
 
   test('direct Discover load migrates legacy community records before the surface renders', async ({ page }) => {
     watch(page, 'visitor opening Discover from a saved link')
-    await page.addInitScript(() => {
+    await page.addInitScript((email) => {
       localStorage.setItem('vs-community-submissions', JSON.stringify([{
         id: 'discover-legacy-owner',
         name: 'Discover legacy record',
         author: 'Legacy owner',
-        authorEmail: 'dylanjacob1100@gmail.com',
+        authorEmail: email,
         category: 'Branding',
         url: 'data:text/html,unsafe',
         c1: '#111111',
         c2: '#222222',
         saves: 0,
       }]))
-    })
+    }, FOUNDER_EMAIL)
     await go(page, '/discover')
 
     // The h1 is the surface's name. "Find systems worth stealing." was here
@@ -385,7 +455,7 @@ test.describe('public UI quality release', () => {
         id: 'legacy',
         name: 'Legacy',
         author: 'Old',
-        authorEmail: 'dylanjacob1100@gmail.com',
+        authorEmail: FOUNDER_EMAIL,
         url: 'javascript:alert(1)',
       }]),
     ]])
@@ -413,7 +483,7 @@ test.describe('public UI quality release', () => {
 
   test('prompt submissions omit email, use safe founder metadata, and reject unsafe profiles', () => {
     const founder = buildCommunityPromptRecord({
-      user: { uid: 'founder-uid', email: 'dylanjacob1100@gmail.com' },
+      user: { uid: 'founder-uid', email: FOUNDER_EMAIL },
       userProfile: { displayName: 'Outdated name' },
       title: 'Founder prompt',
       text: 'Create a colour system.',

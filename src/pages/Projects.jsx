@@ -13,6 +13,7 @@ import DailyBand from '../components/userhome/DailyBand'
 import StarterRow from '../components/userhome/StarterRow'
 import ProjectCard from '../components/userhome/ProjectCard'
 import SaveRefusal from '../components/SaveRefusal'
+import LocalClock from '../components/LocalClock'
 // The `projects` page stylesheet. Imported here rather than from global.css so
 // Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
 // opens this page downloads it, and it arrives with the chunk, before paint.
@@ -126,7 +127,7 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {icon && <img src={icon} alt="" className="proj-detail-icon" />}
-              <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em', flex: 1 }}>{project.name}</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em', flex: 1 }}>{project.name}</h2>
               {isCurrent && (
                 <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '3px 8px', borderRadius: 4 }}>Loaded</span>
               )}
@@ -276,7 +277,7 @@ function NewProjectModal({ onClose, onCreate, error }) {
         </button>
 
         <div className="fg-detail-section" style={{ marginBottom: 20 }}>
-          <h2 id="proj-new-title" style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.02em' }}>New project</h2>
+          <h2 id="proj-new-title" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>New project</h2>
           <p style={{ fontSize: 13, color: 'var(--t2)', marginTop: 4 }}>
             Give it a name and choose where to begin.
           </p>
@@ -610,6 +611,12 @@ export default function Projects({ toast }) {
     <div className="sec uh">
       <header className="sec-h uh-head">
         <div className="uh-head-main">
+          {/* The viewer's own date and time — see LocalClock.jsx for why it
+              renders nothing until the browser has answered, and why it ticks
+              on the minute rather than the second. It sits ABOVE the h1 rather
+              than beside it because it is context for the page, not a second
+              title competing with "Projects" for the first line. */}
+          <LocalClock className="uh-clock" />
           <h1>Projects</h1>
           <p className="uh-sub">Your saved design systems — palette, fonts, type scale, and tints.</p>
           {/* QUICK DATA TRACKING, and every figure countable.

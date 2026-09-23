@@ -188,10 +188,30 @@ test('the six queries from the bug report reach the tool, not the sales page', (
     assert.ok(first, `"${query}" returns nothing`)
     assert.equal(first.path, routeOf(id), `"${query}" opens ${first.path}`)
   }
-  // And /create/color is still legitimately findable as what it is — a page
-  // about colour. The bug was tool queries landing there, not its existence.
-  assert.ok(ask('colour studio').categories.some((c) => c.path === '/create/color'),
-    'the colour landing is a real page and must stay findable by its own name')
+  // The Colour category is still findable by its own name, and it now resolves
+  // to where a click actually lands. It used to be asserted as `/create/color`,
+  // "a page about colour"; that page was deleted on 2026-09-18 with the Spectrum
+  // swap, so the category row must offer the destination rather than the home
+  // that only bounces to it — the same rule toolIndex.js applies to the other
+  // four categories.
+  // AND THE COLOUR CATEGORY IS NO LONGER OFFERED AT ALL, which is the rule
+  // this file already holds for the other four and not a new exception.
+  //
+  // It used to be asserted the other way round — "/create/color is still
+  // legitimately findable as what it is, a page about colour. The bug was tool
+  // queries landing there, not its existence." That was true while the colour
+  // landing existed. The founder deleted it on 2026-09-18 with the Spectrum
+  // swap, so CREATE_HOMES_THAT_RENDER is empty, every Create category is
+  // `destination: false`, and queryCommandIndex drops all five — the same
+  // behaviour that stopped "alt text" landing a visitor on /create/ai-tools.
+  // The colour TOOLS are still found by name, which the test above asserts.
+  for (const row of ask('colour studio').categories) {
+    assert.notEqual(row.path, '/create/color',
+      'search still offers /create/color, which now only redirects')
+    assert.notEqual(row.group, 'colour',
+      'the Colour category is offered as a destination again, but no Create category '
+      + 'home renders a page — the click would bounce')
+  }
 })
 
 test('a label match outranks a description match', () => {

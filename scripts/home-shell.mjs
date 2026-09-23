@@ -93,7 +93,7 @@
 // there — an arrival — and the clip-up plays as it always has.
 // `prefers-reduced-motion` is untouched: those two rules in global.css already
 // say `animation:none`, and none of this restates them.
-import { HERO_HEADLINE } from '../src/data/positioning.js'
+import { HERO_HEADLINE, heroHeadlineText } from '../src/data/positioning.js'
 
 /** Escape for text between tags. Same contract as prerender.mjs's `text()`. */
 const text = (s) => String(s)
@@ -143,6 +143,40 @@ export const HOME_SHELL_ROUTES = new Set(['/', '/home'])
 /**
  * The `/` shell's #root contents.
  *
+ * ── RE-POINTED AT SPECTRUM, 2026-09-18 ──────────────────────────────────────
+ *
+ * This emitted `.home-hero > .home-hero-core > h1.home-hero-h1` for as long as
+ * Home.jsx was the sales page. Home.jsx is deleted and `/` renders
+ * src/pages/Spectrum.jsx, so the shell emits SPECTRUM's hero chain. Leaving the
+ * old chain would have been worse than emitting nothing: the rules that painted
+ * it went out of global.css in the same commit, so the served document would
+ * have flashed an unstyled headline and then jumped.
+ *
+ * THE WORD SPANS ARE NOT DECORATION AND THEY HAVE TO BE HERE. `.sp-wm` is
+ * `display:inline-block; overflow:hidden; vertical-align:bottom`, and an
+ * inline-block with `overflow:hidden` takes its baseline from its bottom margin
+ * edge rather than from its last line box. Emitting the sentence as plain text
+ * would therefore paint it on a different baseline from the hydrated copy —
+ * a layout shift, and a second LCP candidate, which is the pair of failures the
+ * header of this file exists to prevent.
+ *
+ * AND THEY ARE SAFE TO PRE-PAINT, which the old hero's were not. The header
+ * above records why the home hero could not be shown settled without also
+ * disabling its clip-up: its resting state was a 2369px² sliver. `.sp-w`
+ * declares no transform at rest — spectrum.css puts the movement in
+ * `@keyframes sp-word-up`, which only exists under an ancestor carrying
+ * `.is-in` — so the resting state IS the final state. The shell paints the full
+ * box on its first frame, and Spectrum.jsx reads `data-hero-prepainted` on
+ * mount and never adds `.is-in`, so the hydrated copy never animates over it.
+ *
+ * THE SPLIT IS REIMPLEMENTED, NOT IMPORTED, and that is a deliberate limit.
+ * src/components/spectrum/SpectrumWords.jsx is JSX and this is a Node script;
+ * what must not be duplicated is the SENTENCE, and it is not — every word here
+ * comes from HERO_HEADLINE. tests/unit/home-shell-hero.test.js compares what
+ * this emits against `heroHeadlineText()` and against the class chain read out
+ * of SpectrumWords.jsx, so the two splitters cannot drift in either the words
+ * or the elements without the build going red.
+ *
  * `id="boot-shell"` STAYS, and so do the three things read through it:
  * tests/user-sim/helpers.js `ready()` treats its absence as "React has
  * committed", and 04-premium-home.spec.js asserts the status live region, the
@@ -151,21 +185,48 @@ export const HOME_SHELL_ROUTES = new Set(['/', '/home'])
  * strip flows below the hero instead of pushing it down; the nav inside it is
  * fixed, so where it sits in the tree does not matter.
  */
+
+/**
+ * The headline as SpectrumWords renders it: one `.sp-wm` clip per word, one
+ * `.sp-w` inside it carrying its stagger index, and a REAL space text node
+ * between the wrappers — two adjacent inline-blocks with nothing between them
+ * render "Buildandexport", which is a defect SpectrumWords.jsx records finding
+ * in the browser.
+ *
+ * The marked run is matched as WHOLE WORDS, with trailing punctuation stripped
+ * from the last one only, which is SpectrumWords' own rule: a substring match
+ * could paint half a word in the accent.
+ */
+function heroWords() {
+  const words = heroHeadlineText().split(/\s+/).filter(Boolean)
+  const markWords = HERO_HEADLINE.mark.split(/\s+/).filter(Boolean)
+
+  let markStart = -1
+  for (let i = 0; markWords.length && i + markWords.length <= words.length; i += 1) {
+    const window = words.slice(i, i + markWords.length)
+    const ok = window.every((w, j) => {
+      const isLast = j === markWords.length - 1
+      return (isLast ? w.replace(/[.,;:!?]+$/, '') : w) === markWords[j]
+    })
+    if (ok) { markStart = i; break }
+  }
+
+  return words.map((word, i) => {
+    const marked = markStart > -1 && i >= markStart && i < markStart + markWords.length
+    return `<span class="sp-wm" data-sp-wm=""><span class="${marked ? 'sp-w sp-w--mark' : 'sp-w'}" data-sp-w="" style="--sp-wi:${i}">${text(word)}</span></span>`
+  }).join(' ')
+}
+
 export function homeShellRoot() {
-  const lead = text(HERO_HEADLINE.lead)
-  const mark = text(HERO_HEADLINE.mark)
-  const tail = text(HERO_HEADLINE.tail)
   return `${ROOT_OPEN}
   <div class="boot-shell boot-shell-home" id="boot-shell">
     <span class="boot-status" role="status" aria-live="polite">Loading UIL4B</span>
-    <div class="home">
+    <div class="spectrum">
+      <div class="sp-grain" aria-hidden="true"></div>
       <main>
-        <header class="home-hero">
-          <div class="home-hero-core">
-            <h1 class="home-hero-h1">
-              <span class="home-hero-line"><span class="home-hero-line-in">${lead}</span></span>
-              <span class="home-hero-line"><span class="home-hero-line-in"><mark class="home-mark">${mark}</mark>${tail}</span></span>
-            </h1>
+        <header class="sp-hero">
+          <div class="sp-shell sp-hero-core">
+            <h1 class="sp-hero-h1"><span class="sp-words"><span class="sr-only">${text(heroHeadlineText())}</span><span aria-hidden="true" class="sp-words-visual">${heroWords()}</span></span></h1>
           </div>
         </header>
       </main>
@@ -235,11 +296,11 @@ export function applyHomeShell(html) {
  */
 export function assertHomeShellApplied(html, where) {
   const wanted = [
-    ['the h1', '<h1 class="home-hero-h1">'],
-    ['the LCP element', 'class="home-hero-line-in"'],
-    ['the highlight', '<mark class="home-mark">'],
-    ['the headline lead', text(HERO_HEADLINE.lead)],
-    ['the marked run', text(HERO_HEADLINE.mark)],
+    ['the h1', '<h1 class="sp-hero-h1">'],
+    ['the LCP element', 'class="sp-words-visual"'],
+    ['the highlight', 'class="sp-w sp-w--mark"'],
+    ['the screen-reader sentence', `<span class="sr-only">${text(heroHeadlineText())}</span>`],
+    ['the word split', 'data-sp-w=""'],
     [`${PREPAINTED_ATTR} on <html>`, PREPAINTED_ATTR],
   ]
   const missing = wanted.filter(([, needle]) => !html.includes(needle)).map(([label]) => label)

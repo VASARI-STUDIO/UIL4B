@@ -14,12 +14,27 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { ALL_CSS } from './appStylesheets.js'
+import { stripCss } from '../helpers/strip-comments.js'
 
 // Every stylesheet, not just global.css. A custom property used in a page
 // stylesheet and defined nowhere is exactly as invalid as one used here, and
 // eleven families are no longer in global.css at all — scanning it alone would
 // quietly stop checking them rather than fail.
-const CSS = ALL_CSS
+// COMMENTS STRIPPED FIRST, and this is the same rule the rest of the suite
+// applies in the other direction.
+//
+// Elsewhere (iconify-stub.test.js, hero-entrance.test.js) source is stripped so
+// an explanatory COMMENT CANNOT SATISFY a rule about shipped code. The inverse
+// has to hold too: a comment must not FAIL one either. This test went red on
+// 2026-09-18 for a nav comment that quoted the pairing it was describing —
+// "`background:var(--ink);color:var(--page)`" — naming a token from the design
+// FILE rather than one this stylesheet defines. Nothing was broken; a sentence
+// about CSS was being read as CSS.
+//
+// That matters beyond the one comment: this file's whole value is that a red
+// build means a declaration is silently dropped. A test that also goes red for
+// prose teaches people to stop believing it.
+const CSS = stripCss(ALL_CSS)
 
 const definedTokens = () => new Set([...CSS.matchAll(/(--[a-z0-9-]+)\s*:/gi)].map(m => m[1]))
 

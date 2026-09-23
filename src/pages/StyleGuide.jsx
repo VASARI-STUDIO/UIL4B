@@ -30,18 +30,30 @@ const TOKENS = {
     { var: '--err', label: 'Error', group: 'status' },
   ],
   typography: {
+    // NO FAMILY NAMES HERE. Every row is the TOKEN, and the face is read off the
+    // running stylesheet at render (see `familyOf`). Typed names drifted twice:
+    // these rows still said Manrope after global.css had moved to Geist, and the
+    // conventions list further down still said Outfit — the face before that. An
+    // internal reference that names the wrong face is worse than no reference,
+    // and the only version that cannot drift is the one holding no copy.
     families: [
-      { var: '--font', label: 'Primary (UI)', value: 'Manrope' },
-      { var: '--display', label: 'Display', value: 'Manrope' },
-      { var: '--mono', label: 'Technical (code)', value: 'JetBrains Mono' },
+      { var: '--font', label: 'Primary (UI)' },
+      { var: '--display', label: 'Display' },
+      { var: '--mono', label: 'Technical (code)' },
+      { var: '--hand', label: 'Handwritten (annotation)' },
     ],
+    // Weights sit inside the shipped axis, which global.css declares as
+    // `font-weight:300 700`. Anything outside it is CLAMPED silently rather
+    // than refused, so the 800s and the 200 that were here rendered as 700 and
+    // 300 while this page claimed otherwise — a style guide printing a figure
+    // the browser never honours.
     scale: [
-      { size: 40, weight: 800, label: 'Display', tracking: '-.04em' },
-      { size: 28, weight: 800, label: 'Heading 1', tracking: '-.03em' },
+      { size: 40, weight: 700, label: 'Display', tracking: '-.04em' },
+      { size: 28, weight: 700, label: 'Heading 1', tracking: '-.03em' },
       { size: 20, weight: 700, label: 'Heading 2', tracking: '-.02em' },
       { size: 16, weight: 700, label: 'Heading 3', tracking: '-.01em' },
       { size: 14, weight: 600, label: 'Subtitle', tracking: '-.01em' },
-      { size: 14, weight: 200, label: 'Body', tracking: '0' },
+      { size: 14, weight: 400, label: 'Body', tracking: '0' },
       { size: 12, weight: 400, label: 'Small', tracking: '0' },
       { size: 10, weight: 700, label: 'Eyebrow / Label', tracking: '.08em' },
     ],
@@ -67,6 +79,30 @@ const SECTIONS = [
   { id: 'components', label: 'Components' },
   { id: 'patterns', label: 'Patterns' },
 ]
+
+/**
+ * The first family in a CSS font stack, with its quotes taken off.
+ *
+ * NO REGEX: a lone apostrophe in a character class desyncs
+ * tests/helpers/strip-comments.js, which then stops blanking this file's
+ * comments and hands every source-scanning test the prose as if it were code.
+ */
+const QUOTE_CHARS = ['"', "'"]
+function firstFamily(stack) {
+  let s = String(stack || '').split(',')[0].trim()
+  if (QUOTE_CHARS.includes(s.slice(0, 1))) s = s.slice(1)
+  if (QUOTE_CHARS.includes(s.slice(-1))) s = s.slice(0, -1)
+  return s
+}
+
+/** The face a type token resolves to right now — the same read `Swatch` does for
+ *  a colour, so the two halves of this page get their values the same way. */
+const familyOf = (varName) =>
+  firstFamily(getComputedStyle(document.documentElement).getPropertyValue(varName))
+
+/** The weight a named step of the scale above carries, so the conventions list
+ *  below cannot quote a figure the ladder beside it contradicts. */
+const weightOf = (label) => TOKENS.typography.scale.find((s) => s.label === label)?.weight
 
 function Swatch({ varName, label, onCopy }) {
   const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim()
@@ -142,7 +178,7 @@ export default function StyleGuide({ toast }) {
               {TOKENS.typography.families.map(f => (
                 <div key={f.var} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: '1px solid var(--border)', paddingBottom: 12, cursor: 'pointer' }} onClick={() => copy(`var(${f.var})`)}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, fontFamily: `var(${f.var})`, color: 'var(--t0)' }}>{f.value}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, fontFamily: `var(${f.var})`, color: 'var(--t0)' }}>{familyOf(f.var) || '—'}</div>
                     <div style={{ fontSize: 10, color: 'var(--t2)' }}>{f.label}</div>
                   </div>
                   <div style={{ fontSize: 10, fontFamily: 'var(--mono)', color: 'var(--t3)' }}>{f.var}</div>
@@ -171,11 +207,11 @@ export default function StyleGuide({ toast }) {
             <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Conventions</h2>
             <div className="card" style={{ padding: 16, fontSize: 12, lineHeight: 1.8, color: 'var(--t1)' }}>
               <ul style={{ paddingLeft: 20 }}>
-                <li><strong>Headings:</strong> 800 weight, negative letter-spacing (-.03em to -.04em)</li>
-                <li><strong>Body:</strong> 200 weight, default tracking, 1.65 line-height</li>
-                <li><strong>Eyebrow / labels:</strong> 10px, 700 weight, uppercase, .08em tracking</li>
-                <li><strong>Styles &amp; code:</strong> Outfit everywhere — one family across UI, style names, numbers, and technical values</li>
-                <li><strong>Subtitles:</strong> 14px, 600 weight for section headings in cards</li>
+                <li><strong>Headings:</strong> {weightOf('Heading 1')} weight, negative letter-spacing (-.03em to -.04em)</li>
+                <li><strong>Body:</strong> {weightOf('Body')} weight, default tracking, 1.65 line-height</li>
+                <li><strong>Eyebrow / labels:</strong> 10px, {weightOf('Eyebrow / Label')} weight, uppercase, .08em tracking</li>
+                <li><strong>Styles &amp; code:</strong> {familyOf('--font')} for UI and style names, {familyOf('--mono')} for numbers and technical values</li>
+                <li><strong>Subtitles:</strong> 14px, {weightOf('Subtitle')} weight for section headings in cards</li>
               </ul>
             </div>
           </div>

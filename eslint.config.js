@@ -12,7 +12,11 @@ export default defineConfig([
   // gitignored, but ESLint 9's flat config does not read .gitignore, so their
   // vendored browser bundles were linted and reported 63 errors in the main
   // checkout while `src/` was clean. They are not our code and never reach CI.
-  globalIgnores(['dist', 'public', '.claude/worktrees/**', '.agents/**']),
+  // `dist-*/` are the per-lane build outputs from pw-lane.config.js. They are
+  // gitignored, so CI never sees them — but a local run linted all ten and
+  // reported 3,760 errors in minified vendor chunks, which buried the six real
+  // ones and let a lint failure reach CI that a local run should have caught.
+  globalIgnores(['dist', 'dist-*', 'public', '.claude/worktrees/**', '.agents/**']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -50,7 +54,13 @@ export default defineConfig([
     // VITE_DEFER_FIREBASE decides whether the Firebase deferral seams are
     // aliased in, and a build-time decision can only be read from `process.env`.
     // It was always Node code; it simply had no Node globals in it until then.
-    files: ['api/**/*.js', 'scripts/**/*.js', 'tests/**/*.js', 'playwright.config.js', 'vite.config.js'],
+    files: [
+      'api/**/*.js', 'scripts/**/*.js', 'tests/**/*.js',
+      // Both Playwright configs: pw-lane.config.js is the per-lane variant that
+      // reads LANE and PLAYWRIGHT_PORT off process.env so parallel agents stop
+      // colliding in a shared dist/.
+      'playwright.config.js', 'pw-lane.config.js', 'vite.config.js',
+    ],
     languageOptions: {
       globals: {
         ...globals.node,

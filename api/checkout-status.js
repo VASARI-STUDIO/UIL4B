@@ -8,12 +8,22 @@ import {
   retrieveSessionWithCharge,
 } from './_lib/billing.js'
 import { failRequest } from './_lib/http.js'
+import { allowedOrigins } from './_lib/origins.js'
 
 // Returns the status of an embedded Checkout session so the /checkout/return
 // page can confirm the result. The session is verified to belong to the
 // authenticated user's Stripe customer before any details are returned.
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // An allowlisted origin is reflected, anything else gets no CORS header at
+  // all — the same allowlist and the same shape as api/support.js, which
+  // records the reasoning. `*` was not a CSRF hole here (the bearer token below
+  // is the only credential and a browser never attaches it by itself), it was
+  // simply wider than anything that needs it.
+  const origin = req.headers.origin
+  if (origin && allowedOrigins().includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 

@@ -1,0 +1,244 @@
+/* credits.css — the `crd` family. Imported by src/pages/Credits.jsx, so Vite
+ * emits it as that route's own chunk stylesheet and only /credits pays for it.
+ *
+ * ── The shape, and why it is not cards ──────────────────────────────────────
+ *
+ * A credits page is a list of obligations, and the obligation is the licence
+ * rather than the item — four icon sets are CC-BY and that is one fact about
+ * four rows, not four facts. So the page is grouped by licence, each group led
+ * by a heading that says what that licence asks, and the rows under it are a
+ * plain two-column list. Tiling twenty-seven equal cards would have flattened
+ * that structure into decoration, and it is the structure that makes the page
+ * readable rather than a dump.
+ *
+ * ── Tokens only ─────────────────────────────────────────────────────────────
+ *
+ * Every colour, radius, space and duration here is a global token. There is no
+ * hex in this file, which is what lets both themes and the forced-colours
+ * variants in global.css apply without a single override here.
+ *
+ * ── Widths ──────────────────────────────────────────────────────────────────
+ *
+ * Measured at 320, 390, 834 and 1440 in both themes. The row grid is
+ * `minmax(0,1fr)` at every step — an `auto` track lets a long package name
+ * (@stripe/react-stripe-js, @firebase/app-check-interop-types) push the grid
+ * wider than the viewport, which is the one way a list of npm names overflows.
+ * `overflow-wrap:anywhere` is the second half of that, for the names with no
+ * break opportunity at all.
+ */
+
+.crd { --crd-gap: var(--s-5); padding-bottom: var(--s-9); }
+
+/* ── The tally ── */
+.crd-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  list-style: none;
+  margin: 0 0 var(--s-8);
+  padding: 0;
+  font-size: var(--fs-body-s);
+  color: var(--t2);
+}
+.crd-tally li { display: flex; align-items: baseline; gap: 6px; }
+.crd-tally b {
+  font-family: var(--mono);
+  font-size: var(--fs-h4);
+  font-weight: 600;
+  color: var(--t0);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Sections ── */
+.crd-sec { margin-bottom: var(--s-9); }
+.crd-sec-head { max-width: 62ch; margin-bottom: var(--s-6); }
+.crd-h2 {
+  font-family: var(--display);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: -.02em;
+  color: var(--t0);
+  margin: 0 0 var(--s-2);
+}
+.crd-sec-note { font-size: var(--fs-body-s); line-height: 1.7; color: var(--t1); margin: 0; }
+
+/* ── A licence group ──
+ * The rule on the left is the grouping made visible: everything indented past
+ * it is under the licence named at the top. It replaces the box a card would
+ * have drawn, at a fraction of the ink. */
+.crd-group {
+  border-left: 1px solid var(--border);
+  padding-left: var(--s-4);
+  margin-bottom: var(--s-7);
+}
+.crd-group-h {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  font-family: var(--mono);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--t0);
+  margin: 0 0 6px;
+}
+.crd-group-h a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.crd-group-h a:hover { color: var(--accent-text, var(--accent)); }
+
+/* SC 2.5.8 — every target on this page is a link in a run of text, and a bare
+ * inline anchor at 13px is under 24px tall. inline-flex + min-height lifts the
+ * box without touching the type size or breaking the line it sits in. */
+/* The radius is declared AT REST, not in the :focus-visible block below.
+ * A focus style that changes geometry moves the thing it is meant to point at,
+ * and tests/unit/focus-ring-geometry.test.js fails the build over it — the ring
+ * has to trace the shape the control actually has. */
+/* min-WIDTH too, and not only min-height. MEASURED at 1440: the MIT link in a
+ * licence heading was 20 x 24 — three characters wide — which fails SC 2.5.8 on
+ * the axis nobody checks. `justify-content:center` only bites when the box is
+ * wider than its text, so it affects that one link and nothing else. */
+.crd a {
+  min-height: 24px;
+  min-width: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+}
+.crd-group-h a,
+.crd-row a,
+.crd-asks a,
+.crd-sec-note a,
+.crd-foot a { display: inline-flex; }
+.crd summary { border-radius: var(--radius-xs); }
+
+.crd-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: var(--t2);
+  text-transform: uppercase;
+}
+.crd-tag--owed { border-color: var(--accent-border-strong, var(--bh)); color: var(--accent-text, var(--accent)); }
+
+.crd-asks {
+  font-size: var(--fs-body-s);
+  line-height: 1.65;
+  color: var(--t2);
+  margin: 0 0 var(--s-4);
+  max-width: 62ch;
+}
+
+/* ── Rows ── */
+.crd-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--crd-gap); }
+.crd-row { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.crd-row-name {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--t0);
+  text-decoration: none;
+  width: fit-content;
+}
+a.crd-row-name { text-decoration: underline; text-decoration-color: var(--bh); text-underline-offset: 3px; }
+a.crd-row-name:hover { text-decoration-color: currentColor; color: var(--accent-text, var(--accent)); }
+.crd-row-by { font-size: var(--fs-body-s); color: var(--t1); }
+.crd-row-note { font-size: var(--fs-body-s); line-height: 1.6; color: var(--t2); margin: 0; max-width: 62ch; }
+.crd-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  color: var(--t3);
+}
+.crd-row-meta code { font-family: inherit; color: inherit; background: none; padding: 0; }
+.crd-row-meta a { color: var(--t2); }
+.crd-row-meta a:hover { color: var(--t0); }
+
+/* The font notice is the licence text verbatim, so it is set as quoted text:
+ * mono, one measure, and a rule down the side to say it is not our sentence. */
+.crd-copy {
+  font-family: var(--mono);
+  font-size: var(--fs-caption);
+  line-height: 1.6;
+  color: var(--t1);
+  margin: 2px 0 4px;
+  padding-left: var(--s-3);
+  border-left: 2px solid var(--bh);
+  max-width: 72ch;
+  overflow-wrap: anywhere;
+}
+
+/* ── The package scope ── */
+.crd-list--pkgs { gap: var(--s-3); }
+.crd-row--pkg .crd-row-name { font-family: var(--mono); font-size: var(--fs-body-s); font-weight: 500; }
+
+.crd-more { margin-top: 6px; }
+.crd-more summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+  font-size: var(--fs-body-s);
+  color: var(--t2);
+  width: fit-content;
+}
+.crd-more summary:hover { color: var(--t0); }
+.crd-more[open] summary { margin-bottom: var(--s-3); }
+.crd-scope {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 4px var(--s-4);
+}
+.crd-scope li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-family: var(--mono);
+  font-size: var(--fs-micro);
+  color: var(--t2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.crd-scope li span { color: var(--t3); flex: none; }
+
+/* ── The closing note ── */
+.crd-foot {
+  border-top: 1px solid var(--border);
+  padding-top: var(--s-5);
+  font-size: var(--fs-body-s);
+  line-height: 1.7;
+  color: var(--t2);
+  max-width: 68ch;
+}
+.crd-foot code { font-family: var(--mono); font-size: .95em; color: var(--t1); margin: 0 3px; }
+
+/* ── Focus. Never removed, only drawn. ── */
+.crd a:focus-visible,
+.crd summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Two columns once there is room for two measures side by side.
+ * 834 is the iPad portrait step the suite measures; the grid switches a little
+ * under it so the tablet band is not a single long column of short rows. ── */
+@media (min-width: 760px) {
+  .crd-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-5) var(--s-7); }
+  .crd-list--fonts { grid-template-columns: minmax(0, 1fr); }
+  .crd-group { padding-left: var(--s-5); }
+}
+@media (min-width: 1100px) {
+  .crd-list--fonts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crd-list--pkgs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

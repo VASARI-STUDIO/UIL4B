@@ -1,0 +1,431 @@
+/* principles.css — the `prn` family, on the Spectrum ground.
+ *
+ * Imported by src/pages/DesignPrinciples.jsx beside content.css, which carries
+ * the shared content-page system (type, CTA, hairline row, focus, reduced
+ * motion). This sheet is only what is particular to /principles.
+ *
+ * ── It replaces the `.prn-*` block in src/styles/deferred/reading.css ───────
+ *
+ * DesignPrinciples.jsx no longer imports reading.css, so nothing in that file
+ * reaches this page and there is no cascade between the two to reason about.
+ * The `.prn-*` rules are still in reading.css — it is shared with
+ * /learn/:slug, /404 and /sitemap, and three other lanes are editing this tree
+ * — so deleting them is a follow-up, recorded in the handover, not something
+ * to do from inside this lane.
+ *
+ * ── The structure is unchanged, deliberately ────────────────────────────────
+ *
+ * Proof above claim, rows alternating side, the first row given the full width.
+ * That arrangement is the founder's own direction ("large visual, main point,
+ * simple not overly verbose points underneath", 2026-08-20) and it is what
+ * stops the page becoming the five-equal-cards construction every principles
+ * page in the Mobbin corpus ships. It is not what made the page look old.
+ *   https://mobbin.com/sites/sections/ce305258-5218-49f8-8cf0-cc49059d10e4
+ *
+ * What made it look old was the surface language: the app's old `--fs-h1`
+ * scale at a loose 1.16 leading against Spectrum's -.04em display setting, the
+ * retired `.ui-pill` family, a card drawn around every individual row, and
+ * `--accent-strong` on the one link in each row.
+ *
+ * ── --accent-strong is gone from every rule here ────────────────────────────
+ *
+ * `.prn-go` painted it. It is a per-theme LITERAL that does not track
+ * `--accent`, so on a premium theme template it would have left the call to
+ * action on all five rows the old brand blue. `--accent-text` is derived from
+ * `--accent` and measures 6.33:1 on --card in light, 9.40:1 in dark.
+ *
+ * It is still RENDERED on this page, once, as text — `.prn-th-token` prints
+ * the string `--accent-strong` because the proof beside it is literally about
+ * that token having two values. That is the page doing its job, not a colour.
+ *
+ * ── What this sheet must not set ────────────────────────────────────────────
+ *
+ * SystemProofs.jsx writes five things inline, because they are MEASUREMENTS
+ * rather than styling, and tests/user-sim/57-help-and-principles.spec.js reads
+ * every one of them back out of the computed style:
+ *
+ *   .prn-cx-sample   background / color / border-color   (the two blues)
+ *   .prn-th-panel    background                          (a fixed theme ground)
+ *   .prn-th-*        color                               (that theme's ink)
+ *   .prn-ty-spec     font-size                           (stepPx(), 5 rows)
+ *
+ * A rule here that won the cascade on any of them would not merely fail a
+ * test, it would make the page state a figure it is not showing. None are set
+ * below, and none should be added.
+ */
+
+/* ── The hero ── */
+
+.prn-hero { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-4); width: 100%; min-width: 0; }
+/* NO max-width ON THE HERO ITSELF, still. It carried `max-width:22ch` once and
+ * `ch` on a flex container resolves against the CONTAINER's font size — the
+ * inherited body face, not the display face of the h1 inside it. Measured at
+ * 1440 the whole hero came out ~180px wide. The children carry their own
+ * measure, where `ch` resolves against the type it is actually setting. */
+.prn-h1 {
+  margin: 0;
+  max-width: 17ch;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(34px, 5.4vw, 64px);
+  line-height: .99;
+  letter-spacing: -.04em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+
+/* THE HIGHLIGHTER IS NOW AN ACCENT RUN, and this is the one visual decision on
+ * the page that is worth arguing for rather than just recording.
+ *
+ * `.home-mark` paints `--hi` (#E9FF64) as a BACKGROUND behind the phrase, with
+ * `padding-block:.06em` and `box-decoration-break:clone`. Two things follow
+ * from that and both are now wrong here:
+ *
+ *   1. It needs loose leading. A painted box on an inline run collides with
+ *      the line above it at anything under ~1.15 line-height, which is why the
+ *      rule it replaces set `.prn-h1{line-height:1.16}` and added padding to
+ *      compensate. Spectrum's display setting is .96–1.02. The highlighter and
+ *      the new type scale cannot both be had.
+ *   2. Spectrum has no highlighter. The front door marks its headline run with
+ *      `.sp-w--mark{color:var(--accent-mid)}` — a colour, not a box. Two
+ *      different mark treatments on adjacent pages is exactly the disjointedness
+ *      the 2026-09-16 audit measured and this redesign exists to end.
+ *
+ * The class name STAYS. 57-help-and-principles.spec.js asserts exactly one
+ * `.home-mark` inside `.prn-hero`, and that assertion is about the page having
+ * one emphasised phrase, which is still true. Only its appearance moves, and
+ * only on this page — global.css is untouched, so the homepage device and
+ * scripts/og-cards.mjs are unaffected.
+ *
+ * FLAGGED FOR THE FOUNDER: the acid highlighter is his and this is an agent
+ * changing it. Reverting is one rule.
+ * Contrast: --accent-mid on --bg-0 is 5.18:1 light / 9.17:1 dark, measured at
+ * a size whose floor is 3:1. */
+.prn .home-mark {
+  background: none;
+  color: var(--accent-mid);
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  line-height: inherit;
+}
+
+.prn-lede {
+  margin: 0;
+  max-width: 54ch;
+  font-size: clamp(15.5px, 1.3vw, 17px);
+  line-height: 1.6;
+  color: var(--cpg-dim);
+  text-wrap: pretty;
+}
+.prn-hero-cta { margin-top: var(--s-2); }
+
+/* ── The rows ── */
+
+.prn-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(48px, 6vw, 88px);
+  /* The list is `<ol>`, so the numeral beside each rule is a counter rather
+     than a typed digit: a principle deleted from src/data/designPrinciples.js
+     cannot leave a gap in the sequence, and a principle added cannot arrive
+     unnumbered. */
+  counter-reset: prn;
+}
+.prn-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--s-5) clamp(28px, 4vw, 64px);
+  align-items: center;
+  min-width: 0;
+  counter-increment: prn;
+}
+.prn-item[data-side="left"] .prn-proof { grid-column: 1; grid-row: 1; }
+.prn-item[data-side="left"] .prn-say { grid-column: 2; grid-row: 1; }
+.prn-item[data-side="right"] .prn-proof { grid-column: 2; grid-row: 1; }
+.prn-item[data-side="right"] .prn-say { grid-column: 1; grid-row: 1; }
+
+/* The lead row: one column, proof first at full width, the rule beneath it. */
+.prn-item[data-lead="true"] { grid-template-columns: minmax(0, 1fr); gap: var(--s-6); }
+.prn-item[data-lead="true"] .prn-rule { font-size: clamp(30px, 4vw, 52px); max-width: 17ch; }
+.prn-item[data-lead="true"] .prn-say { max-width: 64ch; }
+/* The lead proof is the page's largest object, but "large" is not the same as
+ * "stretched": across the full 1370px column its two rows read as thin bands
+ * with the measurement stranded from the sample it measures. */
+.prn-item[data-lead="true"] .prn-proof { max-width: 920px; }
+
+.prn-say { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-3); min-width: 0; }
+
+/* The numeral. `::before` on the heading rather than an extra element, so the
+ * count of elements inside `.prn-item` is unchanged — 57-help-and-principles
+ * asserts exactly one `.prn-rule`, `.prn-body`, `.prn-go`, `figure` and
+ * `figcaption` per row, and a sixth child is a change nobody asked for.
+ * `aria-hidden` is not available on a pseudo-element, but a CSS-generated
+ * counter is decorative content that assistive tech is free to ignore and the
+ * heading's own text is complete without it. */
+.prn-rule {
+  margin: 0;
+  max-width: 20ch;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(24px, 2.8vw, 36px);
+  line-height: 1.06;
+  letter-spacing: -.03em;
+  color: var(--cpg-ink);
+  text-wrap: balance;
+}
+.prn-rule::before {
+  content: counter(prn, decimal-leading-zero);
+  display: block;
+  margin-bottom: var(--s-3);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  /* --cpg-faint, not --cpg-quiet. This sits on the page ground where --t3 is
+     4.59:1 — passing with nothing in hand — and the numeral is 10.5px, which
+     has no large-text relief. --t2 is 5.62:1 on the same ground. */
+  color: var(--cpg-faint);
+}
+
+.prn-body { margin: 0; max-width: 56ch; font-size: 15px; line-height: 1.7; color: var(--cpg-dim); }
+
+/* min-height AND min-width, and neither is optional. WCAG 2.2 AA 2.5.8:
+ * measured 23.1px tall at 390px on 2026-09-11 — an inline-flex link sized only
+ * by its line box, 0.9px under the minimum — and
+ * tests/user-sim/76-marketing-quality.spec.js measures every `.prn-go` on this
+ * page at 390 for exactly that. It does not qualify for the Inline exception:
+ * this is a standalone call to action on its own line, not a link inside a
+ * sentence. */
+.prn-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  /* 28, NOT 24, and the four extra pixels are the margin the last fix did not
+     have. Measured in a browser at 1440 the box came out at exactly 24.0 —
+     which passes `>= 24` and leaves nothing for a font swap, a zoom step or a
+     subpixel rounding to take away. This control was already 0.9px under the
+     floor once. */
+  min-height: 28px;
+  min-width: 28px;
+  margin-top: var(--s-1);
+  font-size: 14px;
+  font-weight: 540;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.prn-go:hover { color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; }
+.prn-go span { transition: transform var(--dur-2) var(--cpg-ease); }
+.prn-go:hover span, .prn-go:focus-visible span { transform: translateX(3px); }
+
+/* ── The proof panel ─────────────────────────────────────────────────────────
+ * ONE panel per proof, with hairlines inside it — not a card around every row
+ * inside a column with no card of its own. The sheet this replaces drew a
+ * bordered, rounded box around each `.prn-cx-row` and each `.prn-sn-fig`,
+ * which put two and three equally weighted rounded rectangles inside a figure
+ * that had no frame at all. Spectrum's own figures are the opposite shape: one
+ * `--radius-3xl` panel on `--card` with `--shadow-l`, divided by rules.
+ * `--radius-2xl` (18px) rather than 3xl here, because these panels are half the
+ * width of the front door's. */
+.prn-proof { min-width: 0; }
+.prn-proof > figure {
+  margin: 0;
+  min-width: 0;
+  padding: clamp(18px, 2.2vw, 26px);
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius-2xl);
+  background: var(--cpg-card);
+  box-shadow: var(--shadow-m);
+}
+
+/* The caption under every computed proof — small, quiet, and the place the
+ * functions are named. A figure whose provenance is not stated is an
+ * illustration; these are measurements. It sits under a rule inside the panel,
+ * the way `.sp-fig-foot` does. */
+.prn-cap {
+  margin: var(--s-4) 0 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--cpg-line);
+  font-size: 12.5px;
+  line-height: 1.6;
+  /* --cpg-faint on --cpg-card: 6.52:1 light, 8.9:1 dark. */
+  color: var(--cpg-faint);
+}
+.prn-cap code { font-family: var(--mono); font-size: .92em; color: var(--cpg-dim); }
+
+/* Proof 1 — the two blues, each doing the job its ratio permits.
+ * NO background or border on the row any more: the panel is the box. */
+.prn-cx-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.prn-cx-row {
+  display: grid;
+  grid-template-columns: minmax(112px, auto) minmax(0, 1fr);
+  gap: var(--s-2) var(--s-4);
+  align-items: center;
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--cpg-line);
+  min-width: 0;
+}
+.prn-cx-row:first-child { border-top: 0; padding-top: 0; }
+/* Background, colour and border-colour are INLINE here — they are the sample.
+ * This rule sets geometry and type only. */
+.prn-cx-sample {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 var(--s-4);
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.prn-cx-sample[data-boundary="true"] { font-weight: 500; }
+.prn-cx-read { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prn-cx-ratio { font-family: var(--mono); font-size: 17px; font-weight: 500; color: var(--cpg-ink); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.prn-cx-verdict { font-size: 12.5px; line-height: 1.5; color: var(--cpg-faint); }
+.prn-cx-role {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2);
+  padding-top: var(--s-3);
+  font-size: 12.5px;
+  color: var(--cpg-faint);
+}
+.prn-cx-role b { font-family: var(--mono); font-weight: 500; color: var(--cpg-dim); }
+
+/* Proof 2 — one token name, one value per ground. Both tiles paint their own
+ * theme's colours regardless of the theme the reader is in; that is the point,
+ * and it is why these two are the only fixed grounds on the page. Their inks
+ * are inline and are not touched here.
+ * NO OPACITY on either label, and that is a fix rather than a preference:
+ * measured 2026-09-15 with the alpha composited, `.prn-th-theme` was 3.61:1
+ * light and `.prn-th-hex` 3.93:1, both under the 4.5 floor, on the one page
+ * arguing for measured contrast. */
+.prn-th-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+.prn-th-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-5);
+  border: 1px solid var(--cpg-line);
+  border-radius: var(--radius-xl);
+  min-width: 0;
+}
+.prn-th-theme { font-family: var(--mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; }
+.prn-th-token { font-family: var(--mono); font-size: 13.5px; font-weight: 500; overflow-wrap: anywhere; }
+.prn-th-hex { font-family: var(--mono); font-size: 12.5px; }
+.prn-th-ratio { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.2; margin-top: var(--s-2); font-variant-numeric: tabular-nums; }
+
+/* Proof 3 — the ladder, at the sizes the arithmetic produces.
+ * `.prn-ty-spec` HAS NO font-size HERE. It is `stepPx(base, ratio, exponent)`
+ * written inline by SystemProofs, and 57-help-and-principles reads all five
+ * back and compares them to the same function. */
+.prn-ty-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.prn-ty-row { display: flex; align-items: baseline; gap: var(--s-4); padding: var(--s-2) 0; border-top: 1px solid var(--cpg-line); min-width: 0; }
+.prn-ty-row:first-child { border-top: 0; }
+.prn-ty-spec { flex: 0 0 auto; min-width: 2.6em; font-family: var(--display); font-weight: 600; color: var(--cpg-ink); line-height: 1.05; letter-spacing: -.03em; }
+.prn-ty-name { font-family: var(--mono); font-size: 12.5px; color: var(--cpg-dim); }
+.prn-ty-px { margin-left: auto; font-family: var(--mono); font-size: 12.5px; color: var(--cpg-faint); font-variant-numeric: tabular-nums; }
+
+/* Proof 4 — the export offer, split by the flag that decides whether each
+ * button does anything. `.prn-ex-h` is a <p> with an id, and the <ul> beside
+ * it is `aria-labelledby` that id — it is a column LABEL inside a figure that
+ * already has a figcaption, so making it a heading would put three more levels
+ * into the page outline for no navigational gain. 76-marketing-quality asserts
+ * both halves of that. */
+.prn-ex-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); }
+.prn-ex-col { min-width: 0; }
+.prn-ex-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; line-height: 1.45; color: var(--cpg-dim); }
+.prn-ex-col li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.prn-ex-col[data-unbuilt="true"] ul { color: var(--cpg-faint); }
+.prn-ex-h {
+  margin: 0 0 var(--s-3);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--cpg-line);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--cpg-faint);
+}
+
+/* Proof 5 — the two counts, off the registry, beside the badge itself.
+ * The figures are the object here, so they are set at the display scale and
+ * the tiles lose their boxes to the panel, like every other proof. */
+.prn-sn-figures { display: flex; flex-wrap: wrap; gap: var(--s-5); }
+.prn-sn-fig { display: flex; flex-direction: column; gap: var(--s-2); flex: 1 1 180px; min-width: 0; }
+.prn-sn-fig b {
+  font-family: var(--display);
+  font-size: clamp(44px, 6vw, 72px);
+  font-weight: 600;
+  line-height: .92;
+  letter-spacing: -.04em;
+  color: var(--cpg-ink);
+  font-variant-numeric: tabular-nums;
+}
+.prn-sn-fig[data-soon="true"] b { color: var(--cpg-faint); }
+.prn-sn-fig > span { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--cpg-faint); line-height: 1.4; }
+
+/* ── Narrow ── */
+@media (max-width: 960px) {
+  .prn-item,
+  .prn-item[data-side="left"],
+  .prn-item[data-side="right"] { grid-template-columns: minmax(0, 1fr); }
+  .prn-item[data-side="left"] .prn-proof,
+  .prn-item[data-side="right"] .prn-proof { grid-column: 1; grid-row: 1; }
+  .prn-item[data-side="left"] .prn-say,
+  .prn-item[data-side="right"] .prn-say { grid-column: 1; grid-row: 2; }
+  .prn-item[data-lead="true"] .prn-rule { font-size: clamp(26px, 4vw, 40px); }
+  .prn-ex-cols { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+}
+@media (max-width: 560px) {
+  .prn-h1, .prn-lede, .prn-rule, .prn-body { max-width: none; }
+  .prn-cx-row { grid-template-columns: minmax(0, 1fr); }
+  .prn-th-grid { grid-template-columns: minmax(0, 1fr); }
+  .prn-proof > figure { border-radius: var(--radius-xl); }
+}
+
+/* ── REDUCED MOTION ───────────────────────────────────────────────────────────
+   The one thing on this page that MOVES: the arrow beside each rule's link,
+   which slides 3px on hover. content.css's block covers `.cpg-link-go`, which
+   is the shared version of the same gesture; `.prn-go span` is this page's own
+   and needed naming.
+
+   global.css already clamps every duration to 0.01ms, and that clamp is what a
+   measurement of this page under reduced motion reports — a 1e-05s transform
+   transition. That is instantaneous, so this block is belt and braces rather
+   than a fix. It is here because spectrum.css sets the house rule that the
+   MOVEMENT comes off, not just its duration, and a page that keeps a
+   0.01ms slide keeps a slide.
+
+   Both spellings, and the pair is not optional: the Settings choice
+   (`html[data-reduced-motion]`, which wins in both directions) and the OS
+   preference, the latter only when no choice has been made.
+   tests/unit/reduced-motion-guard.test.js fails the build on a
+   `prefers-reduced-motion` block whose selector lacks the
+   `html:not([data-reduced-motion="false"])` guard or has no
+   `html[data-reduced-motion="true"]` companion. */
+:where(html[data-reduced-motion="true"]) .prn .prn-go span {
+  transition: none !important;
+}
+:where(html[data-reduced-motion="true"]) .prn .prn-go:hover span,
+:where(html[data-reduced-motion="true"]) .prn .prn-go:focus-visible span {
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .prn .prn-go span {
+    transition: none !important;
+  }
+  :where(html:not([data-reduced-motion="false"])) .prn .prn-go:hover span,
+  :where(html:not([data-reduced-motion="false"])) .prn .prn-go:focus-visible span {
+    transform: none !important;
+  }
+}

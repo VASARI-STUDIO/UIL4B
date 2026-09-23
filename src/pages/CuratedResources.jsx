@@ -233,7 +233,7 @@ export default function CuratedResources() {
   const clearAll = () => { setRawQuery(''); setCategory('all') }
 
   return (
-    <div className="sec cur-wrap">
+    <div className="sec lib-surface cur-wrap">
       <DiscoverGalleryHero
         title="Curated Resources"
         description="Hand-picked tools from outside UI L4B that are genuinely worth a tab — each one with the reason it earned its place, and a way straight into the UI L4B tool that finishes the job."

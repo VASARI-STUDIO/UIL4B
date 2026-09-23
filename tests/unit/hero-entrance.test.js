@@ -37,128 +37,44 @@ const stripHtml = (s) => s.replace(/<!--[\s\S]*?-->/g, '')
 
 const css = stripCss(read('src/styles/global.css'))
 const html = stripHtml(read('index.html'))
-const motion = stripJs(read('src/hooks/useHomeMotion.js'))
 
-// ── The entrance does not wait on a chunk ───────────────────────────────────
-
-test('the hero entrance is CSS, not a GSAP timeline', () => {
-  // A fire-once entrance does not need a timeline, and putting it in one means
-  // it cannot begin until the import resolves.
-  for (const sel of ['.home-hero-line-in', '.home-hero-sub', '.home-hero-hint']) {
-    assert.ok(!motion.includes(sel),
-      `${sel} is animated from useHomeMotion.js again — the entrance must not wait on the GSAP chunk`)
-  }
-  assert.match(css, /@keyframes home-hero-clip-up/)
-  assert.match(css, /@keyframes home-hero-rise/)
-})
-
-test('no JS class holds the hero hidden', () => {
-  // `.motion-armed` set opacity:0 on the headline until GSAP arrived. If the
-  // chunk failed, a bug in the failure path left the hero invisible for good.
-  assert.ok(!motion.includes('motion-armed'),
-    'the arming class is back; the hero must supply its own start state via animation-fill-mode')
-  assert.ok(!/\.home\.motion-armed/.test(css))
-})
-
-test('the hidden start state comes from the animation itself', () => {
-  // `both` fill applies the `from` keyframe before the animation starts, which
-  // is what prevents a flash without needing JS to hide anything.
-  const line = /\.home-hero-line-in\{animation:[^}]*\}/.exec(css)?.[0] || ''
-  assert.match(line, /\bboth\b/, 'the clip-up needs animation-fill-mode: both')
-})
-
-// ── Nothing expensive is animated ───────────────────────────────────────────
-
-test('the entrance animates transform and opacity only', () => {
-  // Anything else — filter, width, top — is laid out or rasterised per frame
-  // and cannot run on the compositor.
-  const frames = /@keyframes home-hero-(?:clip-up|rise)\{[\s\S]*?\}\s*\}/g
-  const blocks = css.match(frames) || []
-  assert.ok(blocks.length >= 2, 'expected both hero keyframe blocks')
-  for (const b of blocks) {
-    const props = [...b.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1])
-    for (const p of props) {
-      assert.ok(['transform', 'opacity'].includes(p),
-        `hero keyframes animate '${p}'; only transform and opacity composite`)
-    }
-  }
-})
-
-test('the blur burn-off is gone', () => {
-  assert.ok(!/filter:\s*blur/.test(motion),
-    'a filter tween is back in the hero timeline — it re-rasterises the largest text every frame')
-})
-
-// ── The clip actually clips ─────────────────────────────────────────────────
-
-// The compensation this reads is expressed in `em` on purpose, so one number
-// holds across the whole clamp(46px, 6.6vw, 96px) hero. Parsed as a number
-// rather than matched as a string, because the VALUE is the contract — a
-// literal match would pass on `.14em`, which was measured as insufficient.
-const lineRule = /\.home-hero-line\{([^}]*)\}/.exec(css)?.[1] || ''
-const markRule = /\.home-mark\{([^}]*)\}/.exec(css)?.[1] || ''
-const emOf = (rule, ...props) => {
-  for (const p of props) {
-    const m = new RegExp(String.raw`(?:^|;)\s*${p}\s*:\s*-?([\d.]+)em`).exec(rule)
-    if (m) return Number(m[1])
-  }
-  return 0
-}
-
-test('the headline lines have a clip container, with room for descenders', () => {
-  assert.match(lineRule, /overflow:\s*hidden/,
-    'without this the clip-up does not clip and the two lines slide through each other')
-  // line-height is .98, so `g` and `y` hang below the box and would be shaved.
-  assert.match(lineRule, /padding-(?:block|bottom):/, 'descenders need room inside the clip')
-  assert.match(lineRule, /margin-(?:block|bottom):\s*-/,
-    'the negative margin must cancel that padding in layout')
-})
-
-// C5 / F-2 (founder batch 2026-08-20). `.home-hero-line` compensated at the
-// BOTTOM ONLY, so the --hi mark — which paints the full inline box, not the
-// line box — was sheared by this same overflow:hidden. Measured in Chromium at
-// a 95.04px computed hero: 19px off the top, 4.56px still off the bottom.
+// ── WHAT THIS FILE STOPPED GUARDING, AND WHERE IT WENT ─────────────────────
 //
-// The fix is a derivation, not a taste call, which is why this test reads
-// numbers. `line-height:.98` against Manrope's 1.368em content area leaves
-// (1.368 - .98) / 2 = .194em of half-leading overflowing EACH edge, and
-// `.home-mark` adds its own `padding-block` on top of that. Anything less than
-// the sum clips again — F-2 originally proposed mirroring the existing .14em,
-// which measurement showed was ~6px short at the 96px cap.
-test('the clip container leaves room on BOTH edges, sized from the font metrics', () => {
-  const HALF_LEADING = 0.194
-
-  const top = emOf(lineRule, 'padding-block', 'padding-top')
-  const bottom = emOf(lineRule, 'padding-block', 'padding-bottom')
-  assert.ok(top >= HALF_LEADING,
-    `top compensation is ${top}em; the half-leading alone needs ${HALF_LEADING}em or the mark shears`)
-  assert.ok(bottom >= HALF_LEADING,
-    `bottom compensation is ${bottom}em; .14em was measured as insufficient`)
-
-  // The mark's own padding grows its painted box on both edges, so the clip
-  // container has to carry the half-leading PLUS that padding.
-  const markPad = emOf(markRule, 'padding-block')
-  assert.ok(top >= HALF_LEADING + markPad,
-    `.home-mark adds ${markPad}em of padding-block, so the clip needs at least `
-    + `${(HALF_LEADING + markPad).toFixed(3)}em; it has ${top}em`)
-  assert.ok(bottom >= HALF_LEADING + markPad,
-    `bottom needs ${(HALF_LEADING + markPad).toFixed(3)}em; it has ${bottom}em`)
-
-  // Padding without the matching negative margin moves the headline instead of
-  // widening the mask, which is a different bug that looks like this one.
-  const mTop = emOf(lineRule, 'margin-block', 'margin-top')
-  const mBottom = emOf(lineRule, 'margin-block', 'margin-bottom')
-  assert.equal(mTop, top, 'the negative top margin must cancel the top padding exactly')
-  assert.equal(mBottom, bottom, 'the negative bottom margin must cancel the bottom padding exactly')
-  assert.match(lineRule, /margin-(?:block|top):\s*-/, 'the top margin must be negative')
-})
+// Seven tests stood here: the entrance was CSS and not a GSAP timeline, no JS
+// class held the headline hidden, the start state came from `animation-fill-mode`,
+// the keyframes touched transform and opacity only, the blur burn-off was gone,
+// and the clip container left room for descenders on both edges.
+//
+// Their subject is deleted. src/pages/Home.jsx, src/hooks/useHomeMotion.js and
+// the `.home-hero-line` / `.home-hero-line-in` clip-up went on 2026-09-18, when
+// the founder made src/pages/Spectrum.jsx the front door. There is no hero left
+// with a GSAP timeline to avoid, an arming class to refuse, or a clip to size.
+//
+// THE ARGUMENTS SURVIVED THE PAGE, and they are held where the new hero lives:
+//   · "the entrance must not wait on a chunk" — Spectrum's word reveal is
+//     `@keyframes sp-word-up` in src/styles/pages/spectrum.css, which is now the
+//     RENDER-BLOCKING sheet (App.jsx imports the page statically), so it cannot
+//     wait on anything;
+//   · "no JS class holds the hero hidden" — the stronger version is asserted by
+//     tests/unit/spectrum-structure.test.js: `.sp-w` declares no transform at
+//     rest, so the resting state IS the final state and the headline is readable
+//     with the animation never running, in the prerendered shell and with motion
+//     off;
+//   · "the first painted frame is the settled one" — scripts/home-shell.mjs
+//     pre-paints that settled headline into the served `/` shell and
+//     tests/unit/home-shell-hero.test.js asserts the shell carries no `.is-in`.
+//
+// What is left in this file is the half that was never about one page: the
+// fonts, their preloads, and the weight axis.
 
 // ── Reduced motion, both directions ─────────────────────────────────────────
 
-test('reduced motion settles the hero instantly, and an explicit opt-in wins', () => {
+test('reduced motion settles the entrance instantly, and an explicit opt-in wins', () => {
   // AppearanceContext treats its own toggle as authoritative — a user may opt
-  // back INTO motion despite an OS-level reduce. useHomeMotion mirrors that, and
-  // the CSS has to agree or the two disagree about the same hero.
+  // back INTO motion despite an OS-level reduce. Every entrance in the app has
+  // to agree with that or the two disagree about the same element;
+  // src/components/spectrum/reducedMotion.js implements the same contract in JS
+  // for the Spectrum page.
   assert.match(css, /@media \(prefers-reduced-motion:reduce\)/)
   assert.match(css, /html:not\(\[data-reduced-motion="false"\]\)[^{]*\{animation:none\}/)
   assert.match(css, /html\[data-reduced-motion="true"\][^{]*\{animation:none\}/)
@@ -170,23 +86,51 @@ test('the fonts are self-hosted, not two third-party round trips', () => {
   assert.ok(!/fonts\.googleapis\.com/.test(html),
     'the stylesheet request is back; the font URL is only discoverable after it parses')
   assert.ok(!/fonts\.gstatic\.com/.test(css), 'font files must be served from our own origin')
-  // Design Language V2 replaced Outfit with two families: Manrope (--font/--display)
-  // and JetBrains Mono (--mono, which V2 makes load-bearing rather than decorative).
+  // THE FILES THIS CHECKED WERE THE RETIRED ONES, and that is why it is worth a
+  // paragraph. It named manrope-* and jetbrains-mono-*, which nothing has
+  // referenced since the Spectrum adoption (dace2339) moved the product to Geist
+  // (--font/--display), Geist Mono (--mono) and Caveat (--hand). Those four files
+  // are still on disk — deliberately, because scripts/og-cards.mjs reads
+  // manrope-latin.woff2 directly to draw the share cards — so the assertion
+  // passed while checking faces the app does not ship. The Geist files could all
+  // have gone missing and it would have stayed green.
+  //
+  // Caveat is deliberately absent: it is the handwritten annotation only, it is
+  // preloaded nowhere, and the preload test below is the one that cares which
+  // faces are on the first-paint path.
   for (const f of [
-    'public/fonts/manrope-latin.woff2', 'public/fonts/manrope-latin-ext.woff2',
-    'public/fonts/jetbrains-mono-latin.woff2', 'public/fonts/jetbrains-mono-latin-ext.woff2'
+    'public/fonts/geist-latin.woff2', 'public/fonts/geist-latin-ext.woff2',
+    'public/fonts/geist-mono-latin.woff2', 'public/fonts/geist-mono-latin-ext.woff2'
   ]) {
     assert.ok(fs.existsSync(path.join(process.cwd(), f)), `${f} is missing`)
   }
-  // OFL 1.1 permits redistribution; shipping the font means shipping the licence.
-  assert.ok(fs.existsSync(path.join(process.cwd(), 'public/fonts/OFL.txt')))
+  // OFL 1.1 permits redistribution; shipping the font means shipping the licence
+  // — AND THE RIGHT ONE. This named `public/fonts/OFL.txt`, a single combined
+  // file that has not existed since 139e7624 split it: it carried OUTFIT's
+  // copyright line, which is the one family the app no longer sets, so Geist,
+  // Geist Mono and Caveat each shipped beside a licence naming a different
+  // project. That commit wrote one file per family and did not update this
+  // assertion, so the check has been failing on a tree where the licensing is
+  // now correct. Asserted per family, derived from the .woff2 files this test
+  // already lists, so the next face to arrive brings its own notice or fails.
+  for (const family of ['GEIST', 'GEIST-MONO', 'CAVEAT']) {
+    const licence = `public/fonts/${family}-OFL.txt`
+    assert.ok(fs.existsSync(path.join(process.cwd(), licence)), `${licence} is missing`)
+    assert.match(fs.readFileSync(path.join(process.cwd(), licence), 'utf8'), /^Copyright \d{4} /,
+      `${licence} does not open on the copyright line OFL 1.1 asks travel with the font`)
+  }
 })
 
 test('both families are preloaded, in CORS mode', () => {
   const links = html.match(/<link[^>]*rel="preload"[^>]*>/g) || []
-  // BOTH, not just the UI face: V2 puts mono above the fold (nav wordmark,
-  // eyebrows, stat line), so a late mono arrival shifts first paint too.
-  for (const want of [/manrope-latin\.woff2/, /jetbrains-mono-latin\.woff2/]) {
+  // BOTH, not just the UI face: the design puts mono above the fold (nav
+  // wordmark, eyebrows, stat line), so a late mono arrival shifts first paint
+  // too. Geist and Geist Mono since the Spectrum adoption, 2026-09-18.
+  //
+  // CAVEAT IS DELIBERATELY ABSENT. It is the handwritten annotation and nothing
+  // else, it is below the fold on one route, and preloading a third face would
+  // spend first-paint budget on decoration.
+  for (const want of [/geist-latin\.woff2/, /geist-mono-latin\.woff2/]) {
     const link = links.find((l) => want.test(l))
     assert.ok(link, `no preload for ${want}`)
     assert.match(link, /as="font"/)
@@ -201,33 +145,104 @@ test('every authored weight sits inside the variable axis that renders it', () =
   // instances cannot express those, so they were silently rounded — the hero h1
   // asks for 720 and was rendering at 700. Hence variable faces with a RANGE.
   //
-  // The V2 families have narrower axes than Outfit's 100..900 — verified by
-  // reading the fvar table of the shipped files: Manrope 200..800, JetBrains
-  // Mono 100..800. A weight outside a family's axis is silently CLAMPED, which
-  // is the same silent-rounding failure this test was written to catch.
+  // Geist is NARROWER STILL than the faces before it — 300..700 against
+  // Manrope's 200..800 — and a weight outside a family's axis is silently
+  // CLAMPED, which is the same silent-rounding failure this test was written to
+  // catch. Adopting Spectrum on 2026-09-18 therefore moved 21 call sites at
+  // 720/750/800/900 down to 700; see the note at the bottom of this test.
+  //
+  // Caveat is the exception and is allowed a SINGLE weight: it ships one static
+  // instance at 500 because it has exactly one job (the handwritten homepage
+  // annotation) and no second weight is ever asked for. A range is required of
+  // every face that carries intermediate weights, which is the real rule.
   const faces = css.match(/@font-face\{[^}]*\}/g) || []
   assert.ok(faces.length >= 1, 'expected self-hosted @font-face rules')
   for (const f of faces) {
-    assert.match(f, /font-weight:\s*\d{3} \d{3}/,
-      'each face must declare a variable RANGE, or intermediate weights round')
+    const single = /font-family:\s*'Caveat'/.test(f)
+    if (single) {
+      assert.match(f, /font-weight:\s*500\b/, 'Caveat ships one static weight, 500')
+    } else {
+      assert.match(f, /font-weight:\s*\d{3} \d{3}/,
+        'each variable face must declare a RANGE, or intermediate weights round')
+    }
     assert.match(f, /font-display:\s*swap/)
   }
-  // Weights authored OUTSIDE the @font-face rules, i.e. real call sites.
-  const used = [...css.replace(/@font-face\{[^}]*\}/g, '').matchAll(/font-weight:\s*(\d{3})/g)]
-    .map((m) => Number(m[1]))
+  // EVERY STYLESHEET, NOT JUST global.css. This scanned global.css alone, and
+  // that blindness cost 39 silent clamps: the Spectrum font swap remapped the 21
+  // weights this file could see and left 750s and 800s sitting in
+  // deferred/tool-shell.css (13), deferred/colour.css (10), studio, account,
+  // admin, semantic-color, seo-inspector and tint — plus inline `fontWeight` in
+  // JSX, which no CSS scan would ever reach. A guard that only watches one file
+  // reports a clean axis while eight other files clamp.
+  const styleFiles = []
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (entry.name.endsWith('.css')) styleFiles.push(full)
+    }
+  }
+  walk(path.join(process.cwd(), 'src', 'styles'))
+  assert.ok(styleFiles.length >= 5, `only ${styleFiles.length} stylesheets found — the walk is not reaching them`)
+
+  const used = styleFiles.flatMap((file) => {
+    const text = fs.readFileSync(file, 'utf8').replace(/@font-face\{[^}]*\}/g, '')
+    return [...text.matchAll(/font-weight:\s*(\d{3})/g)].map((m) => Number(m[1]))
+  })
+
+  // AND THE WEIGHTS NO STYLESHEET CONTAINS. A component can set a weight two
+  // ways that a CSS scan will never reach: an inline style object
+  // (`style={{ fontWeight: 800 }}`) and — the one that actually got through —
+  // an SVG presentation ATTRIBUTE in JSX (`fontWeight="800"` on a <text>).
+  // The admin donut's total was drawn at 800 and clamped for weeks; it was
+  // found by eye, after this test had already been widened once to walk every
+  // stylesheet. A guard that only reads CSS reports a clean axis while JSX
+  // clamps.
+  //
+  // Comments stripped first, for the reason design-tokens.test.js was fixed on
+  // the same day: source files now CONTAIN prose about this rule, and a test
+  // that fires on an explanation of itself is a test people stop believing.
+  const codeFiles = []
+  const walkCode = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walkCode(full)
+      else if (/\.jsx?$/.test(entry.name)) codeFiles.push(full)
+    }
+  }
+  walkCode(path.join(process.cwd(), 'src'))
+  assert.ok(codeFiles.length >= 20, `only ${codeFiles.length} source files found — the walk is not reaching them`)
+
+  const inlineUsed = codeFiles.flatMap((file) => {
+    const text = stripJs(fs.readFileSync(file, 'utf8'))
+    return [...text.matchAll(/fontWeight\s*[:=]\s*["']?(\d{3})["']?/g)].map((m) => Number(m[1]))
+  })
+  const inlineOutOfAxis = inlineUsed.filter((w) => w < 300 || w > 700)
+  assert.deepEqual(inlineOutOfAxis, [],
+    'a JSX fontWeight sits outside Geist\'s 300..700 axis — inline styles and SVG presentation '
+    + 'attributes are invisible to a stylesheet scan, and the browser clamps them silently')
   const odd = [...new Set(used.filter((w) => w % 100 !== 0))]
   assert.ok(odd.length > 0, 'expected intermediate weights; if these were removed, update this test')
   // The intermediate weights are the whole reason for a variable font, so they
-  // must be renderable by BOTH families — the tighter axis, 200..800, binds.
+  // must be renderable by BOTH families — the tighter axis, Geist's 300..700,
+  // binds.
   for (const w of odd) {
-    assert.ok(w >= 200 && w <= 800, `intermediate weight ${w} sits outside Manrope's 200..800 axis`)
+    assert.ok(w >= 300 && w <= 700, `intermediate weight ${w} sits outside Geist's 300..700 axis`)
   }
-  // Two call sites still ask for 900 (Palette Builder's preview/export headings)
-  // and clamp to Manrope's 800. V2's own display scale tops out at 800, so this
-  // is accepted rather than fixed — but it is BOUNDED here on purpose. A third
-  // out-of-axis weight fails this test so the next author has to make a choice
-  // instead of inheriting a silent clamp.
-  const outOfAxis = used.filter((w) => w < 200 || w > 800)
-  assert.deepStrictEqual(outOfAxis, [900, 900],
-    'a new out-of-axis weight appeared; it will be silently clamped — pick one inside 200..800')
+  // NOW ZERO, AND THAT IS THE POINT. Under Manrope this list read [900, 900] —
+  // two Palette Builder headings that clamped to 800 and were accepted as a
+  // bounded exception. Geist's axis is narrower, so adopting Spectrum turned
+  // that exception plus 19 more (720, 750, 800) into weights that would clamp
+  // to 700 without anyone seeing it. All 21 were remapped to 700 rather than
+  // left to clamp, because a clamp is a decision the renderer makes silently
+  // and a remap is one an author made on purpose. Most of them sit on the Home
+  // page Spectrum replaces outright; the rest are display numbers where Geist
+  // at 700 already reads heavier than Manrope did.
+  //
+  // The empty list is now the guard: a single new out-of-axis weight fails
+  // here, so the next author picks one inside 300..700 instead of inheriting a
+  // silent clamp.
+  const outOfAxis = used.filter((w) => w < 300 || w > 700)
+  assert.deepStrictEqual(outOfAxis, [],
+    'an out-of-axis weight appeared; it will be silently clamped — pick one inside Geist\'s 300..700')
 })

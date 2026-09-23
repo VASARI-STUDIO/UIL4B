@@ -131,7 +131,51 @@ export function ownerEmailDigest(email) {
 // constant is still the digest of it, so the two cannot drift in silence.
 const FOUNDER_DIGEST = 'a21225151329be64a7df9091c4a9cc016f6925ac48fa1f7321004537578a1ca1'
 
-export const ADMIN_EMAIL_DIGESTS = [FOUNDER_DIGEST]
+/* THE TEST ADMIN, AND WHY IT IS A DIGEST TOO.
+ *
+ * The acceptance suite's admin fixture signs in as `admin@uil4b.test` — a
+ * reserved domain, chosen when the server allowlist moved to `ADMIN_EMAILS` so
+ * the founder's real address stopped being the thing tests hardcode. But THIS
+ * list is the client gate, `RequireAdmin` reads it, and a digest cannot be
+ * satisfied by a substitute address. So four admin tests went red the moment
+ * the fixture changed: the server said yes and the browser said no.
+ *
+ * This is the digest of that reserved address, and it is only in the list under
+ * `--mode test`. `import.meta.env.MODE` is replaced at BUILD time by Vite, so
+ * the entry is not dead code in a production bundle — it is absent from it, the
+ * same mechanism that keeps the test auth double out of production
+ * (tests/unit/test-session-not-in-production.test.js proves that separately).
+ *
+ * It is a digest rather than a plaintext for consistency, not secrecy: an
+ * address on a reserved TLD that cannot receive mail is not a credential. What
+ * matters is that the gate takes one shape, so nobody later adds a plaintext
+ * branch here and reopens the disclosure this whole file exists to close. */
+const TEST_ADMIN_DIGEST = '2adf140688fd8cebaceeddf03ce7cddc7b73a131dcb2926aa18c39781b2e569f'
+
+/* THE ROLE ADDRESS, ADDED 2026-09-23 — and BOTH are listed on purpose.
+ *
+ * `admin@uil4b.com` is the better administrator: a role on the product's own
+ * domain rather than the founder's personal identity, so it can be handed over,
+ * revoked or shared without touching his own account.
+ *
+ * BOTH stay listed because this gate and the SERVER's `ADMIN_EMAILS` are
+ * separate lists, and the failure when they disagree is confusing rather than
+ * loud: the server would grant the API while this gate bounced the browser off
+ * /admin, or worse, the reverse — the admin UI rendering for somebody whose
+ * every request then 403s. Listing both here means whichever address
+ * `ADMIN_EMAILS` is set to, the browser agrees with the server, and there is a
+ * second way in if the domain mailbox ever stops being able to sign in.
+ *
+ * This is NOT a weakening. This list only decides what to RENDER — the bundle
+ * ships to every visitor, so it can hide a surface and can never protect data.
+ * `api/_lib/adminEmails.js` is the boundary, it reads a VERIFIED Firebase ID
+ * token, and an address that is not in `ADMIN_EMAILS` gets nothing from it no
+ * matter what this file says. */
+const ROLE_ADMIN_DIGEST = '2b612d4e9520b271cc3e3745856a8b12c49d1280d7cfa54e624f637fa2b0b70d'
+
+export const ADMIN_EMAIL_DIGESTS = import.meta.env?.MODE === 'test'
+  ? [FOUNDER_DIGEST, ROLE_ADMIN_DIGEST, TEST_ADMIN_DIGEST]
+  : [FOUNDER_DIGEST, ROLE_ADMIN_DIGEST]
 
 /**
  * Client-side admin check. Keep in sync with `isAdminEmail` in
