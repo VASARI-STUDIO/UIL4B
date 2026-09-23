@@ -196,6 +196,11 @@ test.describe('3D Viewer', () => {
 
   test('a wrong file and a broken file each get a sentence, never a success', async ({ page }) => {
     watch(page, PERSONA)
+    // A wrong file is refused from its own first bytes, without waiting on the
+    // 808 kB three.js engine. CI run 35849298083 sat on "Loading the viewer"
+    // past this test's 5 s wait because the verdict used to follow that download.
+    const engine = []
+    page.on('request', (r) => { if (/\/assets\/meshEngine-/.test(r.url())) engine.push(r.url()) })
     await go(page, ROUTE)
     await input(page).setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]) })
     await expect(page.getByTestId('v3d-error')).toContainText('photo.png is not a format this viewer reads')
@@ -204,6 +209,7 @@ test.describe('3D Viewer', () => {
     await expect(page.getByTestId('v3d-error')).toContainText('part.stl could not be read as STL')
     await expect(page.getByTestId('v3d-facts')).toHaveCount(0)
     await expect(page.getByTestId('v3d-convert')).toBeDisabled()
+    expect(engine, 'the wrong-file verdict waited on the 3D engine download').toEqual([])
 
     // A broken file dropped over a good model keeps the model and says so.
     await openBox(page)

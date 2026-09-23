@@ -62,7 +62,7 @@ import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js'
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js'
 import { PLYExporter } from 'three/examples/jsm/exporters/PLYExporter.js'
 import { readCad } from './cadEngine.js'
-import { extensionOf, signatureProblem } from './meshFormats.js'
+import { describeSignatureProblem, extensionOf, signatureProblem } from './meshFormats.js'
 
 // ── Materials ────────────────────────────────────────────────────────────────
 
@@ -415,7 +415,7 @@ export function describeLoadError(err, format, name) {
   const file = name || `This ${format?.label || ''} file`.replace(/\s+file$/, ' file')
   if (msg === 'gltf-not-json') return `${file} is not valid JSON, so it cannot be a .gltf. If it is binary, it may be a .glb with the wrong extension.`
   if (msg === 'gltf-missing-buffers') return `${file} keeps its geometry in a separate file that was not dropped with it: ${(err.files || []).join(', ')}. Drop the .gltf and its .bin together.`
-  if (msg.startsWith('signature:')) return `${file} could not be read as ${format?.label}: ${msg.slice('signature:'.length).trim()}.`
+  if (msg.startsWith('signature:')) return describeSignatureProblem(file, format, msg.slice('signature:'.length).trim())
   if (msg.startsWith('empty-model')) return `${file} was read, but it contains nothing to draw: no triangles and no points.`
   if (/DRACOLoader|KHR_draco/i.test(msg)) return `${file} is Draco-compressed, which this viewer does not decode yet. Export it uncompressed and try again.`
   if (/KTX2Loader|KHR_texture_basisu/i.test(msg)) return `${file} uses KTX2 textures, which this viewer does not decode. Export the textures as PNG or JPEG.`

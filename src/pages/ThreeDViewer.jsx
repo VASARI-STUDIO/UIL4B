@@ -7,6 +7,7 @@ import {
   MAX_MODEL_BYTES,
   OUTPUT_FORMATS,
   acceptAttribute,
+  describeSignatureProblem,
   describeSizeLimit,
   formatBytes,
   inputLabels,
@@ -14,6 +15,7 @@ import {
   outputFormat,
   outputLabels,
   pickPrimary,
+  signatureProblem,
 } from '../utils/meshFormats'
 import '../styles/pages/three-d-viewer.css'
 
@@ -165,6 +167,22 @@ export default function ThreeDViewer({ toast }) {
     const { primary, format } = drop
     if (primary.size > MAX_MODEL_BYTES) {
       setError(`${primary.name} is ${formatBytes(primary.size)}. The limit is ${describeSizeLimit()}: the whole file is parsed in this tab's memory, and past that a phone or a small laptop runs out of it.`)
+      return
+    }
+
+    // A file that is plainly not what its extension says is refused HERE, from
+    // its first megabyte and the small meshFormats module — before the 808 kB
+    // three.js engine is fetched. It used to wait on that download, so on a
+    // slow connection a wrong file sat on "Loading the viewer" for seconds
+    // before being told it was wrong (CI run 35849298083: over 5 s).
+    // meshEngine.loadModel still runs the same check on the whole read.
+    let head = null
+    try {
+      head = new Uint8Array(await primary.slice(0, 1 << 20).arrayBuffer())
+    } catch { /* unreadable here; loadModel reports it */ }
+    const problem = head && signatureProblem(format.id, head, primary.size)
+    if (problem) {
+      setError(describeSignatureProblem(primary.name, format, problem))
       return
     }
 

@@ -133,6 +133,12 @@ const ascii = (bytes, start, end) => {
   return s
 }
 
+/** The sentence a failed signature check is shown as — one wording, used both
+ *  by the pre-check in ThreeDViewer.jsx and by meshEngine's describeLoadError. */
+export function describeSignatureProblem(name, format, problem) {
+  return `${name} could not be read as ${format?.label}: ${problem}.`
+}
+
 /** Null when the bytes plausibly are `formatId`, otherwise a short reason. */
 export function signatureProblem(formatId, bytes, size = bytes?.length ?? 0) {
   if (!bytes || size === 0) return 'the file is empty'
