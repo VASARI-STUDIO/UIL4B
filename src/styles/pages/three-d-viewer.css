@@ -1,0 +1,542 @@
+/* three-d-viewer.css — /create/3d-viewer, the `v3d` family.
+ *
+ * Imported by src/pages/ThreeDViewer.jsx alone, so it ships as that route's
+ * chunk stylesheet and never on the homepage. EVERY selector is rooted at
+ * `.v3d`: Vite orders chunk CSS by the dependency graph, not by import order,
+ * so a sheet imported last can still load first (see commit 8d30f37a), and a
+ * page root is the only thing that makes these rules win without betting on
+ * load order. Tokens only; nothing here names a colour.
+ *
+ * Built Spectrum-native against the app file (UIL4B App.dc.html):
+ *   - the tool grid: stage + a 336px panel, one column under 900px;
+ *   - the stage and the panel are 18px (`--radius-2xl`) cards over a hairline;
+ *   - panel sections split by hairlines, each headed by a mono 9.5px / .16em
+ *     index label;
+ *   - controls are 10–12px rounded RECTANGLES over a hairline. 999px is not
+ *     used anywhere on this page (director decision: pills are for meters and
+ *     the marketing page);
+ *   - no accent anywhere except the one primary action and the selected
+ *     output, because accent means "the next action".
+ *
+ * CONTRAST (tokens, per theme, measured on the built page — see the lane
+ * report): the primary button is `--accent-mid` under `--accent-ink`, the pair
+ * /create/tint measured at 5.18:1 light / 9.17:1 dark; its hover is
+ * `--accent-text`, which moves AWAY from the ground in both themes. Never
+ * `--accent-hover` (it lightens in light) and never `--accent-strong` (a
+ * per-theme literal that does not follow a premium accent).
+ *
+ * MOTION: colour and border transitions only. Nothing on this page moves a box.
+ * The one real motion is the model's turntable, which is decided in JavaScript
+ * from the same resolved reduced-motion value AppearanceContext stamps on
+ * <html>, so both the OS setting and the Settings toggle reach it.
+ */
+
+.v3d {
+  min-width: 0;
+  padding-bottom: var(--s-7);
+}
+
+/* ── Head: the tool's name and, once a model is open, the way to swap it ── */
+
+.v3d .v3d-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: var(--s-5);
+}
+
+/* The migrated tool pages' h1 step (tint.css): display face, 600, -.045em,
+   under 1 line-height. Smaller ceiling than a hero because this page is a
+   working surface and the model is the subject, not the title. */
+.v3d .v3d-head h1 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(32px, 4.2vw, 52px);
+  font-weight: 600;
+  line-height: .98;
+  letter-spacing: -.045em;
+  color: var(--t0);
+}
+
+/* The word and only the word, as a small mono label in a hairline box — a
+   rectangle, and in ink, not accent: beta is a limit, not a call to action. */
+.v3d .v3d-beta {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--t2);
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-xs);
+}
+
+/* ── Buttons ── */
+
+.v3d .v3d-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 15px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 540;
+  line-height: 1.2;
+  color: var(--t0);
+  background: var(--card);
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
+}
+
+.v3d .v3d-btn:hover:not(:disabled) { background: var(--bg-2); border-color: var(--t3); }
+
+.v3d .v3d-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.v3d .v3d-btn:disabled { color: var(--t2); cursor: not-allowed; opacity: .6; }
+
+.v3d .v3d-btn--primary {
+  color: var(--accent-ink);
+  background: var(--accent-mid);
+  border-color: var(--accent-mid);
+}
+
+.v3d .v3d-btn--primary:hover:not(:disabled) { color: var(--accent-ink); background: var(--accent-text); border-color: var(--accent-text); }
+
+/* A disabled primary drops to the neutral button rather than a faded accent:
+   a washed-out blue still reads as "the next action", and it is not one yet. */
+.v3d .v3d-btn--primary:disabled { color: var(--t2); background: var(--bg-2); border-color: var(--border); opacity: 1; }
+
+.v3d .v3d-btn--quiet { min-height: 32px; padding: 0 10px; background: transparent; }
+
+/* ── The grid ── */
+
+.v3d .v3d-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 336px;
+  gap: clamp(12px, 1.6vw, 18px);
+  align-items: start;
+}
+
+.v3d .v3d-stage { min-width: 0; margin: 0; }
+
+/* ── The frame: the canvas, and every state drawn over it ── */
+
+.v3d .v3d-frame {
+  position: relative;
+  height: clamp(360px, calc(100svh - var(--nav-clear, 72px) - 190px), 760px);
+  overflow: hidden;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  transition: border-color var(--dur-1) ease, background var(--dur-1) ease;
+}
+
+/* A file held over the stage: the border takes the accent and the ground a
+   wash of it. Colour only, no scale, so nothing moves under the pointer. */
+.v3d .v3d-frame.is-over { border-color: var(--accent); background: var(--accent-wash); }
+
+.v3d .v3d-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+  outline: none;
+}
+
+.v3d .v3d-canvas:active { cursor: grabbing; }
+
+/* The canvas is the keyboard's target once a model is open, so its focus ring
+   is drawn INSIDE the frame, where the overflow clip cannot cut it off. */
+.v3d .v3d-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+
+.v3d[data-state="idle"] .v3d-canvas,
+.v3d[data-state="error"] .v3d-canvas { visibility: hidden; }
+
+.v3d[data-state="busy"] .v3d-canvas { pointer-events: none; }
+
+/* Every state drawn over the canvas shares one centred column. */
+.v3d .v3d-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+.v3d .v3d-overlay .v3d-btn { margin-top: 12px; }
+
+.v3d[data-state="busy"] .v3d-overlay { background: color-mix(in srgb, var(--bg-2) 82%, transparent); }
+
+/* Empty: a glyph, one line, the formats and the limit, one button. */
+.v3d .v3d-empty { cursor: pointer; }
+
+.v3d .v3d-empty-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  color: var(--t2);
+  border: 1px solid var(--bh);
+  border-radius: var(--radius);
+}
+
+.v3d .v3d-empty-glyph svg { width: 22px; height: 22px; }
+
+.v3d .v3d-empty-line { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--t0); }
+
+.v3d .v3d-empty-formats {
+  max-width: 46ch;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.7;
+  letter-spacing: .02em;
+  color: var(--t2);
+}
+
+/* Loading: the file's name, the stage, the bytes, a meter when a total is known. */
+.v3d .v3d-busy-name {
+  max-width: min(420px, 100%);
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 560;
+  color: var(--t0);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v3d .v3d-busy-stage { margin: 0; font-size: 13px; color: var(--t1); }
+
+.v3d .v3d-busy-bytes { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--t2); }
+
+/* The one place 999px is right on this page: a meter. */
+.v3d .v3d-meter {
+  width: min(320px, 100%);
+  height: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: var(--radius-pill);
+}
+
+.v3d .v3d-meter-fill {
+  display: block;
+  width: var(--v3d-pct, 0%);
+  height: 100%;
+  background: var(--t1);
+  border-radius: inherit;
+}
+
+.v3d .v3d-error-text {
+  max-width: 56ch;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--err-strong);
+}
+
+/* A failed load while a model is open keeps the model and says so on a strip
+   across the top, rather than throwing away the thing on screen. */
+.v3d .v3d-banner {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 10px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-s);
+}
+
+.v3d .v3d-banner .v3d-error-text { font-size: 12.5px; }
+
+/* The view controls: one small bar centred under the model (Copilot's shape). */
+.v3d .v3d-tools {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 24px);
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-s);
+  translate: -50% 0;
+}
+
+.v3d .v3d-seg {
+  display: flex;
+  gap: 2px;
+  padding-right: 4px;
+  margin-right: 2px;
+  border-right: 1px solid var(--border);
+}
+
+.v3d .v3d-seg button,
+.v3d .v3d-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 11px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 540;
+  color: var(--t2);
+  white-space: nowrap;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: background var(--dur-1) ease, color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.v3d .v3d-seg button svg,
+.v3d .v3d-tool svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+.v3d .v3d-seg button:hover,
+.v3d .v3d-tool:hover:not(:disabled) { color: var(--t0); background: var(--bg-2); }
+
+/* Pressed is carried by three things, not by colour alone: the ink darkens,
+   the ground fills, and a hairline in the strong border colour draws the box. */
+.v3d .v3d-seg button[aria-pressed="true"],
+.v3d .v3d-tool[aria-pressed="true"] { color: var(--t0); background: var(--bg-2); border-color: var(--bh); }
+
+.v3d .v3d-seg button:focus-visible,
+.v3d .v3d-tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.v3d .v3d-tool:disabled { cursor: not-allowed; opacity: .55; }
+
+.v3d .v3d-file { display: none; }
+
+.v3d .v3d-hint {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--t2);
+}
+
+/* ── The panel ── */
+
+.v3d .v3d-panel {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+}
+
+.v3d .v3d-sect { display: grid; gap: 12px; padding: 16px; }
+
+.v3d .v3d-sect + .v3d-sect { border-top: 1px solid var(--border); }
+
+.v3d .v3d-label {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.v3d .v3d-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.v3d .v3d-facts dt { color: var(--t2); }
+
+.v3d .v3d-facts dd {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--t0);
+  overflow-wrap: anywhere;
+}
+
+.v3d .v3d-facts--idle dd { font-family: var(--font); font-size: 12.5px; text-align: left; color: var(--t1); }
+
+.v3d .v3d-unit { font-family: var(--font); font-size: 11.5px; color: var(--t2); }
+
+.v3d .v3d-notes {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 12px 0 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--t1);
+  border-top: 1px dashed var(--border);
+}
+
+.v3d .v3d-notes li { position: relative; padding-left: 14px; }
+
+.v3d .v3d-notes li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: .6em;
+  width: 5px;
+  height: 5px;
+  background: var(--t3);
+  border-radius: 1px;
+}
+
+/* Output choices: real radios in labelled rows, so arrow keys move between
+   them and a screen reader hears "radio, 3 of 6". */
+.v3d .v3d-outs { display: grid; gap: 6px; }
+
+.v3d .v3d-out {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 1px;
+  align-items: baseline;
+  padding: 9px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: border-color var(--dur-1) ease, background var(--dur-1) ease;
+}
+
+.v3d .v3d-out:hover { border-color: var(--bh); }
+
+.v3d .v3d-out.is-on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+.v3d .v3d-out.is-off { cursor: not-allowed; background: var(--bg-2); }
+
+.v3d .v3d-out:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.v3d .v3d-out input {
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent-mid);
+  cursor: inherit;
+}
+
+.v3d .v3d-out input:focus-visible { outline: none; }
+
+.v3d .v3d-out-l { font-size: 13px; font-weight: 560; color: var(--t0); }
+
+.v3d .v3d-out-n { grid-column: 2; font-size: 11.5px; line-height: 1.45; color: var(--t2); }
+
+.v3d .v3d-out.is-off .v3d-out-l { color: var(--t2); }
+
+.v3d .v3d-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+
+.v3d .v3d-actions .v3d-btn--primary { flex: 1 1 auto; }
+
+.v3d .v3d-idle-note { margin: 0; font-size: 12px; color: var(--t2); }
+
+.v3d .v3d-result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding-top: 10px;
+  font-size: 12.5px;
+  border-top: 1px solid var(--border);
+}
+
+.v3d .v3d-result-name { min-width: 0; font-weight: 560; color: var(--t0); overflow-wrap: anywhere; }
+
+.v3d .v3d-result-size { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--t2); white-space: nowrap; }
+
+/* ── Coarse pointers: 44px on every control, not a blanket rule ── */
+
+@media (pointer: coarse) {
+  .v3d .v3d-btn,
+  .v3d .v3d-seg button,
+  .v3d .v3d-tool,
+  .v3d .v3d-out { min-height: 44px; }
+  .v3d .v3d-btn--quiet { min-height: 44px; }
+  .v3d .v3d-out input { width: 20px; height: 20px; }
+}
+
+/* ── Widths ── */
+
+@media (max-width: 900px) {
+  .v3d .v3d-grid { grid-template-columns: minmax(0, 1fr); }
+  .v3d .v3d-frame { height: clamp(300px, 62svh, 560px); }
+  .v3d .v3d-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .v3d .v3d-sect + .v3d-sect { border-top: 0; border-left: 1px solid var(--border); }
+}
+
+@media (max-width: 640px) {
+  .v3d .v3d-panel { grid-template-columns: minmax(0, 1fr); }
+  .v3d .v3d-sect + .v3d-sect { border-left: 0; border-top: 1px solid var(--border); }
+  /* A canvas that fills the screen leaves nothing to scroll the page with, and
+     touch on the canvas orbits. Capped well under the viewport so there is
+     always page above and below it to grab. */
+  .v3d .v3d-frame { height: clamp(260px, 54svh, 440px); }
+  .v3d .v3d-tools { bottom: 8px; }
+  /* Icon-only under 640: the four labelled buttons need ~390px and the bar
+     must fit a 320px screen. The words stay in the accessibility tree. */
+  .v3d .v3d-seg button span,
+  .v3d .v3d-tool span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .v3d .v3d-seg button,
+  .v3d .v3d-tool { min-width: 40px; justify-content: center; padding: 0 10px; }
+  .v3d .v3d-banner { flex-direction: column; align-items: stretch; }
+}
+
+@media (max-width: 380px) {
+  .v3d .v3d-overlay { padding: 16px; }
+  .v3d .v3d-empty-formats { font-size: 10.5px; }
+}

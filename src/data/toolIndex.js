@@ -249,6 +249,10 @@ export const CREATE_TOOL_SEARCH = {
     description: 'Solve any aspect ratio, resolution, PPI or diagonal from a single measurement.',
     keywords: ['ratio', 'aspect', 'aspect ratio', 'resolution', 'calculator', 'dimensions', 'resize', 'imagery', 'media', '16:9', '4:3', 'crop', 'ppi', 'diagonal', 'screen size', 'device', 'instagram', 'reel', 'banner'],
   },
+  '3d-viewer': {
+    description: 'Open a 3D model in the browser and convert it between mesh formats.',
+    keywords: ['3d', '3d viewer', 'viewer', 'model', 'mesh', 'convert', 'converter', 'obj', 'stl', 'gltf', 'glb', 'ply', '3mf', 'fbx', 'step', 'stp', 'iges', 'cad', '3d print', 'three.js', 'beta'],
+  },
   'alt-text': {
     description: 'Generate accessible alt text for images in batch using AI.',
     keywords: ['alt', 'alt text', 'alt text generator', 'accessibility', 'a11y', 'ai', 'description', 'batch', 'image'],

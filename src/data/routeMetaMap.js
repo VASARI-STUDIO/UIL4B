@@ -13,6 +13,10 @@
 // no entry here), and an article that exists but is missing from this file
 // would render fine in the browser and be invisible to every crawler.
 import { LEARN_PAGE_DESCRIPTIONS, LEARN_PAGE_TITLES } from './learnIndex.js'
+// The 3D Viewer's description lists its formats from the same table its loader
+// dispatch reads, so it cannot advertise a format the page does not open.
+// Plain data, no three.js — safe in the entry graph and in Node.
+import { INPUT_FORMATS, OUTPUT_FORMATS, listForProse } from '../utils/meshFormats.js'
 
 // Titles/descriptions for real destinations only. Legacy redirect-only paths
 // (/dashboard, /resources, /docs-*) are intentionally absent — they render a
@@ -67,6 +71,7 @@ export const PAGE_TITLES = {
   '/admin': 'UI L4B | Admin',
   '/create/auto-builder': 'UI L4B | Brand Starter',
   '/create/file-converter': 'UI L4B | File Converter',
+  '/create/3d-viewer': 'UI L4B | 3D Viewer',
   ...LEARN_PAGE_TITLES,
 }
 // THE "CSS EXPORTS" CLAUSE WAS FALSE AND IS DELETED, not reworded.
@@ -188,5 +193,8 @@ export const PAGE_DESCRIPTIONS = {
   '/sitemap': 'The complete UI L4B sitemap — every page across Create, Discover and Learn, plus your workspace, help and legal, laid out end to end.',
   '/admin': DEFAULT_DESCRIPTION,
   '/create/file-converter': 'Convert files between formats directly in your browser. Fast, private, client-side processing.',
+  // Functional, not marketing: what it opens, what it writes, where the work
+  // happens. Listed as copy owed in the lane report for the founder to reword.
+  '/create/3d-viewer': `View ${listForProse(INPUT_FORMATS.map((f) => f.label))} models in your browser and convert them to ${listForProse(OUTPUT_FORMATS.map((f) => f.label))}.`,
   ...LEARN_PAGE_DESCRIPTIONS,
 }
