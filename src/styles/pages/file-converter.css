@@ -3,7 +3,140 @@
  * Every selector is scoped under `.fc`, the page root. Importing this sheet
  * last does NOT make it last: Vite orders chunk CSS by the dependency graph, so
  * a shared deferred sheet can land after it (commit 8d30f37a measured exactly
- * that on /create/gradient). The root scope is what makes these rules win. */
+ * that on /create/gradient). The root scope is what makes these rules win —
+ * including over the old `.fc-tabs` / `.fc-alpha` / `.fc-drop` rules that still
+ * sit in global.css, which this lane may not edit.
+ *
+ * ── SPECTRUM PASS, 2026-09-23 ───────────────────────────────────────────────
+ *
+ * The page moved out of deferred/studio.css (where every `fc` rule lived beside
+ * the keyboard overlay, the colour-system popup and the quota meter) and out
+ * of 48 inline `style={{…}}` blocks in the JSX. The only inline styles left
+ * carry DATA: a progress bar's percentage, as `--fc-pct`.
+ *
+ * WHAT CHANGED SHAPE, and the evidence:
+ *
+ * - LAYOUT. The app file (`UIL4B App.dc.html`, the Gradient screen) draws a
+ *   tool as a canvas column beside a 336px inspector card: sections split by
+ *   hairlines, each opened by a mono uppercase label. Every mode here now uses
+ *   that grid once a file is loaded — the visitor's files or video on the
+ *   left, the decisions and the action on the right — and it collapses to
+ *   object, decision, action in one column under 900px, which is the order
+ *   the queue comment in FileConverter.jsx was measured into.
+ *
+ * - CONTROLS ARE RECTANGLES. 12px buttons and 10px fields over a hairline, as
+ *   in the app file and as /create/tint and /admin already do. 999px is kept
+ *   for the one meter-shaped object, the progress bar. The tabs were a pill
+ *   segmented control; they are an underline tab row now, and real ARIA tabs.
+ *
+ * - ACCENT IS SPENT ON THE ACTION. `--accent-strong` is gone (the ALPHA tag
+ *   was filled with it; the old spinner and progress bar used `--brand`). The
+ *   one filled control per panel is `--accent-mid` with `--accent-ink`, the
+ *   pair /create/tint measured at 5.18:1 light / 9.17:1 dark. The drop zone's
+ *   icon was an accent tile; it is neutral now, because an empty state is not
+ *   the next action — choosing a file is, and the whole zone is that button.
+ *
+ * - NO LIFT. The drop zone rose 2px and threw a large shadow on hover (global
+ *   `.fc-drop:hover`). A dashed target that jumps is decoration; the hover is a
+ *   border change now, and the drag-over state is the accent wash. */
+
+.fc {
+  --fc-ease: cubic-bezier(.23, 1, .32, 1);
+  --fc-check: repeating-conic-gradient(var(--bg-2) 0 25%, var(--card) 0 50%) 0 0 / 16px 16px;
+  min-width: 0;
+  padding-bottom: var(--s-7);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+
+.fc .fc-hero { margin: 0 0 var(--s-6); }
+
+/* Spectrum's hero metrics, the same step /create/tint and /create/gradient use. */
+.fc .fc-hero h1 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0 0 var(--s-4);
+  font-family: var(--display);
+  font-size: clamp(38px, 5.6vw, 72px);
+  font-weight: 600;
+  line-height: .96;
+  letter-spacing: -.045em;
+  color: var(--t0);
+  text-wrap: balance;
+}
+
+.fc .fc-hero p {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--t1);
+  text-wrap: pretty;
+}
+
+/* A status tag, not a badge: mono, hairline, neutral ink. It was a filled
+   `--accent-strong` chip, the loudest object in the header. */
+.fc .fc-alpha {
+  margin: 0;
+  padding: 4px 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t2);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+
+.fc .fc-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+  margin: 0 0 var(--s-3);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.fc .fc-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin-bottom: -1px;
+  padding: 0 14px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 540;
+  letter-spacing: -.005em;
+  color: var(--t2);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  box-shadow: none;
+  cursor: pointer;
+  transition: color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.fc .fc-tab:hover { color: var(--t0); }
+
+/* The selected tab is ink, not accent: the accent on this page belongs to the
+   one action in each panel. */
+.fc .fc-tab[aria-selected="true"] {
+  color: var(--t0);
+  border-bottom-color: var(--t0);
+}
+
+.fc .fc-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* ── Where 3D went ───────────────────────────────────────────────────────────
    One line under the tabs, replacing a "3D → Blender · soon" tab that led to a
@@ -34,6 +167,566 @@
 
 .fc .fc-3d a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* ── The bench: canvas column + inspector ─────────────────────────────────── */
+
+.fc .fc-bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 336px;
+  gap: clamp(12px, 1.6vw, 18px);
+  align-items: start;
+}
+
+.fc .fc-bench-main {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.fc .fc-inspector {
+  position: sticky;
+  top: var(--nav-clear);
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+}
+
+.fc .fc-insp-sec {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fc .fc-insp-sec:last-child { border-bottom: 0; }
+
+/* The app file's section label: mono, tracked, faint. --t3 on --card measured
+   5.24:1 light / 5.86:1 dark by the tint pass. */
+.fc .fc-eyebrow {
+  display: block;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.fc .fc-eyebrow--sub { margin-top: 6px; }
+
+.fc .fc-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.fc .fc-pair > div { display: grid; gap: 8px; min-width: 0; }
+
+.fc .fc-row { display: flex; align-items: center; gap: 10px; }
+
+.fc .fc-row .fc-note { margin: 0; }
+
+.fc .fc-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--t2);
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────────── */
+
+.fc .fc-field {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 12px;
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--t0);
+  background: var(--inp);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+}
+
+.fc .fc-field:hover:not(:disabled) { border-color: var(--bh); }
+
+.fc .fc-field:disabled { opacity: .55; cursor: not-allowed; }
+
+.fc .fc-field--num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.fc .fc-range { display: flex; align-items: center; gap: 8px; }
+
+.fc .fc-range .fc-field { flex: 1 1 0; }
+
+.fc .fc-range-arrow { color: var(--t3); }
+
+.fc .fc-bg-pick {
+  width: 44px;
+  height: 38px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--bg-2);
+  cursor: pointer;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.fc .fc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 540;
+  line-height: 1.2;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) var(--fc-ease);
+}
+
+.fc .fc-btn:hover:not(:disabled) { background: var(--hvr); border-color: var(--bh); }
+
+.fc .fc-btn:active:not(:disabled) { transform: scale(.98); }
+
+.fc .fc-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.fc .fc-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* The one filled control per panel. The hover moves to --accent-text, the
+   next step in the direction --accent-mid already travels (deeper in light,
+   lighter in dark), never --accent-hover, which mixes toward paper in both
+   themes and has undone a contrast fix on this branch before. */
+.fc .fc-btn--primary {
+  color: var(--accent-ink);
+  background: var(--accent-mid);
+  border-color: transparent;
+}
+
+.fc .fc-btn--primary:hover:not(:disabled) { background: var(--accent-text); border-color: transparent; }
+
+.fc .fc-btn--wide { width: 100%; }
+
+.fc .fc-btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.fc .fc-actions { gap: 10px; }
+
+/* ── Drop zone ────────────────────────────────────────────────────────────── */
+
+.fc .fc-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: clamp(32px, 6vw, 64px) 20px;
+  text-align: center;
+  background: var(--card);
+  border: 1px dashed var(--bh);
+  border-radius: var(--radius-2xl);
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+  transition: border-color var(--dur-1) ease, background var(--dur-1) ease;
+}
+
+.fc .fc-drop:hover { border-color: var(--t2); box-shadow: none; transform: none; }
+
+.fc .fc-drop--over,
+.fc .fc-drop--over:hover {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.fc .fc-drop:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.fc .fc-drop-ico {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  color: var(--t1);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fc .fc-drop-ico svg { width: 18px; height: 18px; }
+
+.fc .fc-drop-text { display: grid; gap: 4px; }
+
+.fc .fc-drop-hint {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 540;
+  letter-spacing: -.01em;
+  color: var(--t0);
+}
+
+.fc .fc-drop-sub {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--t2);
+}
+
+/* "Add more": once the visitor's own files are on screen, the invitation
+   shrinks to a strip under them rather than sitting above them at full size. */
+.fc .fc-drop--compact {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 14px;
+  text-align: left;
+  border-radius: var(--radius);
+}
+
+.fc .fc-drop--compact .fc-drop-ico { width: 32px; height: 32px; border-radius: var(--radius-s); }
+
+.fc .fc-drop--compact .fc-drop-hint { font-size: 13px; }
+
+.fc .fc-draft-note {
+  margin: 12px 0;
+  padding: 10px 14px;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--t1);
+  background: var(--accent-wash);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-s);
+}
+
+.fc .fc-draft-note strong { font-weight: 560; color: var(--t0); }
+
+/* ── Queue / frame cards ──────────────────────────────────────────────────── */
+
+.fc .fc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fc .fc-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  height: 100%;
+  padding: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fc .fc-card--btn {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-1) ease;
+}
+
+.fc .fc-card--btn:hover { border-color: var(--bh); }
+
+.fc .fc-card--btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.fc .fc-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--fc-check);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+}
+
+.fc .fc-thumb img { width: 100%; height: 100%; object-fit: contain; }
+
+.fc .fc-remove {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--t1);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.fc .fc-remove svg { width: 14px; height: 14px; }
+
+.fc .fc-remove:hover:not(:disabled) { color: var(--err-strong); border-color: var(--bh); }
+
+.fc .fc-remove:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.fc .fc-remove:disabled { opacity: .45; cursor: not-allowed; }
+
+.fc .fc-name {
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 540;
+  color: var(--t0);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc .fc-meta {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  color: var(--t2);
+}
+
+.fc .fc-meta--err { font-family: var(--font); font-size: 12px; color: var(--err-strong); }
+
+/* The size change. The -strong inks are the text grade of each state colour
+   in both themes: --ok measured 4.32:1 on the page ground in light. */
+.fc .fc-delta { font-weight: 600; }
+
+.fc .fc-delta--down { color: var(--ok-strong); }
+
+.fc .fc-delta--up { color: var(--err-strong); }
+
+.fc .fc-delta--same { color: var(--t2); }
+
+.fc .fc-dl { width: 100%; margin-top: auto; }
+
+.fc .fc-batch {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--t1);
+}
+
+/* The output readout. One line, under the controls it explains, and quiet
+   enough that it reads as a status rather than another control. */
+.fc .fc-outsize {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  font-size: 12.5px;
+  color: var(--t2);
+  border-top: 1px dashed var(--border);
+}
+
+.fc .fc-outsize-k {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.fc .fc-outsize-v { color: var(--t1); }
+
+.fc .fc-outsize-v strong { font-weight: 600; color: var(--t0); }
+
+.fc .fc-outsize-arrow { color: var(--t3); }
+
+/* ── Progress and engine status ───────────────────────────────────────────── */
+
+/* The meter is the one pill on the page. The bar is --accent against --bg-3:
+   a non-text boundary, where 3:1 is the bar and it clears it in both themes. */
+.fc .fc-progress {
+  height: 6px;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg-3);
+  border-radius: var(--radius-pill);
+}
+
+.fc .fc-progress-bar {
+  width: var(--fc-pct, 0%);
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+  transition: width var(--dur-2) var(--ease-out);
+}
+
+.fc .fc-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--t2);
+}
+
+.fc .fc-status-err { color: var(--err-strong); }
+
+/* The byte count beside the engine-download sentence: tabular so it does not
+   jitter as it climbs. */
+.fc .fc-status-bytes {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--t1);
+  white-space: nowrap;
+}
+
+.fc .fc-spinner {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--t1);
+  border-radius: 50%;
+  animation: fc-spin .7s linear infinite;
+}
+
+/* ── Video source and results ─────────────────────────────────────────────── */
+
+.fc .fc-source { display: grid; gap: 12px; min-width: 0; }
+
+.fc .fc-video {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  background: var(--bg-3);
+  border-radius: var(--radius-xl);
+}
+
+.fc .fc-source-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.fc .fc-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  min-width: 0;
+  margin: 0;
+}
+
+.fc .fc-facts > div { display: grid; gap: 2px; min-width: 0; }
+
+.fc .fc-facts dt {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+
+.fc .fc-facts dd {
+  max-width: 28ch;
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--t0);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc .fc-result {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+}
+
+.fc .fc-result-media {
+  display: block;
+  max-width: 100%;
+  max-height: 480px;
+  background: var(--fc-check);
+  border-radius: var(--radius-s);
+}
+
+.fc .fc-frames { margin-top: var(--s-5); display: grid; gap: 12px; }
+
+.fc .fc-frames-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ── Widths ───────────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .fc .fc-bench { grid-template-columns: minmax(0, 1fr); }
+  .fc .fc-inspector { position: static; }
+}
+
+@media (max-width: 640px) {
+  .fc .fc-hero { margin-bottom: var(--s-5); }
+  .fc .fc-hero p { font-size: 14.5px; }
+  .fc .fc-tab { padding: 0 11px; font-size: 13px; }
+  .fc .fc-video { max-height: 260px; }
+}
+
+@media (max-width: 480px) {
+  .fc .fc-grid { grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr)); }
+  .fc .fc-pair { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Touch: every control this page draws reaches 44px under a coarse pointer
+   (24px is the floor everywhere else, and the smallest here is 28). */
 @media (pointer: coarse) {
+  .fc .fc-tab,
+  .fc .fc-btn,
+  .fc .fc-field,
+  .fc .fc-bg-pick,
   .fc .fc-3d a { min-height: 44px; }
+  .fc .fc-field { height: 44px; }
+  .fc .fc-remove { width: 44px; height: 44px; top: 12px; right: 12px; }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────────
+   The global blanket clamps durations; these are the two things that MOVE a
+   box — the button press and the spinner — stopped outright, in both
+   spellings the app uses. */
+html[data-reduced-motion="true"] .fc .fc-btn:active:not(:disabled) { transform: none; }
+html[data-reduced-motion="true"] .fc .fc-spinner { animation: none; border-top-color: var(--border); }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fc .fc-btn:active:not(:disabled) { transform: none; }
+  html:not([data-reduced-motion="false"]) .fc .fc-spinner { animation: none; border-top-color: var(--border); }
 }

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import JSZip from 'jszip'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
+import DropZone from '../components/converter/DropZone'
+import { loadImage, prefersReducedMotion, useGatedDownload } from '../components/converter/shared'
 import { getLenis } from '../hooks/useSmoothScroll'
 import {
   DRAFT_FORMATS,
@@ -18,10 +20,12 @@ import {
   exceedsCanvasLimit,
   outputDimensions,
 } from '../utils/imageResize'
-import useExportGate from '../hooks/useExportGate'
+import { formatBytes, formatTime } from '../utils/mediaEncode'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
+// file-converter.css is the page's own sheet and holds every `fc` rule; it is
+// root-scoped under `.fc`, which is what lets it win — import order does not.
 import '../styles/deferred/studio.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/file-converter.css'
@@ -128,42 +132,19 @@ const ffmpegCoreURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.js`
 const ffmpegWasmURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function formatBytes(b) {
-  if (b == null) return '—'
-  if (b < 1024) return b + ' B'
-  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'
-  return (b / 1048576).toFixed(1) + ' MB'
-}
-
 // Describes the size change between the original and converted file.
 // dir: 'down' (smaller, good), 'up' (larger), 'same'.
 function sizeDelta(orig, out) {
   if (!orig || out == null) return null
   const pct = Math.round((1 - out / orig) * 100)
-  // The -strong inks, not the raw state colours: this is 12px TEXT and the
-  // batch line sits on the page ground, where --ok measured 4.32:1 in light
-  // (2026-09-09, every width). --ok-strong is the text-grade step of the
-  // same hue in both themes; the card lines move with it so one delta does
-  // not read in two greens.
-  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller`, color: 'var(--ok-strong)' }
-  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger`, color: 'var(--err-strong)' }
-  return { pct: 0, dir: 'same', label: 'same size', color: 'var(--t2)' }
-}
-
-function formatTime(s) {
-  if (!isFinite(s)) return '0:00'
-  const m = Math.floor(s / 60)
-  const sec = Math.floor(s % 60)
-  return `${m}:${sec.toString().padStart(2, '0')}`
-}
-
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('Could not decode image'))
-    img.src = src
-  })
+  // The ink is picked by `dir` in file-converter.css (.fc-delta--down/up/same)
+  // rather than returned here as an inline colour. It is the -strong inks, not
+  // the raw state colours: this is 12px TEXT and the batch line sits on the
+  // page ground, where --ok measured 4.32:1 in light (2026-09-09, every
+  // width). --ok-strong is the text-grade step of the same hue in both themes.
+  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller` }
+  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger` }
+  return { pct: 0, dir: 'same', label: 'same size' }
 }
 
 // Assembles a multi-size Windows ICO (favicon) from the source image: each
@@ -208,17 +189,6 @@ async function encodeIco(img, iw, ih) {
   return new Blob([out], { type: 'image/x-icon' })
 }
 
-// Reduced motion, mirroring useHomeMotion's source of truth: AppearanceContext
-// writes html[data-reduced-motion] and the app treats that toggle as
-// authoritative (a visitor may deliberately opt back into motion), so only fall
-// back to the OS query when the attribute is missing.
-function prefersReducedMotion() {
-  const attr = document.documentElement.getAttribute('data-reduced-motion')
-  if (attr === 'true') return true
-  if (attr === 'false') return false
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-}
-
 // The PillNav is position:fixed, so anything scrolled to its own offsetTop hides
 // underneath it. Measure the live bar (its height changes at ≤640px, and a
 // chrome-less embed has none at all) and leave one --s-4 of air below it.
@@ -253,22 +223,6 @@ function revealQueue(node) {
   else window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' })
 }
 
-// THE RAW DOWNLOAD. The account gate is NOT here, and that is deliberate:
-// this is a module-level function and the gate is a hook, so each component
-// that downloads holds its own `gatedDownload` and calls this after the gate
-// resolves. Three of them do — ImageConvert, DownloadButton and VideoFrames.
-// Calling this directly skips the gate, so do not.
-function triggerDownload(blobOrUrl, filename) {
-  const url = typeof blobOrUrl === 'string' ? blobOrUrl : URL.createObjectURL(blobOrUrl)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  if (typeof blobOrUrl !== 'string') URL.revokeObjectURL(url)
-}
-
 // ── Component ────────────────────────────────────────────────────────────────
 export default function FileConverter({ toast }) {
   // Pick up anything handed over in memory — the dashboard's quick-upload tile
@@ -284,14 +238,31 @@ export default function FileConverter({ toast }) {
   useEffect(() => { consumeImageHandoff() }, [])
   // Image is the default tab; handed-over images therefore land on it.
   const [mode, setMode] = useState('image')
+  const tabRefs = useRef({})
+
+  // THE ARIA TABS PATTERN, including the keyboard half. These were four
+  // buttons with aria-pressed — a toggle group — for what is a set of
+  // mutually exclusive views, each replacing the one below. Arrow keys move
+  // between tabs and select them; only the current tab is in the Tab order.
+  const onTabKey = (e, i) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key]
+    let next = null
+    if (step) next = (i + step + MODES.length) % MODES.length
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = MODES.length - 1
+    if (next == null) return
+    e.preventDefault()
+    setMode(MODES[next].id)
+    tabRefs.current[MODES[next].id]?.focus()
+  }
 
   return (
     <div className="sec fc">
-      <div className="sec-h">
-        {/* NO TAXONOMY EYEBROW. This was the most literal instance in the
-            codebase: the eyebrow read "File Converter" at y=102 and the h1
-            below it read "File Converter" at y=135. The same three words,
-            twice, 33px apart. #surface-headers-read-as-ai. */}
+      {/* NO TAXONOMY EYEBROW. This was the most literal instance in the
+          codebase: the eyebrow read "File Converter" at y=102 and the h1
+          below it read "File Converter" at y=135. The same three words,
+          twice, 33px apart. #surface-headers-read-as-ai. */}
+      <header className="fc-hero">
         <h1>
           File Converter
           <span className="fc-alpha">Alpha</span>
@@ -303,17 +274,22 @@ export default function FileConverter({ toast }) {
           tools download a converter engine — about 9 MB — from a public code
           CDN the first time you use one, then keep it cached.
         </p>
-      </div>
+      </header>
 
-      {/* Mode tabs */}
-      <div className="fc-tabs">
-        {MODES.map(m => (
+      <div className="fc-tabs" role="tablist" aria-label="Converter mode">
+        {MODES.map((m, i) => (
           <button
             key={m.id}
-            className={`fc-tab${mode === m.id ? ' on' : ''}`}
+            ref={el => { tabRefs.current[m.id] = el }}
+            type="button"
+            role="tab"
+            id={`fc-tab-${m.id}`}
+            aria-selected={mode === m.id}
+            aria-controls={`fc-panel-${m.id}`}
+            tabIndex={mode === m.id ? 0 : -1}
+            className="fc-tab"
             onClick={() => setMode(m.id)}
-            aria-pressed={mode === m.id}
-            aria-label={`${m.label} converter`}
+            onKeyDown={e => onTabKey(e, i)}
           >
             {m.label}
           </button>
@@ -330,68 +306,24 @@ export default function FileConverter({ toast }) {
         <span className="fc-3d-note"> · Converting to Blender&apos;s .blend needs Blender running on a server, so it is not offered here.</span>
       </p>
 
-      {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
-      {mode === 'gif' && <VideoToGif toast={toast} />}
-      {mode === 'frames' && <VideoFrames toast={toast} />}
+      <div className="fc-panel" role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
+        {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
+        {mode === 'gif' && <VideoToGif toast={toast} />}
+        {mode === 'frames' && <VideoFrames toast={toast} />}
+      </div>
     </div>
   )
 }
 
-// ── Shared drop zone ─────────────────────────────────────────────────────────
-function DropZone({ accept, multiple, onFiles, hint, sub }) {
-  const inputRef = useRef(null)
-  const [hover, setHover] = useState(false)
-  return (
-    <div
-      className={`img-drop-zone fc-drop${hover ? ' fc-drop-on' : ''}`}
-      role="button"
-      tabIndex={0}
-      aria-label={hint}
-      onClick={() => inputRef.current?.click()}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
-      onDragOver={e => { e.preventDefault(); setHover(true) }}
-      onDragLeave={() => setHover(false)}
-      onDrop={e => {
-        e.preventDefault()
-        setHover(false)
-        if (e.dataTransfer.files?.length) onFiles(e.dataTransfer.files)
-      }}
-    >
-      <span className="fc-drop-ico" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" />
-        </svg>
-      </span>
-      <p className="fc-drop-hint">{hint}</p>
-      <p className="fc-drop-sub">{sub}</p>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        style={{ display: 'none' }}
-        onChange={e => { if (e.target.files?.length) onFiles(e.target.files); e.target.value = '' }}
-      />
-    </div>
-  )
+/** A size change as text plus its direction, which picks the ink. */
+function Delta({ orig, out }) {
+  const d = sizeDelta(orig, out)
+  return d ? <span className={`fc-delta fc-delta--${d.dir}`}> · {d.label}</span> : null
 }
 
 // ── Mode 1: Image format conversion ──────────────────────────────────────────
 function ImageConvert({ toast, initialFiles, initialDraft }) {
-  // A file needs a free account; converting and previewing never do.
-  const requireExportAccount = useExportGate()
-  // RETURNS WHETHER THE FILE ACTUALLY LEFT. It used to return undefined, and
-  // every caller ignored it: `gatedDownload(...)` then `toast('Downloaded ZIP
-  // with N images')` on the next line, unawaited. For a visitor with no account
-  // the gate opens a signup dialog and the download never happens — so the
-  // success toast rendered BEHIND the dialog, telling them a file they did not
-  // get had arrived. A dismissed gate is not a failure and says nothing; it is
-  // the visitor's own answer, and the dialog already explained itself.
-  const gatedDownload = useCallback(async (blobOrUrl, filename, reason) => {
-    if (!(await requireExportAccount(reason))) return false
-    triggerDownload(blobOrUrl, filename)
-    return true
-  }, [requireExportAccount])
+  const gatedDownload = useGatedDownload()
   // A homepage output draft is applied to the real controls once, on mount, and
   // then belongs to the visitor — nothing here keeps re-asserting it.
   const seeded = initialDraft ? draftToConverterSettings(initialDraft) : null
@@ -630,29 +562,32 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   const converted = items.filter(it => it.out)
   const totalOrig = converted.reduce((s, it) => s + it.file.size, 0)
   const totalOut = converted.reduce((s, it) => s + it.out.bytes, 0)
-  const batchDelta = readyCount > 1 ? sizeDelta(totalOrig, totalOut) : null
+  const pct = convertProgress.total ? Math.round((convertProgress.done / convertProgress.total) * 100) : 0
+
+  const drop = (
+    <DropZone
+      accept={ACCEPT_IMAGE}
+      multiple
+      onFiles={addFiles}
+      compact={items.length > 0}
+      hint={items.length ? 'Add more images' : 'Drop images here or click to browse'}
+      sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
+    />
+  )
 
   return (
     <>
-      <div className="sub">
-        <DropZone
-          accept={ACCEPT_IMAGE}
-          multiple
-          onFiles={addFiles}
-          hint="Drop images here or click to browse"
-          sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
-        />
-        {draftNotice && (
-          <div className="fc-draft-note" role="status">
-            <strong>Output settings from your homepage draft: {draftNotice.applied}.</strong>
-            {draftNotice.limit ? ` ${draftNotice.limit}` : ' Change any of them below before converting.'}
-          </div>
-        )}
-      </div>
+      {!items.length && drop}
+      {draftNotice && (
+        <div className="fc-draft-note" role="status">
+          <strong>Output settings from your homepage draft: {draftNotice.applied}.</strong>
+          {draftNotice.limit ? ` ${draftNotice.limit}` : ' Change any of them below before converting.'}
+        </div>
+      )}
 
       {items.length > 0 && (
         <section
-          className="fc-queue"
+          className="fc-queue fc-bench"
           ref={queueRef}
           tabIndex={-1}
           aria-label={`Your ${items.length} image${items.length > 1 ? 's' : ''} and output settings`}
@@ -662,73 +597,60 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               Convert button that acts on it. Measured at 390x844 after adding
               one file: dropzone at 381, Output Settings at 576, "Convert 1
               image" at 839, and the uploaded file row at 915 - past the fold,
-              and 76px BELOW its own action. So the visitor tapped browse, picked
-              a file, and was handed back a screen still reading "Drop images
-              here or click to browse", with the count inside the Convert label
-              the only evidence anything had been accepted. The thumbnail, the
-              name and the status were all off-screen.
-              Mobbin, platform web, and the references do not disagree. Whop
-              (flows/80a82326-1858-49db-99c4-7a0db3ab755a) puts the uploaded
-              thumbnail and its delete control directly beneath the upload
-              button; Magnific (flows/f1270478-c7b4-47f4-a263-3fad86a795a9) lands
-              a placeholder row in that same slot the instant the upload starts;
-              Sana AI (flows/600fc54e-85d7-4f81-98c1-4d4361343b91) puts the new
-              file at the TOP of the list with a green tick. Gamma, Fireflies and
-              Adobe Express were read the same way when this was first written
-              up. Every one of them runs object, then decision, then action.
-              This ran decision, action, object. Moving the list is the whole
-              fix: adding a file now changes the thing the visitor is looking
-              at. */}
-          <div className="sub">
-            <div className="img-grid">
+              and 76px BELOW its own action. Mobbin, platform web: Whop
+              (flows/80a82326-1858-49db-99c4-7a0db3ab755a), Magnific
+              (flows/f1270478-c7b4-47f4-a263-3fad86a795a9) and Sana AI
+              (flows/600fc54e-85d7-4f81-98c1-4d4361343b91) all run object,
+              then decision, then action.
+              SPECTRUM, 2026-09-23: the same order, laid out as the app file's
+              tool grid — the files on the left, a 336px inspector on the right
+              — which collapses back to object, decision, action in one column
+              under 900px. The empty-state drop zone gives way to a slim "Add
+              more" strip once the visitor's own files are on screen. */}
+          <div className="fc-bench-main">
+            <ul className="fc-grid" aria-label="Queued images">
               {items.map(it => (
-                <div key={it.id} className="card fc-card">
-                  <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>×</button>
+                <li key={it.id} className="fc-card">
+                  <button type="button" className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
                   <div className="fc-thumb">
                     <img src={(it.out && !it.out.noPreview && it.out.url) || it.srcUrl} alt={it.name} />
                   </div>
                   <div className="fc-name" title={it.name}>{it.name}</div>
                   {it.error ? (
-                    <div style={{ fontSize: 10, color: 'var(--err-strong)' }}>{it.error}</div>
+                    <div className="fc-meta fc-meta--err">{it.error}</div>
                   ) : it.out ? (
                     <>
-                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                        {it.out.note || `${it.out.w}×${it.out.h}`}
-                      </div>
-                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                      <div className="fc-meta">{it.out.note || `${it.out.w}×${it.out.h}`}</div>
+                      <div className="fc-meta">
                         {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
-                        {(() => {
-                          const d = sizeDelta(it.file.size, it.out.bytes)
-                          return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
-                        })()}
+                        <Delta orig={it.file.size} out={it.out.bytes} />
                       </div>
-                      <button className="btn btn-accent fc-dl" onClick={() => downloadOne(it)}>
+                      <button type="button" className="fc-btn fc-btn--primary fc-dl" onClick={() => downloadOne(it)}>
                         Download {fmt.label}
                       </button>
                     </>
                   ) : (
-                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {it.srcW ? `${it.srcW}×${it.srcH} • ` : ''}{formatBytes(it.file.size)}
+                    <div className="fc-meta">
+                      {it.srcW ? `${it.srcW}×${it.srcH} · ` : ''}{formatBytes(it.file.size)}
                     </div>
                   )}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
+            {drop}
           </div>
 
-          <div className="sub">
-            <div className="sl">Output Settings</div>
-            <div className="fc-settings">
-              <div>
-                <div className="seg-label">Output Format</div>
-                <select value={format} onChange={e => setFormat(e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
-                  {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
-                {fmt.ico && <div className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</div>}
-              </div>
+          <aside className="fc-inspector" aria-label="Output settings">
+            <div className="fc-insp-sec">
+              <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
+              <select id="fc-img-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={busy}>
+                {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              {fmt.ico && <p className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</p>}
               {format === 'image/jpeg' && (
-                <div>
-                  <div className="seg-label">Background</div>
+                <div className="fc-row">
                   {/* The shared picker. Note that this control exists PRECISELY
                       because JPEG has no alpha — which is also the panel's own
                       reason for not offering an alpha slider. */}
@@ -739,85 +661,90 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     ariaLabel="JPEG background colour"
                     triggerClassName="fc-bg-pick"
                   />
-                  <div className="fc-note">fills transparency — JPEG has no alpha</div>
-                </div>
-              )}
-              <div className="fc-field-grow">
-                <div className="seg-label">Quality</div>
-                <div className="row">
-                  <SnapSlider
-                    min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
-                    snaps={QUALITY_SNAPS} unit="%"
-                    onChange={setQuality}
-                    disabled={busy || !fmt.lossy}
-                    ariaLabel="Output quality"
-                  />
-                </div>
-                {!fmt.lossy && <div className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</div>}
-              </div>
-              {!fmt.ico && (
-                <div>
-                  <div className="seg-label">Size limit</div>
-                  <select value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} className="fc-select" aria-label="Output size limit">
-                    {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                  </select>
-                </div>
-              )}
-              {!fmt.ico && (
-                <div>
-                  <div className="seg-label">Export Scale</div>
-                  <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} className="fc-select fc-select--narrow" aria-label="Export render scale">
-                    {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                  </select>
+                  <p className="fc-note">Background — fills transparency, JPEG has no alpha</p>
                 </div>
               )}
             </div>
 
-            {/* WHAT YOU ARE ABOUT TO GET, stated before you press the button.
-                The panel had four controls and no answer: Size limit and Export
-                Scale are both relative to a source size the tool never showed,
-                and they interact — a scale above the limit is clamped BY it.
-                Reading one line beats reasoning about two multipliers. */}
-            {!fmt.ico && sized.length > 0 && (
-              <div className="fc-outsize" aria-live="polite">
-                <span className="fc-outsize-k">Output</span>
-                {sized.length === 1 ? (
-                  <span className="fc-outsize-v">
-                    {sized[0].srcW}×{sized[0].srcH}
-                    <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
-                    <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
-                  </span>
-                ) : (
-                  <span className="fc-outsize-v">
-                    {sized.length} images, longest side <strong>{widestOut}</strong> px
-                  </span>
+            <div className="fc-insp-sec">
+              <span className="fc-eyebrow" id="fc-img-quality">Quality</span>
+              <SnapSlider
+                min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
+                snaps={QUALITY_SNAPS} unit="%"
+                onChange={setQuality}
+                disabled={busy || !fmt.lossy}
+                ariaLabel="Output quality"
+              />
+              {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
+            </div>
+
+            {!fmt.ico && (
+              <div className="fc-insp-sec">
+                <div className="fc-pair">
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-img-size">Size limit</label>
+                    <select id="fc-img-size" className="fc-field" value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} aria-label="Output size limit">
+                      {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-img-scale">Export scale</label>
+                    <select id="fc-img-scale" className="fc-field" value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} aria-label="Export render scale">
+                      {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* WHAT YOU ARE ABOUT TO GET, stated before you press the button.
+                    Size limit and Export Scale are both relative to a source
+                    size the tool never showed, and they interact — a scale
+                    above the limit is clamped BY it. Reading one line beats
+                    reasoning about two multipliers. */}
+                {sized.length > 0 && (
+                  <div className="fc-outsize" aria-live="polite">
+                    <span className="fc-outsize-k">Output</span>
+                    {sized.length === 1 ? (
+                      <span className="fc-outsize-v">
+                        {sized[0].srcW}×{sized[0].srcH}
+                        <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
+                        <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
+                      </span>
+                    ) : (
+                      <span className="fc-outsize-v">
+                        {sized.length} images, longest side <strong>{widestOut}</strong> px
+                      </span>
+                    )}
+                    {anyCapped && <span className="fc-note">held to the size limit</span>}
+                  </div>
                 )}
-                {anyCapped && <span className="fc-note fc-outsize-note">held to the size limit</span>}
               </div>
             )}
-            <div className="fc-actions">
-              <button className="btn btn-accent" onClick={convertAll} disabled={busy}>
+
+            <div className="fc-insp-sec fc-actions">
+              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convertAll} disabled={busy}>
                 {busy ? 'Converting…' : `Convert ${items.length} image${items.length > 1 ? 's' : ''}`}
               </button>
-              {readyCount > 0 && (
-                <button className="btn" onClick={downloadAll} disabled={zipping}>
-                  {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
-                </button>
+              {busy && items.length > 1 && (
+                <div className="fc-progress" role="progressbar" aria-label="Images converted" aria-valuemin={0} aria-valuemax={convertProgress.total} aria-valuenow={convertProgress.done}>
+                  <div className="fc-progress-bar" style={{ '--fc-pct': `${pct}%` }} />
+                </div>
               )}
-              <button className="btn" onClick={clearAll} disabled={busy}>Clear</button>
+              <div className="fc-btn-row">
+                {readyCount > 0 && (
+                  <button type="button" className="fc-btn" onClick={downloadAll} disabled={zipping}>
+                    {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
+                  </button>
+                )}
+                <button type="button" className="fc-btn" onClick={clearAll} disabled={busy}>Clear</button>
+              </div>
+              {readyCount > 1 && (
+                <p className="fc-batch">
+                  {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
+                  <Delta orig={totalOrig} out={totalOut} />
+                </p>
+              )}
             </div>
-            {busy && items.length > 1 && (
-              <div className="fc-progress" style={{ marginTop: 10 }}>
-                <div className="fc-progress-bar" style={{ width: `${Math.round((convertProgress.done / convertProgress.total) * 100)}%` }} />
-              </div>
-            )}
-            {batchDelta && (
-              <div style={{ fontSize: 12, color: 'var(--t1)', marginTop: 10 }}>
-                {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
-                <span style={{ color: batchDelta.color, fontWeight: 600 }}> • {batchDelta.label}</span>
-              </div>
-            )}
-          </div>
+          </aside>
         </section>
       )}
     </>
@@ -895,8 +822,59 @@ async function getFfmpeg(onLog, onBytes) {
   }
 }
 
+/** Engine download, then work, then failure — the three things a video mode says. */
+function EngineStatus({ progress, engineBytes, engineState }) {
+  return (
+    <>
+      {progress && (
+        <div className="fc-status" role="status">
+          <span className="fc-spinner" aria-hidden="true" />
+          {progress}
+          {engineBytes && (
+            <span className="fc-status-bytes">
+              {formatBytes(engineBytes.received)}{engineBytes.total ? ` of ${formatBytes(engineBytes.total)}` : ''}
+            </span>
+          )}
+        </div>
+      )}
+      {engineBytes?.total > 0 && (
+        <div className="fc-progress" role="progressbar" aria-label="Converter engine download" aria-valuemin={0} aria-valuemax={engineBytes.total} aria-valuenow={engineBytes.received}>
+          <div className="fc-progress-bar" style={{ '--fc-pct': `${Math.min(100, Math.round((engineBytes.received / engineBytes.total) * 100))}%` }} />
+        </div>
+      )}
+      {engineState === 'error' && (
+        <p className="fc-status fc-status-err">
+          The converter engine failed to load. Image conversion still works on the Image tab.
+        </p>
+      )}
+    </>
+  )
+}
+
+/** A video's source panel: the player, then the facts about the file. */
+function VideoSource({ srcUrl, videoRef, onLoadedMetadata, facts, onReplace, busy }) {
+  return (
+    <div className="fc-source">
+      <video ref={videoRef} src={srcUrl} controls muted className="fc-video" aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} />
+      <div className="fc-source-card">
+        <dl className="fc-facts">
+          {facts.map(([k, v]) => (
+            <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
+          ))}
+        </dl>
+        {onReplace && (
+          <button type="button" className="fc-btn" onClick={onReplace} disabled={busy}>
+            Choose different file
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Mode 2: Video → GIF ──────────────────────────────────────────────────────
 function VideoToGif({ toast }) {
+  const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
   const [srcUrl, setSrcUrl] = useState(null)
   const [fps, setFps] = useState(10)
@@ -1006,156 +984,104 @@ function VideoToGif({ toast }) {
     setWorking(false)
   }, [file, working, width, fps, quality, duration, trimStart, trimEnd, toast])
 
+  const clearFile = () => { setFile(null); if (srcUrl) URL.revokeObjectURL(srcUrl); setSrcUrl(null); setResult(null) }
+
   return (
     <>
-      <div className="sub">
-        {!srcUrl ? (
-          <DropZone
-            accept={ACCEPT_VIDEO}
-            onFiles={onFiles}
-            hint="Drop a video or animation here or click to browse"
-            sub="MP4, WebM, MOV, AVI, animated GIF / WebP"
-          />
-        ) : (
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div style={{ flex: '1 1 min(360px,100%)', minWidth: 0 }}>
-              <video src={srcUrl} controls muted className="fc-video" aria-label="Video preview"
-                onLoadedMetadata={e => setDuration(e.target.duration || 0)} />
-            </div>
-            <div className="card" style={{ flex: '1 1 200px', minWidth: 0, padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--t0)' }}>Source</div>
-              <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.9 }}>
-                <div><strong>File:</strong> {file?.name}</div>
-                <div><strong>Size:</strong> {formatBytes(file?.size)}</div>
-                {duration > 0 && <div><strong>Duration:</strong> {formatTime(duration)}</div>}
-              </div>
-              <button className="btn" style={{ marginTop: 12 }} onClick={() => { setFile(null); if (srcUrl) URL.revokeObjectURL(srcUrl); setSrcUrl(null); setResult(null) }} disabled={working}>
-                Choose different file
-              </button>
-            </div>
+      {!srcUrl ? (
+        <DropZone
+          accept={ACCEPT_VIDEO}
+          onFiles={onFiles}
+          hint="Drop a video or animation here or click to browse"
+          sub="MP4, WebM, MOV, AVI, animated GIF / WebP"
+        />
+      ) : (
+        <div className="fc-bench">
+          <div className="fc-bench-main">
+            <VideoSource
+              srcUrl={srcUrl}
+              onLoadedMetadata={e => setDuration(e.target.duration || 0)}
+              facts={[
+                ['File', file?.name],
+                ['Size', formatBytes(file?.size)],
+                ...(duration > 0 ? [['Duration', formatTime(duration)]] : []),
+              ]}
+              onReplace={clearFile}
+              busy={working}
+            />
+            {result && (
+              <section className="fc-result" aria-label="Result">
+                <h2 className="fc-eyebrow">Result</h2>
+                <img className="fc-result-media" src={result.url} alt="GIF result" />
+                <p className="fc-meta">
+                  GIF · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
+                  {file?.size ? <Delta orig={file.size} out={result.bytes} /> : null}
+                </p>
+                <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.url, `${(file?.name || 'video').replace(/\.[^.]+$/, '')}.gif`, 'download the GIF')}>
+                  Download GIF
+                </button>
+              </section>
+            )}
           </div>
-        )}
-      </div>
 
-      {srcUrl && (
-        <div className="sub">
-          <div className="sl">GIF Settings</div>
-          <div className="fc-settings">
-            <div>
-              <div className="seg-label">Frame Rate (FPS)</div>
-              <input type="number" min="1" max="50" value={fps} disabled={working}
-                onChange={e => setFps(Math.max(1, Math.min(50, +e.target.value || 10)))} style={{ width: 90, textAlign: 'center' }} />
+          <aside className="fc-inspector" aria-label="GIF settings">
+            <div className="fc-insp-sec">
+              <div className="fc-pair">
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-gif-fps">Frame rate (fps)</label>
+                  <input id="fc-gif-fps" className="fc-field fc-field--num" type="number" min="1" max="50" value={fps} disabled={working}
+                    onChange={e => setFps(Math.max(1, Math.min(50, +e.target.value || 10)))} />
+                </div>
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-gif-width">Width (px)</label>
+                  <input id="fc-gif-width" className="fc-field fc-field--num" type="number" min="16" max="2000" value={width} disabled={working}
+                    onChange={e => setWidth(Math.max(16, Math.min(2000, +e.target.value || 480)))} />
+                </div>
+              </div>
+              <p className="fc-note">Height follows the video&apos;s shape</p>
             </div>
-            <div>
-              <div className="seg-label">Width (px)</div>
-              <input type="number" min="16" max="2000" value={width} disabled={working}
-                onChange={e => setWidth(Math.max(16, Math.min(2000, +e.target.value || 480)))} style={{ width: 100, textAlign: 'center' }} />
-              <div className="fc-note">height auto</div>
-            </div>
-            <div>
-              <div className="seg-label">Quality</div>
-              <select value={quality} onChange={e => setQuality(e.target.value)} disabled={working} style={{ maxWidth: 150 }}>
+            <div className="fc-insp-sec">
+              <label className="fc-eyebrow" htmlFor="fc-gif-quality">Quality</label>
+              <select id="fc-gif-quality" className="fc-field" value={quality} onChange={e => setQuality(e.target.value)} disabled={working}>
                 <option value="low">Low (smaller file)</option>
                 <option value="medium">Medium</option>
                 <option value="high">High (best dither)</option>
               </select>
             </div>
             {duration > 0 && (
-              <div>
-                <div className="seg-label">Trim (seconds)</div>
-                <div className="row" style={{ gap: 6 }}>
-                  <input type="number" min="0" max={duration} step="0.1" value={trimStart} disabled={working}
+              <div className="fc-insp-sec">
+                <span className="fc-eyebrow">Trim (seconds)</span>
+                <div className="fc-range">
+                  <input className="fc-field fc-field--num" type="number" min="0" max={duration} step="0.1" value={trimStart} disabled={working}
                     onChange={e => setTrimStart(Math.max(0, Math.min(duration, +e.target.value || 0)))}
-                    style={{ width: 80, textAlign: 'center' }} aria-label="Trim start (seconds)" />
-                  <span style={{ color: 'var(--t2)' }}>→</span>
-                  <input type="number" min="0" max={duration} step="0.1"
+                    aria-label="Trim start (seconds)" />
+                  <span className="fc-range-arrow" aria-hidden="true">→</span>
+                  <input className="fc-field fc-field--num" type="number" min="0" max={duration} step="0.1"
                     value={trimEnd == null ? +duration.toFixed(1) : trimEnd} disabled={working}
                     onChange={e => setTrimEnd(Math.max(0, Math.min(duration, +e.target.value || 0)))}
-                    style={{ width: 80, textAlign: 'center' }} aria-label="Trim end (seconds)" />
+                    aria-label="Trim end (seconds)" />
                 </div>
-                <div className="fc-note">
+                <p className="fc-note">
                   clip: {formatTime(Math.max(0, (trimEnd == null ? duration : trimEnd) - trimStart))} of {formatTime(duration)}
-                </div>
+                </p>
               </div>
             )}
-          </div>
-
-          <div className="fc-actions">
-            <button className="btn btn-accent" onClick={convert} disabled={working}>
-              {working ? (engineState === 'loading' ? 'Loading engine…' : 'Converting…') : 'Convert to GIF'}
-            </button>
-          </div>
-
-          {progress && (
-            <div className="fc-status" role="status">
-              <span className="fc-spinner" aria-hidden="true" />
-              {progress}
-              {engineBytes && (
-                <span className="fc-status-bytes">
-                  {formatBytes(engineBytes.received)}{engineBytes.total ? ` of ${formatBytes(engineBytes.total)}` : ''}
-                </span>
-              )}
+            <div className="fc-insp-sec fc-actions">
+              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working}>
+                {working ? (engineState === 'loading' ? 'Loading engine…' : 'Converting…') : 'Convert to GIF'}
+              </button>
+              <EngineStatus progress={progress} engineBytes={engineBytes} engineState={engineState} />
             </div>
-          )}
-          {engineBytes?.total > 0 && (
-            <div className="fc-progress" role="progressbar" aria-label="Converter engine download" aria-valuemin={0} aria-valuemax={engineBytes.total} aria-valuenow={engineBytes.received}>
-              <div className="fc-progress-bar" style={{ width: `${Math.min(100, Math.round((engineBytes.received / engineBytes.total) * 100))}%` }} />
-            </div>
-          )}
-          {engineState === 'error' && (
-            <div className="fc-status fc-status-err">
-              The converter engine failed to load. Image conversion still works on the Image tab.
-            </div>
-          )}
-        </div>
-      )}
-
-      {result && (
-        <div className="sub">
-          <div className="sl">Result</div>
-          <div className="card" style={{ padding: 16, marginTop: 10, maxWidth: 520 }}>
-            <img src={result.url} alt="GIF result" style={{ maxWidth: '100%', borderRadius: 'var(--radius-s)', display: 'block', background: 'var(--bg-2)' }} />
-            <div style={{ fontSize: 12, color: 'var(--t1)', margin: '10px 0' }}>
-              GIF • {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
-              {(() => {
-                const d = file?.size ? sizeDelta(file.size, result.bytes) : null
-                return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
-              })()}
-            </div>
-            <DownloadButton url={result.url} name={`${(file?.name || 'video').replace(/\.[^.]+$/, '')}.gif`} />
-          </div>
+          </aside>
         </div>
       )}
     </>
   )
 }
 
-// Small helper button to keep download wiring clean.
-function DownloadButton({ url, name }) {
-  const requireExportAccount = useExportGate()
-  return (
-    <button className="btn btn-accent" onClick={async () => {
-      if (!(await requireExportAccount('download the GIF'))) return
-      triggerDownload(url, name)
-    }}>Download GIF</button>
-  )
-}
-
 // ── Mode 3: Video → Frames (HTML5 video + canvas seek) ───────────────────────
 function VideoFrames({ toast }) {
-  const requireExportAccount = useExportGate()
-  // RETURNS WHETHER THE FILE ACTUALLY LEFT. It used to return undefined, and
-  // every caller ignored it: `gatedDownload(...)` then `toast('Downloaded ZIP
-  // with N images')` on the next line, unawaited. For a visitor with no account
-  // the gate opens a signup dialog and the download never happens — so the
-  // success toast rendered BEHIND the dialog, telling them a file they did not
-  // get had arrived. A dismissed gate is not a failure and says nothing; it is
-  // the visitor's own answer, and the dialog already explained itself.
-  const gatedDownload = useCallback(async (blobOrUrl, filename, reason) => {
-    if (!(await requireExportAccount(reason))) return false
-    triggerDownload(blobOrUrl, filename)
-    return true
-  }, [requireExportAccount])
+  const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
   const [srcUrl, setSrcUrl] = useState(null)
   const [meta, setMeta] = useState(null)
@@ -1309,74 +1235,52 @@ function VideoFrames({ toast }) {
 
   return (
     <>
-      <div className="sub">
-        {!srcUrl ? (
-          <DropZone accept="video/*,.mp4,.webm,.mov,.avi" onFiles={onFiles}
-            hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI — output is a ZIP of image frames" />
-        ) : (
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div style={{ flex: '1 1 min(360px,100%)', minWidth: 0 }}>
-              <video ref={videoRef} src={srcUrl} controls muted onLoadedMetadata={onLoadedMeta} className="fc-video" aria-label="Video preview" />
-            </div>
-            {meta && (
-              <div className="card" style={{ flex: '1 1 200px', minWidth: 0, padding: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--t0)' }}>Video Info</div>
-                <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.9 }}>
-                  <div><strong>File:</strong> {file?.name}</div>
-                  <div><strong>Size:</strong> {formatBytes(file?.size)}</div>
-                  <div><strong>Duration:</strong> {formatTime(meta.duration)}</div>
-                  <div><strong>Resolution:</strong> {meta.width}×{meta.height}px</div>
-                  <div><strong>Est. frames:</strong> {est.toLocaleString()}</div>
+      {!srcUrl ? (
+        <DropZone accept="video/*,.mp4,.webm,.mov,.avi" onFiles={onFiles}
+          hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI — output is a ZIP of image frames" />
+      ) : (
+        <div className="fc-bench">
+          <div className="fc-bench-main">
+            <VideoSource
+              srcUrl={srcUrl}
+              videoRef={videoRef}
+              onLoadedMetadata={onLoadedMeta}
+              facts={meta ? [
+                ['File', file?.name],
+                ['Size', formatBytes(file?.size)],
+                ['Duration', formatTime(meta.duration)],
+                ['Resolution', `${meta.width}×${meta.height}px`],
+                ['Est. frames', est.toLocaleString()],
+              ] : [['File', file?.name], ['Size', formatBytes(file?.size)]]}
+            />
+          </div>
+
+          {meta && (
+            <aside className="fc-inspector" aria-label="Extraction settings">
+              <div className="fc-insp-sec">
+                <div className="fc-pair">
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-fr-fps">Frames per second</label>
+                    <input id="fc-fr-fps" className="fc-field fc-field--num" type="number" min="0.1" max="30" step="0.1" value={fps} disabled={extracting}
+                      onChange={e => setFps(Math.max(0.1, Math.min(30, +e.target.value || 1)))} />
+                  </div>
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-fr-scale">Scale</label>
+                    <select id="fc-fr-scale" className="fc-field" value={scale} onChange={e => setScale(+e.target.value)} disabled={extracting}>
+                      <option value={1}>100% (Original)</option>
+                      <option value={0.75}>75%</option>
+                      <option value={0.5}>50%</option>
+                      <option value={0.25}>25%</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {srcUrl && meta && (
-        <div className="sub">
-          <div className="sl">Extraction Settings</div>
-          <div className="fc-settings">
-            <div>
-              <div className="seg-label">Frames per second</div>
-              <input type="number" min="0.1" max="30" step="0.1" value={fps} disabled={extracting}
-                onChange={e => setFps(Math.max(0.1, Math.min(30, +e.target.value || 1)))} style={{ width: 90, textAlign: 'center' }} />
-            </div>
-            <div>
-              <div className="seg-label">Scale</div>
-              <select value={scale} onChange={e => setScale(+e.target.value)} disabled={extracting} style={{ maxWidth: 150 }}>
-                <option value={1}>100% (Original)</option>
-                <option value={0.75}>75%</option>
-                <option value={0.5}>50%</option>
-                <option value={0.25}>25%</option>
-              </select>
-            </div>
-            <div>
-              <div className="seg-label">Output Format</div>
-              <select value={format} onChange={e => setFormat(e.target.value)} disabled={extracting} style={{ maxWidth: 130 }}>
-                {FRAME_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <div className="seg-label">Range (seconds)</div>
-              <div className="row" style={{ gap: 6 }}>
-                <input type="number" min="0" max={meta.duration} step="0.1" value={rangeStart} disabled={extracting}
-                  onChange={e => setRangeStart(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
-                  style={{ width: 80, textAlign: 'center' }} aria-label="Range start (seconds)" />
-                <span style={{ color: 'var(--t2)' }}>→</span>
-                <input type="number" min="0" max={meta.duration} step="0.1"
-                  value={rangeEnd == null ? +meta.duration.toFixed(1) : rangeEnd} disabled={extracting}
-                  onChange={e => setRangeEnd(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
-                  style={{ width: 80, textAlign: 'center' }} aria-label="Range end (seconds)" />
-              </div>
-              <div className="fc-note">
-                {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} • ~{est.toLocaleString()} frames
-              </div>
-            </div>
-            <div className="fc-field-grow">
-              <div className="seg-label">Quality</div>
-              <div className="row">
+              <div className="fc-insp-sec">
+                <label className="fc-eyebrow" htmlFor="fc-fr-format">Output format</label>
+                <select id="fc-fr-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={extracting}>
+                  {FRAME_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+                <span className="fc-eyebrow fc-eyebrow--sub">Quality</span>
                 <SnapSlider
                   min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
                   snaps={QUALITY_SNAPS} unit="%"
@@ -1384,39 +1288,59 @@ function VideoFrames({ toast }) {
                   disabled={extracting || !fmt.lossy}
                   ariaLabel="Frame quality"
                 />
+                {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
               </div>
-              {!fmt.lossy && <div className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</div>}
-            </div>
-          </div>
-          <div className="fc-actions">
-            <button className="btn btn-accent" onClick={extract} disabled={extracting}>
-              {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
-            </button>
-          </div>
-          {extracting && (
-            <div className="fc-progress"><div className="fc-progress-bar" style={{ width: `${progress}%` }} /></div>
+              <div className="fc-insp-sec">
+                <span className="fc-eyebrow">Range (seconds)</span>
+                <div className="fc-range">
+                  <input className="fc-field fc-field--num" type="number" min="0" max={meta.duration} step="0.1" value={rangeStart} disabled={extracting}
+                    onChange={e => setRangeStart(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
+                    aria-label="Range start (seconds)" />
+                  <span className="fc-range-arrow" aria-hidden="true">→</span>
+                  <input className="fc-field fc-field--num" type="number" min="0" max={meta.duration} step="0.1"
+                    value={rangeEnd == null ? +meta.duration.toFixed(1) : rangeEnd} disabled={extracting}
+                    onChange={e => setRangeEnd(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
+                    aria-label="Range end (seconds)" />
+                </div>
+                <p className="fc-note">
+                  {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} · ~{est.toLocaleString()} frames
+                </p>
+              </div>
+              <div className="fc-insp-sec fc-actions">
+                <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
+                  {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
+                </button>
+                {extracting && (
+                  <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                    <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                  </div>
+                )}
+              </div>
+            </aside>
           )}
         </div>
       )}
 
       {frames.length > 0 && (
-        <div className="sub">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 10, flexWrap: 'wrap' }}>
-            <div className="sl">Extracted Frames ({frames.length.toLocaleString()})</div>
-            <button className="btn btn-accent" onClick={downloadAll} disabled={zipping}>
+        <section className="fc-frames" aria-label="Extracted frames">
+          <div className="fc-frames-head">
+            <h2 className="fc-eyebrow">Extracted frames ({frames.length.toLocaleString()})</h2>
+            <button type="button" className="fc-btn fc-btn--primary" onClick={downloadAll} disabled={zipping}>
               {zipping ? 'Creating ZIP…' : 'Download all as ZIP'}
             </button>
           </div>
-          <div className="img-grid">
+          <ul className="fc-grid">
             {frames.map(f => (
-              <div key={f.name} className="card fc-card" role="button" tabIndex={0} onClick={() => gatedDownload(f.blob, f.name, 'download this frame')} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); gatedDownload(f.blob, f.name, 'download this frame') } }} style={{ cursor: 'pointer' }} title={`Download ${f.name}`} aria-label={`Download ${f.name}`}>
-                <div className="fc-thumb"><img src={f.url} alt={f.name} /></div>
-                <div className="fc-name">{f.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--t2)' }}>{formatBytes(f.size)} • {formatTime(f.time)}</div>
-              </div>
+              <li key={f.name}>
+                <button type="button" className="fc-card fc-card--btn" onClick={() => gatedDownload(f.blob, f.name, 'download this frame')} title={`Download ${f.name}`} aria-label={`Download ${f.name}`}>
+                  <span className="fc-thumb"><img src={f.url} alt="" /></span>
+                  <span className="fc-name">{f.name}</span>
+                  <span className="fc-meta">{formatBytes(f.size)} · {formatTime(f.time)}</span>
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
     </>
   )

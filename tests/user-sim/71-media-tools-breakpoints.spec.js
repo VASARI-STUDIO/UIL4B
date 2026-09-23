@@ -437,7 +437,7 @@ test('/create/file-converter · the batch size-change line reads at 4.5:1 on the
     { name: 'logo.png', mimeType: 'image/png', buffer: png },
   ])
   await expect(page.locator('.fc-queue')).toBeVisible()
-  await page.locator('.fc-actions .btn-accent').click()
+  await page.locator('.fc-actions .fc-btn--primary').click()
   await expect(page.locator('.fc-dl').first()).toBeVisible({ timeout: 20000 })
   const line = page.locator('.fc-queue span', { hasText: /% (smaller|larger)|same size/ }).last()
   await expect(line).toBeVisible()
@@ -478,7 +478,7 @@ test('/create/file-converter · Video → GIF · the engine download shows bytes
     return route.fulfill({ status: 200, headers: { 'content-type': name.endsWith('.wasm') ? 'application/wasm' : 'text/javascript', 'access-control-allow-origin': '*' }, body: fs.readFileSync(file) })
   })
   await go(page, '/create/file-converter')
-  await page.getByRole('button', { name: 'Video → GIF converter' }).click()
+  await page.getByRole('tab', { name: 'Video → GIF' }).click()
   const clip = await page.evaluate(async () => {
     const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64
     const c = canvas.getContext('2d'); c.fillStyle = '#1c40f2'; c.fillRect(0, 0, 64, 64)

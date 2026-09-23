@@ -37,7 +37,7 @@ const notMedia = { name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.fro
 
 async function openTab(page, name) {
   await go(page, '/create/file-converter')
-  if (name) await page.getByRole('button', { name }).click()
+  if (name) await page.getByRole('tab', { name }).click()
   await expect(page.locator('.fc-drop').first()).toBeVisible({ timeout: 15000 })
 }
 
@@ -85,21 +85,21 @@ test.describe('failure toasts are errors', () => {
 
   test('Video: a file that is not a video', async ({ page }) => {
     watch(page, PERSONA)
-    await openTab(page, 'Video → GIF converter')
+    await openTab(page, 'Video → GIF')
     await page.locator('.fc-drop input[type="file"]').setInputFiles([notMedia])
     await expectErrorToast(page, 'Please choose a video')
   })
 
   test('Frames: a file that is not a video', async ({ page }) => {
     watch(page, PERSONA)
-    await openTab(page, 'Video → Frames converter')
+    await openTab(page, 'Video → Frames')
     await page.locator('.fc-drop input[type="file"]').setInputFiles([notMedia])
     await expectErrorToast(page, 'Please choose a video file')
   })
 
   test('Video: pressing Convert while offline', async ({ page, context }) => {
     watch(page, PERSONA)
-    await openTab(page, 'Video → GIF converter')
+    await openTab(page, 'Video → GIF')
     // Any bytes will do: the offline check fires before the engine or the file
     // is touched. The name passes the type filter.
     await page.locator('.fc-drop input[type="file"]')
@@ -119,7 +119,7 @@ test.describe('failure toasts are errors', () => {
     // like from the page. Nothing is fetched from our own origin either way.
     await page.route((url) => url.href.startsWith('https://cdn.jsdelivr.net/'),
       (route) => route.fulfill({ status: 503, body: '' }))
-    await openTab(page, 'Video → GIF converter')
+    await openTab(page, 'Video → GIF')
     await page.locator('.fc-drop input[type="file"]')
       .setInputFiles([{ name: 'clip.webm', mimeType: 'video/webm', buffer: Buffer.from('x') }])
     await page.getByRole('button', { name: /^convert to /i }).click()
