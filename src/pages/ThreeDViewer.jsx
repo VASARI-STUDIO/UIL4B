@@ -126,6 +126,10 @@ export default function ThreeDViewer({ toast }) {
   const inputRef = useRef(null)
   const viewerRef = useRef(null)
   const abortRef = useRef(null)
+  // Bumped whenever a new model starts loading. A conversion that finishes
+  // after that belongs to the model that was replaced, so it is dropped rather
+  // than shown as a download beside the new one.
+  const modelGenRef = useRef(0)
 
   // busy: null | { stage, name, loaded?, total?, cad }
   const [busy, setBusy] = useState(null)
@@ -189,6 +193,7 @@ export default function ThreeDViewer({ toast }) {
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
+    modelGenRef.current++
     setError(null)
     setOutput(null)
     setAnnounce('')
@@ -250,15 +255,18 @@ export default function ThreeDViewer({ toast }) {
     const format = outputFormat(outId)
     const viewer = viewerRef.current
     if (!format || !viewer?.model || converting || !model) return
+    const gen = modelGenRef.current
     setConverting(true)
     setOutput(null)
     try {
       const engine = await getEngine()
       const blob = await engine.exportModel(viewer.model, format, { sourceUnit: model.format.unit })
+      if (gen !== modelGenRef.current) return
       const out = { blob, format, bytes: blob.size, name: `${baseName(model.name)}.${format.ext}` }
       setOutput(out)
       setAnnounce(`${out.name} is ready, ${formatBytes(out.bytes)}.`)
     } catch (err) {
+      if (gen !== modelGenRef.current) return
       const msg = `Could not write ${format.label}: ${err?.message || err}.`
       setAnnounce(msg)
       toast?.(msg, 'error')
