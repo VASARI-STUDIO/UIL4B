@@ -219,7 +219,12 @@ test.describe('the animation builder', () => {
     // ...taking the file away does.
     await page.getByRole('button', { name: 'Download GIF' }).click()
     await expect(page.locator('#ui-login-title')).toBeVisible({ timeout: 10000 })
-    expect(await page.evaluate(() => window.__dl), 'the file left without an account').toBe(0)
+    // Dismiss it and check again: while the dialog is open the answer is not
+    // in yet, so a gate whose answer is ignored would still pass here.
+    await page.keyboard.press('Escape')
+    await expect(page.locator('#ui-login-title'), 'the dialog did not close').toHaveCount(0)
+    await page.waitForTimeout(500)
+    expect(await page.evaluate(() => window.__dl), 'the file left once the dialog was dismissed').toBe(0)
   })
 
   test('a signed-in visitor downloads the file', async ({ page }) => {

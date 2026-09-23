@@ -172,7 +172,12 @@ test.describe('3D Viewer', () => {
     await page.getByTestId('v3d-convert').click()
     await page.getByTestId('v3d-download').click()
     await expect(page.locator('#ui-login-title'), 'the download did not ask for an account').toBeVisible()
-    expect(await page.evaluate(() => window.__dl)).toBe(0)
+    // The file must not leave AFTER the dialog either: checking while it is
+    // still open passes against a gate whose answer is ignored.
+    await page.keyboard.press('Escape')
+    await expect(page.locator('#ui-login-title'), 'the dialog did not close').toHaveCount(0)
+    await page.waitForTimeout(500)
+    expect(await page.evaluate(() => window.__dl), 'the file left once the dialog was dismissed').toBe(0)
   })
 
   test('three.js is not fetched until a model is brought', async ({ page }) => {
