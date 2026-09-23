@@ -297,7 +297,19 @@ test.describe('the closing CTA on every gallery', () => {
 
 const WIDTHS = [320, 360, 390, 414, 480, 540, 600, 640, 680, 768, 834, 900, 980, 1024, 1180, 1280, 1366, 1440, 1600, 1920]
 
+// THE BUDGET IS PER WIDTH, because the cost is. Timed locally, every width costs
+// the same ~0.65s — a fresh context, the route, and restingScrollY's wait for a
+// run of still FRAMES — with no width standing out, so there is no slow page
+// hiding in here: twenty of them came to 13.6s against a 30s default. CI's
+// runner paints fewer frames a second and went past 30s at the eighteenth
+// width; 6x CPU throttling reproduces exactly that locally (1366px, 29.8s).
+// Each wait inside the loop keeps its own backstop, so a width that genuinely
+// hangs still fails there, by name — this only stops twenty healthy widths
+// being charged one width's budget.
+const PER_WIDTH_MS = 4000
+
 test('the closing CTA clears the feedback button at twenty widths', async ({ browser }) => {
+  test.setTimeout(WIDTHS.length * PER_WIDTH_MS)
   const damage = []
   for (const width of WIDTHS) {
     const context = await browser.newContext({ viewport: { width, height: 800 } })
