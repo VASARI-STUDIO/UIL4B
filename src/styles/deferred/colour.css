@@ -103,7 +103,6 @@
 .cs-tint-strip>div{transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-standard)}
 .cs-next-step{padding:48px 0 16px;display:flex;justify-content:center}
 .cs-next-link{display:inline-flex;align-items:center;gap:12px;padding:14px 28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t0);text-decoration:none!important;transition:all var(--t)}
-.cs-next-link:hover{border-color:var(--brand);background:var(--brand-bg);text-decoration:none!important}
 .cs-next-link span{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .cs-next-link strong{font-size:15px;font-weight:700;letter-spacing:-.01em}
 .cs-next-link svg{color:var(--brand);flex-shrink:0}
@@ -115,7 +114,6 @@
 .cs-tools-footer-lead{max-width:620px;margin:0 0 18px;font-size:14px;line-height:1.6;color:var(--t1)}
 .cs-tools-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .cs-tools-footer-link{display:flex;flex-direction:column;gap:2px;text-align:left;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t0);cursor:pointer;text-decoration:none;transition:all var(--t)}
-.cs-tools-footer-link:hover{border-color:var(--brand);background:var(--brand-bg)}
 .cs-tools-footer-link strong{font-size:14px;font-weight:700;letter-spacing:-.01em}
 .cs-tools-footer-link span{font-size:12px;color:var(--t2)}
 @media(max-width:768px){.cs-tools-footer-grid{grid-template-columns:repeat(2,1fr)}}
@@ -882,8 +880,6 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
    the label is 12.5px; on --accent-strong it is 5.84 (light) / 6.09 (dark).
    This rule already reached --accent-strong on HOVER, so the RESTING state was
    the unreadable one — the same shape of bug .ui-pill-accent carried. */
-.ggn-btn-accent{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
-.ggn-btn-accent:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
 .ggn-btn-ghost{background:transparent;border-color:var(--ggn-line-2);color:var(--ggn-t1)}
 .ggn-btn-ghost:hover{border-color:var(--ggn-t2);color:var(--ggn-t0);background:var(--hvr)}
 .ggn-btn-sm{padding:6px 13px;font-size:12px}
@@ -1129,7 +1125,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .grg-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .grg-copy{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.04em;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:6px 11px;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .grg-copy:hover{color:var(--t0);border-color:var(--bh);background:var(--bg-3)}
-.grg-open{display:inline-flex;align-items:center;gap:5px;font-family:var(--font);font-size:var(--fs-micro);font-weight:700;letter-spacing:.02em;color:var(--accent-strong);background:none;border:none;padding:6px 4px;cursor:pointer;text-decoration:none;transition:gap var(--dur-2) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.grg-open{display:inline-flex;align-items:center;gap:5px;font-family:var(--font);font-size:var(--fs-micro);font-weight:700;letter-spacing:.02em;background:none;border:none;padding:6px 4px;cursor:pointer;text-decoration:none;transition:gap var(--dur-2) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .grg-open:hover{gap:8px;color:var(--brand-soft)}
 .grg-empty{margin-top:8px}
 /* Submissions queue — deliberately styled as a LIST, not as gallery cards, so
@@ -1159,8 +1155,6 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 @media(max-width:640px){
   .grg-foot{flex-direction:column;align-items:stretch;gap:8px}
   .grg-actions{justify-content:space-between}}
-
-.pgl-build-link:hover{background:var(--brand)}
 .pgl-note{margin:-8px 0 22px;font-size:12.5px;line-height:1.55;color:var(--t2)}
 /* Category sections. The heading STICKS while its own grid scrolls past, so
    the answer to "what am I looking at" survives a hundred cards — that is what

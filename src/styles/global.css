@@ -682,9 +682,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .img-drop-zone:hover{border-color:var(--accent)}
 .pl-tab{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border:none;background:none;color:var(--t2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t)}
 .pl-tab:hover{color:var(--t0)}
-.pl-tab.active{color:var(--accent-strong);border-bottom-color:var(--accent);font-weight:600}
 .pl-tab-count{font-size:10px;font-weight:700;background:var(--bg-3);color:var(--t2);padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
-.pl-tab.active .pl-tab-count{background:var(--accent-bg);color:var(--accent-strong)}
 .pl-card-author{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t2)}
 .pl-card-saves{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s)}
 .pl-chip{padding:6px 14px;border-radius:var(--radius);font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--t);white-space:nowrap;flex-shrink:0}
@@ -741,7 +739,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
    card's categories are TAG_CATEGORIES, which has no glyph set, and the shared
    CategoryGlyph is keyed to the unrelated discoverCategories taxonomy. */
 .pl-card.no-img .pl-card-title{color:var(--t0)}
-.pl-card.no-img:hover .pl-card-title{color:var(--accent-strong)}
 .pl-tag{padding:3px 10px;border-radius:var(--radius);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);backdrop-filter:blur(4px);transition:background var(--dur-2) var(--ease-standard)}
 /* --accent is #0F6FFF in light theme: 4.43:1 on the white card, 3.82:1 on the
    page ground - under AA at these sizes, and this page renders ~80 tags at once.
@@ -753,10 +750,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .emoji-cell{display:flex;align-items:center;justify-content:center;width:var(--emoji-cell,42px);height:var(--emoji-cell,42px);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard);position:relative}
 .emoji-cell:hover{background:var(--hvr);border-color:var(--border);transform:scale(1.2);z-index:2}
 .emoji-cell.copied{background:var(--accent-bg);border-color:var(--accent);z-index:2}
-.emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;color:var(--accent-strong);white-space:nowrap;font-family:var(--font)}
+.emoji-cell.copied::after{content:'Copied';position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:700;white-space:nowrap;font-family:var(--font)}
 .emoji-tone-btn{display:flex;align-items:center;gap:7px;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t2);font-size:18px;line-height:1;cursor:pointer;font-family:var(--font);transition:border-color var(--t),background var(--t),color var(--t)}
 .emoji-tone-btn:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.emoji-tone-btn.open{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-strong)}
 .emoji-tone-pop{position:absolute;top:calc(100% + 6px);left:0;display:flex;gap:4px;padding:6px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);z-index:40;animation:fg-fade var(--dur-1) var(--ease-entrance)}
 .emoji-skin-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--card);cursor:pointer;font-size:20px;transition:background-color var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .emoji-skin-btn:hover{border-color:var(--bh);background:var(--hvr)}
@@ -1301,7 +1297,6 @@ html[data-reduced-motion="true"] .rail-overflow{scroll-snap-type:none}
 
 /* ─── Settings (Premium) ─── */
 .settings-nav-item:hover{background:var(--hvr);color:var(--t0)}
-.settings-nav-item.active{background:var(--accent-bg);color:var(--accent-strong);font-weight:600}
 .settings-nav-item.active svg{opacity:1}
 /* Profile-save failure — an edit that never reached the account is never silent */
 /* Typing-gated autocomplete (Location): a card popover under the input replaces
@@ -1362,7 +1357,6 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
    stacking glow on Pro: Free sits back on the page layer with no lift, Pro
    keeps the raised card, the larger price and the accent tier name. */
 .plans-tiers .plans-free-card .sub-tier-amount{font-size:26px;color:var(--t1)}
-.plans-tiers .sub-tier-pro .sub-tier-name{color:var(--accent-strong)}
 .plans-tiers .sub-tier-pro .sub-tier-amount{font-size:40px}
 /* Recovery affordance for the price-service-down state (Murphy's law: error +
    offline both land here). Sits under the price slot, never inside the
@@ -1393,7 +1387,6 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .plans-compare-table .pct-none-pro{color:var(--t3);font-weight:400;background:none}
 
 .plans-compare-table .pct-pro{background:var(--accent-bg);color:var(--t0);font-weight:600}
-.plans-compare-table thead .pct-pro{color:var(--accent-strong)}
 .plans-compare-table .pct-none{color:var(--t3)}
 .plans-trust .sub-check{color:var(--accent)}
 .plans-faq-item.open .plans-faq-q svg{transform:rotate(180deg)}
@@ -1422,7 +1415,6 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .lang-tile.active .lang-flag{background:var(--card);border-color:var(--accent)}
 .lang-tile-label{font-size:13px;font-weight:600;color:var(--t0);line-height:1.2}
 .lang-tile-code{font-size:11px;color:var(--t2);line-height:1}
-.lang-tile.active .lang-tile-code{color:var(--accent-strong)}
 .lang-tile-check{flex-shrink:0;color:var(--accent);opacity:0;transition:opacity var(--t)}
 .lang-tile.active .lang-tile-check{opacity:1}
 
@@ -1433,7 +1425,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 .storage-table th{text-align:left;padding:10px 14px;font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border)}
 .storage-table td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--t1);vertical-align:top}
 .storage-table tr:last-child td{border-bottom:none}
-.storage-table .storage-key{font-family:var(--mono);font-size:11px;color:var(--accent-strong);font-weight:500;white-space:nowrap}
+.storage-table .storage-key{font-family:var(--mono);font-size:11px;font-weight:500;white-space:nowrap}
 .storage-table .storage-purpose{color:var(--t1)}
 .storage-table .storage-pii{font-family:var(--mono);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .storage-pii.yes{color:var(--warn-strong)}
@@ -1692,7 +1684,6 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .theme-pill-opt.active{background:var(--card);color:var(--t0);box-shadow:var(--shadow);font-weight:600}
 .toggle-switch{position:relative;width:44px;height:24px;background:var(--bg-4);border-radius:12px;cursor:pointer;border:none;transition:background var(--dur-2) var(--ease-standard);flex-shrink:0}
 .toggle-switch::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform var(--dur-2) var(--ease-standard);box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.toggle-switch.on{background:var(--brand)}
 .toggle-switch.on::after{transform:translateX(20px)}
 .auth-gate-actions{display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px}
 .auth-gate-actions .btn{display:flex;align-items:center;justify-content:center;gap:8px}
@@ -2100,41 +2091,15 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
   .adm-bar-label{width:70px;font-size:10px}
 }
 
-/* ─── File Converter (fc-) ─── */
-/* Mode tabs — a segmented switch (matches the Aspect Ratio tool's .rc-tabs). */
-.fc-tabs{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);margin-bottom:24px}
+/* ─── File Converter (fc-) ───
+   pages/file-converter.css restyles everything under `.fc` at (0,2,0). What is
+   left here is what that sheet does not restate and the page still reads: the
+   tab's gap and position, the drop icon's centring, the download button's
+   centring, and the spinner keyframes. */
 .fc-tab{position:relative;display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
-.fc-tab:hover{color:var(--t0)}
-.fc-tab.on{background:var(--card);color:var(--t0);box-shadow:var(--ring)}
-/* --t2, not --t3: the 8px SOON tag measured 4.07:1 on its chip in light at
-   every width (2026-09-09). --t2 is 4.95:1. The size is left as found and
-   flagged: 8px uppercase is the smallest type on the page. */
-/* 10px, not 8px — founder call, 2026-09-14. At 8px this was the smallest
-   type anywhere in the product, and the lines sitting beside it on the same
-   card are 10px. It is a status a visitor is meant to READ before they click
-   into something that is not built yet. */
-.fc-soon{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:999px;background:var(--bg-3);color:var(--t2)}
-/* Alpha badge — token-driven accent pill (no hardcoded colours). */
-.fc-alpha{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);margin-left:10px;vertical-align:middle}
-.fc-drop{cursor:pointer;transition:border-color var(--t),background var(--t),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
-.fc-drop:hover{transform:translateY(-2px);box-shadow:var(--warm-shadow-lg)}
 .fc-drop-ico{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;margin-bottom:12px;border-radius:var(--radius);background:var(--accent-bg);color:var(--accent)}
-.fc-drop-ico svg{width:22px;height:22px}
-.fc-drop-hint{font-size:14px;font-weight:600;color:var(--t0);margin-bottom:4px}
-.fc-drop-sub{font-size:11px;color:var(--t2)}
 .fc-dl{width:100%;justify-content:center;margin-top:auto}
 @keyframes fc-spin{to{transform:rotate(360deg)}}
-
-@media(max-width:768px){
-  .fc-tabs{gap:4px}
-  .fc-tab{padding:6px 12px;font-size:12px}}
-
-@media(max-width:480px){
-  .fc-tabs{gap:2px}
-  .fc-tab{padding:5px 10px;font-size:11px}}
-
-@media(max-width:480px){
-  .fc-drop{padding:28px 14px}}
 
 .rc-tab{padding:6px 14px;border:none;background:none;border-radius:var(--radius-pill);font-family:var(--font);font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .rc-tab:hover{color:var(--t0)}
@@ -2148,9 +2113,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .ch-submit-btn{flex-shrink:0}
 .ch-filter{padding:6px 14px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--bg-2);color:var(--t1);transition:all var(--t)}
 .ch-filter:hover{border-color:var(--bh);color:var(--t0)}
-.ch-filter.is-active{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
 .ch-sort-btn{padding:5px 14px;border-radius:var(--radius-pill);font-size:12px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--t2);font-family:var(--font);transition:all var(--dur-2) var(--ease-standard)}
-.ch-sort-btn.is-active{background:var(--accent-strong);color:var(--accent-fg)}
 .ic-acc-head{display:flex;align-items:center;gap:12px;width:100%;padding:16px 18px;background:none;border:none;cursor:pointer;font-family:var(--font);text-align:left;transition:background var(--t)}
 .ic-acc-head.is-open .ic-acc-chevron{transform:rotate(180deg)}
 .ic-acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--dur-3) var(--ease-out)}
@@ -2166,7 +2129,6 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    quiet type and a comfortable press height, which is the shape this already
    wanted: the TRACK keeps its 2px inset and the segments gain theirs.
    https://mobbin.com/sites/sections/f1dc0b80-5422-410e-86fd-0d64a1b998e5 */
-.seo-seg button.is-active{background:var(--accent-strong);color:var(--accent-fg)}
 .seo-serp.is-mobile .seo-serp-title{font-size:16px}
 /* THE ONLY TEXT IN THIS APP ON A GRADIENT THAT AN ALPHA BUMP COULD NOT FIX.
    [gradient-text-below-aa]: the 1200x630 placeholder label measured 2.99:1
@@ -2204,8 +2166,6 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    #346 removed the same 10% haircut from textColorForBg for the same reason:
    the last tenth of alpha is never free and is almost never a deliberate
    design choice. */
-.seo-tab:hover{color:var(--t0)}
-.seo-tab.is-active{color:var(--accent-strong);border-bottom-color:var(--accent)}
 /* Three tabs at 13px with 16px of side padding need ~396px and had 358, so every
    label wrapped to two lines — "Meta & / SERP" — and a two-line tab makes the
    underline read as a box rather than as a selection. Trimming the type one step
@@ -4619,7 +4579,6 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 
 /* ── The level in force (Whereby's `AA ⌄`) ──
    Two values, both worth showing, so a radio pair rather than a select. */
-.cc-level .seg-label{margin-bottom:0}
 .cc-level-opt:hover{color:var(--t0)}
 .cc-level-opt.is-on{color:var(--bg-1);background:var(--t0)}
 /* Horizontal padding mirrors .pnav-inner (same --page-inline token) so the
@@ -5577,7 +5536,7 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
    layout. Nothing about `.ggn` itself changed; the declarations were only
    separated along the line between "what these tokens mean" and "where this
    page sits". */
-.ggn{--ggn-accent:var(--accent);--ggn-accent-text:var(--accent-strong);--ggn-bg:var(--inp);--ggn-panel:var(--card);--ggn-panel-2:var(--bg-2);--ggn-line:var(--border);--ggn-line-2:var(--bh);--ggn-t0:var(--t0);--ggn-t1:var(--t1);--ggn-t2:var(--t2);color:var(--ggn-t0);font-family:var(--font)}
+.ggn{--ggn-accent:var(--accent);--ggn-bg:var(--inp);--ggn-panel:var(--card);--ggn-panel-2:var(--bg-2);--ggn-line:var(--border);--ggn-line-2:var(--bh);--ggn-t0:var(--t0);--ggn-t1:var(--t1);--ggn-t2:var(--t2);color:var(--ggn-t0);font-family:var(--font)}
 .ggn *{box-sizing:border-box}
 .ggn-preview{position:relative;aspect-ratio:16/11;border-radius:var(--radius-l);overflow:hidden;border:1px solid var(--ggn-line);box-shadow:var(--shadow-m)}
 .ggn-preview-pills{position:absolute;top:14px;left:14px;display:flex;gap:8px;z-index:2}
@@ -5628,7 +5587,6 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
 .ggn-label-row .ggn-label{margin-bottom:0}
 .ggn-seg-btn{flex:1;font-family:var(--font);font-size:12.5px;font-weight:600;color:var(--ggn-t1);background:transparent;border:none;border-radius:var(--radius-s);padding:8px 6px;cursor:pointer;transition:all var(--t)}
 .ggn-seg-btn:hover{color:var(--ggn-t0)}
-.ggn-seg-btn.is-on{background:var(--accent-strong);color:var(--accent-fg)}
 /* Angle: dial + numeric entry (the dial is the only pointer affordance) */
 .ggn-angle{display:flex;align-items:center;gap:16px}
 .ggn-angle.is-disabled{opacity:.4;pointer-events:none}
@@ -5660,7 +5618,6 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
 .ggn-css code{font-family:var(--mono);font-size:11.5px;line-height:1.5;color:var(--ggn-t1);word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
 .ggn-fmt-btn{font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--ggn-t2);background:transparent;border:none;border-radius:var(--radius-xs);padding:5px 12px;cursor:pointer;transition:all var(--t)}
 .ggn-fmt-btn:hover{color:var(--ggn-t0)}
-.ggn-fmt-btn.is-on{background:var(--accent-strong);color:var(--accent-fg)}
 /* The multi-line SVG export used to be capped at 190px with its own scroller.
    The inspector body now scrolls as one region, so the block flows at full height
    — no nested scroller, no clipped code. */
@@ -5779,7 +5736,6 @@ input.ggn-stop-hex[aria-invalid="true"]{border-color:color-mix(in srgb,var(--err
 /* Randomise locks — pin a setting so a shuffle keeps it */
 .ggn-lock{flex-shrink:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--ggn-t2);background:transparent;border:1px solid var(--ggn-line);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
 .ggn-lock:hover{color:var(--ggn-t0);border-color:var(--ggn-line-2)}
-.ggn-lock.is-on{color:var(--accent-fg);background:var(--accent-strong);border-color:var(--accent-strong)}
 /* Locked stop handle on the preview bar — a solid ring marks it pinned */
 .ggn-handle.is-locked{box-shadow:0 0 0 2px var(--accent),0 1px 4px rgba(0,0,0,.5)}
 .ggn-handle.is-locked.is-active{box-shadow:0 0 0 2px var(--accent),0 0 0 4px rgba(255,255,255,.35),0 1px 4px rgba(0,0,0,.5)}
@@ -5888,7 +5844,6 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    a warning notice should read as a raised control, not as a second wash of
    colour over the first. Measured after: 5.84:1 light, 5.57:1 dark. */
 .typ-notice-retry{align-self:flex-start;margin-top:6px;min-height:34px;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--radius-s);border:1px solid var(--brand);background:var(--card);color:var(--accent-strong);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
-.typ-notice-retry:hover:not(:disabled){background:var(--accent-strong);color:var(--accent-fg)}
 .fbd-card .lbry-card-meta{text-transform:capitalize}
 /* `container-type:inline-size` is here so the specimen can size itself off the
    TILE rather than off the viewport — see .fbd-sample for why that matters. */
@@ -6010,9 +5965,9 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .tsc-row{display:flex;align-items:baseline;gap:16px;width:100%;padding:14px 16px;text-align:left;background:transparent;border:0;cursor:pointer;transition:background var(--t)}
 .tsc-row+.tsc-row{border-top:1px solid var(--border)}
 .tsc-row:hover{background:var(--hvr)}
-.tsc-row:focus-visible{position:relative;z-index:1;outline:2px solid var(--brand);outline-offset:-2px}
+.tsc-row:focus-visible{position:relative;z-index:1;outline-offset:-2px}
 .tsc-row-meta{display:flex;flex-direction:column;gap:2px;flex:0 0 116px;min-width:0}
-.tsc-row-name{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--accent-strong);overflow:hidden;text-overflow:ellipsis}
+.tsc-row-name{font-family:var(--mono);font-size:10.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis}
 .tsc-row-num{font-family:var(--mono);font-size:10px;color:var(--t2)}
 .tsc-select{width:100%;height:42px;padding:0 12px;font-family:var(--font);font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;margin-bottom:14px;transition:border-color var(--t),box-shadow var(--t)}
 @media(max-width:980px){
@@ -6073,7 +6028,6 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .dgh-hero h1{max-width:720px;margin:0;font-family:var(--display);font-size:clamp(54px,8vw,110px);font-weight:500;line-height:.88;letter-spacing:-.065em;overflow-wrap:break-word}
 .dgh-hero p{max-width:630px;margin:28px 0 0;font-size:clamp(15px,1.5vw,19px);line-height:1.55;color:rgba(255,255,255,.68)}
 .dgh-action .btn{display:inline-flex;align-items:center;gap:8px;color:#0a0a0b;background:#fff;border-color:#fff}
-.dgh-action .btn:hover{color:#fff;background:var(--brand);border-color:var(--brand)}
 .dgh-action .btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
 /* RETIRED (#surface-headers-read-as-ai): .dgh-mark, the 92px display numeral
    counting the catalogue. It is the one-up cousin of the Font Gallery's
@@ -6085,7 +6039,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    Its 230px grid track went with it, which is why .dgh-hero is now a single
    column and only --controls declares a second one. */
 .drh-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
-.drh-head span{display:block;margin-bottom:7px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--accent-strong)}
+.drh-head span{display:block;margin-bottom:7px;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
 .drh-head h2{margin:0;font-family:var(--display);font-size:clamp(28px,3.5vw,46px);font-weight:500;letter-spacing:-.04em;color:var(--t0)}
 .drh-head p{margin:0;font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
 .gcta-q{margin:0;font-family:var(--display);font-size:clamp(21px,2.6vw,30px);font-weight:500;letter-spacing:-.035em;color:var(--t0)}
@@ -6155,7 +6109,6 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-toolbar-action{flex-shrink:0;margin-left:auto}
 
 .lbry-search{display:flex;align-items:center;gap:10px;flex:1 1 240px;min-width:0;min-height:46px;padding:0 12px 0 14px;color:var(--t2);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-xl);transition:border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
-.lbry-search:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 .lbry-search>svg{flex-shrink:0}
 /* `align-self:stretch` IS THE HIT AREA. The wrapper is `min-height:46px` and
    a plain <div> — not a <label> — so it forwards nothing. With the flex
@@ -6333,7 +6286,6 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 /* Shortlisted rows are marked by their ground and a brand rule down the gutter
    — not by a border, which the row no longer has. Visible without hover, which
    is the point of a shortlisting control on a touch screen. */
-.fg-card--comparing{background:var(--brand-bg);box-shadow:inset 3px 0 0 var(--brand)}
 /* The foot clears the rank gutter, so the name lines up with the specimen that
    names it rather than with the number, and it spans the row — name at the left
    edge, script coverage at the right — instead of huddling in the first 200px
@@ -7357,11 +7309,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .lidx-card{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-5);border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);text-decoration:none;transition:border-color var(--t),transform var(--t),box-shadow var(--t)}
 .lidx-card:hover{border-color:var(--bh);text-decoration:none;transform:translateY(-2px);box-shadow:var(--shadow-cmd)}
 .lidx-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.lidx-topic{color:var(--accent-strong)}
 .lidx-time{color:var(--t3);letter-spacing:.06em}
 .lidx-title{font-size:19px;font-weight:650;letter-spacing:-.015em;line-height:1.3;color:var(--t0)}
 .lidx-dek{font-size:14px;line-height:1.6;color:var(--t2);flex:1}
-.lidx-go{font-size:13.5px;font-weight:600;color:var(--accent-strong)}
 /* The search field and the per-topic sections on /learn (LearnGuideIndex.jsx).
    The field is the shared .lbry-search every library uses; what is added is
    its placement, the topic headings, the live status line, the body-text

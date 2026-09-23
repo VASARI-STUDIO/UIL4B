@@ -895,7 +895,6 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 [data-theme="dark"] .flair--slate{--flair-c:#8E9BAE}  /* 4.60 */
 [data-theme="dark"] .flair--gold{--flair-c:#E1A54D;--flair-warm:#E8BB79}
 .typ-notice-retry:disabled{opacity:.6;cursor:progress}
-.typ-notice-retry:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .typ-hint{margin:0 0 20px;font-size:11.5px;line-height:1.5;color:var(--t2)}
 
 /* ── FontDossier: the About and Examples panels, shared by both font popups ──
