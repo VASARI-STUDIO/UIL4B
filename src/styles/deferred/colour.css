@@ -105,7 +105,7 @@
 .cs-next-link{display:inline-flex;align-items:center;gap:12px;padding:14px 28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t0);text-decoration:none!important;transition:all var(--t)}
 .cs-next-link span{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .cs-next-link strong{font-size:15px;font-weight:700;letter-spacing:-.01em}
-.cs-next-link svg{color:var(--brand);flex-shrink:0}
+.cs-next-link svg{color:var(--accent);flex-shrink:0}
 /* More colour tools — cross-link footer at the bottom of every colour tool */
 .cs-tools-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border)}
 .cs-tools-footer-title{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin:0 0 6px}
@@ -219,7 +219,7 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 /* Undo toast */
 .cs-undo-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.25);animation:ci-fade var(--dur-1) var(--ease-entrance)}
 .cs-undo-toast span{font-size:13px;font-weight:500;color:var(--t0)}
-.cs-undo-toast button{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:700;color:var(--accent-strong);cursor:pointer;padding:4px 10px;border-radius:6px;transition:background var(--dur-1) var(--ease-standard)}
+.cs-undo-toast button{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:700;color:var(--accent-text);cursor:pointer;padding:4px 10px;border-radius:6px;transition:background var(--dur-1) var(--ease-standard)}
 .cs-undo-toast button:hover{background:var(--bg-2)}
 .cs-undo-dismiss{font-size:16px!important;color:var(--t3)!important;padding:4px 6px!important}
 
@@ -369,11 +369,11 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .cs-pv-quote{margin:0;padding:8px 12px;background:var(--pv-surface);border-left:3px solid var(--pv-primary);
   border-radius:0 var(--radius-s) var(--radius-s) 0;color:var(--pv-text);font-size:14px;line-height:1.4;font-weight:600}
 /* Selected (imported) card: a brand ring on the stripes + a tick badge. */
-.pgal-card.is-selected .pgal-stripes{outline:2px solid var(--brand);outline-offset:2px}
+.pgal-card.is-selected .pgal-stripes{outline:2px solid var(--accent);outline-offset:2px}
 /* Both of these sit in the shared card's float slot now, which is already
    absolutely positioned at the top-right of the swatch — so they only need
    their own shape, not their own placement. */
-.pgal-tick{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--accent-strong);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
+.pgal-tick{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--accent-text);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
 .pgal-stripe{position:relative;flex:1;min-height:0;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end}
 .pgal-stripe:first-child{flex:2.4}
 /* Hairline between stripes so adjacent #FFFFFF (or #000000) bands in a brand
@@ -387,9 +387,9 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
    what has to go — the icons keep every action reachable in a single row. */
 @media (max-width:600px){.pgal-act span{display:none}.pgal-act{padding:6px}}
 .pgal-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
-.pgal-use.is-selected svg{stroke:var(--brand)}
+.pgal-use.is-selected svg{stroke:var(--accent)}
 .pgal-cmp{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-.pgal-cmp:hover{color:var(--brand);border-color:var(--bh)}
+.pgal-cmp:hover{color:var(--accent);border-color:var(--bh)}
 /* Radius declared at REST, not on :focus-visible — see the note on the
    global :focus-visible rule near the top of this file. This element paints
    no background and no border of its own, so the radius is visually inert

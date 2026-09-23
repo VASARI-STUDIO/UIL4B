@@ -527,7 +527,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 /* ─── Toggle pills ─── */
 .pt-t{display:inline-flex;align-items:center;padding:9px 14px;border-radius:var(--radius-s);font-size:11px;border:1px solid var(--border);color:var(--t2);cursor:pointer;transition:all var(--t);font-weight:500;background:none;font-family:var(--font);min-height:36px}
 .pt-t:hover{background:var(--bg-2);color:var(--t0)}
-.pt-t.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong);font-weight:600}
+.pt-t.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text);font-weight:600}
 
 /* ─── Custom semantic-hue slider (ColorStudio States) ─── */
 .cs-hue{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1)}
@@ -687,7 +687,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .pl-card-saves{font-family:var(--mono);font-size:10px;color:var(--t3);background:var(--bg-2);padding:2px 8px;border-radius:var(--radius-s)}
 .pl-chip{padding:6px 14px;border-radius:var(--radius);font-size:11px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--font);transition:all var(--t);white-space:nowrap;flex-shrink:0}
 .pl-chip:hover{color:var(--t0);border-color:var(--bh);background:var(--hvr)}
-.pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
+.pl-chip.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text)}
 .pl-add-btn{flex-shrink:0;margin-left:auto}
 /* PATTERN B (the tablet band) is now handled for this surface by the shared
    toolbar: #318 gave `.lbry-toolbar` a 641-980 layout of its own and #323
@@ -702,7 +702,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .pl-add-panel{max-height:0;overflow:hidden;transition:max-height var(--dur-3) var(--ease-out),opacity var(--dur-2) var(--ease-standard);opacity:0;margin-bottom:0}
 .pl-add-panel.open{max-height:600px;opacity:1;margin-bottom:28px}
 .pl-drop-zone{flex:0 0 180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all var(--t);color:var(--t3);font-size:11px;font-weight:500}
-.pl-drop-zone:hover,.pl-drop-zone.over{border-color:var(--accent);color:var(--accent-strong);background:var(--accent-bg)}
+.pl-drop-zone:hover,.pl-drop-zone.over{border-color:var(--accent);color:var(--accent-text);background:var(--accent-bg)}
 
 /* Gallery grid — masonry-like with varying heights */
 .pl-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));--pl-gap:16px;--pl-preview-h:172px;--pl-preview-fade:44px;--pl-preview-dur:16s;gap:var(--pl-gap);margin-top:8px}
@@ -742,9 +742,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .pl-tag{padding:3px 10px;border-radius:var(--radius);font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);backdrop-filter:blur(4px);transition:background var(--dur-2) var(--ease-standard)}
 /* --accent is #0F6FFF in light theme: 4.43:1 on the white card, 3.82:1 on the
    page ground - under AA at these sizes, and this page renders ~80 tags at once.
-   --accent-strong is the same blue at 5.84 / 5.03. See [accent-small-text-contrast]. */
-.pl-card.no-img .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
-.pl-modal-header .pl-tag{background:var(--accent-bg);color:var(--accent-strong)}
+   --accent-text, the derived step, is 6.14 / 5.28 in light and 9.24 on the dark
+   card, and tracks a premium accent. See [accent-small-text-contrast]. */
+.pl-card.no-img .pl-tag{background:var(--accent-bg);color:var(--accent-text)}
+.pl-modal-header .pl-tag{background:var(--accent-bg);color:var(--accent-text)}
 .pl-modal-delete{color:var(--err-strong)!important;border-color:var(--err)!important}
 .pl-modal-delete:hover{background:color-mix(in srgb,var(--err) 8%,transparent)!important}
 .emoji-cell{display:flex;align-items:center;justify-content:center;width:var(--emoji-cell,42px);height:var(--emoji-cell,42px);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;cursor:pointer;font-size:24px;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard);position:relative}
@@ -903,7 +904,7 @@ html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
 /* ─── Section header ─── */
 .section-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
 .section-h h2{font-size:14px;font-weight:600;color:var(--t0);letter-spacing:-.005em;display:flex;align-items:center;gap:10px}
-.section-h h2 .num{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent-strong);background:var(--accent-bg);padding:3px 8px;border-radius:var(--radius-s);border:1px solid rgba(124,92,252,.1)}
+.section-h h2 .num{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent-text);background:var(--accent-bg);padding:3px 8px;border-radius:var(--radius-s);border:1px solid rgba(124,92,252,.1)}
 .section-h .meta{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--t2);letter-spacing:.06em;text-transform:uppercase}
 .tool-tile-pin{background:none;border:none;cursor:pointer;color:var(--t3);padding:8px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center;transition:all var(--t);min-width:32px;min-height:32px}
 .tool-tile-pin:hover{color:var(--t1);background:var(--bg-3)}
@@ -1315,7 +1316,7 @@ html[data-reduced-motion="true"] .rail-overflow{scroll-snap-type:none}
 .sub-tier-name{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2)}
 .sub-tier-amount{font-size:32px;font-weight:700;letter-spacing:-.03em;color:var(--t0);line-height:1}
 .sub-tier-per{font-size:12px;color:var(--t2);font-weight:500}
-.sub-tier-sub{font-size:11px;color:var(--accent-strong);font-weight:600}
+.sub-tier-sub{font-size:11px;color:var(--accent-text);font-weight:600}
 .sub-tier-list{display:flex;flex-direction:column;gap:9px;margin:0;padding:0;list-style:none;flex:1}
 .sub-tier-list li{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--t1);line-height:1.5}
 .sub-tier-list li strong{color:var(--t0)}
@@ -1345,7 +1346,7 @@ button.sub-tier-btn[aria-disabled="true"]:hover{background:var(--bg-2);color:var
    The shadow belongs to the FOCUSED state only. At rest the box sits 8px above
    the viewport, and a 24px blur is longer than 8px: it bled a grey smudge
    across x 16-160, y 0-5 of every page. */
-.skip-link{position:fixed;top:8px;left:8px;z-index:200;transform:translateY(calc(-100% - 16px));padding:10px 16px;border-radius:var(--radius-s);background:var(--accent-strong);color:var(--accent-fg);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-decoration:none;transition:transform var(--dur-2) var(--ease-standard)}
+.skip-link{position:fixed;top:8px;left:8px;z-index:200;transform:translateY(calc(-100% - 16px));padding:10px 16px;border-radius:var(--radius-s);background:var(--accent-text);color:var(--accent-fg);font-family:var(--mono);font-size:var(--fs-body-s);font-weight:600;text-decoration:none;transition:transform var(--dur-2) var(--ease-standard)}
 .skip-link:focus{transform:translateY(0);box-shadow:0 8px 24px -8px rgba(0,0,0,.4);outline:2px solid var(--accent-fg);outline-offset:2px}
 html[data-reduced-motion="true"] .skip-link{transition:none}
 @media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .skip-link{transition:none}}
@@ -1490,7 +1491,7 @@ html[data-reduced-motion="true"] .skip-link{transition:none}
 @keyframes fg-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
 .fg-more-btn{min-height:38px;padding:9px 18px;font-size:12px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:color var(--t),border-color var(--t),background var(--t)}
 .fg-more-btn:hover:not(:disabled){border-color:var(--bh);background:var(--hvr);color:var(--t0)}
-.fg-more-btn--primary{color:var(--accent-fg);background:var(--accent-strong);border-color:var(--accent-strong)}
+.fg-more-btn--primary{color:var(--accent-fg);background:var(--accent-text);border-color:var(--accent-text)}
 .fg-more-btn--primary:hover:not(:disabled){background:var(--brand-soft);border-color:var(--brand-soft);color:var(--accent-fg)}
 .fg-compare-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:5px 10px;border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--bg-2);font-size:12px;font-weight:600;color:var(--t0);cursor:pointer;transition:color var(--t),border-color var(--t)}
 .fg-compare-tray-actions{display:flex;gap:8px;flex-shrink:0}
@@ -1632,11 +1633,11 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .error-boundary-card{text-align:center;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);padding:48px 40px;max-width:440px;width:100%}
 .error-boundary-card h2{font-family:var(--font);font-size:20px;font-weight:600;color:var(--t0);margin-bottom:8px}
 .error-boundary-card p{font-size:14px;color:var(--t1);line-height:1.6;margin-bottom:24px}
-.error-boundary-card button{display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;background:var(--brand);color:#fff;font-family:var(--font);font-size:14px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;transition:all var(--t)}
+.error-boundary-card button{display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;background:var(--accent);color:#fff;font-family:var(--font);font-size:14px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;transition:all var(--t)}
 .error-boundary-card button:hover{opacity:.85}
 
 /* ─── Alt Text Generator ─── */
-.alt-dropzone:hover,.alt-dropzone.dragging{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-strong)}
+.alt-dropzone:hover,.alt-dropzone.dragging{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}
 /* flex-start, not flex-end: each field now carries a help line beneath it, so
    the two columns differ in height and bottom-aligning them staggered the
    labels. */
@@ -1695,14 +1696,14 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .aipg-mode-btn:hover{color:var(--t0)}
 .aipg-mode-btn.active{color:var(--t0);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .aipg-preset{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-.aipg-preset:hover{border-color:var(--brand)}
-.aipg-preset.active{border-color:var(--brand);background:var(--brand-bg)}
+.aipg-preset:hover{border-color:var(--accent)}
+.aipg-preset.active{border-color:var(--accent);background:var(--brand-bg)}
 .aipg-rulecat-arr.open{transform:rotate(90deg)}
 .aipg-rule{display:inline-flex;align-items:center;gap:6px;padding:6px 11px 6px 8px;font-size:12px;font-weight:500;font-family:var(--font);border:1px solid var(--border);border-radius:99px;background:var(--bg-1);color:var(--t1);cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
-.aipg-rule:hover{border-color:var(--brand);color:var(--t0)}
-.aipg-rule.active{border-color:var(--brand);background:var(--brand-bg);color:var(--accent-strong)}
+.aipg-rule:hover{border-color:var(--accent);color:var(--t0)}
+.aipg-rule.active{border-color:var(--accent);background:var(--brand-bg);color:var(--accent-text)}
 .aipg-rule-check{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--border);flex-shrink:0;transition:all var(--dur-2) var(--ease-standard)}
-.aipg-rule.active .aipg-rule-check{background:var(--brand);border-color:var(--brand);color:#fff}
+.aipg-rule.active .aipg-rule-check{background:var(--accent);border-color:var(--accent);color:#fff}
 .aipg-rule-check.radio{border-radius:50%}
 .aipg-builder-actions .btn-accent{flex:1}
 
@@ -1962,16 +1963,16 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .bkit-card-steps li{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--t2)}
 .bkit-card-steps li.is-current{color:var(--t0);font-weight:600}
 .bkit-card-num{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:11px;font-weight:700}
-.bkit-card-steps li.is-current .bkit-card-num{background:var(--accent-strong);color:var(--accent-fg)}
+.bkit-card-steps li.is-current .bkit-card-num{background:var(--accent-text);color:var(--accent-fg)}
 .bkit-card-go{width:100%;justify-content:center}
 .bkit-step{display:flex;align-items:center;gap:8px;min-width:0;height:100%;padding:6px 9px;border-radius:var(--radius-s);border:1px solid transparent;color:var(--t2);text-decoration:none;transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard)}
 .bkit-step:hover{background:var(--hvr);color:var(--t0)}
 .bkit-step.is-current{border-color:var(--border);background:var(--bg-2);color:var(--t0)}
 .bkit-step-mark{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex-shrink:0;border-radius:999px;background:var(--bg-3);color:var(--t2);font-family:var(--mono);font-size:10.5px;font-weight:700}
-.bkit-step.is-current .bkit-step-mark{background:var(--accent-strong);color:var(--accent-fg)}
+.bkit-step.is-current .bkit-step-mark{background:var(--accent-text);color:var(--accent-fg)}
 /* Done beats current: a step you have built keeps its tick while you stand on
    it, because the tick is a statement about the SYSTEM, not about the cursor. */
-.bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-strong)}
+.bkit-step.is-done .bkit-step-mark{background:color-mix(in srgb,var(--accent) 22%,var(--bg-3));color:var(--accent-text)}
 .bkit-rail-next{flex-shrink:0}
 
 
@@ -2039,7 +2040,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 /* ─── UI Builder: Code tabs ─── */
 
 /* New project modal */
-.proj-new-start-opt.active{border-color:var(--brand);background:var(--brand-bg)}
+.proj-new-start-opt.active{border-color:var(--accent);background:var(--brand-bg)}
 @keyframes adm-pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* Admin tabs */
@@ -2068,7 +2069,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .adm-table tbody td{font-size:12px;padding:10px 14px;border-bottom:1px solid var(--border);color:var(--t0)}
 .adm-table .mono{font-family:var(--mono)}
 .adm-table .bold{font-weight:600}
-.adm-table .accent{color:var(--accent-strong);font-weight:700}
+.adm-table .accent{color:var(--accent-text);font-weight:700}
 .adm-check-icon.done{background:rgba(16,185,129,.1)}
 .adm-check-icon.pending{background:color-mix(in srgb,var(--pending) 12%,transparent)}
 .adm-submission.done{opacity:.7}
@@ -2077,7 +2078,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .adm-cat-desc{font-size:11px;color:var(--t3)}
 .adm-th-sort{display:inline-flex;align-items:center;gap:4px;padding:0;border:none;background:none;font-family:var(--font);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard)}
 .adm-th-sort:hover{color:var(--t0)}
-.adm-th-sort.active{color:var(--accent-strong)}
+.adm-th-sort.active{color:var(--accent-text)}
 .adm-country-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:transparent;font-family:var(--font);font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .adm-country-chip:hover{color:var(--t0);background:var(--bg-2)}
 .adm-country-chip.active{color:var(--t0);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
@@ -2420,7 +2421,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    --dsc-text = the category hue used for small bold TEXT (pill/badge/tile-icon).
    They're the same by default; the WCAG-AA overrides below only deepen --dsc-text
    so the tints stay light/pretty while the text clears contrast. */
-[data-cat]{--dsc-c:var(--accent);--dsc-text:var(--accent-strong)}
+[data-cat]{--dsc-c:var(--accent);--dsc-text:var(--accent-text)}
 [data-cat="gradients"]{--dsc-c:#8b5cf6}
 [data-cat="palettes"]{--dsc-c:#ec4899}
 [data-cat="inspiration"]{--dsc-c:#3b82f6}
@@ -2428,7 +2429,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 [data-cat="free-assets"]{--dsc-c:#f59e0b}
 [data-cat="fonts"]{--dsc-c:#06b6d4}
 [data-cat="components"]{--dsc-c:#f43f5e}
-[data-cat="community"]{--dsc-c:var(--accent);--dsc-text:var(--accent-strong)}
+[data-cat="community"]{--dsc-c:var(--accent);--dsc-text:var(--accent-text)}
 /* WCAG-AA fix: the raw category hues are too light as ~9.5px bold TEXT on the
    pill/badge/tile-icon tints. We darken/lighten ONLY the text token per category
    so the colour-coding (and the accent tints driven by --dsc-c) survive
@@ -2487,7 +2488,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .pgal-hex{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#fff;background:rgba(10,10,14,.72);padding:2px 7px;border-radius:var(--radius-pill);margin-right:8px;opacity:0;transition:opacity var(--dur-1) var(--ease-standard);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);pointer-events:none}
 /* Brand marker — a published identity system, not one of ours. */
 .pgal-badge{padding:3px 8px;background:rgba(10,10,14,.78);font-size:9px;letter-spacing:.1em}
-.pgal-use--pro{color:var(--accent-strong)}
+.pgal-use--pro{color:var(--accent-text)}
 /* Hover / focus actions over the swatch. The layer is always in the DOM (see
    PaletteGalleryGrid) — but the card renders LibraryCard now, so the reveal
    layer IS the shared `.lbry-card-actions` and `.pgal-actions` no longer exists
@@ -2562,8 +2563,8 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 .pgal-name{font-size:12.5px;font-weight:600;color:var(--t1)}
 .pgal-use{display:inline-flex;align-items:center;gap:4px;flex-shrink:0;font-family:var(--font);font-size:11.5px;font-weight:700;color:var(--t2);background:none;border:none;padding:4px 2px;cursor:pointer;text-decoration:none;transition:color var(--dur-1) var(--ease-standard)}
-.pgal-use:hover{color:var(--accent-strong)}
-.pgal-use.is-selected{color:var(--accent-strong)}
+.pgal-use:hover{color:var(--accent-text)}
+.pgal-use.is-selected{color:var(--accent-text)}
 .dsc-coll-card{display:flex;gap:14px;align-items:center;padding:16px;border-radius:var(--radius-l);border:1px solid var(--border);background:var(--card-grad);cursor:pointer;text-align:left;font-family:var(--font);transition:transform var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .btn.is-disabled{opacity:.5;cursor:not-allowed}
 
@@ -2815,7 +2816,7 @@ html[data-reduced-motion="true"] .dsc-rail-track{scroll-snap-type:none}
   /* Same value as dark — the highlight does not lighten. See the dark block. */
   --hi:#E9FF64;--hi-fg:#0F0F10;
   /* Default-avatar background: brand-blue → darker. References --brand/--accent-strong so it resolves per-theme at use-site. */
-  --avatar-grad:linear-gradient(140deg,var(--brand),var(--accent-strong));
+  --avatar-grad:linear-gradient(140deg,var(--accent),var(--accent-text));
   /* STATE COLOURS — three tokens per role, and they are NOT interchangeable.
      These light values are already darker than the ones in the early
      [data-theme="light"] block at the top of this file; THIS block wins, because
@@ -4117,7 +4118,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 .cpk-swatch.is-active{box-shadow:0 0 0 2px var(--bg-1),0 0 0 4px var(--accent)}
 .icust-abs{flex:0 0 auto;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;color:var(--t2);cursor:pointer;transition:border-color var(--dur-1) var(--ease-out),background var(--dur-1) var(--ease-out),color var(--dur-1) var(--ease-out)}
 .icust-abs:hover{border-color:var(--bh);color:var(--t0)}
-.icust-abs.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-strong)}
+.icust-abs.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text)}
 .icust-seg--icon svg{display:block;width:22px;height:22px;margin:0 auto;color:var(--t2)}
 .icust-seg--icon button:hover svg{color:var(--t0)}
 .icust-seg--icon button.active svg{color:var(--t0)}
@@ -4646,7 +4647,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .plb-scrolllist{display:flex;flex-direction:column;gap:2px;max-height:min(50vh,380px);overflow-y:auto;overscroll-behavior:contain}
 .plb-varrow{display:flex;align-items:center;gap:8px;width:100%;padding:0;background:none;border:none;border-radius:var(--radius-s);text-align:left}
 button.plb-varrow{padding:7px 8px;cursor:pointer;transition:background var(--t)}
-.plb-varrow--active .plb-varrow-name{color:var(--accent-strong)}
+.plb-varrow--active .plb-varrow-name{color:var(--accent-text)}
 .plb-varrow-name{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;font-size:12.5px;font-weight:600;color:var(--t0)}
 .plb-varrow-name small{font-size:10.5px;font-weight:500;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .plb-strip-c{width:12px;height:20px;border-radius:4px;background:var(--plb-rc)}
@@ -5426,7 +5427,7 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
 /* This is a dense operating surface, not a gallery of six cards. The scale
    matrix stays one contiguous comparison object; containment is reserved for
    evidence, component-state and scene boundaries that are real objects. */
-.uis-mode-switch button>span,.uis-pro-label{display:inline-flex;align-items:center;margin-left:4px;padding:2px 5px;font-size:8px;font-weight:700;line-height:1;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-strong);background:var(--brand-bg);border-radius:var(--radius-xs)}
+.uis-mode-switch button>span,.uis-pro-label{display:inline-flex;align-items:center;margin-left:4px;padding:2px 5px;font-size:8px;font-weight:700;line-height:1;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-text);background:var(--brand-bg);border-radius:var(--radius-xs)}
 .uis-back{flex:0 0 auto}
 .uis-scene-tab{flex:0 0 auto;min-height:44px;padding:8px 12px;font-size:10px;font-weight:650;color:var(--t2);background:none;border:1px solid transparent;border-radius:var(--radius-s);cursor:pointer}
 
@@ -5843,13 +5844,13 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
    the stack entirely and is the better button anyway: a secondary action inside
    a warning notice should read as a raised control, not as a second wash of
    colour over the first. Measured after: 5.84:1 light, 5.57:1 dark. */
-.typ-notice-retry{align-self:flex-start;margin-top:6px;min-height:34px;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--radius-s);border:1px solid var(--brand);background:var(--card);color:var(--accent-strong);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.typ-notice-retry{align-self:flex-start;margin-top:6px;min-height:34px;padding:6px 14px;font-size:12px;font-weight:600;border-radius:var(--radius-s);border:1px solid var(--accent);background:var(--card);color:var(--accent-text);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .fbd-card .lbry-card-meta{text-transform:capitalize}
 /* `container-type:inline-size` is here so the specimen can size itself off the
    TILE rather than off the viewport — see .fbd-sample for why that matters. */
 .fbd-tile{display:flex;align-items:center;justify-content:center;width:100%;height:104px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;container-type:inline-size;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .fbd-tile:hover{border-color:var(--bh)}
-.fbd-card.is-selected .fbd-tile{border-color:var(--brand);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--brand)}
+.fbd-card.is-selected .fbd-tile{border-color:var(--accent);background:var(--brand-bg);box-shadow:inset 0 0 0 1px var(--accent)}
 
 /* ─── Font Pair (/fontpairs) — fpr- ─────────────────────────────────────────
    The specimen and every suggestion card take their two families and two
@@ -6192,7 +6193,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .lbry-card-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-width:0;padding:0 1px}
 .lbry-card-name{font-size:var(--fs-body-s);font-weight:600;letter-spacing:-.005em;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lbry-card-meta{font-size:var(--fs-caption);color:var(--t2);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lbry-empty-clear{min-height:38px;margin-top:8px;padding:8px 16px;color:var(--accent-fg);background:var(--accent-strong);border:0;border-radius:var(--radius);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+.lbry-empty-clear{min-height:38px;margin-top:8px;padding:8px 16px;color:var(--accent-fg);background:var(--accent-text);border:0;border-radius:var(--radius);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
 @media(pointer:coarse){
   .lbry-empty-clear,.lbry-search-clear{min-width:44px;min-height:44px}}
 
@@ -6556,7 +6557,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .plb-hex:focus-visible{outline:2px solid #fff;outline-offset:0;box-shadow:0 0 0 4px rgba(10,10,11,.9)}
 .cq-filter{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:1px solid var(--border);border-radius:var(--radius-pill);background:transparent;color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .cq-filter:hover{color:var(--t0);border-color:var(--bh)}
-.cq-filter.is-on{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
+.cq-filter.is-on{background:var(--accent-text);border-color:var(--accent-text);color:var(--accent-fg)}
 
 /* Legal page section headings. Were <h3> with inline style={{}} under a single
    <h1>, so every section on /privacy and /terms sat two levels below the title
@@ -6582,7 +6583,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    set the same kind of heading two different ways; /terms now uses .legal-h
    like /privacy. Deleted rather than left behind - an unused modifier is the
    next page's excuse to diverge again. */
-.plb-collapsed-cta{flex-shrink:0;border-color:var(--brand);color:var(--accent-strong)}
+.plb-collapsed-cta{flex-shrink:0;border-color:var(--accent);color:var(--accent-text)}
 
 /* ============================================================
    W3 · V2 SHARED UI — one popover language, app-wide
@@ -7427,7 +7428,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    Mobbin: Customer.io's Design Studio and HubSpot's Brand Identity both set a
    plain word beside the feature name, in the product's own accent, no icon.
    https://mobbin.com/flows/fd22b0b9-1d07-4b64-8514-7dd5580ac298 */
-.beta-badge{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);border:1px solid var(--accent);color:var(--accent-strong);background:var(--accent-bg);line-height:1;flex:0 0 auto}
+.beta-badge{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);border:1px solid var(--accent);color:var(--accent-text);background:var(--accent-bg);line-height:1;flex:0 0 auto}
 
 /* DARK THEME RAISES THE INK, and it is a measured fix rather than a taste one.
    tests/user-sim/39-accent-contrast.spec.js caught this badge on /plans at

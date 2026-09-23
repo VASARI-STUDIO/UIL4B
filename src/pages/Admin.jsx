@@ -262,7 +262,7 @@ function SubmissionCard({ item, onStatusChange, onNotesChange, onDelete, expande
           </div>
           <div className="adm-submission-title">{item.subject || `[${item.type}] Submission`}</div>
           <p className={`adm-submission-preview${expanded ? ' expanded' : ''}`}>{item.message}</p>
-          {!expanded && item.adminNotes && <div style={{ fontSize: 10, color: 'var(--accent-strong)', marginTop: 4 }}>Has admin notes</div>}
+          {!expanded && item.adminNotes && <div style={{ fontSize: 10, color: 'var(--accent-text)', marginTop: 4 }}>Has admin notes</div>}
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'transform .2s', transform: expanded ? 'rotate(180deg)' : 'none', marginTop: 4 }}>
           <polyline points="6 9 12 15 18 9" />
@@ -468,7 +468,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
             )}
             {profileLink && (
               <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 8 }}>
-                Profile: <a href={profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-strong)' }}>{profileLink}</a>
+                Profile: <a href={profileLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-text)' }}>{profileLink}</a>
               </div>
             )}
             {prompt.mediaUrl && (
@@ -487,7 +487,7 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
           <label
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--accent-strong)', cursor: 'pointer', padding: '4px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--accent-text)', cursor: 'pointer', padding: '4px 10px', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)', background: 'var(--bg-1)' }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
@@ -722,7 +722,7 @@ function StripeSetupPanel({ toast }) {
                         <td style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
                           <span style={{ fontWeight: 600 }}>{c.code.toUpperCase()}</span>
                           <span style={{ color: 'var(--t3)', marginLeft: 6 }}>{c.label}</span>
-                          {c.code === config.baseCurrency && <span style={{ color: 'var(--accent-strong)', marginLeft: 6, fontSize: 10 }}>base</span>}
+                          {c.code === config.baseCurrency && <span style={{ color: 'var(--accent-text)', marginLeft: 6, fontSize: 10 }}>base</span>}
                         </td>
                         {intervals.map(interval => {
                           // An interval does not necessarily sell in every
@@ -2351,7 +2351,7 @@ export default function Admin({ toast }) {
                   read as one line and the split is what makes the counts
                   comparable down the eye rather than three sentences. */}
               <span style={{ color: 'var(--warn)' }}><span className="mono">{newCount}</span> new</span>
-              <span style={{ color: 'var(--accent-strong)' }}><span className="mono">{inProgressCount}</span> in progress</span>
+              <span style={{ color: 'var(--accent-text)' }}><span className="mono">{inProgressCount}</span> in progress</span>
               <span style={{ color: 'var(--ok)' }}><span className="mono">{statusCounts.done || 0}</span> done</span>
             </div>
           </div>

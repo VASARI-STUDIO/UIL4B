@@ -46,7 +46,8 @@
  *
  * ── THE ONE LINE THAT MATTERS MOST ──────────────────────────────────────────
  *
- * `global.css:5646` sets `--ggn-accent-text: var(--accent-strong)` on `.ggn`.
+ * `global.css` set `--ggn-accent-text: var(--accent-strong)` on `.ggn` (that
+ * declaration has since been deleted; the alias below is the only one).
  * `--accent-strong` is a PER-THEME LITERAL (`#0B5ED7` light, `#4A90FF` dark)
  * declared beside `--accent` rather than derived from it — so a premium theme
  * template that moves `--accent` alone would leave every accent-coloured word

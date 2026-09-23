@@ -20,7 +20,7 @@
 
 
 /* Alpha badge */
-.nav-alpha-badge{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--accent-bg);color:var(--accent-strong);margin-left:auto;flex-shrink:0}
+.nav-alpha-badge{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--accent-bg);color:var(--accent-text);margin-left:auto;flex-shrink:0}
 
 /* Admin group in footer */
 .nav-admin-group{border-top:1px solid var(--border);padding-top:4px;margin-top:4px}
@@ -166,11 +166,11 @@
    three are the shared Library language now (.lbry-filters / .lbry-empty).
    This page ran outlined pills for category beside a filled segment for sort —
    the same two-idioms-in-one-row fault the Gradient Library had. */
-.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-detail-btn:focus-visible,.fg-pair-apply:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-detail-btn:focus-visible,.fg-pair-apply:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .fg-more-btn:disabled{opacity:.5;cursor:not-allowed}
 .fg-compare,.fg-detail{position:relative;width:100%;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);animation:fg-rise var(--dur-3) var(--ease-entrance)}
-.fg-compare:focus-visible,.fg-detail:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-.fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fg-compare:focus-visible,.fg-detail:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* Detail dialog */
 /* A FRAME, NOT A COLUMN.
@@ -185,7 +185,7 @@
 .fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fg-detail-close:hover{background:var(--bg-3);color:var(--t0)}
 .fg-detail-section{margin-bottom:32px}
-.fg-detail-label{display:block;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-strong)}
+.fg-detail-label{display:block;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
 /* Pinned to the bottom of the frame, so the answer to "I like this one, now
    what" is on screen from the moment the dialog opens instead of 1,700px down
    it. `.fg-detail-apply` is gone with the second action bar it belonged to. */
@@ -257,7 +257,7 @@
 .aipg-rulecat-head{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;font-family:var(--font);padding:0;color:var(--t0)}
 .aipg-rulecat-arr{transition:transform var(--dur-2) var(--ease-standard);flex-shrink:0;color:var(--t2)}
 .aipg-rulecat-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t1)}
-.aipg-rulecat-count{margin-left:auto;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;background:var(--accent-strong);color:var(--accent-fg)}
+.aipg-rulecat-count{margin-left:auto;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;background:var(--accent-text);color:var(--accent-fg)}
 .aipg-rules{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 
 /* Live preview sidebar */
@@ -291,7 +291,7 @@
 .bkit-card{position:sticky;bottom:96px;z-index:61;margin:0 auto;width:min(440px,calc(100% - 32px));background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:22px 24px;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .bkit-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .bkit-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
-.bkit-card-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-strong)}
+.bkit-card-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
 .bkit-card-close{width:28px;height:28px;flex-shrink:0;border-radius:var(--radius-s);border:1px solid transparent;background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
 .bkit-card-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 .bkit-card-title{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:8px}
@@ -908,7 +908,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    has, instead of the ring's own declaration changing the shape to match
    itself. */
 .fdx-panel{border-radius:var(--radius-s)}
-.fdx-panel:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fdx-panel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dgh-hero::before{content:"";position:absolute;inset:auto -10% -65% 42%;height:430px;background:radial-gradient(circle,rgba(124,92,255,.55),rgba(50,190,170,.25) 34%,transparent 68%);filter:blur(10px);pointer-events:none}
 .dgh-copy{position:relative;z-index:1;min-width:0}
 /* Optional inline CTA (the Gradient Library's "Open the Gradient Generator").
