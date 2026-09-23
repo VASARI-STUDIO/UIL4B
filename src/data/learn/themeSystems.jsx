@@ -70,7 +70,7 @@ export default function ThemeSystems() {
           The ground very nearly does invert. Inverting this product&rsquo;s light
           ground <code>#EFEEE9</code> gives <code>#101116</code>, and its real
           dark ground is <code>#060607</code>; those two measure 1.07:1 against
-          each other, which is a difference no reader could point at. Neutrals
+          each other. Neutrals
           are near-grey, and the inverse of a near-grey is another near-grey.
         </p>
         <p>
