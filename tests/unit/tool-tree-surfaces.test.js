@@ -39,7 +39,6 @@ import {
   categoryDestination,
   createRoutes,
   createTools,
-  toolRoute,
 } from '../../src/data/toolTree.js'
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { PAGE_TITLES } from '../../src/data/routeMetaMap.js'

@@ -308,7 +308,7 @@ test.describe('the accent is derived, so a theme template still moves it', () =>
     for (const key of ['bar', 'tab', 'tile', 'detail']) {
       const value = sampled[key]
       expect(value, `${key} resolved to nothing`).toBeTruthy()
-      const [r, g, b] = await page.evaluate((c) => {
+      const [, g, b] = await page.evaluate((c) => {
         // Resolve whatever the engine serialised — rgb(), color(srgb …) or
         // oklab() — through the canvas, which normalises all three.
         const cv = document.createElement('canvas')

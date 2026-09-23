@@ -6,7 +6,6 @@
 // as-is, and the icon draft can never carry markup, URLs, colours or plan data.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { read, stripComments } from './helpers/source-text.js'
 import { createHandoffSlot } from '../../src/utils/handoffSlot.js'
 import {
   DEFAULT_IMAGE_DRAFT,
