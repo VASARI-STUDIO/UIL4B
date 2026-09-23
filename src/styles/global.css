@@ -4460,7 +4460,9 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
 }
 .hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .hcmd-bar:focus-within{border-color:var(--accent)}
-.hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-strong)}
+/* The prompt glyph and the category tags read --accent-mid on the bar's --bg-1
+   (5.55:1 light, 8.48:1 dark), so a premium accent reaches them. */
+.hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
 /* `input.` prefix, the same idiom as input.cs-hue-slider above and for the same
    reason: this MUST outrank the global input[type="text"] reset at the top of
    the file, whose 0,1,1 beats a bare 0,1,0 class no matter which comes later.
@@ -4489,7 +4491,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hcmd-row-body{display:flex;min-width:0;flex-direction:column;gap:2px}
 .hcmd-row-title{font-size:var(--fs-body-s);font-weight:700;letter-spacing:-.01em;color:var(--t0)}
 .hcmd-row-desc{font-size:var(--fs-caption);line-height:1.45;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hcmd-row-cat{flex:0 0 auto;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong);white-space:nowrap}
+.hcmd-row-cat{flex:0 0 auto;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-mid);white-space:nowrap}
 .hcmd-empty{padding:18px 16px;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
 .hcmd-empty strong{color:var(--t0)}
 
