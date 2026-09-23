@@ -253,13 +253,28 @@ test.describe('3D Viewer', () => {
   })
 
   test('no horizontal overflow from 320 to 1920, in both themes, with a model open', async ({ browser }) => {
-    for (const theme of ['light', 'dark']) {
+    // A BUDGET PER ITERATION, the derivation 85-colour-breakpoints and
+    // 88 already use. The 30 s default is a budget for a test that opens ONE
+    // page; this one opens a fresh context per theme, loads the route, fetches
+    // the 808 kB three.js engine into that context's empty cache, parses and
+    // draws a model, then walks seven widths — twice. It took 28.4 s on the CI
+    // run before 35910539677 and timed out at 30.0 s on that one with nothing
+    // failing. Derived from the arrays that drive the loops, so a width or a
+    // theme added raises the budget in the same edit; every wait inside keeps
+    // its own backstop (go() 20 s, openBox 20 s), so a real hang still fails
+    // there, by name.
+    const THEMES = ['light', 'dark']
+    const WIDTHS = [320, 390, 768, 1024, 1280, 1440, 1920]
+    const PAGE_AND_MODEL_MS = 15000
+    const PER_WIDTH_MS = 600
+    test.setTimeout(10000 + THEMES.length * (PAGE_AND_MODEL_MS + WIDTHS.length * PER_WIDTH_MS))
+    for (const theme of THEMES) {
       const context = await browser.newContext({ colorScheme: theme, viewport: { width: 1440, height: 900 } })
       const page = await context.newPage()
       watch(page, PERSONA)
       await go(page, ROUTE)
       await openBox(page)
-      for (const width of [320, 390, 768, 1024, 1280, 1440, 1920]) {
+      for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 900 })
         await page.waitForTimeout(150)
         const m = await page.evaluate(() => {
