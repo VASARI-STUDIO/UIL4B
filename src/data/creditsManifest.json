@@ -104,6 +104,10 @@
     {
       "name": "stripe",
       "licence": "MIT"
+    },
+    {
+      "name": "three",
+      "licence": "MIT"
     }
   ],
   "firebase": [

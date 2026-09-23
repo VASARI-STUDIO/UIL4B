@@ -89,6 +89,12 @@ export const CREATE_GROUPS = [
     tools: [
       { id: 'file-converter', label: 'File Converter', route: '/create/file-converter', soon: false },
       { id: 'ratio', label: 'Aspect & Resolution', route: '/create/aspect-ratio', soon: false },
+      // Beta for the reason Brand Starter is: it is live, mounted and fully
+      // usable, and the badge states a limit on the output (what each format
+      // keeps is listed on the page). Beta also keeps it out of TOOL_COUNT in
+      // src/components/spectrum/spectrumFacts.js, so shipping it does not move
+      // the sales page's "Thirteen tools" headline, which is the founder's line.
+      { id: '3d-viewer', label: '3D Viewer', route: '/create/3d-viewer', soon: false, beta: true },
     ],
   },
   {
@@ -485,6 +491,8 @@ const MENU_ICONS = {
   icons: 'icons',
   emoji: 'emoji',
   'file-converter': 'imagery',
+  // No cube glyph in NavIcon yet; it shares the imagery mark with the converter.
+  '3d-viewer': 'imagery',
   'ai-prompt': 'ai',
   'landing-prompts': 'marketing',
 }
@@ -511,7 +519,7 @@ const CREATE_MENU_SPEC = [
   ],
   [
     { label: 'Icons', ids: ['icons', 'emoji'] },
-    { label: 'Media', ids: ['file-converter', 'ratio'] },
+    { label: 'Media', ids: ['file-converter', 'ratio', '3d-viewer'] },
     { label: 'AI', ids: ['alt-text', 'auto-builder', 'ai-prompt', 'landing-prompts'] },
   ],
 ]
