@@ -141,7 +141,9 @@ export default function LearnGuideIndex() {
             reads every guide’s full text, so a term that is not here is not in
             any guide yet.
           </p>
-          <button type="button" className="ui-pill ui-pill-ink ui-pill-sm" onClick={clear}>
+          {/* A rectangle, not the retired `.ui-pill`: an app control, drawn
+              the way the app design file draws its secondary buttons. */}
+          <button type="button" className="lidx-reset" onClick={clear}>
             Show all {LEARN_ARTICLES.length} guides
           </button>
         </div>
@@ -169,7 +171,7 @@ export default function LearnGuideIndex() {
                         {snippet.before}<mark>{snippet.match}</mark>{snippet.after}
                       </span>
                     )}
-                    <span className="lidx-go">Read&nbsp;&rarr;</span>
+                    <span className="lidx-go" aria-hidden="true">&rarr;</span>
                   </Link>
                 ))}
               </div>
