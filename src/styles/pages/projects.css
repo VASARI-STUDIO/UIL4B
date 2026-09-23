@@ -210,6 +210,13 @@
   white-space: nowrap;
 }
 .uh .uh-card-name:hover { color: var(--accent-mid); }
+/* A 44px TARGET WITHOUT A TALLER ROW. The name is a 24px text button; under a
+   coarse pointer it takes 10px of padding above and below and gives the same
+   back as negative margin, so the row does not move and the tap area does.
+   Raised over the meta line its lower half now covers, which is plain text. */
+@media (pointer: coarse) {
+  .uh .uh-card-name { position: relative; z-index: 1; min-height: 44px; padding-block: 10px; margin-block: -10px; }
+}
 
 /* A WORD, NOT A PILL. Metadata is not given the shape of a control. */
 .uh .uh-tag { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); line-height: 1.4; }

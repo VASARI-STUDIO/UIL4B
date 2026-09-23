@@ -198,6 +198,9 @@
    the rendered TEXT with a Range rather than the element's own box: the box
    never moves, so a box assertion could not fail. */
 .snapv-value{display:inline-flex;align-items:center;justify-content:flex-end;min-height:24px}
+/* 44 under a coarse pointer, on every page (type-scale and the palette board
+   already restated it for their own rows; tint did not). */
+@media(pointer:coarse){.snapv-value{min-height:44px}}
 @media(max-width:980px){
   .fg-detail-actions{padding:14px 22px}}
 

@@ -313,3 +313,10 @@ html[data-reduced-motion="true"] .stg .settings-nav-item { transition: none; }
   .stg .lang-tile.active,
   .stg .sub-billing-toggle button.active { outline: 2px solid Highlight; }
 }
+
+/* Touch: the section tabs reach 44 under a coarse pointer. Last in the sheet
+   because the narrow layout above restates their height (40) after the
+   touch block at the top. */
+@media (pointer: coarse) {
+  .stg .settings-nav-item { min-height: 44px; }
+}

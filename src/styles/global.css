@@ -1695,6 +1695,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 .toggle-switch.on::after{transform:translateX(20px)}
 .auth-gate-actions{display:flex;flex-direction:column;gap:8px;width:100%;max-width:280px}
 .auth-gate-actions .btn{display:flex;align-items:center;justify-content:center;gap:8px}
+@media(pointer:coarse){.auth-gate-actions .btn{min-height:44px}}
 /* Projects toolbar */
 /* Alt text examples panel */
 .alt-example.good{background:color-mix(in srgb,var(--ok) 8%,var(--bg-0));border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
@@ -6916,6 +6917,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    longer this dialog's top-right corner — the form column is. Same treatment
    .ui-pro-x already gets. */
 .ui-login-x{position:absolute;top:13px;right:13px;z-index:2}
+/* The dialog close keeps its 32px square and gains a 44px target on touch
+   through an invisible ring (it is already positioned, so the ring anchors). */
+@media(pointer:coarse){.ui-login-x::after{content:"";position:absolute;inset:-7px}}
 .ui-login .ui-modal-head{padding-top:18px;padding-right:54px}
 
 /* Continue with Google is the primary path: one click, no typing, and it is
