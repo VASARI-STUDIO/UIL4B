@@ -1,0 +1,62 @@
+/* ══ /discover/palettes — the page's own sheet ══════════════════════════════
+   The shared library shell (slab, toolbar panel, S4 chips, the 18px card) is
+   deferred/library.css. What is left is this page's `.pgal-*` / `.pgl-*`
+   family, split between global.css and deferred/colour.css — neither is this
+   lane's — and still carrying `--accent-strong` / `--brand` on the selected
+   ring, the tick, the "Open" hover, the Pro word and the builder link's hover,
+   plus 999px pills on the controls that sit over the swatches.
+
+   Rooted at `.lib-surface.pgl-page` — the page root carries both — so every
+   selector here is at least (0,3,0) against the (0,1,0)/(0,2,0) rules it
+   restates, whichever chunk loads last (SPECTRUM-REVIEW, standing finding 16).
+
+   KEPT, deliberately: the like button stays a circle. It is a single-glyph
+   toggle floating on the artwork, the shape every gallery uses for it, not a
+   toolbar control; it loses only its backdrop blur (the founder's rejected
+   list names blur), with the ground raised from .42 to .56 so the heart keeps
+   its contrast over a pale stripe without it. */
+
+/* Selection: the ring and the tick are non-text, so the plain accent. The tick
+   is a 24px fill carrying a glyph — `--accent-ink` on `--accent-mid`, the
+   same pair as the page's accent buttons. */
+.lib-surface.pgl-page .pgal-card.is-selected .pgal-stripes{outline-color:var(--accent)}
+.lib-surface.pgl-page .pgal-tick{background:var(--accent-mid);color:var(--accent-ink)}
+.lib-surface.pgl-page .pgal-use.is-selected svg{stroke:var(--accent)}
+
+/* "Open" and the compare glyph: hover is ink (a hover is not a claim); the
+   chosen state and the Pro word keep the accent in its derived text member.
+   `--accent-mid` measures 5.56:1 on the white card in light. */
+.lib-surface.pgl-page .pgal-use:hover{color:var(--t0)}
+.lib-surface.pgl-page .pgal-use.is-selected,
+.lib-surface.pgl-page .pgal-use--pro{color:var(--accent-mid)}
+.lib-surface.pgl-page .pgal-use:focus-visible,
+.lib-surface.pgl-page .pgal-cmp:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lib-surface.pgl-page .pgal-cmp{border-radius:var(--radius-xs)}
+.lib-surface.pgl-page .pgal-cmp:hover{color:var(--t0)}
+
+/* The controls on the swatch: an action is a 10px rectangle, a hex readout a
+   6px value chip — neither toggles, so neither is a pill. */
+.lib-surface.pgl-page .pgal-act{border-radius:var(--radius-s)}
+.lib-surface.pgl-page .pgal-hex{border-radius:var(--radius-xs)}
+.lib-surface.pgl-page .pgal-like{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(10,10,14,.56)}
+.lib-surface.pgl-page .pgal-like:hover{background:rgba(10,10,14,.72)}
+
+/* The "Create a palette" ink button in the toolbar. Its hover was a jump to
+   `--brand` blue; the design's ink CTA deepens toward the page instead. */
+.lib-surface.pgl-page .pgl-build-link{border-radius:var(--radius)}
+.lib-surface.pgl-page .pgl-build-link:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-1))}
+.lib-surface.pgl-page .pgl-build-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Section counts are values, not toggles. */
+.lib-surface.pgl-page .pgl-section-count{border-radius:var(--radius-xs)}
+
+/* The touch floor. Measured on a coarse pointer at 768: the like button 28px,
+   the five swatch actions 23px tall, "Open →" 27px. */
+@media(pointer:coarse){
+  .lib-surface.pgl-page .pgal-like{width:44px;height:44px}
+  .lib-surface.pgl-page .pgal-act,
+  .lib-surface.pgl-page .pgal-use{min-height:44px}
+  /* Below 600px the actions drop their labels to a glyph (global.css), which
+     left them 29px wide. */
+  .lib-surface.pgl-page .pgal-act{min-width:44px;justify-content:center}
+}

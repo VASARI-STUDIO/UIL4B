@@ -112,23 +112,21 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); handleSubmitMedia(e.dataTransfer?.files?.[0]) }}
             onClick={() => submitFileRef.current?.click()}
-            style={{ marginBottom: 8 }}
           >
             {submitMediaPreview ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="pl-drop-file">
                 {submitMediaPreview.type === 'image' ? (
-                  <img src={submitMediaPreview.url} alt="Preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+                  <img src={submitMediaPreview.url} alt="Preview" className="pl-drop-thumb" />
                 ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="pl-drop-video" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <polygon points="5 3 19 12 5 21 5 3" />
                   </svg>
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t0)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{submitMedia?.name}</div>
-                  <div style={{ fontSize: 10, color: 'var(--t2)' }}>{submitMediaPreview.type === 'image' ? 'Image' : 'Video'} · {(submitMedia?.size / 1024).toFixed(0)} KB</div>
+                <div className="pl-drop-meta">
+                  <div className="pl-drop-name">{submitMedia?.name}</div>
+                  <div className="pl-drop-size">{submitMediaPreview.type === 'image' ? 'Image' : 'Video'} · {(submitMedia?.size / 1024).toFixed(0)} KB</div>
                 </div>
-                <button type="button" onClick={e => { e.stopPropagation(); setSubmitMedia(null); setSubmitMediaPreview(null) }}
-                  style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '2px 6px' }}
+                <button type="button" className="pl-drop-remove" aria-label="Remove file" onClick={e => { e.stopPropagation(); setSubmitMedia(null); setSubmitMediaPreview(null) }}
                 >&times;</button>
               </div>
             ) : (
@@ -139,22 +137,22 @@ export default function SubmitPromptPanel({ onClose, user, userProfile, toast })
                 <span>Drop an image or video here (optional, max 10 MB)</span>
               </>
             )}
-            <input ref={submitFileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }}
+            <input ref={submitFileRef} type="file" accept="image/*,video/*" className="pl-file-input" aria-label="Image or video (optional)"
               onChange={e => handleSubmitMedia(e.target.files?.[0])} />
           </div>
-          <input type="text" value={submitTitle} onChange={e => setSubmitTitle(e.target.value)} placeholder="Prompt title" className="pl-input-title" />
-          <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} placeholder="Your prompt..." className="pl-textarea" />
-          <input type="text" value={submitTags} onChange={e => setSubmitTags(e.target.value)} placeholder="Tags (comma separated)" />
-          <input type="url" value={submitProfile} onChange={e => setSubmitProfile(e.target.value)} placeholder="Your profile link (optional — portfolio, X, Dribbble)" />
+          <input type="text" value={submitTitle} onChange={e => setSubmitTitle(e.target.value)} placeholder="Prompt title" aria-label="Prompt title" className="pl-input-title" />
+          <textarea value={submitText} onChange={e => setSubmitText(e.target.value)} placeholder="Your prompt..." aria-label="Prompt" className="pl-textarea" />
+          <input type="text" value={submitTags} onChange={e => setSubmitTags(e.target.value)} placeholder="Tags (comma separated)" aria-label="Tags" />
+          <input type="url" value={submitProfile} onChange={e => setSubmitProfile(e.target.value)} placeholder="Your profile link (optional — portfolio, X, Dribbble)" aria-label="Profile link" />
         </div>
         <div className="pl-add-actions">
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btn-accent" onClick={submitToComm} disabled={submitting}>
+          <button type="button" className="lib-btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="lib-btn lib-btn--primary" onClick={submitToComm} disabled={submitting}>
             {submitting ? 'Submitting...' : 'Submit for review'}
           </button>
         </div>
-        <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 8 }}>
-          Submissions are reviewed before appearing in the community library. Approved prompts earn you <strong style={{ color: 'var(--accent-strong)' }}>+25 bonus AI generations</strong>.
+        <div className="pl-add-note">
+          Submissions are reviewed before appearing in the community library. Approved prompts earn you <strong>+25 bonus AI generations</strong>.
         </div>
       </div>
     </div>

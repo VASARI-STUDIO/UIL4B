@@ -72,8 +72,13 @@
 .ig-credit-lic { font-family: var(--mono); font-size: .92em; color: var(--t3); }
 
 .ig-credit-more { margin: 0; }
-.ig-credit-more a { color: var(--accent-strong); font-weight: 600; }
-.ig-credit-more a:hover { color: var(--accent-strong); border-bottom-color: currentColor; }
+/* `--accent-mid`, not `--accent-strong` (a per-theme literal a premium theme's
+   accent would strand): 4.79:1 on the light page, 8.9:1 on the dark one.
+   The link is alone in its paragraph, so on a coarse pointer it takes the
+   44px touch floor the rest of the library holds — measured 27px before. */
+.ig-credit-more a { color: var(--accent-mid); font-weight: 600; }
+.ig-credit-more a:hover { color: var(--accent-mid); border-bottom-color: currentColor; }
+@media (pointer: coarse) { .ig-credit-more a { min-height: 44px; } }
 
 @media (max-width: 600px) {
   .ig-credit { text-align: left; padding-bottom: 20px; }

@@ -48,7 +48,7 @@
    would be dead CSS added on top of dead CSS. The geometry override is just
    dropped. */
 .cs-pillnav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.cs-pillnav-thumb{position:absolute;top:5px;left:0;z-index:0;height:calc(100% - 10px);border-radius:var(--radius-pill);background:var(--brand);box-shadow:0 2px 8px -2px var(--brand-glow);transform:translateX(var(--cs-thumb-x,0));width:var(--cs-thumb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
+.cs-pillnav-thumb{position:absolute;top:5px;left:0;z-index:0;height:calc(100% - 10px);border-radius:var(--radius-pill);background:var(--accent);box-shadow:0 2px 8px -2px var(--accent-border);transform:translateX(var(--cs-thumb-x,0));width:var(--cs-thumb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
 [data-theme="light"] .cs-pillnav{box-shadow:var(--shadow-m)}
 .cs-section-header{user-select:none;position:relative;z-index:10}
 .cs-section-header>h2{transition:color var(--dur-1) var(--ease-standard)}
@@ -102,7 +102,7 @@
 .cs-pb-adjust-field{display:flex;flex-direction:column;gap:6px}
 .cs-pb-adjust-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .cs-pb-adjust-val{color:var(--t1)}
-.cs-pb-adjust-reset{grid-column:1/-1;justify-self:start;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-strong);padding:4px 0;min-height:32px;transition:opacity var(--dur-1) var(--ease-standard)}
+.cs-pb-adjust-reset{grid-column:1/-1;justify-self:start;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-mid);padding:4px 0;min-height:32px;transition:opacity var(--dur-1) var(--ease-standard)}
 .cs-pb-adjust-reset:disabled{color:var(--t3);cursor:default;opacity:.6}
 
 /* Pro-lock affordance (real gate — glyph is the conversion driver) */
@@ -271,7 +271,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* Card date inline */
 .pl-card-date-inline{font-family:var(--mono);font-size:10px;color:var(--t3);margin-top:8px}
 /* Copy hint */
-.pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-strong);transition:opacity var(--dur-2) var(--ease-standard)}
+.pl-card-copy-hint{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--accent-mid);transition:opacity var(--dur-2) var(--ease-standard)}
 /* Prompt modal overlay */
 .pl-modal-backdrop{position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;animation:fg-fade var(--dur-2) var(--ease-entrance)}
 .pl-modal{background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);width:100%;max-width:680px;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--warm-shadow-lg);position:relative;animation:fg-rise var(--dur-3) var(--ease-entrance)}
@@ -396,7 +396,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 .icust-head{flex:0 0 auto;display:flex;align-items:flex-start;gap:16px;padding:24px 24px 12px}
 .icust-head-text{display:flex;flex-direction:column;gap:6px;min-width:0}
-.icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.icust-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .icust-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .icust-close{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--border);background:var(--bg-1);color:var(--t2);border-radius:var(--radius-pill);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
 .icust-close:hover{border-color:var(--bh);background:var(--hvr);color:var(--t0)}
@@ -449,7 +449,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-code-box{position:relative;display:block;width:100%;text-align:left;padding:26px 16px 14px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out)}
 .icust-code-box:hover{border-color:var(--accent)}
 .icust-code-hint{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--dur-2) var(--ease-out)}
-.icust-code-box:hover .icust-code-hint{color:var(--accent-strong)}
+.icust-code-box:hover .icust-code-hint{color:var(--accent-mid)}
 /* Copy-only snippet: the text is not selectable, so the Copy button is the one
    way out — keeps the workflow inside UIL4B. */
 .icust-code-box code{display:block;max-height:120px;overflow:auto;font-family:var(--mono);font-size:var(--fs-caption);line-height:1.55;color:var(--t1);white-space:pre-wrap;word-break:break-all;-webkit-user-select:none;user-select:none}
@@ -458,7 +458,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .icust-save--locked{cursor:pointer;opacity:.85}
 .icust-save--locked:hover{opacity:1}
 .icust-lock-glyph{display:inline-grid;place-items:center}
-.icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-strong);white-space:nowrap}
+.icust-upgrade{font-size:var(--fs-caption);font-weight:600;color:var(--accent-mid);white-space:nowrap}
 .icust-upgrade:hover{text-decoration:underline}
 
 /* Similar icons — same-pack siblings, a foot-of-popup retention nudge */
@@ -473,7 +473,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-rail{margin:8px 0 28px}
 .ig-rail-head{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:10px}
 .ig-rail-clear{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid transparent;border-radius:var(--radius-s);background:none;font-family:var(--mono);font-size:var(--fs-micro);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);cursor:pointer;transition:color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
-.ig-rail-clear:hover{color:var(--accent-strong);border-color:var(--border);background:var(--bg-1)}
+.ig-rail-clear:hover{color:var(--accent-mid);border-color:var(--border);background:var(--bg-1)}
 .ig-rail-clear svg{width:11px;height:11px}
 /* transform stays at --dur-1: it is :active-only press feedback, not a hover lift. */
 .ig-rail-item{position:relative;flex:0 0 auto;display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),transform var(--dur-1) var(--ease-out)}
@@ -499,7 +499,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 
 /* Toolbar add-icon button (icon-scoped; does not touch shared .pl- toolbar bits) */
 .ig-addbtn{flex-shrink:0;display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-2);color:var(--t0);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out)}
-.ig-addbtn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-strong)}
+.ig-addbtn:hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-mid)}
 .ig-addbtn svg{flex-shrink:0}
 
 /* Custom-icons: Pro lock + empty state */
@@ -518,7 +518,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-mysec .ig-custom-lock{padding:48px 24px}
 /* Free-tier allowance hint under the Saved collection (non-Pro only). */
 .ig-custom-hint{margin-top:4px;font-size:var(--fs-caption);color:var(--t3)}
-.ig-custom-hint-link{font:inherit;color:var(--accent-strong);font-weight:600;background:none;border:0;padding:0;cursor:pointer}
+.ig-custom-hint-link{font:inherit;color:var(--accent-mid);font-weight:600;background:none;border:0;padding:0;cursor:pointer}
 .ig-custom-hint-link:hover{text-decoration:underline}
 
 /* Fetch-fallback notice, skeletons, status line, sentinel, CDN invert, pack tag */
@@ -592,7 +592,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 .ig-chip img.ig-logo{width:28px;height:28px}
 .ig-attrib{padding:6px 0 20px;text-align:center;font-size:var(--fs-caption);color:var(--t3);line-height:1.5}
 .ig-attrib code{font-family:var(--mono);font-size:.92em;color:var(--t2)}
-.ig-attrib a{color:var(--accent-strong);text-decoration:none;font-weight:600}
+.ig-attrib a{color:var(--accent-mid);text-decoration:none;font-weight:600}
 .ig-attrib a:hover{text-decoration:underline}
 
 @media(max-width:560px){
@@ -642,7 +642,7 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    --shadow-cmd, --shadow-panel — are owned by feat/v2-token-foundation. */
 
 /* ── Shared V2 section furniture ── */
-.hbrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.hbrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 
 /* ── Hero ────────────────────────────────────────────────────────────────────
    Composition is the page's existing centred measure; every TYPE and SPACING
@@ -673,148 +673,8 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
    (BoxShadow presets, Projects folders, the AI prompt and alt-text pickers,
    ColorStudio's named-library switch) still render it. */
 .pl-chips{max-width:100%}
-/* ══ Curated Resources (/discover/resources) ═══════════════════════════════
-   A hand-picked set is SMALL and has to look edited at that size. So the
-   catalogue is hairline-ruled rows, not a card grid: Mobbin's "AI in Design
-   Report 2026" resource list and Webflow's rule-separated index both hold up
-   at five items where a four-up grid of the same five reads as a grid that
-   failed to fill. It is also this repo's own answer already — the Font Gallery
-   dropped card borders, radius and ground for hairline rules in
-   #font-gallery-one-per-row.
-
-   Pacing comes from inside each category band (one opened-up lead over compact
-   rows, after Upwork's Resource Centre), not from decoration. The only colour
-   a band carries is its own category hue on the head rule, via [data-cat] →
-   --cur-c, matching the discoverCategories map every other Discover surface
-   reads. */
-.cur-wrap{padding-bottom:64px}
-
-/* Category hue. Mirrors the --dsc-c pattern the Discover card face already
-   uses, so the two never disagree about what colour "gradients" is. */
-.cur-band[data-cat="gradients"]{--cur-c:#8b5cf6}
-.cur-band[data-cat="palettes"]{--cur-c:#ec4899}
-.cur-band[data-cat="inspiration"]{--cur-c:#3b82f6}
-.cur-band[data-cat="dev-tools"]{--cur-c:#10b981}
-.cur-band[data-cat="free-assets"]{--cur-c:#f59e0b}
-.cur-band[data-cat="fonts"]{--cur-c:#06b6d4}
-.cur-band[data-cat="components"]{--cur-c:#f43f5e}
-
-.cur-bands{display:flex;flex-direction:column;gap:44px;margin-top:8px}
-.cur-band{--cur-c:var(--accent)}
-
-/* The head is a rule the category colours, not a chip or a pill — the page
-   already has enough pills, and a 2px coloured rule reads as a section edge
-   rather than as another badge competing with the Free/Paid marker. */
-.cur-band-head{display:flex;align-items:center;gap:10px;padding-bottom:10px;
-  border-bottom:2px solid color-mix(in srgb,var(--cur-c) 55%,transparent)}
-.cur-band-glyph{display:inline-flex;color:var(--cur-c)}
-.cur-band-title{margin:0;font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--t0)}
-.cur-band-count{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--t3);
-  font-variant-numeric:tabular-nums}
-
-/* ── The lead item ──
-   Opened up: the full `whyUseful` reasoning rather than the two-line clamp,
-   the use-case and difficulty it actually carries, and the hand-off as a real
-   button. It sits on a faint tint of its own category so it is legible as the
-   head of the band without a border box around it. */
-.cur-lead{padding:16px 16px 14px;margin-top:14px;border-radius:var(--radius-l);
-  background:color-mix(in srgb,var(--cur-c) 5%,var(--bg-1));
-  border:1px solid color-mix(in srgb,var(--cur-c) 16%,transparent)}
-.cur-lead-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.cur-lead-title{margin:0;font-size:17px;font-weight:700;letter-spacing:-.015em;line-height:1.25}
-.cur-why{margin:10px 0 0;font-size:13.5px;line-height:1.6;color:var(--t1);max-width:68ch}
-.cur-lead-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
-
-/* ── Compact rows ──
-   No border, no radius, no ground. A row separated by a hairline is the
-   content; a card around it is chrome around the content. */
-.cur-list{list-style:none;margin:0;padding:0}
-.cur-row{display:flex;align-items:flex-start;gap:20px;padding:14px 2px;
-  border-bottom:1px solid var(--border)}
-.cur-row:last-child{border-bottom:0}
-.cur-row-main{flex:1;min-width:0}
-.cur-row-title{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0;
-  font-size:14.5px;font-weight:650;letter-spacing:-.01em;line-height:1.3}
-.cur-row-desc{margin:5px 0 0;font-size:12.75px;line-height:1.55;color:var(--t2);max-width:74ch}
-.cur-row-aside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;
-  flex-shrink:0;text-align:right}
-
-.cur-host{margin:4px 0 0;font-family:var(--mono);font-size:11.5px;color:var(--t3);
-  overflow-wrap:anywhere}
-.cur-row-aside .cur-host{margin:0}
-
-.cur-link{color:var(--t0);text-decoration:none;border-radius:2px;
-  border-bottom:1px solid color-mix(in srgb,currentColor 32%,transparent)}
-.cur-link:hover{color:var(--cur-c,var(--accent));border-bottom-color:currentColor}
-/* The radius sits on the element at rest so the focus outline traces the shape
-   the control actually has — a radius introduced by :focus-visible changes the
-   geometry at the moment the ring appears. */
-.cur-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-/* SC 2.5.8: the lead title holds only this link, so the Inline exception does
-   not apply to it (the row title's does — it also carries a PriceTag). At the
-   16px this title takes below 640px the inline box measured 23.0px, one pixel
-   under, at 320 and 390. inline-block gives it a height of its own and still
-   wraps internally; inline-flex would not have. */
-.cur-lead-title .cur-link{display:inline-block;min-height:24px}
-/* ...AND SO DOES THE ROW TITLE'S (2026-09-13). The comment above used to end
-   "the row title's does - it also carries a PriceTag", and that reading of the
-   Inline exception is wrong. SC 2.5.8 exempts a target that is "in a sentence
-   or whose size is otherwise constrained by the line-height of non-target
-   text". .cur-row-title is a flex container holding exactly two items, a link
-   and a tag; the link is not inside a run of text and nothing else sets its
-   line box. Measured on the shipped build it was 19.8px tall at EVERY width -
-   19 of them, the whole outbound half of the page, and the smallest thing to
-   hit on a phone. Same technique, same type size. */
-.cur-row-title .cur-link{display:inline-flex;align-items:center;min-height:24px}
-/* The in-product hand-off is the clearer half of the same failure: .cur-go is
-   alone in .cur-row-aside with no text around it at all, so no reading of the
-   Inline exception reaches it. 5 links, 19.8px at every width. */
-.cur-go{display:inline-flex;align-items:center;min-height:24px}
-/* Resting, not hover-only: founder direction 2026-09-02 rules out hover-only
-   affordances on touch, and this arrow is how an outbound link says it leaves. */
-.cur-ext{display:inline-block;margin-left:3px;font-size:.82em;color:var(--t3);vertical-align:baseline}
-
-/* Free / Paid. The only metric on the page, and it is a fact from the record
-   rather than a count nobody has generated yet. */
-.cur-tag{flex-shrink:0;padding:2px 7px;border-radius:999px;font-size:10.5px;font-weight:700;
-  letter-spacing:.03em;text-transform:uppercase;color:var(--ok-strong);
-  background:color-mix(in srgb,var(--ok) 13%,transparent)}
-.cur-tag--paid{color:var(--t2);background:color-mix(in srgb,var(--t2) 12%,transparent)}
-
-.cur-chips{display:flex;gap:6px;flex-wrap:wrap}
-.cur-chip{padding:3px 9px;border-radius:999px;border:1px solid var(--border);
-  font-size:11px;color:var(--t2);white-space:nowrap}
-
-/* The in-product hand-off on a compact row. A link, not a button: it is a
-   navigation, and it must not out-weigh the lead item's real button. */
-/* --accent-mid, not --accent: nine "Open in <tool>" links measured 3.82:1 on
-   the light page against the 4.5:1 floor, and 12px/650 is not large text. Not
-   --accent-strong either, though it would also pass — global.css states at the
-   head of the accent family that it is a per-theme LITERAL outside the
-   derivation, so a theme that moves --accent would leave these nine links
-   behind on stock blue. The outline below is non-text and stays on --accent. */
-.cur-go{font-size:12px;font-weight:650;color:var(--accent-mid);text-decoration:none;
-  white-space:nowrap;border-radius:2px}
-.cur-go:hover{text-decoration:underline}
-.cur-go:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-/* The real sample swatches a palette resource carries in its own record.
-   Rendered only where they exist (3 of 22) — a strip under a resource with no
-   colours would be decoration pretending to be content. */
-.cur-pal{display:flex;gap:3px;margin-top:9px;max-width:260px}
-.cur-pal-chip{flex:1;height:22px;border-radius:3px;border:1px solid color-mix(in srgb,var(--t0) 10%,transparent)}
-
-/* ── Narrow ──
-   The aside stops being a right-hand column and becomes a line under the copy:
-   at 390px a right-aligned column leaves the description four words wide. */
-@media (max-width:640px){
-  .cur-row{flex-direction:column;gap:8px}
-  .cur-row-aside{flex-direction:row;align-items:center;justify-content:space-between;
-    width:100%;text-align:left;gap:12px}
-  .cur-bands{gap:36px}
-  .cur-lead{padding:14px}
-  .cur-lead-title{font-size:16px}
-}
+/* The Curated Resources rules that sat here moved to
+   src/styles/pages/curated-resources.css, rooted at the page. */
 
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1114,7 +974,12 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
    slack the review asked for: at 1280 the icons row-1 now carries the search,
    the pack select and the action with ~500px spare, where before the seven
    group chips shared it. */
+/* The seam under the panel is the design's, not the old clamp(28px,4vw,52px):
+   `clamp(22px,3vw,34px)` down to the result head on the galleries (Palette
+   Library, line 249). The icons page, where the grid follows the panel with
+   no head between them, takes its own 14px in pages/icon-emoji-library.css. */
 .lib-surface .lbry-toolbar{
+  margin-bottom:clamp(22px,3vw,34px);
   padding:12px;background:var(--card);
   box-shadow:var(--shadow-s);
   -webkit-backdrop-filter:none;backdrop-filter:none;
@@ -1254,3 +1119,138 @@ html[data-reduced-motion="true"] .lib-surface .lib-switch-btn:active{transform:n
   border:1px solid var(--border);border-radius:var(--radius-2xl);
 }
 .lib-surface .ic:hover{background:var(--hvr);border-color:var(--bh)}
+
+
+/* ── The tier marker on a locked group chip ────────────────────────────────
+   The follow-up SPECTRUM-REVIEW left on the icons page: "when the toolbar is
+   rebuilt with slack, put a marker back on the locked group chips — that is
+   the one place the gate is currently discovered by clicking rather than
+   announced." The word ("Pro" / "Log in") is in the accessible name; what a
+   sighted viewer gets is a padlock badge on the chip's corner.
+
+   POSITIONED, NOT LAID OUT, and that is the whole design: a badge adds no
+   width, so the tray's intrinsic width — which LibraryFilterGroup's `fit`
+   uses to decide chips-or-menu — is the same for a gated viewer as for a Pro
+   one. A laid-out marker measured +186px on this row once, and wrapped the
+   toolbar for exactly the people the gate was already costing.
+
+   It straddles the chip's TOP edge, inset from the right, rather than
+   hanging off the corner: a badge past the chip's right side is content past
+   the tray's right side on the row's last chip, and 25-defect-sweep's S4
+   check reads that as the row turning back into a horizontal scroller
+   (measured 4px over at 320, 390 and 1180). Upward overflow is not
+   scrollable overflow, and the 6px row gap clears it.
+
+   In the collapsed MENU a row has room, so the padlock sits inline at the
+   row's end like the count does there. */
+.lib-surface .lbry-filter-lock{
+  position:absolute;top:-7px;right:8px;z-index:2;
+  display:grid;place-items:center;width:18px;height:18px;
+  border:1px solid var(--bh);border-radius:50%;
+  background:var(--card);color:var(--t1);pointer-events:none;
+}
+.lib-surface .lbry-filter-lock svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.lib-surface .lbry-filtermenu .lbry-filter-lock{position:static;margin-left:auto;border:0;background:none;width:auto;height:auto}
+.lib-surface .lbry-filtermenu .lbry-filter-lock svg{width:12px;height:12px}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   APP CONTROLS on every library surface
+   ══════════════════════════════════════════════════════════════════════════
+   DECISION (director, 2026-09-23, from `UIL4B App.dc.html`): app controls —
+   toolbar buttons, fields, secondary buttons — are 10–12px rectangles over a
+   hairline; 999px is kept for meters, for the marketing page, and here for
+   the two things the app file itself draws as pills because they TOGGLE (the
+   filter chips and the Icons/Emoji tabs, above).
+
+   `.btn` in global.css is still a 999px pill and belongs to another lane, so
+   the shape is restated for these seven surfaces only, at `.lib-surface`.
+   `--radius` rather than 12px: rounding is a user setting (vs-appearance), and
+   a hard-coded radius would make that setting do nothing here.
+
+   The accent fill is `--accent-mid` under `--accent-ink`, MEASURED rather than
+   read from the names (they read backwards in light): 5.2:1 in light and 8.9:1
+   in dark; the hover, `--accent-text`, is 5.8:1 and 9.7:1. `--accent-mid` is
+   the member nearest the plain accent in BOTH themes — `--accent-bright`
+   passed too, but in dark it is a washed pastel beside the nav's own blue. Both are
+   derived from `--accent`, so a premium theme moving the accent moves these —
+   which `--accent-strong`, a per-theme literal, would not. The hover no longer
+   lifts the button a pixel with a coloured shadow: the fill change is the
+   feedback. */
+.lib-surface .btn{border-radius:var(--radius)}
+.lib-surface .btn-accent,
+.lib-surface .btn-primary{background:var(--accent-mid);color:var(--accent-ink);border-color:transparent}
+.lib-surface .btn-accent:hover,
+.lib-surface .btn-primary:hover{background:var(--accent-text);color:var(--accent-ink);transform:none;box-shadow:none}
+.lib-surface .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* The shared app button — the rectangle every library surface's own dialogs
+   and footers use (IconLibrary's customizer, the Prompt Library's modal).
+   A hairline at rest; the ONE primary in a group is an ink fill, which is the
+   app design's own in-task CTA ("Create a palette" on the library screens:
+   `background:var(--ink);color:var(--page)`) and is ink-on-paper in both
+   themes with no patch. Accent fills stay for the account and upgrade asks,
+   so blue keeps meaning "the product is asking you for something".
+
+   Mobbin, for a detail dialog's actions: Bloom's image detail
+   (mobbin.com/screens/6e00a735-3e9f-4bdd-9d17-5dd1bba60907), Magnific's icon
+   detail (mobbin.com/screens/3d8c2256-598b-46f4-b79b-1831ba0a0ddb) and
+   Descript's prompt template (mobbin.com/screens/34c75374-2f13-4b12-b47a-80d2e9f156fa)
+   — one filled rectangle, hairline rectangles beside it, no pills. */
+.lib-surface .lib-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:40px;padding:0 16px;
+  border:1px solid var(--bh);border-radius:var(--radius);
+  background:transparent;color:var(--t0);
+  font-family:var(--font);font-size:13px;font-weight:560;line-height:1.2;white-space:nowrap;
+  cursor:pointer;text-decoration:none;
+  transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard);
+}
+.lib-surface .lib-btn:hover{background:var(--hvr);border-color:color-mix(in srgb,var(--t0) 34%,transparent)}
+.lib-surface .lib-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.lib-surface .lib-btn:disabled{opacity:.5;cursor:not-allowed}
+.lib-surface .lib-btn--primary{background:var(--t0);border-color:var(--t0);color:var(--bg-1)}
+.lib-surface .lib-btn--primary:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-1));border-color:transparent}
+.lib-surface .lib-btn--primary:disabled:hover{background:var(--t0);border-color:var(--t0)}
+.lib-surface .lib-btn svg{flex-shrink:0}
+@media(pointer:coarse){.lib-surface .lib-btn{min-height:44px}}
+
+/* The masthead's one action ("Submit prompt", "Open the Gradient Generator",
+   "Suggest a resource"). The slab is a fixed dark surface in BOTH themes, so
+   its paper values are literal, like the h1 above. The global hover repainted
+   it in `--brand` with white text; on the slab the hover is the paper dimming
+   instead. */
+/* Restated at (0,3,0) because `.lib-surface .btn-accent` above is (0,2,0) and
+   in a later sheet than global's `.dgh-action .btn`: without this the Prompt
+   Library's "Add prompt" (a .btn-accent) would lose the paper fill on the slab. */
+.lib-surface .dgh-action .btn{min-height:44px;padding:0 18px;border-radius:var(--radius);color:#0a0a0b;background:#fff;border-color:#fff}
+.lib-surface .dgh-action .btn:hover{color:#0a0a0b;background:rgba(247,247,244,.84);border-color:transparent}
+
+/* The result head's eyebrow ("Everything you can browse", "Curated
+   collection") was accent mono caps above an h2 that already says the same
+   thing louder. Quiet ink: `--t2` measures 5.5:1 on the light page. */
+.lib-surface .drh-head span{color:var(--t2)}
+
+/* Search focus was `--brand`. The ring is non-text, so the plain accent is
+   right for it; the halo is the derived wash. */
+.lib-surface .lbry-search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-wash)}
+
+/* The empty state's one action. It was an `--accent-strong` fill; an empty
+   result is the user's own filter talking back, not the product asking for
+   something, so it is the ink primary. */
+.lib-surface .lbry-empty-clear{background:var(--t0);color:var(--bg-1)}
+.lib-surface .lbry-empty-clear:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-1))}
+
+/* A bare link on these pages inherited global `a{color:--accent-strong}`.
+   `:where()` keeps this at the element's own specificity, so every classed
+   link rule (.cur-link, .grg-open, ...) still decides its own colour. */
+:where(.lib-surface) a{color:var(--accent-mid)}
+
+/* THE TOUCH FLOOR, for the controls above. Measured on a coarse pointer at
+   320/390/768 before this: the accent `.btn`s ("Log in", "Create your free
+   account") at 39px and the search input at 42px, under the 44px every other
+   library control is floored at in tool-shell.css. */
+@media(pointer:coarse){
+  .lib-surface .btn{min-height:44px}
+  .lib-surface .lbry-search input{min-height:44px}
+}

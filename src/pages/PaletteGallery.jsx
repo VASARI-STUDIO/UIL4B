@@ -22,6 +22,8 @@ import { LIBRARY_PALETTES } from '../data/paletteLibrary'
 import '../styles/deferred/colour.css'
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
+// This page's own sheet — every selector rooted at the page root's two classes.
+import '../styles/pages/palette-gallery.css'
 
 // ── TWO QUESTIONS, TWO TRAYS ────────────────────────────────────────
 //
