@@ -3528,9 +3528,9 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .pnav-pop-item svg{flex:0 0 auto;color:var(--t2)}
 .pnav-pop-kbd{margin-left:auto}
-.pnav-pop-item--accent{color:var(--accent-strong);font-weight:600}
+.pnav-pop-item--accent{color:var(--accent-mid);font-weight:600}
 .pnav-pop-item--accent svg{color:var(--accent)}
-.pnav-pop-item--accent:hover{background:color-mix(in srgb,var(--accent) 12%,var(--bg-1));color:var(--accent-strong)}
+.pnav-pop-item--accent:hover{background:color-mix(in srgb,var(--accent) 12%,var(--bg-1));color:var(--accent-text)}
 .pnav-pop-item--danger{color:var(--danger,#dc2626)}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--danger,#dc2626) 12%,var(--bg-1));color:var(--danger,#dc2626)}
 .pnav-pop--account{width:280px}
@@ -3538,7 +3538,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-avatar{width:40px;height:40px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:14px;font-weight:600;color:#fff}
 .pnav-pop-id-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent-strong);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:0 6px}
+.pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent-mid);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:0 6px}
 .pnav-pop-id-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Account-switcher rows — compact avatar + name/email stack per known account */
 .pnav-pop-acct{min-height:46px;padding:5px 10px}
@@ -3693,7 +3693,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-step-label{font-size:var(--fs-body-s);font-weight:600;color:var(--t1)}
 /* Step one is where the flow starts, and the card exists to say so. */
 .pnav-step:first-child .pnav-step-label{font-weight:700;color:var(--t0)}
-.pnav-step:first-child .pnav-step-n{color:var(--accent-strong)}
+.pnav-step:first-child .pnav-step-n{color:var(--accent-mid)}
 
 /* ── Card actions ──────────────────────────────────────────────────────────
    The primary is the guided flow; "Explore" steps back to a quiet text link so
@@ -3792,7 +3792,7 @@ html.lenis{scroll-behavior:auto!important}
    desktop panel never did. The wash is mixed from --hue, the column's category
    colour, falling back to --accent for Discover and Learn — so a premium theme
    moves these too. */
-.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong))}
+.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-mid))}
 .pnav-tool-ico svg{width:14px;height:14px}
 .pnav-tool-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
 /* Label and its badge on one line, wrapping together if the column is narrow. */
@@ -3842,7 +3842,7 @@ html.lenis{scroll-behavior:auto!important}
 /* Promo / feature card — the right-hand rail of every mega-menu. Copy is
    data-driven from NAV_SECTIONS[*].promo; carries an inline SVG mock + two CTAs. */
 .pnav-promo{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:var(--radius-xl);background:color-mix(in srgb,var(--accent) 8%,var(--bg-0));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));box-shadow:var(--ring)}
-.pnav-promo-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.pnav-promo-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-text)}
 .pnav-promo-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .pnav-promo-blurb{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
 .pnav-promo-actions{display:flex;gap:8px;margin-top:auto}
@@ -3866,7 +3866,7 @@ html.lenis{scroll-behavior:auto!important}
    derived token, so a premium theme carries it. Measured on both grounds:
    5.3:1 light, 8.5:1 dark, i.e. clear of the 4.5:1 floor for text this size. */
 .pnav-menu-foot-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;font-size:var(--fs-caption);font-weight:560;color:var(--accent-mid);text-decoration:none}
-.pnav-menu-foot-link:hover{color:var(--accent-strong);text-decoration:none}
+.pnav-menu-foot-link:hover{color:var(--accent-text);text-decoration:none}
 
 /* Mobile sheet */
 .pnav-sheet{position:fixed;inset:0;z-index:110;background:var(--bg-1);padding:calc(var(--chrome-h) + 16px) 20px 20px;overflow-y:auto;overscroll-behavior:contain;animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
@@ -3883,7 +3883,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-acc-link:hover,.pnav-acc-link:active{color:var(--t0);background:var(--hvr);text-decoration:none}
 .pnav-acc-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
 .pnav-acc-desc{font-size:var(--fs-caption);line-height:1.35;color:var(--t2)}
-.pnav-acc-ico{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong))}
+.pnav-acc-ico{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-mid))}
 .pnav-acc-label{font-weight:560}
 /* Column eyebrow inside an expanded accordion, plus soon-badge push + dimming. */
 .pnav-acc-col + .pnav-acc-col{margin-top:4px}
@@ -4060,7 +4060,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 .spnav-tool{display:flex;align-items:center;gap:10px;min-height:44px;padding:7px 8px;border-radius:var(--radius);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .spnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .spnav-tool:focus-visible{background:var(--hvr);color:var(--t0);outline:2px solid var(--accent);outline-offset:-2px}
-.spnav-tool-ico{display:grid;place-items:center;width:26px;height:26px;flex:0 0 auto;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong))}
+.spnav-tool-ico{display:grid;place-items:center;width:26px;height:26px;flex:0 0 auto;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-mid))}
 .spnav-tool-ico svg{width:14px;height:14px}
 .spnav-tool-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
 .spnav-tool-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
@@ -4074,7 +4074,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 .spnav-tool[data-soon]:hover .spnav-tool-label{color:var(--t0)}
 .spnav-tool .soon-badge,.spnav-tool .beta-badge{padding:3px 6px;border-radius:var(--radius-xs)}
 .spnav-tree-all{display:inline-flex;align-items:center;gap:8px;min-height:24px;margin-top:12px;font-size:var(--fs-caption);font-weight:560;color:var(--accent-mid);text-decoration:none}
-.spnav-tree-all:hover{color:var(--accent-strong);text-decoration:none}
+.spnav-tree-all:hover{color:var(--accent-text);text-decoration:none}
 
 /* -- The utilities the pill has no room for -------------------------------- */
 .spnav-util{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.5vw,32px);align-items:start;padding-top:clamp(18px,3vw,30px);border-top:1px solid var(--border)}
@@ -4082,7 +4082,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 .spnav-util-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:0;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-body-s);font-weight:540;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .spnav-util-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .spnav-util-item svg{flex:0 0 auto;color:var(--t2)}
-.spnav-util-item--accent{color:var(--accent-strong);font-weight:600}
+.spnav-util-item--accent{color:var(--accent-mid);font-weight:600}
 .spnav-util-theme .theme-seg{max-width:320px}
 .spnav-kbd{margin-left:auto;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--mono);font-size:10px;line-height:1}
 
@@ -6804,13 +6804,15 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .fbx-dismiss:hover{background:var(--hvr);color:var(--t2)}
 
 /* ── The nav popovers, brought onto the shared language ─────────────────── */
-/* Small accent TEXT must use --accent-strong: --accent measures 3.82:1 on the
-   page and 4.43:1 on white, both under the 4.5:1 floor for normal-size text.
-   These two rules were the only accent-text failures in the nav. */
-.pnav-pop-item--accent{color:var(--accent-strong)}
-.pnav-pop-item--accent svg{color:var(--accent-strong)}
-.pnav-pop-item--accent:hover{background:var(--accent-bg);color:var(--accent-strong)}
-.pnav-pop-tag{color:var(--accent-strong);border-color:var(--accent-strong)}
+/* Small accent TEXT reads the derived family, never bare --accent (3.82:1 on
+   the page, 4.43:1 on white) and never the --accent-strong literal, which a
+   premium accent does not reach. Measured light / dark: --accent-mid on the
+   popover's --bg-1 is 5.55 / 8.48; the hover sits on an 8% accent wash, so it
+   steps to --accent-text, 5.52 / 7.90. */
+.pnav-pop-item--accent{color:var(--accent-mid)}
+.pnav-pop-item--accent svg{color:var(--accent-mid)}
+.pnav-pop-item--accent:hover{background:var(--accent-bg);color:var(--accent-text)}
+.pnav-pop-tag{color:var(--accent-mid);border-color:var(--accent-mid)}
 /* Rows pick up the shared radius so the nav popover and a tool micro-menu
    round their hover states identically. */
 .pnav-pop-item,.pnav-pop-acct{border-radius:var(--radius-s)}
@@ -7091,11 +7093,12 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    asked to keep this navigation system, so this is a skin, density and state
    pass only. */
 
-/* Accent TEXT below large size must be --accent-strong. --accent measures
-   3.82:1 on the page ground and 4.43:1 on white, both under the 4.5:1 floor.
-   These three were the remaining failures in the nav surface. */
-.pnav-promo-eyebrow{color:var(--accent-strong)}
-.pnav-editorial-link:hover{color:var(--accent-strong)}
+/* Accent TEXT below large size reads the derived family (see the popover note
+   above). The promo eyebrow sits on the promo card's 8% accent wash, where
+   --accent-mid drops to 4.32 in light, so it takes --accent-text: 4.78 light,
+   8.41 dark. The editorial link's hover sits on --bg-1: 6.14 / 8.92. */
+.pnav-promo-eyebrow{color:var(--accent-text)}
+.pnav-editorial-link:hover{color:var(--accent-text)}
 
 /* Motion: the panel is opened by HOVER, so its entrance has to keep up with the
    pointer. --dur-4 (420ms) is the scroll-reveal step and read as lag here;

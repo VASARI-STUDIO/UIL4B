@@ -48,7 +48,7 @@
 .nav-switch-chev{width:13px;height:13px;flex-shrink:0;color:var(--t2);transition:transform var(--t)}
 .pnav-group{min-width:0}
 /* Hue-tinted icon tile — colour comes from the group's data-hue */
-.pnav-ico{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong));transition:background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
+.pnav-ico{flex:0 0 auto;display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-mid));transition:background var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out)}
 .pnav-group-title{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-h5);font-weight:700;letter-spacing:-.012em;color:var(--t0);transition:color var(--dur-2) var(--ease-out)}
 .pnav-promo-visual{border-radius:var(--radius-l);overflow:hidden;background:var(--bg-1);border:1px solid var(--border);aspect-ratio:16/10;margin-bottom:4px}
 
