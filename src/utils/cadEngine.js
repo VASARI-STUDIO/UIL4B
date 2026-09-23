@@ -159,8 +159,12 @@ export async function readCad(bytes, formatId, onStage, signal) {
       if (msg.id !== id) return
       if (msg.type === 'progress') { onStage?.({ stage: msg.stage, loaded: msg.loaded, total: msg.total }); return }
       cleanup()
-      if (msg.type === 'result') resolve(msg.result)
-      else reject(new Error(msg.message || 'the CAD engine failed without saying why'))
+      if (msg.type === 'result') { resolve(msg.result); return }
+      // Anything else is a failure inside OpenCascade, and a wasm module that
+      // threw mid-read may have left its heap corrupt. Discard the worker so the
+      // next file starts from a fresh, re-verified engine rather than reusing it.
+      stopWorker()
+      reject(new Error(msg.message || 'the CAD engine failed without saying why'))
     }
     const onError = (e) => {
       cleanup()
