@@ -43,6 +43,10 @@ import { detectCanvasFontRendered } from '../utils/fontDetection'
  * measurements are 531.25 and 718.75, so 0.531 and 0.719 are measured rather
  * than rounded. Three decimals is what the table shows, and this is what makes
  * the third one real.
+ *
+ * That is Chromium on Windows. On Linux FreeType rounds ink bounds to whole
+ * pixels at EVERY size (CI measured 532 and 719), and 1000px still suffices:
+ * a whole pixel at 1000px is a thousandth of an em, which is the third place.
  */
 const EM = 1000
 
@@ -184,7 +188,8 @@ export default function TypeMetricsTable() {
       </div>
       <figcaption className="lart-table-cap">
         Measured in this browser at render: each face is painted to a canvas at {EM}px — large
-        enough that the ink extents come back unrounded — and the height above the baseline is
+        enough that even a browser that rounds ink to whole pixels is exact to a thousandth of an
+        em, the third decimal shown — and the height above the baseline is
         read off <code>x</code> and <code>H</code>, then divided by the em.
         The first two rows are the stacks in <code>--font</code> and <code>--mono</code>; the last
         three are whatever this machine supplies for the generic families, so they differ from one

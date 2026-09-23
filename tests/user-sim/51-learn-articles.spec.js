@@ -276,25 +276,40 @@ test.describe('Learn articles', () => {
       .toBe(false)
 
     // And the direct form of the same check, against the browser rather than
-    // against the rendered digits: re-measure at the em the component uses and
-    // at the em that was wrong, and confirm the small one is the one that
-    // rounds. If Chromium ever stopped rounding at 100px this would go red and
-    // the guard above would become untestable rather than merely unnecessary.
+    // against the rendered digits: re-measure at the em that was wrong and at
+    // the em the component uses. If Chromium ever stopped rounding at 100px the
+    // first half would go red and the guard above would become untestable
+    // rather than merely unnecessary.
+    //
+    // WHAT THE LARGER EM BUYS IS A THIRD DECIMAL, NOT A FRACTIONAL PIXEL. This
+    // used to assert that the 1000px extent is not a whole pixel, which is true
+    // of Chromium on Windows (Geist's x is 531.25) and false on Linux, where
+    // FreeType rounds ink bounds to whole pixels at every size (CI read 532 and
+    // 719). Rounding to a whole pixel at 1000px is still rounding to a
+    // thousandth of an em — exactly the three places the table prints — so the
+    // claim that matters is that the 1000px measurements carry a third decimal
+    // the 100px ones cannot: across the x and H of both product faces, at least
+    // one must not land on a multiple of 10px. At 100px every one of them does,
+    // by construction, which is the defect this guards.
     const rounding = await page.evaluate(() => {
       const ctx = document.createElement('canvas').getContext('2d')
-      const stack = getComputedStyle(document.documentElement).getPropertyValue('--font').trim()
-      const at = (em) => {
+      const root = getComputedStyle(document.documentElement)
+      const stacks = ['--font', '--mono'].map((v) => root.getPropertyValue(v).trim())
+      const at = (em, stack, glyph) => {
         ctx.font = `${em}px ${stack}`
-        return ctx.measureText('x').actualBoundingBoxAscent / em
+        return ctx.measureText(glyph).actualBoundingBoxAscent / em
       }
-      return { small: at(100), large: at(1000) }
+      const all = (em) => stacks.flatMap((s) => ['x', 'H'].map((g) => at(em, s, g)))
+      return { small: all(100), large: all(1000) }
     })
-    expect(Number.isInteger(rounding.small * 100),
-      `an ink extent measured at 100px came back as ${rounding.small * 100}px rather than a whole`
-      + ' pixel — the premise of the precision guard above no longer holds').toBe(true)
-    expect(rounding.large * 1000 % 1,
-      'the same measurement at 1000px is also a whole pixel, so the larger em buys no precision')
-      .not.toBe(0)
+    expect(rounding.small.every((r) => Number.isInteger(Math.round(r * 100 * 1e6) / 1e6)),
+      `an ink extent measured at 100px came back as ${rounding.small.map((r) => r * 100).join(', ')}px`
+      + ' rather than whole pixels — the premise of the precision guard above no longer holds').toBe(true)
+    const thirdPlaces = rounding.large.map((r) => Math.round(r * 1000) % 10)
+    expect(thirdPlaces.length, 'nothing was re-measured at 1000px, so this guard is vacuous').toBe(4)
+    expect(thirdPlaces.every((d) => d === 0),
+      `every extent measured at 1000px (${rounding.large.map((r) => r * 1000).join(', ')}px) is a`
+      + ' multiple of 10px, so the larger em buys no third decimal place').toBe(false)
 
     // ── /learn/font-loading ────────────────────────────────────────────────
     await go(page, '/learn/font-loading')
