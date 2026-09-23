@@ -852,7 +852,10 @@ test('N3 · no Palette Builder swatch name is crushed by the tool row', async ({
 // field in the wrong family, and this defect would come back the next time a
 // value got one character longer.
 
-const GGN_WIDTHS = [320, 340, 350, 390, 769, 780, 800, 900]
+// 481 and 600 joined when the stop list went to one column (2026-09-23): between
+// 481 and 640 the global mobile form floor sets the field in 16px, and a
+// one-line row with 44px touch controls left "#7C3AED" 51px of a 69px need.
+const GGN_WIDTHS = [320, 340, 350, 390, 481, 600, 769, 780, 800, 900]
 
 test('N2 · the gradient stop hex input shows its whole value', async ({ browser }) => {
   budget(GGN_WIDTHS.length)

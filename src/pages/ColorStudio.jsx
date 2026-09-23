@@ -1018,7 +1018,9 @@ ${stateVars}
   const copyStateTokens = () => onCopy(`:root {\n${stateCSS}\n}`)
 
   return (
-    <div className="sec">
+    // `.stc-page` is the root every selector in semantic-color.css is scoped
+    // under — scope, not import order, is what lets a page sheet win.
+    <div className="sec stc-page">
       {/* THE SOLO TOOL HEADER, minus the two things the founder marked "AI".
           ------------------------------------------------------------------
           This header used to converge on a shape the Tint Scale Generator and
@@ -1159,7 +1161,7 @@ ${stateVars}
 
       {/* ═══ SECTION 2: UI STATE COLORS ═══ */}
 
-      <section id="states" style={{ marginBottom: 48, scrollMarginTop: 100 }}>
+      <section id="states" className="stc-states">
 
         <div className="stc-bundles" role="radiogroup" aria-label="Semantic colour bundle">
           {STATE_BUNDLES.map((bundle, bundleIndex) => {
@@ -1178,7 +1180,10 @@ ${stateVars}
               >
                 <span className="stc-bundle-top">
                   <strong>{bundle.name}</strong>
-                  <span aria-hidden="true">{selected ? 'Selected' : 'Choose'}</span>
+                  {/* Only the chosen card says anything here. "Choose" printed six
+                      times over six cards was one word of chrome per card, all
+                      aria-hidden, telling a sighted reader what a card is for. */}
+                  {selected && <span aria-hidden="true">Selected</span>}
                 </span>
                 <span className="stc-bundle-swatches" aria-hidden="true">
                   {Object.entries(bundle.config).map(([role, index]) => (
@@ -1190,6 +1195,10 @@ ${stateVars}
             )
           })}
         </div>
+        {/* One panel, five hairline rows — not five cards. The roles are one
+            editor with five lines in it, and five bordered, shadowed boxes of
+            equal weight read as five separate things. */}
+        <div className="stc-roles">
         {Object.entries(STATE_PRESETS).map(([state, presets]) => {
           const sel = stateColors[state]
           // NB: coerce to a real boolean. `sel` is 0 for the default preset of
@@ -1209,12 +1218,18 @@ ${stateVars}
                   </span>
                 </div>
                 <div className="stc-role-presets">
+                  {/* aria-pressed: the selected preset was carried by a class and
+                      colour alone, so a screen reader heard eight identical
+                      buttons and never which one was on. `Custom` beside them
+                      already said so; now every chip in the row does. */}
                   {presets.map((p, pi) => (
-                    <button key={p.name} onClick={() => setStateColors({ ...stateColors, [state]: pi })}
+                    <button key={p.name} type="button" onClick={() => setStateColors({ ...stateColors, [state]: pi })}
                       className={`pt-t${!isCustom && pi === sel ? ' on' : ''}`}
+                      aria-pressed={!isCustom && pi === sel}
                     ><span className="state-preset-full">{p.name}</span><span className="state-preset-short">{p.name === 'Tailwind' ? 'TW' : p.name}</span></button>
                   ))}
                   <button
+                    type="button"
                     onClick={() => (isCustom ? setStateColors({ ...stateColors, [state]: STATE_BUNDLES[0].config[state] }) : setCustomHue(state, arc.canonical))}
                     className={`pt-t${isCustom ? ' on' : ''}`} aria-pressed={isCustom}
                   >Custom</button>
@@ -1260,6 +1275,7 @@ ${stateVars}
             </div>
           )
         })}
+        </div>
 
         <section className="stc-preview-section" aria-labelledby="stc-preview-title">
           <div className="stc-subhead">

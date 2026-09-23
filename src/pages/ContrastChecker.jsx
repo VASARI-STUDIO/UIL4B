@@ -220,7 +220,7 @@ function ColorField({ id, label, raw, valid, committed, against, ratio, level, o
   const pass = ratio >= level.normal
   return (
     <div className="cc-field">
-      <label className="seg-label" htmlFor={id}>{label}</label>
+      <label className="cc-label" htmlFor={id}>{label}</label>
       <div className="cc-field-row">
         {/* The shared picker, not `<input type="color">`. `onRaw` already both
             records the text and commits a valid hex, so the picker's emitted
@@ -319,23 +319,40 @@ export default function ContrastChecker({ onCopy }) {
   const unfixable = ratio < level.normal && fixes.length === 0
 
   return (
-    <div className="sec">
-      <div className="sec-h">
+    // `.cc-page` is the root every selector in contrast.css is scoped under.
+    // Importing a sheet last does not make it load last — Vite orders chunk CSS
+    // by the dependency graph — so scope, not order, is what makes it win.
+    <div className="sec cc-page">
+      <header className="cc-hero">
         {/* NO TAXONOMY EYEBROW. It read "Colour" in 10px mono caps at y=102,
             above an h1 whose first word is "Colour", on /create/contrast under
             a lit Create > Colour menu. Third statement of one fact. Removed
             with the rest of the sweep for #surface-headers-read-as-ai. */}
-        <h1>Colour Contrast Checker</h1>
+        <h1 id="cc-title">Colour Contrast Checker</h1>
         <p>
           Test any text and background pair against WCAG AA and AAA. If a check
           fails, one click nudges either colour just far enough to pass —
           verified before it&rsquo;s offered.
         </p>
-      </div>
+      </header>
 
+      {/* TWO LANDMARKS, AND NO NEW WORDS FOR EITHER.
+          The page used to report navigation | main | navigation | contentinfo
+          and nothing naming its content (create-tools-left-2026-09-15, item 1).
+          Each panel is now a <section> with an accessible name, which is what
+          makes it a region. The instrument borrows the page's own h1 — the
+          panel IS the checker — and the specimen keeps its "Live preview" h2.
+          A dedicated heading for the instrument would be new copy, and that is
+          the founder's to write; this needs none.
+
+          DOM order is instrument first, so a keyboard or screen-reader user
+          meets the fields before the specimen. From 1041px the grid paints the
+          specimen on the LEFT, canvas-then-inspector, the order the founder's
+          App design and /create/tint both use. The preview holds no focusable
+          element, so the visual swap moves no tab stop. */}
       <div className="cc-grid">
         {/* ── Inputs + verdicts ── */}
-        <div className="card cc-panel">
+        <section className="cc-panel cc-panel--controls" aria-labelledby="cc-title">
           <div className="cc-fields">
             <ColorField
               id="cc-fg" label="Text colour"
@@ -343,8 +360,10 @@ export default function ContrastChecker({ onCopy }) {
               against="background" ratio={ratio} level={level}
               onRaw={setSide(setFgInput, setFg)} onBlur={() => setFgInput(fg)}
             />
+            {/* The word shows only where the button spans the column (≤560px),
+                where a lone glyph in a 300px bar read as a divider. */}
             <button type="button" className="cc-swap" onClick={swap} aria-label="Swap text and background colours">
-              ⇄
+              <span aria-hidden="true">⇄</span><span className="cc-swap-word" aria-hidden="true">Swap</span>
             </button>
             <ColorField
               id="cc-bg" label="Background colour"
@@ -360,7 +379,12 @@ export default function ContrastChecker({ onCopy }) {
           )}
 
           <div className="cc-ratio" aria-live="polite">
-            <span className="cc-ratio-num">{ratioLabel}</span>
+            {/* The unit is a quieter span INSIDE the numeral, so the element's
+                text is still "3.81 : 1" — one token for a reader and for the
+                specs that read it — while the eye lands on the number. */}
+            <span className="cc-ratio-num">
+              {ratioLabel.replace(/ : 1$/, '')}<span className="cc-ratio-unit"> : 1</span>
+            </span>
             <span className={
               ratio >= level.normal ? 'cc-ratio-verdict cc-pass'
                 : ratio >= NON_TEXT_MIN ? 'cc-ratio-verdict cc-mixed'
@@ -373,7 +397,7 @@ export default function ContrastChecker({ onCopy }) {
           {/* Whereby's `AA ⌄`, as a radio group rather than a select: there are
               exactly two values and both are worth showing at once. */}
           <div className="cc-level">
-            <span className="seg-label" id="cc-level-label">Hold it to</span>
+            <span className="cc-label" id="cc-level-label">Hold it to</span>
             <div className="cc-level-opts" role="radiogroup" aria-labelledby="cc-level-label">
               {Object.values(LEVELS).map(lv => (
                 <button
@@ -412,7 +436,7 @@ export default function ContrastChecker({ onCopy }) {
 
           {fixes.length > 0 && (
             <>
-              <h2 className="seg-label">Make it pass</h2>
+              <h2 className="cc-label cc-fixes-label">Make it pass</h2>
               <div className="cc-fixes">
                 {fixes.map(fix => (
                   <div key={fix.key} className="cc-fix">
@@ -434,11 +458,11 @@ export default function ContrastChecker({ onCopy }) {
               too close in lightness. Move both, or pick a different pair.
             </p>
           )}
-        </div>
+        </section>
 
         {/* ── Live preview ── */}
-        <div className="card cc-panel">
-          <h2 className="seg-label">Live preview</h2>
+        <section className="cc-panel cc-panel--preview" aria-labelledby="cc-preview-title">
+          <h2 className="cc-label" id="cc-preview-title">Live preview</h2>
           <p className="cc-lede">
             The pair on a real surface. Each chip is that element&rsquo;s own
             threshold at {level.label}, not the page&rsquo;s — which is why one
@@ -497,7 +521,7 @@ export default function ContrastChecker({ onCopy }) {
             Borders, icons and focus rings are non-text: they need {NON_TEXT_MIN}:1
             against whatever is beside them.
           </p>
-        </div>
+        </section>
       </div>
 
       <nav className="cc-more" aria-label="More colour tools">
