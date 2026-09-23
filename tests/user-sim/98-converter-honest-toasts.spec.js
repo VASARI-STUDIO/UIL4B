@@ -59,9 +59,16 @@ test.describe('the batch download never claims a file the gate withheld', () => 
     const zip = page.getByRole('button', { name: /download all \(2\) as zip/i })
     // POSITIVE CONTROL: the batch control only exists once both converted.
     await expect(zip, 'the batch download never appeared').toBeVisible({ timeout: 30000 })
+    // POSITIVE CONTROL for the claim check below: the SAME locator, filtered
+    // the same way, does find a real success toast — the conversion's own.
+    // Without this, a renamed toast class would let the "no Downloaded ZIP
+    // toast" check pass against anything.
+    const shown = page.locator('.toast.show')
+    await expect(shown.filter({ hasText: /converted 2 images/i }), 'the toast probe cannot see a success toast')
+      .toHaveCount(1, { timeout: 10000 })
     // Let the "Converted 2 images" success toast clear so it cannot be confused
     // with the one this test is about.
-    await expect(page.locator('.toast.show')).toHaveCount(0, { timeout: 10000 })
+    await expect(shown).toHaveCount(0, { timeout: 10000 })
 
     await zip.click()
     await expect(page.locator('#ui-login-title'), 'the ZIP left without asking for an account')
@@ -69,7 +76,7 @@ test.describe('the batch download never claims a file the gate withheld', () => 
     // The ZIP is built before the gate is asked, and the toast would follow it
     // within a frame. A second and a half is generous.
     await page.waitForTimeout(1500)
-    const claimed = await page.locator('.toast.show').filter({ hasText: /downloaded zip/i }).count()
+    const claimed = await shown.filter({ hasText: /downloaded zip/i }).count()
     expect(claimed, 'a "Downloaded ZIP" success toast fired while the sign-up dialog was '
       + 'withholding the file. gatedDownload must be awaited and its result checked.').toBe(0)
   })
