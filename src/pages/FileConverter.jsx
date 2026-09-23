@@ -417,7 +417,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     const imgs = arr.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp|avif|ico)$/i.test(f.name))
     if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images', 'error'); return 0 }
     const big = imgs.find(f => f.size > LARGE_FILE_BYTES)
-    if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`)
+    if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`, 'info')
     const next = imgs.map(f => ({
       id: `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 7)}`,
       name: f.name,
@@ -919,7 +919,7 @@ function VideoToGif({ toast }) {
     if (!f) return
     const okType = f.type.startsWith('video/') || /\.(mp4|webm|mov|avi|gif|webp)$/i.test(f.name)
     if (!okType) { toast('Please choose a video, animated GIF or animated WebP', 'error'); return }
-    if (f.size > LARGE_FILE_BYTES) toast(`Heads up: file is over 50 MB — conversion may be slow or run out of memory`)
+    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — conversion may be slow or run out of memory', 'info')
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     if (result?.url) URL.revokeObjectURL(result.url)
     setFile(f)
@@ -1180,7 +1180,7 @@ function VideoFrames({ toast }) {
       toast('Please choose a video file (MP4, WebM, MOV, AVI)', 'error')
       return
     }
-    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow')
+    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow', 'info')
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     frames.forEach(fr => URL.revokeObjectURL(fr.url))
     setFile(f)
@@ -1235,6 +1235,7 @@ function VideoFrames({ toast }) {
     const out = []
     let t = from, idx = 0
     let unsupported = false
+    let stopped = null
 
     try {
       while (t < to && idx < total + 1) {
@@ -1261,14 +1262,19 @@ function VideoFrames({ toast }) {
         setProgress(Math.round((idx / total) * 100))
       }
     } catch (err) {
-      if (unsupported) toast(err.message, 'error')
-      else toast(out.length ? `Extracted ${out.length} frames (stopped: ${err.message})` : `Extraction failed: ${err.message}`, out.length ? 'success' : 'error')
+      stopped = err.message
     }
 
     setFrames(out)
     setExtracting(false)
     setProgress(100)
-    if (out.length) toast(`Extracted ${out.length} frames`)
+    // ONE toast, chosen after the loop. The catch used to toast "Extracted N
+    // frames (stopped: …)" and then this line toasted "Extracted N frames" in
+    // the same tick — the second replaced the first before it painted, so a
+    // run that stopped early reported itself as a clean success.
+    if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
+    else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
+    else toast(`Extracted ${out.length} frames`)
   }, [srcUrl, meta, fps, scale, format, quality, rangeStart, rangeEnd, extracting, toast])
 
   const downloadAll = useCallback(async () => {
