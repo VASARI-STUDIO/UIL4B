@@ -276,8 +276,17 @@ test.describe('every standalone control on the marketing set clears 24px', () =>
 
 // ── Landmarks and headings, from Chrome's accessibility tree ────────────────
 test.describe('the marketing set exposes a usable landmark list', () => {
+  // THE BUDGET IS PER ROUTE. Each test walks all eleven marketing routes —
+  // navigate, scroll the whole page for its reveals, read Chrome's tree — which
+  // is ~1.8s a route on CI (20.1s at 390 and 17.3s at 1440 on run 35826022497,
+  // against a 30s default meant for one page). Derived from MARKETING_ROUTES,
+  // the same shape as 25-defect-sweep's `budget()`, so a new route raises it in
+  // the same edit. A route that hangs still fails inside the loop, on go()'s
+  // own readiness backstop, by name.
+  const PER_ROUTE_MS = 6000
   for (const width of [390, 1440]) {
     test(`at ${width}px every landmark is named or is not a landmark`, async ({ browser }) => {
+      test.setTimeout(15000 + MARKETING_ROUTES.length * PER_ROUTE_MS)
       const ctx = await browser.newContext({
         viewport: { width, height: 900 }, isMobile: width <= 834, hasTouch: width <= 834,
       })
