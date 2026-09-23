@@ -100,13 +100,13 @@ export default function AddPromptPanel({ open, onClose, onAdd, toast, t }) {
                 <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
               </svg>
               <span>{t('promptLibrary.referenceImage')}</span>
-              <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} />
+              <input ref={fileRef} type="file" accept="image/*,video/*" className="pl-file-input" />
             </div>
           </div>
         </div>
         <div className="pl-add-actions">
-          <button className="btn" onClick={onClose}>Cancel</button>
-          <button className="btn btn-accent" onClick={save}>{t('promptLibrary.addPrompt')}</button>
+          <button type="button" className="lib-btn" onClick={onClose}>Cancel</button>
+          <button type="button" className="lib-btn lib-btn--primary" onClick={save}>{t('promptLibrary.addPrompt')}</button>
         </div>
       </div>
     </div>
