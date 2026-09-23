@@ -1,0 +1,129 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   FEEDBACK — /feedback, on the app file's form language.
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Every selector is scoped under `.fb-page`, the page root, so it carries one
+   class more than the base rules it restates (`.card`, `.pt-t`, `.seg-label`
+   in global.css; `.fb-*` in account.css). Importing this sheet last does NOT
+   make it win — Vite orders a lazy chunk's CSS by the dependency graph — so
+   the extra class is what settles the cascade, by construction.
+
+   Source for the values: `UIL4B App.dc.html`. Its app-page h1 is
+   clamp(26px,3.6vw,40px) at 600 and -.035em; its panels are 18px radius over a
+   hairline with no lift; its fields, segmented choices and buttons are 12px
+   rectangles. The FeedbackModal (the dialog version of this form) is styled in
+   global.css and is not touched here.
+
+   Accent: the derived family only. The chosen type's label sits on the 8%
+   accent wash over the white card, so it reads --accent-text, 5.52:1 light and
+   7.90:1 dark; its border is --accent-mid, 5.55:1 against the card, so the
+   chosen state does not rest on the wash alone.                                */
+
+.fb-page .sec-h {
+  margin-bottom: clamp(24px, 3vw, 32px);
+}
+.fb-page .sec-h h1 {
+  margin: 0 0 10px;
+  padding: 0;
+  font-family: var(--display);
+  font-size: clamp(26px, 3.6vw, 40px);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -.035em;
+  color: var(--t0);
+  text-wrap: balance;
+}
+.fb-page .sec-h p {
+  max-width: 56ch;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--t1);
+  text-wrap: pretty;
+}
+
+/* The panel. */
+.fb-page .fb-card {
+  max-width: 600px;
+  padding: clamp(20px, 4vw, 28px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: none;
+}
+
+.fb-page .fb-form { gap: 20px; }
+
+/* Field labels. The global .seg-label is an 8.5px uppercase caption built for
+   toolbars; a form label is read before the field, so it is the same 12.5px
+   label the sign-in form uses. */
+.fb-page .seg-label {
+  display: block;
+  margin: 0 0 7px;
+  font-size: 12.5px;
+  font-weight: 560;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--t1);
+}
+
+/* The type choice: a radiogroup drawn as the app file's segmented buttons. */
+.fb-page .fb-types { gap: 6px; }
+.fb-page .pt-t {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--t1);
+  transition: background var(--dur-1) var(--ease-standard),
+              border-color var(--dur-1) var(--ease-standard),
+              color var(--dur-1) var(--ease-standard);
+}
+.fb-page .pt-t:hover { background: var(--bg-2); border-color: var(--bh); color: var(--t0); }
+.fb-page .pt-t.on,
+.fb-page .pt-t[aria-checked="true"] {
+  background: var(--accent-wash);
+  border-color: var(--accent-mid);
+  color: var(--accent-text);
+  font-weight: 560;
+}
+
+.fb-page .fb-input,
+.fb-page .fb-textarea {
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+.fb-page .fb-textarea { min-height: 132px; line-height: 1.55; }
+
+.fb-page .fb-submit {
+  min-height: 44px;
+  padding: 0 22px;
+  justify-content: center;
+}
+
+/* The confirmation. */
+.fb-page .fb-done { padding: clamp(24px, 5vw, 40px) 8px; }
+.fb-page .fb-done-mark { border-radius: var(--radius); }
+.fb-page .fb-done-title {
+  margin: 0 0 6px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  color: var(--t0);
+}
+.fb-page .fb-again { min-height: 36px; padding: 0 14px; }
+
+/* Coarse pointers get the 44px floor on every control in the form. */
+@media (pointer: coarse) {
+  .fb-page .pt-t,
+  .fb-page .fb-again { min-height: 44px; }
+}
+
+/* Forced colours: the chosen type has to survive without its wash. */
+@media (forced-colors: active) {
+  .fb-page .pt-t.on,
+  .fb-page .pt-t[aria-checked="true"] { border: 2px solid Highlight; }
+}

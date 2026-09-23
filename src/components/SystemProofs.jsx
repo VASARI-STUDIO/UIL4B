@@ -32,7 +32,7 @@ import { LIVE_TOOLS, SOON_TOOLS } from '../data/helpStart'
 
 /** --bg-0 in each theme, from the :root blocks in src/styles/global.css. */
 const LIGHT_GROUND = '#EFEEE9'
-const DARK_GROUND = '#101012'
+const DARK_GROUND = '#060607'
 /** --accent-strong in each theme — the role every link in the app is painted in. */
 const LIGHT_LINK = '#0B5ED7'
 const DARK_LINK = '#4A90FF'

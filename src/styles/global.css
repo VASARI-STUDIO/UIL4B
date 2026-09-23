@@ -112,14 +112,37 @@
   /* Cascade steps + loop timings (loop duration is the effect — not on the duration scale). */
   --fl-stagger:55ms;--stagger:70ms;--fl-shimmer-dur:1.4s}
 /* ── DARK — V2 reseed. Docs: docs/reference/design-language-v2.md#palette ──
-   Page #101012 · surface #191A1D · ink #F2F1EC · mute #8E8E88 · line #2A2B2F.
+   Page #060607 · chrome #0B0C0E · surface #111215 · ink #F2F1EC · mute #8E8E88 · line #202125.
+   NEAR-BLACK, 2026-09-23 (founder: "the dark mode i want darker"). The first
+   pass moved the ramp down while holding every step at its old lightness gap,
+   and it photographed as unchanged. This is the Linear/Vercel reading of dark:
+   a near-black page, cards only just lifted, separation carried by hairlines.
+   Same small blue lean as before (B one to four above R), not blue-black.
+   CIELAB L*, measured on the rounded hexes (the #101012 ramp in brackets):
+     --bg-0 1.66 (4.74) · --bg-1 3.30 (7.26) · --bg-2/--card 5.47 (9.27)
+     --bg-3 8.26 (13.66) · --bg-4/--border 12.79 (17.58) · --bh 20.41 (25.84)
+     card on page 3.81 (4.54) · --border on page 11.12 (12.84), on a card 7.31
+     (8.30) · --bh on a card 14.93 (16.56). Adjacent steps are smaller than they
+     were, on purpose; the hairline does the separating, and every panel,
+     dialog and card here already carries one.
+   --hvr film 5% -> 6.5%: at 5% the hover would be 3.72 L* on this page; at 6.5%
+     it is 5.26 on the page (was 5.22) and 7.02 on a card (was 5.29).
+   --scrim is a touch darker than the page it dims (it was lighter than this
+     page, which would have lifted it rather than dimmed it).
+   Text only gains: --t3, the faintest role, is 6.15:1 on the page (was 5.77)
+   and 5.39 on --bg-3 (was 4.78). Shadows barely read on near-black.
+   Measurement notes further down that quote #101012 / #151619 / #191A1D /
+   #212327 were taken on the original ramp. Every one of those grounds moved
+   DARKER, which only raises the light-on-dark ratios they record; the
+   contrast suites re-measure on the new values (tests/unit/dark-ground-mirrors
+   fails if a suite is left measuring the old ones).
    Token NAMES and the M3 role-generation method are unchanged; only the seeds
    move. The ink ladder stays four steps with the spec's mute anchored at --t3
    (the faintest) so the existing hierarchy survives — --t1/--t2 are interpolated
    warm-neutral steps between ink and mute, not new roles. Borders are opaque
    now (the spec ships a line COLOUR, not an ink alpha), which also stops them
    compounding unpredictably when surfaces stack. */
-[data-theme="dark"]{--bg-0:#101012;--bg-1:#151619;--bg-2:#191A1D;--bg-3:#212327;--bg-4:#2A2B2F;--border:#2A2B2F;--bh:#3C3D42;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#151619;--hvr:rgba(242,241,236,.05);--card:#191A1D;--card-grad:#191A1D;--inp:#191A1D;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--pending:#a78bfa;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(8,8,10,.62);
+[data-theme="dark"]{--bg-0:#060607;--bg-1:#0B0C0E;--bg-2:#111215;--bg-3:#17181B;--bg-4:#202125;--border:#202125;--bh:#303136;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#0B0C0E;--hvr:rgba(242,241,236,.065);--card:#111215;--card-grad:#111215;--inp:#111215;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--pending:#a78bfa;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(3,3,4,.68);
   /* ON-ACCENT FLIPS IN DARK. The dark accent is a LIGHT blue, so white on it
      measures 2.41:1 — a bad failure, and it applies to every accent-filled
      control, not just buttons. Ink on the same fill measures 7.89:1. This is
@@ -461,41 +484,50 @@ a{color:var(--accent-strong);text-decoration:none}a:hover{text-decoration:underl
 .split>.side{flex:0 1 360px;min-width:0}
 
 /* ─── Buttons ─── */
-/* ── BUTTONS — V2 has ONE shape: pill. There is no second button shape.
-   Docs: docs/reference/design-language-v2.md#buttons-pill-always
+/* ── BUTTONS — the APP's shape is a rounded rectangle, not a pill.
+   Source: `UIL4B App.dc.html`. Its toolbars, fields and secondary buttons are
+   12px (10px when small) rectangles over a hairline border; 999px is kept for
+   meters and filter chips there, and for the marketing page (`/` styles its
+   own `.sp-cta` in pages/spectrum.css and does not use `.btn`). Director
+   decision 2026-09-23, recorded in SPECTRUM-REVIEW.md "copy owed #4".
+   Radii come from the tokens so the rounding setting still reaches them.
    Three treatments and no others:
-     Primary  .btn-accent / .btn-primary — --accent fill, white text
+     Primary  .btn-accent / .btn-primary — derived accent fill, --accent-ink label
      Inverse  .btn-inverse               — ink fill, page-coloured text
-     Quiet    .btn (the base)            — --card surface + 1px --border line
+     Quiet    .btn (the base)            — --card surface + 1px --border hairline
    The base rule below IS the Quiet treatment; don't add a fourth. ── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:var(--radius-pill);font-size:12.5px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--t0);transition:all var(--dur-3) var(--ease-standard);text-decoration:none!important;letter-spacing:-.005em}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--t0);transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard),color var(--dur-2) var(--ease-standard),opacity var(--dur-2) var(--ease-standard);text-decoration:none!important;letter-spacing:-.005em}
 .btn:hover{border-color:var(--bh);background:var(--bg-2);color:var(--t0)}
 .btn:active{background:var(--bg-3);color:var(--t0);transition-duration:var(--dur-1)}
-.btn-s{padding:6px 12px;font-size:11px}
-/* Primary fills with --accent-strong, NOT --accent. The label is 12.5px, so it
-   is normal-size text at a 4.5:1 floor, and --accent-fg on --accent measures
-   only 4.43:1 in light. On --accent-strong it is 5.84:1 (light) and 6.09:1
-   (dark, where --accent-fg flips to ink). */
-.btn-accent,.btn-primary{background:var(--accent-strong);color:var(--accent-fg);border-color:transparent;transition:all var(--dur-2) var(--ease-standard)}
+.btn-s{padding:6px 12px;font-size:11.5px;border-radius:var(--radius-s)}
+/* Primary fills with --accent-mid and labels with --accent-ink — the pair the
+   migrated pages use (.sp-cta--accent, .tt-copy-primary). MEASURED, not
+   reasoned (the family's names read backwards in light theme, see above):
+     rest   --accent-mid   #0E61DD / ink #F4F7FF  5.18:1 light · #82B3FF / #0B0C0E 9.17:1 dark
+     hover  --accent-text  #0E5BCF               5.73:1 light · #8AB8FF          9.65:1 dark
+     press  --accent-bright #0E53BC              6.56:1 light · #94BEFF         10.33:1 dark
+   Each state moves AWAY from the ink, so hover and press never read worse than
+   rest. Raw --accent is 4.14:1 in light and fails; --accent-strong is a literal
+   that does not follow a premium accent, so neither is used. No lift, no glow:
+   the fill change is the state. */
+.btn-accent,.btn-primary{background:var(--accent-mid);color:var(--accent-ink);border-color:var(--accent-mid);font-weight:560}
 /* Inverse — the strongest non-accent action. Nav "Start free", in-panel tool
    links. Ink fill, page-coloured label, so it flips correctly with the theme. */
 .btn.btn-inverse{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
 .btn.btn-inverse:hover{background:var(--t1);border-color:var(--t1);color:var(--bg-0)}
 .btn.btn-inverse:active{background:var(--t0);color:var(--bg-0);transition-duration:var(--dur-1)}
-/* Hover no longer changes the FILL. The old --brand-soft hover dropped the
-   label to 3.11:1 in light — hovering a button made it harder to read. The
-   hover reads through the lift and shadow that were already here, which cost
-   nothing in contrast. */
-.btn-accent:hover,.btn-primary:hover{transform:translateY(-1px);box-shadow:0 1px 2px rgba(0,0,0,.12),0 4px 10px -3px color-mix(in srgb,var(--accent-strong) 40%,transparent)}
-.btn-accent:active,.btn-primary:active{transform:translateY(0);opacity:.8;transition-duration:var(--dur-1)}
-.btn-accent:disabled,.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none}
+/* Hover and press restate the label colour because `.btn:hover` (0,2,0) would
+   otherwise hand an accent button the quiet --bg-2 ground. */
+.btn-accent:hover,.btn-primary:hover{background:var(--accent-text);border-color:var(--accent-text);color:var(--accent-ink)}
+.btn-accent:active,.btn-primary:active{background:var(--accent-bright);border-color:var(--accent-bright);color:var(--accent-ink);transition-duration:var(--dur-1)}
+.btn-accent:disabled,.btn-primary:disabled,.btn-accent:disabled:hover,.btn-primary:disabled:hover{opacity:.4;cursor:not-allowed;background:var(--accent-mid);border-color:var(--accent-mid)}
 .btn.btn-ghost{background:none;border-color:transparent;color:var(--t1)}
 .btn.btn-ghost:hover{background:var(--hvr);color:var(--t0)}
 .btn-l{padding:14px 28px;font-size:14px}
 .btn.is-loading{color:transparent!important;position:relative;pointer-events:none}
 .btn.is-loading>*{visibility:hidden}
 .btn.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;color:var(--t1);animation:fg-spin .7s linear infinite}
-.btn-accent.is-loading::after,.btn-primary.is-loading::after{color:var(--accent-fg)}
+.btn-accent.is-loading::after,.btn-primary.is-loading::after{color:var(--accent-ink)}
 .tag{display:inline-flex;padding:4px 12px;border-radius:var(--radius-s);font-size:10px;font-weight:600}
 
 /* ─── Inputs ─── */
@@ -804,19 +836,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .auth-header{text-align:center;margin-bottom:26px}
 .auth-header h1{font-family:var(--font);font-size:clamp(24px,4vw,30px);font-weight:700;margin-bottom:8px;letter-spacing:-.022em;line-height:1.15;color:var(--t0)}
 .auth-header p{font-size:14px;color:var(--t2);line-height:1.5}
-.auth-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 16px;border-radius:var(--radius-l);border:1px solid var(--border);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:560;cursor:pointer;transition:background var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
-.auth-google-btn:hover{background:var(--hvr);border-color:var(--bh);transform:translateY(-1px);box-shadow:var(--shadow-s)}
-.auth-google-btn:active{transform:translateY(0);transition-duration:var(--dur-1)}
+.auth-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-1);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:560;cursor:pointer;transition:background var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out),transform var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
+.auth-google-btn:hover{background:var(--hvr);border-color:var(--bh)}
+.auth-google-btn:active{transition-duration:var(--dur-1)}
 .auth-google-btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
 .auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--t3);font-size:12px;font-family:var(--mono);letter-spacing:.04em}
 .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
 .auth-form{display:flex;flex-direction:column;gap:16px}
 .auth-field label{display:block;font-size:12px;font-weight:600;color:var(--t1);margin-bottom:6px;letter-spacing:0}
 .auth-field input{width:100%}
-.auth-submit{width:100%;justify-content:center;padding:13px;font-size:14px;font-weight:600;border-radius:var(--radius-l);transition:transform var(--dur-2) var(--ease-out),filter var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
+.auth-submit{width:100%;justify-content:center;padding:13px;font-size:14px;font-weight:600;border-radius:var(--radius);transition:transform var(--dur-2) var(--ease-out),filter var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out)}
 .auth-submit:disabled{opacity:.5;cursor:not-allowed;transform:none!important;filter:none!important;box-shadow:none!important}
 .auth-links{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px}
-.auth-links button{background:none;border:none;color:var(--accent-strong);font-size:13px;font-family:var(--font);cursor:pointer;transition:opacity var(--dur-2) var(--ease-out);opacity:.85;padding:10px 14px;min-height:36px;border-radius:var(--radius-s)}
+.auth-links button{background:none;border:none;color:var(--accent-mid);font-size:13px;font-family:var(--font);cursor:pointer;transition:opacity var(--dur-2) var(--ease-out);opacity:.85;padding:10px 14px;min-height:36px;border-radius:var(--radius-s)}
 .auth-links button:hover{text-decoration:underline;opacity:1}
 .seg-cell{padding:18px 20px;border-right:1px solid var(--border);flex:1;min-width:140px}
 .seg-cell:last-child{border-right:none}
@@ -825,14 +857,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .fp{cursor:pointer;flex:1 1 280px;min-width:0}
 
 /* ─── Toast ─── */
-.toast{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--ring),var(--warm-shadow-lg);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius-l);font-family:var(--font);transform:translateY(16px) scale(.97);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
-.toast.show{transform:translateY(0) scale(1);opacity:1}
+.toast{position:fixed;bottom:24px;right:24px;display:flex;align-items:center;gap:11px;max-width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--bh);box-shadow:var(--shadow-m);color:var(--t0);padding:11px 16px 11px 11px;border-radius:var(--radius);font-family:var(--font);transform:translateY(12px);opacity:0;transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-out);z-index:9999;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
 .toast-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .toast-ico svg{width:15px;height:15px}
 .toast-msg{font-size:13px;font-weight:500;line-height:1.35;color:var(--t0);letter-spacing:-.005em}
 .toast-success .toast-ico{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 .toast-error .toast-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
-.toast-info .toast-ico{background:var(--accent-bg);color:var(--accent)}
+.toast-info .toast-ico{background:var(--accent-bg);color:var(--accent-mid)}
 /* The dismiss control. The toast itself stays pointer-events:none — it must
    never block what is under it — so the one thing that is meant to be pressed
    opts back in. Negative margins keep the box the same height it was. */
@@ -841,11 +873,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 
 .toast-x:hover{background:var(--bg-2);color:var(--t0)}
 .toast:not(.show) .toast-x{pointer-events:none}
 .uh-save-refusal{margin:var(--s-3) 0 0;max-width:58ch;font-size:var(--fs-caption);line-height:1.6;color:var(--err-strong)}
-/* Success motion: icon spring-pop + checkmark stroke draw (E3, motion-safe) */
+/* Success motion: the checkmark draws, which is the state ("done") being
+   said. The spring pop that scaled the tile from .5 went: it said nothing the
+   draw does not, and springy decoration is on the founder's rejected list. */
 .toast-success .toast-ico svg path{stroke-dasharray:26;stroke-dashoffset:26}
-.toast-success.show .toast-ico{animation:toast-pop var(--dur-4) var(--ease-spring) both}
 .toast-success.show .toast-ico svg path{animation:toast-draw var(--dur-3) var(--ease-entrance) 90ms forwards}
-@keyframes toast-pop{from{transform:scale(.5)}to{transform:scale(1)}}
 @keyframes toast-draw{to{stroke-dashoffset:0}}
 html[data-reduced-motion="true"] .toast-success.show .toast-ico{animation:none}
 html[data-reduced-motion="true"] .toast-success .toast-ico svg path,html[data-reduced-motion="true"] .toast-success.show .toast-ico svg path{animation:none;stroke-dashoffset:0}
@@ -951,7 +983,7 @@ html[data-reduced-motion="true"] .bento-hero-name-in{animation:none}
 .cp-item:hover,.cp-item.active{background:var(--hvr);color:var(--t0)}
 .cp-item.active{outline:none;box-shadow:inset 0 0 0 1px var(--accent-glow)}
 .cp-item-icon{width:30px;height:30px;border-radius:var(--radius-s);background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--t1);flex-shrink:0;transition:all var(--t)}
-.cp-item.active .cp-item-icon{background:var(--accent-bg);border-color:var(--accent-glow);color:var(--accent)}
+.cp-item.active .cp-item-icon{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent-mid)}
 
 /* ─── Cmd+K hint button (TopBar) ─── */
 .cmdk-hint{display:inline-flex;align-items:center;gap:8px;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);padding:7px 16px;color:var(--t2);font-size:13px;font-family:var(--font);cursor:pointer;transition:all var(--dur-2) var(--ease-out);min-width:320px;flex:1;max-width:520px}
@@ -1674,10 +1706,12 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
 /* Error Boundary */
 .coming-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:70vh;max-width:520px;margin:0 auto;padding:24px}
 .coming-emoji{font-size:56px;line-height:1;margin-bottom:18px;animation:cp-rise var(--dur-4) var(--ease-entrance)}
-.coming-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:10px}
+.coming-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-mid);margin-bottom:10px}
 .coming-title{font-size:clamp(24px,4vw,32px);font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--t0);margin:0 0 12px}
 .coming-sub{font-size:14.5px;color:var(--t2);line-height:1.65;margin:0 0 24px}
 .coming-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+/* The two ways out, as the app's rectangle at the 44px the old .ui-pill-md held. */
+.coming-actions .coming-act{min-height:44px;padding:0 20px;font-size:14px;justify-content:center}
 .error-boundary{display:flex;align-items:center;justify-content:center;min-height:60vh;width:100%;padding:24px}
 .error-boundary-card{text-align:center;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-l);padding:48px 40px;max-width:440px;width:100%}
 .error-boundary-card h2{font-family:var(--font);font-size:20px;font-weight:600;color:var(--t0);margin-bottom:8px}
@@ -1787,7 +1821,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    quieter text treatment the row is built around and only lifts the floor.
    https://mobbin.com/sites/sections/fa5c03c7-be13-4344-b36f-16b5edddc2a0 */
 .app-footer-start{display:inline-flex;align-items:center;min-height:24px;gap:8px;font-size:var(--fs-body-s);font-weight:650;color:var(--t0);text-decoration:none}
-.app-footer-start:hover{gap:12px;color:var(--accent-strong);text-decoration:none}
+.app-footer-start:hover{gap:12px;color:var(--accent-mid);text-decoration:none}
 .app-footer-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-5)}
 .app-footer-group{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .app-footer-group p{margin-bottom:3px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
@@ -1801,7 +1835,9 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    The column gap drops to 6px so the visual pitch is unchanged (21.4+9 = 30.4
    before, 24+6 = 30 after) while the pressable box grows. */
 .app-footer-links a{display:inline-flex;align-items:center;min-height:24px;font-size:var(--fs-caption);color:var(--t1);text-decoration:none;font-weight:500;transition:color var(--t-fast)}
-.app-footer-links a:hover{color:var(--accent-strong)}
+/* Every footer hover reads --accent-mid on the footer's --bg-1 ground:
+   5.55:1 light, 8.48:1 dark, and it follows a premium accent. */
+.app-footer-links a:hover{color:var(--accent-mid)}
 .app-footer-soon-link{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-caption);color:var(--t2);font-weight:500}
 .app-footer-soon-link em{padding:2px 5px;border:1px solid var(--border);border-radius:999px;font-family:var(--mono);font-size:8px;font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
 .app-footer-legal{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding-top:var(--s-5);border-top:1px solid var(--border);font-size:var(--fs-caption);color:var(--t3)}
@@ -1816,7 +1852,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    the mix that clears 1.4.11's 3:1 against the footer ground in BOTH themes —
    50% measured 2.4:1 in light, where the ground is white. */
 .app-footer-attrib{color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
-.app-footer-attrib:hover{color:var(--accent-strong);text-decoration-color:currentColor}
+.app-footer-attrib:hover{color:var(--accent-mid);text-decoration-color:currentColor}
 /* The compact variant keeps the FAB clearance for the same reason the full one
    does — it sets `padding-block`, which would otherwise overwrite it. */
 .app-footer--compact{padding-block:var(--s-6) max(var(--s-4),var(--fab-clearance))}
@@ -1852,15 +1888,15 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    the height as a FLOOR grows the pressable box by 1.3px above and below the
    line box and leaves the type where it was. */
 .app-footer-note{display:inline-flex;align-items:center;min-height:24px;padding:0;border:0;background:none;font:inherit;font-size:var(--fs-caption);font-weight:500;color:var(--t1);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px;transition:color var(--t-fast)}
-.app-footer-note:hover{color:var(--accent-strong);text-decoration-color:currentColor}
+.app-footer-note:hover{color:var(--accent-mid);text-decoration-color:currentColor}
 
 /* THE PANEL. The house dialog shell — same scrim, same radius, same entrance as
    .fb-modal — carrying a letter rather than a form. Narrower than the feedback
    modal (480 vs 520) because this is one column of prose and nothing else, and
    .fnote-para caps at 56ch so the measure stays readable however long the note
    turns out to be. */
-.fnote-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance)}
-.fnote{display:flex;flex-direction:column;width:100%;max-width:480px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.fnote-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
+.fnote{display:flex;flex-direction:column;width:100%;max-width:480px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .fnote-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 14px;flex-shrink:0}
 .fnote-title{margin:0;font-size:var(--fs-body);font-weight:650;letter-spacing:-.01em;color:var(--t0)}
 .fnote-close{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;padding:0;border:1px solid transparent;border-radius:var(--radius-s);background:none;color:var(--t2);cursor:pointer;transition:color var(--t-fast),background var(--t-fast),border-color var(--t-fast)}
@@ -1908,8 +1944,9 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 }
 
 /* Global floating feedback button */
-.global-feedback-btn{position:fixed;right:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(0,0,0,.3);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.global-feedback-btn:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg);transform:translateY(-2px)}
+.global-feedback-btn{position:fixed;right:20px;bottom:20px;z-index:80;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);color:var(--t1);font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px -6px rgba(0,0,0,.3);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+/* The .btn-accent pair (5.18:1 light, 9.17:1 dark); the fill is the state, no lift. */
+.global-feedback-btn:hover{background:var(--accent-mid);border-color:var(--accent-mid);color:var(--accent-ink)}
 .global-feedback-btn svg{flex-shrink:0}
 /* The compact form fires on EITHER axis. It used to be width-only, so the one
    device class with the least vertical room — a phone held sideways, 844–932px
@@ -1936,8 +1973,8 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 @media(max-width:640px),(max-height:500px){.global-feedback-btn span{display:none}.global-feedback-btn{padding:12px;right:14px;bottom:14px}}
 
 /* ─── Feedback modal (global floating feedback button popup) ─── */
-.fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cp-fade var(--dur-2) var(--ease-entrance)}
-.fb-modal{display:flex;flex-direction:column;width:100%;max-width:520px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
+.fb-overlay{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--scrim);animation:cp-fade var(--dur-2) var(--ease-entrance)}
+.fb-modal{display:flex;flex-direction:column;width:100%;max-width:520px;max-height:calc(100vh - 40px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:var(--shadow-panel);overflow:hidden;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .fb-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
 .fb-title{font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--t0);margin:0}
 .fb-close{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;background:none;border:none;border-radius:var(--radius-s);color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
@@ -1950,7 +1987,10 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-types{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .fb-type{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px 6px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);color:var(--t2);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:border-color var(--t),background var(--t),color var(--t)}
 .fb-type:hover{border-color:var(--bh);color:var(--t1)}
-.fb-type.on{border-color:var(--brand);background:var(--brand-bg);color:var(--accent-strong)}
+/* Chosen type: the label sits on an 8% accent wash over --bg-2, where
+   --accent-mid falls under 4.5 in light, so it reads --accent-text
+   (4.78:1 light, 8.41:1 dark). */
+.fb-type.on{border-color:var(--accent-mid);background:var(--accent-wash);color:var(--accent-text)}
 .fb-type svg{flex-shrink:0}
 .fb-selects{display:flex;flex-direction:column;gap:14px}
 .fb-select,.fb-input,.fb-textarea{width:100%}
@@ -1999,7 +2039,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .fb-success-actions{display:flex;gap:8px}
 @media(max-width:480px){
   .fb-overlay{padding:0;align-items:flex-end}
-  .fb-modal{max-width:100%;max-height:92vh;border-radius:var(--radius-l) var(--radius-l) 0 0;border-bottom:none}
+  .fb-modal{max-width:100%;max-height:92vh;border-radius:var(--radius-2xl) var(--radius-2xl) 0 0;border-bottom:none}
   .fb-types{grid-template-columns:repeat(2,1fr)}
   .fb-actions{flex-direction:column-reverse}
   .fb-actions .btn{width:100%;justify-content:center}
@@ -2033,7 +2073,8 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 
 /* ─── Onboarding ─── */
 .onb{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:24px;background:var(--bg-0)}
-.onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:36px;position:relative;overflow:hidden}
+/* The app file's panel: 18px radius over a hairline, no lift. */
+.onb-card{width:100%;max-width:640px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-2xl);box-shadow:none;padding:36px;position:relative;overflow:hidden}
 .onb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .onb-brand{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t0)}
 
@@ -2045,12 +2086,16 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
 .onb-greeting em{font-style:normal;color:var(--t0);font-weight:600}
 .onb-q{font-family:var(--display);font-size:clamp(22px,3vw,28px);font-weight:500;letter-spacing:-.02em;line-height:1.2;margin-bottom:6px;color:var(--t0)}
 .onb-sub{font-size:13px;color:var(--t2);margin-bottom:20px}
+/* The question is a focus TARGET, not a control: Onboarding focuses it on each
+   step so the new question is announced. Same rule as .ui-modal[tabindex="-1"]
+   further down; the options below keep their rings. */
+.onb-q[tabindex="-1"]:focus-visible{outline:none}
 
 .onb-options{display:flex;flex-direction:column;gap:8px}
 .onb-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--t0);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:all var(--dur-2) var(--ease-out);text-align:left}
-.onb-option:hover{border-color:var(--bh);background:var(--hvr);transform:translateX(3px)}
+.onb-option:hover{border-color:var(--bh);background:var(--hvr)}
 .onb-option-arrow{color:var(--t3);transition:color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard)}
-.onb-option:hover .onb-option-arrow{color:var(--accent);transform:translateX(3px)}
+.onb-option:hover .onb-option-arrow{color:var(--accent-mid);transform:translateX(3px)}
 
 .onb-back{display:inline-flex;align-items:center;gap:6px;margin-top:18px;background:none;border:none;color:var(--t2);font-size:13px;font-family:var(--font);cursor:pointer;padding:8px 0;transition:color var(--dur-2) var(--ease-standard)}
 .onb-back:hover{color:var(--t0)}
@@ -2070,7 +2115,7 @@ html[data-reduced-motion="true"] .fnote{animation:none;opacity:1;transform:none}
    who has not made anything yet. */
 .onb-firstwin-foot{margin:18px 0 0;font-size:12px;color:var(--t3)}
 .onb-firstwin-foot a{color:var(--t1);text-decoration:underline;text-underline-offset:2px}
-.onb-firstwin-foot a:hover{color:var(--accent-strong)}
+.onb-firstwin-foot a:hover{color:var(--accent-mid)}
 
 
 @media(max-width:520px){
@@ -3202,26 +3247,23 @@ html.lenis{scroll-behavior:auto!important}
    entrance is CSS now and supplies its own hidden start state via
    `animation-fill-mode: both` — see the hero entrance block. */
 
-/* ── Reusable pill button system (nav, hero, rail, coming-soon) ── */
-.ui-pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius-pill);font-family:var(--font);font-weight:580;line-height:1;cursor:pointer;text-decoration:none;white-space:nowrap;border:1px solid transparent;transition:transform var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out),box-shadow var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out)}
-.ui-pill:hover{text-decoration:none;transform:translateY(-1px)}
-.ui-pill:active{transform:scale(.98)}
+/* ── The legacy `.ui-pill` action family (nav, CTAs, coming-soon) ──
+   Despite the name it is no longer a pill: in the app it is the same rounded
+   rectangle as `.btn` (see the BUTTONS note), because `UIL4B App.dc.html` does
+   not pill its actions. The family is being retired surface by surface; pages
+   that still want Spectrum's pill (plans, help, principles) restate the radius
+   in their own root-scoped sheets. No hover lift and no glow — the ground or
+   border change is the state. */
+.ui-pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);font-family:var(--font);font-weight:540;line-height:1;cursor:pointer;text-decoration:none;white-space:nowrap;border:1px solid transparent;transition:background var(--dur-2) var(--ease-out),color var(--dur-2) var(--ease-out),border-color var(--dur-2) var(--ease-out)}
+.ui-pill:hover{text-decoration:none}
 .ui-pill-ink{background:var(--t0);color:var(--bg-0);border-color:var(--t0)}
-.ui-pill-ink:hover{color:var(--bg-0);box-shadow:var(--shadow-s)}
-.ui-pill-out{background:var(--bg-1);color:var(--t0);border-color:var(--bh)}
-.ui-pill-out:hover{border-color:var(--t0)}
-/* Fills with --accent-strong, not --accent — same reason as .btn-accent. This
-   is the shared pill primitive behind the nav "Start for Free" and the hero
-   CTA, i.e. the most-seen control in the product: at 14px its label is normal
-   text, and --accent-fg on --accent measured 4.43:1 against the 4.5:1 floor.
-   On --accent-strong it is 5.84:1 (light) / 6.09:1 (dark).
-   The old rule had this backwards — it filled with --accent at rest and only
-   reached the readable --accent-strong on HOVER, so the resting state was the
-   failing one. Hover now holds the fill and reads through lift + glow, which
-   also keeps it correct in dark, where "darker on hover" would reduce contrast
-   against the ink label rather than increase it. */
-.ui-pill-accent{background:var(--accent-strong);color:var(--accent-fg);border-color:var(--accent-strong)}
-.ui-pill-accent:hover{background:var(--accent-strong);color:var(--accent-fg);border-color:var(--accent-strong);transform:translateY(-1px);box-shadow:0 4px 14px -4px var(--accent-glow)}
+.ui-pill-ink:hover{color:var(--bg-0);background:var(--t1);border-color:var(--t1)}
+.ui-pill-out{background:var(--card);color:var(--t0);border-color:var(--border)}
+.ui-pill-out:hover{border-color:var(--bh);background:var(--bg-2)}
+/* The same measured pair as .btn-accent: --accent-mid under --accent-ink at
+   rest (5.18:1 light · 9.17:1 dark), --accent-text on hover (5.73 · 9.65). */
+.ui-pill-accent{background:var(--accent-mid);color:var(--accent-ink);border-color:var(--accent-mid)}
+.ui-pill-accent:hover{background:var(--accent-text);color:var(--accent-ink);border-color:var(--accent-text)}
 .ui-pill-ghost{background:none;color:var(--t1)}
 .ui-pill-ghost:hover{background:var(--hvr);color:var(--t0)}
 .ui-pill-sm{height:40px;padding:0 18px;font-size:var(--fs-body-s)}
@@ -3535,9 +3577,9 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .pnav-pop-item svg{flex:0 0 auto;color:var(--t2)}
 .pnav-pop-kbd{margin-left:auto}
-.pnav-pop-item--accent{color:var(--accent-strong);font-weight:600}
+.pnav-pop-item--accent{color:var(--accent-mid);font-weight:600}
 .pnav-pop-item--accent svg{color:var(--accent)}
-.pnav-pop-item--accent:hover{background:color-mix(in srgb,var(--accent) 12%,var(--bg-1));color:var(--accent-strong)}
+.pnav-pop-item--accent:hover{background:color-mix(in srgb,var(--accent) 12%,var(--bg-1));color:var(--accent-text)}
 .pnav-pop-item--danger{color:var(--danger,#dc2626)}
 .pnav-pop-item--danger:hover{background:color-mix(in srgb,var(--danger,#dc2626) 12%,var(--bg-1));color:var(--danger,#dc2626)}
 .pnav-pop--account{width:280px}
@@ -3545,7 +3587,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-pop-avatar{width:40px;height:40px;flex:0 0 auto;border-radius:50%;object-fit:cover;background:var(--avatar-grad);display:grid;place-items:center;font-size:14px;font-weight:600;color:#fff}
 .pnav-pop-id-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .pnav-pop-id-name{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-body-s);font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent-strong);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:0 6px}
+.pnav-pop-tag{font-family:var(--mono);font-style:normal;font-size:var(--fs-micro);letter-spacing:.06em;color:var(--accent-mid);border:1px solid var(--accent);border-radius:var(--radius-pill);padding:0 6px}
 .pnav-pop-id-email{font-size:var(--fs-caption);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Account-switcher rows — compact avatar + name/email stack per known account */
 .pnav-pop-acct{min-height:46px;padding:5px 10px}
@@ -3700,7 +3742,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-step-label{font-size:var(--fs-body-s);font-weight:600;color:var(--t1)}
 /* Step one is where the flow starts, and the card exists to say so. */
 .pnav-step:first-child .pnav-step-label{font-weight:700;color:var(--t0)}
-.pnav-step:first-child .pnav-step-n{color:var(--accent-strong)}
+.pnav-step:first-child .pnav-step-n{color:var(--accent-mid)}
 
 /* ── Card actions ──────────────────────────────────────────────────────────
    The primary is the guided flow; "Explore" steps back to a quiet text link so
@@ -3799,7 +3841,7 @@ html.lenis{scroll-behavior:auto!important}
    desktop panel never did. The wash is mixed from --hue, the column's category
    colour, falling back to --accent for Discover and Learn — so a premium theme
    moves these too. */
-.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong))}
+.pnav-tool-ico{flex:0 0 auto;display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-mid))}
 .pnav-tool-ico svg{width:14px;height:14px}
 .pnav-tool-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
 /* Label and its badge on one line, wrapping together if the column is narrow. */
@@ -3849,7 +3891,7 @@ html.lenis{scroll-behavior:auto!important}
 /* Promo / feature card — the right-hand rail of every mega-menu. Copy is
    data-driven from NAV_SECTIONS[*].promo; carries an inline SVG mock + two CTAs. */
 .pnav-promo{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:var(--radius-xl);background:color-mix(in srgb,var(--accent) 8%,var(--bg-0));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--border));box-shadow:var(--ring)}
-.pnav-promo-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.pnav-promo-eyebrow{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--accent-text)}
 .pnav-promo-title{font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0);line-height:1.2}
 .pnav-promo-blurb{font-size:var(--fs-body-s);color:var(--t2);line-height:1.5}
 .pnav-promo-actions{display:flex;gap:8px;margin-top:auto}
@@ -3873,7 +3915,7 @@ html.lenis{scroll-behavior:auto!important}
    derived token, so a premium theme carries it. Measured on both grounds:
    5.3:1 light, 8.5:1 dark, i.e. clear of the 4.5:1 floor for text this size. */
 .pnav-menu-foot-link{display:inline-flex;align-items:center;gap:8px;min-height:24px;font-size:var(--fs-caption);font-weight:560;color:var(--accent-mid);text-decoration:none}
-.pnav-menu-foot-link:hover{color:var(--accent-strong);text-decoration:none}
+.pnav-menu-foot-link:hover{color:var(--accent-text);text-decoration:none}
 
 /* Mobile sheet */
 .pnav-sheet{position:fixed;inset:0;z-index:110;background:var(--bg-1);padding:calc(var(--chrome-h) + 16px) 20px 20px;overflow-y:auto;overscroll-behavior:contain;animation:pnav-sheet-in var(--dur-3) var(--ease-entrance)}
@@ -3890,7 +3932,7 @@ html.lenis{scroll-behavior:auto!important}
 .pnav-acc-link:hover,.pnav-acc-link:active{color:var(--t0);background:var(--hvr);text-decoration:none}
 .pnav-acc-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
 .pnav-acc-desc{font-size:var(--fs-caption);line-height:1.35;color:var(--t2)}
-.pnav-acc-ico{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong))}
+.pnav-acc-ico{flex:0 0 auto;display:grid;place-items:center;width:36px;height:36px;border-radius:var(--radius-s);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-mid))}
 .pnav-acc-label{font-weight:560}
 /* Column eyebrow inside an expanded accordion, plus soon-badge push + dimming. */
 .pnav-acc-col + .pnav-acc-col{margin-top:4px}
@@ -4067,7 +4109,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 .spnav-tool{display:flex;align-items:center;gap:10px;min-height:44px;padding:7px 8px;border-radius:var(--radius);color:var(--t1);text-decoration:none;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .spnav-tool:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .spnav-tool:focus-visible{background:var(--hvr);color:var(--t0);outline:2px solid var(--accent);outline-offset:-2px}
-.spnav-tool-ico{display:grid;place-items:center;width:26px;height:26px;flex:0 0 auto;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-strong))}
+.spnav-tool-ico{display:grid;place-items:center;width:26px;height:26px;flex:0 0 auto;border-radius:var(--radius);background:color-mix(in srgb,var(--hue,var(--accent)) 12%,var(--bg-2));color:var(--hue,var(--accent-mid))}
 .spnav-tool-ico svg{width:14px;height:14px}
 .spnav-tool-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
 .spnav-tool-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
@@ -4081,7 +4123,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 .spnav-tool[data-soon]:hover .spnav-tool-label{color:var(--t0)}
 .spnav-tool .soon-badge,.spnav-tool .beta-badge{padding:3px 6px;border-radius:var(--radius-xs)}
 .spnav-tree-all{display:inline-flex;align-items:center;gap:8px;min-height:24px;margin-top:12px;font-size:var(--fs-caption);font-weight:560;color:var(--accent-mid);text-decoration:none}
-.spnav-tree-all:hover{color:var(--accent-strong);text-decoration:none}
+.spnav-tree-all:hover{color:var(--accent-text);text-decoration:none}
 
 /* -- The utilities the pill has no room for -------------------------------- */
 .spnav-util{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.5vw,32px);align-items:start;padding-top:clamp(18px,3vw,30px);border-top:1px solid var(--border)}
@@ -4089,7 +4131,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
 .spnav-util-item{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:0 10px;border:0;background:none;border-radius:var(--radius);font-family:var(--font);font-size:var(--fs-body-s);font-weight:540;color:var(--t1);text-align:left;text-decoration:none;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .spnav-util-item:hover{background:var(--hvr);color:var(--t0);text-decoration:none}
 .spnav-util-item svg{flex:0 0 auto;color:var(--t2)}
-.spnav-util-item--accent{color:var(--accent-strong);font-weight:600}
+.spnav-util-item--accent{color:var(--accent-mid);font-weight:600}
 .spnav-util-theme .theme-seg{max-width:320px}
 .spnav-kbd{margin-left:auto;display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:var(--radius-xs);border:1px solid var(--border);background:var(--bg-2);color:var(--t2);font-family:var(--mono);font-size:10px;line-height:1}
 
@@ -4114,7 +4156,7 @@ html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
   .spnav-mark{padding:8px 10px}
 }
 
-.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;text-align:left;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
+.exp-fmt{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;text-align:left;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:border-color var(--dur-2) var(--ease-out),background var(--dur-2) var(--ease-out)}
 .exp-fmt:hover{border-color:var(--bh);background:var(--bg-1)}
 .exp-fmt.is-active{border-color:color-mix(in srgb,var(--accent) 60%,var(--border));background:color-mix(in srgb,var(--accent) 7%,var(--bg-1))}
 .exp-fmt-check{flex:0 0 auto;width:18px;height:18px;border:2px solid var(--bh);border-radius:50%;transition:border-color var(--dur-2) var(--ease-out)}
@@ -4458,7 +4500,9 @@ html[data-reduced-motion="true"] :is(.hcmd,.home-hero-hint){animation:none}
 }
 .hcmd-bar{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:60px;padding:0 10px 0 18px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);box-shadow:var(--shadow-cmd);transition:border-color var(--dur-2) var(--ease-standard),box-shadow var(--dur-2) var(--ease-standard)}
 .hcmd-bar:focus-within{border-color:var(--accent)}
-.hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-strong)}
+/* The prompt glyph and the category tags read --accent-mid on the bar's --bg-1
+   (5.55:1 light, 8.48:1 dark), so a premium accent reaches them. */
+.hcmd-prompt{font-family:var(--mono);font-size:var(--fs-body);font-weight:700;color:var(--accent-mid)}
 /* `input.` prefix, the same idiom as input.cs-hue-slider above and for the same
    reason: this MUST outrank the global input[type="text"] reset at the top of
    the file, whose 0,1,1 beats a bare 0,1,0 class no matter which comes later.
@@ -4487,7 +4531,7 @@ input.hcmd-input:focus{outline:none;box-shadow:none}
 .hcmd-row-body{display:flex;min-width:0;flex-direction:column;gap:2px}
 .hcmd-row-title{font-size:var(--fs-body-s);font-weight:700;letter-spacing:-.01em;color:var(--t0)}
 .hcmd-row-desc{font-size:var(--fs-caption);line-height:1.45;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hcmd-row-cat{flex:0 0 auto;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong);white-space:nowrap}
+.hcmd-row-cat{flex:0 0 auto;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-pill);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-mid);white-space:nowrap}
 .hcmd-empty{padding:18px 16px;font-size:var(--fs-body-s);line-height:1.55;color:var(--t2)}
 .hcmd-empty strong{color:var(--t0)}
 
@@ -5436,7 +5480,7 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
 /* Topmost interactive layer — canonical modals (incl. the login prompt) must sit
    above every tool overlay (.icust-overlay/.cp-overlay are 9998), or e.g. the
    "log in to continue" popup opened from the icon customizer stacks underneath. */
-.ui-modal-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);backdrop-filter:blur(6px);animation:cp-fade var(--dur-1) var(--ease-entrance)}
+.ui-modal-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:clamp(16px,4vw,40px);background:var(--scrim);animation:cp-fade var(--dur-1) var(--ease-entrance)}
 /* The max-height cap is correct and stays. What was missing is any sign that
    the dialog scrolls when its content exceeds it (S7, mobile-audit-2026-08).
    At 844x390 the login dialog holds 489px of content in 356px: the submit
@@ -5456,7 +5500,7 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
    this shell get it. */
 .ui-modal{position:relative;width:100%;max-width:440px;background:linear-gradient(var(--card) 30%,rgba(0,0,0,0)) top/100% 26px no-repeat local,linear-gradient(rgba(0,0,0,0),var(--card) 70%) bottom/100% 26px no-repeat local,radial-gradient(farthest-side at 50% 0,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) top/100% 12px no-repeat scroll,radial-gradient(farthest-side at 50% 100%,color-mix(in srgb,var(--t0) 18%,transparent),rgba(0,0,0,0)) bottom/100% 12px no-repeat scroll,var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance);max-height:calc(100dvh - 32px);overflow:hidden auto}
 .ui-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px 0}
-.ui-modal-x{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--radius-pill);border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
+.ui-modal-x{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:var(--radius-s);border:1px solid transparent;background:transparent;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .ui-modal-x:hover{background:var(--hvr);color:var(--t0)}
 .ui-modal-body{padding:14px 22px 22px}
 .ui-modal-title{font-size:19px;font-weight:640;letter-spacing:-.01em;color:var(--t0);margin:0}
@@ -5529,8 +5573,12 @@ html[data-reduced-motion="true"] .plb-toolbar-group:last-child{scroll-snap-type:
 @media(max-height:460px){
   .ui-login .ui-modal-body{padding-top:8px}
 }
-.ui-login-note{display:flex;gap:9px;align-items:flex-start;margin:0 0 16px;padding:11px 13px;background:var(--brand-bg);border:1px solid color-mix(in srgb,var(--brand) 26%,transparent);border-radius:var(--radius);font-size:12.5px;line-height:1.45;color:var(--t1)}
-.ui-login-note svg{flex:none;margin-top:1px;color:var(--brand)}
+.ui-login-note{display:flex;gap:9px;align-items:flex-start;margin:0 0 16px;padding:11px 13px;background:var(--accent-wash);border:1px solid var(--accent-border);border-radius:var(--radius);font-size:12.5px;line-height:1.45;color:var(--t1)}
+.ui-login-note svg{flex:none;margin-top:1px;color:var(--accent-mid)}
+/* The reset-link confirmation. These three were inline style objects. */
+.ui-login-sent{padding:10px 0 4px;text-align:center}
+.ui-login-sent-h{margin:0 0 6px;font-size:14px;font-weight:560;color:var(--t0)}
+.ui-login-sent-p{margin:0 0 14px;font-size:12.5px;color:var(--t2)}
 .ui-login-err{margin:0 0 12px;padding:9px 12px;background:color-mix(in srgb,var(--err) 12%,transparent);border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius);font-size:12.5px;color:var(--err-strong)}
 .ui-login .auth-links{margin-top:14px}
 /* "Why we ask first" — the plain-language account rationale on the community
@@ -6567,7 +6615,7 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .offline-banner svg{color:var(--warn);flex-shrink:0;margin-top:1px}
 .offline-banner-text{margin:0;font-size:12.5px;line-height:1.55;color:var(--t1)}
 .offline-banner-text strong{color:var(--t0);font-weight:700}
-.bill-banner{position:fixed;left:20px;bottom:20px;z-index:120;display:flex;align-items:flex-start;gap:10px;width:min(360px,calc(100vw - 40px));padding:14px 12px 14px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--t3);border-radius:var(--radius-l);box-shadow:var(--ring),var(--warm-shadow-lg);animation:bill-rise var(--dur-3) var(--ease-entrance)}
+.bill-banner{position:fixed;left:20px;bottom:20px;z-index:120;display:flex;align-items:flex-start;gap:10px;width:min(360px,calc(100vw - 40px));padding:14px 12px 14px 16px;background:var(--card);border:1px solid var(--bh);border-left:3px solid var(--t3);border-radius:var(--radius);box-shadow:var(--shadow-m);animation:bill-rise var(--dur-3) var(--ease-entrance)}
 .bill-banner--urgent{border-left-color:var(--err)}
 .bill-banner-body{flex:1;min-width:0}
 .bill-banner-title{margin:0;font-size:13px;font-weight:650;line-height:1.4;color:var(--t0)}
@@ -6575,15 +6623,13 @@ html[data-reduced-motion="true"] .ggn-presets{scroll-snap-type:none}
 .bill-banner-text{margin:4px 0 0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .bill-banner-err{margin:6px 0 0;font-size:12px;line-height:1.45;color:var(--err-strong)}
 .bill-banner-actions{display:flex;align-items:center;gap:12px;margin-top:11px;flex-wrap:wrap}
-/* Fills with --accent-strong, not --brand. At 12.5px the label is normal-size
-   text, so --accent-fg on --brand (== --accent) measured 4.43:1 against the
-   4.5:1 floor; on --accent-strong it is 5.84:1 light / 6.09:1 dark. Same
-   resting-state fault already fixed on .ui-pill-accent and .btn-accent — this
-   rule reached the readable tone only on HOVER, so the state a user actually
-   reads was the failing one. This banner tells someone their payment failed;
-   it is the last CTA in the product that should be hard to read. */
-.bill-banner-cta{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--accent-strong);background:var(--accent-strong);color:var(--accent-fg);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
-.bill-banner-cta:hover:not(:disabled){background:var(--accent-strong);border-color:var(--accent-strong);box-shadow:0 3px 10px -3px var(--accent-glow)}
+/* The .btn-accent pair: --accent-mid under --accent-ink (5.18:1 light, 9.17:1
+   dark), --accent-text on hover (5.73 / 9.65). Bare --accent would be 4.14:1
+   at this 12.5px label, and --accent-strong is a literal a premium accent does
+   not reach. This banner tells someone their payment failed; it is the last
+   CTA in the product that should be hard to read. */
+.bill-banner-cta{padding:7px 14px;border-radius:var(--radius);border:1px solid var(--accent-mid);background:var(--accent-mid);color:var(--accent-ink);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
+.bill-banner-cta:hover:not(:disabled){background:var(--accent-text);border-color:var(--accent-text);color:var(--accent-ink)}
 .bill-banner-cta:disabled{opacity:.6;cursor:progress}
 .bill-banner-link{font-size:12.5px;font-weight:550;color:var(--t2);text-decoration:none}
 .bill-banner-link:hover{color:var(--t0);text-decoration:underline}
@@ -6811,13 +6857,15 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .fbx-dismiss:hover{background:var(--hvr);color:var(--t2)}
 
 /* ── The nav popovers, brought onto the shared language ─────────────────── */
-/* Small accent TEXT must use --accent-strong: --accent measures 3.82:1 on the
-   page and 4.43:1 on white, both under the 4.5:1 floor for normal-size text.
-   These two rules were the only accent-text failures in the nav. */
-.pnav-pop-item--accent{color:var(--accent-strong)}
-.pnav-pop-item--accent svg{color:var(--accent-strong)}
-.pnav-pop-item--accent:hover{background:var(--accent-bg);color:var(--accent-strong)}
-.pnav-pop-tag{color:var(--accent-strong);border-color:var(--accent-strong)}
+/* Small accent TEXT reads the derived family, never bare --accent (3.82:1 on
+   the page, 4.43:1 on white) and never the --accent-strong literal, which a
+   premium accent does not reach. Measured light / dark: --accent-mid on the
+   popover's --bg-1 is 5.55 / 8.48; the hover sits on an 8% accent wash, so it
+   steps to --accent-text, 5.52 / 7.90. */
+.pnav-pop-item--accent{color:var(--accent-mid)}
+.pnav-pop-item--accent svg{color:var(--accent-mid)}
+.pnav-pop-item--accent:hover{background:var(--accent-bg);color:var(--accent-text)}
+.pnav-pop-tag{color:var(--accent-mid);border-color:var(--accent-mid)}
 /* Rows pick up the shared radius so the nav popover and a tool micro-menu
    round their hover states identically. */
 .pnav-pop-item,.pnav-pop-acct{border-radius:var(--radius-s)}
@@ -6852,7 +6900,12 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    Deliberately NOT taken: any "most popular" ribbon that isn't backed by real
    data, and every save badge that only appears once you hover the cheaper tab. */
 /* Mono eyebrow - V2's tool texture. --accent-strong because it is 11px. */
-.ui-pro-eyebrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+/* Accent text and glyphs in the Pro dialog read the derived family, never the
+   --accent-strong literal. Measured light / dark: the eyebrow's --accent-mid on
+   the card is 5.55 / 8.15; the chosen plan's name sits on the 8% accent wash and
+   steps to --accent-text, 5.52 / 7.90; the trial tag and tick carry
+   --accent-ink on --accent-mid, 5.18 / 9.17. */
+.ui-pro-eyebrow{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 .ui-pro-title{margin:8px 0 0;font-size:var(--fs-h3);font-weight:700;line-height:1.12;letter-spacing:-.03em;color:var(--t0);text-wrap:balance}
 .ui-pro-sub{margin:8px 0 0;max-width:46ch;font-size:14px;line-height:1.55;color:var(--t2);text-wrap:pretty}
 
@@ -6864,7 +6917,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 .ui-pro-list{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:9px}
 .ui-pro-li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;color:var(--t1)}
-.ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-strong);color:var(--accent-fg)}
+.ui-pro-tick{flex:none;width:19px;height:19px;margin-top:1px;border-radius:var(--radius-pill);display:grid;place-items:center;background:var(--accent-mid);color:var(--accent-ink)}
 
 /* The ladder. Two tiles at rest, stacking into Glide-style rows on a phone. */
 /* STACKED ROWS. As a 2-up grid at minmax(180px,1fr) this held exactly two
@@ -6874,8 +6927,8 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    is not a footnote. */
 .ui-pro-plans{display:flex;flex-direction:column;gap:8px;margin:20px 0 0;padding:0;border:none;min-width:0}
 .ui-pro-plans-skel{height:186px;border-radius:var(--radius-l)}
-.ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),transform var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-/* The shared V2 card-hover language: border to ink AND a 3px lift, together. */
+.ui-pro-plan{position:relative;display:flex;flex-direction:column;gap:3px;padding:13px 15px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-2) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+/* Hover is the border going to ink; the tile does not lift. */
 .ui-pro-plan:hover{border-color:var(--t0)}
 .ui-pro-plan.is-chosen{border-color:var(--accent);background:var(--accent-bg);box-shadow:inset 0 0 0 1px var(--accent)}
 /* The radio is the real control; the tile is its label. Focus has to be visible
@@ -6885,7 +6938,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-plan-main{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:nowrap}
 .ui-pro-plan-id{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0}
 .ui-pro-plan-name{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t2)}
-.ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-strong)}
+.ui-pro-plan.is-chosen .ui-pro-plan-name{color:var(--accent-text)}
 /* The one --hi element on this surface, and the only place it appears in the
    whole modal - the marker-pen budget is one per viewport. */
 .ui-pro-plan-save{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:var(--radius-pill);background:var(--hi);color:var(--hi-fg)}
@@ -6899,7 +6952,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    outlined "Save N%" pill sits beside it and the trial must win that pairing:
    a discount is a reason to prefer a cadence, a free trial is a reason to
    start at all. */
-.ui-pro-plan-trial{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);background:var(--accent);color:var(--accent-fg);white-space:nowrap}
+.ui-pro-plan-trial{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:var(--radius-pill);background:var(--accent-mid);color:var(--accent-ink);white-space:nowrap}
 
 .ui-pro-plans-err{margin:20px 0 0;padding:14px;border:1px solid color-mix(in srgb,var(--err) 34%,transparent);border-radius:var(--radius-l);background:color-mix(in srgb,var(--err) 8%,transparent)}
 .ui-pro-plans-err p{margin:0 0 10px;font-size:13px;color:var(--t1)}
@@ -6974,7 +7027,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 /* Default = the phone/tablet band. The grid below upgrades it to a column. */
 .ui-login-aside{display:flex;flex-direction:column;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--cbg)}
-.ui-login-eyebrow{margin:0;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
+.ui-login-eyebrow{margin:0;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-mid)}
 /* The one piece of type on this surface that is allowed to be big. It carries
    the name of the action the user was actually taking, which is the whole
    difference between a gate and a hand-off. */
@@ -6988,7 +7041,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    surface. */
 .ui-login-gets{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
 .ui-login-get{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.4;color:var(--t1)}
-.ui-login-get-tick{flex:none;display:grid;place-items:center;width:16px;height:16px;margin-top:1px;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent-strong)}
+.ui-login-get-tick{flex:none;display:grid;place-items:center;width:16px;height:16px;margin-top:1px;border-radius:var(--radius-pill);background:var(--accent-bg);color:var(--accent-mid)}
 
 /* Inside the pane the "why we ask first" list loses its own border and fill.
    It is already inside a distinct surface; a card within a card was the
@@ -7046,10 +7099,12 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    already where focus lands on open. It was drawn as a neutral outline while
    the two-field email submit carried the accent fill — the slower path wearing
    the primary's clothes. Swapped, using the same --accent-strong/--accent-fg
-   pair .btn-accent uses, so it stays AA in both themes (bare --accent is a
-   4.43:1 fill colour and is not allowed to carry 14px text here). */
-.ui-login .auth-google-btn--primary{background:var(--accent-strong);color:var(--accent-fg);border-color:transparent;font-weight:600}
-.ui-login .auth-google-btn--primary:hover{background:var(--accent-strong);border-color:transparent;box-shadow:0 1px 2px rgba(0,0,0,.12),0 4px 10px -3px color-mix(in srgb,var(--accent-strong) 40%,transparent)}
+   pair .btn-accent uses — --accent-mid under --accent-ink, --accent-text on
+   hover, 5.18 / 5.73 light and 9.17 / 9.65 dark — so it stays AA in both
+   themes and follows a premium accent (bare --accent is 4.14:1 under the ink
+   and is not allowed to carry 14px text here). */
+.ui-login .auth-google-btn--primary{background:var(--accent-mid);color:var(--accent-ink);border-color:var(--accent-mid);font-weight:600}
+.ui-login .auth-google-btn--primary:hover{background:var(--accent-text);border-color:var(--accent-text);color:var(--accent-ink)}
 .auth-google-mark{display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:var(--radius-xs);background:#fff}
 .ui-login .auth-submit{font-weight:600}
 
@@ -7098,11 +7153,12 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    asked to keep this navigation system, so this is a skin, density and state
    pass only. */
 
-/* Accent TEXT below large size must be --accent-strong. --accent measures
-   3.82:1 on the page ground and 4.43:1 on white, both under the 4.5:1 floor.
-   These three were the remaining failures in the nav surface. */
-.pnav-promo-eyebrow{color:var(--accent-strong)}
-.pnav-editorial-link:hover{color:var(--accent-strong)}
+/* Accent TEXT below large size reads the derived family (see the popover note
+   above). The promo eyebrow sits on the promo card's 8% accent wash, where
+   --accent-mid drops to 4.32 in light, so it takes --accent-text: 4.78 light,
+   8.41 dark. The editorial link's hover sits on --bg-1: 6.14 / 8.92. */
+.pnav-promo-eyebrow{color:var(--accent-text)}
+.pnav-editorial-link:hover{color:var(--accent-text)}
 
 /* Motion: the panel is opened by HOVER, so its entrance has to keep up with the
    pointer. --dur-4 (420ms) is the scroll-reveal step and read as lag here;
@@ -7190,7 +7246,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .ui-pro-rail-list{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:11px}
 .ui-pro-rail-row{display:flex;flex-direction:column;gap:5px;min-width:0}
 .ui-pro-rail-name{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--t1)}
-.ui-pro-rail-lock{display:inline-grid;place-items:center;color:var(--accent-strong)}
+.ui-pro-rail-lock{display:inline-grid;place-items:center;color:var(--accent-mid)}
 .ui-pro-rail-free{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;border-radius:var(--radius-pill);border:1px solid var(--border);color:var(--t2);background:var(--bg-1)}
 /* The strip is the product. Five swatches because that is what the palette
    tools build - a four-swatch preview would be showing a system that does not
@@ -7203,7 +7259,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 
 /* Actions: accept and decline at the same weight of legibility. */
 .ui-pro-cta{margin-top:16px;display:flex;flex-direction:column;gap:8px}
-.ui-pro-later{align-self:center;padding:8px 14px;border:none;border-radius:var(--radius-pill);background:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.ui-pro-later{align-self:center;padding:8px 14px;border:none;border-radius:var(--radius);background:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .ui-pro-later:hover{background:var(--hvr);color:var(--t0)}
 .ui-pro-later:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
@@ -7253,8 +7309,13 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    rule's own opacity:.85 lightened it further against the white card. The
    opacity goes with it: dimming accent text to signal "quiet" is buying tone
    with legibility, and the underline on hover already carries that job. */
-.auth-links button{color:var(--accent-strong);opacity:1}
-.auth-links button:hover{color:var(--accent-strong);text-decoration:underline}
+.auth-links button{color:var(--accent-mid);opacity:1}
+.auth-links button:hover{color:var(--accent-text);text-decoration:underline}
+/* The inline sign-in gate's two text buttons (AuthGate, rules in studio.css).
+   studio.css loads after this sheet at the same specificity, so the override
+   carries its parent: --accent-mid on the gate's --bg-1 is 5.55 / 8.48. */
+.auth-gate-footer .auth-gate-google-link,.auth-gate-footer .auth-gate-switch{color:var(--accent-mid)}
+.auth-gate-footer .auth-gate-google-link:hover,.auth-gate-footer .auth-gate-switch:hover{color:var(--accent-text)}
 
 /* -- Coming-soon rows: de-emphasise without making them unreadable ----------
    .pnav-tool[data-soon] dimmed the WHOLE row to opacity:.45. The intent is
@@ -7293,7 +7354,9 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
    absent, "Pro" reports that a present format is paid for, and an outline for
    both made the two read as the same kind of unavailability. ══ */
 .exp-fmt-pro{flex:0 0 auto;margin-left:auto;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.06em;text-transform:uppercase;color:var(--bg-0);background:var(--t1);border:1px solid var(--t1);border-radius:var(--radius-pill);padding:2px 8px}
-.exp-fmt.is-active .exp-fmt-pro{background:var(--accent);border-color:var(--accent);color:#fff}
+/* Was bare --accent under #fff: 4.43:1 at micro size in light, and a literal
+   white that never flipped for dark. The .btn-accent pair: 5.18 / 9.17. */
+.exp-fmt.is-active .exp-fmt-pro{background:var(--accent-mid);border-color:var(--accent-mid);color:var(--accent-ink)}
 .lockt-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--t2)}
 .lockt-name{font-size:12.5px;font-weight:600;color:var(--t1)}
 /* --t1 on the pill ground, not --accent: this is micro text and #0F6FFF
@@ -7597,7 +7660,7 @@ html[data-reduced-motion="true"] .bill-banner{animation:none}
 .sync-notice-ico{flex-shrink:0;width:26px;height:26px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center}
 .sync-notice-ico svg{width:15px;height:15px}
 .sync-notice--error .sync-notice-ico{background:color-mix(in srgb,var(--err) 16%,transparent);color:var(--err)}
-.sync-notice--info .sync-notice-ico{background:var(--accent-bg);color:var(--accent)}
+.sync-notice--info .sync-notice-ico{background:var(--accent-bg);color:var(--accent-mid)}
 .sync-notice-msg{flex:1;min-width:0;font-size:13px;font-weight:500;line-height:1.45;color:var(--t0);letter-spacing:-.005em}
 .sync-notice-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .sync-notice-dismiss{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-s);border:0;background:transparent;color:var(--t2);cursor:pointer}

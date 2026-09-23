@@ -343,17 +343,17 @@ export default function ExportPanel({ onClose }) {
         {error && <p className="exp-error" role="alert">{error}</p>}
 
         <div className="exp-foot">
-          <button type="button" className="ui-pill ui-pill-out ui-pill-md" onClick={onClose} disabled={busy}>
+          <button type="button" className="btn exp-act" onClick={onClose} disabled={busy}>
             Cancel
           </button>
           {activeFormat?.live ? (
-            <button type="button" className="ui-pill ui-pill-accent ui-pill-md" onClick={runExport} disabled={busy}>
+            <button type="button" className="btn btn-accent exp-act" onClick={runExport} disabled={busy}>
               {busy ? 'Exporting…' : locked ? 'Unlock with Pro' : `Export ${EXPORT_LABEL[format] || 'file'}`}
             </button>
           ) : (
             <button
               type="button"
-              className="ui-pill ui-pill-accent ui-pill-md"
+              className="btn btn-accent exp-act"
               disabled
               aria-disabled="true"
               title="This format is coming soon"

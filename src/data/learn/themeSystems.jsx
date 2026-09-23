@@ -25,7 +25,7 @@ export default function ThemeSystems() {
         <p>
           A theme is a second set of values bound to the same set of names.{' '}
           <code>--bg-0</code> is a name; in this product it holds{' '}
-          <code>#EFEEE9</code> in the light theme and <code>#101012</code> in the
+          <code>#EFEEE9</code> in the light theme and <code>#060607</code> in the
           dark one. Nothing that consumes the name is told which is mounted, and
           that is the whole mechanism — there is no second stylesheet, no
           duplicated component and no branch in the markup.
@@ -69,7 +69,7 @@ export default function ThemeSystems() {
         <p>
           The ground very nearly does invert. Inverting this product&rsquo;s light
           ground <code>#EFEEE9</code> gives <code>#101116</code>, and its real
-          dark ground is <code>#101012</code>; those two measure 1.01:1 against
+          dark ground is <code>#060607</code>; those two measure 1.07:1 against
           each other, which is a difference no reader could point at. Neutrals
           are near-grey, and the inverse of a near-grey is another near-grey.
         </p>
@@ -124,9 +124,9 @@ lin(191/255)  = 0.5210      <- the inverted channel
         </p>
         <p>
           The steps are small by necessity. This product&rsquo;s dark theme runs
-          five surface levels from <code>#101012</code> to <code>#2A2B2F</code>,
-          and the whole span measures 1.34:1 — adjacent levels are between
-          1.04:1 and 1.11:1 apart. Those are differences a reader perceives as
+          five surface levels from <code>#060607</code> to <code>#202125</code>,
+          and the whole span measures 1.26:1 — adjacent levels are between
+          1.04:1 and 1.10:1 apart. Those are differences a reader perceives as
           depth and a contrast checker reports as nothing, which is correct: SC
           1.4.11 governs the boundary that identifies a component, not the fill
           behind it.

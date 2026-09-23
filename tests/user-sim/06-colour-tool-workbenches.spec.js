@@ -313,7 +313,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       // THE THEME IS ESTABLISHED BEFORE THE FIRST PAINT, not stamped afterwards.
       //
       // This used to `go()` and then setAttribute('data-theme', theme). The
-      // tokens on :root do change at once - `--card-grad` reads #191a1d
+      // tokens on :root do change at once - `--card-grad` reads #111215
       // immediately - but `.card` carries `transition: all .2s`, so its
       // BACKGROUND is still the previous theme's for 200ms. Reading a value
       // that is mid-transition at whatever instant the test arrives is the same
