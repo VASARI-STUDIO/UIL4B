@@ -55,7 +55,10 @@
    and inside the Palette Builder's save menu. Lifted out of pages/projects.css
    when the component became shared: that file only ships with the /projects
    chunk and the homepage renders the palette tool. */
-.uh-quota-link{font-weight:600;color:var(--accent-strong)}
+/* --accent-mid, not --accent-strong: the latter is a per-theme literal that a
+   premium theme moving --accent would strand at the old blue. 5.18:1 on --bg-0
+   light, 9.17:1 dark. */
+.uh-quota-link{font-weight:600;color:var(--accent-mid)}
 @media(max-width:640px){
   .lang-grid{grid-template-columns:1fr}}
 
@@ -296,6 +299,6 @@
    below could not fail. One fix, one call site, one assertion that pins it. */
 .ch-card-source{flex:0 0 auto;font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* ── Project cards ─────────────────────────────────────────────── */
-.uh-card.is-archived{opacity:.62}
-.uh-card.is-archived:hover,.uh-card.is-archived:focus-within{opacity:1}
+/* The archived-row treatment lives in pages/projects.css now. It was
+   `opacity:.62` on the whole row here, which took every label in it under
+   4.5:1; the row says "Archived" and drops the name's weight instead. */

@@ -287,6 +287,55 @@ test.describe('/projects offers no folder it cannot keep', () => {
     await expect(dialog).toContainText('Project name')
     await expect(dialog).toContainText('Start from')
   })
+
+  // BOTH DIALOGS ARE DRAWN AS DIALOGS. `.fg-detail-overlay` lost its rule in
+  // #200 and nothing noticed: the project sheet and the New project form —
+  // aria-modal, focus-trapped, scroll-locked — were laid out in the document
+  // flow at the foot of the page, under the starters, while the lock froze the
+  // page above them. Asserted on geometry: the backdrop covers the viewport and
+  // the dialog's top edge is on screen the moment it opens, at a phone and a
+  // laptop width.
+  for (const width of [390, 1440]) {
+    test(`the project dialogs open over the page, not below it — ${width}`, async ({ page }) => {
+      watch(page, 'somebody opening a project to read it')
+      await page.setViewportSize({ width, height: width < 700 ? 844 : 900 })
+      await signIn(page, { plan: 'free', projects: 3 })
+      await go(page, '/projects')
+      await expectRendered(page, '/projects')
+
+      const covers = async () => page.evaluate(() => {
+        const overlay = document.querySelector('.fg-detail-overlay')
+        const dialog = overlay?.querySelector('[role="dialog"]')
+        if (!overlay || !dialog) return null
+        const o = overlay.getBoundingClientRect()
+        const d = dialog.getBoundingClientRect()
+        return {
+          position: getComputedStyle(overlay).position,
+          covers: o.top <= 0 && o.left <= 0 && o.width >= innerWidth - 1 && o.height >= innerHeight - 1,
+          dialogTop: Math.round(d.top),
+          viewport: innerHeight,
+        }
+      })
+
+      await page.locator('.uh-grid .uh-card-name').first().click()
+      await expect(page.getByRole('dialog')).toBeVisible()
+      const sheet = await covers()
+      expect(sheet, 'the project sheet did not open').not.toBeNull()
+      expect(sheet.position, 'the project sheet is laid out in the page flow').toBe('fixed')
+      expect(sheet.covers, 'the backdrop does not cover the screen').toBe(true)
+      expect(sheet.dialogTop, 'the project sheet opened off screen').toBeGreaterThanOrEqual(0)
+      expect(sheet.dialogTop).toBeLessThan(sheet.viewport / 2)
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+
+      await page.getByRole('button', { name: 'New Project' }).click()
+      await expect(page.getByRole('dialog')).toBeVisible()
+      const form = await covers()
+      expect(form?.position, 'the New project form is laid out in the page flow').toBe('fixed')
+      expect(form.dialogTop, 'the New project form opened off screen').toBeGreaterThanOrEqual(0)
+      expect(form.dialogTop).toBeLessThan(form.viewport / 2)
+    })
+  }
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

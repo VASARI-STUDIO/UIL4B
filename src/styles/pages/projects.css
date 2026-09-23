@@ -1,258 +1,474 @@
-/* projects.css — the `proj` and `uh` families, lifted out of global.css.
- * Imported by the page module that owns it, so Vite emits it as that page's
- * chunk stylesheet and only that route pays for it.
+/* projects.css — /projects on the Spectrum ground: the `uh` and `proj` families.
  *
- * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
- * so anything here now outranks every global rule at equal specificity —
- * which is why a rule a later global rule overrides was left behind rather
- * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+ * Imported by src/pages/Projects.jsx (and by the user-home fixture the
+ * acceptance suite mounts), so it ships with that lazy chunk only.
+ *
+ * ── Every selector is scoped under `.uh`, the page root ─────────────────────
+ * Vite orders chunk CSS by the dependency graph, not by import order, so a page
+ * sheet imported last can still load BEFORE deferred/account.css and
+ * deferred/tool-shell.css, which restate `.uh-card.is-archived`,
+ * `.fg-detail-*` and `.checkout-*` at equal specificity. `.uh .x` wins by
+ * construction rather than by a load order nobody controls. The one exception
+ * is the reduced-motion block at the foot, which has to start at <html>.
+ *
+ * ── The page is a LIST of a person's work, not a grid of cards ──────────────
+ * The founder named /projects on 2026-09-13 as one of four surfaces that "feel
+ * AI generated". The rework he asked to see was #481 ("Make /projects a list
+ * of a person's work, not a grid of cards"), built before Spectrum. This sheet
+ * is that rework ported onto the Spectrum language rather than merged: one
+ * column of hairline-ruled rows, the palette as a specimen chip filled only
+ * when somebody chose the colours, both actions for a row at the row's end, and
+ * one filled control on the page. The shapes are `UIL4B App.dc.html`'s — its
+ * workspace screen's "Other projects" list (hairline rows, a 56x34 swatch chip,
+ * mono values, a 36px open control), its 18px panels, its 12px primary and 10px
+ * secondary rectangles over a hairline border. 999px is reserved for meters.
+ *
+ * ── The accent is never --accent-strong and never --brand ───────────────────
+ * Both are per-theme literals that do not follow `--accent`, so a premium theme
+ * template would strand them at the old blue. Accent TEXT is --accent-mid
+ * (5.18:1 on --bg-0 light, 9.17:1 dark); the one filled control is --accent-mid
+ * under --accent-ink, hovering to --accent-text, which moves AWAY from the
+ * ground in both themes (--accent-hover mixes toward paper in both and would
+ * lower the contrast it lifts off).
+ *
+ * ── --t3 is not allowed on a wash ───────────────────────────────────────────
+ * --t3 is 4.59:1 on --bg-0 and drops under 4.5 on any tinted ground. A row
+ * tints under the pointer, so every label inside a row is --t2 or darker.   */
 
-.proj-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-
-.proj-search{position:relative;display:flex;align-items:center;flex:1;min-width:200px;max-width:340px}
-
-.proj-search svg{position:absolute;left:11px;color:var(--t3);pointer-events:none}
-
-.proj-search input{width:100%;padding:9px 30px 9px 32px;border:1px solid var(--border);border-radius:9px;background:var(--bg-1);color:var(--t0);font-size:13px}
-
-.proj-search input:focus{outline:none;border-color:var(--brand)}
-
-.proj-search button{position:absolute;right:8px;width:24px;height:24px;border:none;background:var(--bg-3);color:var(--t2);border-radius:50%;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center}
-
-.proj-sort{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3)}
-
-.proj-sort select{padding:8px 10px;border:1px solid var(--border);border-radius:9px;background:var(--bg-1);color:var(--t1);font-size:13px;cursor:pointer}
-
-.proj-count{margin-left:auto;font-size:12px;color:var(--t2);font-weight:500}
-
-
-.proj-detail{max-width:520px}
-
-.proj-detail-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px}
-
-.proj-detail-swatch{display:flex;flex-direction:column;gap:6px}
-
-.proj-detail-swatch-chip{height:48px;border-radius:var(--radius-s);border:1px solid var(--border)}
-
-.proj-detail-swatch-hex{font-family:var(--mono);font-size:10px;color:var(--t2);text-align:center}
-
-.proj-detail-meta{display:flex;flex-direction:column;gap:8px}
-
-.proj-detail-meta-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px}
-
-.proj-detail-meta-row span{color:var(--t2)}
-
-.proj-detail-meta-row strong{color:var(--t0);font-weight:600}
-
-/* ─── Projects: Cards ─── */
-.proj-card{transition:transform var(--dur-2) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
-.proj-card:hover{transform:translateY(-2px);box-shadow:var(--warm-shadow-lg)}
-.proj-card-active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.proj-card-icon{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:6px;object-fit:contain;background:rgba(255,255,255,.9);padding:3px;box-shadow:0 1px 6px rgba(0,0,0,.2)}
-.proj-detail-icon{width:32px;height:32px;border-radius:6px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:2px}
-.proj-detail-icon-lg{width:56px;height:56px;border-radius:8px;object-fit:contain;border:1px solid var(--border);background:var(--bg-2);padding:4px}
-.proj-detail-icon-empty{display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:20px}
-
-.proj-new-modal{max-width:460px}
-
-.proj-new-start{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-.proj-new-start-opt{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-1);cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-
-.proj-new-start-opt:hover{border-color:var(--brand)}
-
-.proj-new-start-opt strong{font-size:13px;font-weight:700;color:var(--t0)}
-
-.proj-new-start-opt span{font-size:11px;color:var(--t2);line-height:1.4}
-
-@media(max-width:520px){.proj-new-start{grid-template-columns:1fr}}
-
-/* The shared eyebrow. One rule, four call sites, so the labelling is visibly
-   one system rather than four near-misses. */
-.uh-eyebrow{display:flex;align-items:baseline;gap:var(--s-2);margin:0 0 var(--s-2);font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--t3)}
-.uh-eyebrow-kind{font-weight:500;letter-spacing:.06em;color:var(--accent-strong)}
-.uh-eyebrow-kind::before{content:'\00b7';margin-right:.5em;color:var(--t3)}
-
-/* ── Masthead ───────────────────────────────────────────────────── */
-/* .sec-h is kept alongside so the h1 inherits the site's display treatment;
-   only the spacing changes, because a 48px gap under the title pushed the band
-   and the first row of projects below the fold on a laptop. */
-.uh-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-5);flex-wrap:wrap;margin-bottom:var(--s-5)}
-.uh-head-main{min-width:0}
-/* The viewer's own date and time, above the h1. Mono because it is a VALUE
-   read at a glance, which is what --mono means everywhere else in this product,
-   and tabular figures stop the line reflowing as the minute ticks over. It is
-   deliberately quiet (--t3, small, wide tracking): it is orientation, not a
-   heading, and it must never compete with "Projects" for first read. */
-.uh-clock{display:block;margin-bottom:6px;font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;letter-spacing:.08em;text-transform:uppercase;color:var(--t3)}
-.uh-sub{max-width:56ch;font-size:var(--fs-body-s);line-height:1.6;color:var(--t2)}
-.uh-head-actions{display:flex;gap:var(--s-2);flex-wrap:wrap}
-
-/* Quick data tracking. Mono + tabular figures so the numbers line up and read
-   as measurements rather than as marketing. Any figure that would be zero is
-   dropped upstream in utils/userHome.js and never reaches this list. */
-.uh-stats{display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);margin-top:var(--s-3);padding:0;list-style:none;font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.02em;color:var(--t2);font-variant-numeric:tabular-nums}
-.uh-stats li{display:flex;align-items:baseline;gap:.35em}
-.uh-stats li + li{padding-left:var(--s-4);border-left:1px solid var(--border)}
-.uh-stats strong{font-weight:700;font-size:var(--fs-caption);color:var(--t0)}
-.uh-quota{margin-top:var(--s-3);max-width:58ch;font-size:var(--fs-caption);line-height:1.65;color:var(--t2)}
-/* .uh-quota-link and .uh-save-refusal live in global.css: SaveRefusal is a
-   shared component now (PaletteBuilder renders it on the homepage), and this
-   file only ships with the /projects chunk. */
-/* The cap's refusal, held in the form it refused (SaveRefusal in Projects.jsx).
-   Error ink on a plain line, no card and no icon: it sits inside a card
-   already, and a box inside a box would out-shout the form it explains. */
-
-/* ── The band: NEXT | TIP ─────────────────────────────────────────── */
-/* Two hairlines and a gap. No fill, no radius, no shadow — see the note above.
-   The vertical rule between the columns is the only divider, and it is dropped
-   at narrow widths where the columns stack and it would point the wrong way. */
-.uh-band{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-5) var(--s-7);margin:0 0 var(--s-6);padding:var(--s-4) 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.uh-band-col + .uh-band-col{padding-left:var(--s-7);border-left:1px solid var(--border)}
-.uh-band-text{margin:0;font-size:var(--fs-body-s);line-height:1.65;color:var(--t1);max-width:62ch}
-.uh-band-go{font-weight:600;color:var(--accent-strong);white-space:nowrap}
-.uh-tip{color:var(--t1)}
-@media(max-width:860px){
-  .uh-band{grid-template-columns:1fr;gap:var(--s-4)}
-  .uh-band-col + .uh-band-col{padding-left:0;padding-top:var(--s-4);border-left:none;border-top:1px solid var(--border)}
+.uh {
+  --uh-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --uh-hair-2: color-mix(in srgb, var(--t0) 13%, transparent);
+  --uh-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  --uh-ease: cubic-bezier(.23, 1, .32, 1);
 }
 
-.uh-skel{display:block;width:min(38ch,100%);height:1em;border-radius:var(--radius-xs);background:linear-gradient(90deg,var(--bg-2) 0%,var(--bg-3) 50%,var(--bg-2) 100%);background-size:200% 100%;animation:uh-skel-slide var(--fl-shimmer-dur) var(--ease-standard) infinite}
-
-.uh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:var(--s-4)}
-
-.uh-card{padding:0;overflow:visible;display:flex;flex-direction:column}
-
-/* The palette, at a size you can actually read it at. 40px rather than a hairline
-   because “see what is in each project at a glance” is the whole brief, and an
-   8px spine is a decoration that gestures at a palette instead of showing one.
-   Nothing is typeset on top of it: the old header set the project name in white
-   over a two-colour blend, so legibility depended on the user's own colours and
-   any dark-on-light palette broke it. */
-.uh-card-art{height:40px;border-radius:var(--radius-xl) var(--radius-xl) 0 0;border-bottom:1px solid var(--border)}
-.uh-card-body{display:flex;flex-direction:column;gap:var(--s-3);padding:var(--s-4);flex:1}
-.uh-card-top{display:flex;align-items:center;gap:var(--s-2)}
-.uh-card-icon{width:22px;height:22px;border-radius:var(--radius-xs);object-fit:contain;flex:0 0 auto}
-
-/* The name, set in the project's OWN heading face. A button because it opens
-   the detail sheet; styled as text because it is the card's title. */
-.uh-card-name{flex:1;min-width:0;min-height:24px;padding:0;border:none;background:none;font-size:var(--fs-h5);font-weight:700;letter-spacing:-.015em;line-height:1.25;color:var(--t0);text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.uh-card-name:hover{color:var(--accent-strong)}
-
-.uh-tag{flex:0 0 auto;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 7px;line-height:1.4}
-.uh-tag--live{color:var(--accent-strong);background:var(--accent-bg);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
-
-/* What is in it. Mono, because these are values read off the project rather
-   than prose about it. Wraps rather than truncating — two font names and a
-   scale do not fit one line at 300px and the second line is not a failure. */
-.uh-card-meta{margin:0;font-family:var(--mono);font-size:var(--fs-micro);line-height:1.7;letter-spacing:.01em;color:var(--t2);font-variant-numeric:tabular-nums}
-.uh-dot{margin:0 .5em;color:var(--t3)}
-
-.uh-card-rename{display:flex;gap:var(--s-2)}
-.uh-card-rename input{flex:1;min-width:0;font-size:var(--fs-body-s);font-weight:600}
-
-.uh-parts{display:flex;align-items:flex-start;gap:var(--s-2);flex-wrap:nowrap;margin-top:auto;font-size:var(--fs-micro)}
-
-.uh-parts-dots{display:inline-flex;gap:5px;flex:0 0 auto;padding-top:.35em}
-
-.uh-part{width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--t3)}
-
-.uh-parts-label{flex:1;min-width:0;font-family:var(--mono);font-weight:600;letter-spacing:.03em;line-height:1.6;color:var(--t2)}
-
-.uh-card-when{flex:0 0 auto;font-family:var(--mono);letter-spacing:.02em;line-height:1.6;color:var(--t3);white-space:nowrap}
-
-.uh-card-foot{display:flex;align-items:center;gap:var(--s-2)}
-
-/* Deletion still types the name. The ⋯ row only ARMS this — a one-click destroy
-   in a menu that also holds “Rename” is how people lose work. */
-.uh-card-confirm{display:flex;flex-direction:column;gap:var(--s-2)}
-.uh-card-confirm p{margin:0;font-size:var(--fs-micro);line-height:1.6;color:var(--err-strong)}
-.uh-card-confirm input{font-size:var(--fs-body-s)}
-.uh-card-confirm-actions{display:flex;gap:var(--s-2)}
-.uh-danger{color:var(--err-strong);border-color:color-mix(in srgb,var(--err) 45%,transparent)}
-.uh-danger:disabled{opacity:.5;cursor:not-allowed}
-
-.uh-actions{position:relative;flex:0 0 auto}
-/* A card with its Actions menu open outranks its neighbours. .card:hover lifts
-   the card with a transform, and a transform is a stacking context — so the
-   menu's z-index:130 was boxed inside the hovered card, and in the one-column
-   grid at 390 the NEXT card's .uh-card-art painted over Duplicate and
-   everything below it. Measured 2026-09-10: elementFromPoint on Duplicate
-   returned the next card's art; the tap did nothing. Scoped to an open menu
-   so an ordinary hover changes nothing. */
-.uh-card:has(.uh-menu){z-index:2}
-
-.uh-actions-trigger{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid transparent;border-radius:var(--radius-pill);background:none;color:var(--t3);cursor:pointer;transition:background var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-
-.uh-actions-trigger:hover,.uh-actions-trigger[aria-expanded="true"]{background:var(--hvr);border-color:var(--border);color:var(--t0)}
-
-.uh-menu{min-width:230px}
-
-.uh-menu-hint{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
-
-.uh-menu-danger{color:var(--err-strong)}
-
-.uh-menu-danger:hover{background:color-mix(in srgb,var(--err) 9%,transparent);color:var(--err-strong)}
-
-/* ── Waiting, and signed out ─────────────────────────────────────── */
-.uh-resolving{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s-3);min-height:220px;color:var(--t2);font-size:var(--fs-body-s)}
-.uh-resolving p{margin:0}
-
-/* Left-aligned on a tinted ground rather than a centred card with a circular
-   icon. The centred-icon-card is the shape this page is deliberately not made
-   of, and it would be the only one on the page if it stayed. */
-.uh-signin{max-width:60ch;margin-bottom:var(--s-6);padding:var(--s-5);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 var(--radius-l) var(--radius-l) 0;background:var(--bg-2)}
-.uh-signin h2{margin:0 0 var(--s-2);font-size:var(--fs-h4);font-weight:700;letter-spacing:-.015em;color:var(--t0)}
-.uh-signin p{margin:0 0 var(--s-4);font-size:var(--fs-body-s);line-height:1.65;color:var(--t2)}
-
-/* ── Nothing saved yet ─────────────────────────────────────────── */
-/* The panel a new account lands on, and since the "Default Project" seed was
-   dropped it is the FIRST SCREEN of the product. Every value here was an inline
-   style on the <div> until 2026-09-13 and is unchanged from 641px up; what was
-   missing was a rule for what happens below that.
-
-   MEASURED, 320px wide: 48px of padding each side left 176px of line for a
-   sentence that names two tools, so it wrapped to five lines and the card grew
-   from 319px tall to 340 — the panel got taller the less room it had, and its
-   own button went down with it. 24px below 640 buys back 48px of width and
-   48px of height on exactly the screens that had neither. */
-.uh-empty{padding:48px;text-align:center}
-.uh-empty-mark{display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin:0 auto 16px;border-radius:50%;background:var(--accent-bg)}
-.uh-empty-title{margin-bottom:6px;font-size:16px;font-weight:700}
-.uh-empty-text{margin:0 auto 16px;max-width:360px;font-size:13px;color:var(--t2)}
-/* "Nothing matched your filters", which is a different sentence and a different
-   panel from "you have nothing yet" above. Same treatment, one size down,
-   because it answers an action the reader just took rather than greeting them.
-   The reset sits in the panel — see the note at the call site. */
-.uh-filtered{display:flex;flex-direction:column;align-items:center;gap:var(--s-3);padding:40px;text-align:center}
-.uh-filtered-text{font-size:13px;color:var(--t2)}
-
-@media(max-width:640px){
-  .uh-empty{padding:24px}
-  .uh-filtered{padding:24px}
+/* ── Controls: the app's rectangles, not the marketing pill ──────────────────
+   `.btn` in the critical sheet is a 999px pill (lane 5 owns that decision).
+   This page draws its own controls the way the app design file does. */
+.uh .btn {
+  border-radius: var(--radius-s);
+  border-color: var(--uh-hair-2);
+  background: transparent;
+  color: var(--t0);
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 36px;
+  padding: 0 14px;
+  gap: 8px;
+  transition: background var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
+}
+.uh .btn:hover { background: var(--uh-wash); border-color: var(--bh); color: var(--t0); }
+.uh .btn-s { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+.uh .btn-accent {
+  border-radius: var(--radius);
+  min-height: 44px;
+  padding: 0 17px;
+  border-color: var(--accent-mid);
+  background: var(--accent-mid);
+  color: var(--accent-ink);
+  font-size: 13.5px;
+  font-weight: 560;
+}
+.uh .btn-accent:hover { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent-ink); }
+.uh .btn-s.btn-accent { min-height: 32px; padding: 0 12px; font-size: 12.5px; border-radius: var(--radius-s); }
+.uh .btn:disabled { opacity: .5; cursor: not-allowed; }
+.uh .btn:disabled:hover { background: transparent; border-color: var(--uh-hair-2); }
+.uh .btn-accent:disabled:hover { background: var(--accent-mid); border-color: var(--accent-mid); }
+.uh input:not([type="file"]),
+.uh select { border-radius: var(--radius); }
+@media (pointer: coarse) {
+  .uh .btn, .uh .btn-s { min-height: 44px; }
 }
 
-/* ── Daily starters ────────────────────────────────────────────── */
-.uh-starters{margin-top:var(--s-8);padding-top:var(--s-5);border-top:1px solid var(--border)}
-.uh-band + .uh-starters{margin-top:var(--s-6);padding-top:0;border-top:none}
-.uh-starters-head{margin-bottom:var(--s-4)}
-.uh-starters-note{margin:0;max-width:60ch;font-size:var(--fs-micro);line-height:1.6;color:var(--t3)}
-.uh-starter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr));gap:var(--s-3);padding:0;list-style:none}
-.uh-starter{display:flex;flex-direction:column;height:100%;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--bg-1);overflow:hidden;text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-standard),box-shadow var(--dur-1) var(--ease-standard)}
-.uh-starter:hover{border-color:var(--bh);text-decoration:none;transform:translateY(-2px);box-shadow:var(--shadow-cmd)}
-/* The artefact itself, at a size it can be judged at. */
-.uh-starter-art{display:block;height:64px;border-bottom:1px solid var(--border)}
-.uh-starter-body{display:flex;flex-direction:column;gap:2px;padding:var(--s-3)}
-.uh-starter-kind{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong)}
-.uh-starter-name{font-size:var(--fs-body-s);font-weight:650;letter-spacing:-.01em;color:var(--t0)}
-.uh-starter-fact{font-family:var(--mono);font-size:var(--fs-micro);color:var(--t2);font-variant-numeric:tabular-nums}
-.uh-starter-opens{margin-top:var(--s-1);font-size:var(--fs-micro);color:var(--t3)}
+/* ── Masthead ─────────────────────────────────────────────────────────────── */
+.uh .uh-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-5); flex-wrap: wrap; margin-bottom: var(--s-5); }
+.uh .uh-head-main { min-width: 0; flex: 1 1 420px; }
+/* The viewer's own date and time. Mono because it is a VALUE read at a glance,
+   tabular so the line does not reflow as the minute turns, and quiet: it is
+   orientation, not a second title. */
+.uh .uh-clock { display: block; margin-bottom: 10px; font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
+/* The app design file's page title (`clamp(26px,3.6vw,40px)/600/-.035em`), not
+   .sec-h's 52px/1.3 content-page scale: this is a working surface. */
+.uh .uh-head h1,
+.uh .uh-head .uh-h1 {
+  margin: 0;
+  padding: 0;
+  font-family: var(--display);
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1.04;
+  color: var(--t0);
+}
+.uh .uh-sub { margin: 10px 0 0; max-width: 56ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
+.uh .uh-head-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.uh .uh-head-actions .btn { white-space: nowrap; min-height: 44px; }
 
-@media(max-width:640px){
-  .uh-head{margin-bottom:var(--s-4)}
-  .uh-card-foot{flex-wrap:wrap}
-  .uh-head-actions{width:100%}
-  .uh-stats li + li{padding-left:var(--s-3)}
-  .uh-parts{flex-wrap:wrap}
-  .uh-card-when{flex:1 0 100%}
+/* Quick data tracking: mono, tabular, one hairline between figures. Any figure
+   that would be zero never reaches this list (utils/userHome.js). */
+.uh .uh-stats { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); margin: var(--s-3) 0 0; padding: 0; list-style: none; font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em; color: var(--t2); font-variant-numeric: tabular-nums; }
+.uh .uh-stats li { display: flex; align-items: baseline; gap: .35em; }
+.uh .uh-stats li + li { padding-left: var(--s-4); border-left: 1px solid var(--uh-hair); }
+.uh .uh-stats strong { font-weight: 600; font-size: 13px; color: var(--t0); }
+.uh .uh-quota { margin: var(--s-3) 0 0; max-width: 60ch; font-size: 13px; line-height: 1.65; color: var(--t1); }
+.uh .uh-quota-link { color: var(--accent-mid); font-weight: 560; }
+
+/* ── Save the current design ─────────────────────────────────────────────── */
+.uh .uh-save { max-width: 620px; margin-bottom: var(--s-5); padding: 16px; border: 1px solid var(--uh-hair); border-radius: var(--radius-2xl); background: var(--card); }
+.uh .uh-save-label { display: block; margin-bottom: 10px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+.uh .uh-save-row { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
+.uh .uh-save-row input { flex: 1 1 220px; min-width: 0; min-height: 44px; }
+.uh .uh-save-row .btn { min-height: 44px; }
+.uh .uh-save-note { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+
+/* ── Search and sort ─────────────────────────────────────────────────────── */
+.uh .proj-toolbar { display: flex; align-items: center; gap: var(--s-3); margin-bottom: var(--s-3); flex-wrap: wrap; }
+.uh .proj-search { position: relative; display: flex; align-items: center; flex: 1 1 240px; min-width: 200px; max-width: 380px; }
+.uh .proj-search svg { position: absolute; left: 13px; color: var(--t2); pointer-events: none; }
+.uh .proj-search input { width: 100%; min-height: 40px; padding: 9px 38px 9px 36px; border: 1px solid var(--uh-hair); border-radius: var(--radius); background: var(--card); color: var(--t0); font-size: 14px; }
+.uh .proj-search input:focus { border-color: var(--bh); }
+.uh .proj-search button { position: absolute; right: 8px; width: 24px; height: 24px; border: none; background: var(--uh-wash); color: var(--t1); border-radius: var(--radius-xs); cursor: pointer; font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.uh .proj-sort { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+.uh .proj-sort select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--uh-hair); border-radius: var(--radius); background: var(--card); color: var(--t0); font-family: var(--font); font-size: 13.5px; letter-spacing: 0; text-transform: none; cursor: pointer; }
+.uh .proj-count { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--t2); font-variant-numeric: tabular-nums; }
+@media (pointer: coarse) {
+  .uh .proj-search input, .uh .proj-sort select { min-height: 44px; }
+}
+
+/* ── The list ─────────────────────────────────────────────────────────────────
+   One column of rows, full width at every size. No fill, no border box, no
+   radius, no shadow: a hairline between rows is the only separation, which is
+   what makes each row's own contents — the chip, the name, the values — the
+   loudest thing in it. The -8px inline margin is the row's hover band and
+   nothing else; it is well inside the shell's 20px gutter at every width. */
+.uh .uh-grid { display: block; margin-inline: calc(var(--s-2) * -1); border-bottom: 1px solid var(--uh-hair); }
+
+.uh .uh-card {
+  position: relative;
+  display: grid;
+  align-items: center;
+  /* ONE FLEXIBLE COLUMN, the body. #481 measured the reason: two proportional
+     columns put slack inside BOTH text columns and the row read as three loose
+     clusters at 1440. Body takes the slack, and parts/when/Load/⋯ pack against
+     the right as one group. Fixed tracks, not `auto`: every row is its own grid,
+     and an `auto` track would put Load at a different x on every row. */
+  grid-template-columns: auto minmax(0, 1fr) 17rem 7.5rem auto auto;
+  grid-template-areas: "art body parts when foot acts" "confirm confirm confirm confirm confirm confirm";
+  column-gap: var(--s-5);
+  padding: 14px var(--s-2);
+  border-top: 1px solid var(--uh-hair);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  transition: background var(--dur-1) ease, box-shadow var(--dur-2) var(--uh-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .uh .uh-card:hover { background: var(--uh-wash); }
+}
+/* LOADED — the only way a row differs from its neighbours. An inset rule, so
+   the row does not shift when it becomes the loaded one, and a transition on
+   it so a person who has just pressed Load on the third row can see which row
+   answered. That is the list's whole motion budget, spent on state. */
+.uh .uh-card.proj-card-active { box-shadow: inset 2px 0 0 var(--accent-mid); }
+/* Put away, not deleted. Stated by the word "Archived" and by weight — NOT by
+   opacity, which account.css used to apply to the whole row and which took
+   every label in it under 4.5:1. */
+.uh .uh-card.is-archived { opacity: 1; }
+.uh .uh-card.is-archived .uh-card-name { color: var(--t1); font-weight: 500; }
+
+/* THE PALETTE AS A SPECIMEN, NOT AS A BANNER — and only filled if somebody
+   filled it. An untouched project keeps the outline at the same size (so the
+   rows share a left edge) and loses the fill, because its "palette" is the one
+   default seed nobody chose. The chip and the four dots read the same fact
+   (utils/userHome.js, partsPresent), so they cannot disagree. */
+.uh .uh-card-art { grid-area: art; width: 56px; height: 34px; border: 1px solid var(--uh-hair); border-radius: var(--radius-xs); }
+.uh .uh-card-art.is-unset { background: none; }
+.uh .uh-card-body { grid-area: body; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.uh .uh-card-top { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.uh .uh-card-icon { width: 20px; height: 20px; border-radius: var(--radius-xs); object-fit: contain; flex: 0 0 auto; }
+
+/* The name. A button, because it opens the detail sheet; styled as the row's
+   title. Set in the UI face, not the project's own — see ProjectCard.jsx. */
+.uh .uh-card-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 560;
+  letter-spacing: -.01em;
+  line-height: 1.3;
+  color: var(--t0);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.uh .uh-card-name:hover { color: var(--accent-mid); }
+
+/* A WORD, NOT A PILL. Metadata is not given the shape of a control. */
+.uh .uh-tag { flex: 0 0 auto; font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); line-height: 1.4; }
+.uh .uh-tag--live { color: var(--accent-mid); }
+
+/* What is in it, as values: mono, tabular. Wraps rather than truncating. */
+.uh .uh-card-meta { margin: 0; font-family: var(--mono); font-size: 11.5px; line-height: 1.6; letter-spacing: .01em; color: var(--t2); font-variant-numeric: tabular-nums; }
+.uh .uh-dot { margin: 0 .5em; color: var(--t2); }
+
+.uh .uh-card-rename { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.uh .uh-card-rename input { flex: 1 1 180px; min-width: 0; min-height: 36px; font-size: 14px; font-weight: 500; }
+
+.uh .uh-parts { grid-area: parts; display: flex; align-items: baseline; gap: var(--s-2); flex-wrap: wrap; font-size: 11.5px; }
+.uh .uh-parts-dots { display: inline-flex; gap: 5px; flex: 0 0 auto; align-self: center; }
+/* The dots are an image with a spoken label (ProjectCard.jsx); these rings are
+   graphics against a 3:1 floor, and --t2 clears it on the row's hover wash. */
+.uh .uh-part { width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--t2); }
+.uh .uh-part.is-done { box-shadow: none; background: var(--accent-mid); }
+.uh .uh-parts-label { flex: 1 1 auto; min-width: 0; font-family: var(--mono); font-weight: 500; letter-spacing: .02em; line-height: 1.6; color: var(--t1); }
+
+/* Right-aligned in its own column, so "1 hour ago" and "2 days ago" line up
+   at their right edge down the list. */
+.uh .uh-card-when { grid-area: when; justify-self: end; font-family: var(--mono); font-size: 11.5px; letter-spacing: .02em; line-height: 1.6; color: var(--t2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.uh .uh-card-foot { grid-area: foot; display: flex; align-items: center; gap: var(--s-2); justify-self: end; }
+
+/* Deletion still types the name. The ⋯ menu only ARMS it. It spans the whole
+   row: a field squeezed into a button's width is how somebody mistypes the name
+   of the thing they are about to destroy. */
+.uh .uh-card-confirm { grid-area: confirm; display: flex; flex-direction: column; gap: var(--s-2); max-width: 46ch; margin-top: var(--s-3); }
+.uh .uh-card-confirm p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--err-strong); }
+.uh .uh-card-confirm input { min-height: 40px; font-size: 14px; }
+.uh .uh-card-confirm-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.uh .uh-danger { color: var(--err-strong); border-color: color-mix(in srgb, var(--err) 45%, transparent); }
+.uh .uh-danger:hover { color: var(--err-strong); border-color: var(--err-strong); background: color-mix(in srgb, var(--err) 7%, transparent); }
+/* The armed, irreversible action. --err-strong under --err-fg: 7.6:1 light,
+   8.1:1 dark. White on --err (the inline style this replaces) was 2.8:1 dark. */
+.uh .uh-danger-go,
+.uh .uh-card-confirm .uh-danger:not(:disabled) { background: var(--err-strong); border-color: var(--err-strong); color: var(--err-fg); }
+.uh .uh-danger-go:hover:not(:disabled),
+.uh .uh-card-confirm .uh-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--err-strong) 88%, var(--t0)); border-color: var(--err-strong); color: var(--err-fg); }
+
+.uh .uh-actions { grid-area: acts; justify-self: end; position: relative; flex: 0 0 auto; }
+/* A row with its menu open outranks its neighbours, or the next row's painted
+   hover band takes the tap on Duplicate (72-flow-followups § M9). */
+.uh .uh-card:has(.uh-menu) { z-index: 2; }
+
+/* Square, 36px, the design's open control — not a pill. */
+.uh .uh-actions-trigger { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid transparent; border-radius: var(--radius-s); background: none; color: var(--t1); cursor: pointer; transition: background var(--dur-1) ease, color var(--dur-1) ease, border-color var(--dur-1) ease; }
+.uh .uh-actions-trigger:hover,
+.uh .uh-actions-trigger[aria-expanded="true"] { background: var(--uh-wash); border-color: var(--uh-hair-2); color: var(--t0); }
+@media (pointer: coarse) {
+  .uh .uh-actions-trigger { width: 44px; height: 44px; }
+}
+.uh .uh-menu { min-width: 230px; border-radius: var(--radius-2xl); }
+.uh .uh-menu-hint { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--t2); }
+.uh .uh-menu-danger { color: var(--err-strong); }
+.uh .uh-menu-danger:hover { background: color-mix(in srgb, var(--err) 9%, transparent); color: var(--err-strong); }
+
+/* Archived projects, behind their own disclosure. */
+.uh .uh-archived { margin-top: var(--s-6); }
+.uh .uh-archived-toggle { margin-bottom: var(--s-3); color: var(--t1); }
+.uh .uh-archived-chev { transition: transform var(--dur-2) var(--uh-ease); }
+.uh .uh-archived-toggle[aria-expanded="true"] .uh-archived-chev { transform: rotate(180deg); }
+
+/* ── The one panel for "nothing here yet", signed out or brand new ───────────
+   The app design file's own empty-state shape — an 18px panel on --card, left
+   aligned, a heading, one sentence, the primary control — used for BOTH
+   states, because the signed-out visitor and the brand-new account are being
+   told the same kind of thing. What it replaces: a centred card with a 48px
+   tinted icon circle (empty), and a 3px accent stripe down the left edge
+   (sign-in). A solid hairline rather than the design's dashed one: a dashed box
+   reads as a drop target, and nothing drops here. */
+.uh .uh-empty,
+.uh .uh-signin {
+  max-width: 62ch;
+  margin-bottom: var(--s-6);
+  padding: clamp(22px, 3.4vw, 36px);
+  border: 1px solid var(--uh-hair);
+  border-radius: var(--radius-2xl);
+  background: var(--card);
+  text-align: left;
+}
+.uh .uh-empty-title,
+.uh .uh-signin h2 { margin: 0 0 var(--s-2); font-family: var(--font); font-size: 19px; font-weight: 560; letter-spacing: -.015em; line-height: 1.3; color: var(--t0); }
+.uh .uh-empty-text,
+.uh .uh-signin p { margin: 0 0 var(--s-4); max-width: 52ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
+.uh .uh-empty-text a { color: var(--accent-mid); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+
+/* "Nothing matched" answers an action the reader just took, so it is not the
+   greeting panel: a band between two hairlines, with its reset inside it. */
+.uh .uh-filtered { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3); padding: var(--s-4) 0; border-top: 1px solid var(--uh-hair); border-bottom: 1px solid var(--uh-hair); }
+.uh .uh-filtered-text { margin: 0; font-size: 14px; color: var(--t1); }
+
+.uh .uh-resolving { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--s-3); min-height: 180px; color: var(--t1); font-size: 14px; }
+.uh .uh-resolving p { margin: 0; }
+
+/* ── NEXT | TIP ───────────────────────────────────────────────────────────────
+   Two columns of text between two hairlines. No fill, no radius, no shadow. */
+.uh .uh-band { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5) var(--s-7); margin: var(--s-6) 0; padding: var(--s-4) 0; border-top: 1px solid var(--uh-hair); border-bottom: 1px solid var(--uh-hair); }
+.uh .uh-band-col + .uh-band-col { padding-left: var(--s-7); border-left: 1px solid var(--uh-hair); }
+.uh .uh-eyebrow { display: flex; align-items: baseline; gap: var(--s-2); margin: 0 0 var(--s-2); font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+/* The tip's kind (colour, type, a11y…) is a classification, not the next
+   action — so it is not accent. It is set apart by the separator and weight. */
+.uh .uh-eyebrow-kind { font-weight: 500; letter-spacing: .1em; color: var(--t1); }
+.uh .uh-eyebrow-kind::before { content: '\00b7'; margin-right: .5em; color: var(--t2); }
+.uh .uh-band-text { margin: 0; max-width: 62ch; font-size: 14px; line-height: 1.65; color: var(--t1); }
+.uh .uh-band-go { font-weight: 560; color: var(--accent-mid); white-space: nowrap; }
+.uh .uh-tip { color: var(--t1); }
+.uh .uh-skel { display: block; width: min(38ch, 100%); height: 1em; border-radius: var(--radius-xs); background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%); background-size: 200% 100%; animation: uh-skel-slide var(--fl-shimmer-dur) var(--ease-standard) infinite; }
+@media (max-width: 860px) {
+  .uh .uh-band { grid-template-columns: 1fr; gap: var(--s-4); }
+  .uh .uh-band-col + .uh-band-col { padding-left: 0; padding-top: var(--s-4); border-left: none; border-top: 1px solid var(--uh-hair); }
+}
+
+/* ── Daily starters ───────────────────────────────────────────────────────────
+   These STAY objects — they are artefacts you browse and their art is their
+   content — and that is now a distinction rather than a coincidence: your own
+   work is a list of values, a suggestion is a thing to look at. The design
+   file's "New in Discover" card: 18px, --card, a swatch band, no lift. */
+.uh .uh-starters { margin-top: var(--s-7); }
+.uh .uh-band + .uh-starters { margin-top: var(--s-6); }
+.uh .uh-starters-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--s-4); padding-bottom: 12px; border-bottom: 1px solid var(--uh-hair); }
+.uh .uh-starters-head .uh-eyebrow { margin: 0; }
+.uh .uh-starters-note { margin: 0; max-width: 60ch; font-size: 12.5px; line-height: 1.55; color: var(--t2); }
+.uh .uh-starter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.uh .uh-starter { display: flex; flex-direction: column; height: 100%; border: 1px solid var(--uh-hair); border-radius: var(--radius-2xl); background: var(--card); overflow: hidden; text-decoration: none; transition: border-color var(--dur-1) ease, background var(--dur-1) ease; }
+.uh .uh-starter:hover { border-color: var(--bh); text-decoration: none; }
+.uh .uh-starter-art { display: block; height: 74px; }
+.uh .uh-starter-body { display: flex; flex-direction: column; gap: 3px; padding: 11px 13px 13px; }
+/* "Gradient" / "Palette" is the KIND of artefact — metadata, so not accent. */
+.uh .uh-starter-kind { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+.uh .uh-starter-name { font-size: 14px; font-weight: 540; letter-spacing: -.01em; color: var(--t0); }
+.uh .uh-starter-fact { font-family: var(--mono); font-size: 11.5px; color: var(--t2); font-variant-numeric: tabular-nums; }
+.uh .uh-starter-opens { margin-top: 2px; font-size: 12px; color: var(--t2); }
+
+/* ── The two dialogs: project detail and new project ──────────────────────────
+   `.fg-detail-overlay` HAD NO RULE. It lost its declaration in #200 and nothing
+   noticed, so both dialogs — aria-modal, focus-trapped, Escape-to-close — were
+   laid out in the document flow at the foot of the page, under the starters,
+   while the scroll lock froze the page above them. A modal the page's own
+   contract calls a modal is drawn as one now: fixed, over a scrim, centred,
+   scrolling on its own. No blur — a scrim says "the page is behind this"
+   without the glass the anti-slop bar names. */
+.uh .fg-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(16px, 6vh, 72px) 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--scrim);
+}
+.uh .il-detail {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: auto 0;
+  padding: clamp(20px, 3.4vw, 32px);
+  border: 1px solid var(--uh-hair);
+  border-radius: var(--radius-2xl);
+  background: var(--card);
+  box-shadow: 0 24px 56px -24px rgba(0, 0, 0, .35);
+}
+.uh .proj-new-modal { max-width: 480px; }
+.uh .fg-detail-close { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; border-radius: var(--radius-s); border-color: var(--uh-hair); background: transparent; color: var(--t1); }
+.uh .fg-detail-close:hover { background: var(--uh-wash); color: var(--t0); }
+.uh .fg-detail-section { margin-bottom: var(--s-5); }
+.uh .fg-detail-label { display: block; margin-bottom: 10px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+.uh .fg-detail-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; padding: var(--s-4) 0 0; border-top: 1px solid var(--uh-hair); background: none; }
+.uh .proj-detail-head { padding-right: 44px; }
+.uh .proj-detail-title { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; min-width: 0; }
+.uh .proj-detail-h { flex: 1 1 auto; min-width: 0; margin: 0; font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -.025em; line-height: 1.2; color: var(--t0); overflow-wrap: anywhere; }
+.uh .proj-detail-rename { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.uh .proj-detail-rename input { flex: 1 1 200px; min-width: 0; min-height: 40px; font-size: 15px; font-weight: 560; }
+.uh .proj-new-lede { margin: 6px 0 0; font-size: 13.5px; line-height: 1.55; color: var(--t1); }
+.uh .proj-new-name { width: 100%; min-height: 44px; font-size: 15px; font-weight: 500; }
+.uh .proj-detail-none { margin: 0; font-size: 13px; color: var(--t2); }
+.uh .proj-detail-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
+.uh .proj-detail-swatch { display: flex; flex-direction: column; gap: 6px; }
+.uh .proj-detail-swatch-chip { height: 48px; border-radius: var(--radius-s); border: 1px solid var(--uh-hair); }
+.uh .proj-detail-swatch-hex { font-family: var(--mono); font-size: 11px; color: var(--t1); text-align: center; font-variant-numeric: tabular-nums; }
+.uh .proj-detail-meta { display: flex; flex-direction: column; }
+.uh .proj-detail-meta-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--uh-hair); font-size: 13.5px; }
+.uh .proj-detail-meta-row:first-child { border-top: 0; padding-top: 0; }
+.uh .proj-detail-meta-row span { color: var(--t1); }
+.uh .proj-detail-meta-row strong { color: var(--t0); font-weight: 560; }
+.uh .proj-detail-iconrow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.uh .proj-detail-upload { cursor: pointer; }
+.uh .proj-detail-upload:focus-within { outline: 2px solid var(--accent); outline-offset: 3px; }
+.uh .proj-detail-hint { font-size: 12px; color: var(--t2); }
+.uh .proj-detail-icon { width: 32px; height: 32px; border-radius: var(--radius-xs); object-fit: contain; border: 1px solid var(--uh-hair); background: var(--bg-2); padding: 2px; }
+.uh .proj-detail-icon-lg { width: 56px; height: 56px; border-radius: var(--radius-s); object-fit: contain; border: 1px solid var(--uh-hair); background: var(--bg-2); padding: 4px; }
+.uh .proj-detail-icon-empty { display: flex; align-items: center; justify-content: center; color: var(--t2); font-size: 20px; }
+.uh .proj-detail-confirm { flex-direction: column; align-items: stretch; gap: var(--s-2); }
+.uh .proj-detail-confirm-text { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--err-strong); }
+.uh .proj-detail-confirm input { min-height: 40px; font-size: 14px; }
+.uh .proj-detail-confirm-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+
+.uh .proj-new-start { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.uh .proj-new-start-opt { display: flex; flex-direction: column; gap: 4px; min-height: 44px; padding: 12px 14px; border: 1px solid var(--uh-hair-2); border-radius: var(--radius); background: transparent; text-align: left; cursor: pointer; transition: border-color var(--dur-1) ease, background var(--dur-1) ease; }
+.uh .proj-new-start-opt:hover { border-color: var(--bh); background: var(--uh-wash); }
+/* Selected = the ink ring, not an accent fill: which starting point is chosen
+   is state, and the accent is kept for the action that creates the project. */
+.uh .proj-new-start-opt.active { border-color: var(--t0); box-shadow: inset 0 0 0 1px var(--t0); }
+.uh .proj-new-start-opt strong { font-size: 13.5px; font-weight: 560; color: var(--t0); }
+.uh .proj-new-start-opt span { font-size: 12px; color: var(--t1); line-height: 1.45; }
+@media (max-width: 520px) { .uh .proj-new-start { grid-template-columns: 1fr; } }
+
+/* ── Focus. Drawn, never removed; no radius in the rule (the outline follows
+   its element's own radius — focus-ring-geometry.test.js). ── */
+.uh :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ── The row, below a single line ─────────────────────────────────────────────
+   Five columns do not fit a phone, and the honest reflow is three lines — WHAT
+   IT IS, WHAT IS IN IT, WHAT YOU CAN DO — in the same order the wide row reads.
+   900 rather than 640 because the parts column carries a string as long as "No
+   type scale, fonts or tints", and it runs out of room first. */
+@media (max-width: 900px) {
+  .uh .uh-card {
+    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "art body acts" "parts parts foot" "when when when" "confirm confirm confirm";
+    column-gap: var(--s-3);
+  }
+  .uh .uh-card-art { width: 44px; height: 28px; margin-top: 2px; }
+  .uh .uh-parts { margin-top: var(--s-2); align-self: center; }
+  .uh .uh-card-when { justify-self: start; }
+  .uh .uh-card-foot { margin-top: var(--s-2); align-self: start; }
+}
+
+@media (max-width: 640px) {
+  .uh .uh-head { margin-bottom: var(--s-4); align-items: flex-start; }
+  .uh .uh-head-actions { width: 100%; }
+  .uh .proj-toolbar { gap: var(--s-2); }
+  .uh .proj-search { max-width: none; }
+  .uh .uh-card-foot { flex-wrap: wrap; }
+  /* A trailing middot, not a leading rule: the list wraps here, and a
+     border-left on a wrapped item draws a divider against the left margin. */
+  .uh .uh-stats li + li { padding-left: 0; border-left: none; }
+  .uh .uh-stats li:not(:last-child)::after { content: '·'; margin-left: .55em; color: var(--t2); }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────────
+   global.css clamps durations; these remove the movement. Both spellings: the
+   Settings choice wins in both directions, the OS query only when no choice was
+   made. Not prefixed with `.uh` — <html> is an ancestor of it. */
+html[data-reduced-motion="true"] .uh .uh-archived-chev,
+html[data-reduced-motion="true"] .uh .uh-card { transition: none; }
+html[data-reduced-motion="true"] .uh .il-detail { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .uh .uh-archived-chev,
+  html:not([data-reduced-motion="false"]) .uh .uh-card { transition: none; }
+  html:not([data-reduced-motion="false"]) .uh .il-detail { animation: none; }
+}
+
+@media (forced-colors: active) {
+  .uh .uh-card.proj-card-active { border-left: 3px solid Highlight; }
+  .uh .uh-part.is-done { background: CanvasText; }
 }
