@@ -1796,7 +1796,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    quieter text treatment the row is built around and only lifts the floor.
    https://mobbin.com/sites/sections/fa5c03c7-be13-4344-b36f-16b5edddc2a0 */
 .app-footer-start{display:inline-flex;align-items:center;min-height:24px;gap:8px;font-size:var(--fs-body-s);font-weight:650;color:var(--t0);text-decoration:none}
-.app-footer-start:hover{gap:12px;color:var(--accent-strong);text-decoration:none}
+.app-footer-start:hover{gap:12px;color:var(--accent-mid);text-decoration:none}
 .app-footer-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-5)}
 .app-footer-group{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .app-footer-group p{margin-bottom:3px;font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t2)}
@@ -1810,7 +1810,9 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    The column gap drops to 6px so the visual pitch is unchanged (21.4+9 = 30.4
    before, 24+6 = 30 after) while the pressable box grows. */
 .app-footer-links a{display:inline-flex;align-items:center;min-height:24px;font-size:var(--fs-caption);color:var(--t1);text-decoration:none;font-weight:500;transition:color var(--t-fast)}
-.app-footer-links a:hover{color:var(--accent-strong)}
+/* Every footer hover reads --accent-mid on the footer's --bg-1 ground:
+   5.55:1 light, 8.48:1 dark, and it follows a premium accent. */
+.app-footer-links a:hover{color:var(--accent-mid)}
 .app-footer-soon-link{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-caption);color:var(--t2);font-weight:500}
 .app-footer-soon-link em{padding:2px 5px;border:1px solid var(--border);border-radius:999px;font-family:var(--mono);font-size:8px;font-style:normal;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
 .app-footer-legal{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--s-3);padding-top:var(--s-5);border-top:1px solid var(--border);font-size:var(--fs-caption);color:var(--t3)}
@@ -1825,7 +1827,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    the mix that clears 1.4.11's 3:1 against the footer ground in BOTH themes —
    50% measured 2.4:1 in light, where the ground is white. */
 .app-footer-attrib{color:var(--t1);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
-.app-footer-attrib:hover{color:var(--accent-strong);text-decoration-color:currentColor}
+.app-footer-attrib:hover{color:var(--accent-mid);text-decoration-color:currentColor}
 /* The compact variant keeps the FAB clearance for the same reason the full one
    does — it sets `padding-block`, which would otherwise overwrite it. */
 .app-footer--compact{padding-block:var(--s-6) max(var(--s-4),var(--fab-clearance))}
@@ -1861,7 +1863,7 @@ html[data-reduced-motion="true"] .fg-loader{animation:none}
    the height as a FLOOR grows the pressable box by 1.3px above and below the
    line box and leaves the type where it was. */
 .app-footer-note{display:inline-flex;align-items:center;min-height:24px;padding:0;border:0;background:none;font:inherit;font-size:var(--fs-caption);font-weight:500;color:var(--t1);cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px;transition:color var(--t-fast)}
-.app-footer-note:hover{color:var(--accent-strong);text-decoration-color:currentColor}
+.app-footer-note:hover{color:var(--accent-mid);text-decoration-color:currentColor}
 
 /* THE PANEL. The house dialog shell — same scrim, same radius, same entrance as
    .fb-modal — carrying a letter rather than a form. Narrower than the feedback
