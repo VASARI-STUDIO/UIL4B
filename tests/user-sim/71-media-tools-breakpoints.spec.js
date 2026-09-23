@@ -228,8 +228,9 @@ test('/create/emoji and /create/file-converter · the count chip and the 3D view
   // at every width from 320 to 1920, on 10px and 8px type. --t2 is 4.95:1.
   // Dark measured clear before and after.
   //
-  // MUTATION: put `color:var(--t3)` back on .emoji-section-count or .fc-soon
-  // in global.css — the matching line fails at 4.07.
+  // MUTATION: put `color:var(--t3)` back on .emoji-section-count — the emoji
+  // line fails at 4.07. (.fc-soon, the converter's old chip, no longer exists;
+  // the converter half below has its own mutation.)
   const { ctx, page } = await at(browser, 1280)
   watch(page, 'someone reading the small print on a light screen')
   await go(page, '/create/emoji')
