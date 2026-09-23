@@ -129,7 +129,9 @@ test('the client surfaces truncation instead of swallowing it', () => {
   assert.match(PAGE, /alt-card-warn/, 'the warning needs its own treatment, not the error style')
   assert.match(PAGE, /status: 'generating', error: null, truncated: false/,
     'a retry must clear the previous attempt\'s truncation flag')
-  assert.ok(CSS.includes('.alt-card-warn{'), 'the warning class must actually be styled')
+  // Whitespace-tolerant since the Spectrum pass reformatted alt-text.css and
+  // scoped it under `.alt-page` (2026-09-23); the rule itself must still exist.
+  assert.match(CSS, /\.alt-card-warn\s*\{/, 'the warning class must actually be styled')
 })
 
 // ── Fault 2 · the result field fits its content ─────────────────────────────
@@ -160,12 +162,12 @@ test('the autosize ceiling and the CSS backstop agree', () => {
   // If the script fails to run, max-height is all that stops a runaway box.
   // Two numbers that must match are a drift risk, so this is where it is caught.
   const js = /ALT_TEXT_MAX_HEIGHT = (\d+)/.exec(PAGE)
-  const css = /\.alt-card-text\{[^}]*max-height:(\d+)px/.exec(CSS)
+  const css = /\.alt-card-text\s*\{[^}]*max-height:\s*(\d+)px/.exec(CSS)
   assert.ok(js && css, 'both the JS ceiling and the CSS backstop must exist')
   assert.equal(js[1], css[1], 'ALT_TEXT_MAX_HEIGHT and .alt-card-text max-height have drifted apart')
-  assert.match(CSS, /\.alt-card-text\{[^}]*resize:none/,
+  assert.match(CSS, /\.alt-card-text\s*\{[^}]*resize:\s*none/,
     'a self-sizing field must not also carry a manual resize handle that its next keystroke overwrites')
-  assert.ok(!/\.alt-card-text\{[^}]*min-height/.test(CSS),
+  assert.ok(!/\.alt-card-text\s*\{[^}]*min-height/.test(CSS),
     'a min-height fights the measured height on a one-line result')
 })
 
@@ -291,7 +293,7 @@ test('the guidance is rendered, not hidden in a title tooltip', () => {
   assert.match(PAGE, /\{activeTone\.desc\}/)
   assert.match(PAGE, /\{activeTone\.when\}/)
   assert.match(PAGE, /const activeTone = TONES\.find/)
-  assert.ok(CSS.includes('.alt-field-help{'), 'the help text must be styled, not unstyled fallback')
+  assert.match(CSS, /\.alt-field-help\s*\{/, 'the help text must be styled, not unstyled fallback')
 })
 
 test('the length chips announce which one is selected', () => {

@@ -419,7 +419,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
           </span>
           <button
             type="button"
-            className="btn btn-accent"
+            className="bs-btn bs-btn--primary"
             onClick={generate}
             disabled={!canGenerate}
             data-testid="brand-starter-generate"
@@ -468,7 +468,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
       {status === 'error' && error && (
         <div className="bs-error" role="alert" data-testid="brand-starter-error">
           <p className="bs-error-text">{error}</p>
-          <button type="button" className="btn btn-s" onClick={generate} disabled={!canGenerate}>
+          <button type="button" className="bs-btn" onClick={generate} disabled={!canGenerate}>
             Try again
           </button>
         </div>
@@ -633,8 +633,8 @@ export default function BrandStarter({ toast }) {
   const { user } = useAuth()
 
   return (
-    <div className="sec">
-      <div className="sec-h bs-head">
+    <div className="sec bs-page">
+      <header className="bs-head">
         {/* NO <em> ON THE SECOND WORD. Founder, 2026-09-14: "the brand starter
             page needs a UI overhaul i dont like the heading it looks so AI
             generated."
@@ -658,7 +658,7 @@ export default function BrandStarter({ toast }) {
           anything you disagree with.
         </p>
         <p className="bs-beta-note">{BETA_NOTE}</p>
-      </div>
+      </header>
 
       {/* WHAT YOU GET, SHOWN BEFORE THE WALL.
           Founder, 2026-09-14: the page "needs a UI overhaul". Rendered

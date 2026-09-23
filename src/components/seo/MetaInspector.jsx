@@ -121,9 +121,9 @@ function runChecks({ title, description, url, keyword }) {
 }
 
 const STATUS_META = {
-  pass: { color: 'var(--ok)', score: 1, icon: <polyline points="20 6 9 17 4 12" /> },
-  warn: { color: 'var(--warn)', score: 0.5, icon: <><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /></> },
-  fail: { color: 'var(--err)', score: 0, icon: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></> },
+  pass: { tone: 'ok', score: 1, icon: <polyline points="20 6 9 17 4 12" /> },
+  warn: { tone: 'warn', score: 0.5, icon: <><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /></> },
+  fail: { tone: 'err', score: 0, icon: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></> },
 }
 
 export default function MetaInspector({ onCopy, toast }) {
@@ -148,7 +148,13 @@ export default function MetaInspector({ onCopy, toast }) {
     return Math.round((got / total) * 100)
   }, [checks])
 
-  const scoreBand = score >= 80 ? { label: 'Strong', color: 'var(--ok)' } : score >= 55 ? { label: 'Needs work', color: 'var(--warn)' } : { label: 'Poor', color: 'var(--err)' }
+  // A TONE, not a colour. These were inline `var(--ok)` / `var(--warn)` /
+  // `var(--err)` on TEXT — the band label, the score and the checklist glyphs —
+  // and the raw state colours are not text-grade: --warn on the white card is
+  // under 3:1 in light. seo-inspector.css maps each tone to the -strong ink
+  // for text and glyphs, and the raw colour only for bars and borders.
+  const scoreBand = score >= 80 ? { label: 'Strong', tone: 'ok' } : score >= 55 ? { label: 'Needs work', tone: 'warn' } : { label: 'Poor', tone: 'err' }
+  const meterTone = (len, min, max) => (len > max ? 'err' : len >= min ? 'ok' : 'warn')
 
   const { domain, crumbs } = parseUrl(url)
   const previewTitle = title.trim() || 'Your page title appears here'
@@ -163,13 +169,13 @@ export default function MetaInspector({ onCopy, toast }) {
           <label className="seo-field">
             <span className="seo-field-label">Page title <em>{title.trim().length}/{TITLE_MAX}</em></span>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Free Aspect Ratio Calculator — UIL4B" />
-            <span className="seo-meter"><span className="seo-meter-fill" style={{ width: `${Math.min(100, (title.trim().length / TITLE_MAX) * 100)}%`, background: title.trim().length > TITLE_MAX ? 'var(--err)' : title.trim().length >= TITLE_MIN ? 'var(--ok)' : 'var(--warn)' }} /></span>
+            <span className="seo-meter"><span className={`seo-meter-fill seo-tone--${meterTone(title.trim().length, TITLE_MIN, TITLE_MAX)}`} style={{ width: `${Math.min(100, (title.trim().length / TITLE_MAX) * 100)}%` }} /></span>
           </label>
 
           <label className="seo-field">
             <span className="seo-field-label">Meta description <em>{description.trim().length}/{DESC_MAX}</em></span>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="Lock a ratio, enter one dimension, and get the matching size with a live preview…" />
-            <span className="seo-meter"><span className="seo-meter-fill" style={{ width: `${Math.min(100, (description.trim().length / DESC_MAX) * 100)}%`, background: description.trim().length > DESC_MAX ? 'var(--err)' : description.trim().length >= DESC_MIN ? 'var(--ok)' : 'var(--warn)' }} /></span>
+            <span className="seo-meter"><span className={`seo-meter-fill seo-tone--${meterTone(description.trim().length, DESC_MIN, DESC_MAX)}`} style={{ width: `${Math.min(100, (description.trim().length / DESC_MAX) * 100)}%` }} /></span>
           </label>
 
           <label className="seo-field">
@@ -185,21 +191,21 @@ export default function MetaInspector({ onCopy, toast }) {
 
         {/* Previews + score */}
         <div className="seo-preview-col">
-          <div className="seo-score" style={{ borderColor: scoreBand.color }}>
-            <div className="seo-score-num" style={{ color: scoreBand.color }}>{score}</div>
+          <div className={`seo-score seo-tone--${scoreBand.tone}`}>
+            <div className="seo-score-num">{score}</div>
             <div className="seo-score-meta">
-              <div className="seo-score-band" style={{ color: scoreBand.color }}>{scoreBand.label}</div>
+              <div className="seo-score-band">{scoreBand.label}</div>
               <div className="seo-score-lbl">SEO score</div>
             </div>
-            <div className="seo-score-bar"><div className="seo-score-bar-fill" style={{ width: `${score}%`, background: scoreBand.color }} /></div>
+            <div className="seo-score-bar"><div className="seo-score-bar-fill" style={{ width: `${score}%` }} /></div>
           </div>
 
           <div className="seo-preview">
             <div className="seo-preview-head">
               <span>Search preview</span>
               <div className="seo-seg">
-                <button className={device === 'desktop' ? 'is-active' : ''} onClick={() => setDevice('desktop')}>Desktop</button>
-                <button className={device === 'mobile' ? 'is-active' : ''} onClick={() => setDevice('mobile')}>Mobile</button>
+                <button type="button" className={device === 'desktop' ? 'is-active' : ''} aria-pressed={device === 'desktop'} onClick={() => setDevice('desktop')}>Desktop</button>
+                <button type="button" className={device === 'mobile' ? 'is-active' : ''} aria-pressed={device === 'mobile'} onClick={() => setDevice('mobile')}>Mobile</button>
               </div>
             </div>
             <div className={`seo-serp${isMobile ? ' is-mobile' : ''}`}>
@@ -233,7 +239,7 @@ export default function MetaInspector({ onCopy, toast }) {
           const m = STATUS_META[c.status]
           return (
             <div key={c.id} className="seo-check">
-              <span className="seo-check-icon" style={{ color: m.color, borderColor: m.color }}>
+              <span className={`seo-check-icon seo-tone--${m.tone}`}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">{m.icon}</svg>
               </span>
               <div className="seo-check-body">
@@ -248,8 +254,8 @@ export default function MetaInspector({ onCopy, toast }) {
       {/* Copy-ready meta tags */}
       <div className="seo-tags">
         <div className="seo-tags-head">
-          <h2 className="seo-checklist-h" style={{ margin: 0 }}>Meta tags</h2>
-          <button className="btn btn-s btn-accent" onClick={copyTags}>
+          <h2 className="seo-checklist-h seo-checklist-h--flush">Meta tags</h2>
+          <button type="button" className="seo-btn seo-btn--primary" onClick={copyTags}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
