@@ -33,7 +33,7 @@ const ratio = (a, b) => {
 
 const GROUNDS = {
   light: ['#FFFFFF', '#EFEEE9', '#F6F5F1'],
-  dark: ['#0A0A0C', '#111215', '#16171A', '#1E2024'],
+  dark: ['#060607', '#0B0C0E', '#111215', '#17181B'],
 }
 const rgbOf = (hex) => {
   const h = hex.replace('#', '')

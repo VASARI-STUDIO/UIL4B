@@ -83,12 +83,12 @@ const AA = 4.5
 // The grounds .flair actually lands on, READ OFF THE RENDERED PAGE rather than
 // assumed: a pill was injected into /settings and /community in both themes and
 // its composited ground reported back. Light: rows and cards are #FFFFFF, the
-// page is #EFEEE9. Dark: #16171A and #0A0A0C. #1E2024 is carried as a margin for
+// page is #EFEEE9. Dark: #111215 and #060607. #17181B is carried as a margin for
 // inset rows. Adding --bg-3/--bg-4 to the light set as well would force amber to
 // #864904 and gold to #795015 — brown, not amber — which is the cost of tuning
 // against a ground you have not confirmed the element can sit on.
 const LIGHT_GROUNDS = ['#FFFFFF', '#EFEEE9', '#F6F5F1']
-const DARK_GROUNDS = ['#0A0A0C', '#16171A', '#1E2024']
+const DARK_GROUNDS = ['#060607', '#111215', '#17181B']
 
 // ANCHORED AT THE START OF A LINE, and that is load-bearing. An unanchored
 // /\.flair--gold\s*\{/ also matches the tail of
@@ -115,7 +115,7 @@ test('every named flair tone has a light AND a dark value', () => {
   for (const t of TONES) {
     if (!lightTone(t)) missing.push(`.flair--${t} has no light value`)
     if (!darkTone(t)) {
-      missing.push(`.flair--${t} has no dark value — dark will paint the light one on #16171A`)
+      missing.push(`.flair--${t} has no dark value — dark will paint the light one on #111215`)
     }
   }
   assert.equal(missing.length, 0, missing.join('\n'))

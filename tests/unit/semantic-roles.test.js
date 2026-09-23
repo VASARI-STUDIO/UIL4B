@@ -83,7 +83,7 @@ test('4 · --pending clears AA small text on every ground, in BOTH themes', () =
   // The grounds a state colour actually lands on, read off the same two lines.
   const cases = [
     ['[data-theme="light"]', ['#EFEEE9', '#FFFFFF', '#F6F5F1']],
-    ['[data-theme="dark"]', ['#0A0A0C', '#111215', '#16171A']],
+    ['[data-theme="dark"]', ['#060607', '#0B0C0E', '#111215']],
   ]
   for (const [sel, grounds] of cases) {
     const pending = tokenValue(sel, '--pending')

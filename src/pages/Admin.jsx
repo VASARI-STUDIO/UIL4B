@@ -1724,7 +1724,7 @@ export default function Admin({ toast }) {
         })
         const data = await res.json().catch(() => ({}))
         if (data.isAdmin) { setServerVerified(true); setVerifyError('') }
-        else { setVerifyError(data.error || `Server returned ${res.status}`); toast?.('Admin verification failed') }
+        else { setVerifyError(data.error || `Server returned ${res.status}`); toast?.('Admin verification failed', 'error') }
       } catch { /* offline */ }
     })()
   }, [isAdminUser, serverVerified, roleLoading, role]) // eslint-disable-line react-hooks/exhaustive-deps

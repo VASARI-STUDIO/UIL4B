@@ -26,7 +26,7 @@ import { contrastRatio, generateTintScale, T_LABELS } from '../utils/colors'
 
 /** The two --bg-0 values in src/styles/global.css, light theme then dark. */
 const LIGHT_GROUND = '#EFEEE9'
-const DARK_GROUND = '#0A0A0C'
+const DARK_GROUND = '#060607'
 
 /** ColorStudio.jsx's default base colour and its default tint configuration. */
 const SEED = '#2563EB'

@@ -112,22 +112,27 @@
   /* Cascade steps + loop timings (loop duration is the effect — not on the duration scale). */
   --fl-stagger:55ms;--stagger:70ms;--fl-shimmer-dur:1.4s}
 /* ── DARK — V2 reseed. Docs: docs/reference/design-language-v2.md#palette ──
-   Page #0A0A0C · surface #16171A · ink #F2F1EC · mute #8E8E88 · line #28292D.
-   DARKER, 2026-09-23 (founder: "the dark mode i want darker"). The whole
-   surface ramp moved down toward near-black with the same small blue lean it
-   had (B two to six above R), and every step was re-solved so the CIELAB
-   lightness gap between neighbours is no smaller than before. L*, old -> new:
-     --bg-0 4.74 -> 2.78 · --bg-1 7.26 -> 5.47 · --bg-2 9.27 -> 7.75
-     --bg-3 13.66 -> 12.20 · --bg-4 17.58 -> 16.63 · --bh 25.84 -> 24.50
-     steps bg0>1 2.52 -> 2.69 · 1>2 2.02 -> 2.28 · 2>3 4.39 -> 4.45 · 3>4 3.92 -> 4.44
-     card on page 4.54 -> 4.97 · --border on card 8.30 -> 8.88 · --bh on card 16.56 -> 16.75
-     --hvr film 5% -> 6%: at 5% the hover on the new page was 4.31 L*, down from
-     5.22; at 6% it is 5.46 on the page and 6.49 on a card (was 5.29).
-   Text only gains: the lowest role, --t3, is 6.00:1 on the page (was 5.77)
-   and 4.95 on --bg-3 (was 4.78). Shadows barely read on near-black, so panels
-   separate by their --border hairline, which every dialog already carries.
+   Page #060607 · chrome #0B0C0E · surface #111215 · ink #F2F1EC · mute #8E8E88 · line #202125.
+   NEAR-BLACK, 2026-09-23 (founder: "the dark mode i want darker"). The first
+   pass moved the ramp down while holding every step at its old lightness gap,
+   and it photographed as unchanged. This is the Linear/Vercel reading of dark:
+   a near-black page, cards only just lifted, separation carried by hairlines.
+   Same small blue lean as before (B one to four above R), not blue-black.
+   CIELAB L*, measured on the rounded hexes (the #101012 ramp in brackets):
+     --bg-0 1.66 (4.74) · --bg-1 3.30 (7.26) · --bg-2/--card 5.47 (9.27)
+     --bg-3 8.26 (13.66) · --bg-4/--border 12.79 (17.58) · --bh 20.41 (25.84)
+     card on page 3.81 (4.54) · --border on page 11.12 (12.84), on a card 7.31
+     (8.30) · --bh on a card 14.93 (16.56). Adjacent steps are smaller than they
+     were, on purpose; the hairline does the separating, and every panel,
+     dialog and card here already carries one.
+   --hvr film 5% -> 6.5%: at 5% the hover would be 3.72 L* on this page; at 6.5%
+     it is 5.26 on the page (was 5.22) and 7.02 on a card (was 5.29).
+   --scrim is a touch darker than the page it dims (it was lighter than this
+     page, which would have lifted it rather than dimmed it).
+   Text only gains: --t3, the faintest role, is 6.15:1 on the page (was 5.77)
+   and 5.39 on --bg-3 (was 4.78). Shadows barely read on near-black.
    Measurement notes further down that quote #101012 / #151619 / #191A1D /
-   #212327 were taken on the previous ramp. Every one of those grounds moved
+   #212327 were taken on the original ramp. Every one of those grounds moved
    DARKER, which only raises the light-on-dark ratios they record; the
    contrast suites re-measure on the new values (tests/unit/dark-ground-mirrors
    fails if a suite is left measuring the old ones).
@@ -137,7 +142,7 @@
    warm-neutral steps between ink and mute, not new roles. Borders are opaque
    now (the spec ships a line COLOUR, not an ink alpha), which also stops them
    compounding unpredictably when surfaces stack. */
-[data-theme="dark"]{--bg-0:#0A0A0C;--bg-1:#111215;--bg-2:#16171A;--bg-3:#1E2024;--bg-4:#28292D;--border:#28292D;--bh:#393A3F;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#111215;--hvr:rgba(242,241,236,.06);--card:#16171A;--card-grad:#16171A;--inp:#16171A;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--pending:#a78bfa;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(8,8,10,.62);
+[data-theme="dark"]{--bg-0:#060607;--bg-1:#0B0C0E;--bg-2:#111215;--bg-3:#17181B;--bg-4:#202125;--border:#202125;--bh:#303136;--t0:#F2F1EC;--t1:#BFBEB6;--t2:#9F9F98;--t3:#8E8E88;--cbg:#0B0C0E;--hvr:rgba(242,241,236,.065);--card:#111215;--card-grad:#111215;--inp:#111215;--shadow-xs:0 1px 2px rgba(0,0,0,.4);--shadow-s:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--shadow-m:0 2px 4px rgba(0,0,0,.45),0 8px 24px -6px rgba(0,0,0,.5);--shadow-l:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--shadow-glow:0 8px 32px -8px var(--accent-glow);--ring:inset 0 1px 0 rgba(255,255,255,.06);--shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.35);--warm-shadow-lg:0 4px 8px rgba(0,0,0,.5),0 24px 48px -12px rgba(0,0,0,.6);--ok:#4ade80;--warn:#facc15;--err:#f87171;--pending:#a78bfa;--accent:#6FA8FF;--accent-strong:#4A90FF;--accent-soft:#9CC5FF;--accent-bg:rgba(111,168,255,.12);--accent-glow:rgba(111,168,255,.20);--icon-inv:invert(1);--brand:#6FA8FF;--brand-soft:#9CC5FF;--brand-bg:rgba(111,168,255,.12);--brand-glow:rgba(111,168,255,.18);--info:#6FA8FF;--info-bg:rgba(111,168,255,.12);--scrim:rgba(3,3,4,.68);
   /* ON-ACCENT FLIPS IN DARK. The dark accent is a LIGHT blue, so white on it
      measures 2.41:1 — a bad failure, and it applies to every accent-filled
      control, not just buttons. Ink on the same fill measures 7.89:1. This is

@@ -22,7 +22,7 @@
 //   1. A COPY EDIT THAT ROUNDS. "4.45:1" becoming "4.5:1" inverts the point of
 //      the paragraph it sits in, and reads better.
 //   2. A TOKEN THAT MOVES. Both guides quote this product's own hexes —
-//      #EFEEE9, #0A0A0C, #0B5ED7, #4A90FF. A palette change in global.css
+//      #EFEEE9, #060607, #0B5ED7, #4A90FF. A palette change in global.css
 //      leaves them behind as confident, checkable, wrong.
 //   3. A DEFAULT THAT MOVES. The ramp is only "the ramp the product hands you"
 //      while ColorStudio.jsx and designDefaults.js still call the generator the
@@ -118,7 +118,7 @@ test('the theme guide quotes this product’s own grounds and accents', () => {
   const darkAccent = token('dark', '--accent-strong')
 
   assert.equal(lightGround, '#EFEEE9')
-  assert.equal(darkGround, '#0A0A0C')
+  assert.equal(darkGround, '#060607')
   assert.equal(lightAccent, '#0B5ED7')
   assert.equal(darkAccent, '#4A90FF')
 
@@ -131,10 +131,10 @@ test('the ground very nearly inverts, by the margin the guide states', () => {
   const flipped = invert(token('light', '--bg-0'))
   assert.equal(flipped, '#101116', 'inverting the light ground no longer gives #101116')
   const against = ratio(flipped, token('dark', '--bg-0'))
-  assert.equal(shown(against), '1.05:1',
+  assert.equal(shown(against), '1.07:1',
     `the inverted light ground now measures ${shown(against)} against the real dark ground`)
   assert.match(themeProse, /#101116/)
-  assert.match(themeProse, /1\.05:1/)
+  assert.match(themeProse, /1\.07:1/)
 })
 
 test('the accent does not invert at all, and the guide’s hues are the real ones', () => {
@@ -203,10 +203,10 @@ test('THE ONE THAT MATTERS: the inverted pair disagrees with the real one in eve
 
 test('the dark surface ramp spans what the guide says it spans', () => {
   const levels = ['--bg-0', '--bg-1', '--bg-2', '--bg-3', '--bg-4'].map((n) => token('dark', n))
-  assert.equal(levels[0], '#0A0A0C')
-  assert.equal(levels[4], '#28292D')
+  assert.equal(levels[0], '#060607')
+  assert.equal(levels[4], '#202125')
   assert.equal(levels.length, 5, 'the guide says five surface levels')
-  assert.equal(shown(ratio(levels[0], levels[4])), '1.36:1')
+  assert.equal(shown(ratio(levels[0], levels[4])), '1.26:1')
   // The guide quotes the two ends of the step range to two places, so the
   // assertion is on the PRINTED values rather than on the raw floats: the
   // smallest step is 1.0399, which is 1.04:1 as published and below 1.04 as a
@@ -214,11 +214,11 @@ test('the dark surface ramp spans what the guide says it spans', () => {
   const steps = levels.slice(1).map((hex, i) => ratio(levels[i], hex))
   assert.equal(shown(Math.min(...steps)), '1.04:1',
     `the smallest surface step is now ${shown(Math.min(...steps))}`)
-  assert.equal(shown(Math.max(...steps)), '1.12:1',
+  assert.equal(shown(Math.max(...steps)), '1.10:1',
     `the largest surface step is now ${shown(Math.max(...steps))}`)
-  assert.match(themeProse, /1\.36:1/)
+  assert.match(themeProse, /1\.26:1/)
   assert.match(themeProse, /1\.04:1/)
-  assert.match(themeProse, /1\.12:1/)
+  assert.match(themeProse, /1\.10:1/)
   assert.match(themeProse, /five surface levels/)
 })
 
