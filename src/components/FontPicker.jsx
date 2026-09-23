@@ -2,6 +2,9 @@ import { useId, useState } from 'react'
 import FontBrowseDialog from './FontBrowseDialog'
 import { fontStack, headingWeight } from '../utils/googleFonts'
 import { specimenSizeCqw } from '../utils/fontGallery'
+// The picker's and the browse dialog's own sheet. Rooted at .typ-picker and
+// .fbd-overlay, so its place in the chunk's CSS order does not matter.
+import '../styles/pages/font-picker.css'
 
 // Pick one family out of the catalogue. Shared by the Type Scale and Font Pair
 // tools so choosing a typeface works identically in both.

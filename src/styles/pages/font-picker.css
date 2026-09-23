@@ -1,0 +1,336 @@
+/* font-picker.css — the family picker and its browse dialog, on the Spectrum
+ * app language. Imported by FontPicker.jsx, so it rides the lazy chunk of the
+ * two tools that mount a picker (/create/type-scale, /create/font-pair) and no
+ * other route pays for it.
+ *
+ * EVERY SELECTOR IS ROOTED AT `.typ-picker` OR `.fbd-overlay`. Vite orders chunk
+ * CSS by the dependency graph, not by import order, so a sheet imported last
+ * can still load before deferred/type.css or tool-shell.css (8d30f37a lost
+ * thirty declarations to exactly that). A root class buys one more class of
+ * specificity than every base rule restated here, so load order stops mattering.
+ * The dialog is portalled to <body>, so it cannot be scoped under a page root:
+ * `.fbd-overlay` is its own root.
+ *
+ * ── S4: THE FILTER CHIPS WERE BARE WORDS ─────────────────────────────────────
+ *
+ * The dialog's category filter is the shared LibraryFilterGroup, but the dialog
+ * is not a `.lib-surface`, so it never received library.css's S4 fix. What it
+ * rendered was global.css's base `.lbry-filter`: `border:0`, `background:
+ * transparent`, on a `--bg-2` rail about two per cent off the dialog ground.
+ * "All · Sans · Serif · Display · Script · Mono" read as six adjacent words
+ * whenever the rail's sliding indicator had not yet measured itself.
+ *
+ * The treatment below is library.css's S4 block (lines 1001-1099) restated
+ * under this root, value for value, so a chip means one thing across the
+ * product: a hairline chip at rest, a solid ink chip when on, no rail. The
+ * sliding indicator stays and is painted ink, so it IS the selected fill.
+ * library.css itself is not touched — it belongs to another lane.
+ *
+ * ── WHAT ELSE CHANGED ───────────────────────────────────────────────────────
+ *
+ * - The overlay's 6px backdrop blur is gone. A blur behind a modal is one of
+ *   the named "premium signal" tells, and the scrim alone already separates
+ *   the dialog from the page.
+ * - Controls are the app file's rounded rectangle over a hairline (close,
+ *   back, info, show-more), not 999px pills. The pill is kept only for the
+ *   filter chips, where it is the library's own shape and the point is parity.
+ * - The selected tile is an ink ring, not a `--brand` ring on a `--brand-bg`
+ *   wash. Selection is ink everywhere on the Spectrum branch; the accent is
+ *   the next action ("Use this family"), not the state of a choice.
+ *
+ * Contrast measured on the built preview, composited, both themes — see the
+ * lane report. Reduced motion: the only movement here is the chip press, and
+ * it carries the house pair (Settings choice and OS query). */
+
+/* ── The trigger ──────────────────────────────────────────────────────────── */
+
+.typ-picker .seg-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  color: var(--t2);
+  margin-bottom: 8px;
+}
+
+.typ-picker .typ-picker-trigger {
+  padding: 11px 12px 11px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.typ-picker .typ-picker-trigger:hover:not(:disabled) {
+  border-color: var(--bh);
+  background: color-mix(in srgb, var(--t0) 3%, var(--card));
+}
+
+/* A real outline, like every other control on the page. The old rule was
+   `outline:none` plus a 3px 8%-alpha halo, which composited to about 1.1:1 on
+   the card. */
+.typ-picker .typ-picker-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--bh);
+  box-shadow: none;
+}
+
+.typ-picker .typ-picker-name { font-weight: 560; }
+
+/* "Browse" is a cue printed on the trigger, not a second button, so it takes
+   the quiet secondary shape rather than an accent-washed pill: the accent on
+   this page belongs to the one primary action. */
+.typ-picker .typ-picker-cue {
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 560;
+  color: var(--t1);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-s);
+}
+
+.typ-picker .typ-picker-trigger:hover:not(:disabled) .typ-picker-cue { color: var(--t0); }
+
+/* ── The dialog ───────────────────────────────────────────────────────────── */
+
+.fbd-overlay {
+  background: rgba(8, 8, 12, .52);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.fbd-overlay .fbd-dialog {
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3xl);
+  box-shadow: 0 2px 4px -2px rgba(6, 6, 12, .12), 0 32px 80px -24px rgba(6, 6, 12, .42);
+}
+
+.fbd-overlay .fbd-head h2 {
+  font-family: var(--display);
+  font-size: clamp(19px, 2.4vw, 24px);
+  font-weight: 560;
+  letter-spacing: -.025em;
+}
+
+.fbd-overlay .fbd-close,
+.fbd-overlay .fbd-back,
+.fbd-overlay .fbd-info,
+.fbd-overlay .fg-more-btn {
+  color: var(--t1);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius);
+  transition: color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), background var(--dur-1) var(--ease-standard);
+}
+
+.fbd-overlay .fbd-close { width: 40px; height: 40px; }
+
+.fbd-overlay .fbd-back { min-height: 36px; padding: 6px 13px 6px 9px; font-size: 12.5px; font-weight: 560; }
+
+.fbd-overlay .fbd-info {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-s);
+  background: var(--card);
+}
+
+.fbd-overlay .fg-more-btn {
+  min-height: 40px;
+  padding: 9px 16px;
+  font-size: 12.5px;
+  font-weight: 560;
+}
+
+.fbd-overlay .fbd-close:hover,
+.fbd-overlay .fbd-back:hover,
+.fbd-overlay .fbd-info:hover,
+.fbd-overlay .fg-more-btn:hover:not(:disabled) {
+  color: var(--t0);
+  border-color: color-mix(in srgb, var(--t0) 34%, transparent);
+  background: var(--hvr);
+}
+
+.fbd-overlay .fbd-close:focus-visible,
+.fbd-overlay .fbd-back:focus-visible,
+.fbd-overlay .fbd-info:focus-visible,
+.fbd-overlay .fg-more-btn:focus-visible,
+.fbd-overlay .fbd-tile:focus-visible,
+.fbd-overlay .fbd-use:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The toolbar: the library's panel on `--card` over a hairline, flat. The
+   global rule gives it a sticky translucent ground with a blur, which inside a
+   dialog that is its own scroll container is neither needed nor wanted. */
+.fbd-overlay .lbry-toolbar {
+  padding: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.fbd-overlay .lbry-search {
+  min-height: 44px;
+  padding: 0 13px;
+  border-color: transparent;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+}
+
+.fbd-overlay .lbry-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+
+.fbd-overlay .lbry-search input { font-size: 14px; }
+
+/* ── S4, restated from library.css under this root ───────────────────────── */
+
+.fbd-overlay .lbry-toolbar-filters { gap: 10px; }
+
+.fbd-overlay .lbry-filters {
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+.fbd-overlay .lbry-filters .lbry-filter {
+  min-height: 40px;
+  padding: 9px 15px;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--t1);
+  font-size: 12.5px;
+  font-weight: 560;
+  transition:
+    color var(--dur-2) var(--ease-standard),
+    background var(--dur-1) var(--ease-standard),
+    border-color var(--dur-1) var(--ease-standard);
+}
+
+.fbd-overlay .lbry-filters .lbry-filter:hover {
+  color: var(--t0);
+  border-color: color-mix(in srgb, var(--t0) 34%, transparent);
+  background: var(--hvr);
+}
+
+/* The pressed chip paints its own fill as well as being covered by the sliding
+   one: the indicator is placed from a JS measurement and is invisible until it
+   lands, and ink text on no fill would be `--bg-0` on `--bg-0` for that frame. */
+.fbd-overlay .lbry-filters .lbry-filter[data-active="true"] {
+  color: var(--bg-0);
+  border-color: var(--t0);
+  background: var(--t0);
+}
+
+.fbd-overlay .lbry-filters .lbry-filter-ind {
+  background: var(--t0);
+  border-radius: var(--radius-pill);
+  box-shadow: none;
+}
+
+.fbd-overlay .lbry-filtertrig {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--t1);
+  font-size: 12.5px;
+  font-weight: 560;
+}
+
+.fbd-overlay .lbry-filtertrig:hover { color: var(--t0); background: var(--hvr); }
+
+.fbd-overlay .lbry-filtertrig[aria-expanded="true"],
+.fbd-overlay .lbry-filtertrig[data-active="true"] {
+  color: var(--t0);
+  background: var(--card);
+  box-shadow: none;
+}
+
+.fbd-overlay .lbry-filtermenu .lbry-filter {
+  border-color: transparent;
+  border-radius: var(--radius-s);
+  min-height: 38px;
+  background: transparent;
+}
+
+.fbd-overlay .lbry-filtermenu .lbry-filter[data-active="true"] {
+  color: var(--t0);
+  background: var(--bg-2);
+  border-color: var(--border);
+}
+
+/* In dark `--bg-2` is the menu's own ground, so the chosen row needs the next
+   step up to be visible as anything but a text colour. */
+[data-theme="dark"] .fbd-overlay .lbry-filtermenu .lbry-filter[data-active="true"] {
+  background: var(--bg-3);
+}
+
+.fbd-overlay .lbry-filters .lbry-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Tiles ─────────────────────────────────────────────────────────────────── */
+
+.fbd-overlay .fbd-tile {
+  border-radius: var(--radius-l);
+  background: var(--card);
+  transition: border-color var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
+}
+
+.fbd-overlay .fbd-tile:hover { border-color: var(--bh); }
+
+.fbd-overlay .fbd-card.is-selected .fbd-tile {
+  border-color: var(--t0);
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--t0);
+}
+
+.fbd-overlay .fbd-card .lbry-card-name { font-weight: 560; }
+
+.fbd-overlay .fbd-count {
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: var(--t2);
+}
+
+/* ── Detail view ──────────────────────────────────────────────────────────── */
+
+.fbd-overlay .fdx-tab { font-weight: 500; }
+
+.fbd-overlay .fdx-tab--on { font-weight: 560; }
+
+.fbd-overlay .fdx-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── Touch floors, restated at this specificity ──────────────────────────── */
+
+@media (pointer: coarse) {
+  .fbd-overlay .lbry-filters .lbry-filter { min-width: 44px; min-height: 44px; justify-content: center; }
+  .fbd-overlay .lbry-filtertrig { min-height: 44px; }
+  .fbd-overlay .lbry-filtermenu .lbry-filter { min-height: 44px; }
+  .fbd-overlay .fbd-close { width: 44px; height: 44px; }
+  .fbd-overlay .fbd-back,
+  .fbd-overlay .fg-more-btn { min-height: 44px; }
+  .fbd-overlay .fbd-info { width: 44px; height: 44px; }
+}
+
+/* ── Press feedback, with the house reduced-motion pair ──────────────────── */
+
+.fbd-overlay .lbry-filters .lbry-filter:active,
+.fbd-overlay .lbry-filtertrig:active { transform: scale(.97); }
+
+html[data-reduced-motion="true"] .fbd-overlay .lbry-filters .lbry-filter:active,
+html[data-reduced-motion="true"] .fbd-overlay .lbry-filtertrig:active { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fbd-overlay .lbry-filters .lbry-filter:active,
+  html:not([data-reduced-motion="false"]) .fbd-overlay .lbry-filtertrig:active { transform: none; }
+}
