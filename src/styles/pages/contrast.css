@@ -90,7 +90,7 @@
 }
 
 /* One small-label voice for the page. --t2, not --t3: 10px caps want the
-   headroom (#5F5F59 on #FFF 6.43:1 light; #9F9F98 on #191A1D 6.54:1 dark). */
+   headroom (#5F5F59 on #FFF 6.43:1 light; #9F9F98 on #111215 7.03:1 dark). */
 .cc-page .cc-label {
   display: block;
   margin: 0 0 8px;

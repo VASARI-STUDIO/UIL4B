@@ -804,9 +804,10 @@ html[data-reduced-motion="true"] .pl-card-preview-text,html[data-reduced-motion=
 /* ── S4 · THE RESTING FILTER GETS AN AFFORDANCE ────────────────────────────
    THE DEFECT, measured on the shipped build at 1280 before this change:
    `.lbry-filter` unselected computed `border: 0px none; background:
-   rgba(0,0,0,0)`, on a `.lbry-filters` rail whose fill is `--bg-2` — #191A1D
-   on a #101012 toolbar in dark, #F6F5F1 on #EFEEE9 in light. So the rail is
-   about two per cent of contrast and the options themselves paint nothing at
+   rgba(0,0,0,0)`, on a `.lbry-filters` rail whose fill is `--bg-2` — #111215
+   on a #060607 toolbar in dark (1.08:1; #191A1D on #101012, 1.09:1, on the
+   ramp this was measured on), #F6F5F1 on #EFEEE9 in light (1.06:1). So the
+   rail is under a tenth of contrast and the options themselves paint nothing at
    all. On /create/icons all SEVEN options read `data-active="false"` on
    arrival, so there is not even a selected sibling to imply the row is a
    control: "My Icons · Outlined · Solid · Coloured · Brand logos · Flags ·

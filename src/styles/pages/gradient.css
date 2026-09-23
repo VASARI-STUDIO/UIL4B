@@ -87,7 +87,7 @@
      80%, var(--accent-toward))`, so it follows the theme's accent wherever it
      goes and keeps its direction: deeper in light, lighter in dark. Measured on
      `--card`, which is what every user of this alias actually sits on:
-     #0E5BCF on #FFFFFF = 6.48:1 light, #8AB8FF on #191A1D = 9.12:1 dark. */
+     #0E5BCF on #FFFFFF = 6.15:1 light, #8AB8FF on #111215 = 9.24:1 dark. */
   --ggn-accent-text: var(--accent-text);
 }
 
