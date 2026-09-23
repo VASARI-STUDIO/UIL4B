@@ -118,16 +118,36 @@ html[data-reduced-motion="true"] [data-reveal]{animation:none!important;opacity:
 /* ── 404 ────────────────────────────────────────────────────────────────────
    pages/NotFound.jsx. Replaces a redirect to `/`, which returned 200 for every
    typo and silently teleported the user so a broken link looked like it had
-   worked. */
-.nf-path{font-family:var(--mono);font-size:.92em;padding:2px 6px;border-radius:var(--radius-s);background:var(--bg-2);border:1px solid var(--border);color:var(--t0);word-break:break-all}
-.nf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:var(--s-6) 0}
-.nf-card{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px solid var(--border);border-radius:var(--radius-l);background:var(--card);text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-.nf-card:hover{border-color:var(--bh);background:var(--bg-1)}
-.nf-card-label{font-size:14px;font-weight:650;color:var(--t0)}
-.nf-card-desc{font-size:12.5px;line-height:1.5;color:var(--t2)}
-.nf-more{font-size:13px;color:var(--t2)}
-.nf-more a{color:var(--accent-strong);text-decoration:none}
-.nf-more a:hover{text-decoration:underline}
+   worked.
+
+   On the Spectrum ground (2026-09-23), every selector under `.nf`, the page
+   root. What it was: a 52px content-page title, four equal bordered cards and
+   three --accent-strong links. What it is: the app scale for the title, the
+   suggestions as a ruled LIST — label left, what it is right, an arrow — which
+   is the shape the 404s worth copying use (Firecrawl
+   mobbin.com/sites/sections/69292ac1-6a10-416a-822c-ab66b7796d46, SSENSE
+   mobbin.com/sites/sections/4bdf6fbf-11fd-4c3f-8ff8-01d6ce5c96b0: a sentence and a
+   list of links, no tiles), and --accent-mid on the text links. */
+.nf{max-width:760px}
+.nf .sec-h{margin-bottom:clamp(24px,3.4vw,36px)}
+.nf .sec-h h1{margin:0;padding:0;font-family:var(--display);font-size:clamp(28px,3.4vw,40px);font-weight:600;letter-spacing:-.035em;line-height:1.08;color:var(--t0)}
+.nf .sec-h p{margin:12px 0 0;max-width:56ch;font-size:15px;line-height:1.6;color:var(--t1)}
+.nf .nf-path{font-family:var(--mono);font-size:.88em;padding:1px 6px;border-radius:var(--radius-xs);background:color-mix(in srgb,var(--t0) 5%,transparent);border:1px solid color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0);word-break:break-all}
+.nf .nf-grid{display:flex;flex-direction:column;margin:0 0 var(--s-5);border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent)}
+.nf .nf-card{position:relative;display:flex;align-items:baseline;justify-content:space-between;gap:16px;min-height:52px;padding:14px 32px 14px 0;border:0;border-bottom:1px solid color-mix(in srgb,var(--t0) 9%,transparent);border-radius:0;background:none;text-decoration:none;transition:background var(--dur-1) ease}
+.nf .nf-card::after{content:'\2192';position:absolute;right:6px;top:50%;transform:translateY(-50%);color:var(--t2);transition:transform var(--dur-2) cubic-bezier(.23,1,.32,1),color var(--dur-1) ease}
+.nf .nf-card:hover{background:none;border-color:color-mix(in srgb,var(--t0) 9%,transparent);text-decoration:none}
+.nf .nf-card:hover::after,.nf .nf-card:focus-visible::after{color:var(--accent-mid);transform:translate(3px,-50%)}
+.nf .nf-card-label{font-size:16px;font-weight:560;letter-spacing:-.01em;color:var(--t0)}
+.nf .nf-card:hover .nf-card-label{color:var(--accent-mid)}
+.nf .nf-card-desc{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;line-height:1.5;color:var(--t2);text-align:right}
+.nf .nf-more{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:14px;color:var(--t2)}
+.nf .nf-more a{display:inline-flex;align-items:center;min-height:24px;color:var(--accent-mid);font-weight:500;text-decoration:none}
+.nf .nf-more a:hover{text-decoration:underline;text-underline-offset:3px}
+.nf :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:480px){.nf .nf-card{flex-direction:column;gap:2px}.nf .nf-card-desc{text-align:left}}
+html[data-reduced-motion="true"] .nf .nf-card::after{transition:none;transform:translateY(-50%)!important}
+@media(prefers-reduced-motion:reduce){html:not([data-reduced-motion="false"]) .nf .nf-card::after{transition:none;transform:translateY(-50%)!important}}
 
 /* The error level used to carry a red border on its own card. It is a row in
    .notice-stack now, so the strip's own bottom edge is what reddens: one line
