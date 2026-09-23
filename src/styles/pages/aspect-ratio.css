@@ -127,6 +127,13 @@
 }
 
 .arc-page .rc-tabs { margin-bottom: 16px; }
+/* The four presets share ONE row at every width. At 320 they wrapped and left
+   "Social" alone on a second row; below 480 each takes an equal share and a
+   tighter inline padding, which fits all four labels on one line. */
+@media (max-width: 480px) {
+  .arc-page .rc-tabs { flex-wrap: nowrap; }
+  .arc-page .rc-tab { flex: 1 1 0; min-width: 0; padding-inline: 6px; white-space: nowrap; }
+}
 
 .arc-page .rc-tab,
 .arc-page .arc-sides .pt-t {

@@ -95,23 +95,32 @@
 
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
 
+/* ONE ROW AT EVERY WIDTH. At 320 the row wrapped and put "Extract frames" on a
+   second line under the first line's underline; it scrolls sideways instead.
+   The rule under the row is an inset shadow rather than a border so a tab's
+   own 2px underline can sit on it without a negative margin, which a
+   scrolling row would clip. */
 .fc .fc-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 2px 4px;
   margin: 0 0 var(--s-3);
   padding: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
   background: none;
   border: 0;
-  border-bottom: 1px solid var(--border);
   border-radius: 0;
+  box-shadow: inset 0 -1px 0 var(--border);
 }
+.fc .fc-tabs::-webkit-scrollbar { display: none; }
 
 .fc .fc-tab {
   display: inline-flex;
+  flex: none;
   align-items: center;
   min-height: 40px;
-  margin-bottom: -1px;
+  white-space: nowrap;
   padding: 0 14px;
   font-family: var(--font);
   font-size: 13.5px;
@@ -148,10 +157,11 @@
   color: var(--t2);
 }
 
+/* INLINE, not an inline-flex box: a 24px (44px on touch) box taller than the
+   13px line opened a loose gap wherever the sentence wrapped. A link inside a
+   sentence is the inline exception in WCAG 2.5.8, so it keeps the line. */
 .fc .fc-3d a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
+  display: inline;
   font-weight: 540;
   /* --accent-mid, not the global link's --accent-strong: that one is a
      per-theme literal that does not follow --accent. Contrast measured in
@@ -880,8 +890,7 @@
   .fc .fc-tab,
   .fc .fc-btn,
   .fc .fc-field,
-  .fc .fc-bg-pick,
-  .fc .fc-3d a { min-height: 44px; }
+  .fc .fc-bg-pick { min-height: 44px; }
   .fc .fc-field { height: 44px; }
   .fc .fc-remove { width: 44px; height: 44px; top: 12px; right: 12px; }
   .fc .fc-check { min-height: 44px; }
