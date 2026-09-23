@@ -301,6 +301,9 @@ export async function parseModel(format, buffer, { companions = [] } = {}) {
         break
       }
       case '3mf':
+        // No cap on the DECOMPRESSED size (a 3MF is a zip): a crafted archive can
+        // only exhaust the memory of the tab of the visitor who opened it, so it
+        // is left uncapped on purpose (review of #487, 2026-09-23).
         object = new ThreeMFLoader(manager).parse(buffer)
         break
       case 'fbx':
