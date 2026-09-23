@@ -7,7 +7,7 @@
 // That is the class of bug this file exists to catch: a default that matches no
 // panel is a blank page, and a blank page is indistinguishable from a crash.
 import { test, expect } from './base.js'
-import { go, restingScrollY, watch } from './helpers.js'
+import { go, restingScrollY, signIn, watch } from './helpers.js'
 
 test.describe('settings panels', () => {
   test('opens on a real panel, never blank', async ({ page }) => {
@@ -64,5 +64,28 @@ test.describe('settings panels', () => {
     await expect(page.getByRole('button', { name: /free trial/i })).toHaveCount(0)
     await expect(page.locator('.sub-billing-toggle')).toHaveCount(0)
     await expect(page.getByRole('link', { name: /See Free and Pro/ })).toBeVisible()
+  })
+
+  // AN UNREACHABLE PRICE SERVICE IS A STATE THIS PANEL HAS TO RENDER. With
+  // /api/get-prices down, `loaded` is true (the fetch SETTLED) and the amount
+  // is null, so the Pro tier printed a blank where the price goes — which
+  // reads as free — over the line "USD · null/mo". /plans and /checkout
+  // already answer this outage; Settings now says what they say.
+  test('signed in, the Pro tier never prints a blank price or "null" when pricing is down', async ({ page }) => {
+    watch(page, 'a free account comparing plans while the price service is down')
+    await page.route('**/api/get-prices*', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }))
+    await page.addInitScript(() => { try { localStorage.setItem('vs-settings-section', 'support') } catch { /* private mode */ } })
+    await signIn(page, { plan: 'free' })
+    await go(page, '/settings')
+
+    const pro = page.locator('.sub-tier-pro')
+    await expect(pro).toBeVisible()
+    for (const billing of ['Yearly', 'Monthly']) {
+      await page.getByRole('tab', { name: new RegExp(billing) }).click()
+      const amount = (await pro.locator('.sub-tier-amount').innerText()).trim()
+      expect(amount, `${billing}: the Pro price is blank`).not.toBe('')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the price line prints "null"`).not.toContainText('null')
+      await expect(pro.locator('.sub-tier-sub'), `${billing}: the outage is not said`).toContainText('Live pricing is unreachable')
+    }
   })
 })
