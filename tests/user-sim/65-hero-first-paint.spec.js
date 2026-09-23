@@ -280,11 +280,42 @@ async function arriveFromAnotherRoute(page) {
 }
 
 test("arriving at the homepage in-session still plays the entrance, and still paints inside its clip on frame 0", async ({ page }) => {
+  // EVERY FRAME, FROM BEFORE THE CLICK. The hero used to commit without `.is-in`
+  // and get it one requestAnimationFrame later, so for one to three frames the
+  // headline painted whole and settled, then every word dropped under its mask
+  // and rose — and a single read after the words appeared could land in that
+  // window and see no entrance at all (CI run 35827912049). A read cannot rule
+  // that out; only a per-frame scan can. It is installed on the document the
+  // visitor starts on, which survives the in-session route change, and counts
+  // the frames on which the hero's words existed with no entrance on them before
+  // the entrance first appeared.
+  await page.addInitScript(() => {
+    window.__heroBare = 0
+    window.__heroEntered = false
+    const scan = () => {
+      const w = document.querySelector('.sp-hero-h1 .sp-w')
+      if (w && !window.__heroEntered) {
+        if (w.getAnimations().some((a) => a.animationName === 'sp-word-up')) window.__heroEntered = true
+        else window.__heroBare += 1
+      }
+      requestAnimationFrame(scan)
+    }
+    requestAnimationFrame(scan)
+  })
   watch(page, 'a visitor who reaches the homepage from a tool, for whom the hero really does arrive')
   await arriveFromAnotherRoute(page)
 
   const lines = page.locator('.sp-hero-h1 .sp-w')
   await expect(lines).toHaveCount(HERO_WORDS)
+  // Wait on the animation layer rather than on a single read: the scan must have
+  // seen the entrance. If it never arrives this times out and the assertion
+  // below names why.
+  await page.waitForFunction(() => window.__heroEntered, null, { polling: 'raf', timeout: 5000 }).catch(() => {})
+  const scan = await page.evaluate(() => ({ entered: window.__heroEntered, bare: window.__heroBare }))
+  expect(scan.entered, 'the per-frame scan never saw an sp-word-up entrance on the hero').toBe(true)
+  expect(scan.bare, `the headline painted settled for ${scan.bare} frame(s) before its entrance started — `
+    + 'a visible flash, then every word dives under its mask and rises').toBe(0)
+
   const frame0 = await lines.evaluateAll(FIRST_FRAME)
 
   for (const [i, f] of frame0.entries()) {
