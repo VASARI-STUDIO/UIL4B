@@ -74,7 +74,28 @@ async function openBox(page) {
   await expect(fact(page, 'triangles'), 'the box never finished loading').toHaveText('12', { timeout: 20000 })
 }
 
+// ONE HONEST BUDGET FOR THE WHOLE FILE, not a fix per test as each one trips.
+//
+// Every test here starts from a fresh browser context, so every one that opens
+// a model downloads the 808 kB three.js engine into an empty cache and parses
+// and draws it. On the CI runner that makes this file uniformly slow, measured
+// across three runs (35849298083, 35910539677, 35913674130): the model tests
+// took 24.5-30.2 s, the ones that never open the engine 14-21 s, and each of
+// the two 30 s timeouts in those runs had nothing failing — the next wait was
+// simply still inside its own limit. A long-cache header on the preview server
+// would not help: Playwright contexts do not share an HTTP cache, so every
+// context is cold whatever the header says.
+//
+// So each test gets twice the slowest single-model test measured on CI.
+// Every wait inside keeps its own backstop (go() 20 s, openBox 20 s, the
+// result and error waits their own), so a real hang still fails there, by
+// name, well inside this.
+const SLOWEST_MODEL_TEST_ON_CI_MS = 30_000
+const FILE_TEST_BUDGET_MS = 2 * SLOWEST_MODEL_TEST_ON_CI_MS
+
 test.describe('3D Viewer', () => {
+  test.describe.configure({ timeout: FILE_TEST_BUDGET_MS })
+
   test('a model is drawn, described, turned from the keyboard, and converted', async ({ page }) => {
     watch(page, PERSONA)
     await go(page, ROUTE)
@@ -253,8 +274,8 @@ test.describe('3D Viewer', () => {
   })
 
   test('no horizontal overflow from 320 to 1920, in both themes, with a model open', async ({ browser }) => {
-    // A BUDGET PER ITERATION, the derivation 85-colour-breakpoints and
-    // 88 already use. The 30 s default is a budget for a test that opens ONE
+    // A BUDGET PER ITERATION, on top of the file budget above, the derivation
+    // 85-colour-breakpoints and 88 already use. The 30 s default is a budget for a test that opens ONE
     // page; this one opens a fresh context per theme, loads the route, fetches
     // the 808 kB three.js engine into that context's empty cache, parses and
     // draws a model, then walks seven widths — twice. It took 28.4 s on the CI
@@ -265,7 +286,8 @@ test.describe('3D Viewer', () => {
     // there, by name.
     const THEMES = ['light', 'dark']
     const WIDTHS = [320, 390, 768, 1024, 1280, 1440, 1920]
-    const PAGE_AND_MODEL_MS = 15000
+    // Two cold loads in one test: per theme, the slowest single-model test.
+    const PAGE_AND_MODEL_MS = SLOWEST_MODEL_TEST_ON_CI_MS
     const PER_WIDTH_MS = 600
     test.setTimeout(10000 + THEMES.length * (PAGE_AND_MODEL_MS + WIDTHS.length * PER_WIDTH_MS))
     for (const theme of THEMES) {
