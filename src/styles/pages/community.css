@@ -563,6 +563,15 @@
   transform: none !important;
 }
 
+/* Touch: 44px under a coarse pointer. The chips and the sort buttons grow;
+   the heart keeps its painted pill, because it sits over the card's artwork,
+   and gains the target through an invisible ring around it. */
+@media (pointer: coarse) {
+  .ch-spectrum .ch-filter,
+  .ch-spectrum .ch-sort-btn { min-height: 44px; }
+  .ch-spectrum .ch-heart::after { content: ""; position: absolute; inset: -8px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-card,
   :where(html:not([data-reduced-motion="false"])) .ch-spectrum .ch-filter,

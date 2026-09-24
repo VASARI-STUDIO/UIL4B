@@ -45,76 +45,11 @@
 .auth-gate-title{font-size:16px;font-weight:700;text-align:center;margin-bottom:4px}
 .auth-gate-error{font-size:12px;color:var(--err-strong);background:rgba(239,68,68,.08);padding:8px 12px;border-radius:var(--radius-s);text-align:center}
 .auth-gate-footer{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px}
-.auth-gate-google-link,.auth-gate-switch{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-strong);cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 4px}
+.auth-gate-google-link,.auth-gate-switch{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:600;color:var(--accent-mid);cursor:pointer;display:flex;align-items:center;gap:4px;padding:2px 4px}
 .auth-gate-google-link:hover,.auth-gate-switch:hover{text-decoration:underline}
 .auth-gate-sep{color:var(--t3);font-size:11px}
-.fc-card{display:flex;flex-direction:column;gap:8px;padding:12px;position:relative;align-items:stretch}
-.fc-remove{position:absolute;top:8px;right:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:none;border-radius:50%;background:var(--bg-3);color:var(--t1);font-size:16px;line-height:1;cursor:pointer;transition:all var(--t);z-index:2}
-.fc-remove:hover{background:var(--err);color:var(--err-fg)}
-.fc-remove:disabled{opacity:.4;cursor:not-allowed}
-.fc-thumb{width:100%;aspect-ratio:16/10;border-radius:var(--radius-s);overflow:hidden;background:var(--bg-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
-.fc-thumb img{width:100%;height:100%;object-fit:contain}
-.fc-name{font-size:12px;font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fc-video{width:100%;max-height:380px;border-radius:var(--radius);background:#000;display:block}
-.fc-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin-top:10px}
-.fc-status-err{color:var(--err-strong)}
-/* The byte count beside the engine-download sentence: tabular so it does not
-   jitter as it climbs. */
-.fc-status-bytes{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--t1);white-space:nowrap}
-.fc-progress{height:8px;background:var(--bg-3);border-radius:999px;overflow:hidden;margin-top:10px}
-.fc-progress-bar{height:100%;background:var(--brand);border-radius:999px;transition:width var(--dur-2) var(--ease-out)}
-.fc-soon-card{padding:36px 28px;text-align:left;border-style:dashed}
-.fc-soon-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,var(--brand),var(--brand-soft));color:var(--accent-fg);margin-bottom:14px}
-.fc-spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--brand);border-radius:50%;animation:fc-spin .7s linear infinite;flex-shrink:0}
-/* THE SETTINGS ROW WAS ONE FLEX LINE WITH A GREEDY MIDDLE.
-
-   Measured at 1280 on 2026-09-15: Output Format sat at the far left, the
-   quality slider took roughly 870px of the row because .fc-field-grow is the
-   only flexible cell, and Size limit and Export Scale were pushed against the
-   right edge — so the eye travelled about 1200px between the format and the
-   two controls that decide the output, and the slider was four times wider
-   than any value it sets needs.
-
-   A grid with a sane track size puts every control at a comparable width and
-   lets them wrap in reading order on a narrow screen. The slider gets two
-   tracks because it genuinely wants more room than a select, and no more. */
-.fc-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px 16px;margin-top:10px;align-items:start;max-width:860px}
-.fc-settings .fc-field-grow{grid-column:span 2;min-width:0}
-.fc-select{width:100%;max-width:220px}
-.fc-select--narrow{max-width:120px}
-
-/* The output readout. One line, under the controls it explains, and quiet
-   enough that it reads as a status rather than another control. */
-.fc-outsize{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12.5px;color:var(--t2);max-width:860px}
-.fc-outsize-k{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
-.fc-outsize-v{color:var(--t1)}
-.fc-outsize-v strong{color:var(--t0);font-weight:700}
-.fc-outsize-arrow{color:var(--t3)}
-.fc-outsize-note{margin-top:0}
-
-@media(max-width:640px){
-  .fc-settings{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
-  .fc-settings .fc-field-grow{grid-column:1 / -1}
-}
-.fc-actions{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
-.fc-note{font-size:10px;color:var(--t2);margin-top:2px}
-/* States what a homepage output draft actually became here — including the part
-   this converter cannot honour. Never a success claim: nothing is converted yet. */
-.fc-draft-note{margin-top:12px;padding:10px 14px;border:1px solid color-mix(in srgb,var(--accent) 32%,var(--border));border-radius:var(--radius-s);background:color-mix(in srgb,var(--accent) 7%,var(--bg-1));font-size:var(--fs-caption);line-height:1.5;color:var(--t1)}
-.fc-draft-note strong{color:var(--t0);font-weight:650}
-.fc-field-grow{flex:1;min-width:200px}
-.fc-bg-pick{width:42px;height:30px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);cursor:pointer}
-@media(max-width:768px){
-  .fc-video{max-height:260px}
-  .fc-soon-card{padding:24px 18px}
-  .fc-soon-card h2{font-size:20px}
-  .fc-soon-card p{font-size:13px}}
-
-@media(max-width:480px){
-  .fc-card{padding:10px}
-  .fc-video{max-height:200px}
-  .fc-soon-card{padding:20px 14px}
-  .fc-soon-card h2{font-size:18px}}
+/* The File Converter's `fc` rules moved to src/styles/pages/file-converter.css
+   on 2026-09-23, root-scoped under `.fc` (Spectrum pass). */
 
 
 /* ── Keyboard Shortcuts Overlay ─────────────────────────────── */
@@ -137,14 +72,13 @@
   .kbd-list{padding:8px 16px 14px}
   .kbd-desc{font-size:12px}
 }
-.seo-serp.is-mobile{max-width:360px}
+/* .seo-serp.is-mobile moved to pages/seo-inspector.css, under .seo-page. */
 
 
 /* Pro-locked overlay shell (placeholder is server-gated; we style the shell only) */
 .pro-lock{position:relative;border-radius:var(--radius-l);overflow:hidden;isolation:isolate}
 .pro-lock-veil{position:absolute;inset:0;background:var(--scrim);backdrop-filter:blur(10px) saturate(120%);-webkit-backdrop-filter:blur(10px) saturate(120%)}
 .pro-lock-cta{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:12px;padding:32px 28px;text-align:center;max-width:360px;margin:0 auto;min-height:200px;justify-content:center}
-.pro-lock-badge{display:inline-flex;align-items:center;gap:6px;font:700 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-fg);background:var(--accent-strong);padding:4px 10px;border-radius:var(--radius-pill)}
 .pro-lock-title{font:600 18px/1.3 var(--font);letter-spacing:-.02em;color:var(--t0)}
 .pro-lock-sub{font:400 13px/1.6 var(--font);color:var(--t1);max-width:42ch}
 .pro-lock-cta .btn-primary{margin-top:4px}
@@ -197,8 +131,6 @@
 .cs-sw-cc-ratio{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--cs-cc-tx,var(--t1))}
 .cs-sw-badges{display:flex;gap:4px}
 .cs-sw-badge{font-size:9px;font-weight:700;letter-spacing:.04em;padding:2px 6px;border-radius:5px}
-.cs-sw-fix{margin-top:6px;font-size:11px;font-weight:700;color:var(--accent-strong);background:none;border:1px solid var(--border);border-radius:var(--radius-s);padding:5px 10px;cursor:pointer}
-.cs-sw-fix:hover{border-color:var(--bh);background:var(--hvr)}
 .cs-sw-siblings{display:flex;flex-direction:column;gap:2px}
 .cs-sw-sib-row{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--radius-s)}
 .cs-sw-sib-chip{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);flex:0 0 auto;background:var(--cs-sib,#000)}
@@ -228,8 +160,6 @@
    so a background here would paint over it. */
 .cs-sw-edit-chip{width:40px;height:40px;flex:0 0 auto}
 .cs-sw-edit-err{font-size:11px;color:var(--err-strong);display:flex;align-items:center;gap:5px;margin-bottom:var(--s-3)}
-.cs-sw-edit-note{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:var(--s-3)}
-.cs-sw-edit-note button{font:inherit;font-weight:700;color:var(--accent-strong);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline}
 .cs-sw-edit-sub{font-family:var(--mono);font-size:11px;color:var(--t2);margin-bottom:var(--s-3)}
 .cs-sw-edit-sep{height:1px;background:var(--border);margin:0 0 var(--s-3)}
 .cs-sw-recent{display:flex;gap:6px;margin-bottom:var(--s-3);flex-wrap:wrap}
@@ -239,14 +169,8 @@
 .cs-cb-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .cs-cb-title{font-size:12px;font-weight:600;color:var(--t2);white-space:nowrap}
 .cs-cb-select-label{font-size:12px;font-weight:600;color:var(--t2)}
-.cs-cb-thumb{position:absolute;top:3px;left:3px;z-index:0;height:calc(100% - 6px);border-radius:var(--radius-pill);background:var(--brand);box-shadow:0 2px 8px -2px var(--brand-glow);transform:translateX(var(--cs-cb-x,0));width:var(--cs-cb-w,0);transition:transform var(--dur-4) var(--ease-spring),width var(--dur-4) var(--ease-spring)}
 .cs-cb-select{height:34px;padding:0 30px 0 12px;font-family:var(--font);font-size:12px;font-weight:600;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);cursor:pointer}
-.cs-cb-banner{display:flex;align-items:center;gap:10px;margin-bottom:var(--s-3);padding:9px var(--s-4);border-radius:var(--radius);background:color-mix(in srgb,var(--brand) 8%,var(--bg-2));border:1px solid color-mix(in srgb,var(--brand) 24%,var(--border));font-size:12px;color:var(--t1)}
-.cs-cb-banner-icon{flex:0 0 auto;color:var(--brand)}
-.cs-cb-banner-exit{margin-left:auto;font-weight:700;color:var(--accent-strong);background:none;border:none;cursor:pointer;font-size:12px;white-space:nowrap}
 .cs-cb-tag{position:absolute;top:6px;right:6px;font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:color-mix(in srgb,#000 38%,transparent);color:#fff;z-index:3}
-.cs-pb-rail.cb-on .cs-pb-swatch{cursor:default}
-.cs-pb-rail.cb-on .cs-pb-swatch.cs-cb-clash{box-shadow:inset 0 0 0 2px var(--warn)}
 
 /* ──────────────────────────────────────────────────────────────────────────
    Colour System popup (CS#3.14, Slice 3). Replaces the old cs-add-menu dropdown.
@@ -262,11 +186,6 @@
 /* Head */
 .cs-csys-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:var(--s-3) var(--s-4);border-bottom:1px solid var(--border);flex:0 0 auto}
 .cs-csys-title{font-size:16px;line-height:1.2;font-weight:600;letter-spacing:-.01em;color:var(--t0);margin:0}
-.cs-csys-close{width:32px;height:32px;flex:0 0 auto;border:none;border-radius:var(--radius-s);background:none;color:var(--t2);font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:background var(--t-fast),color var(--t-fast)}
-.cs-csys-close:hover{background:var(--hvr);color:var(--t0)}
-.cs-csys-close:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
-.cs-csys-tab:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--brand)}
-.cs-csys-tab-underline{position:absolute;bottom:-1px;left:0;height:2px;background:var(--brand);width:var(--cs-csys-tab-w,0);transform:translateX(var(--cs-csys-tab-x,0));transition:transform var(--dur-3) var(--ease-spring),width var(--dur-3) var(--ease-spring)}
 
 /* Body / panel */
 .cs-csys-body{padding:var(--s-4);overflow-y:auto;flex:1 1 auto;overscroll-behavior:contain}
@@ -279,11 +198,6 @@
 
 /* Foot — contextual action bar. */
 .cs-csys-foot{display:flex;align-items:center;gap:var(--s-3);margin-top:var(--s-5);padding-top:var(--s-4);border-top:1px solid var(--border)}
-.cs-csys-add:hover:not(:disabled){filter:brightness(1.08)}
-.cs-csys-add:disabled{opacity:.45;cursor:not-allowed}
-.cs-csys-add:focus-visible{outline:none;box-shadow:0 0 0 3px var(--brand-glow)}
-.cs-csys-ghost:hover{background:var(--hvr);color:var(--t0)}
-.cs-csys-ghost:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
 .cs-csys-foot-note{font-size:12px;line-height:1.45;color:var(--t2)}
 
 /* Visually-hidden aria-live */
@@ -292,11 +206,17 @@
 /* ── Generate tab ── */
 .cs-csys-auto{display:flex;border-radius:var(--radius);overflow:hidden}
 .cs-csys-auto-tile{flex:1;height:40px;background:var(--cs-csys-tile,var(--bg-3))}
-.cs-csys-harm-chip:hover{background:var(--bh)}
-.quota-row{display:grid;gap:5px}
+/* ── QuotaMeter (components/QuotaMeter.jsx) — Spectrum pass, 2026-09-23 ─────
+   The meter is the one object here allowed a 999px radius: it is a meter.
+   The container's base rule (.quota) is in tool-shell.css, which this lane
+   does not own, so the card treatment is raised to `.quota.quota--tool` —
+   two classes, which outranks it wherever Vite puts the two sheets. The row
+   label takes the app file's mono section label; the count stays mono. */
+.quota.quota--tool{background:var(--card);border-radius:var(--radius-xl);box-shadow:none}
+.quota-row{display:grid;gap:6px}
 .quota-row-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.quota-label{font-size:12px;font-weight:600;color:var(--t1)}
-.quota-count{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--t2);font-variant-numeric:tabular-nums}
+.quota-label{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+.quota-count{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t1);font-variant-numeric:tabular-nums}
 .quota-track{position:relative;height:6px;border-radius:var(--radius-pill);background:var(--bg-3);overflow:hidden}
 .quota-fill{display:block;height:100%;width:var(--quota-pct,0%);border-radius:var(--radius-pill);background:var(--accent);transition:width var(--dur-3) var(--ease-out)}
 .quota-track--low .quota-fill{background:var(--warn)}
@@ -304,7 +224,7 @@
 .quota-msg{margin:0;font-size:12.5px;line-height:1.5;color:var(--t1)}
 .quota-msg--low{color:var(--warn-strong)}
 .quota-msg--out{color:var(--err-strong)}
-.quota-note{margin:0;font-size:11.5px;line-height:1.45;color:var(--t3)}
+.quota-note{margin:0;font-size:12px;line-height:1.45;color:var(--t2)}
 html[data-reduced-motion="true"] .quota-fill{transition:none}
 @media (prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .quota-fill{transition:none}

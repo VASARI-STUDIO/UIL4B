@@ -250,6 +250,21 @@ test.describe('Semantic Colour system workflow', () => {
     await expect(page.locator('.cs-tools-footer-lead')).toContainText('Validate the states')
   })
 
+  // The selected preset was carried by `.on` and colour alone: a screen-reader
+  // user heard eight identical buttons per role and never which was on.
+  test('each role announces which preset is on, and the announcement follows a click', async ({ page }) => {
+    watch(page, 'a designer on a screen reader choosing a success green')
+    await go(page, '/create/semantic-color')
+    const success = page.locator('.stc-role').first()
+    // One pressed chip per role, five roles.
+    await expect(page.locator('.stc-role-presets button[aria-pressed="true"]')).toHaveCount(5)
+    const teal = success.getByRole('button', { name: 'Teal', exact: true })
+    await expect(teal).toHaveAttribute('aria-pressed', 'false')
+    await teal.click()
+    await expect(teal).toHaveAttribute('aria-pressed', 'true')
+    await expect(success.locator('button[aria-pressed="true"]')).toHaveCount(1)
+  })
+
   test('the semantic editor and handoff remain contained on a narrow screen', async ({ page }) => {
     watch(page, 'mobile product designer')
     await page.setViewportSize({ width: 390, height: 844 })
@@ -313,7 +328,7 @@ test.describe('The Contrast Checker meets the standard it enforces', () => {
       // THE THEME IS ESTABLISHED BEFORE THE FIRST PAINT, not stamped afterwards.
       //
       // This used to `go()` and then setAttribute('data-theme', theme). The
-      // tokens on :root do change at once - `--card-grad` reads #191a1d
+      // tokens on :root do change at once - `--card-grad` reads #111215
       // immediately - but `.card` carries `transition: all .2s`, so its
       // BACKGROUND is still the previous theme's for 200ms. Reading a value
       // that is mid-transition at whatever instant the test arrives is the same

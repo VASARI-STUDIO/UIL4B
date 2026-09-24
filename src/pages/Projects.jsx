@@ -117,23 +117,22 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
           </svg>
         </button>
 
-        <div className="fg-detail-section" style={{ marginBottom: 24 }}>
+        <div className="fg-detail-section proj-detail-head">
           {editing ? (
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input value={name} onChange={e => setName(e.target.value)} autoFocus style={{ flex: 1, fontSize: 16, fontWeight: 700 }} />
+            <div className="proj-detail-rename">
+              <input value={name} onChange={e => setName(e.target.value)} autoFocus aria-label={`Rename ${project.name}`} />
               <button className="btn btn-s" onClick={() => { onRename(project.id, name); setEditing(false) }}>Save</button>
               <button className="btn btn-s" onClick={() => { setName(project.name); setEditing(false) }}>Cancel</button>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="proj-detail-title">
               {icon && <img src={icon} alt="" className="proj-detail-icon" />}
-              <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em', flex: 1 }}>{project.name}</h2>
-              {isCurrent && (
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ok)', background: 'rgba(16,185,129,.1)', padding: '3px 8px', borderRadius: 4 }}>Loaded</span>
-              )}
-              {project.archived && (
-                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', background: 'var(--bg-2)', color: 'var(--t2)', padding: '3px 8px', borderRadius: 4 }}>Archived</span>
-              )}
+              <h2 className="proj-detail-h">{project.name}</h2>
+              {/* The same two words the row carries, in the same treatment —
+                  they were a green chip and a grey chip here, a third and a
+                  fourth way of saying one state. */}
+              {isCurrent && <span className="uh-tag uh-tag--live">Loaded</span>}
+              {project.archived && <span className="uh-tag">Archived</span>}
             </div>
           )}
         </div>
@@ -150,7 +149,7 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
               ))}
             </div>
           ) : (
-            <p style={{ fontSize: 12, color: 'var(--t2)' }}>No colours saved.</p>
+            <p className="proj-detail-none">No colours saved.</p>
           )}
         </div>
 
@@ -165,27 +164,27 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
 
         <div className="fg-detail-section">
           <div className="fg-detail-label">Icon</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="proj-detail-iconrow">
             {icon ? (
               <img src={icon} alt="Project icon" className="proj-detail-icon-lg" />
             ) : (
               <div className="proj-detail-icon-lg proj-detail-icon-empty">—</div>
             )}
-            <label className="btn btn-s" style={{ cursor: 'pointer' }}>
+            <label className="btn btn-s proj-detail-upload">
               {icon ? 'Replace' : 'Upload icon'}
               <input
                 type="file"
                 accept="image/svg+xml,image/png"
-                style={{ display: 'none' }}
+                hidden
                 onChange={e => { const f = e.target.files?.[0]; if (f) onIconChange?.(f); e.target.value = '' }}
               />
             </label>
             {icon && (
-              <button className="btn btn-s" onClick={() => onIconRemove?.()} style={{ color: 'var(--err)' }}>
+              <button className="btn btn-s uh-danger" onClick={() => onIconRemove?.()}>
                 Remove icon
               </button>
             )}
-            <span style={{ fontSize: 11, color: 'var(--t2)' }}>SVG or PNG, max 128px / 50KB.</span>
+            <span className="proj-detail-hint">SVG or PNG, max 128px / 50KB.</span>
           </div>
         </div>
 
@@ -199,17 +198,19 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
         </div>
 
         {confirmDelete ? (
-          <div className="fg-detail-actions" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
-            <div style={{ fontSize: 12, color: 'var(--err)', lineHeight: 1.5 }}>
+          <div className="fg-detail-actions proj-detail-confirm">
+            <p className="proj-detail-confirm-text">
               Type <strong>{project.name}</strong> to confirm deletion:
-            </div>
-            <input value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder={project.name} autoFocus style={{ fontSize: 13 }} />
-            <div style={{ display: 'flex', gap: 8 }}>
+            </p>
+            <input value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder={project.name} autoFocus aria-label={`Type the project name to confirm deleting ${project.name}`} />
+            <div className="proj-detail-confirm-actions">
+              {/* Filled only once the name matches. The inline version painted
+                  #fff on --err, which is 2.8:1 in dark; --err-strong under
+                  --err-fg clears 4.5 in both themes. */}
               <button
-                className="btn btn-s"
+                className="btn btn-s uh-danger-go"
                 onClick={() => { onDelete(project.id); setConfirmDelete(false); setDeleteConfirmText(''); onClose() }}
                 disabled={deleteConfirmText !== project.name}
-                style={{ color: '#fff', background: deleteConfirmText === project.name ? 'var(--err)' : 'var(--bg-2)', borderColor: 'var(--err)', opacity: deleteConfirmText === project.name ? 1 : 0.5 }}
               >
                 Permanently delete
               </button>
@@ -228,7 +229,7 @@ function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename
             )}
             <button className="btn" onClick={() => setEditing(true)}>Rename</button>
             <button className="btn" onClick={() => { onArchive(project.id); onClose() }}>{project.archived ? 'Restore' : 'Archive'}</button>
-            <button className="btn" onClick={() => setConfirmDelete(true)} style={{ color: 'var(--err)' }}>Delete</button>
+            <button className="btn uh-danger" onClick={() => setConfirmDelete(true)}>Delete</button>
           </div>
         )}
       </div>
@@ -276,9 +277,9 @@ function NewProjectModal({ onClose, onCreate, error }) {
           </svg>
         </button>
 
-        <div className="fg-detail-section" style={{ marginBottom: 20 }}>
-          <h2 id="proj-new-title" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-.02em' }}>New project</h2>
-          <p style={{ fontSize: 13, color: 'var(--t2)', marginTop: 4 }}>
+        <div className="fg-detail-section proj-detail-head">
+          <h2 id="proj-new-title" className="proj-detail-h">New project</h2>
+          <p className="proj-new-lede">
             Give it a name and choose where to begin.
           </p>
         </div>
@@ -297,7 +298,7 @@ function NewProjectModal({ onClose, onCreate, error }) {
             // 2026-09-09: keydown@input → click@button[New Project].
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
             placeholder="e.g. Brand v1, Marketing site, Mobile app"
-            style={{ width: '100%', fontSize: 15, fontWeight: 600 }}
+            className="proj-new-name"
           />
         </div>
 
@@ -307,6 +308,7 @@ function NewProjectModal({ onClose, onCreate, error }) {
             <button
               type="button"
               className={`proj-new-start-opt${start === 'blank' ? ' active' : ''}`}
+              aria-pressed={start === 'blank'}
               onClick={() => setStart('blank')}
             >
               <strong>Blank canvas</strong>
@@ -315,6 +317,7 @@ function NewProjectModal({ onClose, onCreate, error }) {
             <button
               type="button"
               className={`proj-new-start-opt${start === 'current' ? ' active' : ''}`}
+              aria-pressed={start === 'current'}
               onClick={() => setStart('current')}
             >
               <strong>Current design</strong>
@@ -667,16 +670,24 @@ export default function Projects({ toast }) {
             </p>
           )}
         </div>
+        {/* THE ACCENT IS ON "NEW PROJECT" NOW, AND IT WAS ON THE OTHER ONE.
+            Ported from #481. Both controls stay, but they were drawn as equals
+            with the filled one on the wrong action: the empty state's own
+            control ("Create your first project") opens THIS dialog, so a
+            person's primary action changed colour the moment their account
+            filled up. "Save Current" files away whatever is in the working kit
+            — meaningful only to somebody just back from a tool — so it is the
+            secondary of the two. One filled control on the page. */}
         <div className="uh-head-actions">
           {!showSaveForm && (
-            <button className="btn btn-accent" onClick={() => setShowSaveForm(true)}>
+            <button className="btn" onClick={() => setShowSaveForm(true)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
               </svg>
               Save Current
             </button>
           )}
-          <button className="btn" onClick={() => setShowNewModal(true)} title="Start a new project">
+          <button className="btn btn-accent" onClick={() => setShowNewModal(true)} title="Start a new project">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -686,25 +697,25 @@ export default function Projects({ toast }) {
       </header>
 
       {showSaveForm && (
-        <div className="card" style={{ padding: 20, marginBottom: 24, maxWidth: 560 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 10 }}>
+        <div className="uh-save">
+          <label className="uh-save-label" htmlFor="uh-save-name">
             Add current design to project
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          </label>
+          <div className="uh-save-row">
             <input
               value={newName}
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
               placeholder="e.g. Brand v1, Marketing site, Mobile app"
+              id="uh-save-name"
               autoFocus
-              style={{ flex: 1 }}
             />
             <button className="btn btn-accent" onClick={handleSave}>Save</button>
             <button className="btn" onClick={() => { setShowSaveForm(false); setNewName(''); setSaveError('') }}>Cancel</button>
           </div>
-          <div style={{ fontSize: 11, color: 'var(--t2)', marginTop: 10 }}>
+          <p className="uh-save-note">
             Captures: palette, tints, state colours, gradient, fonts, type scale.
-          </div>
+          </p>
           {saveError && <SaveRefusal message={saveError} testId="project-save-refusal" />}
         </div>
       )}
@@ -827,12 +838,15 @@ export default function Projects({ toast }) {
            pushing its own button further down the narrower the screen got. It
            is a class now so the value can answer the width; the 48 is unchanged
            from 641px up, which is every width it was ever looked at on. */
-        <div className="card uh-empty">
-          <div className="uh-empty-mark">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-            </svg>
-          </div>
+        /* NOT A CARD ANY MORE (2026-09-23, carried over from #481). A centred
+           card with a circular tinted icon badge over a bold centred heading
+           over a filled pill is the stock first-run screen — the founder's
+           "feels AI generated" call on this page. The folder glyph was hidden
+           from assistive technology precisely because it carried nothing, so it
+           is gone, and the panel takes the one shape this page uses for "you
+           have nothing here yet": the same panel .uh-signin draws for a
+           signed-out visitor. Same words. */
+        <div className="uh-empty">
           <h2 className="uh-empty-title">No projects yet</h2>
           <p className="uh-empty-text">
             Build a palette in <NavLink to="/create/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/create/font-pair">Font Pair Finder</NavLink>, then save your design as a project.
@@ -861,7 +875,7 @@ export default function Projects({ toast }) {
            role="status" for the same reason LibraryEmpty gives: the grid
            emptying is otherwise silent, and at 390 this panel opens at y=815
            in an 844px viewport, directly under the controls that caused it. */
-        <div className="card uh-filtered" role="status">
+        <div className="uh-filtered" role="status">
           <p className="uh-filtered-text">
             No projects match “{search.trim()}”.
           </p>
@@ -896,10 +910,10 @@ export default function Projects({ toast }) {
           </div>
 
           {archivedProjects.length > 0 && (
-            <div style={{ marginTop: 32 }}>
-              <button className="btn btn-s" onClick={() => setShowArchived(!showArchived)} style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 12 }}>
+            <div className="uh-archived">
+              <button className="btn btn-s uh-archived-toggle" onClick={() => setShowArchived(!showArchived)} aria-expanded={showArchived}>
                 {showArchived ? 'Hide' : 'Show'} archived ({archivedProjects.length})
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ marginLeft: 4, transition: 'transform .2s', transform: showArchived ? 'rotate(180deg)' : 'none' }}>
+                <svg className="uh-archived-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>

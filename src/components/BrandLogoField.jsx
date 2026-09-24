@@ -207,7 +207,7 @@ export default function BrandLogoField() {
         <span className="exp-logo-acts">
           <button
             type="button"
-            className="ui-pill ui-pill-out ui-pill-sm"
+            className="btn btn-s"
             onClick={() => fileRef.current?.click()}
             disabled={busy}
           >

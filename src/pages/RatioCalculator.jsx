@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
+// This page's own Spectrum sheet. Every selector in it is rooted at .arc-page,
+// so it wins over the two shared sheets above however Vite orders the chunk.
+import '../styles/pages/aspect-ratio.css'
 import { standardSizesForRatio } from '../utils/standardWidths'
 
 // Aspect & Resolution Calculator — start from ANY single piece of information
@@ -447,12 +450,19 @@ export default function RatioCalculator({ onCopy }) {
   const sizeValue = out ? sizeOptions.find(o => o.w === out.width && o.h === out.height)?.name : undefined
 
   return (
-    <div className="sec">
-      <div className="sec-h">
+    // A NAMED REGION, NOT A BARE <div>. Walked through Chrome's accessibility
+    // tree on 2026-09-15 this route reported navigation | main | contentinfo
+    // and nothing naming its content: 56 controls under one heading. The
+    // region takes its name from the page's own h1 — no new words — so a
+    // screen-reader user's landmark list now has the tool in it. The
+    // calculator PANEL still has no heading of its own; that needs a sentence
+    // from the founder (create-tools-left-2026-09-15) and is left for him.
+    <section className="sec arc-page" aria-labelledby="arc-title">
+      <div className="sec-h arc-hero">
         {/* NO TAXONOMY EYEBROW. It read "Imagery" at y=102 — the name of the
             Create group the visitor clicked through to get here, above an h1
             that names the tool. #surface-headers-read-as-ai. */}
-        <h1>Aspect &amp; Resolution Calculator</h1>
+        <h1 id="arc-title">Aspect &amp; Resolution Calculator</h1>
         <p>Start from anything — a device, a screen, a social format, a ratio, or a couple of pixels — and get the matching dimensions, simplified ratio, PPI and diagonal.</p>
       </div>
 
@@ -565,9 +575,12 @@ export default function RatioCalculator({ onCopy }) {
           )}
 
           <div className="rc-field">
-            <div className="seg-label">I know the…</div>
+            <div className="seg-label" id="arc-known-label">I know the…</div>
             <div className="rc-known">
-              <div className="row" style={{ gap: 6 }}>
+              {/* A labelled group, named by the caption above it, so the three
+                  toggles announce what they choose between. The gap that used
+                  to ride here as an inline style is in aspect-ratio.css. */}
+              <div className="arc-sides" role="group" aria-labelledby="arc-known-label">
                 <button type="button" className={`pt-t${side === 'width' ? ' on' : ''}`} aria-pressed={side === 'width'} onClick={() => pickSide('width')}>Width</button>
                 <button type="button" className={`pt-t${side === 'height' ? ' on' : ''}`} aria-pressed={side === 'height'} onClick={() => pickSide('height')}>Height</button>
                 <button type="button" className={`pt-t${side === 'both' ? ' on' : ''}`} aria-pressed={side === 'both'} onClick={() => pickSide('both')}>Width × height</button>
@@ -633,7 +646,9 @@ export default function RatioCalculator({ onCopy }) {
                   <span className="rc-times">×</span>
                   <button className="rc-dim" onClick={() => copy(String(out.height))} title="Copy height">{out.height}<small>H</small></button>
                 </div>
-                <button className="btn btn-s" onClick={() => copy(`${out.width} × ${out.height}`)}>Copy size</button>
+                {/* The page's one primary action, so it is the one accent fill
+                    — drawn by this page's sheet rather than the shared .btn. */}
+                <button type="button" className="arc-copy" onClick={() => copy(`${out.width} × ${out.height}`)}>Copy size</button>
               </div>
               <div className="arc-stats">
                 <button className="arc-stat" onClick={() => copy(simplified || '')} title="Copy ratio">
@@ -718,6 +733,6 @@ export default function RatioCalculator({ onCopy }) {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

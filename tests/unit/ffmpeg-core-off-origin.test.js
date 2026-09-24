@@ -28,7 +28,9 @@ import path from 'node:path'
 
 const ROOT = process.cwd()
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8')
-const SOURCE = 'src/pages/FileConverter.jsx'
+// The engine loader moved out of src/pages/FileConverter.jsx on 2026-09-23,
+// when the animation builder became its second caller. Same code, same pin.
+const SOURCE = 'src/utils/ffmpegEngine.js'
 
 /** Every .js/.jsx file under src/, as { file, text }. */
 function sourceFiles() {

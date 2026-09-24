@@ -15,6 +15,7 @@
 - [Type Scale Generator](https://uil4b.com/create/type-scale): Free modular type scale generator. Set a base size and a ratio, preview the whole scale in a real layout, and copy CSS custom properties, Tailwind or SCSS.
 - [File Converter](https://uil4b.com/create/file-converter): Convert files between formats directly in your browser. Fast, private, client-side processing.
 - [Aspect & Resolution Calculator](https://uil4b.com/create/aspect-ratio): Free aspect ratio and resolution calculator. Pick a device, screen, social format or ratio — get exact dimensions, PPI, and diagonal with a live shape preview.
+- [3D Viewer (beta)](https://uil4b.com/create/3d-viewer): View OBJ, STL, glTF, GLB, PLY, 3MF, FBX, STEP and IGES models in your browser and convert them to GLB, glTF, OBJ, STL, PLY and 3MF.
 - [Alt Text Generator](https://uil4b.com/create/alt-text): Generate accessible alt text for images using AI. Improve SEO and screen-reader support in seconds.
 - [Brand Starter (beta)](https://uil4b.com/create/auto-builder): Describe what you are making and get a palette, a font pairing and a type scale to start from — each opens in the tool that owns it.
 - [SEO Specialist](https://uil4b.com/seo): Free SEO Meta & SERP Inspector. Preview your Google search snippet and social card live, and get an instant, actionable SEO score as you type.

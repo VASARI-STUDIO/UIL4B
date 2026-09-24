@@ -19,9 +19,8 @@
  */
 
 
-
 /* Alpha badge */
-.nav-alpha-badge{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--accent-bg);color:var(--accent-strong);margin-left:auto;flex-shrink:0}
+.nav-alpha-badge{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--accent-bg);color:var(--accent-text);margin-left:auto;flex-shrink:0}
 
 /* Admin group in footer */
 .nav-admin-group{border-top:1px solid var(--border);padding-top:4px;margin-top:4px}
@@ -32,9 +31,6 @@
 .nav-ctx-menu button:hover{background:var(--hvr)}
 
 /* Collapsible Categories */
-.nav-cat{display:flex;flex-direction:column;margin-top:2px}
-.nav-cat+.nav-cat{margin-top:4px;padding-top:4px}
-.nav-cat-header{display:flex;align-items:center;gap:2px;width:100%}
 .nav-cat-arr{width:11px;height:11px;transition:transform var(--dur-2) var(--ease-standard)}
 .nav-cat-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 .sec-h-eyebrow::before{content:'';width:24px;height:1px;background:var(--t3)}
@@ -46,9 +42,6 @@
 .pl-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:80px 20px;text-align:center;color:var(--t2)}
 .pl-empty svg{opacity:.25}
 .pl-empty p{font-size:14px;margin:0}
-
-.nav-item-sub{cursor:grab}
-.nav-item-sub:active{cursor:grabbing}
 
 /* Generic ghost rows reused inside card skeletons */
 .sk-line{display:block;height:10px;border-radius:var(--radius-xs)}
@@ -173,11 +166,11 @@
    three are the shared Library language now (.lbry-filters / .lbry-empty).
    This page ran outlined pills for category beside a filled segment for sort —
    the same two-idioms-in-one-row fault the Gradient Library had. */
-.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-detail-btn:focus-visible,.fg-pair-apply:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fg-more-btn:focus-visible,.fg-compare-chip:focus-visible,.fg-detail-btn:focus-visible,.fg-pair-apply:focus-visible,.fg-compare-copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .fg-more-btn:disabled{opacity:.5;cursor:not-allowed}
 .fg-compare,.fg-detail{position:relative;width:100%;background:var(--bg-0);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--shadow-l);animation:fg-rise var(--dur-3) var(--ease-entrance)}
-.fg-compare:focus-visible,.fg-detail:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
-.fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fg-compare:focus-visible,.fg-detail:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fg-compare-col-name:focus-visible,.fg-compare-col-remove:focus-visible,.fg-detail-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* Detail dialog */
 /* A FRAME, NOT A COLUMN.
@@ -192,7 +185,7 @@
 .fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fg-detail-close:hover{background:var(--bg-3);color:var(--t0)}
 .fg-detail-section{margin-bottom:32px}
-.fg-detail-label{display:block;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-strong)}
+.fg-detail-label{display:block;margin-bottom:14px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
 /* Pinned to the bottom of the frame, so the answer to "I like this one, now
    what" is on screen from the moment the dialog opens instead of 1,700px down
    it. `.fg-detail-apply` is gone with the second action bar it belonged to. */
@@ -205,6 +198,9 @@
    the rendered TEXT with a Range rather than the element's own box: the box
    never moves, so a box assertion could not fail. */
 .snapv-value{display:inline-flex;align-items:center;justify-content:flex-end;min-height:24px}
+/* 44 under a coarse pointer, on every page (type-scale and the palette board
+   already restated it for their own rows; tint did not). */
+@media(pointer:coarse){.snapv-value{min-height:44px}}
 @media(max-width:980px){
   .fg-detail-actions{padding:14px 22px}}
 
@@ -264,7 +260,7 @@
 .aipg-rulecat-head{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;font-family:var(--font);padding:0;color:var(--t0)}
 .aipg-rulecat-arr{transition:transform var(--dur-2) var(--ease-standard);flex-shrink:0;color:var(--t2)}
 .aipg-rulecat-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t1)}
-.aipg-rulecat-count{margin-left:auto;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;background:var(--accent-strong);color:var(--accent-fg)}
+.aipg-rulecat-count{margin-left:auto;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;background:var(--accent-text);color:var(--accent-fg)}
 .aipg-rules{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 
 /* Live preview sidebar */
@@ -298,7 +294,7 @@
 .bkit-card{position:sticky;bottom:96px;z-index:61;margin:0 auto;width:min(440px,calc(100% - 32px));background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg);padding:22px 24px;animation:cp-rise var(--dur-2) var(--ease-entrance)}
 .bkit-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .bkit-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
-.bkit-card-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-strong)}
+.bkit-card-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
 .bkit-card-close{width:28px;height:28px;flex-shrink:0;border-radius:var(--radius-s);border:1px solid transparent;background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
 .bkit-card-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 .bkit-card-title{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:8px}
@@ -344,18 +340,12 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 }
 .cs-csys-harm-diagram{flex:0 0 auto;color:var(--t2)}
 .cs-csys-harm-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cs-csys-drop:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
-.cs-csys-drop svg{color:var(--t3);margin-bottom:2px}
 .cs-csys-drop-title{font-size:13px;font-weight:600;color:var(--t1)}
 .cs-csys-drop-sub{font-size:12px;color:var(--t3)}
 .cs-csys-drop-err{margin-top:6px;font-size:12px;font-weight:550;color:var(--err-strong);text-align:center}
 .cs-csys-file{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
 
 .cs-csys-zoom{display:inline-flex;align-self:flex-start;gap:2px;margin-bottom:var(--s-3);padding:2px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
-.cs-csys-zoom-seg:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
-
-.cs-csys-stage{--cs-csys-stage-h:300px;position:relative;width:100%;border-radius:var(--radius);overflow:hidden;background:var(--bg-0);touch-action:none}
-.cs-csys-stage:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
 .cs-pv-lock-art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:var(--s-5);
   filter:grayscale(1);opacity:.5}
 .cs-pv-lock-phone{width:90px;display:flex;flex-direction:column;gap:7px;padding:12px;
@@ -370,13 +360,7 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .cs-pv-lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:var(--s-3);text-align:center;padding:var(--s-5);
   background:color-mix(in srgb,var(--bg-2) 72%,transparent)}
-.cs-pv-lock-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--radius-pill);
-  background:var(--brand-bg);color:var(--accent-strong);font-size:11px;font-weight:700}
 .cs-pv-lock-label{color:var(--t1);font-size:13px;font-weight:700}
-.cs-pv-lock-cta{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;
-  border-radius:var(--radius-pill);border:1px solid var(--brand);background:transparent;color:var(--accent-strong);
-  font-family:var(--font);font-size:12px;font-weight:650;cursor:pointer;transition:background var(--t),color var(--t)}
-.cs-pv-lock-cta:hover{background:var(--accent-strong);color:var(--accent-fg)}
 .cs-pv-upsell-copy{display:flex;flex-direction:column;gap:3px}
 .cs-pv-upsell-copy strong{color:var(--t0);font-size:15px;font-weight:700}
 .cs-pv-upsell-copy span{color:var(--t2);font-size:12px}
@@ -914,7 +898,6 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
 [data-theme="dark"] .flair--slate{--flair-c:#8E9BAE}  /* 4.60 */
 [data-theme="dark"] .flair--gold{--flair-c:#E1A54D;--flair-warm:#E8BB79}
 .typ-notice-retry:disabled{opacity:.6;cursor:progress}
-.typ-notice-retry:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .typ-hint{margin:0 0 20px;font-size:11.5px;line-height:1.5;color:var(--t2)}
 
 /* ── FontDossier: the About and Examples panels, shared by both font popups ──
@@ -928,7 +911,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    has, instead of the ring's own declaration changing the shape to match
    itself. */
 .fdx-panel{border-radius:var(--radius-s)}
-.fdx-panel:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.fdx-panel:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dgh-hero::before{content:"";position:absolute;inset:auto -10% -65% 42%;height:430px;background:radial-gradient(circle,rgba(124,92,255,.55),rgba(50,190,170,.25) 34%,transparent 68%);filter:blur(10px);pointer-events:none}
 .dgh-copy{position:relative;z-index:1;min-width:0}
 /* Optional inline CTA (the Gradient Library's "Open the Gradient Generator").
@@ -1032,7 +1015,7 @@ html[data-reduced-motion="true"] .uis-cell,html[data-reduced-motion="true"] .uis
    for a horizontal strip; in a column it would leave every label floating in
    the middle of its own row with no common left edge to read down. */
 .lbry-filtermenu .lbry-filter{width:100%;justify-content:flex-start;border-radius:var(--radius)}
-/* IN DARK, --card AND --bg-2 ARE THE SAME HEX (#191A1D), so every "raised
+/* IN DARK, --card AND --bg-2 ARE THE SAME HEX (#111215), so every "raised
    surface on the tray" fill above paints nothing there: the tray's sliding
    indicator is --card on a --bg-2 tray, and the menu's active and hover rows
    are --bg-2 on a --card menu. Measured 2026-09-08 on /discover/palettes with

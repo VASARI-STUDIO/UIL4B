@@ -19,7 +19,6 @@
  */
 
 
-
 /* ─── Admin Dashboard ─── */
 .adm{max-width:1200px}
 .adm-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:24px}
@@ -27,7 +26,7 @@
 .adm-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong)}
 .adm-status-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:adm-pulse 2s infinite}
 .adm-actions{display:flex;gap:6px;flex-wrap:wrap}
-.adm-tab-badge{margin-left:6px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--accent-strong);color:var(--accent-fg)}
+.adm-tab-badge{margin-left:6px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--accent-text);color:var(--accent-fg)}
 
 /* Time filter */
 .adm-time-filter{display:flex;gap:2px;padding:2px;background:var(--bg-2);border-radius:var(--radius-s)}
@@ -81,7 +80,6 @@
 .adm-list-row:last-child{border-bottom:none}
 .adm-list-rank{width:20px;font-size:10px;font-weight:700;color:var(--t3);text-align:center;flex-shrink:0}
 .adm-list-name{font-size:12px;font-weight:500;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.adm-list-value{font-size:12px;font-weight:700;color:var(--accent-strong);font-family:var(--mono);flex-shrink:0}
 
 /* Activity feed */
 .adm-feed{display:flex;flex-direction:column;gap:0}
@@ -156,7 +154,7 @@
 
 /* Lock screen */
 .adm-lock{max-width:400px;margin:80px auto;text-align:center}
-.adm-lock-eyebrow{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-strong);margin-bottom:16px;font-family:var(--mono)}
+.adm-lock-eyebrow{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-text);margin-bottom:16px;font-family:var(--mono)}
 .adm-lock h1{font-size:28px;font-weight:700;letter-spacing:-.03em;margin-bottom:8px}
 .adm-lock p{font-size:14px;color:var(--t1);margin-bottom:24px}
 .adm-lock form{display:flex;gap:8px}
@@ -227,7 +225,7 @@
 .cq-item-body{flex:1;min-width:0}
 .cq-item-name{margin:0;font-size:13.5px;font-weight:650;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cq-item-meta{margin:3px 0 0;font-size:12px;color:var(--t2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.cq-kind{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-strong);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px}
+.cq-kind{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-text);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px}
 .cq-item-actions{display:flex;gap:6px;flex-shrink:0}
 .cq-approve{border-color:var(--ok);color:var(--ok-strong)}
 .cq-approve:hover:not(:disabled){background:var(--ok);border-color:var(--ok);color:var(--ok-fg)}
@@ -294,7 +292,7 @@
  * state most rows are in is noise that hides the two rows that are not. */
 .adm-access{font-size:11px;color:var(--t2)}
 .adm-access--founder,.adm-access--moderator{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:var(--radius-xs,4px);white-space:nowrap}
-.adm-access--founder{background:var(--accent-bg);color:var(--accent-strong)}
+.adm-access--founder{background:var(--accent-bg);color:var(--accent-text)}
 .adm-access-off{color:var(--t3);font-style:italic}
 .adm-access--moderator{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok-strong)}
 
@@ -347,7 +345,7 @@
 .adm-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
 .adm-btn-danger{border-color:var(--err);color:var(--err-strong)}
 .adm-btn-danger:hover:not(:disabled){background:var(--err);border-color:var(--err);color:var(--err-fg)}
-.adm-btn-go{border-color:var(--accent);color:var(--accent-strong)}
+.adm-btn-go{border-color:var(--accent);color:var(--accent-text)}
 .adm-btn-go:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 
 /* ── 980px and under: drop the column the filter chips already answer ───────
@@ -501,7 +499,6 @@
 .adm-user-view-n,
 .adm-bar-value,
 .adm-donut-count,
-.adm-list-value,
 .adm-list-rank,
 .adm-user-count,
 .adm-tab-badge,
@@ -1280,34 +1277,6 @@ html[data-reduced-motion="true"] .adm-status-dot {
 .adm-stripe-input input {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
-}
-
-/* ── THE BUTTONS ARE THE APP'S, NOT THE MARKETING PAGE'S ───────────────────
- *
- * `.btn` in the critical sheet is a 999px pill, which is right for the sales
- * page and wrong here. `UIL4B App.dc.html` gives its secondary button
- * `height:32px;padding:0 13px;border:1px solid rgba(var(--ink-rgb),.11);
- * border-radius:10px;font-size:12.5px` and its primary `border-radius:12px;
- * font-weight:560;min-height:44px` — rectangles on the same 10/12 radius scale
- * as every other control in the app.
- *
- * Scoped to this surface rather than changed globally: `.btn` belongs to the
- * critical sheet, which is another workstream's file, and every other page
- * still wants the pill.
- *
- * The SIZE is deliberately not reduced to the design's 32px here. These
- * buttons sit in table rows and confirmation panels where they are the only
- * target, and the accessibility sweeps hold a ≥24px minimum that the existing
- * padding already clears with room. Shrinking them would be adopting a number
- * rather than a design. */
-.adm .btn,
-.adm-lock .btn {
-  border-radius: var(--radius);
-}
-
-.adm .btn-s,
-.adm-lock .btn-s {
-  border-radius: var(--radius-s);
 }
 
 /* The lock screen's field matches the toolbar field's shape for the same

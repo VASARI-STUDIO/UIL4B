@@ -19,43 +19,22 @@
  */
 
 
-
 /* ─── Shared Utilities (used by Settings + Sidebar) ─── */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px}
-.avatar-circle{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--accent-bg);color:var(--accent-strong);font-weight:700;font-size:14px;flex-shrink:0}
-.avatar-circle img{width:100%;height:100%;object-fit:cover}
-.il-detail-preview{display:flex;align-items:center;justify-content:center;padding:32px;margin-bottom:20px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);min-height:140px;background-image:radial-gradient(circle,color-mix(in srgb,var(--border) 60%,transparent) .5px,transparent .5px);background-size:12px 12px}
-.il-detail-preview img,.il-detail-preview svg{transition:all var(--dur-2) var(--ease-standard)}
-.il-detail-controls{display:flex;flex-direction:column;gap:14px}
-.il-detail-row{display:flex;align-items:center;gap:10px}
-.il-detail-row>label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);min-width:52px;flex-shrink:0}
-.il-detail-row input[type="range"]{flex:1;accent-color:var(--accent)}
-.il-detail-row input[type="color"]{width:28px;height:28px;border:1px solid var(--border);border-radius:var(--radius-s);cursor:pointer;padding:1px;background:var(--bg-1);flex-shrink:0}
-.il-detail-value{font-family:var(--mono);font-size:11px;color:var(--t2);min-width:36px;text-align:right;flex-shrink:0}
-.il-detail-color-input{flex:1;font-family:var(--mono);font-size:12px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t0)}
-.il-detail-reset{width:24px;height:24px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-1);color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--t)}
-.il-detail-reset:hover{background:var(--bg-2);color:var(--t0)}
-.il-detail-code-tabs{display:flex;gap:2px;margin-bottom:8px}
-.il-detail-code{position:relative;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-s);padding:14px 14px 14px 14px;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--t1);max-height:120px;overflow:auto;word-break:break-all;white-space:pre-wrap;cursor:pointer;transition:border-color var(--t)}
-.il-detail-code:hover{border-color:var(--accent)}
-.il-detail-code-hint{position:absolute;top:6px;right:8px;font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);pointer-events:none;transition:color var(--t)}
-.il-detail-code:hover .il-detail-code-hint{color:var(--accent-strong)}
-.ts-row:last-child{border-bottom:none}
 
 /* ─── Button catalogue ─── */
-.btn-cat{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr));gap:10px}
-.btn-cell{display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
 
 /* ─── Layouts ─── */
-.lp{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:14px;min-height:80px}
-.lph{background:var(--bg-3);border:1px dashed var(--bh);border-radius:var(--radius-s)}
 
 /* ── SaveRefusal (src/components/SaveRefusal.jsx) ──
    The free cap's refusal, rendered under the field it refused, on /projects
    and inside the Palette Builder's save menu. Lifted out of pages/projects.css
    when the component became shared: that file only ships with the /projects
    chunk and the homepage renders the palette tool. */
-.uh-quota-link{font-weight:600;color:var(--accent-strong)}
+/* --accent-mid, not --accent-strong: the latter is a per-theme literal that a
+   premium theme moving --accent would strand at the old blue. 5.18:1 on --bg-0
+   light, 9.17:1 dark. */
+.uh-quota-link{font-weight:600;color:var(--accent-mid)}
 @media(max-width:640px){
   .lang-grid{grid-template-columns:1fr}}
 
@@ -63,45 +42,15 @@
 /* Subscription — active Pro state */
 .sub-active{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 22px;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow)}
 .sub-active-top{display:flex;align-items:center;gap:14px;min-width:0}
-.sub-active-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--accent-strong);color:var(--accent-fg);font-size:12px;font-weight:700;letter-spacing:.04em;flex-shrink:0}
+.sub-active-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--accent-mid);color:var(--accent-ink);font-size:12px;font-weight:700;letter-spacing:.04em;flex-shrink:0}
 .sub-active-title{font-size:15px;font-weight:700;color:var(--t0)}
 .sub-active-meta{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5}
 
 /* Subscription — billing toggle */
 .sub-signin-note{font-size:13px;color:var(--t2);margin-bottom:14px}
-.sub-signin-note a{color:var(--accent-strong);font-weight:600}
-.sub-tier-flag{position:absolute;top:-10px;right:20px;padding:4px 10px;border-radius:999px;background:var(--accent-strong);color:var(--accent-fg);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.sub-signin-note a{color:var(--accent-mid);font-weight:600}
+.sub-tier-flag{position:absolute;top:-10px;right:20px;padding:4px 10px;border-radius:999px;background:var(--accent-mid);color:var(--accent-ink);font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
 .sub-tier-top{display:flex;align-items:center;gap:9px}
-.checkout-grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:24px;align-items:start}
-.checkout-summary{display:flex;flex-direction:column;gap:14px;position:sticky;top:24px}
-.checkout-plan-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.checkout-plan-name{font-size:16px;font-weight:700;color:var(--t0)}
-.checkout-plan-cadence{font-size:12px;color:var(--t2);margin-top:2px}
-.checkout-plan-price{text-align:right;white-space:nowrap}
-.checkout-plan-amount{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--t0);line-height:1;display:block}
-.checkout-plan-per{font-size:11px;color:var(--t2)}
-.checkout-plan-note{font-size:11px;color:var(--accent-strong);font-weight:600;margin-top:14px}
-.checkout-price-retry{align-self:flex-start;margin-top:10px}
-.checkout-trial{display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;border-radius:var(--radius);background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok-strong);font-size:12px;font-weight:600}
-.checkout-features{display:flex;flex-direction:column;gap:10px;margin:18px 0 0;padding:18px 0 0;border-top:1px solid var(--border);list-style:none}
-.checkout-features li{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--t1);line-height:1.45}
-.checkout-switch{margin-top:16px}
-.checkout-switch a{font-size:12px;font-weight:600;color:var(--accent-strong);text-decoration:none}
-.checkout-switch a:hover{text-decoration:underline}
-.checkout-back{font-size:13px;color:var(--t2);text-decoration:none;padding:4px 2px}
-.checkout-back:hover{color:var(--t0)}
-.checkout-error{padding:24px;text-align:center;font-size:13px;color:var(--t1);line-height:1.6}
-.checkout-error code{font-family:var(--mono);font-size:12px;background:var(--bg-2);padding:2px 6px;border-radius:6px}
-.checkout-return-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}
-.checkout-return-ref{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-s);background:var(--bg-2);max-width:100%}
-.checkout-return-ref-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3)}
-.checkout-return-ref-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--t1);word-break:break-all;line-height:1.4;user-select:all}
-.checkout-success-icon{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
-.checkout-spinner{width:40px;height:40px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--accent);animation:checkout-spin .8s linear infinite}
-@media(max-width:760px){
-  .checkout-grid{grid-template-columns:1fr}
-  .checkout-summary{position:static}
-}
 
 
 /* Language picker (flags) */
@@ -119,11 +68,8 @@
 .danger-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
 .danger-confirm-go:hover:not(:disabled){filter:brightness(.92)}
 .danger-confirm-err{font-size:12px;line-height:1.5;color:var(--err-strong);margin-top:8px}
-[data-density="compact"] .nav-icon-sub{display:none}
 
 /* ─── Appearance Settings Controls ─── */
-.theme-pill{display:inline-flex;padding:4px;background:var(--bg-2);border:1px solid var(--border);border-radius:999px;gap:2px}
-.theme-pill-opt svg{width:14px;height:14px}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
 .toggle-row:last-child{border-bottom:none}
 .toggle-row-info{display:flex;flex-direction:column;gap:2px}
@@ -184,7 +130,6 @@
 .ch-card-body{padding:12px 14px 14px}
 .ch-card-name{font-size:13.5px;font-weight:650;color:var(--t0);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ch-card-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--t2)}
-.ch-card-tag{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-strong);background:var(--accent-bg);border-radius:var(--radius-s);padding:2px 7px;flex-shrink:0}
 .ch-empty{padding:48px 24px;text-align:center;font-size:13.5px;color:var(--t2);border:1.5px dashed var(--border);border-radius:var(--radius-l)}
 /* Two columns are kept — this is a browse grid and one column turns 12 cards
    into a 12-screen list — but at 390px that makes each card ~171px, and a
@@ -205,52 +150,11 @@
   .ch-card-tag{font-size:11px;padding:2px 6px;letter-spacing:.02em}
   .ch-card-meta{gap:6px}
 }
-.cs-csys-spinner{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--border);border-top-color:var(--brand);animation:cs-csys-spin .7s linear infinite}
 
-.cs-csys-hint{margin:var(--s-3) 0 0;font-size:12px;line-height:1.45;color:var(--t2)}
-.cs-csys-tray{display:flex;flex-wrap:wrap;gap:var(--s-2);margin-top:var(--s-3)}
-.cs-csys-tray-tile:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brand)}
-.cs-csys-tray-x{position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--bg-4);color:var(--t0);font-size:11px;line-height:16px;text-align:center;opacity:0;box-shadow:var(--shadow-xs);transition:opacity var(--t-fast)}
-.cs-csys-tray-tile:hover .cs-csys-tray-x,.cs-csys-tray-tile:focus-visible .cs-csys-tray-x{opacity:1}
-.system-cta-grid{position:absolute;z-index:-2;inset:0;opacity:.5;background-image:linear-gradient(color-mix(in srgb,var(--t0) 5%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--t0) 5%,transparent) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(circle at center,#000,transparent 74%)}
-.system-cta-beams{position:absolute;z-index:-1;inset:0;overflow:hidden}
-.system-cta-beams i{position:absolute;left:50%;bottom:-58%;width:70px;height:130%;border-radius:var(--radius-pill);background:linear-gradient(to top,color-mix(in srgb,var(--accent) 20%,transparent),transparent 68%);transform-origin:50% 100%}
-.system-cta-beams i:nth-child(1){transform:translateX(-50%) rotate(-62deg)}
-.system-cta-beams i:nth-child(2){transform:translateX(-50%) rotate(-42deg)}
-.system-cta-beams i:nth-child(3){transform:translateX(-50%) rotate(-21deg)}
-.system-cta-beams i:nth-child(4){transform:translateX(-50%)}
-.system-cta-beams i:nth-child(5){transform:translateX(-50%) rotate(21deg)}
-.system-cta-beams i:nth-child(6){transform:translateX(-50%) rotate(42deg)}
-.system-cta-beams i:nth-child(7){transform:translateX(-50%) rotate(62deg)}
 .system-cta-inner{max-width:690px;text-align:center}
 .system-cta-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:var(--s-6)}
 .system-cta-hint{margin-top:var(--s-4);font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 
-/* Footer — a row of large feature links above the standard column links, so
-   the last thing before the page ends still sells the product, not just
-   navigates it. */
-.home-foot{background:var(--bg-1);border-top:1px solid var(--border);padding:var(--s-9) 0 var(--s-6);margin-top:var(--sec-pad)}
-.home-foot-feat{display:grid;grid-template-columns:repeat(3,1fr);gap:32px 48px}
-.home-foot-feat-link{display:block;text-decoration:none}
-.home-foot-feat-link:hover{text-decoration:none}
-.home-foot-feat-title{display:flex;align-items:center;gap:10px;font-size:var(--fs-h2);font-weight:700;letter-spacing:-.02em;color:var(--t0);transition:color var(--dur-3) var(--ease-out)}
-.home-foot-feat-link:hover .home-foot-feat-title{color:var(--hue,var(--accent-strong))}
-.home-foot-feat-desc{font-size:var(--fs-caption);color:var(--t2);margin-top:6px}
-.home-foot-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:32px;margin-top:var(--s-8)}
-.home-foot-colhead{font-family:var(--mono);font-size:var(--fs-micro);letter-spacing:.12em;text-transform:uppercase;color:var(--t2);margin-bottom:12px}
-.home-foot-link{display:flex;align-items:center;gap:8px;min-height:32px;font-size:var(--fs-body-s);color:var(--t1);text-decoration:none}
-.home-foot-link:hover{color:var(--t0);text-decoration:none}
-.home-foot-legal{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:var(--s-8);padding-top:24px;border-top:1px solid var(--border)}
-.home-foot-brand{display:flex;align-items:center;gap:10px}
-.home-foot-copy{font-size:var(--fs-caption);color:var(--t2)}
-@media(max-width:768px){
-  .home-foot-feat{grid-template-columns:repeat(2,1fr)}
-  .home-foot-cols{grid-template-columns:repeat(2,1fr);gap:24px 32px}}
-
-@media(max-width:480px){
-  .home-foot-feat{grid-template-columns:1fr}
-  .home-foot-cols{grid-template-columns:1fr}}
- /* 4.60 */
 
 /* Flair picker (Settings › Account) --- */
 .flairpick-hint{margin:0 0 10px;font-size:12px;color:var(--t3);line-height:1.5}
@@ -296,6 +200,6 @@
    below could not fail. One fix, one call site, one assertion that pins it. */
 .ch-card-source{flex:0 0 auto;font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* ── Project cards ─────────────────────────────────────────────── */
-.uh-card.is-archived{opacity:.62}
-.uh-card.is-archived:hover,.uh-card.is-archived:focus-within{opacity:1}
+/* The archived-row treatment lives in pages/projects.css now. It was
+   `opacity:.62` on the whole row here, which took every label in it under
+   4.5:1; the row says "Archived" and drops the name's weight instead. */

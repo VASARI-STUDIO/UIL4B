@@ -46,7 +46,8 @@
  *
  * ── THE ONE LINE THAT MATTERS MOST ──────────────────────────────────────────
  *
- * `global.css:5646` sets `--ggn-accent-text: var(--accent-strong)` on `.ggn`.
+ * `global.css` set `--ggn-accent-text: var(--accent-strong)` on `.ggn` (that
+ * declaration has since been deleted; the alias below is the only one).
  * `--accent-strong` is a PER-THEME LITERAL (`#0B5ED7` light, `#4A90FF` dark)
  * declared beside `--accent` rather than derived from it — so a premium theme
  * template that moves `--accent` alone would leave every accent-coloured word
@@ -87,7 +88,7 @@
      80%, var(--accent-toward))`, so it follows the theme's accent wherever it
      goes and keeps its direction: deeper in light, lighter in dark. Measured on
      `--card`, which is what every user of this alias actually sits on:
-     #0E5BCF on #FFFFFF = 6.48:1 light, #8AB8FF on #191A1D = 9.12:1 dark. */
+     #0E5BCF on #FFFFFF = 6.15:1 light, #8AB8FF on #111215 = 9.24:1 dark. */
   --ggn-accent-text: var(--accent-text);
 }
 
@@ -348,7 +349,10 @@
   transition: transform var(--dur-2) var(--ggn-ease), box-shadow var(--dur-2) ease;
 }
 
-.ggn .ggn-preset:hover .ggn-preset-swatch{ transform: translateY(-2px); box-shadow: var(--shadow-m); }
+/* No lift. A -2px rise and a bigger shadow on sixteen tiles was hover carrying
+   more personality than feedback; the border darkening and the name going to
+   full ink say "this one" without moving anything. */
+.ggn .ggn-preset:hover .ggn-preset-swatch{ transform: none; box-shadow: none; border-color: var(--ggn-line-2); }
 
 .ggn .ggn-preset-name{ font-size: 12.5px; font-weight: 500; color: var(--ggn-t1); text-align: left; }
 
@@ -385,6 +389,90 @@
   box-shadow: 0 0 0 3px var(--accent-wash-4);
 }
 
+/* ── Structural pass, lane 1, 2026-09-23 ─────────────────────────────────────
+   Earlier passes on this sheet were type, colour, radius and motion only. This
+   one changes composition, and subtracts. Mobbin: Shopify's brand colours list
+   (mobbin.com/screens/01a1db52-91d3-4c6c-a67c-535f345173d3) runs its colours
+   as one column of swatch rows under hairlines with the destructive action at
+   the row's end; Telegram's editor
+   (mobbin.com/screens/ac204413-1af7-405e-94f5-9105b912151e) keeps the canvas
+   free of chrome and puts every value in the inspector beside it. */
+
+/* THE STOPS ARE ONE COLUMN OF HAIRLINE ROWS, not a two-up grid of boxes.
+   Each stop was a bordered, filled card inside the bordered Stops card, two to
+   a row, so a three-stop gradient read as a grid of tiles with a hole in it
+   and the position field floated mid-row. A stop is a line in an ordered list:
+   index, colour, hex, position, lock, remove. One column is also what lets the
+   lock and remove buttons take a real 44px under a coarse pointer (below). */
+.ggn .ggn-stops{ display: flex; flex-direction: column; gap: 0; }
+.ggn .ggn-stop{
+  position: relative;
+  gap: 12px;
+  padding: 10px 4px 10px 14px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--ggn-line);
+  border-radius: 0;
+  transition: background var(--dur-1) ease;
+}
+.ggn .ggn-stop:last-child{ border-bottom: 1px solid var(--ggn-line); }
+.ggn .ggn-stop:hover{ background: var(--ggn-wash); border-color: var(--ggn-line); }
+/* The stop the handles are editing: the 2px bar /create/tint uses for its
+   selected ramp, instead of an accent box drawn round the whole row. */
+.ggn .ggn-stop.is-active{ border-color: var(--ggn-line); }
+.ggn .ggn-stop.is-active::before{
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.ggn .ggn-stop-pos{ margin-left: auto; }
+.ggn .ggn-stop-x,
+.ggn .ggn-lock{ transition: color var(--dur-1) ease, border-color var(--dur-1) ease, background var(--dur-1) ease; }
+
+/* A locked value was a filled `--accent-strong` square (global.css), the one
+   legacy literal the `--ggn-accent-text` re-point above cannot reach because
+   it is not spelled through the variable. Tint's primary pair instead:
+   --accent-mid ground, --accent-ink glyph (5.18:1 light / 9.17:1 dark). */
+.ggn .ggn-lock.is-on{ color: var(--accent-ink); background: var(--accent-mid); border-color: var(--accent-mid); }
+
+/* "3/12 stops" is a count, not a status and not a thing to press. It was an
+   accent-washed pill; it is a mono figure in the quiet ink now, which is what
+   `.ggn-step` beside it already is. --t2 on the card: 6.43:1 light. */
+.ggn .ggn-badge{
+  padding: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--t2);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+/* The canvas labels ("LINEAR", "135°") were frosted-glass pills —
+   backdrop-filter blur on a 999px capsule, the exact premium-signal stack the
+   anti-slop bar names. A plain scrim rectangle does the same job: white ink on
+   rgba(10,11,13,.72) composited over pure white, the worst ground a gradient
+   can present, is 8.5:1 (label-ink-not-dimmed.test.js computes it). */
+.ggn .ggn-pill{
+  color: #fff;
+  background: rgba(10, 11, 13, .72);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 0;
+  border-radius: var(--radius-xs);
+  padding: 5px 9px;
+}
+
+/* The lock note and the palette-import card: the last two accent-bg / lift
+   treatments on the page. */
+.ggn .ggn-lock-note{ background: var(--accent-wash); }
+.ggn .ggn-import:hover{ transform: none; border-color: var(--ggn-line-2); }
+
 /* ── Coarse pointers ─────────────────────────────────────────────────────────
    44px on the controls that are pressed, not a blanket floor: the preset
    swatches are already 16/9 tiles well over 44px, and the handles take their
@@ -396,45 +484,54 @@
   .ggn .ggn-seg-btn,
   .ggn .ggn-fmt-btn{ min-height: 44px; }
 
-  /* THE LOCK AND THE DELETE BUTTON DO NOT GET 44px OF WIDTH, and the first cut
-     of this file giving them that was a real regression that
-     `25-defect-sweep :: N2` caught.
+  /* THE LOCK AND THE DELETE BUTTON NOW GET A REAL 44px, and the reason the
+     last pass could not give it has gone. That pass measured the stop row in a
+     TWO-COLUMN grid at 769px: two 44px buttons took 36px from a row whose only
+     flexible item is the hex field, and "#7C3AED" clipped to "#7C3AE" — a
+     wrong colour that looks right. It settled for a 34px pseudo-element hit
+     area, because 44 would overlap Remove Stop.
 
-     They are 26x26 in global.css, which already clears SC 2.5.8's 24px floor.
-     Taking them to 44 stole 2 x 18 = 36px from the stop row, and the row's
-     flexible item is the HEX FIELD — the one thing in it a user is meant to
-     read and copy. Measured at 769px with touch emulation (which is how the
-     sweep opens it, and what puts `pointer: coarse` in play): the field
-     collapsed to 36px of content box against the 68px "#7C3AED" needs, so all
-     three stops rendered "#7C3AE" — a plausible but WRONG colour, which is
-     worse than an obviously truncated one. 780px was the same; 320 and 390
-     were clean only because the row reflows below ~700.
-
-     The hit area is widened instead of the box, the way `.ggn-handle` above
-     does it, so it costs no layout width. -4px and not -9px: the two buttons
-     sit 10px apart, so a true 44px target would make them OVERLAP, and the
-     one they would overlap into is Remove Stop. A destructive control that
-     steals its neighbour's taps is a worse defect than a 26px target. 34px
-     with 2px of clearance is what this row can honestly give; a full 44px
-     would need the trailing controls to wrap onto their own line, which is a
-     layout change to a measured row and is flagged in the report rather than
-     made here. */
+     The stops are one column now (see `.ggn-stops` above), so the row is the
+     full panel width at every width over 640, and at 640 and under the
+     trailing controls sit on their own grid line (see below). Measured with
+     touch emulation at 320, 390, 481, 600, 769, 780 and 834: no hex field
+     scrolls its text. */
+  .ggn .ggn-lock,
   .ggn .ggn-stop-lock,
-  .ggn .ggn-stop-x{ position: relative; }
-  .ggn .ggn-stop-lock::after,
-  .ggn .ggn-stop-x::after{
-    content: '';
-    position: absolute;
-    inset: -4px;
-    border-radius: var(--radius-s);
-  }
+  .ggn .ggn-stop-x{ width: 44px; height: 44px; }
+  .ggn .ggn-stop-swatch .cpk-trigger{ width: 44px; height: 44px; }
+  .ggn input.ggn-stop-hex,
+  .ggn .ggn-stop-pos input,
+  .ggn input.ggn-angle-input{ min-height: 44px; }
+  .ggn .ggn-stop-pos input{ min-width: 48px; }
+  .ggn .ggn-copy{ min-height: 44px; padding: 0 10px; margin-right: -10px; }
+  .ggn .ggn-gal-link{ min-height: 44px; }
+}
+/* THE TWO-LINE STOP ROW STARTS AT 640, NOT 480. global.css stacks the row
+   (hex on line one, position + lock + remove on line two) only at 480 and
+   under — but its mobile form floor lifts every field to 16px at 640 and
+   under, and a 16px "#7C3AED" in one line with 44px buttons beside it
+   measured 51px of content box against the 69px it needs at 481 with touch
+   emulation: "#7C3AE", the wrong-but-plausible clip 25-defect-sweep N2 exists
+   to catch. From 640 down the row now takes both lines at every pointer. */
+@media (max-width: 640px) {
+  .ggn .ggn-stop{ display: grid; grid-template-columns: 20px 32px minmax(0, 1fr) auto auto; gap: 6px 8px; }
+  .ggn .ggn-stop-hex-field{ grid-column: 3 / -1; }
+  /* Under the swatch as well as column 3: with 44px lock and remove buttons
+     column 3 alone measured 8px at 320, narrower than the field it holds. */
+  .ggn .ggn-stop-pos{ grid-column: 2 / 4; margin-left: 0; }
+  .ggn .ggn-stop-lock{ grid-column: 4; }
+  .ggn .ggn-stop-x{ grid-column: 5; }
+}
+@media (pointer: coarse) and (max-width: 640px) {
+  .ggn .ggn-stop{ grid-template-columns: 20px 44px minmax(0, 1fr) auto auto; }
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
    global.css's blanket rule clamps every DURATION under both spellings the app
    uses — the Settings choice (the `data-reduced-motion` attribute on <html>)
    and the OS query for anyone who has not made one. A clamp makes movement
-   instant rather than absent, so the two rules here that MOVE a box get a
+   instant rather than absent, so a rule here that MOVES a box gets a
    companion that removes the movement itself.
 
    NOT `:where()`, and this was measured rather than assumed. `:where()`
@@ -446,14 +543,12 @@
    still reported translateY(-2px) with reduced motion active in BOTH spellings.
    The bare attribute selector adds (0,1,1) and carries it.
 
-   AND THE PAGE ROOT IS NOT PREFIXED HERE. Every other rule in this file is
-   scoped `.ggn …` to outrank colour.css, but <html> is an ANCESTOR of `.ggn`,
-   not a descendant: `.ggn html[…] .ggn-preset` can never match anything. These
-   two selectors already clear colour.css on their own. */
-html[data-reduced-motion="true"] .ggn-preset:hover .ggn-preset-swatch,
-html[data-reduced-motion="true"] .ggn-btn:active { transform: none; }
+   SCOPED THROUGH THE ROOT, with <html> first: <html> is an ancestor of
+   `.ggn`, so the attribute goes on it and the page root sits between. The
+   preset hover no longer moves at all (see `.ggn-preset:hover` above), so the
+   press on a button is the one movement left to remove. */
+html[data-reduced-motion="true"] .ggn .ggn-btn:active { transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-reduced-motion="false"]) .ggn-preset:hover .ggn-preset-swatch,
-  html:not([data-reduced-motion="false"]) .ggn-btn:active { transform: none; }
+  html:not([data-reduced-motion="false"]) .ggn .ggn-btn:active { transform: none; }
 }

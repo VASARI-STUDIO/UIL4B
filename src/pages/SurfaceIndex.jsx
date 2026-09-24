@@ -228,121 +228,99 @@ export default function SurfaceIndex({ surface }) {
   }, [surface])
 
   return (
-    <div className="home">
+    // `srf` is the page root every rule in pages/surface.css is scoped under.
+    // `home` stays for the shell-level rules that still key on it.
+    <div className={`home srf srf--${surface}`}>
       <PillNav />
 
-      <main id="main" tabIndex={-1}>
+      {/* The page measure lives ON <main>, not on a wrapper inside it: the
+          compressed-landing contract (52) counts main's direct children as the
+          page's bands, and a wrapper would fold them into one. */}
+      <main id="main" className="srf-wrap" tabIndex={-1}>
       {/* ── The page head. NOT a hero, and that is the founder's 2026-09-18
           decision: "/discover and /learn lose their sales intro and go straight
           to the real library/guide index."
 
-          WHAT WENT, and it is the whole sales intro: the eyebrow, the pitch
-          headline ("Understand the craft, not just the tools."), the lede
-          paragraph under it, and the single big CTA into one destination. A
-          visitor who has clicked Discover has already decided to browse; a
-          screen of argument before the list is a toll on a decision they made
-          in the nav. The index is now the first thing on the page.
-
-          WHAT STAYED, and why it is not a pitch: the surface's own NAME as the
-          h1 — "Discover", "Learn", the labels the nav already uses, which is
-          also how every library under this page is headed ("Palette Library",
-          "Gradient Library") — and the DERIVED count line, which is a fact read
-          off the data (see DISCOVER_LIVE above) rather than a claim. No sentence
-          was written to replace anything: the founder's copy is his, and there
-          is no line of his about these two surfaces to borrow.
-
-          `home-hero--surface` drops the homepage's min-height:min(100svh,980px);
-          with the pitch gone this head is a name and one line, so the modifier
-          matters more than it did. */}
-      <header className="home-hero home-hero--surface">
-        <h1 className="home-hero-h1">{s.title}</h1>
-        <p className="home-hero-hint">{s.hint}</p>
+          What stays is the surface's own NAME as the h1 — the label the nav
+          already uses, and how every library under it is headed — and the
+          DERIVED count line, a fact read off the data (DISCOVER_LIVE above)
+          rather than a claim. It is left-aligned at the app's page-title scale
+          now, not a centred 96px display line over an empty first screen: the
+          index under it is the page. */}
+      <header className="home-hero home-hero--surface srf-head">
+        <h1 className="home-hero-h1 srf-h1">{s.title}</h1>
+        <p className="home-hero-hint srf-hint">{s.hint}</p>
       </header>
 
       {/* ── Learn only: the guides that exist, before the ones that do not ──
           Order is the argument. A reader arriving at Learn should meet pages
-          they can open before they meet a roadmap; the previous version led
-          with eight Soon cards and had nothing behind any of them. */}
+          they can open before they meet a roadmap. */}
       {surface === 'learn' && (
-        <section className="home-section" aria-labelledby="surface-guides-heading">
-          <div className="home-container">
-            <div className="home-head home-head-center" data-reveal>
-              <h2 className="home-h2" id="surface-guides-heading">Reference, not opinion.</h2>
-            </div>
-            {/* Grouped by the topic each guide declares, behind a search over
-                their full text. See src/components/LearnGuideIndex.jsx. */}
-            <LearnGuideIndex />
+        <section className="srf-sec" aria-labelledby="surface-guides-heading">
+          <div className="srf-sec-head" data-reveal>
+            <h2 className="srf-h2" id="surface-guides-heading">Reference, not opinion.</h2>
           </div>
+          {/* Grouped by the topic each guide declares, behind a search over
+              their full text. See src/components/LearnGuideIndex.jsx. */}
+          <LearnGuideIndex />
         </section>
       )}
 
       {/* ── The destinations. This grid IS the page. ──
-          NAMED, so that it is a landmark. Measured on the built preview at
-          eleven widths in both themes, /discover offered exactly four
-          landmarks — navigation("Primary") | main | contentinfo |
-          navigation("Footer") — and not one of them said anything about
-          libraries. A <section> with no accessible name computes to `generic`,
-          so the grid this comment calls "the page" was absent from the
-          landmark list, which is how a non-visual reader answers "what is
-          this page made of" on arrival. Both galleries beneath this surface
-          already name their results region; the index above them did not, so
-          it was the only page in the set whose subject could not be reached
-          that way. The name is the h2 that is already here — no new sentence. */}
-      <section className="home-section" aria-labelledby="surface-grid-heading">
-        <div className="home-container">
-          <div className="home-head home-head-center" data-reveal>
-            <h2 className="home-h2" id="surface-grid-heading">{s.gridTitle}</h2>
-            {s.gridLede && <p className="home-lede">{s.gridLede}</p>}
-          </div>
+          NAMED, so that it is a landmark: a <section> with no accessible name
+          computes to `generic`, and the grid this comment calls "the page" was
+          absent from the landmark list. The name is the h2 already here. */}
+      <section className="srf-sec" aria-labelledby="surface-grid-heading">
+        <div className="srf-sec-head" data-reveal>
+          <h2 className="srf-h2" id="surface-grid-heading">{s.gridTitle}</h2>
+          {s.gridLede && <p className="srf-lede">{s.gridLede}</p>}
+        </div>
 
-          <div className="surface-grid">
-            {s.groups.map((g) => {
-              const hue = g.accent ? 'accent' : s.hue
-              // Live libraries lead with what is inside them; the ones still on
-              // the way stay a plain card, which is the honest difference and
-              // also the thing that stops eight identical rectangles.
-              const preview = !g.soon && PREVIEWS[g.id] ? PREVIEWS[g.id]() : null
-              const body = (
-                <>
-                  {preview && (
-                    <span className="surface-card-preview" aria-hidden="true">{preview.node}</span>
-                  )}
-                  <h3 className="surface-card-title">
-                    <span className="fx-dot" aria-hidden="true" />
-                    {g.label}
-                  </h3>
-                  <p className="surface-card-desc">{g.desc}</p>
-                  {/* The meta sits beside the call to action rather than over
-                      the preview: these previews are dense (three palettes,
-                      three prompt titles), so a badge laid on top of them
-                      covered the very thing it was counting. */}
-                  <span className="surface-card-foot">
-                    {g.soon
-                      ? <span className="soon-badge">Soon</span>
-                      : <span className="surface-card-go">Browse&nbsp;&rarr;</span>}
-                    {/* `preview.meta`, not `preview`. The four count badges were
-                        deleted in the B2 claims pass because a signed-out
-                        visitor reaches three rows, not the hundred the number
-                        promised — but the span was still rendered for every
-                        previewed card, so Palette, Gradient, Icon and Prompt
-                        each carried an EMPTY meta element in the card foot. */}
-                    {preview?.meta && <span className="surface-card-meta">{preview.meta}</span>}
-                  </span>
-                </>
-              )
-              // Live groups (soon:false) link to their real page; everything else
-              // stays a static "on the way" card — no dead links either way.
-              return g.soon ? (
-                <article className="surface-card fx-lift" key={g.id} data-hue={hue} data-reveal>
-                  {body}
-                </article>
-              ) : (
-                <Link className="surface-card surface-card--link fx-lift" key={g.id} to={g.route} data-hue={hue} data-reveal>
-                  {body}
-                </Link>
-              )
-            })}
-          </div>
+        <div className="surface-grid">
+          {s.groups.map((g) => {
+            const hue = g.accent ? 'accent' : s.hue
+            // Live libraries lead with what is inside them; the ones still on
+            // the way stay a plain card, which is the honest difference and
+            // also the thing that stops eight identical rectangles.
+            const preview = !g.soon && PREVIEWS[g.id] ? PREVIEWS[g.id]() : null
+            const body = (
+              <>
+                {preview && (
+                  <span className="surface-card-preview" aria-hidden="true">{preview.node}</span>
+                )}
+                {/* The coloured dot that led every title is gone: one hue per
+                    surface, on every card, marked nothing a card did not
+                    already say, and it was the page's only saturated mark. */}
+                <h3 className="surface-card-title">{g.label}</h3>
+                <p className="surface-card-desc">{g.desc}</p>
+                {/* The meta sits beside the call to action rather than over
+                    the preview: these previews are dense (three palettes,
+                    three prompt titles), so a badge laid on top of them
+                    covered the very thing it was counting. */}
+                <span className="surface-card-foot">
+                  {g.soon
+                    ? <span className="soon-badge">Soon</span>
+                    : <span className="surface-card-go">Browse&nbsp;&rarr;</span>}
+                  {/* `preview.meta`, not `preview`: the count badges were
+                      deleted in the B2 claims pass, and an empty meta element
+                      was left in four card feet. */}
+                  {preview?.meta && <span className="surface-card-meta">{preview.meta}</span>}
+                </span>
+              </>
+            )
+            // Live groups link to their real page; everything else stays a
+            // static "on the way" card — no dead links either way. No lift on
+            // hover: nothing about a library changes when a pointer crosses it.
+            return g.soon ? (
+              <article className="surface-card" key={g.id} data-hue={hue} data-reveal>
+                {body}
+              </article>
+            ) : (
+              <Link className="surface-card surface-card--link" key={g.id} to={g.route} data-hue={hue} data-reveal>
+                {body}
+              </Link>
+            )
+          })}
         </div>
       </section>
       </main>

@@ -20,9 +20,8 @@
 //     computed-style sweep, and hard-coded a 14px body size on the one page in
 //     the product a reader is most likely to be squinting at.
 //   · The storage table keeps every cell, every `data-label` and its stacked
-//     phone layout. legal.css only restyles it — see the note there about
-//     `.storage-key`, which global.css paints in `--accent-strong`, the one
-//     accent token that does not track `--accent`.
+//     phone layout. legal.css only restyles it, `.storage-key` included (its
+//     colour is legal.css's alone; global.css no longer sets one).
 //
 // ── The index is derived from the same list the document is ───────────────
 //

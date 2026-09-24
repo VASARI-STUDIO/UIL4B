@@ -307,7 +307,8 @@ test('a refused triage write is reverted and reported, not toasted as success', 
     'a refused status or notes write no longer puts the row back the way the server has it')
   assert.match(handlers, /setFeedback\(before\)/,
     'a refused delete no longer puts the row back')
-  const failureToasts = src.match(/toast\('Could not [^']+'\)/g) || []
+  // …and each is raised as an ERROR, not in the success toast's green tick.
+  const failureToasts = src.match(/toast\('Could not [^']+', 'error'\)/g) || []
   assert.equal(failureToasts.length, 3,
     `each of the three writes needs its own failure path; found ${failureToasts.length}`)
   assert.equal((src.match(/setWriteError\(String\(/g) || []).length, 3,

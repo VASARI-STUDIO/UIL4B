@@ -24,6 +24,8 @@ import GalleryCloseCta from '../components/discover/GalleryCloseCta'
 import '../styles/deferred/colour.css'
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
+// This page's own sheet — every selector rooted at `.plib-page`.
+import '../styles/pages/prompt-library.css'
 
 // Community submission surface name for the sign-in gate (utils/submitIntent).
 const SUBMIT_SURFACE = 'prompt'
@@ -284,7 +286,7 @@ export default function PromptLibrary({ onCopy, toast }) {
   })
 
   return (
-    <div className="sec lib-surface">
+    <div className="sec lib-surface plib-page">
       {/* The shared Discover masthead, same as the Palette, Gradient, Icon and
           Emoji libraries. This surface was the last one still on the site-wide
           `.sec-h`, where the eyebrow was rendered from the SAME i18n key as the
@@ -325,14 +327,14 @@ export default function PromptLibrary({ onCopy, toast }) {
 
       {/* Tab switcher */}
       <div className="pl-tabs">
-        <button className={`pl-tab${tab === 'my' ? ' active' : ''}`} onClick={() => switchTab('my')}>
+        <button type="button" className={`pl-tab${tab === 'my' ? ' active' : ''}`} aria-pressed={tab === 'my'} onClick={() => switchTab('my')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
           </svg>
           My Prompts
           {prompts.length > 0 && <span className="pl-tab-count">{prompts.length}</span>}
         </button>
-        <button className={`pl-tab${tab === 'community' ? ' active' : ''}`} onClick={() => switchTab('community')}>
+        <button type="button" className={`pl-tab${tab === 'community' ? ' active' : ''}`} aria-pressed={tab === 'community'} onClick={() => switchTab('community')}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>

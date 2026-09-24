@@ -857,8 +857,8 @@
    and both are the anti-slop bar's named tell — "glow, blur, glass, gradients …
    layered together as a generic premium signal". Spectrum's own closing band
    (`.sp-close`) is a headline, a lede and two pills on the page ground, with no
-   decoration at all. Hidden rather than deleted because the markup belongs to a
-   component three other surfaces render. */
+   decoration at all. This page is SystemCTA's only mount, so both layers are
+   now deleted from the component itself rather than hidden here. */
 .plans-page .system-cta {
   margin-top: clamp(72px, 10vw, 140px);
   padding: 0;
@@ -867,8 +867,6 @@
   box-shadow: none;
   overflow: visible;
 }
-.plans-page .system-cta-beams,
-.plans-page .system-cta-grid { display: none; }
 .plans-page .system-cta-inner {
   max-width: 62ch;
   margin-inline: auto;

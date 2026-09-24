@@ -1,0 +1,410 @@
+/* font-gallery.css — /create/font-gallery (FontGallery.jsx), on Spectrum.
+ *
+ * The Font Gallery is one of the six library surfaces: its root carries
+ * `.lib-surface`, so deferred/library.css (another lane's) already restyles the
+ * shared toolbar, the filter chips and `.lbry-card`. What that sheet cannot
+ * reach is everything that is this page's own — the masthead, the specimen
+ * list's row geometry, the preview/size controls, the compare tray and the two
+ * dialogs — and those are here. library.css is not touched.
+ *
+ * EVERY SELECTOR IS ROOTED AT `.fg-page`. Vite orders chunk CSS by the
+ * dependency graph, not import order (8d30f37a), and three sheets on this
+ * route (global.css, tool-shell.css, library.css) style the same classes.
+ * The dialogs are rendered inside the page root, not portalled, so they are
+ * reached through it too.
+ *
+ * ── WHAT CHANGED ────────────────────────────────────────────────────────────
+ *
+ * - THE MASTHEAD IS THE LIBRARY SLAB, not its own. It was `.fg-hero--premium`:
+ *   a flat #0a0a0b box, a 128px h1 at -.07em, a 290px ghost "Aa" drawn in
+ *   ::after, and a white CTA that hovered to lilac #d8d1ff. The five sibling
+ *   libraries open on library.css's `.dgh-hero` — the app file's 26px slab on
+ *   `--accent-deep` with its two mesh gradients and a 78px/600 title. This
+ *   page now opens the same way, with the same numbers, so the family of
+ *   library surfaces reads as one. The ghost "Aa" is switched off.
+ * - THE SPECIMEN LIST IS A TABLE AGAIN. library.css's `.lib-surface .lbry-card`
+ *   (border, 18px radius, card ground) matches every `.fg-card`, so the
+ *   continuous ruled list type.css argues for at length had become a stack of
+ *   seventy-seven floating rounded cards inside a rounded panel — the "every
+ *   idea in a card" tell — and the same sheet's foot padding pulled each
+ *   row's name 38px left of the specimen it names. Both are restored here.
+ * - The shortlisted row is marked in ink (a 3px rule down the gutter on a
+ *   faint ink ground), not `--brand` on `--brand-bg`.
+ * - Controls are 10-12px rectangles over a hairline: the per-row compare
+ *   toggle (a 30px circle), the dialog close buttons (circles), the pairing
+ *   "Use" buttons and the compare tray's chips (999px pills).
+ * - The overlay's 6px backdrop blur is deleted.
+ * - `.fg-detail-label` was `--accent-strong` in tool-shell.css: four accent
+ *   captions per dialog, none of them an action. It is `--t2`.
+ * - The accent is spent on the primary dialog action ("Find a pairing") and
+ *   the compare tray's primary ("Compare"), both `--accent-mid` under
+ *   `--accent-ink`, hovering to `--accent-text`.
+ *
+ * The phone lede and every other sentence on this page are the founder's and
+ * are unchanged; this sheet only restyles. */
+
+.fg-page {
+  --fg-ease: cubic-bezier(.23, 1, .32, 1);
+  --fg-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+}
+
+/* ── Masthead: library.css's .dgh-hero, value for value ───────────────────── */
+
+.fg-page .fg-hero--premium {
+  --fg-mesh-a: color-mix(in srgb, var(--accent-hover) 55%, transparent);
+  --fg-mesh-b: color-mix(in srgb, color-mix(in srgb, #3FAFA0 62%, var(--accent-hover)) 32%, transparent);
+  min-height: 0;
+  margin: 0 0 18px;
+  padding: clamp(30px, 5.6vw, 72px) clamp(20px, 3.6vw, 48px);
+  color: #F7F7F4;
+  background: var(--accent-deep);
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 26px;
+  box-shadow: 0 22px 64px rgba(6, 6, 10, .16);
+}
+
+/* The ghost "Aa" goes; the design's mesh takes its layer. It was already
+   aria-free (a pseudo-element), so this is purely a subtraction. */
+.fg-page .fg-hero--premium::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  height: 100%;
+  font-size: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 140% at 88% 52%, var(--fg-mesh-a), transparent 58%),
+    radial-gradient(90% 120% at 66% 8%, var(--fg-mesh-b), transparent 62%);
+}
+
+/* The dark-theme lift global.css gives this slab is for a #0a0a0b box that
+   vanished into a #0A0B0D page. The design's slab carries its own hairline and
+   mesh, which is the answer the other five libraries use in dark. */
+[data-theme="dark"] .fg-page .fg-hero--premium {
+  background: var(--accent-deep);
+  border-color: rgba(255, 255, 255, .12);
+  box-shadow: 0 22px 64px rgba(0, 0, 0, .4);
+}
+
+.fg-page .fg-hero--premium .fg-hero-copy { gap: clamp(28px, 6vw, 96px); align-items: end; }
+
+.fg-page .fg-hero--premium h1 {
+  font-family: var(--display);
+  font-size: clamp(34px, 7.6vw, 78px);
+  font-weight: 600;
+  line-height: .92;
+  letter-spacing: -.045em;
+  color: #F7F7F4;
+}
+
+.fg-page .fg-hero-intro > p {
+  max-width: min(46ch, 100%);
+  margin: 0 0 24px;
+  font-size: clamp(14.5px, 1.5vw, 16.5px);
+  line-height: 1.55;
+  color: rgba(247, 247, 244, .72);
+}
+
+/* Paper on the slab: the page's onward action. The slab is dark in both
+   themes, so this is a fixed pair (#F7F7F4 / #0B0C0E), not theme tokens. */
+.fg-page .fg-hero-cta {
+  min-height: 44px;
+  padding: 10px 18px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 560;
+  color: #0B0C0E;
+  background: #F7F7F4;
+  border: 1px solid #F7F7F4;
+  border-radius: var(--radius-pill);
+  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.fg-page .fg-hero-cta:hover { color: #0B0C0E; background: rgba(247, 247, 244, .86); border-color: rgba(247, 247, 244, .86); }
+
+.fg-page .fg-hero-cta:focus-visible { outline: 2px solid #F7F7F4; outline-offset: 3px; }
+
+@media (max-width: 720px) {
+  .fg-page .fg-hero--premium { border-radius: 20px; }
+}
+
+/* ── The toolbar's second row: preview text and size ─────────────────────── */
+
+/* Recessed into the toolbar panel the way library.css draws the search field
+   beside them: 12px radius, a 4.5% ink wash, no border of their own. */
+.fg-page .fg-command-text,
+.fg-page .fg-command-size {
+  min-height: 44px;
+  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+.fg-page .fg-command-text:focus-within,
+.fg-page .fg-command-size:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash-4);
+}
+
+.fg-page .fg-command-text > span,
+.fg-page .fg-command-size > span { font-weight: 500; letter-spacing: .14em; }
+
+.fg-page .fg-command-text input { font-size: 14px; }
+
+.fg-page .fg-command-size strong { font-weight: 500; color: var(--t0); }
+
+.fg-page .fg-count { font-size: 10.5px; letter-spacing: .14em; color: var(--t2); }
+
+/* ── The specimen list: one ruled table ──────────────────────────────────── */
+
+.fg-page .fg-grid {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  background: var(--card);
+  box-shadow: var(--shadow-s);
+}
+
+/* library.css draws every .lbry-card as its own bordered, rounded card. A row
+   in this list is a band between two rules; the rules are the structure. */
+.fg-page .fg-grid .fg-card.lbry-card {
+  gap: 13px;
+  padding: 18px 0 16px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  transition: background-color var(--dur-1) ease;
+}
+
+.fg-page .fg-grid .fg-card.lbry-card:last-child { border-bottom-color: transparent; }
+
+.fg-page .fg-grid .fg-card.lbry-card:hover { background: var(--fg-wash); border-color: var(--border); }
+
+.fg-page .fg-grid .fg-card.lbry-card:last-child:hover { border-bottom-color: transparent; }
+
+/* The foot clears the rank gutter again, so the name sits under the specimen
+   that names it (type.css's 56px, which library.css's 18px foot padding had
+   overridden). */
+.fg-page .fg-card.lbry-card .lbry-card-foot { align-items: baseline; padding: 0 22px 0 56px; }
+
+.fg-page .fg-card.lbry-card .lbry-card-name { font-size: 16px; font-weight: 560; }
+
+.fg-page .fg-card.lbry-card .lbry-card-meta,
+.fg-page .fg-card-info { color: var(--t2); }
+
+.fg-page .fg-card-index { color: var(--t2); font-weight: 500; }
+
+.fg-page .fg-card-scripts { color: var(--t2); }
+
+.fg-page .fg-grid .fg-card--comparing.lbry-card,
+.fg-page .fg-grid .fg-card--comparing.lbry-card:hover {
+  background: var(--fg-wash);
+  box-shadow: inset 3px 0 0 var(--t0);
+}
+
+.fg-page .fg-card-compare {
+  width: 32px;
+  height: 32px;
+  color: var(--t1);
+  background: var(--card);
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-s);
+}
+
+.fg-page .fg-card-compare:hover { color: var(--t0); border-color: color-mix(in srgb, var(--t0) 34%, transparent); }
+
+.fg-page .fg-card-compare--on,
+.fg-page .fg-card-compare--on:hover { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
+
+.fg-page .fg-card-compare:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .fg-page .fg-card.lbry-card .lbry-card-foot { padding: 0 16px 0 34px; }
+}
+
+/* ── Buttons: show more, the tray, the onward links ──────────────────────── */
+
+.fg-page .fg-more-btn,
+.fg-page .fg-detail-btn,
+.fg-page .fg-compare-copy,
+.fg-page .fg-pair-apply {
+  min-height: 40px;
+  padding: 8px 15px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 560;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-s);
+  transition: color var(--dur-1) ease, background-color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.fg-page .fg-pair-apply { min-height: 36px; padding: 6px 12px; }
+
+.fg-page .fg-more-btn:hover:not(:disabled),
+.fg-page .fg-detail-btn:hover,
+.fg-page .fg-compare-copy:hover,
+.fg-page .fg-pair-apply:hover {
+  color: var(--t0);
+  background: var(--hvr);
+  border-color: color-mix(in srgb, var(--t0) 34%, transparent);
+}
+
+.fg-page .fg-more-btn--primary,
+.fg-page .fg-detail-btn--primary {
+  color: var(--accent-ink);
+  background: var(--accent-mid);
+  border-color: var(--accent-mid);
+}
+
+.fg-page .fg-more-btn--primary:hover:not(:disabled),
+.fg-page .fg-detail-btn--primary:hover {
+  color: var(--accent-ink);
+  background: var(--accent-text);
+  border-color: var(--accent-text);
+}
+
+.fg-page .fg-compare-tray {
+  border-radius: var(--radius-xl);
+  box-shadow: 0 2px 4px -2px rgba(10, 10, 11, .08), 0 22px 44px -24px rgba(10, 10, 11, .32);
+}
+
+.fg-page .fg-compare-tray-label { font-weight: 500; letter-spacing: .14em; }
+
+.fg-page .fg-compare-chip {
+  min-height: 34px;
+  padding: 5px 10px;
+  font-weight: 560;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-s);
+}
+
+.fg-page .fg-more-link { font-size: 12.5px; font-weight: 500; }
+
+.fg-page .fg-more-nav strong { font-size: 14px; font-weight: 560; }
+
+/* ── The two dialogs ─────────────────────────────────────────────────────── */
+
+.fg-page .fg-overlay {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: rgba(8, 8, 12, .52);
+}
+
+.fg-page .fg-detail,
+.fg-page .fg-compare {
+  border-radius: var(--radius-3xl);
+  box-shadow: 0 2px 4px -2px rgba(6, 6, 12, .12), 0 32px 80px -24px rgba(6, 6, 12, .42);
+}
+
+.fg-page .fg-detail-close {
+  width: 40px;
+  height: 40px;
+  color: var(--t1);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius);
+}
+
+.fg-page .fg-detail-close:hover { color: var(--t0); background: var(--hvr); }
+
+.fg-page .fg-detail-label {
+  font-weight: 500;
+  letter-spacing: .14em;
+  color: var(--t2);
+}
+
+.fg-page .fg-compare-title { font-weight: 560; letter-spacing: -.025em; }
+
+/* Facts, not pills: the category, the weight count and the scripts are
+   metadata, so they take the hairline tag at the small radius. */
+.fg-page .fg-tag {
+  padding: 4px 9px;
+  font-weight: 500;
+  letter-spacing: .1em;
+  color: var(--t2);
+  border-radius: var(--radius-xs);
+}
+
+.fg-page .fg-detail-field {
+  border-radius: var(--radius);
+}
+
+.fg-page .fg-detail-field:focus-within { box-shadow: 0 0 0 3px var(--accent-wash-4); }
+
+.fg-page .fg-detail-field > span { font-weight: 500; letter-spacing: .14em; color: var(--t2); }
+
+.fg-page .fg-pair-card { border-radius: var(--radius-l); }
+
+.fg-page .fg-pair-name { font-weight: 560; }
+
+.fg-page .fg-compare-input { border-radius: var(--radius-s); }
+
+.fg-page .fg-compare-input:focus { box-shadow: 0 0 0 3px var(--accent-wash-4); }
+
+.fg-page .fg-compare-col { border-radius: var(--radius-l); }
+
+.fg-page .fg-compare-col-name { font-weight: 560; }
+
+.fg-page .fg-compare-col-remove {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border-color: var(--bh);
+  border-radius: var(--radius-s);
+}
+
+/* ── Focus: the tool-shell rules for these are still `--brand` ────────────── */
+
+.fg-page .fg-more-btn:focus-visible,
+.fg-page .fg-compare-chip:focus-visible,
+.fg-page .fg-detail-btn:focus-visible,
+.fg-page .fg-pair-apply:focus-visible,
+.fg-page .fg-compare-copy:focus-visible,
+.fg-page .fg-compare-col-name:focus-visible,
+.fg-page .fg-compare-col-remove:focus-visible,
+.fg-page .fg-detail-close:focus-visible,
+.fg-page .fg-more-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fg-page .fg-compare:focus-visible,
+.fg-page .fg-detail:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Touch floors ─────────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+  .fg-page .fg-card-compare,
+  .fg-page .fg-detail-close { width: 44px; height: 44px; }
+  .fg-page .fg-compare-col-remove { width: 44px; height: 44px; }
+  .fg-page .fg-more-btn,
+  .fg-page .fg-detail-btn,
+  .fg-page .fg-compare-copy,
+  .fg-page .fg-pair-apply,
+  .fg-page .fg-compare-chip,
+  .fg-page .fg-more-link { min-height: 44px; }
+  .fg-page .fg-more-link { display: inline-flex; align-items: center; }
+}
+
+/* ── Press feedback, with the house reduced-motion pair ──────────────────── */
+
+.fg-page .fg-more-btn:active,
+.fg-page .fg-detail-btn:active,
+.fg-page .fg-card-compare:active { transform: scale(.97); }
+
+html[data-reduced-motion="true"] .fg-page .fg-more-btn:active,
+html[data-reduced-motion="true"] .fg-page .fg-detail-btn:active,
+html[data-reduced-motion="true"] .fg-page .fg-card-compare:active { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .fg-page .fg-more-btn:active,
+  html:not([data-reduced-motion="false"]) .fg-page .fg-detail-btn:active,
+  html:not([data-reduced-motion="false"]) .fg-page .fg-card-compare:active { transform: none; }
+}

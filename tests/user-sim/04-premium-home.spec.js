@@ -243,7 +243,13 @@ test.describe('premium homepage', () => {
 
     // Shipped but unfinished is declared, not hidden — the founder's rule is
     // that a tool on the shelf is never dressed up as more finished than it is.
-    await expect(page.locator('.sp-beta')).toHaveText('Beta')
+    // Two tools carry the flag since the 3D Viewer shipped beside the Brand
+    // Starter, so every label is checked rather than "the" label.
+    const betas = page.locator('.sp-beta')
+    await expect(betas.first()).toHaveText('Beta')
+    expect(await betas.allTextContents()).toEqual(Array(await betas.count()).fill('Beta'))
+    await expect(page.getByRole('link', { name: 'Brand Starter Beta' })).toHaveCount(1)
+    await expect(page.getByRole('link', { name: '3D Viewer Beta' })).toHaveCount(1)
 
     // Each panel ends at the real tool rather than at a screenshot of it.
     const bench = page.locator('#bench')

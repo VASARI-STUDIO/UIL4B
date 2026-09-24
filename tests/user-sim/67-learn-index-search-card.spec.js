@@ -233,6 +233,42 @@ test.describe('the Learn index', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(target.title)
   })
 
+  // CI run 35910539677 failed the test above once: "/learn/colour-contrast
+  // rendered 0 characters of its own content". React Router navigates in a
+  // transition: the URL changes at once, the OLD page stays painted while the
+  // guide's lazy chunk loads, and only then does the new <main> commit, with
+  // the Suspense spinner in it until the chunk lands. `ready()` sampled the old
+  // page (no spinner, content present) and returned; the measurement then read
+  // the new, still-loading <main>. The app shows a real loading state in that
+  // window — the defect was the wait. <main> now carries data-route and ready()
+  // requires it to match the address bar. Reproduced here by holding the
+  // guide's chunk back on a normal link click.
+  test('a slow guide chunk ends in the guide, not in a measurement of the index', async ({ page }) => {
+    watch(page, 'reader on a slow connection opening a guide')
+    await go(page, '/learn')
+    let held = 0
+    await page.route(/\/assets\/LearnArticle-[^/]+\.js$/, async (route) => {
+      held++
+      await new Promise((r) => setTimeout(r, 1500))
+      await route.continue()
+    })
+    // A slow runner, which is what widens the gap between the address bar
+    // changing and the new <main> committing from one frame to several.
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 8 })
+    await page.locator(`a.lidx-card[href="/learn/${target.slug}"]`).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe(`/learn/${target.slug}`)
+    await expectRendered(page, `/learn/${target.slug}`)
+    // Read AT ONCE, not through an auto-waiting locator: expectRendered's
+    // verdict has to be about the guide, so the guide must already be what
+    // <main> holds when it returns. Measuring the index it navigated away from
+    // and calling that the guide is the defect this test exists for.
+    const h1 = await page.evaluate(() => document.querySelector('main h1')?.textContent?.trim() || '')
+    expect(h1, 'expectRendered returned while <main> still held another route').toBe(target.title)
+    // POSITIVE CONTROL: the chunk really was held, so the window really opened.
+    expect(held, 'the guide chunk was never requested — it was already cached').toBeGreaterThan(0)
+  })
+
   test('results are painted, not stranded by the scroll reveal — with and without reduced motion', async ({ page }) => {
     watch(page, 'reader who searched, cleared, and searched again')
     for (const reduced of [false, true]) {
@@ -277,7 +313,7 @@ test.describe('the Learn index', () => {
     const clear = page.getByRole('button', { name: 'Clear search' })
     const clearBox = await clear.boundingBox()
     expect(Math.min(clearBox.width, clearBox.height)).toBeGreaterThanOrEqual(24)
-    await expect(page.locator('.lidx-empty .ui-pill')).toBeVisible()
+    await expect(page.locator('.lidx-empty .lidx-reset')).toBeVisible()
     await input.fill(phrase)
     await expect(page.locator('.lidx-hit')).toBeVisible()
   })
@@ -308,7 +344,7 @@ test.describe('the Learn index', () => {
       }
       await input.fill('qzxvw')
       await settled(page)
-      for (const sel of ['.lidx-empty-h', '.lidx-empty-p', '.lidx-empty .ui-pill']) {
+      for (const sel of ['.lidx-empty-h', '.lidx-empty-p', '.lidx-empty .lidx-reset']) {
         const c = await contrastOf(page, sel)
         expect(c.ratio, `${theme}: ${sel} at ${c.ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5)
       }

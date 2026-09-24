@@ -1,0 +1,494 @@
+/* aspect-ratio.css — /create/aspect-ratio (RatioCalculator.jsx), on Spectrum.
+ *
+ * The page's base rules live in global.css (`.rc-tab`, `.arc-opt`,
+ * `.arc-ratio-card`, `.pt-t`, `.card`, `.sec-h`) and deferred/type.css
+ * (`.rc-*`, `.arc-*`). This sheet restyles them and EVERY SELECTOR IS ROOTED AT
+ * `.arc-page`: Vite orders chunk CSS by the dependency graph, not by import
+ * order, so "imported last" is not "loads last" (8d30f37a). One class more
+ * than each base rule is what makes the order irrelevant.
+ *
+ * ── WHAT CHANGED ────────────────────────────────────────────────────────────
+ *
+ * - The masthead takes the Create tools' Spectrum step (/create/tint): 600
+ *   weight, -.045em, under-1 leading, lede in its own column. The old h1 was
+ *   the pre-Spectrum 500/-.025em at 1.3 leading.
+ * - Every control is the app file's rounded rectangle over a hairline. The
+ *   preset tabs and the three "I know the…" toggles were a 999px pill switch
+ *   and `.pt-t` chips; they are one segmented control shape now, the one
+ *   /create/tint already uses.
+ * - Selection is ink, not accent. The chosen ratio card, tab, side toggle and
+ *   listbox row all read `--accent-strong` / `--accent-bg` before — seventeen
+ *   accent-coloured objects on one screen, none of them the next action. The
+ *   accent is now spent on exactly two things: "Copy size", the page's one
+ *   primary action, and the shape preview, which IS the answer.
+ * - The seven result stats were seven equally weighted bordered boxes. They
+ *   are one hairline table of copyable values; the "Nearest standard" snap
+ *   keeps an accent outline because it is the only one that DOES something
+ *   other than copy.
+ * - The orientation tag above the preview was a mono pill; it is a label.
+ * - An inline `style={{ gap: 6 }}` left RatioCalculator.jsx for `.arc-sides`.
+ *
+ * ── CONTRAST ────────────────────────────────────────────────────────────────
+ *
+ * Accent TEXT is `--accent-text` (the family's text member, derived from
+ * `--accent`). The fill is `--accent-mid` under `--accent-ink`, hovering to
+ * `--accent-text` — away from the ground in both themes. Never
+ * `--accent-hover`, which mixes toward paper in both. Values measured on the
+ * built preview are in the lane report and pinned by 39-accent-contrast.
+ *
+ * ── MOTION ──────────────────────────────────────────────────────────────────
+ *
+ * Colour and border transitions only, plus the preview box's width/height
+ * tween from type.css, which the global reduced-motion clamp already covers.
+ * The press scale below carries the house reduced-motion pair. */
+
+.arc-page {
+  --arc-ease: cubic-bezier(.23, 1, .32, 1);
+  --arc-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  min-width: 0;
+  padding-bottom: var(--s-7);
+}
+
+/* ── Masthead ─────────────────────────────────────────────────────────────── */
+
+.arc-page .arc-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(min(360px, 100%), 500px);
+  gap: var(--s-4) var(--s-8);
+  align-items: end;
+  margin-bottom: var(--s-6);
+  padding-left: 0;
+  border-left: 0;
+}
+
+.arc-page .arc-hero h1 {
+  margin: 0;
+  padding-bottom: 0;
+  font-family: var(--display);
+  font-size: clamp(38px, 5.6vw, 72px);
+  font-weight: 600;
+  line-height: .96;
+  letter-spacing: -.045em;
+  color: var(--t0);
+  text-wrap: balance;
+}
+
+.arc-page .arc-hero > p {
+  max-width: 52ch;
+  margin: 0 0 6px;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--t1);
+  text-wrap: pretty;
+}
+
+/* ── Panels ───────────────────────────────────────────────────────────────── */
+
+.arc-page .rc-grid {
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
+  gap: var(--s-5);
+}
+
+/* The shared `.card` is a gradient ground under a warm shadow and a ring with
+   `transition: all`. Spectrum's panel is the flat card over a hairline. */
+.arc-page .rc-panel {
+  padding: clamp(18px, 2.2vw, 26px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-s);
+  transition: none;
+}
+
+.arc-page .rc-panel:hover { border-color: var(--border); }
+
+.arc-page .seg-label {
+  margin: 0 0 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  color: var(--t2);
+}
+
+.arc-page .rc-field { margin-top: 22px; }
+
+/* ── Segmented controls: the preset tabs and the side toggles ─────────────── */
+
+.arc-page .rc-tabs,
+.arc-page .arc-sides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 3px;
+  background: var(--arc-wash);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.arc-page .rc-tabs { margin-bottom: 16px; }
+/* The four presets share ONE row at every width. At 320 they wrapped and left
+   "Social" alone on a second row; below 480 each takes an equal share and a
+   tighter inline padding, which fits all four labels on one line. */
+@media (max-width: 480px) {
+  .arc-page .rc-tabs { flex-wrap: nowrap; }
+  .arc-page .rc-tab { flex: 1 1 0; min-width: 0; padding-inline: 6px; white-space: nowrap; }
+}
+
+.arc-page .rc-tab,
+.arc-page .arc-sides .pt-t {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-height: 36px;
+  padding: 7px 14px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--t2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
+}
+
+.arc-page .rc-tab:hover,
+.arc-page .arc-sides .pt-t:hover { color: var(--t0); background: transparent; }
+
+.arc-page .rc-tab.on,
+.arc-page .arc-sides .pt-t.on {
+  color: var(--t0);
+  font-weight: 560;
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
+}
+
+.arc-page .rc-known { gap: 10px; }
+
+/* ── Preset listbox ───────────────────────────────────────────────────────── */
+
+.arc-page .arc-select-btn {
+  min-height: 52px;
+  padding: 9px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--dur-1) ease;
+}
+
+.arc-page .arc-select-btn:hover { border-color: var(--bh); }
+
+.arc-page .arc-select-btn[aria-expanded="true"] { border-color: var(--bh); }
+
+.arc-page .arc-select-ph { font-size: 13.5px; color: var(--t2); }
+
+.arc-page .arc-select-chev { color: var(--t2); }
+
+.arc-page .arc-select-pop {
+  padding: 5px;
+  border-radius: var(--radius-l);
+  box-shadow: 0 2px 4px -2px rgba(10, 10, 11, .08), 0 22px 44px -24px rgba(10, 10, 11, .32);
+}
+
+.arc-page .arc-opt { min-height: 44px; padding: 7px 10px; border-radius: var(--radius-s); }
+
+.arc-page .arc-opt:hover { background: var(--arc-wash); }
+
+.arc-page .arc-opt.on { background: var(--bg-2); box-shadow: inset 2px 0 0 var(--t0); }
+
+[data-theme="dark"] .arc-page .arc-opt.on { background: var(--bg-3); }
+
+.arc-page .arc-opt-name { font-weight: 560; }
+
+.arc-page .arc-opt-meta { color: var(--t2); }
+
+/* The thumbnails are drawings of a shape, not emphasis: ink hairline on a
+   faint ink wash. The one accent shape on the page is the preview. */
+.arc-page .arc-thumb-box {
+  border: 1.5px solid color-mix(in srgb, var(--t0) 55%, transparent);
+  background: var(--arc-wash);
+}
+
+/* ── Ratio cards ──────────────────────────────────────────────────────────── */
+
+.arc-page .arc-ratio-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100px, 100%), 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.arc-page .arc-ratio-card {
+  gap: 5px;
+  min-height: 96px;
+  padding: 12px 8px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--dur-1) ease, background-color var(--dur-1) ease;
+}
+
+.arc-page .arc-ratio-card:hover { border-color: var(--bh); background: var(--arc-wash); }
+
+.arc-page .arc-ratio-card.on {
+  background: var(--card);
+  border-color: var(--t0);
+  box-shadow: inset 0 0 0 1px var(--t0);
+}
+
+.arc-page .arc-ratio-card.on .arc-thumb-box { border-color: var(--t0); }
+
+.arc-page .arc-ratio-card-name { font-weight: 600; }
+
+/* ── Fields ───────────────────────────────────────────────────────────────── */
+
+.arc-page input[type="number"] {
+  min-height: 44px;
+  padding: 0 12px;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  background: var(--inp);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
+}
+
+.arc-page input[type="number"]:hover { border-color: var(--bh); }
+
+/* Global `input:focus` paints a 3px `--accent-bg` halo, a legacy literal at 8%.
+   This is the derived wash at 20%, the value /create/tint's fields use. */
+.arc-page input[type="number"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash-4);
+}
+
+.arc-page .rc-ratio-row { gap: 8px; }
+
+.arc-page .rc-ratio-row input { width: 96px; }
+
+.arc-page .rc-flip {
+  width: 44px;
+  height: 44px;
+  color: var(--t1);
+  background: transparent;
+  border: 1px solid var(--bh);
+  border-radius: var(--radius-s);
+}
+
+.arc-page .rc-flip:hover {
+  color: var(--t0);
+  background: var(--hvr);
+  border-color: color-mix(in srgb, var(--t0) 34%, transparent);
+}
+
+.arc-page .rc-colon { color: var(--t2); font-weight: 500; }
+
+.arc-page .rc-simplified { margin-left: 4px; font-size: 13px; color: var(--t0); }
+
+.arc-page .rc-simplified small { color: var(--t2); }
+
+.arc-page .arc-ppi-field input { width: 96px; }
+
+.arc-page .arc-ppi-field span,
+.arc-page .arc-ppi-or { color: var(--t2); }
+
+.arc-page .arc-note { color: var(--t2); }
+
+/* ── Result ───────────────────────────────────────────────────────────────── */
+
+.arc-page .rc-out {
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.arc-page .rc-out-size { margin-top: 4px; align-items: center; }
+
+.arc-page .rc-result-dims { gap: 4px; }
+
+/* The answer, at the size Spectrum gives a result (the contrast mock's ratio
+   readout): the display face at 600, not a bold mono. Still a button, still
+   copies its own number. */
+.arc-page .rc-dim {
+  gap: 4px;
+  min-height: 44px;
+  padding: 2px 8px;
+  font-family: var(--display);
+  font-size: clamp(30px, 3.4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+  color: var(--t0);
+  border-radius: var(--radius-s);
+  transition: background-color var(--dur-1) ease;
+}
+
+.arc-page .rc-dim:hover { background: var(--arc-wash); color: var(--t0); }
+
+.arc-page .rc-dim small {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  color: var(--t2);
+}
+
+.arc-page .rc-times { color: var(--t3); font-size: 20px; }
+
+.arc-page .arc-copy {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--accent-ink);
+  background: var(--accent-mid);
+  border: 1px solid var(--accent-mid);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.arc-page .arc-copy:hover { background: var(--accent-text); border-color: var(--accent-text); }
+
+/* One ruled table, not seven cards. Each cell draws its right and bottom rule
+   as a 1px shadow that spills into its neighbour; the frame clips the spill
+   at the outer edge. Not a gap over a hairline-coloured ground: the stat count
+   varies (five to seven), and a short last row then showed the ground as a
+   grey block. */
+.arc-page .arc-stats {
+  grid-template-columns: repeat(auto-fill, minmax(min(132px, 100%), 1fr));
+  gap: 0;
+  margin-top: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.arc-page .arc-stat {
+  gap: 3px;
+  min-height: 60px;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 0;
+  border-radius: 0;
+  box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border);
+  transition: background-color var(--dur-1) ease;
+}
+
+.arc-page .arc-stat:hover { background: color-mix(in srgb, var(--t0) 4%, var(--card)); }
+
+.arc-page .arc-stat-k {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  color: var(--t2);
+}
+
+.arc-page .arc-stat-v { font-size: 14px; font-weight: 500; }
+
+/* The snap is the one cell that changes the numbers rather than copying one,
+   so it keeps an accent edge — drawn inside the cell so the table's rules stay
+   continuous. */
+.arc-page .arc-stat--snap {
+  background: color-mix(in srgb, var(--accent) 6%, var(--card));
+  box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border), inset 0 0 0 1px var(--accent-border);
+}
+
+.arc-page .arc-stat--snap:hover { background: color-mix(in srgb, var(--accent) 11%, var(--card)); }
+
+.arc-page .arc-stat--snap .arc-stat-v,
+.arc-page .arc-stat-sub { color: var(--accent-text); }
+
+/* ── Shape preview ────────────────────────────────────────────────────────── */
+
+.arc-page .rc-vis-head { min-height: 24px; }
+
+.arc-page .rc-vis-tag {
+  padding: 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  color: var(--t2);
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.arc-page .rc-vis-box {
+  border: 1.5px solid var(--accent);
+  background: var(--accent-wash);
+  border-radius: var(--radius-xs);
+}
+
+.arc-page .rc-vis-ratio { font-weight: 600; color: var(--accent-text); }
+
+.arc-page .rc-vis-dims { color: var(--accent-text); }
+
+.arc-page .rc-vis-empty { color: var(--t2); }
+
+/* ── Focus ────────────────────────────────────────────────────────────────── */
+
+.arc-page .rc-tab:focus-visible,
+.arc-page .arc-sides .pt-t:focus-visible,
+.arc-page .arc-select-btn:focus-visible,
+.arc-page .arc-opt:focus-visible,
+.arc-page .arc-ratio-card:focus-visible,
+.arc-page .rc-flip:focus-visible,
+.arc-page .rc-dim:focus-visible,
+.arc-page .arc-copy:focus-visible,
+.arc-page .arc-stat:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.arc-page .arc-opt:focus-visible,
+.arc-page .arc-stat:focus-visible { outline-offset: -2px; }
+
+/* ── Widths ───────────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .arc-page .arc-hero { grid-template-columns: minmax(0, 1fr); gap: var(--s-3); }
+}
+
+@media (max-width: 760px) {
+  .arc-page .rc-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .arc-page .arc-hero { margin-bottom: var(--s-5); }
+  .arc-page .arc-hero > p { font-size: 14.5px; }
+  .arc-page .rc-ratio-row input,
+  .arc-page .arc-ppi-field input { width: 84px; }
+}
+
+/* ── Touch floors ─────────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+  .arc-page .rc-tab,
+  .arc-page .arc-sides .pt-t,
+  .arc-page .arc-copy { min-height: 44px; }
+}
+
+/* ── Press feedback, with the house reduced-motion pair ──────────────────── */
+
+.arc-page .arc-ratio-card:active,
+.arc-page .arc-copy:active,
+.arc-page .rc-flip:active { transform: scale(.97); }
+
+.arc-page .arc-ratio-card,
+.arc-page .arc-copy,
+.arc-page .rc-flip { transition-property: background-color, border-color, color, transform; transition-duration: var(--dur-1); transition-timing-function: var(--arc-ease); }
+
+html[data-reduced-motion="true"] .arc-page .arc-ratio-card:active,
+html[data-reduced-motion="true"] .arc-page .arc-copy:active,
+html[data-reduced-motion="true"] .arc-page .rc-flip:active { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .arc-page .arc-ratio-card:active,
+  html:not([data-reduced-motion="false"]) .arc-page .arc-copy:active,
+  html:not([data-reduced-motion="false"]) .arc-page .rc-flip:active { transform: none; }
+}

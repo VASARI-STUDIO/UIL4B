@@ -16,7 +16,7 @@
      preference, and that one covers the explicit chooser. Keep both values in
      step with the critical theme block below — they are the same two grounds. -->
 <meta name="theme-color" content="#EFEEE9" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#101012" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#060607" media="(prefers-color-scheme: dark)">
 <meta property="og:title" content="UI L4B | Design Toolkit">
 <meta property="og:description" content="Free browser-based design toolkit. Colour palettes, type scales, font pairing, icon library, image conversion and video frames.">
 <meta property="og:type" content="website">
@@ -74,7 +74,7 @@
    (stroke="currentColor") never flash black on dark mode first paint. These
    MUST track --bg-0/--t0 in global.css or the page repaints on stylesheet
    arrival; V2 moved both, so both moved here. */
-html[data-theme="dark"]{background:#101012;color:#F2F1EC;color-scheme:dark}
+html[data-theme="dark"]{background:#060607;color:#F2F1EC;color-scheme:dark}
 html[data-theme="light"]{background:#EFEEE9;color:#0F0F10;color-scheme:light}
 body{background:inherit;color:inherit}
 svg{color:inherit}
@@ -91,7 +91,7 @@ svg{color:inherit}
 .boot-kicker{width:180px;height:10px;margin:0 auto 24px}.boot-title{width:min(680px,88%);height:clamp(52px,8vw,86px);margin:0 auto 18px;border-radius:18px}
 .boot-sub{width:min(520px,72%);height:14px;margin:0 auto 38px;border-radius:999px}
 .boot-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.boot-card{height:132px;border-radius:18px}
-html[data-theme="dark"] .boot-nav{background:rgba(18,20,24,.82);border-color:rgba(255,255,255,.1)}
+html[data-theme="dark"] .boot-nav{background:rgba(11,12,14,.82);border-color:rgba(255,255,255,.1)}
 html[data-theme="dark"] .boot-status{color:rgba(203,213,225,.72)}
 html[data-theme="dark"] .boot-line,html[data-theme="dark"] .boot-action,html[data-theme="dark"] .boot-copy,html[data-theme="dark"] .boot-card{background:rgba(255,255,255,.09)}
 @keyframes boot-shimmer{to{transform:translateX(100%)}}

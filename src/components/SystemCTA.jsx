@@ -33,10 +33,6 @@ export default function SystemCTA({
 
   return (
     <section className="system-cta" aria-labelledby="system-cta-title">
-      <div className="system-cta-beams" aria-hidden="true">
-        <i /><i /><i /><i /><i /><i /><i />
-      </div>
-      <div className="system-cta-grid" aria-hidden="true" />
       <div className="system-cta-inner" data-reveal>
         {/* Optional since the 2026-09-09 anti-slop audit: a caller passing
             `eyebrow={null}` gets no label above the heading. An eyebrow that

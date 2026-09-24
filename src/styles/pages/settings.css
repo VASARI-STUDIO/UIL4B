@@ -1,176 +1,322 @@
-/* settings.css — the `settings` family, lifted out of global.css.
- * Imported by the page module that owns it, so Vite emits it as that page's
- * chunk stylesheet and only that route pays for it.
+/* settings.css — /settings on the Spectrum ground: the `settings`, `sub`,
+ * `lang`, `danger` and `stg` families as this page draws them.
  *
- * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
- * so anything here now outranks every global rule at equal specificity —
- * which is why a rule a later global rule overrides was left behind rather
- * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+ * Imported by src/pages/Settings.jsx only. The base rules for `.sub-*`,
+ * `.lang-tile`, `.toggle-switch`, `.danger-*` live in global.css and
+ * deferred/account.css because /plans, the colour tools and the nav share
+ * them; this sheet restyles them for THIS page, every selector under `.stg`
+ * (the page root), so it wins by specificity instead of by a chunk load order
+ * Vite does not promise. The reduced-motion block at the foot is the one
+ * exception — it has to start at <html>.
+ *
+ * ── What changed, and why ─────────────────────────────────────────────────────
+ * The page was the pre-Spectrum account screen: a section nav in a shadowed
+ * card, every panel in a --warm-shadow card, a profile header washed in an
+ * accent gradient, a dashed red "danger zone" box, 999px pills for every
+ * control, and --accent-strong / --brand on the links, the switch and the
+ * "Recommended" badge. `UIL4B App.dc.html` and the settings screens worth
+ * copying on Mobbin (Buffer, Canny, Plain — all a plain text list for the
+ * section nav, one column of hairline rows, a separated delete section) agree
+ * on the correction, and it is subtraction: fewer containers, no shadows, no
+ * gradient, rectangles for controls, the accent on the one thing that acts.
+ *
+ * The accent is the derived family only. --accent-mid for accent text (5.18:1
+ * on --bg-0 light, 9.17:1 dark), --accent-mid under --accent-ink for the filled
+ * control, hovering to --accent-text (never --accent-hover, which mixes toward
+ * paper in both themes and lowers contrast in light).                        */
 
-@media(max-width:640px){
-  .settings-grid{grid-template-columns:1fr;gap:20px}
-  .settings-section-h h2{font-size:24px}
-  .settings-card-h,.settings-card-body,.settings-profile{padding-left:18px!important;padding-right:18px!important}
-  .settings-profile{flex-wrap:wrap}
+.stg {
+  --stg-hair: color-mix(in srgb, var(--t0) 9%, transparent);
+  --stg-hair-2: color-mix(in srgb, var(--t0) 13%, transparent);
+  --stg-wash: color-mix(in srgb, var(--t0) 4%, transparent);
+  --stg-wash-2: color-mix(in srgb, var(--t0) 6%, transparent);
 }
 
-@media(max-width:480px){
-  .settings-section-h h2{font-size:22px}
+/* ── Controls: the app's rectangles ──────────────────────────────────────── */
+.stg .btn {
+  border-radius: var(--radius-s);
+  border-color: var(--stg-hair-2);
+  background: transparent;
+  color: var(--t0);
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 36px;
+  padding: 0 14px;
+  transition: background var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
+}
+.stg .btn:hover { background: var(--stg-wash); border-color: var(--bh); color: var(--t0); }
+.stg .btn-s { min-height: 32px; padding: 0 12px; font-size: 12.5px; }
+.stg .btn-accent {
+  border-radius: var(--radius);
+  border-color: var(--accent-mid);
+  background: var(--accent-mid);
+  color: var(--accent-ink);
+  font-weight: 560;
+}
+.stg .btn-accent:hover { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent-ink); }
+.stg .btn-s.btn-accent { border-radius: var(--radius-s); }
+.stg .btn:disabled { opacity: .55; cursor: not-allowed; }
+.stg .btn-accent:disabled:hover { background: var(--accent-mid); border-color: var(--accent-mid); }
+.stg input:not([type="file"]):not([type="checkbox"]):not([type="radio"]) { border-radius: var(--radius); min-height: 40px; }
+@media (pointer: coarse) {
+  .stg .btn, .stg .btn-s { min-height: 44px; }
+  .stg input:not([type="file"]):not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
 }
 
-.settings-grid{display:grid;grid-template-columns:240px 1fr;gap:48px;align-items:start}
+/* ── Page head ────────────────────────────────────────────────────────────────
+   The app design file's page title (40px/600/-.035em). The founder's "Make it
+   yours." keeps its emphasis, but as the accent run Spectrum uses for a marked
+   word (`.sp-w--mark`, `.cpg-mark`) rather than as V2's grey italic. */
+.stg .stg-head { margin-bottom: clamp(24px, 3.4vw, 40px); }
+.stg .stg-head h1 { margin: 0; padding: 0; font-family: var(--display); font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -.035em; line-height: 1.04; color: var(--t0); }
+.stg .stg-head h1 em { font-style: normal; font-weight: 600; color: var(--accent-mid); padding: 0; }
+.stg .stg-head p { margin: 10px 0 0; max-width: 60ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
 
-.settings-nav{position:sticky;top:24px;display:flex;flex-direction:column;gap:1px;padding:6px;background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow)}
+/* ── Layout and the section nav ───────────────────────────────────────────────
+   The nav is a plain list, not a card: the section list on every settings
+   screen in the reference set is text on the page ground with the current row
+   on a quiet wash (Buffer, Canny, Plain). */
+.stg .settings-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); align-items: start; }
+.stg .settings-nav { position: sticky; top: calc(var(--nav-clear) + 12px); display: flex; flex-direction: column; gap: 2px; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; }
+.stg .settings-nav-item { display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 8px 12px; border: 1px solid transparent; border-radius: var(--radius-s); background: none; font-family: var(--font); font-size: 14px; font-weight: 500; color: var(--t1); text-align: left; cursor: pointer; transition: background var(--dur-1) ease, color var(--dur-1) ease; }
+.stg .settings-nav-item:hover { background: var(--stg-wash); color: var(--t0); }
+.stg .settings-nav-item.active { background: var(--stg-wash-2); color: var(--t0); }
+.stg .settings-nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 1; color: var(--t2); }
+.stg .settings-nav-item.active svg { color: var(--t0); }
+.stg .settings-content { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
 
-.settings-nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-s);font-size:13px;font-weight:500;color:var(--t1);background:none;border:none;cursor:pointer;font-family:var(--font);text-align:left;transition:all var(--t)}
+/* ── Section head and panels ─────────────────────────────────────────────── */
+.stg .settings-section-h { margin-bottom: 16px; }
+.stg .settings-section-h h2 { margin: 0 0 6px; font-family: var(--display); font-size: clamp(21px, 2.4vw, 26px); font-weight: 600; letter-spacing: -.025em; line-height: 1.2; color: var(--t0); }
+.stg .settings-section-h p { margin: 0; max-width: 60ch; font-size: 14px; line-height: 1.6; color: var(--t1); }
+.stg .settings-card { padding: 0; overflow: visible; border: 1px solid var(--stg-hair); border-radius: var(--radius-2xl); background: var(--card); box-shadow: none; }
+.stg .settings-card-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--stg-hair); }
+.stg .settings-card-h h3 { margin: 0; font-size: 14px; font-weight: 560; color: var(--t0); }
+.stg .settings-card-h p { margin: 2px 0 0; font-size: 12.5px; color: var(--t1); }
+.stg .settings-card-body { padding: 4px 20px; }
+.stg .settings-card-body--grid { padding: 14px; }
 
-.settings-nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.7}
+/* ── Rows ─────────────────────────────────────────────────────────────────────
+   Label in the mono caption voice, value in the reading face. The label is
+   --t2, which holds 5:1 on --card in both themes. */
+.stg .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--stg-hair); }
+.stg .settings-row:last-child { border-bottom: none; }
+.stg .settings-row-main { flex: 1 1 auto; min-width: 0; }
+.stg .settings-row-label { margin: 0 0 4px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+.stg .settings-row-value { font-size: 14px; color: var(--t0); overflow-wrap: anywhere; }
+.stg .settings-row-meta { margin-top: 2px; font-size: 12.5px; line-height: 1.5; color: var(--t1); }
+.stg .settings-row-empty { color: var(--t2); }
+.stg .settings-row--open { flex-direction: column; align-items: stretch; }
+.stg .settings-row--open > .settings-row-label { margin-bottom: 8px; }
+.stg .settings-row--pad { padding-top: 16px; padding-bottom: 16px; }
+.stg .settings-edit-line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stg .settings-edit-line > input { flex: 1 1 220px; min-width: 0; }
+.stg .settings-edit-line > .settings-suggest-wrap { flex: 1 1 220px; }
+.stg .settings-edit-stack { display: flex; flex-direction: column; gap: 8px; }
+.stg .settings-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.stg .settings-edit-actions--tight { margin-top: 0; }
+.stg .settings-field-err { margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: var(--err-strong); }
+.stg .settings-field-ok { margin-top: 8px; font-size: 12.5px; line-height: 1.5; color: var(--ok-strong); }
+/* The location field's suggestion list. */
+.stg .settings-suggest-wrap { position: relative; flex: 1; min-width: 0; }
+.stg .settings-suggest-wrap input { width: 100%; }
+.stg .settings-suggest { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60; max-height: 260px; margin: 0; padding: 6px; overflow: auto; list-style: none; border: 1px solid var(--stg-hair-2); border-radius: var(--radius); background: var(--card); box-shadow: 0 16px 36px -18px rgba(0, 0, 0, .3); animation: cp-rise var(--dur-2) var(--ease-entrance); }
+.stg .settings-suggest-item { display: block; width: 100%; min-height: 32px; padding: 8px 10px; border: none; border-radius: var(--radius-s); background: none; font-family: var(--font); font-size: 13.5px; color: var(--t1); text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background var(--dur-1) ease; }
+.stg .settings-suggest-item strong { font-weight: 600; color: var(--t0); }
+.stg .settings-suggest-item.on { background: var(--stg-wash-2); color: var(--t0); }
 
-.settings-content{display:flex;flex-direction:column;gap:32px;min-width:0}
+/* The profile could not sync: a warning, so --warn is the one tinted ground on
+   the page. */
+.stg .settings-sync-alert { display: flex; align-items: flex-start; gap: 10px; margin: 14px 0 2px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--stg-hair)); border-radius: var(--radius); background: color-mix(in srgb, var(--warn) 9%, var(--card)); color: var(--t1); font-size: 13px; line-height: 1.5; }
+.stg .settings-sync-alert svg { flex-shrink: 0; margin-top: 1px; color: var(--warn-strong); }
+.stg .settings-sync-alert button { flex-shrink: 0; min-height: 24px; margin-left: auto; padding: 0; border: none; background: none; font-family: var(--font); font-size: 12.5px; font-weight: 560; color: var(--t0); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+@media (max-width: 480px) { .stg .settings-sync-alert { flex-wrap: wrap; } .stg .settings-sync-alert button { margin-left: 0; } }
 
-.settings-section{}
+/* ── Account: the profile header ──────────────────────────────────────────────
+   No accent gradient wash behind it. The avatar is the one accent object: the
+   design file's own avatar is an accent disc with the initials on --accent-ink. */
+.stg .settings-profile { display: flex; align-items: center; gap: 16px; padding: 20px; background: none; border-bottom: 1px solid var(--stg-hair); }
+.stg .settings-profile-avatar { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 56px; height: 56px; overflow: hidden; border: 1px solid var(--stg-hair-2); border-radius: 50%; background: var(--accent-mid); color: var(--accent-ink); font-family: var(--font); font-size: 22px; font-weight: 560; }
+.stg .settings-profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+/* The avatar doubles as the photo-upload button: a camera glyph fades in over
+   the picture on hover or keyboard focus. The hidden file input does the
+   picking. */
+.stg .settings-avatar-btn { position: relative; padding: 0; cursor: pointer; }
+.stg .settings-avatar-edit { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(0, 0, 0, .52); color: #fff; opacity: 0; transition: opacity var(--dur-2) var(--ease-out); }
+.stg .settings-avatar-btn:hover .settings-avatar-edit,
+.stg .settings-avatar-btn:focus-visible .settings-avatar-edit { opacity: 1; }
+.stg .settings-profile-info { flex: 1; min-width: 0; }
+.stg .settings-profile-name { font-family: var(--display); font-size: 19px; font-weight: 560; letter-spacing: -.015em; line-height: 1.3; color: var(--t0); }
+/* `overflow-wrap:anywhere`: an address has no spaces to break at. */
+.stg .settings-profile-email { margin-top: 2px; font-family: var(--mono); font-size: 12.5px; color: var(--t1); overflow-wrap: anywhere; }
+.stg .settings-avatar-remove { display: inline-flex; align-items: center; min-height: 24px; margin-top: 2px; padding: 0; border: 0; background: none; font-family: var(--font); font-size: 12.5px; color: var(--t1); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.stg .settings-avatar-remove:hover { color: var(--t0); }
 
-.settings-section-h{margin-bottom:16px}
+/* Flair picker, inside an open row */
+.stg .flairpick-hint { color: var(--t1); font-size: 12.5px; }
+.stg .flairpick-preview { border: 1px solid var(--stg-hair); border-radius: var(--radius); background: var(--stg-wash); }
+.stg .flairpick-preview-label,
+.stg .flairpick-group-label { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
 
-.settings-section-h h2{font-family:var(--display);font-size:28px;font-weight:500;letter-spacing:-.02em;margin-bottom:6px;color:var(--t0);line-height:1.35}
+/* ── Account: deleting it ─────────────────────────────────────────────────────
+   Not a dashed red box. A dashed border reads as a drop target, and a tinted
+   red ground under running text is alarm for its own sake. It is the last
+   section of the panel, set off by a rule, with the destructive colour spent on
+   its heading and its one control — which is how Buffer and Descript close
+   their settings. */
+.stg .danger-zone { margin-top: 8px; padding: 18px 0 16px; border: 0; border-top: 1px solid var(--stg-hair); border-radius: 0; background: none; }
+.stg .danger-zone-h { margin-bottom: 8px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; color: var(--err-strong); }
+.stg .danger-zone-h::before { content: none; }
+.stg .danger-zone p { max-width: 60ch; font-size: 13px; line-height: 1.6; color: var(--t1); }
+.stg .danger-zone-open,
+.stg .settings-danger { color: var(--err-strong); border-color: color-mix(in srgb, var(--err) 50%, transparent); background: transparent; }
+.stg .danger-zone-open:hover,
+.stg .settings-danger:hover { color: var(--err-strong); border-color: var(--err-strong); background: color-mix(in srgb, var(--err) 7%, transparent); }
+/* The armed, irreversible action: --err-strong under --err-fg (7.6:1 light,
+   8.1:1 dark). The inline style this replaces was #fff on --err: 2.8:1 dark. */
+.stg .danger-confirm-go,
+.stg .settings-danger-go { background: var(--err-strong); border-color: var(--err-strong); color: var(--err-fg); }
+.stg .danger-confirm-go:hover:not(:disabled),
+.stg .settings-danger-go:hover { background: color-mix(in srgb, var(--err-strong) 88%, var(--t0)); border-color: var(--err-strong); color: var(--err-fg); filter: none; }
+.stg .danger-confirm-list li,
+.stg .danger-confirm-note { color: var(--t1); font-size: 13px; }
+.stg .danger-confirm-err { color: var(--err-strong); }
 
-.settings-section-h p{font-size:13.5px;color:var(--t2);line-height:1.6;max-width:520px}
+/* ── Accessibility: theme and reduced motion ─────────────────────────────── */
+.stg .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--stg-hair); }
+.stg .toggle-row:last-child { border-bottom: none; }
+.stg .toggle-row-label { font-size: 14px; font-weight: 500; color: var(--t0); }
+.stg .toggle-row-meta { font-size: 12.5px; color: var(--t1); }
+.stg .toggle-row .theme-seg { border-radius: var(--radius); background: var(--stg-wash-2); }
+.stg .toggle-row .theme-seg-btn { border-radius: var(--radius-s); }
+.stg .toggle-row .theme-seg-btn[aria-pressed="true"] { background: var(--card); box-shadow: 0 0 0 1px var(--stg-hair-2); }
+/* --accent-mid, not --brand: the switch's "on" track is a 3:1 graphic and
+   measures 4.9:1 on --card light, 9:1 dark. The hover dims it; opacity is
+   left to global.css. */
+.stg .toggle-switch { background: color-mix(in srgb, var(--t0) 22%, var(--card)); }
+.stg .toggle-switch.on { background: var(--accent-mid); }
 
-.settings-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);padding:0;box-shadow:var(--warm-shadow);overflow:hidden}
+/* ── Language ─────────────────────────────────────────────────────────────── */
+.stg .lang-tile { min-height: 48px; border-color: var(--stg-hair); border-radius: var(--radius); background: transparent; box-shadow: none; transition: border-color var(--dur-1) ease, background var(--dur-1) ease; }
+.stg .lang-tile:hover { border-color: var(--bh); background: var(--stg-wash); transform: none; }
+/* Chosen = the ink ring the rest of Spectrum uses for a selection, not an
+   accent fill plus a glow: which language is chosen is state, not an offer. */
+.stg .lang-tile.active { border-color: var(--t0); background: transparent; box-shadow: inset 0 0 0 1px var(--t0); }
+.stg .lang-flag { border-radius: var(--radius-xs); border-color: var(--stg-hair); }
+.stg .lang-tile.active .lang-flag { border-color: var(--stg-hair-2); }
+.stg .lang-flag img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.stg .lang-tile-code { color: var(--t1); font-family: var(--mono); font-size: 11px; }
+.stg .lang-tile.active .lang-tile-code { color: var(--t1); }
+.stg .lang-tile-check { color: var(--t0); }
 
-.settings-card-h{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+/* ── Subscription (signed in, free) ──────────────────────────────────────────
+   Two 18px panels. The recommended plan is told apart by a hairline in the
+   accent family and a word, not by a floating filled pill and a coloured
+   shadow under the card. */
+.stg .sub-signin-note { font-size: 14px; line-height: 1.6; color: var(--t1); }
+.stg .sub-signin-note p + p { margin-top: 6px; }
+.stg .sub-signin-note a { color: var(--accent-mid); font-weight: 560; }
+.stg .sub-billing-toggle { gap: 2px; padding: 3px; border: 1px solid var(--stg-hair); border-radius: var(--radius); background: var(--stg-wash); }
+.stg .sub-billing-toggle button { min-height: 36px; padding: 0 16px; border-radius: var(--radius-s); font-weight: 500; color: var(--t1); }
+/* Selected is the ink ground, the way Spectrum draws every segmented control,
+   so "selected" is one idea across the product and the accent stays on the
+   action that spends money. */
+.stg .sub-billing-toggle button.active { background: var(--t0); color: var(--bg-0); box-shadow: none; }
+.stg .sub-billing-toggle .sub-save { color: inherit; }
+.stg .sub-tier { gap: 14px; padding: 22px; border: 1px solid var(--stg-hair); border-radius: var(--radius-2xl); background: var(--card); box-shadow: none; }
+.stg .sub-tier-pro { border-color: var(--accent-border); box-shadow: none; }
+.stg .sub-tier-flag { position: absolute; top: 20px; right: 20px; padding: 0; border-radius: 0; background: none; font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; color: var(--accent-mid); }
+.stg .sub-tier-name { font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: .14em; color: var(--t1); }
+.stg .sub-tier-amount { font-family: var(--display); font-size: 34px; font-weight: 600; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.stg .sub-tier-per { color: var(--t1); }
+/* "Unavailable" is a word, not a figure: set at the reading size so it
+   does not fill the panel at the price's display size. */
+.stg .sub-tier-amount.is-word { font-family: var(--font); font-size: 17px; font-weight: 560; letter-spacing: -.01em; }
+.stg .sub-tier-sub { margin-top: 4px; font-size: 12px; font-weight: 500; color: var(--t1); }
+.stg .sub-tier-list li { display: block; position: relative; padding-left: 25px; font-size: 13.5px; color: var(--t1); }
+/* The tick is a marker, not a badge: no tinted chip behind seven of them. */
+/* A block with a hanging tick, not a flex row: as flex, every <strong> in a
+   sentence became its own column ("7-day free trial" | "— cancel anytime"),
+   the same fault /plans fixed in its own list. */
+.stg .sub-check { position: absolute; left: 0; top: 3px; padding: 0; margin: 0; background: none; color: var(--accent-mid); }
+.stg .sub-tier-btn { min-height: 44px; }
+.stg .sub-tier-foot { font-size: 12px; color: var(--t1); text-align: center; }
 
-.settings-card-h h3{font-size:14px;font-weight:600;letter-spacing:-.005em;color:var(--t0)}
+/* Subscription (Pro) */
+.stg .sub-active { gap: 16px; padding: 20px; border: 1px solid var(--stg-hair); border-radius: var(--radius-2xl); background: var(--card); box-shadow: none; }
+.stg .sub-active-badge { padding: 6px 11px; border-radius: var(--radius-s); background: var(--accent-mid); color: var(--accent-ink); font-weight: 560; }
+.stg .sub-active-title { font-size: 15px; font-weight: 560; }
+.stg .sub-active-meta { font-size: 12.5px; color: var(--t1); }
+.stg .sub-active-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.stg .sub-active-cancel { color: var(--t1); border-color: transparent; }
 
-.settings-card-h p{font-size:12px;color:var(--t2);margin-top:2px}
+/* ── Data and privacy ────────────────────────────────────────────────────── */
+.stg .settings-data-note { max-width: 64ch; padding: 12px 0; font-size: 13.5px; line-height: 1.65; color: var(--t1); }
+.stg .settings-facts { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 14px 0; list-style: none; }
+.stg .settings-facts li { display: flex; gap: 10px; font-size: 13.5px; line-height: 1.55; color: var(--t1); }
+.stg .settings-facts svg { flex-shrink: 0; margin-top: 2px; color: var(--accent-mid); }
+.stg .settings-legal-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; padding: 14px 0; border-top: 1px solid var(--stg-hair); }
 
-.settings-card-body{padding:8px 24px}
+/* The founder's credit under the panels. Underlined at rest — his 2026-09-02
+   direction that the credit is discoverable without hover. */
+.stg .stg-credit { padding: 28px 0 12px; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; text-align: center; color: var(--t2); }
+.stg .stg-credit a { display: inline-flex; align-items: center; min-height: 24px; color: var(--accent-mid); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 
-.settings-sync-alert{display:flex;align-items:flex-start;gap:10px;margin:14px 0 2px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--warn) 35%,var(--border));border-radius:var(--radius);background:color-mix(in srgb,var(--warn) 9%,var(--bg-1));color:var(--t1);font-size:12.5px;line-height:1.5}
+.stg :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-.settings-sync-alert svg{color:var(--warn);flex-shrink:0;margin-top:1px}
-
-.settings-sync-alert button{margin-left:auto;flex-shrink:0;background:none;border:none;padding:0;font-family:var(--font);font-size:12px;font-weight:700;color:var(--accent-strong);cursor:pointer}
-
-@media (max-width:480px){.settings-sync-alert{flex-wrap:wrap}.settings-sync-alert button{margin-left:0}}
-
-.settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)}
-
-.settings-row:last-child{border-bottom:none}
-
-.settings-row-label{font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
-
-.settings-row-value{font-size:14px;color:var(--t0)}
-
-.settings-row-meta{font-size:12px;color:var(--t2);margin-top:2px;line-height:1.5}
-
-.settings-suggest-wrap{position:relative;flex:1;min-width:0}
-
-.settings-suggest-wrap input{width:100%}
-
-.settings-suggest{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:60;margin:0;padding:6px;list-style:none;max-height:260px;overflow:auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);animation:cp-rise var(--dur-2) var(--ease-entrance)}
-
-.settings-suggest-item{display:block;width:100%;padding:8px 10px;border:none;background:none;border-radius:var(--radius-s);font-family:var(--font);font-size:13px;color:var(--t1);text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background var(--t)}
-
-.settings-suggest-item strong{font-weight:600;color:var(--t0)}
-
-/* Profile header */
-.settings-profile{display:flex;align-items:center;gap:18px;padding:24px;background:linear-gradient(135deg,var(--accent-bg),transparent);border-bottom:1px solid var(--border)}
-.settings-profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--avatar-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:24px;font-weight:500;border:2px solid var(--border);overflow:hidden;flex-shrink:0}
-.settings-profile-avatar img{width:100%;height:100%;object-fit:cover}
-/* The avatar doubles as the photo-upload button: a camera glyph sweeps in on
-   hover/focus over the picture. The hidden <input type=file> does the picking. */
-.settings-avatar-btn{position:relative;padding:0;cursor:pointer}
-.settings-avatar-edit{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(0,0,0,.48);color:#fff;opacity:0;transition:opacity var(--dur-2) var(--ease-out)}
-.settings-avatar-btn:hover .settings-avatar-edit,.settings-avatar-btn:focus-visible .settings-avatar-edit{opacity:1}
-.settings-avatar-remove{display:inline-block;margin-top:4px;padding:0;border:0;background:none;font-family:var(--font);font-size:12px;color:var(--t3);cursor:pointer;text-decoration:underline;text-underline-offset:2px;transition:color var(--dur-2) var(--ease-out)}
-.settings-avatar-remove:hover{color:var(--t1)}
-.settings-profile-info{flex:1;min-width:0}
-.settings-profile-name{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.015em;color:var(--t0);line-height:1.35}
-/* `overflow-wrap:anywhere`: an address has no spaces to break at, and this
-   column is 172px on a 320 phone. */
-.settings-profile-email{font-size:13px;color:var(--t2);margin-top:2px;overflow-wrap:anywhere}
-/* The phone layout of the profile row, placed AFTER the base rules above for
-   the same reason the section-nav overrides further down are: the ≤640 block
-   at the top of this file used to carry `gap:14px` and
-   `.settings-profile-info{flex:1 1 calc(100% - 78px)}`, and both were dead —
-   the base `.settings-profile{gap:18px}` and `.settings-profile-info{flex:1}`
-   come later at equal specificity and won. Measured at 320 (2026-09-08): the
-   row never wrapped, the name/email column was 81px of a 250px row beside the
-   Sign out button, the name broke onto two lines and the email overflowed it.
-   With the basis honoured the avatar and the column share the first row
-   (64 + 14 + 172 = 250) and Sign out drops to the second. */
-@media(max-width:640px){
-  .settings-profile{gap:14px}
-  .settings-profile-info{flex:1 1 calc(100% - 78px)}
+/* ── Responsive ───────────────────────────────────────────────────────────────
+   Below the two-column layout the nav lies down into rows that WRAP (never a
+   scroller — S8 in 24-mobile-overhaul, which found Data and Privacy hidden off
+   the edge of one). Each item gets a hairline so a wrapped row reads as a set
+   of controls rather than loose words. */
+@media (max-width: 900px) {
+  .stg .settings-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .stg .settings-nav { position: static; flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .stg .settings-nav-item { flex: 0 0 auto; white-space: nowrap; min-height: 40px; border-color: var(--stg-hair); }
+  .stg .settings-nav-item.active { border-color: var(--stg-hair-2); }
 }
-/* Accessibility → Theme. `.toggle-row .theme-seg` is a fixed 250px in
-   global.css; beside its label in a 250px card body at 320 that overflowed
-   the card by 23px and cut "System" to "Syste", with the label crushed into a
-   75px, five-line column. Below 520 the control takes the row under its label. */
-@media(max-width:520px){
-  .settings-card .toggle-row{flex-wrap:wrap;gap:10px}
-  .settings-card .toggle-row .theme-seg{flex:1 1 100%;width:auto}
+@media (max-width: 640px) {
+  .stg .settings-card-h,
+  .stg .settings-card-body,
+  .stg .settings-profile { padding-left: 16px; padding-right: 16px; }
+  .stg .settings-card-body--grid { padding: 10px; }
+  .stg .settings-profile { flex-wrap: wrap; gap: 14px; }
+  .stg .settings-profile-info { flex: 1 1 calc(100% - 72px); }
+  .stg .lang-grid { grid-template-columns: 1fr; }
+  .stg .sub-billing-toggle { display: flex; width: 100%; }
+  .stg .sub-billing-toggle button { flex: 1 1 0; justify-content: center; padding: 0 8px; }
+}
+@media (max-width: 520px) {
+  .stg .toggle-row { flex-wrap: wrap; gap: 10px; }
+  .stg .toggle-row .theme-seg { flex: 1 1 100%; width: auto; }
+  .stg .settings-row { flex-wrap: wrap; }
+}
+@media (max-width: 480px) {
+  /* 2-up so five sections take three rows, not four ragged ones, and the
+     labels may wrap: every one comes through t(), so a longer translation
+     must not spill out of its button (S8's glyph check). */
+  .stg .settings-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stg .settings-nav-item { white-space: normal; }
 }
 
-/* Below the two-column layout the section nav lies down into a row. It used to
-   become a horizontal SCROLLER, which hid three of its five sections off-screen
-   with nothing to say so (S8, mobile-audit-2026-08: 2 of 5 fully visible at
-   390x844, scrollWidth 675 against clientWidth 356). Worse, the <=640px block
-   deleted the scrollbar with ::-webkit-scrollbar{display:none}, which on a phone
-   is the only affordance the platform would have offered - and the two sections
-   left off-screen were Data Management (account deletion, data export) and
-   Privacy & Legal (consent), i.e. the two people open Settings specifically to
-   find.
-   Five short items do not need a scroller. Wrapping shows all five at once and
-   costs one or two rows of height, which is the right trade on a page whose
-   content is far longer than its nav. Both overrides now wrap; neither scrolls,
-   so there is no scrollbar left to delete. */
-@media(max-width:900px){
-  .settings-grid{grid-template-columns:1fr;gap:24px}
-  .settings-nav{position:static;flex-direction:row;flex-wrap:wrap;padding:4px}
-  .settings-nav-item{white-space:nowrap;flex:0 0 auto}
-}
-/* These live here, after the base .settings-nav rule, and not in the mobile
-   blocks higher up the file where the rest of the Settings overrides sit. That
-   is not tidiness: the base rule at .settings-nav declares display, position,
-   flex-direction, gap and padding, and it appears LATER in the stylesheet than
-   the max-width:640px block, so every one of those properties set up there was
-   silently overridden. Verified by computed style, not by reading: a grid rule
-   placed in the 640/480 blocks reported `display: flex` on a 320px phone.
-   Worth knowing when reading the audit, too - it cites global.css:1491 for the
-   scroller, but `overflow-x:auto` there was dead for the same reason; the
-   scroller that actually shipped came from the max-width:900px block above. */
-@media(max-width:640px){
-  .settings-nav{gap:2px}
-  .settings-nav-item{padding:9px 14px;font-size:12.5px;min-height:40px}
-}
-@media(max-width:480px){
-  /* Ragged wrapping costs a whole extra row on a small phone (measured 4 rows,
-     173px, at 320px). A 2-up grid packs the same five sections into 3 rows and
-     lines their icons up. minmax(0,1fr) rather than a bare 1fr: a bare 1fr track
-     floors at min-content and would push the page wider than the viewport, which
-     is the exact fault S6 records on /info. */
-  .settings-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
-  /* The label must be allowed to wrap once the cell is this narrow. The base
-     rule sets white-space:nowrap, which at 320px pushed "Data Management" 10px
-     past its own button and 5px past the nav card's border - measured with a
-     Range over the glyphs, and the rendered result was "Data Managemen" with the
-     final t painted outside the card. Exactly the S15 failure mode: innerText
-     still reads correctly, and only a sighted user sees the damage.
-     Wrapping rather than trimming the padding, because padding arithmetic only
-     holds for these five English strings - every label here comes through t(),
-     so a longer translation would reopen it. */
-  .settings-nav-item{white-space:normal}
+[data-density="compact"] .stg .settings-row { padding: 10px 0; }
+
+html[data-reduced-motion="true"] .stg .lang-tile,
+html[data-reduced-motion="true"] .stg .settings-nav-item { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-reduced-motion="false"]) .stg .lang-tile,
+  html:not([data-reduced-motion="false"]) .stg .settings-nav-item { transition: none; }
 }
 
-[data-density="compact"] .settings-row{padding:10px 0}
+@media (forced-colors: active) {
+  .stg .settings-nav-item.active,
+  .stg .lang-tile.active,
+  .stg .sub-billing-toggle button.active { outline: 2px solid Highlight; }
+}
 
-/* Settings → Your data. Replaces inline style={} objects (see
-   docs/reference/css-conventions.md). */
-.settings-data-note{font-size:13px;color:var(--t1);line-height:1.65;padding:12px 0;max-width:64ch}
-.settings-row--pad{padding-top:16px;padding-bottom:16px}
-/* Settings → Privacy & legal. Was an inline flex row with no wrap: at 320 the
-   two pills need 284px of a 250px card body, so "Terms of service" ran under
-   the card edge and the feedback button (rendered 2026-09-08, both themes). */
-.settings-legal-links{display:flex;flex-wrap:wrap;gap:8px;padding-top:14px;border-top:1px solid var(--border);margin-top:6px}
+/* Touch: the section tabs reach 44 under a coarse pointer. Last in the sheet
+   because the narrow layout above restates their height (40) after the
+   touch block at the top. */
+@media (pointer: coarse) {
+  .stg .settings-nav-item { min-height: 44px; }
+}

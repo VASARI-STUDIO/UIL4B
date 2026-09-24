@@ -1,7 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import JSZip from 'jszip'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
+import DropZone from '../components/converter/DropZone'
+import AnimationBuilder from '../components/converter/AnimationBuilder'
+import JobStatus from '../components/converter/JobStatus'
+import { loadImage, prefersReducedMotion, useGatedDownload } from '../components/converter/shared'
 import { getLenis } from '../hooks/useSmoothScroll'
 import {
   DRAFT_FORMATS,
@@ -17,19 +22,26 @@ import {
   exceedsCanvasLimit,
   outputDimensions,
 } from '../utils/imageResize'
-import useExportGate from '../hooks/useExportGate'
+import {
+  ANIMATION_FORMATS, FPS_MAX, FPS_MIN, PLAY_OPTIONS, QUALITY_LEVELS,
+  clampFps, findFormat, formatBytes, formatTime, videoToAnimationArgs,
+} from '../utils/mediaEncode'
+import { engineLoaded, getFfmpeg, resetFfmpeg, runJob } from '../utils/ffmpegEngine'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
+// file-converter.css is the page's own sheet and holds every `fc` rule; it is
+// root-scoped under `.fc`, which is what lets it win — import order does not.
 import '../styles/deferred/studio.css'
 import '../styles/deferred/tool-shell.css'
+import '../styles/pages/file-converter.css'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MODES = [
   { id: 'image', label: 'Image' },
-  { id: 'gif', label: 'Video → GIF' },
-  { id: 'frames', label: 'Video → Frames' },
-  { id: '3d', label: '3D → Blender' },
+  { id: 'animation', label: 'Animation' },
+  { id: 'video', label: 'Video' },
+  { id: 'frames', label: 'Extract frames' },
 ]
 
 const OUTPUT_FORMATS = [
@@ -65,104 +77,24 @@ const QUALITY_DEFAULT = 90
 // the item instead so the batch — and the UI — always finishes.
 const ENCODE_TIMEOUT_MS = 30000
 
-// ── The ffmpeg.wasm engine, and why it is NOT served from uil4b.com ──────────
-//
-// THE BILL THAT PAID FOR THIS. The core is 32,129,114 bytes of WebAssembly. It
-// used to be imported here as `@ffmpeg/core?url`, which made Vite emit it into
-// `dist/assets/ffmpeg-core-<hash>.wasm` — one file that was 91% of the entire
-// deployable byte-mass (dist/assets was 35 MB; everything else in it is ~3 MB).
-// Vercel's Hobby plan allows 10 GB/month of FAST ORIGIN TRANSFER — bytes served
-// from the origin rather than from an edge cache — and the project hit it. The
-// mechanism is the content hash: every deploy renames the file, so the warm
-// copy in every edge region is discarded and the next visitor in each region
-// pulls the whole thing from origin again.
-//
-// How much that costs per miss depends on whether the edge compresses wasm,
-// which is NOT something this repo can verify from here — production is not
-// reachable from the sandbox. The measurable bracket: 32,129,114 bytes
-// uncompressed, and 9,260,281 bytes when a host does compress it (measured
-// against jsDelivr in Chromium, which served exactly those two numbers). So
-// somewhere between about 300 and 1,100 region-first-hits spends the whole
-// month, from one file, with ~80 undeployed merges queued behind it. The
-// bracket does not change the decision: after this, the number is zero.
-//
-// SO THE ENGINE IS FETCHED FROM jsDelivr, PINNED TO AN EXACT VERSION. These are
-// the same bytes the npm package ships, and that is measured rather than
-// assumed — both files were downloaded on 2026-09-06 and hashed against
-// node_modules/@ffmpeg/core/dist/esm, which is why the suite can fulfil these
-// URLs from the local copy and still be testing the real thing:
-//   ffmpeg-core.js   sha256 c972f5abeafcd5f3949e54edfbdc74a9badb27025809feb1945d468ffbcfb7f1
-//   ffmpeg-core.wasm sha256 2390efa7fb66e7e42dbae15427571a5ffc96b829480904c30f471f0a78967f61
-// jsDelivr serves them with `access-control-allow-origin: *` and `immutable`
-// caching, so `toBlobURL` below can read them cross-origin and the browser
-// keeps them for a year.
-//
-// WHY A PINNED VERSION AND NOT A RANGE. `@ffmpeg/core@0.12.6` names one
-// immutable artifact. A floating tag (`@latest`, `@0.12`) would let a
-// third party change the engine underneath a shipped build with no review, and
-// jsDelivr could not mark it immutable. tests/unit/ffmpeg-core-off-origin.test.js
-// fails if this version and the installed @ffmpeg/core ever disagree.
-//
-// WHY NO SECOND CDN AS A FALLBACK. A mirror would be a code path that only
-// executes during someone else's outage — the kind that rots unnoticed and is
-// a second pinned version to keep in step. The honest failure is already built:
-// getFfmpeg throws, `engineState` goes to 'error', and the UI says the engine
-// failed and that the Image tab still works. Image conversion — the tab this
-// page opens on — is pure canvas and needs none of this.
-//
-// SINGLE-THREADED CORE, deliberately: `@ffmpeg/core` not `@ffmpeg/core-mt`. The
-// mt build needs SharedArrayBuffer and therefore COOP/COEP cross-origin
-// isolation headers. Measured in Chromium against the built site on
-// 2026-09-06: `crossOriginIsolated` is false and `SharedArrayBuffer` is
-// undefined, because vercel.json sets neither header. The mt core would not
-// run here; this one does, and needs no header work at all.
-//
-// LOADED ONLY ON CONVERT, NEVER ON PAGE OPEN. These are plain strings; the
-// FFmpeg class and util are dynamic imports inside getFfmpeg, which only runs
-// when someone presses Convert. A visitor who opens the converter — or the
-// homepage workbench, which mounts the same image panel — downloads none of it.
-const FFMPEG_CORE_VERSION = '0.12.6'
-const FFMPEG_CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`
-const ffmpegCoreURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.js`
-const ffmpegWasmURL = `${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`
+// The ffmpeg.wasm engine — pinned, fetched from jsDelivr on first use, never
+// from our origin, single-threaded on purpose — lives in utils/ffmpegEngine.js
+// with the full reasoning. The animation builder is its second caller.
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function formatBytes(b) {
-  if (b == null) return '—'
-  if (b < 1024) return b + ' B'
-  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'
-  return (b / 1048576).toFixed(1) + ' MB'
-}
-
 // Describes the size change between the original and converted file.
 // dir: 'down' (smaller, good), 'up' (larger), 'same'.
 function sizeDelta(orig, out) {
   if (!orig || out == null) return null
   const pct = Math.round((1 - out / orig) * 100)
-  // The -strong inks, not the raw state colours: this is 12px TEXT and the
-  // batch line sits on the page ground, where --ok measured 4.32:1 in light
-  // (2026-09-09, every width). --ok-strong is the text-grade step of the
-  // same hue in both themes; the card lines move with it so one delta does
-  // not read in two greens.
-  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller`, color: 'var(--ok-strong)' }
-  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger`, color: 'var(--err-strong)' }
-  return { pct: 0, dir: 'same', label: 'same size', color: 'var(--t2)' }
-}
-
-function formatTime(s) {
-  if (!isFinite(s)) return '0:00'
-  const m = Math.floor(s / 60)
-  const sec = Math.floor(s % 60)
-  return `${m}:${sec.toString().padStart(2, '0')}`
-}
-
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('Could not decode image'))
-    img.src = src
-  })
+  // The ink is picked by `dir` in file-converter.css (.fc-delta--down/up/same)
+  // rather than returned here as an inline colour. It is the -strong inks, not
+  // the raw state colours: this is 12px TEXT and the batch line sits on the
+  // page ground, where --ok measured 4.32:1 in light (2026-09-09, every
+  // width). --ok-strong is the text-grade step of the same hue in both themes.
+  if (pct > 0) return { pct, dir: 'down', label: `${pct}% smaller` }
+  if (pct < 0) return { pct, dir: 'up', label: `${Math.abs(pct)}% larger` }
+  return { pct: 0, dir: 'same', label: 'same size' }
 }
 
 // Assembles a multi-size Windows ICO (favicon) from the source image: each
@@ -207,17 +139,6 @@ async function encodeIco(img, iw, ih) {
   return new Blob([out], { type: 'image/x-icon' })
 }
 
-// Reduced motion, mirroring useHomeMotion's source of truth: AppearanceContext
-// writes html[data-reduced-motion] and the app treats that toggle as
-// authoritative (a visitor may deliberately opt back into motion), so only fall
-// back to the OS query when the attribute is missing.
-function prefersReducedMotion() {
-  const attr = document.documentElement.getAttribute('data-reduced-motion')
-  if (attr === 'true') return true
-  if (attr === 'false') return false
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-}
-
 // The PillNav is position:fixed, so anything scrolled to its own offsetTop hides
 // underneath it. Measure the live bar (its height changes at ≤640px, and a
 // chrome-less embed has none at all) and leave one --s-4 of air below it.
@@ -252,22 +173,6 @@ function revealQueue(node) {
   else window.scrollTo({ top, behavior: reduced ? 'auto' : 'smooth' })
 }
 
-// THE RAW DOWNLOAD. The account gate is NOT here, and that is deliberate:
-// this is a module-level function and the gate is a hook, so each component
-// that downloads holds its own `gatedDownload` and calls this after the gate
-// resolves. Three of them do — ImageConvert, DownloadButton and VideoFrames.
-// Calling this directly skips the gate, so do not.
-function triggerDownload(blobOrUrl, filename) {
-  const url = typeof blobOrUrl === 'string' ? blobOrUrl : URL.createObjectURL(blobOrUrl)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  if (typeof blobOrUrl !== 'string') URL.revokeObjectURL(url)
-}
-
 // ── Component ────────────────────────────────────────────────────────────────
 export default function FileConverter({ toast }) {
   // Pick up anything handed over in memory — the dashboard's quick-upload tile
@@ -283,14 +188,31 @@ export default function FileConverter({ toast }) {
   useEffect(() => { consumeImageHandoff() }, [])
   // Image is the default tab; handed-over images therefore land on it.
   const [mode, setMode] = useState('image')
+  const tabRefs = useRef({})
+
+  // THE ARIA TABS PATTERN, including the keyboard half. These were four
+  // buttons with aria-pressed — a toggle group — for what is a set of
+  // mutually exclusive views, each replacing the one below. Arrow keys move
+  // between tabs and select them; only the current tab is in the Tab order.
+  const onTabKey = (e, i) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key]
+    let next = null
+    if (step) next = (i + step + MODES.length) % MODES.length
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = MODES.length - 1
+    if (next == null) return
+    e.preventDefault()
+    setMode(MODES[next].id)
+    tabRefs.current[MODES[next].id]?.focus()
+  }
 
   return (
     <div className="sec fc">
-      <div className="sec-h">
-        {/* NO TAXONOMY EYEBROW. This was the most literal instance in the
-            codebase: the eyebrow read "File Converter" at y=102 and the h1
-            below it read "File Converter" at y=135. The same three words,
-            twice, 33px apart. #surface-headers-read-as-ai. */}
+      {/* NO TAXONOMY EYEBROW. This was the most literal instance in the
+          codebase: the eyebrow read "File Converter" at y=102 and the h1
+          below it read "File Converter" at y=135. The same three words,
+          twice, 33px apart. #surface-headers-read-as-ai. */}
+      <header className="fc-hero">
         <h1>
           File Converter
           <span className="fc-alpha">Alpha</span>
@@ -302,87 +224,57 @@ export default function FileConverter({ toast }) {
           tools download a converter engine — about 9 MB — from a public code
           CDN the first time you use one, then keep it cached.
         </p>
-      </div>
+      </header>
 
-      {/* Mode tabs */}
-      <div className="fc-tabs">
-        {MODES.map(m => (
+      <div className="fc-tabs" role="tablist" aria-label="Converter mode">
+        {MODES.map((m, i) => (
           <button
             key={m.id}
-            className={`fc-tab${mode === m.id ? ' on' : ''}`}
+            ref={el => { tabRefs.current[m.id] = el }}
+            type="button"
+            role="tab"
+            id={`fc-tab-${m.id}`}
+            aria-selected={mode === m.id}
+            aria-controls={`fc-panel-${m.id}`}
+            tabIndex={mode === m.id ? 0 : -1}
+            className="fc-tab"
             onClick={() => setMode(m.id)}
-            aria-pressed={mode === m.id}
-            aria-label={`${m.label}${m.id === '3d' ? ' (coming soon)' : ''} converter`}
+            onKeyDown={e => onTabKey(e, i)}
           >
             {m.label}
-            {m.id === '3d' && <span className="fc-soon">soon</span>}
           </button>
         ))}
       </div>
 
-      {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
-      {mode === 'gif' && <VideoToGif toast={toast} />}
-      {mode === 'frames' && <VideoFrames toast={toast} />}
-      {mode === '3d' && <ThreeDComingSoon />}
+      {/* WHERE 3D WENT. This was a fourth tab, "3D → Blender", that opened a
+          "Coming soon" card and a disabled button. Its one true statement is
+          kept: a .blend file needs Blender itself running on a server, which a
+          browser tool cannot do. What a person holding a 3D file CAN do here
+          is look at it, so the line points there instead of at a dead end. */}
+      <p className="fc-3d">
+        <Link to="/create/3d-viewer">Open a 3D model in the 3D viewer</Link>
+        <span className="fc-3d-note"> · Converting to Blender&apos;s .blend needs Blender running on a server, so it is not offered here.</span>
+      </p>
+
+      <div className="fc-panel" role="tabpanel" id={`fc-panel-${mode}`} aria-labelledby={`fc-tab-${mode}`}>
+        {mode === 'image' && <ImageConvert toast={toast} initialFiles={handoff?.files} initialDraft={handoff?.draft} />}
+        {mode === 'animation' && <AnimationBuilder toast={toast} />}
+        {mode === 'video' && <VideoConvert toast={toast} />}
+        {mode === 'frames' && <VideoFrames toast={toast} />}
+      </div>
     </div>
   )
 }
 
-// ── Shared drop zone ─────────────────────────────────────────────────────────
-function DropZone({ accept, multiple, onFiles, hint, sub }) {
-  const inputRef = useRef(null)
-  const [hover, setHover] = useState(false)
-  return (
-    <div
-      className={`img-drop-zone fc-drop${hover ? ' fc-drop-on' : ''}`}
-      role="button"
-      tabIndex={0}
-      aria-label={hint}
-      onClick={() => inputRef.current?.click()}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
-      onDragOver={e => { e.preventDefault(); setHover(true) }}
-      onDragLeave={() => setHover(false)}
-      onDrop={e => {
-        e.preventDefault()
-        setHover(false)
-        if (e.dataTransfer.files?.length) onFiles(e.dataTransfer.files)
-      }}
-    >
-      <span className="fc-drop-ico" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" />
-        </svg>
-      </span>
-      <p className="fc-drop-hint">{hint}</p>
-      <p className="fc-drop-sub">{sub}</p>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        style={{ display: 'none' }}
-        onChange={e => { if (e.target.files?.length) onFiles(e.target.files); e.target.value = '' }}
-      />
-    </div>
-  )
+/** A size change as text plus its direction, which picks the ink. */
+function Delta({ orig, out }) {
+  const d = sizeDelta(orig, out)
+  return d ? <span className={`fc-delta fc-delta--${d.dir}`}> · {d.label}</span> : null
 }
 
 // ── Mode 1: Image format conversion ──────────────────────────────────────────
 function ImageConvert({ toast, initialFiles, initialDraft }) {
-  // A file needs a free account; converting and previewing never do.
-  const requireExportAccount = useExportGate()
-  // RETURNS WHETHER THE FILE ACTUALLY LEFT. It used to return undefined, and
-  // every caller ignored it: `gatedDownload(...)` then `toast('Downloaded ZIP
-  // with N images')` on the next line, unawaited. For a visitor with no account
-  // the gate opens a signup dialog and the download never happens — so the
-  // success toast rendered BEHIND the dialog, telling them a file they did not
-  // get had arrived. A dismissed gate is not a failure and says nothing; it is
-  // the visitor's own answer, and the dialog already explained itself.
-  const gatedDownload = useCallback(async (blobOrUrl, filename, reason) => {
-    if (!(await requireExportAccount(reason))) return false
-    triggerDownload(blobOrUrl, filename)
-    return true
-  }, [requireExportAccount])
+  const gatedDownload = useGatedDownload()
   // A homepage output draft is applied to the real controls once, on mount, and
   // then belongs to the visitor — nothing here keeps re-asserting it.
   const seeded = initialDraft ? draftToConverterSettings(initialDraft) : null
@@ -417,7 +309,7 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
     const imgs = arr.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg|bmp|avif|ico)$/i.test(f.name))
     if (!imgs.length) { toast('Please choose PNG, JPEG, WebP, GIF, SVG, BMP, AVIF or ICO images', 'error'); return 0 }
     const big = imgs.find(f => f.size > LARGE_FILE_BYTES)
-    if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`)
+    if (big) toast(`Heads up: ${big.name} is over 50 MB — it may be slow`, 'info')
     const next = imgs.map(f => ({
       id: `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 7)}`,
       name: f.name,
@@ -621,29 +513,32 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
   const converted = items.filter(it => it.out)
   const totalOrig = converted.reduce((s, it) => s + it.file.size, 0)
   const totalOut = converted.reduce((s, it) => s + it.out.bytes, 0)
-  const batchDelta = readyCount > 1 ? sizeDelta(totalOrig, totalOut) : null
+  const pct = convertProgress.total ? Math.round((convertProgress.done / convertProgress.total) * 100) : 0
+
+  const drop = (
+    <DropZone
+      accept={ACCEPT_IMAGE}
+      multiple
+      onFiles={addFiles}
+      compact={items.length > 0}
+      hint={items.length ? 'Add more images' : 'Drop images here or click to browse'}
+      sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
+    />
+  )
 
   return (
     <>
-      <div className="sub">
-        <DropZone
-          accept={ACCEPT_IMAGE}
-          multiple
-          onFiles={addFiles}
-          hint="Drop images here or click to browse"
-          sub="PNG, JPEG, WebP, GIF, SVG, BMP, AVIF, ICO — batch supported"
-        />
-        {draftNotice && (
-          <div className="fc-draft-note" role="status">
-            <strong>Output settings from your homepage draft: {draftNotice.applied}.</strong>
-            {draftNotice.limit ? ` ${draftNotice.limit}` : ' Change any of them below before converting.'}
-          </div>
-        )}
-      </div>
+      {!items.length && drop}
+      {draftNotice && (
+        <div className="fc-draft-note" role="status">
+          <strong>Output settings from your homepage draft: {draftNotice.applied}.</strong>
+          {draftNotice.limit ? ` ${draftNotice.limit}` : ' Change any of them below before converting.'}
+        </div>
+      )}
 
       {items.length > 0 && (
         <section
-          className="fc-queue"
+          className="fc-queue fc-bench"
           ref={queueRef}
           tabIndex={-1}
           aria-label={`Your ${items.length} image${items.length > 1 ? 's' : ''} and output settings`}
@@ -653,73 +548,60 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
               Convert button that acts on it. Measured at 390x844 after adding
               one file: dropzone at 381, Output Settings at 576, "Convert 1
               image" at 839, and the uploaded file row at 915 - past the fold,
-              and 76px BELOW its own action. So the visitor tapped browse, picked
-              a file, and was handed back a screen still reading "Drop images
-              here or click to browse", with the count inside the Convert label
-              the only evidence anything had been accepted. The thumbnail, the
-              name and the status were all off-screen.
-              Mobbin, platform web, and the references do not disagree. Whop
-              (flows/80a82326-1858-49db-99c4-7a0db3ab755a) puts the uploaded
-              thumbnail and its delete control directly beneath the upload
-              button; Magnific (flows/f1270478-c7b4-47f4-a263-3fad86a795a9) lands
-              a placeholder row in that same slot the instant the upload starts;
-              Sana AI (flows/600fc54e-85d7-4f81-98c1-4d4361343b91) puts the new
-              file at the TOP of the list with a green tick. Gamma, Fireflies and
-              Adobe Express were read the same way when this was first written
-              up. Every one of them runs object, then decision, then action.
-              This ran decision, action, object. Moving the list is the whole
-              fix: adding a file now changes the thing the visitor is looking
-              at. */}
-          <div className="sub">
-            <div className="img-grid">
+              and 76px BELOW its own action. Mobbin, platform web: Whop
+              (flows/80a82326-1858-49db-99c4-7a0db3ab755a), Magnific
+              (flows/f1270478-c7b4-47f4-a263-3fad86a795a9) and Sana AI
+              (flows/600fc54e-85d7-4f81-98c1-4d4361343b91) all run object,
+              then decision, then action.
+              SPECTRUM, 2026-09-23: the same order, laid out as the app file's
+              tool grid — the files on the left, a 336px inspector on the right
+              — which collapses back to object, decision, action in one column
+              under 900px. The empty-state drop zone gives way to a slim "Add
+              more" strip once the visitor's own files are on screen. */}
+          <div className="fc-bench-main">
+            <ul className="fc-grid" aria-label="Queued images">
               {items.map(it => (
-                <div key={it.id} className="card fc-card">
-                  <button className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>×</button>
+                <li key={it.id} className="fc-card">
+                  <button type="button" className="fc-remove" onClick={() => removeItem(it.id)} title="Remove" aria-label={`Remove ${it.name}`} disabled={busy}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
                   <div className="fc-thumb">
                     <img src={(it.out && !it.out.noPreview && it.out.url) || it.srcUrl} alt={it.name} />
                   </div>
                   <div className="fc-name" title={it.name}>{it.name}</div>
                   {it.error ? (
-                    <div style={{ fontSize: 10, color: 'var(--err-strong)' }}>{it.error}</div>
+                    <div className="fc-meta fc-meta--err">{it.error}</div>
                   ) : it.out ? (
                     <>
-                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                        {it.out.note || `${it.out.w}×${it.out.h}`}
-                      </div>
-                      <div style={{ fontSize: 10, color: 'var(--t2)' }}>
+                      <div className="fc-meta">{it.out.note || `${it.out.w}×${it.out.h}`}</div>
+                      <div className="fc-meta">
                         {formatBytes(it.file.size)} → {formatBytes(it.out.bytes)}
-                        {(() => {
-                          const d = sizeDelta(it.file.size, it.out.bytes)
-                          return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
-                        })()}
+                        <Delta orig={it.file.size} out={it.out.bytes} />
                       </div>
-                      <button className="btn btn-accent fc-dl" onClick={() => downloadOne(it)}>
+                      <button type="button" className="fc-btn fc-btn--primary fc-dl" onClick={() => downloadOne(it)}>
                         Download {fmt.label}
                       </button>
                     </>
                   ) : (
-                    <div style={{ fontSize: 10, color: 'var(--t2)' }}>
-                      {it.srcW ? `${it.srcW}×${it.srcH} • ` : ''}{formatBytes(it.file.size)}
+                    <div className="fc-meta">
+                      {it.srcW ? `${it.srcW}×${it.srcH} · ` : ''}{formatBytes(it.file.size)}
                     </div>
                   )}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
+            {drop}
           </div>
 
-          <div className="sub">
-            <div className="sl">Output Settings</div>
-            <div className="fc-settings">
-              <div>
-                <div className="seg-label">Output Format</div>
-                <select value={format} onChange={e => setFormat(e.target.value)} disabled={busy} style={{ maxWidth: 150 }}>
-                  {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                </select>
-                {fmt.ico && <div className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</div>}
-              </div>
+          <aside className="fc-inspector" aria-label="Output settings">
+            <div className="fc-insp-sec">
+              <label className="fc-eyebrow" htmlFor="fc-img-format">Output format</label>
+              <select id="fc-img-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={busy}>
+                {OUTPUT_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              {fmt.ico && <p className="fc-note">Multi-size favicon: {ICO_SIZES.join(', ')} px in one file</p>}
               {format === 'image/jpeg' && (
-                <div>
-                  <div className="seg-label">Background</div>
+                <div className="fc-row">
                   {/* The shared picker. Note that this control exists PRECISELY
                       because JPEG has no alpha — which is also the panel's own
                       reason for not offering an alpha slider. */}
@@ -730,188 +612,157 @@ function ImageConvert({ toast, initialFiles, initialDraft }) {
                     ariaLabel="JPEG background colour"
                     triggerClassName="fc-bg-pick"
                   />
-                  <div className="fc-note">fills transparency — JPEG has no alpha</div>
-                </div>
-              )}
-              <div className="fc-field-grow">
-                <div className="seg-label">Quality</div>
-                <div className="row">
-                  <SnapSlider
-                    min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
-                    snaps={QUALITY_SNAPS} unit="%"
-                    onChange={setQuality}
-                    disabled={busy || !fmt.lossy}
-                    ariaLabel="Output quality"
-                  />
-                </div>
-                {!fmt.lossy && <div className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</div>}
-              </div>
-              {!fmt.ico && (
-                <div>
-                  <div className="seg-label">Size limit</div>
-                  <select value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} className="fc-select" aria-label="Output size limit">
-                    {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                  </select>
-                </div>
-              )}
-              {!fmt.ico && (
-                <div>
-                  <div className="seg-label">Export Scale</div>
-                  <select value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} className="fc-select fc-select--narrow" aria-label="Export render scale">
-                    {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                  </select>
+                  <p className="fc-note">Background — fills transparency, JPEG has no alpha</p>
                 </div>
               )}
             </div>
 
-            {/* WHAT YOU ARE ABOUT TO GET, stated before you press the button.
-                The panel had four controls and no answer: Size limit and Export
-                Scale are both relative to a source size the tool never showed,
-                and they interact — a scale above the limit is clamped BY it.
-                Reading one line beats reasoning about two multipliers. */}
-            {!fmt.ico && sized.length > 0 && (
-              <div className="fc-outsize" aria-live="polite">
-                <span className="fc-outsize-k">Output</span>
-                {sized.length === 1 ? (
-                  <span className="fc-outsize-v">
-                    {sized[0].srcW}×{sized[0].srcH}
-                    <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
-                    <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
-                  </span>
-                ) : (
-                  <span className="fc-outsize-v">
-                    {sized.length} images, longest side <strong>{widestOut}</strong> px
-                  </span>
+            <div className="fc-insp-sec">
+              <span className="fc-eyebrow" id="fc-img-quality">Quality</span>
+              <SnapSlider
+                min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
+                snaps={QUALITY_SNAPS} unit="%"
+                onChange={setQuality}
+                disabled={busy || !fmt.lossy}
+                ariaLabel="Output quality"
+              />
+              {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
+            </div>
+
+            {!fmt.ico && (
+              <div className="fc-insp-sec">
+                <div className="fc-pair">
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-img-size">Size limit</label>
+                    <select id="fc-img-size" className="fc-field" value={maxDim} onChange={e => setMaxDim(+e.target.value)} disabled={busy} aria-label="Output size limit">
+                      {SIZE_PRESETS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-img-scale">Export scale</label>
+                    <select id="fc-img-scale" className="fc-field" value={renderScale} onChange={e => setRenderScale(+e.target.value)} disabled={busy} aria-label="Export render scale">
+                      {EXPORT_SCALES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* WHAT YOU ARE ABOUT TO GET, stated before you press the button.
+                    Size limit and Export Scale are both relative to a source
+                    size the tool never showed, and they interact — a scale
+                    above the limit is clamped BY it. Reading one line beats
+                    reasoning about two multipliers. */}
+                {sized.length > 0 && (
+                  <div className="fc-outsize" aria-live="polite">
+                    <span className="fc-outsize-k">Output</span>
+                    {sized.length === 1 ? (
+                      <span className="fc-outsize-v">
+                        {sized[0].srcW}×{sized[0].srcH}
+                        <span className="fc-outsize-arrow" aria-hidden="true"> → </span>
+                        <strong>{sized[0].out.w}×{sized[0].out.h}</strong> px
+                      </span>
+                    ) : (
+                      <span className="fc-outsize-v">
+                        {sized.length} images, longest side <strong>{widestOut}</strong> px
+                      </span>
+                    )}
+                    {anyCapped && <span className="fc-note">held to the size limit</span>}
+                  </div>
                 )}
-                {anyCapped && <span className="fc-note fc-outsize-note">held to the size limit</span>}
               </div>
             )}
-            <div className="fc-actions">
-              <button className="btn btn-accent" onClick={convertAll} disabled={busy}>
+
+            <div className="fc-insp-sec fc-actions">
+              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convertAll} disabled={busy}>
                 {busy ? 'Converting…' : `Convert ${items.length} image${items.length > 1 ? 's' : ''}`}
               </button>
-              {readyCount > 0 && (
-                <button className="btn" onClick={downloadAll} disabled={zipping}>
-                  {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
-                </button>
+              {busy && items.length > 1 && (
+                <div className="fc-progress" role="progressbar" aria-label="Images converted" aria-valuemin={0} aria-valuemax={convertProgress.total} aria-valuenow={convertProgress.done}>
+                  <div className="fc-progress-bar" style={{ '--fc-pct': `${pct}%` }} />
+                </div>
               )}
-              <button className="btn" onClick={clearAll} disabled={busy}>Clear</button>
+              <div className="fc-btn-row">
+                {readyCount > 0 && (
+                  <button type="button" className="fc-btn" onClick={downloadAll} disabled={zipping}>
+                    {zipping ? 'Creating ZIP…' : readyCount > 1 ? `Download all (${readyCount}) as ZIP` : 'Download'}
+                  </button>
+                )}
+                <button type="button" className="fc-btn" onClick={clearAll} disabled={busy}>Clear</button>
+              </div>
+              {readyCount > 1 && (
+                <p className="fc-batch">
+                  {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
+                  <Delta orig={totalOrig} out={totalOut} />
+                </p>
+              )}
             </div>
-            {busy && items.length > 1 && (
-              <div className="fc-progress" style={{ marginTop: 10 }}>
-                <div className="fc-progress-bar" style={{ width: `${Math.round((convertProgress.done / convertProgress.total) * 100)}%` }} />
-              </div>
-            )}
-            {batchDelta && (
-              <div style={{ fontSize: 12, color: 'var(--t1)', marginTop: 10 }}>
-                {readyCount} files: {formatBytes(totalOrig)} → {formatBytes(totalOut)}
-                <span style={{ color: batchDelta.color, fontWeight: 600 }}> • {batchDelta.label}</span>
-              </div>
-            )}
-          </div>
+          </aside>
         </section>
       )}
     </>
   )
 }
 
-// ── ffmpeg loader — Video → GIF is its ONLY caller ──────────────────────────
-// The header used to say "shared by GIF + Frames". It is not: Video → Frames
-// seeks a <video> element and paints each frame to a canvas (see `extract`
-// below), and never touches ffmpeg. Worth stating, because it is the reason
-// only one mode of four pays the engine download at all.
-let ffmpegInstance = null
-let ffmpegLoadPromise = null
-
-// Fetch one core file and report bytes as they arrive. @ffmpeg/util's own
-// toBlobURL(url, type, true, cb) was NOT used for this: it throws when the
-// byte count disagrees with Content-Length and then re-reads a body it has
-// already consumed — which is exactly what happens when a CDN serves the wasm
-// gzipped (Content-Length is the compressed size, the reader yields the
-// decompressed bytes). This reader asserts nothing about the total: it hands
-// back whatever arrived and lets the caller decide whether the total is
-// usable. Falls back to a plain arrayBuffer() when streaming is unavailable.
-async function fetchCoreFile(url, mimeType, onBytes) {
-  const resp = await fetch(url)
-  if (!resp.ok) throw new Error(`${url}: HTTP ${resp.status}`)
-  const total = Number(resp.headers.get('content-length')) || 0
-  const reader = resp.body?.getReader?.()
-  let buf
-  if (!reader) {
-    buf = await resp.arrayBuffer()
-    onBytes?.({ received: buf.byteLength, total: buf.byteLength })
-  } else {
-    const chunks = []
-    let received = 0
-    for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      chunks.push(value)
-      received += value.length
-      onBytes?.({ received, total })
-    }
-    const data = new Uint8Array(received)
-    let at = 0
-    for (const c of chunks) { data.set(c, at); at += c.length }
-    buf = data.buffer
-  }
-  return URL.createObjectURL(new Blob([buf], { type: mimeType }))
+/** A video's source panel: the player, then the facts about the file. */
+function VideoSource({ srcUrl, videoRef, onLoadedMetadata, facts, onReplace, busy }) {
+  return (
+    <div className="fc-source">
+      <video ref={videoRef} src={srcUrl} controls muted className="fc-video" aria-label="Video preview" onLoadedMetadata={onLoadedMetadata} />
+      <div className="fc-source-card">
+        <dl className="fc-facts">
+          {facts.map(([k, v]) => (
+            <div key={k}><dt>{k}</dt><dd>{v}</dd></div>
+          ))}
+        </dl>
+        {onReplace && (
+          <button type="button" className="fc-btn" onClick={onReplace} disabled={busy}>
+            Choose different file
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
 
-async function getFfmpeg(onLog, onBytes) {
-  if (ffmpegInstance) return ffmpegInstance
-  if (ffmpegLoadPromise) return ffmpegLoadPromise
-  ffmpegLoadPromise = (async () => {
-    const [{ FFmpeg }, { toBlobURL, fetchFile }] = await Promise.all([
-      import('@ffmpeg/ffmpeg'),
-      import('@ffmpeg/util'),
-    ])
-    const ffmpeg = new FFmpeg()
-    if (onLog) ffmpeg.on('log', ({ message }) => onLog(message))
-    // The wasm is the download (32 MB raw, ~9 MB compressed); the .js core is
-    // a few KB and not worth a second progress line.
-    await ffmpeg.load({
-      coreURL: await toBlobURL(ffmpegCoreURL, 'text/javascript'),
-      wasmURL: await fetchCoreFile(ffmpegWasmURL, 'application/wasm', onBytes),
-    })
-    ffmpeg._fetchFile = fetchFile
-    ffmpegInstance = ffmpeg
-    return ffmpeg
-  })()
-  try {
-    return await ffmpegLoadPromise
-  } catch (err) {
-    ffmpegLoadPromise = null
-    throw err
-  }
-}
-
-// ── Mode 2: Video → GIF ──────────────────────────────────────────────────────
-function VideoToGif({ toast }) {
+// ── Mode 3: Video → an animated file ─────────────────────────────────────────
+// This was "Video → GIF". The engine it already loaded writes four more
+// formats for the cost of a different argument list (utils/mediaEncode.js), so
+// the same panel now offers GIF, animated WebP, APNG, MP4 and WebM. GIF stays
+// the default and its command is unchanged apart from an even height, which
+// tests/unit/media-encode.test.js pins. Sound is dropped in every format:
+// these are loops for a page, and saying so is better than a silent track
+// that sometimes survives.
+function VideoConvert({ toast }) {
+  const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
   const [srcUrl, setSrcUrl] = useState(null)
+  const [format, setFormat] = useState('gif')
   const [fps, setFps] = useState(10)
   const [width, setWidth] = useState(480)
   const [quality, setQuality] = useState('medium')
+  const [plays, setPlays] = useState(0)
   const [duration, setDuration] = useState(0)
   const [trimStart, setTrimStart] = useState(0)
   const [trimEnd, setTrimEnd] = useState(null) // null = to the end
-  const [engineState, setEngineState] = useState('idle') // idle|loading|ready|error
-  const [working, setWorking] = useState(false)
-  const [progress, setProgress] = useState('')
-  // Bytes of the engine received so far, and the total when the CDN stated one
-  // the count can be measured against. null outside the engine download.
-  const [engineBytes, setEngineBytes] = useState(null)
-  const [result, setResult] = useState(null) // { url, bytes }
+  const [job, setJob] = useState(null)
+  const [engineFailed, setEngineFailed] = useState(false)
+  const [result, setResult] = useState(null) // { url, blob, bytes, format }
+  // One token per run. Cancel (and unmount) bumps it, and so does every new run,
+  // so a run can only ever act while it is the latest one. A shared boolean,
+  // which the next run reset to false, let a cancelled run wake up and encode.
+  const runRef = useRef(0)
+  const fmt = findFormat(format)
+  const working = !!job
 
-  // Unmount-only URL cleanup via a ref — with [srcUrl, result] deps the
-  // cleanup re-ran on every state change and revoked URLs still in use.
-  const urlsRef = useRef({})
-  useEffect(() => { urlsRef.current = { srcUrl, resultUrl: result?.url } })
+  // Unmount-only cleanup via a ref — with [srcUrl, result] deps the cleanup
+  // re-ran on every state change and revoked URLs still in use. An encode still
+  // running in the worker is stopped rather than left to finish for nobody.
+  const liveRef = useRef({})
+  useEffect(() => { liveRef.current = { srcUrl, resultUrl: result?.url, job } })
   useEffect(() => () => {
-    const u = urlsRef.current
+    const u = liveRef.current
     if (u.srcUrl) URL.revokeObjectURL(u.srcUrl)
     if (u.resultUrl) URL.revokeObjectURL(u.resultUrl)
+    if (u.job) { runRef.current++; resetFfmpeg() }
   }, [])
 
   const onFiles = useCallback((files) => {
@@ -919,7 +770,7 @@ function VideoToGif({ toast }) {
     if (!f) return
     const okType = f.type.startsWith('video/') || /\.(mp4|webm|mov|avi|gif|webp)$/i.test(f.name)
     if (!okType) { toast('Please choose a video, animated GIF or animated WebP', 'error'); return }
-    if (f.size > LARGE_FILE_BYTES) toast(`Heads up: file is over 50 MB — conversion may be slow or run out of memory`)
+    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — conversion may be slow or run out of memory', 'info')
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     if (result?.url) URL.revokeObjectURL(result.url)
     setFile(f)
@@ -936,217 +787,204 @@ function VideoToGif({ toast }) {
       toast('Trim end must be after trim start', 'error')
       return
     }
-    if (!navigator.onLine && !ffmpegInstance) {
+    if (!engineLoaded() && !navigator.onLine) {
       toast('You appear to be offline — the converter engine needs a connection to load', 'error')
       return
     }
-    setWorking(true)
-    setResult(null)
+    const run = ++runRef.current
+    const stale = () => runRef.current !== run
+    setEngineFailed(false)
+    setResult(prev => { if (prev?.url) URL.revokeObjectURL(prev.url); return null })
+    const target = fmt
     let ffmpeg
     try {
-      if (!ffmpegInstance) { setEngineState('loading'); setProgress('Loading converter engine… (about 9 MB, first run only)') }
-      // The 9 MB sentence above is the promise; the bytes are the evidence.
+      // The 9 MB sentence is the promise; the bytes are the evidence.
       // Measured 2026-09-09: the engine download showed a spinner and that one
       // sentence for its whole duration, at every width — on a phone connection
-      // that is a minute of nothing moving. The count is shown against the
-      // stated total only while it is consistent with it (a gzipped transfer
-      // reports the compressed size and the reader yields more than that).
-      ffmpeg = await getFfmpeg(null, ({ received, total }) => {
-        setEngineBytes({ received, total: total >= received ? total : 0 })
+      // that is a minute of nothing moving. JobStatus shows the count against
+      // the stated total whenever the CDN's total can be trusted.
+      if (!engineLoaded()) setJob({ stage: 'engine', received: 0, bytesTotal: 0 })
+      ffmpeg = await getFfmpeg(({ received, total }) => {
+        if (!stale()) setJob({ stage: 'engine', received, bytesTotal: total })
       })
-      setEngineBytes(null)
-      setEngineState('ready')
-    } catch {
-      setEngineState('error')
-      setEngineBytes(null)
-      setWorking(false)
-      setProgress('')
-      toast('Could not load the converter engine. Check your connection or try the Image tab.', 'error')
+    } catch (err) {
+      if (stale()) return
+      setJob(null)
+      setEngineFailed(true)
+      // A core that fails its pinned SHA-256 was never run; say that, not "offline".
+      toast(err?.name === 'IntegrityError'
+        ? 'The converter engine that arrived did not match its pinned fingerprint, so it was not run. Try again later, or use the Image tab.'
+        : 'Could not load the converter engine. Check your connection or try the Image tab.', 'error')
       return
     }
+    if (stale()) return
 
+    // Optional trim: -ss before -i seeks fast; -t caps the clip length.
+    const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
+    const end = trimEnd == null ? duration : Math.min(trimEnd, duration || trimEnd)
+    const clipLen = duration && end > start ? end - start : 0
+    const trimmed = clipLen > 0 && (start > 0 || end < duration)
+    const inName = 'input' + (file.name.match(/\.[^.]+$/)?.[0] || '.mp4')
+    setJob({ stage: 'encode', done: 0, total: clipLen, unit: 'time' })
     try {
-      setProgress('Converting to GIF…')
-      const inName = 'input' + (file.name.match(/\.[^.]+$/)?.[0] || '.mp4')
-      const outName = 'output.gif'
-      await ffmpeg.writeFile(inName, await ffmpeg._fetchFile(file))
-      const w = Math.max(16, Math.min(2000, width | 0))
-      const fpsVal = Math.max(1, Math.min(50, fps | 0))
-      const dither = quality === 'high' ? 'sierra2_4a' : quality === 'low' ? 'none' : 'bayer:bayer_scale=2'
-      const vf = `fps=${fpsVal},scale=${w}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse=dither=${dither}`
-      // Optional trim: -ss before -i seeks fast; -t caps the clip length.
-      const start = Math.max(0, Math.min(trimStart || 0, duration || Infinity))
-      const end = trimEnd == null ? duration : Math.min(trimEnd, duration || trimEnd)
-      const clipLen = duration && end > start ? end - start : 0
-      const args = []
-      if (start > 0) args.push('-ss', String(start))
-      args.push('-i', inName)
-      if (clipLen > 0 && (start > 0 || end < duration)) args.push('-t', String(clipLen))
-      args.push('-vf', vf, '-loop', '0', outName)
-      await ffmpeg.exec(args)
-      const data = await ffmpeg.readFile(outName)
-      const blob = new Blob([data.buffer], { type: 'image/gif' })
-      try { await ffmpeg.deleteFile(inName); await ffmpeg.deleteFile(outName) } catch { /* ignore cleanup */ }
-      setResult({ url: URL.createObjectURL(blob), bytes: blob.size })
-      setProgress('')
-      toast('GIF ready')
+      const bytes = await runJob(ffmpeg, {
+        inputs: [{ name: inName, data: file }],
+        args: videoToAnimationArgs({
+          format: target.id, input: inName, fps, width, plays, quality,
+          start, length: trimmed ? clipLen : 0,
+        }),
+        output: `output.${target.ext}`,
+        onTime: (t) => { if (!stale()) setJob({ stage: 'encode', done: t, total: clipLen, unit: 'time' }) },
+      })
+      if (stale()) return
+      const blob = new Blob([bytes], { type: target.mime })
+      setResult({ url: URL.createObjectURL(blob), blob, bytes: blob.size, format: target.id })
+      setJob(null)
+      toast(`${target.label} ready`)
     } catch (err) {
-      setProgress('')
+      if (stale()) return
+      setJob(null)
       toast('Conversion failed: ' + (err?.message || 'unknown error'), 'error')
     }
-    setWorking(false)
-  }, [file, working, width, fps, quality, duration, trimStart, trimEnd, toast])
+  }, [file, working, fmt, width, fps, plays, quality, duration, trimStart, trimEnd, toast])
+
+  const cancel = () => {
+    runRef.current++
+    resetFfmpeg()
+    setJob(null)
+    toast('Conversion cancelled', 'info')
+  }
+
+  // The result's blob: URL goes too: it pins the whole encoded file until
+  // revoked, and a replaced source leaves nothing that could show it again.
+  const clearFile = () => {
+    setFile(null)
+    if (srcUrl) URL.revokeObjectURL(srcUrl)
+    setSrcUrl(null)
+    setResult(prev => { if (prev?.url) URL.revokeObjectURL(prev.url); return null })
+  }
+  const resultFmt = result ? findFormat(result.format) : null
+  const base = (file?.name || 'video').replace(/\.[^.]+$/, '')
 
   return (
     <>
-      <div className="sub">
-        {!srcUrl ? (
-          <DropZone
-            accept={ACCEPT_VIDEO}
-            onFiles={onFiles}
-            hint="Drop a video or animation here or click to browse"
-            sub="MP4, WebM, MOV, AVI, animated GIF / WebP"
-          />
-        ) : (
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div style={{ flex: '1 1 min(360px,100%)', minWidth: 0 }}>
-              <video src={srcUrl} controls muted className="fc-video" aria-label="Video preview"
-                onLoadedMetadata={e => setDuration(e.target.duration || 0)} />
-            </div>
-            <div className="card" style={{ flex: '1 1 200px', minWidth: 0, padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--t0)' }}>Source</div>
-              <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.9 }}>
-                <div><strong>File:</strong> {file?.name}</div>
-                <div><strong>Size:</strong> {formatBytes(file?.size)}</div>
-                {duration > 0 && <div><strong>Duration:</strong> {formatTime(duration)}</div>}
-              </div>
-              <button className="btn" style={{ marginTop: 12 }} onClick={() => { setFile(null); if (srcUrl) URL.revokeObjectURL(srcUrl); setSrcUrl(null); setResult(null) }} disabled={working}>
-                Choose different file
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {srcUrl && (
-        <div className="sub">
-          <div className="sl">GIF Settings</div>
-          <div className="fc-settings">
-            <div>
-              <div className="seg-label">Frame Rate (FPS)</div>
-              <input type="number" min="1" max="50" value={fps} disabled={working}
-                onChange={e => setFps(Math.max(1, Math.min(50, +e.target.value || 10)))} style={{ width: 90, textAlign: 'center' }} />
-            </div>
-            <div>
-              <div className="seg-label">Width (px)</div>
-              <input type="number" min="16" max="2000" value={width} disabled={working}
-                onChange={e => setWidth(Math.max(16, Math.min(2000, +e.target.value || 480)))} style={{ width: 100, textAlign: 'center' }} />
-              <div className="fc-note">height auto</div>
-            </div>
-            <div>
-              <div className="seg-label">Quality</div>
-              <select value={quality} onChange={e => setQuality(e.target.value)} disabled={working} style={{ maxWidth: 150 }}>
-                <option value="low">Low (smaller file)</option>
-                <option value="medium">Medium</option>
-                <option value="high">High (best dither)</option>
-              </select>
-            </div>
-            {duration > 0 && (
-              <div>
-                <div className="seg-label">Trim (seconds)</div>
-                <div className="row" style={{ gap: 6 }}>
-                  <input type="number" min="0" max={duration} step="0.1" value={trimStart} disabled={working}
-                    onChange={e => setTrimStart(Math.max(0, Math.min(duration, +e.target.value || 0)))}
-                    style={{ width: 80, textAlign: 'center' }} aria-label="Trim start (seconds)" />
-                  <span style={{ color: 'var(--t2)' }}>→</span>
-                  <input type="number" min="0" max={duration} step="0.1"
-                    value={trimEnd == null ? +duration.toFixed(1) : trimEnd} disabled={working}
-                    onChange={e => setTrimEnd(Math.max(0, Math.min(duration, +e.target.value || 0)))}
-                    style={{ width: 80, textAlign: 'center' }} aria-label="Trim end (seconds)" />
-                </div>
-                <div className="fc-note">
-                  clip: {formatTime(Math.max(0, (trimEnd == null ? duration : trimEnd) - trimStart))} of {formatTime(duration)}
-                </div>
-              </div>
+      {!srcUrl ? (
+        <DropZone
+          accept={ACCEPT_VIDEO}
+          onFiles={onFiles}
+          hint="Drop a video or animation here or click to browse"
+          sub="MP4, WebM, MOV, AVI, animated GIF / WebP — out as GIF, WebP, APNG, MP4 or WebM"
+        />
+      ) : (
+        <div className="fc-bench">
+          <div className="fc-bench-main">
+            <VideoSource
+              srcUrl={srcUrl}
+              // A recorded WebM often reports Infinity until it is played
+              // through; treat that as unknown rather than as a length.
+              onLoadedMetadata={e => setDuration(Number.isFinite(e.target.duration) ? e.target.duration : 0)}
+              facts={[
+                ['File', file?.name],
+                ['Size', formatBytes(file?.size)],
+                ...(duration > 0 ? [['Duration', formatTime(duration)]] : []),
+              ]}
+              onReplace={clearFile}
+              busy={working}
+            />
+            {result && (
+              <section className="fc-result" aria-label="Result">
+                <h2 className="fc-eyebrow">Result</h2>
+                {resultFmt.kind === 'video' ? (
+                  <video className="fc-result-media" src={result.url} controls loop muted playsInline aria-label={`${resultFmt.label} result`} />
+                ) : (
+                  <img className="fc-result-media" src={result.url} alt={`${resultFmt.label} result`} />
+                )}
+                <p className="fc-meta">
+                  {resultFmt.label} · {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
+                  {file?.size ? <Delta orig={file.size} out={result.bytes} /> : null}
+                </p>
+                <button type="button" className="fc-btn fc-btn--primary" onClick={() => gatedDownload(result.blob, `${base}.${resultFmt.ext}`, `download the ${resultFmt.label}`)}>
+                  Download {resultFmt.label}
+                </button>
+              </section>
             )}
           </div>
 
-          <div className="fc-actions">
-            <button className="btn btn-accent" onClick={convert} disabled={working}>
-              {working ? (engineState === 'loading' ? 'Loading engine…' : 'Converting…') : 'Convert to GIF'}
-            </button>
-          </div>
-
-          {progress && (
-            <div className="fc-status" role="status">
-              <span className="fc-spinner" aria-hidden="true" />
-              {progress}
-              {engineBytes && (
-                <span className="fc-status-bytes">
-                  {formatBytes(engineBytes.received)}{engineBytes.total ? ` of ${formatBytes(engineBytes.total)}` : ''}
-                </span>
-              )}
+          <aside className="fc-inspector" aria-label="Conversion settings">
+            <div className="fc-insp-sec">
+              <label className="fc-eyebrow" htmlFor="fc-vid-format">Output format</label>
+              <select id="fc-vid-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={working}>
+                {ANIMATION_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </select>
+              <p className="fc-note">Sound is removed</p>
             </div>
-          )}
-          {engineBytes?.total > 0 && (
-            <div className="fc-progress" role="progressbar" aria-label="Converter engine download" aria-valuemin={0} aria-valuemax={engineBytes.total} aria-valuenow={engineBytes.received}>
-              <div className="fc-progress-bar" style={{ width: `${Math.min(100, Math.round((engineBytes.received / engineBytes.total) * 100))}%` }} />
+            <div className="fc-insp-sec">
+              <div className="fc-pair">
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-fps">Frame rate (fps)</label>
+                  <input id="fc-vid-fps" className="fc-field fc-field--num" type="number" min={FPS_MIN} max={FPS_MAX} value={fps} disabled={working}
+                    onChange={e => setFps(clampFps(+e.target.value || 10))} />
+                </div>
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-width">Width (px)</label>
+                  <input id="fc-vid-width" className="fc-field fc-field--num" type="number" min="16" max="2000" value={width} disabled={working}
+                    onChange={e => setWidth(Math.max(16, Math.min(2000, +e.target.value || 480)))} />
+                </div>
+              </div>
+              <p className="fc-note">Height follows the video&apos;s shape</p>
             </div>
-          )}
-          {engineState === 'error' && (
-            <div className="fc-status fc-status-err">
-              The converter engine failed to load. Image conversion still works on the Image tab.
+            <div className="fc-insp-sec">
+              <div className="fc-pair">
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-quality">Quality</label>
+                  <select id="fc-vid-quality" className="fc-field" value={quality} onChange={e => setQuality(e.target.value)} disabled={working || fmt.id === 'apng'}>
+                    {QUALITY_LEVELS.map(q => <option key={q.id} value={q.id}>{q.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="fc-eyebrow" htmlFor="fc-vid-loop">Loop</label>
+                  <select id="fc-vid-loop" className="fc-field" value={fmt.loops ? plays : 0} onChange={e => setPlays(+e.target.value)} disabled={working || !fmt.loops}>
+                    {PLAY_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              {fmt.id === 'apng' && <p className="fc-note">APNG is lossless — quality doesn&apos;t apply</p>}
+              {!fmt.loops && <p className="fc-note">Video files store no loop count — the player decides</p>}
             </div>
-          )}
-        </div>
-      )}
-
-      {result && (
-        <div className="sub">
-          <div className="sl">Result</div>
-          <div className="card" style={{ padding: 16, marginTop: 10, maxWidth: 520 }}>
-            <img src={result.url} alt="GIF result" style={{ maxWidth: '100%', borderRadius: 'var(--radius-s)', display: 'block', background: 'var(--bg-2)' }} />
-            <div style={{ fontSize: 12, color: 'var(--t1)', margin: '10px 0' }}>
-              GIF • {file?.size ? <>{formatBytes(file.size)} → {formatBytes(result.bytes)}</> : formatBytes(result.bytes)}
-              {(() => {
-                const d = file?.size ? sizeDelta(file.size, result.bytes) : null
-                return d ? <span style={{ color: d.color, fontWeight: 600 }}> • {d.label}</span> : null
-              })()}
+            {duration > 0 && (
+              <div className="fc-insp-sec">
+                <span className="fc-eyebrow">Trim (seconds)</span>
+                <div className="fc-range">
+                  <input className="fc-field fc-field--num" type="number" min="0" max={duration} step="0.1" value={trimStart} disabled={working}
+                    onChange={e => setTrimStart(Math.max(0, Math.min(duration, +e.target.value || 0)))}
+                    aria-label="Trim start (seconds)" />
+                  <span className="fc-range-arrow" aria-hidden="true">→</span>
+                  <input className="fc-field fc-field--num" type="number" min="0" max={duration} step="0.1"
+                    value={trimEnd == null ? +duration.toFixed(1) : trimEnd} disabled={working}
+                    onChange={e => setTrimEnd(Math.max(0, Math.min(duration, +e.target.value || 0)))}
+                    aria-label="Trim end (seconds)" />
+                </div>
+                <p className="fc-note">
+                  clip: {formatTime(Math.max(0, (trimEnd == null ? duration : trimEnd) - trimStart))} of {formatTime(duration)}
+                </p>
+              </div>
+            )}
+            <div className="fc-insp-sec fc-actions">
+              <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={convert} disabled={working}>
+                {working ? (job.stage === 'engine' ? 'Loading engine…' : 'Converting…') : `Convert to ${fmt.label}`}
+              </button>
+              <JobStatus job={job} engineFailed={engineFailed} onCancel={working ? cancel : null} />
             </div>
-            <DownloadButton url={result.url} name={`${(file?.name || 'video').replace(/\.[^.]+$/, '')}.gif`} />
-          </div>
+          </aside>
         </div>
       )}
     </>
   )
 }
 
-// Small helper button to keep download wiring clean.
-function DownloadButton({ url, name }) {
-  const requireExportAccount = useExportGate()
-  return (
-    <button className="btn btn-accent" onClick={async () => {
-      if (!(await requireExportAccount('download the GIF'))) return
-      triggerDownload(url, name)
-    }}>Download GIF</button>
-  )
-}
-
-// ── Mode 3: Video → Frames (HTML5 video + canvas seek) ───────────────────────
+// ── Mode 4: Video → Frames (HTML5 video + canvas seek) ───────────────────────
 function VideoFrames({ toast }) {
-  const requireExportAccount = useExportGate()
-  // RETURNS WHETHER THE FILE ACTUALLY LEFT. It used to return undefined, and
-  // every caller ignored it: `gatedDownload(...)` then `toast('Downloaded ZIP
-  // with N images')` on the next line, unawaited. For a visitor with no account
-  // the gate opens a signup dialog and the download never happens — so the
-  // success toast rendered BEHIND the dialog, telling them a file they did not
-  // get had arrived. A dismissed gate is not a failure and says nothing; it is
-  // the visitor's own answer, and the dialog already explained itself.
-  const gatedDownload = useCallback(async (blobOrUrl, filename, reason) => {
-    if (!(await requireExportAccount(reason))) return false
-    triggerDownload(blobOrUrl, filename)
-    return true
-  }, [requireExportAccount])
+  const gatedDownload = useGatedDownload()
   const [file, setFile] = useState(null)
   const [srcUrl, setSrcUrl] = useState(null)
   const [meta, setMeta] = useState(null)
@@ -1180,7 +1018,7 @@ function VideoFrames({ toast }) {
       toast('Please choose a video file (MP4, WebM, MOV, AVI)', 'error')
       return
     }
-    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow')
+    if (f.size > LARGE_FILE_BYTES) toast('Heads up: file is over 50 MB — extraction may be slow', 'info')
     if (srcUrl) URL.revokeObjectURL(srcUrl)
     frames.forEach(fr => URL.revokeObjectURL(fr.url))
     setFile(f)
@@ -1201,7 +1039,9 @@ function VideoFrames({ toast }) {
     if (!srcUrl || !meta || extracting) return
     setExtracting(true)
     setProgress(0)
-    setFrames([])
+    // A second extraction replaces the first: revoke its thumbnails' blob: URLs
+    // rather than leaving every earlier frame pinned for the life of the page.
+    setFrames(prev => { prev.forEach(fr => URL.revokeObjectURL(fr.url)); return [] })
 
     const video = document.createElement('video')
     video.muted = true
@@ -1235,6 +1075,7 @@ function VideoFrames({ toast }) {
     const out = []
     let t = from, idx = 0
     let unsupported = false
+    let stopped = null
 
     try {
       while (t < to && idx < total + 1) {
@@ -1261,14 +1102,19 @@ function VideoFrames({ toast }) {
         setProgress(Math.round((idx / total) * 100))
       }
     } catch (err) {
-      if (unsupported) toast(err.message, 'error')
-      else toast(out.length ? `Extracted ${out.length} frames (stopped: ${err.message})` : `Extraction failed: ${err.message}`, out.length ? 'success' : 'error')
+      stopped = err.message
     }
 
     setFrames(out)
     setExtracting(false)
     setProgress(100)
-    if (out.length) toast(`Extracted ${out.length} frames`)
+    // ONE toast, chosen after the loop. The catch used to toast "Extracted N
+    // frames (stopped: …)" and then this line toasted "Extracted N frames" in
+    // the same tick — the second replaced the first before it painted, so a
+    // run that stopped early reported itself as a clean success.
+    if (!out.length) toast(unsupported ? stopped : `Extraction failed: ${stopped || 'no frames in that range'}`, 'error')
+    else if (stopped) toast(`Extracted ${out.length} frames (stopped: ${stopped})`, 'info')
+    else toast(`Extracted ${out.length} frames`)
   }, [srcUrl, meta, fps, scale, format, quality, rangeStart, rangeEnd, extracting, toast])
 
   const downloadAll = useCallback(async () => {
@@ -1294,74 +1140,52 @@ function VideoFrames({ toast }) {
 
   return (
     <>
-      <div className="sub">
-        {!srcUrl ? (
-          <DropZone accept="video/*,.mp4,.webm,.mov,.avi" onFiles={onFiles}
-            hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI — output is a ZIP of image frames" />
-        ) : (
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div style={{ flex: '1 1 min(360px,100%)', minWidth: 0 }}>
-              <video ref={videoRef} src={srcUrl} controls muted onLoadedMetadata={onLoadedMeta} className="fc-video" aria-label="Video preview" />
-            </div>
-            {meta && (
-              <div className="card" style={{ flex: '1 1 200px', minWidth: 0, padding: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--t0)' }}>Video Info</div>
-                <div style={{ fontSize: 12, color: 'var(--t1)', lineHeight: 1.9 }}>
-                  <div><strong>File:</strong> {file?.name}</div>
-                  <div><strong>Size:</strong> {formatBytes(file?.size)}</div>
-                  <div><strong>Duration:</strong> {formatTime(meta.duration)}</div>
-                  <div><strong>Resolution:</strong> {meta.width}×{meta.height}px</div>
-                  <div><strong>Est. frames:</strong> {est.toLocaleString()}</div>
+      {!srcUrl ? (
+        <DropZone accept="video/*,.mp4,.webm,.mov,.avi" onFiles={onFiles}
+          hint="Drop a video here or click to browse" sub="MP4, WebM, MOV, AVI — output is a ZIP of image frames" />
+      ) : (
+        <div className="fc-bench">
+          <div className="fc-bench-main">
+            <VideoSource
+              srcUrl={srcUrl}
+              videoRef={videoRef}
+              onLoadedMetadata={onLoadedMeta}
+              facts={meta ? [
+                ['File', file?.name],
+                ['Size', formatBytes(file?.size)],
+                ['Duration', formatTime(meta.duration)],
+                ['Resolution', `${meta.width}×${meta.height}px`],
+                ['Est. frames', est.toLocaleString()],
+              ] : [['File', file?.name], ['Size', formatBytes(file?.size)]]}
+            />
+          </div>
+
+          {meta && (
+            <aside className="fc-inspector" aria-label="Extraction settings">
+              <div className="fc-insp-sec">
+                <div className="fc-pair">
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-fr-fps">Frames per second</label>
+                    <input id="fc-fr-fps" className="fc-field fc-field--num" type="number" min="0.1" max="30" step="0.1" value={fps} disabled={extracting}
+                      onChange={e => setFps(Math.max(0.1, Math.min(30, +e.target.value || 1)))} />
+                  </div>
+                  <div>
+                    <label className="fc-eyebrow" htmlFor="fc-fr-scale">Scale</label>
+                    <select id="fc-fr-scale" className="fc-field" value={scale} onChange={e => setScale(+e.target.value)} disabled={extracting}>
+                      <option value={1}>100% (Original)</option>
+                      <option value={0.75}>75%</option>
+                      <option value={0.5}>50%</option>
+                      <option value={0.25}>25%</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {srcUrl && meta && (
-        <div className="sub">
-          <div className="sl">Extraction Settings</div>
-          <div className="fc-settings">
-            <div>
-              <div className="seg-label">Frames per second</div>
-              <input type="number" min="0.1" max="30" step="0.1" value={fps} disabled={extracting}
-                onChange={e => setFps(Math.max(0.1, Math.min(30, +e.target.value || 1)))} style={{ width: 90, textAlign: 'center' }} />
-            </div>
-            <div>
-              <div className="seg-label">Scale</div>
-              <select value={scale} onChange={e => setScale(+e.target.value)} disabled={extracting} style={{ maxWidth: 150 }}>
-                <option value={1}>100% (Original)</option>
-                <option value={0.75}>75%</option>
-                <option value={0.5}>50%</option>
-                <option value={0.25}>25%</option>
-              </select>
-            </div>
-            <div>
-              <div className="seg-label">Output Format</div>
-              <select value={format} onChange={e => setFormat(e.target.value)} disabled={extracting} style={{ maxWidth: 130 }}>
-                {FRAME_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <div className="seg-label">Range (seconds)</div>
-              <div className="row" style={{ gap: 6 }}>
-                <input type="number" min="0" max={meta.duration} step="0.1" value={rangeStart} disabled={extracting}
-                  onChange={e => setRangeStart(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
-                  style={{ width: 80, textAlign: 'center' }} aria-label="Range start (seconds)" />
-                <span style={{ color: 'var(--t2)' }}>→</span>
-                <input type="number" min="0" max={meta.duration} step="0.1"
-                  value={rangeEnd == null ? +meta.duration.toFixed(1) : rangeEnd} disabled={extracting}
-                  onChange={e => setRangeEnd(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
-                  style={{ width: 80, textAlign: 'center' }} aria-label="Range end (seconds)" />
-              </div>
-              <div className="fc-note">
-                {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} • ~{est.toLocaleString()} frames
-              </div>
-            </div>
-            <div className="fc-field-grow">
-              <div className="seg-label">Quality</div>
-              <div className="row">
+              <div className="fc-insp-sec">
+                <label className="fc-eyebrow" htmlFor="fc-fr-format">Output format</label>
+                <select id="fc-fr-format" className="fc-field" value={format} onChange={e => setFormat(e.target.value)} disabled={extracting}>
+                  {FRAME_FORMATS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+                </select>
+                <span className="fc-eyebrow fc-eyebrow--sub">Quality</span>
                 <SnapSlider
                   min={1} max={100} value={quality} defaultValue={QUALITY_DEFAULT}
                   snaps={QUALITY_SNAPS} unit="%"
@@ -1369,63 +1193,60 @@ function VideoFrames({ toast }) {
                   disabled={extracting || !fmt.lossy}
                   ariaLabel="Frame quality"
                 />
+                {!fmt.lossy && <p className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</p>}
               </div>
-              {!fmt.lossy && <div className="fc-note">{fmt.label} is lossless — quality doesn&apos;t apply</div>}
-            </div>
-          </div>
-          <div className="fc-actions">
-            <button className="btn btn-accent" onClick={extract} disabled={extracting}>
-              {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
-            </button>
-          </div>
-          {extracting && (
-            <div className="fc-progress"><div className="fc-progress-bar" style={{ width: `${progress}%` }} /></div>
+              <div className="fc-insp-sec">
+                <span className="fc-eyebrow">Range (seconds)</span>
+                <div className="fc-range">
+                  <input className="fc-field fc-field--num" type="number" min="0" max={meta.duration} step="0.1" value={rangeStart} disabled={extracting}
+                    onChange={e => setRangeStart(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
+                    aria-label="Range start (seconds)" />
+                  <span className="fc-range-arrow" aria-hidden="true">→</span>
+                  <input className="fc-field fc-field--num" type="number" min="0" max={meta.duration} step="0.1"
+                    value={rangeEnd == null ? +meta.duration.toFixed(1) : rangeEnd} disabled={extracting}
+                    onChange={e => setRangeEnd(Math.max(0, Math.min(meta.duration, +e.target.value || 0)))}
+                    aria-label="Range end (seconds)" />
+                </div>
+                <p className="fc-note">
+                  {formatTime(Math.max(0, estTo - estFrom))} of {formatTime(meta.duration)} · ~{est.toLocaleString()} frames
+                </p>
+              </div>
+              <div className="fc-insp-sec fc-actions">
+                <button type="button" className="fc-btn fc-btn--primary fc-btn--wide" onClick={extract} disabled={extracting}>
+                  {extracting ? `Extracting… ${progress}%` : 'Extract Frames'}
+                </button>
+                {extracting && (
+                  <div className="fc-progress" role="progressbar" aria-label="Frames extracted" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                    <div className="fc-progress-bar" style={{ '--fc-pct': `${progress}%` }} />
+                  </div>
+                )}
+              </div>
+            </aside>
           )}
         </div>
       )}
 
       {frames.length > 0 && (
-        <div className="sub">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 10, flexWrap: 'wrap' }}>
-            <div className="sl">Extracted Frames ({frames.length.toLocaleString()})</div>
-            <button className="btn btn-accent" onClick={downloadAll} disabled={zipping}>
+        <section className="fc-frames" aria-label="Extracted frames">
+          <div className="fc-frames-head">
+            <h2 className="fc-eyebrow">Extracted frames ({frames.length.toLocaleString()})</h2>
+            <button type="button" className="fc-btn fc-btn--primary" onClick={downloadAll} disabled={zipping}>
               {zipping ? 'Creating ZIP…' : 'Download all as ZIP'}
             </button>
           </div>
-          <div className="img-grid">
+          <ul className="fc-grid">
             {frames.map(f => (
-              <div key={f.name} className="card fc-card" role="button" tabIndex={0} onClick={() => gatedDownload(f.blob, f.name, 'download this frame')} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); gatedDownload(f.blob, f.name, 'download this frame') } }} style={{ cursor: 'pointer' }} title={`Download ${f.name}`} aria-label={`Download ${f.name}`}>
-                <div className="fc-thumb"><img src={f.url} alt={f.name} /></div>
-                <div className="fc-name">{f.name}</div>
-                <div style={{ fontSize: 10, color: 'var(--t2)' }}>{formatBytes(f.size)} • {formatTime(f.time)}</div>
-              </div>
+              <li key={f.name}>
+                <button type="button" className="fc-card fc-card--btn" onClick={() => gatedDownload(f.blob, f.name, 'download this frame')} title={`Download ${f.name}`} aria-label={`Download ${f.name}`}>
+                  <span className="fc-thumb"><img src={f.url} alt="" /></span>
+                  <span className="fc-name">{f.name}</span>
+                  <span className="fc-meta">{formatBytes(f.size)} · {formatTime(f.time)}</span>
+                </button>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
       )}
     </>
-  )
-}
-
-// ── Mode 4: 3D → Blender (coming soon) ───────────────────────────────────────
-function ThreeDComingSoon() {
-  return (
-    <div className="sub">
-      <div className="card fc-soon-card">
-        <div className="fc-soon-badge">Coming soon</div>
-        <h2 style={{ fontFamily: 'var(--display)', fontSize: 24, fontWeight: 500, marginBottom: 8, color: 'var(--t0)' }}>
-          3D model → Blender (.blend)
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--t1)', lineHeight: 1.65, maxWidth: 560 }}>
-          Converting 3D files (OBJ, FBX, glTF, STL…) into a native Blender <code>.blend</code> file
-          isn't possible purely in the browser — it requires Blender's Python engine running
-          server-side. We're planning a hosted pipeline for this. For now, use Blender's
-          built-in import/export, or import OBJ / glTF directly.
-        </p>
-        <button className="btn" disabled style={{ marginTop: 16, opacity: 0.55, cursor: 'not-allowed' }}>
-          Not available yet
-        </button>
-      </div>
-    </div>
   )
 }

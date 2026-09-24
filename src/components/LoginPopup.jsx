@@ -308,9 +308,9 @@ export default function LoginPopup({ reason, reasons, unlocks, free = true, init
           {error && <p className="ui-login-err" role="alert">{error}</p>}
 
           {resetMode && resetSent ? (
-            <div style={{ textAlign: 'center', padding: '10px 0 4px' }}>
-              <p style={{ fontSize: 14, color: 'var(--t0)', marginBottom: 6 }}>Check your email</p>
-              <p style={{ fontSize: 12.5, color: 'var(--t2)', marginBottom: 14 }}>
+            <div className="ui-login-sent">
+              <p className="ui-login-sent-h">Check your email</p>
+              <p className="ui-login-sent-p">
                 We sent a reset link to <strong>{email}</strong>.
               </p>
               <button type="button" className="btn" onClick={() => { setResetMode(false); setResetSent(false) }}>Back to sign in</button>

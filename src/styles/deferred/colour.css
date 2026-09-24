@@ -43,21 +43,15 @@
 .search-empty{padding:24px;text-align:center;font-size:12px;color:var(--t2)}
 .search-footer{display:flex;gap:14px;padding:8px 14px;background:var(--bg-1);border-top:1px solid var(--border);font-size:10px;color:var(--t3)}
 .search-footer kbd{font-family:var(--mono);background:var(--bg-3);padding:1px 5px;border-radius:4px;border:1px solid var(--border);margin-right:4px}
-.topbar-btn-export:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
 .topbar-btn-export-label-i{overflow:hidden;min-width:0;white-space:nowrap}
-.topbar-btn-export:hover .topbar-btn-export-label,.topbar-btn-export:focus-visible .topbar-btn-export-label,.topbar-btn-export[aria-expanded="true"] .topbar-btn-export-label{grid-template-columns:1fr;opacity:1;margin-left:0}
 .topbar-btn-export-chev{margin-left:2px;transition:transform var(--dur-2) var(--ease-standard)}
-.export-dropdown-item:hover{background:var(--hvr)}
-.export-dropdown-item svg{color:var(--brand);flex-shrink:0}
 .export-dropdown-hint{display:block;font-size:10px;color:var(--t2);font-weight:400;margin-left:auto}
-.topbar-preview-btn:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
-.topbar-icon-btn:hover{background:var(--brand-bg);color:var(--brand)}
 .topbar-notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--err)}
 .topbar-avatar:hover{border-color:var(--bh)}
 .topbar-avatar-guest{background:var(--bg-2);color:var(--t2)}
 .topbar-avatar{cursor:pointer}
 .profile-menu-head{display:flex;align-items:center;gap:10px;padding:10px 10px 12px;border-bottom:1px solid var(--border);margin-bottom:4px}
-.profile-menu-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
+.profile-menu-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:var(--avatar-ink);font-weight:700;font-size:14px;flex-shrink:0}
 .profile-menu-avatar img{width:100%;height:100%;object-fit:cover}
 .profile-menu-name{font-size:13px;font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .profile-menu-email{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -69,17 +63,6 @@
 .profile-menu-danger svg{color:var(--err-strong)}
 .profile-menu-sep{height:1px;background:var(--border);margin:4px 0}
 .profile-menu-head{position:relative}
-.profile-menu-probadge{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--accent-fg);background:var(--accent-strong);padding:2px 7px;border-radius:100px;align-self:flex-start;flex-shrink:0}
-/* Primary CTA — the upgrade prompt is intentionally the loudest row in the
-   popup now that the navbar no longer carries an Upgrade button (#9). */
-.profile-menu-upgrade{justify-content:center;font-weight:700;color:var(--accent-fg);background:var(--accent-strong);margin:2px 0 6px;padding:11px 12px;box-shadow:0 4px 14px -6px var(--accent-glow);transition:background var(--t),box-shadow var(--t),transform var(--dur-2) var(--ease-out)}
-.profile-menu-upgrade svg{color:var(--accent-fg)}
-.profile-menu-upgrade:hover{background:var(--accent-strong);box-shadow:0 6px 18px -6px var(--accent-glow);transform:translateY(-1px)}
-.profile-menu-upgrade:active{transform:translateY(0);transition-duration:var(--dur-1)}
-/* Pro members see a quiet, left-aligned "Manage subscription" row instead. */
-.profile-menu-upgrade.is-pro{justify-content:flex-start;font-weight:500;color:var(--t0);background:none;margin:0;padding:9px 12px;box-shadow:none}
-.profile-menu-upgrade.is-pro svg{color:var(--t2)}
-.profile-menu-upgrade.is-pro:hover{background:var(--hvr);box-shadow:none;transform:none}
 
 /* Brand */
 .sidebar-brand{padding:18px 16px 20px;flex-shrink:0;text-decoration:none!important;color:inherit;border-bottom:1px solid var(--border);margin-bottom:12px;display:block;transition:background var(--t)}
@@ -91,8 +74,6 @@
 /* Navigation */
 .sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 10px 12px;display:flex;flex-direction:column;gap:3px}
 .nav-more-section{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
-.nav-item-sub{padding:7px 12px;font-size:12px}
-.nav-item-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nav-item-footer{margin-bottom:2px}
 
 /* Pinned quick-access group */
@@ -112,7 +93,7 @@
 .sidebar-user{display:flex;align-items:center;gap:6px;padding:10px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--border);margin-top:4px}
 .sidebar-user-link{display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-decoration:none!important;color:inherit;border-radius:var(--radius-s);transition:opacity var(--t)}
 .sidebar-user-link:hover{opacity:.8}
-.sidebar-user-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
+.sidebar-user-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--avatar-grad);color:var(--avatar-ink);font-weight:700;font-size:14px;flex-shrink:0}
 .sidebar-user-avatar img{width:100%;height:100%;object-fit:cover}
 .sidebar-user-info{flex:1;min-width:0}
 .sidebar-user-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
@@ -122,10 +103,9 @@
 .cs-tint-strip>div{transition:transform var(--dur-3) var(--ease-out),opacity var(--dur-3) var(--ease-standard)}
 .cs-next-step{padding:48px 0 16px;display:flex;justify-content:center}
 .cs-next-link{display:inline-flex;align-items:center;gap:12px;padding:14px 28px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t0);text-decoration:none!important;transition:all var(--t)}
-.cs-next-link:hover{border-color:var(--brand);background:var(--brand-bg);text-decoration:none!important}
 .cs-next-link span{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t2)}
 .cs-next-link strong{font-size:15px;font-weight:700;letter-spacing:-.01em}
-.cs-next-link svg{color:var(--brand);flex-shrink:0}
+.cs-next-link svg{color:var(--accent);flex-shrink:0}
 /* More colour tools — cross-link footer at the bottom of every colour tool */
 .cs-tools-footer{margin-top:56px;padding-top:32px;border-top:1px solid var(--border)}
 .cs-tools-footer-title{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);margin:0 0 6px}
@@ -134,7 +114,6 @@
 .cs-tools-footer-lead{max-width:620px;margin:0 0 18px;font-size:14px;line-height:1.6;color:var(--t1)}
 .cs-tools-footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .cs-tools-footer-link{display:flex;flex-direction:column;gap:2px;text-align:left;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-2);color:var(--t0);cursor:pointer;text-decoration:none;transition:all var(--t)}
-.cs-tools-footer-link:hover{border-color:var(--brand);background:var(--brand-bg)}
 .cs-tools-footer-link strong{font-size:14px;font-weight:700;letter-spacing:-.01em}
 .cs-tools-footer-link span{font-size:12px;color:var(--t2)}
 @media(max-width:768px){.cs-tools-footer-grid{grid-template-columns:repeat(2,1fr)}}
@@ -180,7 +159,6 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .tint-swatch .stop-label{font-size:11px;font-family:var(--mono);font-weight:700}
 .tint-info{text-align:center;margin-top:6px}
 .tint-info .lval{font-family:var(--mono);font-size:9px;color:var(--t2)}
-.tint-base-tag{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-strong)}
 
 /* ─── Contrast ─── */
 .cr-val{font-size:clamp(24px,4vw,36px);font-weight:700;font-family:var(--mono);letter-spacing:-.02em}
@@ -241,7 +219,7 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 /* Undo toast */
 .cs-undo-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,.25);animation:ci-fade var(--dur-1) var(--ease-entrance)}
 .cs-undo-toast span{font-size:13px;font-weight:500;color:var(--t0)}
-.cs-undo-toast button{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:700;color:var(--accent-strong);cursor:pointer;padding:4px 10px;border-radius:6px;transition:background var(--dur-1) var(--ease-standard)}
+.cs-undo-toast button{border:none;background:none;font-family:var(--font);font-size:12px;font-weight:700;color:var(--accent-text);cursor:pointer;padding:4px 10px;border-radius:6px;transition:background var(--dur-1) var(--ease-standard)}
 .cs-undo-toast button:hover{background:var(--bg-2)}
 .cs-undo-dismiss{font-size:16px!important;color:var(--t3)!important;padding:4px 6px!important}
 
@@ -264,10 +242,6 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .grad-bento-arrow{color:var(--t3);font-size:9px}
 @media(max-width:700px){.grad-bento{grid-template-columns:1fr}}
 
-.cs-csys-pt:focus-visible{outline:none}
-.cs-csys-pt-ring{display:block;width:100%;height:100%;border-radius:50%;background:var(--cs-c,#000);box-shadow:0 0 0 1px #000,0 0 0 2px #fff;transition:transform var(--dur-2) var(--ease-entrance)}
-.cs-csys-pt:focus-visible .cs-csys-pt-ring{box-shadow:0 0 0 1px #000,0 0 0 2px #fff,0 0 0 4px var(--brand)}
-
 /* Live readout chip — follows the active handle. */
 .cs-csys-readout{position:absolute;left:var(--cs-x);top:var(--cs-y);transform:translate(-50%,calc(-100% - 26px));display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:var(--radius-s);background:var(--bg-1);border:1px solid var(--border);box-shadow:var(--shadow-m);pointer-events:none;white-space:nowrap;z-index:4}
 .cs-csys-readout-sw{width:14px;height:14px;flex:0 0 auto;border-radius:4px;background:var(--cs-c,#000);box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
@@ -276,7 +250,6 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 
 /* Magnifier loupe — function, not decoration. */
 .cs-csys-loupe{position:absolute;left:var(--cs-loupe-x,0);top:var(--cs-loupe-y,0);width:var(--cs-loupe-size,96px);height:var(--cs-loupe-size,96px);border-radius:50%;overflow:hidden;border:2px solid var(--bg-1);box-shadow:0 0 0 1px var(--border),var(--shadow-m);pointer-events:none;opacity:0;transition:opacity var(--dur-1) var(--ease-entrance);z-index:5}
-.cs-csys-stage:hover .cs-csys-loupe,.cs-csys-pt:focus-within ~ .cs-csys-loupe,.cs-csys-pt.is-dragging ~ .cs-csys-loupe{opacity:1}
 .cs-csys-loupe-canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
 .cs-csys-loupe-cross{position:absolute;inset:0;pointer-events:none}
 .cs-csys-loupe-cross::before,.cs-csys-loupe-cross::after{content:'';position:absolute;background:rgba(255,255,255,.7);box-shadow:0 0 0 .5px rgba(0,0,0,.6)}
@@ -284,9 +257,6 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .cs-csys-loupe-cross::after{top:50%;left:0;right:0;height:1px;transform:translateY(-.5px)}
 .cs-csys-brand-name{font-size:13px;font-weight:550;color:var(--t1)}
 .cs-csys-brand-bar{display:flex;height:24px;border-radius:var(--radius-xs);overflow:hidden}
-.cs-csys-brand-sw{flex:1;border:none;padding:0;background:var(--cs-c,var(--bg-3));cursor:pointer;transition:flex var(--t-fast)}
-.cs-csys-brand-sw:hover{flex:1.6}
-.cs-csys-brand-sw:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--brand)}
 
 /* Reduced motion — loupe/readout stay functional, only the fade is removed. */
 [data-reduced-motion] .cs-csys-loupe{transition:none}
@@ -399,11 +369,11 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .cs-pv-quote{margin:0;padding:8px 12px;background:var(--pv-surface);border-left:3px solid var(--pv-primary);
   border-radius:0 var(--radius-s) var(--radius-s) 0;color:var(--pv-text);font-size:14px;line-height:1.4;font-weight:600}
 /* Selected (imported) card: a brand ring on the stripes + a tick badge. */
-.pgal-card.is-selected .pgal-stripes{outline:2px solid var(--brand);outline-offset:2px}
+.pgal-card.is-selected .pgal-stripes{outline:2px solid var(--accent);outline-offset:2px}
 /* Both of these sit in the shared card's float slot now, which is already
    absolutely positioned at the top-right of the swatch — so they only need
    their own shape, not their own placement. */
-.pgal-tick{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--accent-strong);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
+.pgal-tick{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--radius-pill);background:var(--accent-text);color:var(--accent-fg,#fff);box-shadow:var(--shadow-s);pointer-events:none}
 .pgal-stripe{position:relative;flex:1;min-height:0;border:none;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:flex-end}
 .pgal-stripe:first-child{flex:2.4}
 /* Hairline between stripes so adjacent #FFFFFF (or #000000) bands in a brand
@@ -417,9 +387,9 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
    what has to go — the icons keep every action reachable in a single row. */
 @media (max-width:600px){.pgal-act span{display:none}.pgal-act{padding:6px}}
 .pgal-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
-.pgal-use.is-selected svg{stroke:var(--brand)}
+.pgal-use.is-selected svg{stroke:var(--accent)}
 .pgal-cmp{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;border-radius:var(--radius-pill);border:1px solid var(--border);background:none;color:var(--t2);cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-.pgal-cmp:hover{color:var(--brand);border-color:var(--bh)}
+.pgal-cmp:hover{color:var(--accent);border-color:var(--bh)}
 /* Radius declared at REST, not on :focus-visible — see the note on the
    global :focus-visible rule near the top of this file. This element paints
    no background and no border of its own, so the radius is visually inert
@@ -456,8 +426,6 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .dsc-modal-tags{display:flex;gap:6px;flex-wrap:wrap}
 .dsc-modal-tag{font-family:var(--mono);font-size:11px;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);padding:3px 9px;border-radius:var(--radius-pill)}
 .dsc-modal-tools{display:flex;gap:8px;flex-wrap:wrap}
-.dsc-modal-tool{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius);border:1px solid color-mix(in srgb,var(--brand) 40%,var(--border));background:var(--brand-bg);color:var(--accent-strong);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-.dsc-modal-tool:hover{background:color-mix(in srgb,var(--brand) 16%,transparent);border-color:var(--brand)}
 .dsc-modal-members{list-style:none;display:flex;flex-direction:column;gap:6px;margin:0;padding:0}
 .dsc-modal-member{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg-1);cursor:pointer;font-family:var(--font);transition:background var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
 .dsc-modal-member:hover{background:var(--hvr);border-color:var(--bh)}
@@ -484,7 +452,7 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
    trigger sits at the left edge of the toolbar (default .cpk-pop is right:0). */
 .plb-seedpick{flex:0 0 auto}
 .plb-hexfield{width:96px;padding:0 10px;font-family:var(--mono);font-size:13px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);transition:border-color var(--t)}
-.plb-hexfield:focus{outline:none;border-color:var(--brand)}
+.plb-hexfield:focus{outline:none;border-color:var(--accent)}
 .plb-hexfield--bad{border-color:#D64545}
 /* System + Vision toolbar triggers ride on .btn btn-s; these only add the
    eyebrow label + no-wrap so every toolbar control shares one button system. */
@@ -498,7 +466,7 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .plb-menu-title{font-size:12px;font-weight:700;color:var(--t0);margin:2px 2px 10px}
 .plb-menu-row{display:flex;gap:8px}
 .plb-menu-row input{flex:1;min-width:0;padding:8px 10px;font-size:13px;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
-.plb-menu-row input:focus{outline:none;border-color:var(--brand)}
+.plb-menu-row input:focus{outline:none;border-color:var(--accent)}
 .plb-menu-sub{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin:12px 2px 6px}
 .plb-menu-item{display:block;width:100%;padding:8px 10px;font-size:13px;font-weight:500;text-align:left;color:var(--t1);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plb-menu-item:hover{background:var(--bg-2);color:var(--t0)}
@@ -507,13 +475,13 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .plb-harm-opt:hover{background:var(--bg-2);color:var(--t0)}
 .plb-harm-opt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
 .plb-harm-opt>svg{flex-shrink:0;color:var(--t2)}
-.plb-harm-opt--on>svg{color:var(--brand)}
+.plb-harm-opt--on>svg{color:var(--accent)}
 .plb-harm-opt-l{flex:1;text-align:left}
 .plb-visopt{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;font-size:13px;font-weight:600;text-align:left;color:var(--t1);background:none;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:all var(--t)}
 .plb-visopt>svg{flex-shrink:0;color:var(--t2)}
 .plb-visopt:hover{background:var(--bg-2);color:var(--t0)}
 .plb-visopt--on{background:var(--bg-2);border-color:var(--t0);color:var(--t0)}
-.plb-visopt--on>svg{color:var(--brand)}
+.plb-visopt--on>svg{color:var(--accent)}
 .plb-visopt-l{flex:1}
 /* 9px bold on a 15% green tint: #16A34A measured 2.69:1 in light and 4.07:1
    in dark (2026-09-09). --ok-strong is the text companion of the state token
@@ -521,8 +489,8 @@ input.cs-hue-slider:focus-visible::-moz-range-track{box-shadow:0 0 0 3px var(--a
 .plb-free{padding:2px 7px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong);background:color-mix(in srgb,#22C55E 15%,transparent);border-radius:999px}
 button.plb-varrow:hover{background:var(--bg-2)}
 .plb-varrow--locked{opacity:.55}
-.plb-varrow--active{background:var(--brand-weak,var(--bg-2))}
-.plb-varrow-tick{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--brand)}
+.plb-varrow--active{background:var(--bg-2)}
+.plb-varrow-tick{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent)}
 .plb-varrow-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:7px 8px;background:none;border:none;border-radius:var(--radius-s);text-align:left;cursor:pointer;transition:background var(--t)}
 .plb-varrow-main:hover{background:var(--bg-2)}
 .plb-varrow-cmp{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;color:var(--t1);background:none;border:none;border-radius:8px;cursor:pointer;transition:all var(--t)}
@@ -537,7 +505,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
    300px dropdown was too small to see where the markers were landing. */
 .plb-imgcard{width:min(720px,100%);gap:10px}
 .plb-imgdrop{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px;text-align:center;color:var(--t2);background:var(--bg-1);border:1.5px dashed var(--border);border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
-.plb-imgdrop:hover,.plb-imgdrop--over{border-color:var(--brand);background:var(--bg-2);color:var(--t1)}
+.plb-imgdrop:hover,.plb-imgdrop--over{border-color:var(--accent);background:var(--bg-2);color:var(--t1)}
 .plb-imgdrop>svg{color:var(--t2)}
 .plb-imgdrop-t{font-size:13px;font-weight:600;color:var(--t0)}
 .plb-imgdrop-s{font-size:11px;font-weight:500;color:var(--t2)}
@@ -549,8 +517,8 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-imgpoint:active{cursor:grabbing}
 /* The active marker reads as the one being worked on — a keyboard user gets
    this from focus, so the ring is the same cue for both input methods. */
-.plb-imgpoint--on{border-color:var(--brand);box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 0 0 4px color-mix(in srgb,var(--brand) 45%,transparent),0 2px 6px rgba(0,0,0,.4);z-index:3}
-.plb-imgpoint:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.plb-imgpoint--on{border-color:var(--accent);box-shadow:0 0 0 1.5px rgba(0,0,0,.45),0 0 0 4px color-mix(in srgb,var(--accent) 45%,transparent),0 2px 6px rgba(0,0,0,.4);z-index:3}
+.plb-imgpoint:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 /* ── The eyedropper loupe ──────────────────────────────────────────────────
    Parked in a stage corner (Mobbin: Alan crop) rather than tracking the
    pointer, so it never covers the region it magnifies; `data-side` flips it
@@ -577,7 +545,7 @@ button.plb-varrow:hover{background:var(--bg-2)}
 .plb-imgactions{display:flex;gap:6px;margin-top:12px}
 .plb-imgclear{display:block;width:100%;margin-top:8px;padding:6px;font-size:11.5px;font-weight:600;color:var(--t2);background:none;border:none;border-radius:var(--radius-s);cursor:pointer;transition:all var(--t)}
 .plb-imgclear:hover{color:#B91C1C;background:var(--bg-2)}
-.plb-tgl--on{color:var(--brand);border-color:var(--brand);background:color-mix(in srgb,var(--brand) 8%,transparent)}
+.plb-tgl--on{color:var(--accent);border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
 /* Vision type split: top half the real palette colour, bottom half the
    colour-vision simulation. Content sits in the bottom half (justify-end), so
    --plb-ink is computed against --plb-sim. */
@@ -612,7 +580,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-picker-hexrow{display:flex;align-items:center;gap:8px;margin-top:8px}
 .plb-picker-chip{width:28px;height:28px;flex-shrink:0;background:var(--plb-rc);border:1px solid var(--border);border-radius:8px}
 .plb-picker-hex{flex:1;min-width:0;padding:7px 9px;font-family:var(--mono);font-size:12px;text-transform:uppercase;color:var(--t0);background:var(--inp);border:1px solid var(--border);border-radius:var(--radius-s)}
-.plb-picker-hex:focus{outline:none;border-color:var(--brand)}
+.plb-picker-hex:focus{outline:none;border-color:var(--accent)}
 .plb-picker-evidence{display:grid;gap:2px;margin:8px 0 2px;font-size:9px;line-height:1.4;color:var(--t2)}
 .plb-picker-evidence strong{font-weight:650;color:#8B5C08}
 .plb-help{position:relative;display:inline-flex;margin-left:auto}
@@ -636,7 +604,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-ctx-sep{height:1px;margin:5px 4px;background:var(--border)}
 .plb-ctx-item--muted{color:var(--t3);cursor:default}
 .plb-ctx-item--muted:hover{background:none;color:var(--t3)}
-.plb-ctx-pro{margin-left:auto;padding:1px 6px;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--accent-strong);border:1px solid var(--brand);border-radius:var(--radius-pill)}
+.plb-ctx-pro{margin-left:auto;padding:1px 6px;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--accent-text);border:1px solid var(--accent);border-radius:var(--radius-pill)}
 
 /* Preview modal + mini UI scene painted from --pv-* role props */
 .plb-modal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,32px);background:var(--scrim);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
@@ -652,11 +620,11 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-preview-item{position:relative;min-width:0;padding:12px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius)}
 .plb-preview-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
 .plb-preview-label strong{font-size:12px;font-weight:700;color:var(--t0)}
-.plb-preview-label span{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-strong)}
+.plb-preview-label span{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--accent-text)}
 .plb-preview-grid .plb-pv{min-height:260px}
 .plb-preview-item--locked .plb-pv{opacity:.62}
 .plb-preview-gate{position:absolute;right:22px;bottom:22px;z-index:2;display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--t0);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-s);cursor:pointer}
-.plb-preview-gate:hover{color:var(--accent-strong);border-color:var(--brand)}
+.plb-preview-gate:hover{color:var(--accent-text);border-color:var(--accent)}
 .plb-pv--v1 .plb-pv-side{order:2;border-right:0;border-left:1px solid var(--pv-border)}
 .plb-pv--v2 .plb-pv-cards{grid-template-columns:1fr 1fr}
 .plb-pv--v2 .plb-pv-card:last-child{grid-column:1/-1}
@@ -749,7 +717,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-submit-err{font-size:12px;font-weight:600;color:var(--danger,#D64545);margin:2px 2px 0}
 .plb-submit-as{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2)}
 .plb-submit-as strong{color:var(--t0);font-weight:700}
-.plb-linkbtn{font-size:12px;font-weight:600;color:var(--accent-strong);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.plb-linkbtn{font-size:12px;font-weight:600;color:var(--accent-text);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .plb-linkbtn:hover{opacity:.8}
 .plb-dsbcard{width:min(420px,100%)}
 .plb-dsb-body{text-align:center;padding:6px 4px 2px}
@@ -759,7 +727,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 /* DSB coming-soon popup — quick links into the tools the walkthrough will connect */
 .plb-dsb-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
 .plb-dsb-link{display:inline-flex;align-items:center;padding:6px 13px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--t1);text-decoration:none;transition:border-color var(--dur-1) var(--ease-standard),color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
-.plb-dsb-link:hover{border-color:var(--brand);color:var(--accent-strong);background:color-mix(in srgb,var(--brand) 6%,transparent)}
+.plb-dsb-link:hover{border-color:var(--accent);color:var(--accent-text);background:color-mix(in srgb,var(--accent) 6%,transparent)}
 .plb-icobtn:hover,.plb-icobtn:focus-visible,.plb-icobtn[aria-expanded="true"]{z-index:4}
 .plb-icobtn:hover .plb-lbl,.plb-icobtn:focus-visible .plb-lbl,.plb-icobtn[aria-expanded="true"] .plb-lbl{grid-template-columns:1fr;padding-left:7px;opacity:1}
 
@@ -771,9 +739,9 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .plb-galtab>svg{flex-shrink:0;opacity:.75}
 .plb-galtab:hover{color:var(--t0)}
 .plb-galtab--on{background:var(--card);color:var(--t0);box-shadow:var(--shadow-xs)}
-.plb-galtab--on>svg{opacity:1;color:var(--brand)}
+.plb-galtab--on>svg{opacity:1;color:var(--accent)}
 .plb-galpopup-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;font-size:12px;font-weight:600;color:var(--t2)}
-.plb-galpopup-body .plb-menu-sub a{color:var(--accent-strong);text-decoration:none}
+.plb-galpopup-body .plb-menu-sub a{color:var(--accent-text);text-decoration:none}
 .plb-galpopup-body .plb-menu-sub a:hover{text-decoration:underline}
 .plb-histclear{margin-top:6px;color:var(--t2);font-size:12px}
 .plb-histclear:hover{color:var(--warn-strong)}
@@ -912,8 +880,6 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
    the label is 12.5px; on --accent-strong it is 5.84 (light) / 6.09 (dark).
    This rule already reached --accent-strong on HOVER, so the RESTING state was
    the unreadable one — the same shape of bug .ui-pill-accent carried. */
-.ggn-btn-accent{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
-.ggn-btn-accent:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
 .ggn-btn-ghost{background:transparent;border-color:var(--ggn-line-2);color:var(--ggn-t1)}
 .ggn-btn-ghost:hover{border-color:var(--ggn-t2);color:var(--ggn-t0);background:var(--hvr)}
 .ggn-btn-sm{padding:6px 13px;font-size:12px}
@@ -1159,7 +1125,7 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 .grg-like:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .grg-copy{font-family:var(--mono);font-size:var(--fs-micro);font-weight:700;letter-spacing:.04em;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:6px 11px;cursor:pointer;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .grg-copy:hover{color:var(--t0);border-color:var(--bh);background:var(--bg-3)}
-.grg-open{display:inline-flex;align-items:center;gap:5px;font-family:var(--font);font-size:var(--fs-micro);font-weight:700;letter-spacing:.02em;color:var(--accent-strong);background:none;border:none;padding:6px 4px;cursor:pointer;text-decoration:none;transition:gap var(--dur-2) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
+.grg-open{display:inline-flex;align-items:center;gap:5px;font-family:var(--font);font-size:var(--fs-micro);font-weight:700;letter-spacing:.02em;background:none;border:none;padding:6px 4px;cursor:pointer;text-decoration:none;transition:gap var(--dur-2) var(--ease-standard),color var(--dur-1) var(--ease-standard)}
 .grg-open:hover{gap:8px;color:var(--brand-soft)}
 .grg-empty{margin-top:8px}
 /* Submissions queue — deliberately styled as a LIST, not as gallery cards, so
@@ -1189,8 +1155,6 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
 @media(max-width:640px){
   .grg-foot{flex-direction:column;align-items:stretch;gap:8px}
   .grg-actions{justify-content:space-between}}
-
-.pgl-build-link:hover{background:var(--brand)}
 .pgl-note{margin:-8px 0 22px;font-size:12.5px;line-height:1.55;color:var(--t2)}
 /* Category sections. The heading STICKS while its own grid scrolls past, so
    the answer to "what am I looking at" survives a hundred cards — that is what
@@ -1229,6 +1193,6 @@ html[data-reduced-motion="true"] .plb-col--in,html[data-reduced-motion="true"] .
    A free user opening a board saved on a paid system used to get Auto silently
    — the chip still read "Analogous" while the board rendered something else, so
    the product looked unreliable rather than paid. */
-.plb-collapsed{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 var(--page-inline) 12px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--brand) 55%,transparent);border-radius:var(--radius-l);background:var(--brand-bg);font-size:12.5px;line-height:1.5;color:var(--t1)}
+.plb-collapsed{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 var(--page-inline) 12px;padding:11px 14px;border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);border-radius:var(--radius-l);background:var(--accent-wash);font-size:12.5px;line-height:1.5;color:var(--t1)}
 .plb-collapsed strong{color:var(--t0);font-weight:650}
-.plb-collapsed-cta:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-fg)}
+.plb-collapsed-cta:hover{background:var(--accent-mid);border-color:var(--accent-mid);color:var(--accent-ink)}

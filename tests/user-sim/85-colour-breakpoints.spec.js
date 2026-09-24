@@ -345,4 +345,96 @@ test.describe('the contrast checker says nothing it cannot stand behind', () => 
       await ctx.close()
     }
   })
+  // create-tools-left-2026-09-15 (1): the page reported main | navigation |
+  // contentinfo and no region naming its content. Both panels are named
+  // sections now — the instrument by the page's own h1, the specimen by its
+  // "Live preview" h2 — so no new words were needed to name them.
+  test('both panels are named regions, instrument and specimen', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440)
+    await go(page, '/create/contrast')
+    await expect(page.locator('.cc-preview')).toBeVisible()
+    const instrument = page.getByRole('region', { name: 'Colour Contrast Checker' })
+    const specimen = page.getByRole('region', { name: /live preview/i })
+    await expect(instrument).toHaveCount(1)
+    await expect(specimen).toHaveCount(1)
+    // The instrument region holds the tool, not just its heading.
+    await expect(instrument.locator('#cc-fg')).toHaveCount(1)
+    await expect(specimen.locator('.cc-preview')).toHaveCount(1)
+    await ctx.close()
+  })
+
+  // App controls are rounded rectangles; 999px is for meters and the sales
+  // page. The AA/AAA switch and the verdict chips were both 999px pills.
+  test('no control or verdict chip on the checker is a pill', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440)
+    await go(page, '/create/contrast')
+    await expect(page.locator('.cc-level-opt')).toHaveCount(2)
+    const radii = await page.evaluate(() => [...document.querySelectorAll(
+      '.cc-page button, .cc-page input, .cc-level-opts, .cc-verdict')]
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => ({ cls: String(el.className), r: parseFloat(getComputedStyle(el).borderTopLeftRadius) })))
+    // POSITIVE CONTROL: the switch, both fields, swap and four chips at least.
+    expect(radii.length).toBeGreaterThan(8)
+    expect(radii.filter((x) => x.r >= 20), 'pill-shaped controls').toEqual([])
+    await ctx.close()
+  })
+})
+
+// The stop row's lock and remove buttons were 26px with a 34px pseudo-element
+// hit area, because in the old two-up grid a real 44px squeezed the hex field.
+// The list is one column now and they take a real 44px under a coarse pointer.
+test.describe('the gradient stop row under a thumb', () => {
+  test('every stop control is 44px on a phone', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 390)
+    await go(page, '/create/gradient')
+    await expect(page.locator('.ggn-stop')).toHaveCount(3)
+    const read = await page.evaluate(() => ({
+      coarse: matchMedia('(pointer: coarse)').matches,
+      boxes: [...document.querySelectorAll('.ggn-stop-lock, .ggn-stop-x, .ggn-stop-swatch .cpk-trigger')]
+        .map((el) => { const b = el.getBoundingClientRect(); return { cls: String(el.className), w: Math.round(b.width), h: Math.round(b.height) } }),
+    }))
+    expect(read.coarse, 'the context must present a coarse pointer').toBe(true)
+    expect(read.boxes.length, 'three stops x three controls').toBe(9)
+    expect(read.boxes.filter((b) => b.w < 44 || b.h < 44), 'stop controls under 44px').toEqual([])
+    await ctx.close()
+  })
+})
+
+// The founder's App design reads each palette column from its left edge; the
+// board used to centre name, hex and role, so five labels drifted sideways
+// with the length of each name. And a phone reaches lock / copy / more only
+// through the column's 32px tools, which a coarse pointer now gets at 44.
+test.describe('the palette board, read and pressed', () => {
+  test('from 769px every column’s label stack starts at the same left edge as its column', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 1440)
+    await go(page, '/create/palette')
+    await expect(page.locator('.plb-col')).toHaveCount(5)
+    await settled(page)
+    const cols = await page.locator('.plb-col').evaluateAll((els) => els.map((col) => {
+      const c = col.getBoundingClientRect()
+      const name = col.querySelector('.plb-name')
+      const n = name.getBoundingClientRect()
+      return { inset: Math.round(n.left - c.left), align: getComputedStyle(name).textAlign }
+    }))
+    expect(cols.length).toBe(5)
+    for (const c of cols) {
+      expect(c.align, 'name is set flush-left').toBe('left')
+      // The column's own inline padding, not a centred offset that varies
+      // with the length of the name.
+      expect(c.inset).toBeLessThanOrEqual(24)
+    }
+    await ctx.close()
+  })
+
+  test('a phone gets 44px column tools', async ({ browser }) => {
+    const { ctx, page } = await at(browser, 390)
+    await go(page, '/create/palette')
+    await expect(page.locator('.plb-col')).toHaveCount(5)
+    const boxes = await page.locator('.plb-col .plb-tool').evaluateAll((els) => els
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => { const b = el.getBoundingClientRect(); return { label: el.getAttribute('aria-label'), w: Math.round(b.width), h: Math.round(b.height) } }))
+    expect(boxes.length, 'visible column tools').toBeGreaterThanOrEqual(10)
+    expect(boxes.filter((b) => b.w < 44 || b.h < 44), 'column tools under 44px').toEqual([])
+    await ctx.close()
+  })
 })

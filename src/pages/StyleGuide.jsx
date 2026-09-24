@@ -311,7 +311,7 @@ export default function StyleGuide({ toast }) {
           <div style={{ marginBottom: 32 }}>
             <h2 style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--t2)', marginBottom: 12 }}>Badges & Tags</h2>
             <div className="card" style={{ padding: 20, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'var(--accent-bg)', color: 'var(--accent-strong)' }}>Default</span>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'var(--accent-bg)', color: 'var(--accent-text)' }}>Default</span>
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,.1)', color: 'var(--ok)' }}>Success</span>
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'rgba(245,158,11,.1)', color: 'var(--warn)' }}>Warning</span>
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 4, background: 'rgba(239,68,68,.1)', color: 'var(--err)' }}>Error</span>

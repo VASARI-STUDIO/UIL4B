@@ -23,6 +23,8 @@ import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import '../styles/deferred/colour.css'
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
+// This page's own sheet — every selector rooted at the page root's two classes.
+import '../styles/pages/gradient-gallery.css'
 
 // /discover/gradients — the Gradient Library. A designgradients-style browse
 // surface over the local static set (src/data/gradientGallery.js): search by

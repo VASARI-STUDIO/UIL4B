@@ -130,7 +130,7 @@ export const SECTIONS = Object.freeze([
     blurb: 'Convert, compress and measure',
     hue: 'imagery',
     group: 'imagery',
-    routes: Object.freeze(['/create/file-converter', '/create/aspect-ratio']),
+    routes: Object.freeze(['/create/file-converter', '/create/aspect-ratio', '/create/3d-viewer']),
   }),
   Object.freeze({
     id: 'ai',

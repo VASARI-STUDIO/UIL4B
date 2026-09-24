@@ -1,0 +1,150 @@
+/* ══ /create/icons + /create/emoji — the page's own sheet ═══════════════════
+   Source: `UIL4B App.dc.html`, the icons screen, and the app file's control
+   language generally — toolbars, fields and secondary buttons are 10–12px
+   rectangles over a hairline; 999px is kept for things that TOGGLE (the filter
+   chips and the Icons/Emoji tabs, which the design draws as pills and which
+   library.css owns) and for meters.
+
+   EVERY SELECTOR IS ROOTED AT `.iel-page` (IconEmojiLibrary's root, which
+   both tabs render inside, customizer included — it is not portalled). The
+   base rules live in global.css and deferred/library.css; rooting here gives
+   each restatement one class more than the rule it replaces, so the answer
+   does not depend on which CSS chunk Vite emits last (SPECTRUM-REVIEW,
+   standing finding 16).
+
+   ACCENT: zero `--accent-strong` and zero `--brand` from this sheet. Small
+   accent text takes `--accent-mid`, MEASURED (not reasoned from the name,
+   which reads backwards in light): 5.56:1 on white and 4.79:1 on the #EFEEE9
+   page in light, 8.9:1 on the dark page. */
+
+
+/* ── The app button, in this dialog ────────────────────────────────────────
+   The eight `.ui-pill` buttons IconLibrary carried (the customizer foot, the
+   paste foot, the new-project row and the refused-service notice) are the
+   shared `.lib-btn` now — see deferred/library.css for the shape and the
+   Mobbin references. What is local is only how the customizer's foot shares
+   its row: that sizing used to hang off `.icust-foot .ui-pill` in global.css
+   and is restated for the new class, or the four buttons would lose their
+   share of the line. */
+.iel-page .icust-foot .lib-btn{flex:1 1 auto;min-width:max-content}
+.iel-page .icust-paste .icust-foot .lib-btn{flex:0 1 auto}
+/* Try again sits on the notice's warn-tinted band, so it carries a card
+   ground of its own — a transparent button there would read as part of the
+   sentence. 40px floor: 66-icon-library-offline-fixture holds it on a phone. */
+.iel-page .ig-notice .ig-notice-btn{padding:0 14px;background:var(--card)}
+.iel-page .ig-notice .ig-notice-btn:hover{background:color-mix(in srgb,var(--t0) 5%,var(--card))}
+
+
+/* ── The customizer dialog ─────────────────────────────────────────────────
+   The panel takes the app's 18px panel radius over a hairline. The scrim
+   loses its blur: a 6px backdrop blur was the one "premium" effect on the
+   surface, it is on the founder's rejected list by name, and the dim alone
+   already separates the dialog from the page. (The gate backdrop inside the
+   panel is `position:fixed` and the overlay is itself fixed at inset 0, so
+   dropping the filter does not move the box the gate fills.) */
+.iel-page .icust-overlay{-webkit-backdrop-filter:none;backdrop-filter:none}
+.iel-page .icust-panel{background:var(--card);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l)}
+.iel-page .icust-head{padding:22px 24px 12px}
+/* The eyebrow was accent-coloured mono caps. It is a kind label, not the next
+   action, so it goes quiet; the title carries the hierarchy. */
+.iel-page .icust-eyebrow{
+  font-family:var(--font);font-size:12.5px;font-weight:560;
+  letter-spacing:0;text-transform:none;color:var(--t2);
+}
+.iel-page .icust-title{font-size:20px;font-weight:600;letter-spacing:-.02em}
+.iel-page .icust-close{
+  width:40px;height:40px;border-radius:var(--radius-s);
+  border-color:var(--border);background:transparent;
+}
+@media(pointer:coarse){.iel-page .icust-close{width:44px;height:44px}}
+.iel-page .icust-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* Metadata tags are values (pack, name, source), so they stay mono — but as
+   6px rectangles, not pills: nothing here toggles. */
+.iel-page .icust-tag{border-radius:var(--radius-xs)}
+/* Control labels: sentence case in the UI face. Mono caps at 10px was the
+   same voice as the values beside them; the design sets labels in Geist and
+   keeps mono for what a user copies. */
+.iel-page .icust-row>label,
+.iel-page .icust-pro-head,
+.iel-page .icust-code-label,
+.iel-page .icust-similar-label{
+  font-family:var(--font);font-size:12.5px;font-weight:560;
+  letter-spacing:0;text-transform:none;color:var(--t2);
+}
+/* The segmented controls: the design's selected segment is a 9% ink wash, not
+   a lifted white chip — which in dark was `--bg-0` on `--bg-2`, the page
+   colour showing through a hole. One recipe, both themes. */
+.iel-page .icust-seg{border-radius:var(--radius-s);background:color-mix(in srgb,var(--t0) 4%,transparent)}
+.iel-page .icust-seg button{
+  border-radius:var(--radius-xs);
+  font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0;
+}
+.iel-page .icust-seg button.active{background:color-mix(in srgb,var(--t0) 9%,transparent);box-shadow:none}
+.iel-page .icust-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* "Fixed" stroke is a toggle, so its on-state is the same wash — not an
+   accent fill with accent text, which claimed it was the next action. */
+.iel-page .icust-abs{font-family:var(--font);font-size:12.5px;font-weight:560;letter-spacing:0}
+.iel-page .icust-abs.active{background:color-mix(in srgb,var(--t0) 9%,transparent);border-color:var(--bh);color:var(--t0)}
+.iel-page .icust-pro{border-radius:var(--radius);background:transparent}
+/* The Pro word on the line-style box. It rides the nav's `.pnav-pop-tag`
+   class, which is a 999px accent pill painted in `--accent-strong`. Here it
+   is a quiet 6px tag in the derived accent. */
+.iel-page .pnav-pop-tag{
+  color:var(--accent-mid);border-color:var(--accent-border);border-radius:var(--radius-xs);
+}
+.iel-page .icust-code-box:hover .icust-code-hint{color:var(--t0)}
+.iel-page .icust-upgrade{color:var(--accent-mid)}
+/* The similar-icon tiles lift on hover. Decorative motion on a row of
+   targets; the border and ground already say "this one". */
+.iel-page .icust-similar-btn:hover{transform:none}
+.iel-page .icust-proj-btn{border-radius:var(--radius)}
+.iel-page .icust-newproj-input{border-radius:var(--radius)}
+.iel-page .icust-gate{border-radius:var(--radius-2xl);background:var(--card)}
+.iel-page .icust-gate-dismiss{border-radius:var(--radius-s);min-height:36px}
+.iel-page .icust-gate-backdrop{background:var(--scrim)}
+
+
+/* Design (icons page, line 313): the grid sits 14px under the panel — there
+   is no result head between them to need the galleries' larger seam. The
+   emoji tab keeps the shared seam: its first row is a category heading. */
+.iel-page .lbry-toolbar.ig-toolbar{margin-bottom:14px}
+
+/* ── The icon page around the grid ─────────────────────────────────────────
+   Accent text on this page was the "Add icon" hover, the Clear-all hover, the
+   "Go Pro for unlimited" link and the attribution link — all `--accent-strong`.
+   Hover states are ink (a hover is not a claim); the two links keep the
+   accent, in the derived member. */
+.iel-page .ig-addbtn{min-height:44px;height:auto;border-color:var(--bh);background:transparent}
+.iel-page .ig-addbtn:hover{border-color:color-mix(in srgb,var(--t0) 34%,transparent);background:var(--hvr);color:var(--t0)}
+.iel-page .ig-addbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iel-page .ig-rail-clear:hover{color:var(--t0);border-color:var(--border);background:var(--hvr)}
+/* SC 2.5.8: measured 124x21 — alone on its line after the allowance text,
+   so no reading of the Inline exception reaches it. */
+.iel-page .ig-custom-hint-link{color:var(--accent-mid);display:inline-flex;align-items:center;min-height:24px}
+.iel-page .ig-attrib a{color:var(--accent-mid)}
+.iel-page .ig-notice{border-radius:var(--radius)}
+.iel-page .ig-mysec-title{font-family:var(--font);font-weight:600;letter-spacing:-.015em}
+/* The wall's padlock. It was an inline style (vertical-align and a 6px end
+   margin) — a fixed design value, so it lives here. */
+.iel-page .ig-gate-lock{vertical-align:-1px;margin-inline-end:6px}
+
+
+/* ── The emoji body ────────────────────────────────────────────────────────
+   Mobbin: Dropbox Dash's emoji picker
+   (mobbin.com/screens/b7e61c85-6428-4a4f-b99f-57f3467f5fee) and Telegram's
+   (mobbin.com/screens/e020a768-aa90-4584-a886-03fef5f1a305) are the shape this
+   already is — a dense bare grid under plain category headings. The design's
+   92px labelled cell is right for 60 icons and wrong for 1,655 emoji: it would
+   take the grid from 25 columns to 12 at 1280 and multiply the scroll by four.
+   So the grid stays; what changes is its STATE language, onto the design's
+   picked cell (accent wash over an accent hairline). */
+.iel-page .emoji-cell.copied{background:var(--accent-wash);border-color:var(--accent-border)}
+.iel-page .emoji-cell.copied::after{color:var(--accent-mid)}
+.iel-page .emoji-cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.iel-page .emoji-tone-btn{border-color:var(--bh);background:transparent;min-height:44px;height:auto}
+.iel-page .emoji-tone-btn.open{border-color:var(--bh);background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
+.iel-page .emoji-tone-pop{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-m)}
+.iel-page .emoji-skin-btn.active{border-color:var(--accent-border);background:var(--accent-wash);box-shadow:0 0 0 1px var(--accent)}
+/* The count stays a filled chip — 71-media-tools-breakpoints measures it as
+   ink on its OWN ground — but as a 6px rectangle, not a pill. */
+.iel-page .emoji-section-count{border-radius:var(--radius-xs)}

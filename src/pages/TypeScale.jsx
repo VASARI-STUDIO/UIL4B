@@ -17,6 +17,8 @@ import { FLUID_VIEWPORTS, fluidClamp, sizeAtViewport, stepName, stepPx } from '.
 import '../styles/deferred/colour.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
+// This page's own Spectrum sheet, every selector rooted at .tsc-page.
+import '../styles/pages/type-scale.css'
 
 // Type Scale Generator — the standalone /create/type-scale page. One base size and one
 // ratio generate a whole modular scale, previewed in a real article and handed
@@ -493,6 +495,9 @@ export default function TypeScale({ onCopy, onExport = onCopy, toast }) {
           subject is type, the biggest type on it was the one string the visitor
           cannot change, and it was setting the scale the specimen then had to
           compete with. The specimen is the largest thing here now.
+          (The Spectrum pass kept this: pages/type-scale.css gives the h1
+          Spectrum's weight and tracking but NOT the display size the other
+          Create tools open on — 54-type-scale-overhaul holds it under 40px.)
 
           The paragraph lost two of its three clauses. What it said — tune the
           curve, read it back, copy the properties — was the page describing its

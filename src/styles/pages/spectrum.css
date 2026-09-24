@@ -6,7 +6,7 @@
    `style=` attribute against its own parallel token set (`--page`, `--card`,
    `--ink`, `--ink-rgb`, `--ink-dim`, `--ink-faint`, `--shade-rgb`). None of
    those ship. The design's ground IS this product's ground already reseeded —
-   dark #0B0C0E/#16181D/#EFEEEA against the app's #101012/#191A1D/#F2F1EC, light
+   dark #0B0C0E/#16181D/#EFEEEA against the app's #060607/#111215/#F2F1EC, light
    #F5F5F2/#FFFFFF/#121418 against #EFEEE9/#FFFFFF/#0F0F10 — so the whole sheet
    maps onto the existing --bg-* / --t* ramp rather than adding a second one
    beside it. A parallel ramp is precisely the "disjointed" the 2026-09-16 audit

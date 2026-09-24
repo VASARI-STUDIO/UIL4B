@@ -277,6 +277,10 @@
       "destination": "/community/index.html"
     },
     {
+      "source": "/create/3d-viewer",
+      "destination": "/create/3d-viewer/index.html"
+    },
+    {
       "source": "/create/alt-text",
       "destination": "/create/alt-text/index.html"
     },

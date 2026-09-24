@@ -166,7 +166,7 @@ export default function SchemaGenerator({ onCopy, toast }) {
                 <textarea rows={2} value={qa.a} placeholder="Answer" onChange={e => setFaqs(prev => prev.map((x, idx) => idx === i ? { ...x, a: e.target.value } : x))} />
               </div>
             ))}
-            <button type="button" className="btn btn-s" onClick={() => setFaqs(prev => [...prev, { q: '', a: '' }])}>
+            <button type="button" className="seo-btn" onClick={() => setFaqs(prev => [...prev, { q: '', a: '' }])}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
               Add question
             </button>
@@ -175,10 +175,10 @@ export default function SchemaGenerator({ onCopy, toast }) {
       </div>
 
       <div className="seo-preview-col">
-        <div className="seo-tags" style={{ margin: 0 }}>
+        <div className="seo-tags seo-tags--flush">
           <div className="seo-tags-head">
-            <h2 className="seo-checklist-h" style={{ margin: 0 }}>JSON-LD</h2>
-            <button className="btn btn-s btn-accent" onClick={copy}>
+            <h2 className="seo-checklist-h seo-checklist-h--flush">JSON-LD</h2>
+            <button type="button" className="seo-btn seo-btn--primary" onClick={copy}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
               </svg>

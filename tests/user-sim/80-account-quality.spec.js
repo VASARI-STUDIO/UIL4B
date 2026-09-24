@@ -126,11 +126,15 @@ test.describe('every account surface starts at heading 1', () => {
     const h1 = page.locator('main h1')
     await expect(h1).toHaveCount(1)
     await expect(h1).toContainText('You’re on UIL4B Pro')
-    // The paint must not have moved: this heading is styled by
-    // `.checkout-return-card h1`, which carries the same declarations the h2
-    // rule did.
-    const px = await h1.evaluate((el) => getComputedStyle(el).fontSize)
-    expect(px, 'the confirmation heading keeps its 22px size').toBe('22px')
+    // It is styled as the confirmation panel's heading — `.checkout-page
+    // .checkout-return-card h1`, the Spectrum pass's clamp(24px,3vw,30px) —
+    // and NOT by whatever an unscoped h1 rule would give a bare <h1> (the
+    // .sec-h display size is 32-52px). This pinned '22px' until the Spectrum
+    // pass restyled the panel on purpose; the property it was guarding is that
+    // the h2 -> h1 swap did not hand the heading a page-title size.
+    const px = parseFloat(await h1.evaluate((el) => getComputedStyle(el).fontSize))
+    expect(px, 'the confirmation heading is not set at a page-title size').toBeGreaterThanOrEqual(24)
+    expect(px, 'the confirmation heading is not set at a page-title size').toBeLessThanOrEqual(30)
   })
 
   test('a payment whose entitlement has not landed says so, from an h1', async ({ page }) => {

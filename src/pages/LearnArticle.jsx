@@ -147,9 +147,9 @@ function Article({ article }) {
               been told how a number is calculated, and the tool calculates it. */}
           <aside className="lart-next" aria-label="Put this into practice">
             <p className="lart-next-lede">{TOOL_LEDE[article.slug]}</p>
-            <Link className="ui-pill ui-pill-out" to={article.toolTo}>
+            <Link className="lart-next-go" to={article.toolTo}>
               Open the {article.toolLabel}
-              <span className="ui-pill-arrow" aria-hidden="true">&rarr;</span>
+              <span className="lart-next-arrow" aria-hidden="true">&rarr;</span>
             </Link>
           </aside>
 

@@ -15,11 +15,11 @@ function syllables(word) {
 }
 
 function readingEaseLabel(score) {
-  if (score >= 80) return { label: 'Very easy', color: 'var(--ok)' }
-  if (score >= 60) return { label: 'Plain English', color: 'var(--ok)' }
-  if (score >= 50) return { label: 'Fairly difficult', color: 'var(--warn)' }
-  if (score >= 30) return { label: 'Difficult', color: 'var(--warn)' }
-  return { label: 'Very difficult', color: 'var(--err)' }
+  if (score >= 80) return { label: 'Very easy', tone: 'ok' }
+  if (score >= 60) return { label: 'Plain English', tone: 'ok' }
+  if (score >= 50) return { label: 'Fairly difficult', tone: 'warn' }
+  if (score >= 30) return { label: 'Difficult', tone: 'warn' }
+  return { label: 'Very difficult', tone: 'err' }
 }
 
 function analyze(text, keyword) {
@@ -79,10 +79,10 @@ function analyze(text, keyword) {
     }
     const density = (count / Math.max(1, wordCount)) * 100
     let verdict
-    if (count === 0) verdict = { text: 'Not found — add it to your copy.', color: 'var(--err)' }
-    else if (density > 3) verdict = { text: 'High — may read as keyword stuffing.', color: 'var(--warn)' }
-    else if (density < 0.4) verdict = { text: 'Low — could appear a little more.', color: 'var(--warn)' }
-    else verdict = { text: 'Healthy density.', color: 'var(--ok)' }
+    if (count === 0) verdict = { text: 'Not found — add it to your copy.', tone: 'err' }
+    else if (density > 3) verdict = { text: 'High — may read as keyword stuffing.', tone: 'warn' }
+    else if (density < 0.4) verdict = { text: 'Low — could appear a little more.', tone: 'warn' }
+    else verdict = { text: 'Healthy density.', tone: 'ok' }
     keywordStat = { count, density, verdict }
   }
 
@@ -131,31 +131,31 @@ export default function ContentAnalyzer() {
               <div className="seo-ca-stat"><div className="seo-ca-num">{result.avgSentence.toFixed(1)}</div><div className="seo-ca-lbl">Words/sentence</div></div>
             </div>
 
-            <div className="seo-tags" style={{ margin: 0 }}>
+            <div className="seo-tags seo-tags--flush">
               <div className="seo-ca-ease">
                 <div>
-                  <div className="seo-ca-ease-score" style={{ color: easeMeta.color }}>{Math.round(result.ease)}</div>
+                  <div className={`seo-ca-ease-score seo-tone--${easeMeta.tone}`}>{Math.round(result.ease)}</div>
                   <div className="seo-ca-lbl">Reading ease</div>
                 </div>
                 <div className="seo-ca-ease-meta">
-                  <div className="seo-ca-ease-label" style={{ color: easeMeta.color }}>{easeMeta.label}</div>
+                  <div className={`seo-ca-ease-label seo-tone--${easeMeta.tone}`}>{easeMeta.label}</div>
                   <div className="seo-ca-ease-grade">Grade level ≈ {result.grade.toFixed(1)}</div>
                 </div>
               </div>
             </div>
 
             {result.keywordStat && (
-              <div className="seo-tags" style={{ margin: 0 }}>
-                <h2 className="seo-checklist-h" style={{ margin: '0 0 10px' }}>Target keyword</h2>
+              <div className="seo-tags seo-tags--flush">
+                <h2 className="seo-checklist-h seo-checklist-h--tight">Target keyword</h2>
                 <div className="seo-ca-kwline">
                   <span><strong>{result.keywordStat.count}</strong> uses · <strong>{result.keywordStat.density.toFixed(2)}%</strong> density</span>
-                  <span style={{ color: result.keywordStat.verdict.color, fontWeight: 600, fontSize: 12 }}>{result.keywordStat.verdict.text}</span>
+                  <span className={`seo-ca-verdict seo-tone--${result.keywordStat.verdict.tone}`}>{result.keywordStat.verdict.text}</span>
                 </div>
               </div>
             )}
 
-            <div className="seo-tags" style={{ margin: 0 }}>
-              <h2 className="seo-checklist-h" style={{ margin: '0 0 10px' }}>Top keywords</h2>
+            <div className="seo-tags seo-tags--flush">
+              <h2 className="seo-checklist-h seo-checklist-h--tight">Top keywords</h2>
               <div className="seo-ca-kw-grid">
                 {result.topWords.length ? result.topWords.map(k => (
                   <div key={k.word} className="seo-ca-kw">
@@ -167,8 +167,8 @@ export default function ContentAnalyzer() {
             </div>
 
             {result.topPhrases.length > 0 && (
-              <div className="seo-tags" style={{ margin: 0 }}>
-                <h2 className="seo-checklist-h" style={{ margin: '0 0 10px' }}>Repeated phrases</h2>
+              <div className="seo-tags seo-tags--flush">
+                <h2 className="seo-checklist-h seo-checklist-h--tight">Repeated phrases</h2>
                 <div className="seo-ca-phrases">
                   {result.topPhrases.map(p => (
                     <span key={p.phrase} className="seo-ca-phrase">{p.phrase} <em>{p.count}×</em></span>

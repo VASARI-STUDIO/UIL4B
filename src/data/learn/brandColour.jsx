@@ -110,7 +110,7 @@ export default function BrandColour() {
         <h2>No single stop clears both grounds</h2>
         <p>
           Not one of the eleven stops in that ramp measures 4.5:1 against both{' '}
-          <code>#EFEEE9</code> and <code>#101012</code>. Two of them —
+          <code>#EFEEE9</code> and <code>#060607</code>. Two of them —
           400 and 500 — clear 3:1 against both, which is why a brand-coloured
           border can be one value in a theme system while a brand-coloured link
           cannot.

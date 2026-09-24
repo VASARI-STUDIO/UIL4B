@@ -1,4 +1,4 @@
-import { Component, useEffect, useRef, lazy, Suspense } from 'react'
+import { Component, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
@@ -257,6 +257,14 @@ function AppInner() {
   const { message, visible, type, toast, dismiss } = useToast()
   const copy = useClipboard(toast)
   const location = useLocation()
+  // WHICH ROUTE IS ON SCREEN, stamped when it COMMITS. React Router navigates
+  // in a transition: the address bar names the new route at once while the old
+  // page stays painted until the new tree commits (a frame locally, several on a
+  // slow machine). tests/user-sim/helpers.js ready() compares this stamp with
+  // the address bar so a measurement is never of the page just left (CI run
+  // 35910539677). A layout effect, so the stamp moves in the same commit as
+  // the page, on every branch — the shell, /create, /, and the surface pages.
+  useLayoutEffect(() => { document.documentElement.dataset.route = location.pathname }, [location.pathname])
   const navigate = useNavigate()
 
   useEffect(() => {

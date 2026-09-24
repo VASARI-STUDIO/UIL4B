@@ -1,0 +1,125 @@
+/* ══ /discover/prompts — the page's own sheet ═══════════════════════════════
+   The Prompt Library already wears the shared library shell (masthead slab,
+   toolbar panel, S4 chips — deferred/library.css). What was left was its own
+   `.pl-*` family, which lives in global.css (another lane's file) and still
+   spoke the pre-Spectrum language: accent-strong caps tags on every card, an
+   accent tab underline, a card that jumped 4px with a large shadow and zoomed
+   its image, a blurred modal scrim, and two equal accent pills at the foot of
+   the modal for two unequal actions.
+
+   EVERY SELECTOR IS ROOTED AT `.plib-page`, so each restatement carries a
+   class more than the global rule it replaces and does not depend on chunk
+   order (SPECTRUM-REVIEW, standing finding 16). Zero `--accent-strong` and
+   zero `--brand` here.
+
+   Mobbin, for the modal: Descript's prompt template
+   (mobbin.com/screens/34c75374-2f13-4b12-b47a-80d2e9f156fa) — neutral tag
+   chips, the prompt in a recessed box, ONE filled action; SchoolAI's prompt
+   view (mobbin.com/screens/7908edcb-c865-42a8-b7a2-d62b761593b2) — an ink
+   underline on the current tab, not a coloured one. */
+
+
+/* ── My Prompts / Community ────────────────────────────────────────────────
+   The current tab is ink over an ink underline. Blue said "next action" about
+   the tab the visitor is already standing in. */
+.plib-page .pl-tab{min-height:44px;border-radius:0}
+.plib-page .pl-tab.active{color:var(--t0);border-bottom-color:var(--t0);font-weight:600}
+.plib-page .pl-tab-count{border-radius:var(--radius-xs)}
+.plib-page .pl-tab.active .pl-tab-count{background:color-mix(in srgb,var(--t0) 9%,transparent);color:var(--t0)}
+.plib-page .pl-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+
+/* ── The card ──────────────────────────────────────────────────────────────
+   Design (`UIL4B App.dc.html`, the Palette Library card, line 256): 18px on
+   `--card` over a hairline, and `[data-lift]` as the hover — the border warms
+   and the ground lifts 4.5% toward ink. That replaces the 4px jump, the large
+   shadow and the 1.04 image zoom: three effects for one state. The scrolling
+   preview on hover/focus stays; it is the card showing its artefact, and it
+   has its reduced-motion pair in library.css. */
+.plib-page .pl-card{
+  border-radius:var(--radius-2xl);
+  transition:background var(--dur-2) var(--ease-standard),border-color var(--dur-2) var(--ease-standard);
+}
+.plib-page .pl-card:hover{
+  transform:none;box-shadow:none;border-color:var(--bh);
+  background:color-mix(in srgb,var(--t0) 4.5%,var(--card));
+}
+.plib-page .pl-card:hover .pl-card-img img{transform:none}
+.plib-page .pl-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.plib-page .pl-card.no-img:hover .pl-card-title{color:var(--t0)}
+/* Tags are the design's value chip (the hex chips on the palette card):
+   a 5.5% ink ground, 78% ink, a small rectangle. Sentence case — they are
+   words the author typed, and caps at 9px was the shouting half of the card.
+   `--t1` on that ground measures 7.4:1 in light. */
+.plib-page .pl-card.no-img .pl-tag,
+.plib-page .pl-modal-header .pl-tag{
+  padding:4px 8px;border-radius:var(--radius-xs);
+  background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:var(--t1);
+  font-size:11px;font-weight:560;letter-spacing:0;text-transform:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+.plib-page .pl-card-copy-hint{color:var(--t1)}
+.plib-page .pl-card-saved{margin-left:auto;flex-shrink:0;color:var(--accent)}
+
+
+/* ── The modal ─────────────────────────────────────────────────────────────
+   No blur on the scrim (the founder's rejected list names it); the panel is
+   the app's 18px card; the close is a 10px rectangle like every other control
+   on the page. The foot is ONE ink primary ("Copy prompt" — the thing the
+   page exists for) beside a hairline secondary, via the shared `.lib-btn`. */
+.plib-page .pl-modal-backdrop{-webkit-backdrop-filter:none;backdrop-filter:none}
+.plib-page .pl-modal{background:var(--card);border-radius:var(--radius-2xl);box-shadow:var(--shadow-l)}
+.plib-page .pl-modal-close{
+  width:40px;height:40px;border-radius:var(--radius-s);
+  background:transparent;border-color:var(--border);
+}
+.plib-page .pl-modal-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(pointer:coarse){.plib-page .pl-modal-close{width:44px;height:44px}}
+.plib-page .pl-modal-header h2{font-weight:600;letter-spacing:-.02em}
+.plib-page .pl-modal-tags{margin-top:8px}
+/* "View profile" — was an inline style in `--accent-strong`. SC 2.5.8: it is
+   not inside a sentence, so it takes a 24px box of its own. */
+.plib-page .pl-modal-profile{
+  display:inline-flex;align-items:center;min-height:24px;margin-left:4px;
+  font-size:12px;color:var(--accent-mid);text-decoration:none;
+}
+.plib-page .pl-modal-profile:hover{text-decoration:underline}
+.plib-page .pl-modal-view.is-on{border-bottom-color:var(--t0)}
+.plib-page .pl-modal-prompt{border-radius:var(--radius);background:color-mix(in srgb,var(--t0) 4%,transparent)}
+.plib-page .pl-modal-prompt:hover{background:color-mix(in srgb,var(--t0) 6.5%,transparent)}
+/* Was an inline `opacity:1` over the resting .5 — the modal's copy hint is
+   always shown because the whole box is the copy target. */
+.plib-page .pl-modal-prompt .pl-card-copy-hint.is-shown{opacity:1}
+.plib-page .pl-modal-frame{border-radius:var(--radius)}
+.plib-page .pl-modal-footer .lib-btn{min-width:0}
+
+
+/* ── The two add panels (My Prompts' add, Community's submit) ──────────────
+   A card like every other panel on the page: `--card` over a hairline at
+   18px, no warm shadow. The inline styles SubmitPromptPanel carried are
+   classes now — ten of them, every one a fixed design value. */
+.plib-page .pl-add-inner{
+  background:var(--card);border-radius:var(--radius-2xl);box-shadow:none;
+}
+.plib-page .pl-drop-zone{border-width:1px;border-radius:var(--radius)}
+.plib-page .pl-drop-zone:hover,
+.plib-page .pl-drop-zone.over{border-color:var(--accent);color:var(--t0);background:var(--accent-wash)}
+.plib-page .pl-add-fields>.pl-drop-zone{margin-bottom:8px}
+.plib-page .pl-file-input{display:none}
+.plib-page .pl-drop-file{display:flex;align-items:center;gap:10px;width:100%}
+.plib-page .pl-drop-thumb{width:48px;height:48px;object-fit:cover;border-radius:var(--radius-xs)}
+.plib-page .pl-drop-video{flex-shrink:0;color:var(--accent)}
+.plib-page .pl-drop-meta{flex:1;min-width:0;text-align:left}
+.plib-page .pl-drop-name{overflow:hidden;font-size:12px;font-weight:600;color:var(--t0);text-overflow:ellipsis;white-space:nowrap}
+.plib-page .pl-drop-size{font-size:11px;color:var(--t2)}
+.plib-page .pl-drop-remove{
+  display:grid;place-items:center;min-width:32px;min-height:32px;padding:0;
+  border:0;border-radius:var(--radius-xs);background:none;
+  color:var(--t2);font-size:16px;line-height:1;cursor:pointer;
+}
+.plib-page .pl-drop-remove:hover{background:var(--hvr);color:var(--t0)}
+.plib-page .pl-drop-remove:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@media(pointer:coarse){.plib-page .pl-drop-remove{min-width:44px;min-height:44px}}
+.plib-page .pl-add-note{margin-top:8px;font-size:12px;line-height:1.5;color:var(--t2)}
+.plib-page .pl-add-note strong{font-weight:600;color:var(--t0)}
+.plib-page .pl-add-actions .lib-btn{min-width:0}

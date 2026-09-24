@@ -1,164 +1,368 @@
-/* seo-inspector.css — the `seo` family, lifted out of global.css.
- * Imported by the page module that owns it, so Vite emits it as that page's
- * chunk stylesheet and only that route pays for it.
+/* seo-inspector.css — the `seo` family, /seo's own sheet.
  *
- * Rules are in the ORDER THEY HAD in global.css. This sheet loads after it,
- * so anything here now outranks every global rule at equal specificity —
- * which is why a rule a later global rule overrides was left behind rather
- * than moved. See the note in the splitter, and 23-responsive-mid-band. */
+ * ── SPECTRUM PASS, 2026-09-23 ───────────────────────────────────────────────
+ *
+ * Every selector is scoped under `.seo-page`, the page root: import order does
+ * not decide which sheet wins (Vite orders chunk CSS by the dependency graph —
+ * commit 8d30f37a measured it). The scope is also what beats the three `.seo-`
+ * rules still in global.css (the tab and the seg button painted in
+ * `--accent-strong`), which this lane may not edit.
+ *
+ * What changed:
+ *   - STATE COLOURS ON TEXT WERE UNDER AA. The score, its band label, the
+ *     reading-ease figure, the keyword verdict and the checklist glyphs were
+ *     inline `var(--ok)` / `var(--warn)` / `var(--err)` — the raw state
+ *     colours, which are fill-grade, not text-grade (--warn on the white card
+ *     is under 3:1 in light). They are tone classes now: `.seo-tone--*` sets
+ *     `--seo-tone` (bars, borders) and `--seo-tone-ink` (the -strong step, for
+ *     text and glyphs).
+ *   - `--accent-strong` gone from the selected tab and the Desktop/Mobile
+ *     switch (global.css). Selected is ink, as on the converter's tabs; the
+ *     accent is the Copy action.
+ *   - The panels were `--card-grad` with a warm drop shadow; they are the app
+ *     file's flat card over a hairline. Buttons are 12px rectangles; the
+ *     phrase chips and the seg switch are rectangles, not pills.
+ *   - Twenty inline styles in components/seo/ are gone: margins became
+ *     `.seo-tags--flush` / `.seo-checklist-h--flush|--tight`, colours became
+ *     tones. What remains inline is a bar's width, which is data.
+ *   - 700 weights are 600; 1.5px borders are 1px.
+ *
+ * Left as it was, deliberately: the SERP title's #1a0dab / #8ab4f8 (Google's
+ * own link colours — the preview is an imitation of Google on purpose) and
+ * the social card's image gradient, whose inks tests/user-sim/48 was built to
+ * measure. */
 
-.seo-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin-bottom:24px}
+.seo-page { min-width: 0; padding-bottom: var(--s-7); }
 
-.seo-inputs{display:flex;flex-direction:column;gap:16px}
+.seo-page .seo-tone--ok { --seo-tone: var(--ok); --seo-tone-ink: var(--ok-strong); }
 
-.seo-field{display:flex;flex-direction:column;gap:7px}
+.seo-page .seo-tone--warn { --seo-tone: var(--warn); --seo-tone-ink: var(--warn-strong); }
 
-.seo-field-label{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;color:var(--t1)}
+.seo-page .seo-tone--err { --seo-tone: var(--err); --seo-tone-ink: var(--err-strong); }
 
-.seo-field-label em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--t3);font-weight:500}
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
 
-.seo-field input,.seo-field textarea{width:100%}
+.seo-page .seo-hero { margin: 0 0 var(--s-6); }
 
-.seo-field textarea{resize:vertical;line-height:1.5}
-
-.seo-meter{display:block;height:4px;border-radius:2px;background:var(--bg-3);overflow:hidden}
-
-.seo-meter-fill{display:block;height:100%;border-radius:2px;transition:width var(--dur-2) var(--ease-standard),background var(--dur-2) var(--ease-standard)}
-
-.seo-preview-col{display:flex;flex-direction:column;gap:16px}
-
-.seo-score{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:2px 16px;align-items:center;padding:18px 20px;background:var(--card-grad);border:1px solid var(--border);border-left-width:3px;border-radius:var(--radius-l);box-shadow:var(--warm-shadow)}
-
-.seo-score-num{grid-row:1 / span 2;font-size:42px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-
-.seo-score-band{font-size:14px;font-weight:700}
-
-.seo-score-lbl{font-size:11px;color:var(--t2);text-transform:uppercase;letter-spacing:.05em}
-
-.seo-score-bar{grid-column:1 / -1;height:5px;border-radius:3px;background:var(--bg-3);overflow:hidden;margin-top:8px}
-
-.seo-score-bar-fill{height:100%;border-radius:3px;transition:width var(--dur-3) var(--ease-standard),background var(--dur-3) var(--ease-standard)}
-
-.seo-preview{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow);overflow:hidden}
-
-.seo-preview-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--t2)}
-
-.seo-seg{display:flex;gap:2px;background:var(--bg-2);border-radius:var(--radius-pill);padding:2px}
-
-.seo-seg button{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:3px 12px;border-radius:var(--radius-pill);border:none;background:transparent;color:var(--t2);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer;letter-spacing:0;text-transform:none}
-
-.seo-serp{padding:16px}
-
-.seo-serp-url{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-
-.seo-serp-fav{width:18px;height:18px;border-radius:50%;background:var(--bg-3);border:1px solid var(--border);flex-shrink:0}
-
-.seo-serp-domain{font-size:12px;color:var(--t1)}
-
-.seo-serp-path{color:var(--t3)}
-
-.seo-serp-title{font-size:18px;line-height:1.3;color:#8ab4f8;margin:2px 0 3px;font-weight:400}
-
-[data-theme="light"] .seo-serp-title{color:#1a0dab}
-
-.seo-serp-desc{font-size:13px;line-height:1.5;color:var(--t1)}
-
-.seo-social{padding:16px}
-
-.seo-social-img{height:150px;border-radius:var(--radius-s) var(--radius-s) 0 0;background:linear-gradient(135deg,#0B5ED7,color-mix(in srgb,#0B5ED7 40%,#8B5CF6));display:flex;align-items:center;justify-content:center}
-
-.seo-social-img span{font-family:var(--mono);font-size:11px;color:#FFFFFF;letter-spacing:.05em}
-
-.seo-social-body{padding:12px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-s) var(--radius-s);background:var(--bg-2)}
-
-.seo-social-domain{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
-
-.seo-social-title{font-size:14px;font-weight:600;color:var(--t0);line-height:1.3;margin-bottom:3px}
-
-.seo-social-desc{font-size:12px;color:var(--t2);line-height:1.45}
-
-.seo-checklist{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow);padding:20px}
-
-.seo-checklist-h{font-size:15px;font-weight:700;color:var(--t0);margin:0 0 14px}
-
-.seo-check{display:flex;gap:12px;padding:11px 0;border-top:1px solid var(--border)}
-
-.seo-check:first-of-type{border-top:none;padding-top:0}
-
-.seo-check-icon{flex-shrink:0;width:22px;height:22px;border-radius:50%;border:1.5px solid;display:flex;align-items:center;justify-content:center;margin-top:1px}
-
-.seo-check-label{font-size:13px;font-weight:600;color:var(--t0);margin-bottom:2px}
-
-.seo-check-detail{font-size:12.5px;color:var(--t2);line-height:1.5}
-
-.seo-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
-
-.seo-tab{padding:9px 16px;border:none;background:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;color:var(--t2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--dur-1) var(--ease-standard),border-color var(--dur-1) var(--ease-standard)}
-
-@media(max-width:560px){
-  .seo-tabs{gap:2px}
-  .seo-tab{padding:9px 10px;font-size:12px}
+.seo-page .seo-hero h1 {
+  margin: 0 0 var(--s-4);
+  font-family: var(--display);
+  font-size: clamp(38px, 5.6vw, 72px);
+  font-weight: 600;
+  line-height: .96;
+  letter-spacing: -.045em;
+  color: var(--t0);
+  text-wrap: balance;
 }
 
-.seo-faqs{display:flex;flex-direction:column;gap:14px}
+.seo-page .seo-hero p { max-width: 62ch; margin: 0; font-size: 15.5px; line-height: 1.62; color: var(--t1); text-wrap: pretty; }
 
-.seo-faq{display:flex;flex-direction:column;gap:7px}
+/* ── Tabs ─────────────────────────────────────────────────────────────────── */
 
-.seo-faq-head{display:flex;align-items:center;justify-content:space-between}
+.seo-page .seo-tabs { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-bottom: var(--s-5); border-bottom: 1px solid var(--border); }
+
+.seo-page .seo-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin-bottom: -1px;
+  padding: 0 14px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 540;
+  color: var(--t2);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  cursor: pointer;
+  transition: color var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.seo-page .seo-tab:hover { color: var(--t0); }
+
+.seo-page .seo-tab.is-active { color: var(--t0); border-bottom-color: var(--t0); }
+
+.seo-page .seo-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.seo-page .seo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 13px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 540;
+  line-height: 1.2;
+  color: var(--t0);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--dur-1) ease, border-color var(--dur-1) ease;
+}
+
+.seo-page .seo-btn:hover { background: var(--hvr); border-color: var(--bh); }
+
+.seo-page .seo-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.seo-page .seo-btn--primary { color: var(--accent-ink); background: var(--accent-mid); border-color: transparent; }
+
+.seo-page .seo-btn--primary:hover { background: var(--accent-text); border-color: transparent; }
+
+/* ── Inputs ───────────────────────────────────────────────────────────────── */
+
+.seo-page .seo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; margin-bottom: 24px; }
+
+.seo-page .seo-inputs { display: flex; flex-direction: column; gap: 16px; }
+
+.seo-page .seo-field { display: flex; flex-direction: column; gap: 7px; }
+
+.seo-page .seo-field-label { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 560; color: var(--t1); }
+
+.seo-page .seo-field-label em { font-family: var(--mono); font-size: 10.5px; font-style: normal; font-weight: 500; color: var(--t2); }
+
+.seo-page .seo-field input,
+.seo-page .seo-field textarea,
+.seo-page .seo-field select { width: 100%; border-radius: var(--radius-s); }
+
+.seo-page .seo-field input,
+.seo-page .seo-field select { min-height: 40px; }
+
+.seo-page .seo-field textarea { line-height: 1.5; resize: vertical; }
+
+.seo-page .seo-meter { display: block; height: 4px; overflow: hidden; background: var(--bg-3); border-radius: var(--radius-pill); }
+
+.seo-page .seo-meter-fill { display: block; height: 100%; background: var(--seo-tone); border-radius: var(--radius-pill); transition: width var(--dur-2) var(--ease-standard), background var(--dur-2) var(--ease-standard); }
+
+/* ── Score and previews ───────────────────────────────────────────────────── */
+
+.seo-page .seo-preview-col { display: flex; flex-direction: column; gap: 16px; }
+
+.seo-page .seo-score {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 16px;
+  padding: 18px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--seo-tone);
+  border-radius: var(--radius-xl);
+}
+
+.seo-page .seo-score-num { grid-row: 1 / span 2; font-size: 42px; font-weight: 600; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--seo-tone-ink); }
+
+.seo-page .seo-score-band { font-size: 14px; font-weight: 600; color: var(--seo-tone-ink); }
+
+.seo-page .seo-score-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--t3); }
+
+.seo-page .seo-score-bar { grid-column: 1 / -1; height: 5px; margin-top: 8px; overflow: hidden; background: var(--bg-3); border-radius: var(--radius-pill); }
+
+.seo-page .seo-score-bar-fill { height: 100%; background: var(--seo-tone); border-radius: var(--radius-pill); transition: width var(--dur-3) var(--ease-standard), background var(--dur-3) var(--ease-standard); }
+
+.seo-page .seo-preview { overflow: hidden; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: none; }
+
+.seo-page .seo-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--t3);
+  border-bottom: 1px solid var(--border);
+}
+
+.seo-page .seo-seg { display: flex; gap: 2px; padding: 2px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-s); }
+
+.seo-page .seo-seg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 3px 12px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 540;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--t2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+
+.seo-page .seo-seg button:hover { color: var(--t0); }
+
+.seo-page .seo-seg button.is-active { color: var(--t0); background: var(--card); border-color: var(--border); }
+
+.seo-page .seo-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.seo-page .seo-serp { padding: 16px; }
+
+.seo-page .seo-serp.is-mobile { max-width: 360px; }
+
+.seo-page .seo-serp-url { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+
+.seo-page .seo-serp-fav { flex-shrink: 0; width: 18px; height: 18px; background: var(--bg-3); border: 1px solid var(--border); border-radius: 50%; }
+
+.seo-page .seo-serp-domain { font-size: 12px; color: var(--t1); }
+
+.seo-page .seo-serp-path { color: var(--t2); }
+
+/* Google's own link colours: the preview imitates a results page on purpose. */
+.seo-page .seo-serp-title { margin: 2px 0 3px; font-size: 18px; font-weight: 400; line-height: 1.3; color: #8ab4f8; }
+
+[data-theme="light"] .seo-page .seo-serp-title { color: #1a0dab; }
+
+.seo-page .seo-serp.is-mobile .seo-serp-title { font-size: 16px; }
+
+.seo-page .seo-serp-desc { font-size: 13px; line-height: 1.5; color: var(--t1); }
+
+.seo-page .seo-social { padding: 16px; }
+
+/* Unchanged: a stand-in for the page's own share image. Its ink is measured
+   pixel by pixel in tests/user-sim/48-text-over-gradients.spec.js. */
+.seo-page .seo-social-img { display: flex; align-items: center; justify-content: center; height: 150px; background: linear-gradient(135deg, #0B5ED7, color-mix(in srgb, #0B5ED7 40%, #8B5CF6)); border-radius: var(--radius-s) var(--radius-s) 0 0; }
+
+.seo-page .seo-social-img span { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; color: #FFFFFF; }
+
+.seo-page .seo-social-body { padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-s) var(--radius-s); }
+
+.seo-page .seo-social-domain { margin-bottom: 4px; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--t2); }
+
+.seo-page .seo-social-title { margin-bottom: 3px; font-size: 14px; font-weight: 600; line-height: 1.3; color: var(--t0); }
+
+.seo-page .seo-social-desc { font-size: 12px; line-height: 1.45; color: var(--t2); }
+
+/* ── Checklist and code panels ────────────────────────────────────────────── */
+
+.seo-page .seo-checklist,
+.seo-page .seo-tags { padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-2xl); box-shadow: none; }
+
+.seo-page .seo-tags { margin-top: 16px; }
+
+.seo-page .seo-tags--flush { margin: 0; }
+
+.seo-page .seo-checklist-h { margin: 0 0 14px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--t0); }
+
+.seo-page .seo-checklist-h--flush { margin: 0; }
+
+.seo-page .seo-checklist-h--tight { margin: 0 0 10px; }
+
+.seo-page .seo-check { display: flex; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+
+.seo-page .seo-check:first-of-type { padding-top: 0; border-top: none; }
+
+.seo-page .seo-check-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--seo-tone-ink);
+  border: 1px solid var(--seo-tone-ink);
+  border-radius: 50%;
+}
+
+.seo-page .seo-check-label { margin-bottom: 2px; font-size: 13px; font-weight: 560; color: var(--t0); }
+
+.seo-page .seo-check-detail { font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+
+.seo-page .seo-tags-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.seo-page .seo-tags-note { margin: 8px 0 12px; font-size: 12.5px; line-height: 1.5; color: var(--t2); }
+
+.seo-page .seo-tags-note code { padding: 1px 5px; font-family: var(--mono); font-size: 11px; color: var(--t1); background: var(--bg-3); border: 1px solid var(--border); border-radius: var(--radius-xs); }
+
+.seo-page .seo-tags-code { margin: 0; padding: 14px 16px; font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--t1); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--radius); }
+
+.seo-page .seo-faqs { display: flex; flex-direction: column; gap: 14px; }
+
+.seo-page .seo-faq { display: flex; flex-direction: column; gap: 7px; }
+
+.seo-page .seo-faq-head { display: flex; align-items: center; justify-content: space-between; }
 
 /* min 24px: the 14px glyph plus 2px padding made this an 18x18 target at
    every width from 320 to 1920 (2026-09-09), under WCAG 2.2 AA 2.5.8 and the
    floor 58-target-size-24 holds the shell to. The glyph stays 14px. */
-.seo-faq-del{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px;min-width:24px;min-height:24px;border-radius:var(--radius-s);display:flex;align-items:center;justify-content:center;transition:color var(--dur-1) var(--ease-standard)}
+.seo-page .seo-faq-del { display: flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 2px; color: var(--t2); background: none; border: none; border-radius: var(--radius-s); cursor: pointer; transition: color var(--dur-1) var(--ease-standard); }
 
-.seo-faq-del:hover{color:var(--err-strong)}
+.seo-page .seo-faq-del:hover { color: var(--err-strong); }
 
-.seo-tags{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow);padding:20px;margin-top:16px}
+.seo-page .seo-faq-del:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.seo-tags-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+/* ── Content analysis ─────────────────────────────────────────────────────── */
 
-.seo-tags-note{font-size:12.5px;color:var(--t2);line-height:1.5;margin:8px 0 12px}
+.seo-page .seo-ca-empty { padding: 40px 20px; font-size: 13px; text-align: center; color: var(--t2); border: 1px dashed var(--bh); border-radius: var(--radius-xl); }
 
-.seo-tags-note code{font-family:var(--mono);font-size:11px;background:var(--bg-3);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--t1)}
+.seo-page .seo-ca-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 
-.seo-tags-code{font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--t1);background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.seo-page .seo-ca-stat { padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
 
-@media(max-width:760px){.seo-grid{grid-template-columns:1fr}}
+.seo-page .seo-ca-num { font-size: 20px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--t0); }
 
-.seo-ca-empty{padding:40px 20px;text-align:center;font-size:13px;color:var(--t3);border:1.5px dashed var(--border);border-radius:var(--radius-l)}
+.seo-page .seo-ca-num span { font-size: 11px; font-weight: 500; color: var(--t2); }
 
-.seo-ca-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.seo-page .seo-ca-lbl { margin-top: 7px; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--t3); }
 
-.seo-ca-stat{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.seo-page .seo-ca-ease { display: flex; align-items: center; gap: 18px; }
 
-.seo-ca-num{font-size:20px;font-weight:700;color:var(--t0);font-variant-numeric:tabular-nums;line-height:1}
+.seo-page .seo-ca-ease-score { font-size: 38px; font-weight: 600; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--seo-tone-ink); }
 
-.seo-ca-num span{font-size:11px;color:var(--t3);font-weight:500}
+.seo-page .seo-ca-ease-label { font-size: 15px; font-weight: 600; color: var(--seo-tone-ink); }
 
-.seo-ca-lbl{font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--t3);margin-top:7px}
+.seo-page .seo-ca-ease-grade { margin-top: 3px; font-size: 12px; color: var(--t2); }
 
-.seo-ca-ease{display:flex;align-items:center;gap:18px}
+.seo-page .seo-ca-kwline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--t1); }
 
-.seo-ca-ease-score{font-size:38px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.seo-page .seo-ca-verdict { font-size: 12.5px; font-weight: 600; color: var(--seo-tone-ink); }
 
-.seo-ca-ease-label{font-size:15px;font-weight:700}
+.seo-page .seo-ca-kw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-.seo-ca-ease-grade{font-size:12px;color:var(--t2);margin-top:3px}
+.seo-page .seo-ca-kw { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 11px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-s); }
 
-.seo-ca-kwline{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--t1)}
+.seo-page .seo-ca-kw-word { overflow: hidden; font-size: 12.5px; font-weight: 560; color: var(--t0); text-overflow: ellipsis; white-space: nowrap; }
 
-.seo-ca-kw-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seo-page .seo-ca-kw-meta { flex-shrink: 0; font-family: var(--mono); font-size: 10.5px; color: var(--t2); }
 
-.seo-ca-kw{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:7px 11px}
+.seo-page .seo-ca-phrases { display: flex; flex-wrap: wrap; gap: 7px; }
 
-.seo-ca-kw-word{font-size:12.5px;font-weight:600;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seo-page .seo-ca-phrase { padding: 4px 10px; font-size: 12px; color: var(--t1); background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-s); }
 
-.seo-ca-kw-meta{font-family:var(--mono);font-size:10.5px;color:var(--t2);flex-shrink:0}
+.seo-page .seo-ca-phrase em { margin-left: 3px; font-family: var(--mono); font-size: 10.5px; font-style: normal; color: var(--t2); }
 
-.seo-ca-phrases{display:flex;flex-wrap:wrap;gap:7px}
+/* ── Widths, touch ────────────────────────────────────────────────────────── */
 
-.seo-ca-phrase{font-size:12px;color:var(--t1);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-pill);padding:4px 12px}
+@media (max-width: 760px) {
+  .seo-page .seo-grid { grid-template-columns: 1fr; }
+}
 
-.seo-ca-phrase em{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--t3);margin-left:3px}
+@media (max-width: 560px) {
+  .seo-page .seo-hero p { font-size: 14.5px; }
+  .seo-page .seo-tab { padding: 0 10px; font-size: 13px; }
+  .seo-page .seo-ca-stats { grid-template-columns: repeat(2, 1fr); }
+  .seo-page .seo-ca-kw-grid { grid-template-columns: 1fr; }
+}
 
-@media(max-width:560px){.seo-ca-stats{grid-template-columns:repeat(2,1fr)}.seo-ca-kw-grid{grid-template-columns:1fr}}
+@media (pointer: coarse) {
+  .seo-page .seo-tab,
+  .seo-page .seo-btn,
+  .seo-page .seo-seg button,
+  .seo-page .seo-field input,
+  .seo-page .seo-field select { min-height: 44px; }
+  .seo-page .seo-faq-del { min-width: 44px; min-height: 44px; }
+}

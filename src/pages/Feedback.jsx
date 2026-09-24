@@ -8,6 +8,9 @@ import { CONTACT_EMAIL_MAX, isContactEmail } from '../utils/contactEmail'
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
+// The page's own sheet, every selector under .fb-page. Last here, but it wins
+// by its scoping, not its position.
+import '../styles/pages/feedback.css'
 
 // The feedback form. Four surfaces across the app point here as THE way to
 // report a problem — including, now, the 404 page — so this is the last place
@@ -181,7 +184,7 @@ export default function Feedback({ toast }) {
   }
 
   return (
-    <div className="sec">
+    <div className="sec fb-page">
       <div className="sec-h">
         <h1>{t('feedback.title')}</h1>
         <p>{t('feedback.subtitle')}</p>

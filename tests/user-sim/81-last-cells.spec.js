@@ -296,10 +296,11 @@ test.describe('the gradient stop hex reads as a field', () => {
     }
   }
 
-  // MUTATION: delete `.ggn-stop-hex-field{grid-column:3/-1}` from the
-  // `@media(max-width:480px)` block in src/styles/global.css. The field falls
-  // back to the 80px 1fr track, 80 - 14 = 66px of content for a 67.2px value,
-  // and this goes red on BOTH assertions — the width and the clipping.
+  // MUTATION: in the `@media (max-width: 640px)` block of
+  // src/styles/pages/gradient.css (where the stacked row moved on 2026-09-23,
+  // beside global.css's own copy at 480), change
+  // `.ggn .ggn-stop-hex-field{ grid-column: 3 / -1; }` to `3 / 4`. The field
+  // stops at the 1fr track, short of the row's right edge, and this goes red.
   test('below 481 the field spends the row\'s empty tail, not the value\'s slack', async ({ browser }) => {
     const { ctx, page } = await at(browser, 320)
     watch(page, 'designer editing a gradient on the narrowest phone')
@@ -323,16 +324,27 @@ test.describe('the gradient stop hex reads as a field', () => {
         need: +need.toFixed(1),
         rowHeight: +row.getBoundingClientRect().height.toFixed(1),
         rowDisplay: getComputedStyle(row).display,
+        fieldRight: el.getBoundingClientRect().right,
+        rowContentRight: row.getBoundingClientRect().right - parseFloat(getComputedStyle(row).paddingRight),
+        // Two lines of the row's own controls, whatever the pointer makes them
+        // (44px under a coarse one since 2026-09-23), plus gap and padding.
+        twoLines: (() => {
+          const rs = getComputedStyle(row)
+          const line = (sel) => Math.max(...[...row.querySelectorAll(sel)].map((n) => n.getBoundingClientRect().height))
+          return line('.ggn-stop-swatch, .ggn-stop-hex-field') + line('.ggn-stop-pos, .ggn-stop-lock, .ggn-stop-x')
+            + parseFloat(rs.rowGap) + parseFloat(rs.paddingTop) + parseFloat(rs.paddingBottom)
+            + parseFloat(rs.borderTopWidth) + parseFloat(rs.borderBottomWidth)
+        })(),
       }
     })
 
     expect(m.rowDisplay, 'the ≤480 row is no longer a grid; this test measures the wrong thing').toBe('grid')
-    // 144px: the 80px track plus the 58px of columns 4-5 that the position
-    // field's `grid-column:3/4` leaves empty on row 1, plus the 6px gap.
-    expect(m.width, 'the field did not take the row\'s empty tail').toBeGreaterThanOrEqual(140)
+    // The field runs to the row's right edge: the columns the second line's
+    // controls leave empty on the first line are its to use.
+    expect(m.fieldRight, 'the field did not take the row\'s empty tail').toBeGreaterThanOrEqual(m.rowContentRight - 1)
     expect(m.content, `the widest hex needs ${m.need}px and the box gives ${m.content}px`).toBeGreaterThan(m.need)
     // And the row did not get taller to pay for it.
-    expect(m.rowHeight, 'the stop row grew').toBeLessThanOrEqual(93)
+    expect(m.rowHeight, 'the stop row grew').toBeLessThanOrEqual(m.twoLines + 1)
 
     await ctx.close()
   })
