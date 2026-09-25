@@ -55,7 +55,12 @@ import usePopover from '../../hooks/usePopover'
 // never grows, which is the property wanted; a row of chips that wraps is not.
 
 const PHONE_QUERY = '(max-width:640px)'
-const SEARCH_FLOOR = { phone: 120, wide: 200 }
+// The wide floor is not the search field's comfortable width; it is how narrow
+// it may get before the filters step down a stage. At 200 the Palette Library's
+// collapsed row needed exactly the 700px it had at 768, so a platform whose text
+// measures a pixel or two wider tipped it into the Filters control. 180 leaves
+// that row 20px of room without changing what it paints where it already fit.
+const SEARCH_FLOOR = { phone: 120, wide: 180 }
 const MAX_STAGE = 3
 
 function FiltersGlyph() {

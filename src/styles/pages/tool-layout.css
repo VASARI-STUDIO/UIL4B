@@ -502,9 +502,12 @@
   .tl .tl-toolbar .tl-btn-label--collapse { display: none; }
 }
 /* Below the 390 phone the row tightens its gaps and gutters, so a whole tool
-   name and a labelled primary still share one line. */
+   name and a labelled primary still share one line. At 360, with every action
+   already in the overflow, back + name + More + primary are all that is left;
+   a 6px gap left them under 3px from the screen edge, which text that measures
+   slightly wider on another platform used up. 4px buys back 6px. */
 @media (max-width: 380px) {
-  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 6px; padding-inline: 8px; }
+  :is(.tl, .tl-sheet-layer) .tl-toolbar { gap: 4px; padding-inline: 8px; }
 }
 
 /* Coarse pointers: every control reaches the 44px floor the touch specs hold

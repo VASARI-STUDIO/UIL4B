@@ -26,8 +26,11 @@ const BOB = 'bob-uid'
 let testEnv
 
 before(async () => {
+  // Its own projectId. `node --test` runs rule files in parallel against one
+  // emulator, and clearFirestore() wipes a whole project, so sharing an id with
+  // firestore-rules.test.js would delete that suite's seeded documents mid-test.
   testEnv = await initializeTestEnvironment({
-    projectId: process.env.GCLOUD_PROJECT || 'demo-uil4b',
+    projectId: 'demo-uil4b-account-sync',
     firestore: { rules: await readFile(RULES_PATH, 'utf8') },
   })
 })
