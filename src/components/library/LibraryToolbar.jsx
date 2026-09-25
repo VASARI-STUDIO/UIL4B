@@ -96,6 +96,16 @@ export default function LibraryToolbar({
 
   const minStage = phone ? 2 : 0
   const [stage, setStage] = useState(minStage)
+  // Crossing the phone query starts the climb again from the new floor. The two
+  // modes count the search field at different floors and put different things
+  // on the row, so a stage reached in one says nothing about the other: kept,
+  // a phone's stage 2 would hold a wide row on the Filters control, with no
+  // wide need cached that could ever step it back down.
+  const [stageMode, setStageMode] = useState(phone)
+  if (stageMode !== phone) {
+    setStageMode(phone)
+    setStage(minStage)
+  }
   const effective = Math.max(stage, minStage)
   const needs = useRef({})
   const rowRef = useRef(null)
@@ -145,15 +155,21 @@ export default function LibraryToolbar({
   }, [decide, groups.length, count, action])
 
   // A font swap changes every option's width, so every cached need is stale.
+  // Cleared ONCE, when the fonts settle, not every time `decide` changes: it
+  // changes with every stage, and `fonts.ready` has long resolved by then, so
+  // clearing there emptied the cache on each step and a row that had stepped
+  // up could never find a lower stage to step back down to.
+  const decideRef = useRef(decide)
+  useEffect(() => { decideRef.current = decide }, [decide])
   useEffect(() => {
     let cancelled = false
     document.fonts?.ready?.then(() => {
       if (cancelled) return
       needs.current = {}
-      decide()
+      decideRef.current()
     }).catch(() => {})
     return () => { cancelled = true }
-  }, [decide])
+  }, [])
 
   // Leaving the stage that owns the panel closes it, rather than leaving a
   // panel open with no control on screen to hand focus back to.
