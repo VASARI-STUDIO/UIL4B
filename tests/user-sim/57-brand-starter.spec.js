@@ -450,9 +450,11 @@ test.describe('the pricing page and the server agree', () => {
     await go(page, '/plans')
     await expectRendered(page, 'the plans page')
 
-    const lists = page.locator('.sub-tier-list')
-    await expect(lists.first(), 'the Free tier does not mention the Brand Starter at all')
-      .toContainText('Brand Starter')
+    // The design's Pricing screen keeps the design's five-line plan
+    // cards, so the Brand Starter allowance is stated where the design's comparison
+    // table states every per-plan figure: one row, a Free cell and a Pro cell.
+    const row = page.locator('.pr-compare-row', { has: page.locator('th', { hasText: 'Brand Starter' }) })
+    await expect(row, 'the comparison does not mention the Brand Starter at all').toHaveCount(1)
 
     // Both tiers state the SAME sentence the tool states and the server
     // enforces. Imported, never typed — if the founder changes the allowance,
@@ -468,12 +470,12 @@ test.describe('the pricing page and the server agree', () => {
     // typed-literal mutation IS killed, by "/plans derives the allowance
     // instead of typing it" in tests/unit/ai-generation-truth.test.js. Both
     // halves are needed and neither subsumes the other.
-    await expect(page.locator('.sub-tier-list').first()).toContainText(allowanceSentence('free'))
-    await expect(page.locator('.sub-tier-list').nth(1)).toContainText(allowanceSentence('pro'))
+    await expect(row.locator('td[data-plan="Free"]')).toHaveText(allowanceSentence('free'))
+    await expect(row.locator('td[data-plan="Pro"]')).toHaveText(allowanceSentence('pro'))
 
     // …and beta is disclosed where the money is, not only on the tool.
-    await expect(page.locator('.sub-tier-list .beta-badge').first()).toBeVisible()
-    await expect(page.locator('.sub-tier-list .beta-badge').first()).toHaveText('Beta')
+    await expect(row.locator('.beta-badge')).toBeVisible()
+    await expect(row.locator('.beta-badge')).toHaveText('Beta')
   })
 
   test('the tool is reachable from the AI Studio menu, badged beta', async ({ page }) => {
@@ -501,9 +503,10 @@ test.describe('the pricing page and the server agree', () => {
 
   test('the route mounts the tool rather than the workshop placeholder', async ({ page }) => {
     // The /create/color lesson: a flag said a tool was live while the route
-    // rendered something else entirely. Signed out, the page shows its header
-    // and the auth gate — which is the correct signed-out state for a tool that
-    // meters against an account.
+    // rendered something else entirely. Signed out, the page shows the tool
+    // itself — the brief, Generate and the example — because a free tool opens
+    // without an account; the account is asked for when Generate is pressed
+    // (tests/user-sim/101-ai-tools-open-signed-out.spec.js follows that press).
     watch(page, 'a signed-out visitor opening the Brand Starter')
     await go(page, '/create/auto-builder')
     await expectRendered(page, 'the Brand Starter route')
@@ -512,9 +515,10 @@ test.describe('the pricing page and the server agree', () => {
     await expect(page.locator('.bs-beta')).toHaveText('Beta')
     await expect(page.locator('.coming-title'), 'the route still renders the workshop state')
       .toHaveCount(0)
-    // Signed out, the gate is what you get — metering follows the account, so
-    // there is no anonymous path to a provider call.
-    await expect(page.locator('.auth-gate-prompt')).toBeVisible()
-    await expect(page.getByTestId('brand-starter-generate')).toHaveCount(0)
+    await expect(page.locator('.auth-gate-prompt'), 'the tool is walled off behind a sign-in gate again')
+      .toHaveCount(0)
+    await expect(page.locator('#bs-brief')).toBeVisible()
+    await expect(page.getByTestId('brand-starter-generate')).toBeVisible()
+    await expect(page.locator('.bs-sample')).toBeVisible()
   })
 })

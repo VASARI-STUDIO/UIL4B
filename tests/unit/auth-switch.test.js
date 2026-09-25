@@ -102,7 +102,7 @@ test('legacy login window gate is removed and nav handles switch outcomes in pla
     + 'test — a grep proof written into a file that ships is how the neighbouring '
     + 'item in that same pipeline came to disprove its own claim about uip-modal.')
 
-  const pillNav = await readFile(new URL('../../src/components/PillNav.jsx', import.meta.url), 'utf8')
+  const pillNav = await readFile(new URL('../../src/components/nav/AccountSwitcher.jsx', import.meta.url), 'utf8')
   assert.ok(pillNav.includes('switchingUid'))
   assert.ok(pillNav.includes('aria-live="polite"'))
   assert.ok(!pillNav.includes("navigate('/login', { state: { email: res.email"))
@@ -112,7 +112,7 @@ test('forced password switching and prompt re-entrancy are guarded', async () =>
   const [popup, prompt, pillNav, auth] = await Promise.all([
     readFile(new URL('../../src/components/LoginPopup.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../../src/contexts/LoginPromptContext.jsx', import.meta.url), 'utf8'),
-    readFile(new URL('../../src/components/PillNav.jsx', import.meta.url), 'utf8'),
+    readFile(new URL('../../src/components/nav/AccountSwitcher.jsx', import.meta.url), 'utf8'),
     readFile(new URL('../../src/contexts/AuthContext.jsx', import.meta.url), 'utf8'),
   ])
   assert.ok(popup.includes('!resetMode && !passwordOnly'))
@@ -147,5 +147,9 @@ test('forced password switching and prompt re-entrancy are guarded', async () =>
     || auth.includes('isCurrentAuthSession(authEpochRef, authEpoch, expectedUid, authNow()?.auth?.currentUser)'),
     'the auth-epoch guard no longer compares against the live current user',
   )
-  assert.ok(pillNav.includes('requestAnimationFrame(() => accountBtnRef.current?.focus())'))
+  // The switch lives in nav/AccountSwitcher.jsx; returning focus to the avatar
+  // after a switch is the header's job, so that half is read from PillNav.
+  const header = await readFile(new URL('../../src/components/PillNav.jsx', import.meta.url), 'utf8')
+  assert.ok(header.includes('requestAnimationFrame(() => accountBtnRef.current?.focus())'))
+  assert.ok(header.includes('<AccountSwitcher onDone={closeAccountMenuAndRestoreFocus} />'))
 })

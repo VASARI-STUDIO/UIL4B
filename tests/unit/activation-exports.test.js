@@ -142,9 +142,11 @@ test('the ordinary copy affordances are NOT counted as activations', () => {
   // would measure fidgeting and the one number that says whether any of this
   // works would be inflated.
   const pb = stripComments(read('src/pages/PaletteBuilder.jsx'))
+  // Five since the drawn board: the swatch's hex, its actions
+  // menu's Copy hex, a tint row, the share link and the hex list.
   const plainCopies = (pb.match(/onCopy\?\.\(/g) || []).length
-  assert.ok(plainCopies >= 6, `expected PaletteBuilder's lookup copies to stay on onCopy, found ${plainCopies}`)
-  assert.match(pb, /onCopy\?\.\(adjusted\[i\]\)/, 'copying one hex must stay a lookup')
+  assert.ok(plainCopies >= 5, `expected PaletteBuilder's lookup copies to stay on onCopy, found ${plainCopies}`)
+  assert.match(pb, /onCopy\?\.\(adjusted\[i\](\.toUpperCase\(\))?\)/, 'copying one hex must stay a lookup')
   assert.match(pb, /onCopy\?\.\(shareLink\(\)\)/, 'copying a share link must stay a lookup')
 
   const ts = stripComments(read('src/pages/TypeScale.jsx'))
@@ -163,7 +165,7 @@ test('the palette routes both of its CSS buttons through the single hook', () =>
   // the identical border. What this line defends is the ONCLICK, not the label:
   // the anchor on "Copy CSS" is only what tells the footer button apart from the
   // save-menu row, whose handler is a closure.
-  assert.match(pb, /onClick=\{copyCssExport\}>(<Ico\w+ \/> )?Copy CSS</, 'the footer button must use it')
+  assert.match(pb, /onClick=\{copyCssExport\}>\s*(<(Ico\w+|ToolIcon)[^>]*\/>\s*)?(<span>)?Copy CSS</, 'the footer button must use it')
   assert.equal((pb.match(/onCopy\?\.\(cssExport\)/g) || []).length, 0, 'no CSS export may bypass the hook')
 })
 

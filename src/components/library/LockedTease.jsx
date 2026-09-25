@@ -1,4 +1,5 @@
-import { useProModal } from '../../contexts/ProModalContext'
+import { Link } from 'react-router-dom'
+import { reportUpgradeGate } from '../../contexts/ProModalContext'
 
 // The locked end of a library: a few placeholder rows, then one call to action.
 //
@@ -62,29 +63,50 @@ function LockGlyph() {
   )
 }
 
+// The one control a locked card carries: the way to Pro.
+//
+// Locked items are BLURRED, not greyed, and on hover or focus they show an
+// "Upgrade to Pro" CTA that goes to /plans (every Pro CTA does, never a modal
+// or checkout).
+// It is a link to a page, not an action on the item, so the card is still
+// incapable of copying, opening or handing off what it stands for. Named with
+// the item, so a screen-reader user tabbing past three of them hears which one.
+function UpgradeLink({ gate, name }) {
+  return (
+    <Link
+      className="lockt-upgrade"
+      to="/plans"
+      aria-label={name ? `Upgrade to Pro to open ${name}` : 'Upgrade to Pro'}
+      onClick={() => { reportUpgradeGate(gate) }}
+    >
+      <LockGlyph />
+      <span>Upgrade to Pro</span>
+    </Link>
+  )
+}
+
 // One placeholder standing in for a locked palette.
 //
-// Non-interactive by construction: no button, no link, no tabindex. There is
-// nothing here to copy, open or hand off, so a control would be a control that
-// does nothing — and the CTA below is the one focus stop this group needs.
-//
-// `slots` draws that many neutral bands from the surface tokens. They carry no
-// colour information about the palette they stand for; every locked card in the
-// library draws the identical ramp, which is the point.
-export function LockedPaletteCard({ preview }) {
+// `slots` draws that many bands, blurred. THE BANDS ARE NOT THE PALETTE'S
+// COLOURS and cannot be: the preview carries no values (utils/lockedPreview),
+// so they are four fixed decorative tints in the stylesheet — the same ramp on
+// every locked card, each checked against every hex in src/data so that no tint
+// is a withheld colour. The blur says "there is something here"; the tints stop
+// it reading as a grey box that failed to load.
+export function LockedPaletteCard({ preview, gate = 'library-locked-card' }) {
   const slots = Math.max(1, Number(preview.slots) || 1)
   return (
-    <div className="lockt-card">
+    <div className="lockt-card lockt-card--blur">
       <div className="lockt-stripes" aria-hidden="true">
         {Array.from({ length: slots }, (_, i) => (
           <span key={i} className="lockt-stripe" data-step={i % 4} />
         ))}
-        <span className="lockt-badge"><LockGlyph /></span>
       </div>
       <div className="lockt-foot">
         <span className="lockt-name">{preview.label}</span>
-        <span className="lockt-tag">Pro</span>
+        <span className="lockt-tag"><LockGlyph /> Pro</span>
       </div>
+      <UpgradeLink gate={gate} name={preview.label} />
     </div>
   )
 }
@@ -114,10 +136,10 @@ export function LockedPaletteRow({ preview }) {
 // A prompt's TITLE is the idea being sold, so unlike a brand palette no label is
 // passed and none is rendered. What is left is the tag set — already public, it
 // is the library's own filter facet — and a skeleton sized by `slots`.
-export function LockedPromptCard({ preview }) {
+export function LockedPromptCard({ preview, gate = 'prompt-library-locked-card' }) {
   const slots = Math.max(1, Number(preview.slots) || 1)
   return (
-    <div className="lockt-card lockt-card--prompt">
+    <div className="lockt-card lockt-card--prompt lockt-card--blur">
       <div className="lockt-lines" aria-hidden="true">
         {Array.from({ length: slots }, (_, i) => (
           <span key={i} className="lockt-line" data-step={i % 3} />
@@ -129,30 +151,61 @@ export function LockedPromptCard({ preview }) {
           : <span className="lockt-name lockt-name--muted">Community prompt</span>}
         <span className="lockt-tag"><LockGlyph /> Pro</span>
       </div>
+      <UpgradeLink gate={gate} />
+    </div>
+  )
+}
+
+// One placeholder standing in for a locked icon group.
+//
+// The preview carries the group's name and how many icons it holds (`slots`),
+// never an icon id, so the blurred area is a fixed row of neutral outline
+// shapes drawn here — the same on every locked group — and nothing of the
+// group's own glyphs is fetched or painted.
+const GROUP_SHAPES = ['circle', 'square', 'arrow', 'circle', 'square', 'arrow', 'circle', 'square']
+function PlaceholderShape({ kind }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {kind === 'circle' && <circle cx="12" cy="12" r="8" />}
+      {kind === 'square' && <rect x="4" y="4" width="16" height="16" rx="3" />}
+      {kind === 'arrow' && <path d="M5 12h14M13 6l6 6-6 6" />}
+    </svg>
+  )
+}
+export function LockedIconGroupCard({ preview, gate = 'icon-group-locked-card' }) {
+  return (
+    <div className="lockt-card lockt-card--blur lockt-card--group">
+      <div className="lockt-glyphs" aria-hidden="true">
+        {GROUP_SHAPES.map((kind, i) => <PlaceholderShape key={i} kind={kind} />)}
+      </div>
+      <div className="lockt-foot">
+        <span className="lockt-name">{preview.label}</span>
+        <span className="lockt-tag"><LockGlyph /> Pro</span>
+      </div>
+      <UpgradeLink gate={gate} name={preview.label} />
     </div>
   )
 }
 
 // The wall. One heading, one honest sentence, one button.
 //
-// `gate` is required and is passed straight to openProModal, which is where
-// trackUpgradeGate fires — so this wall is measured as itself rather than
-// falling back to the modal title.
-export function LockedTeaseCta({ gate, heading, body, action, modal }) {
-  const { openProModal } = useProModal()
+// `gate` is required and is reported (reportUpgradeGate) on the click, so this
+// wall is measured as itself. The button goes to /plans (every Pro CTA goes
+// to /plans, never a modal or checkout).
+export function LockedTeaseCta({ gate, heading, body, action }) {
   return (
     <div className="lockt-cta">
       <div className="lockt-cta-copy">
         <p className="lockt-cta-head">{heading}</p>
         <p className="lockt-cta-body">{body}</p>
       </div>
-      <button
-        type="button"
+      <Link
         className="btn btn-accent lockt-cta-btn"
-        onClick={() => openProModal({ gate, ...modal })}
+        to="/plans"
+        onClick={() => { reportUpgradeGate(gate) }}
       >
         {action}
-      </button>
+      </Link>
     </div>
   )
 }

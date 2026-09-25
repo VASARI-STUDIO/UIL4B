@@ -1,476 +1,217 @@
-/* contrast.css — /create/contrast, the `cc` family.
+/* contrast.css — /create/contrast, rebuilt to the design.
  *
- * EVERY SELECTOR IS SCOPED UNDER `.cc-page`. Importing a sheet last does not
- * make it load last: Vite orders chunk CSS by the dependency graph, and a page
- * sheet has been measured loading BEFORE a shared deferred sheet it was meant
- * to override (8d30f37a). Specificity is the only order that holds.
+ * Source: "UIL4B App.dc.html", `isContrast` (D:718-791), view model
+ * (D:1899-1934). The toolbar, the grid, the side card and its section labels
+ * come from the shared tool layout (pages/tool-layout.css); this sheet is the
+ * specimen, the pairs grid, the ratio, the tests, the swatches, the two hex
+ * fields and the fixes. Scoped `.cc …` throughout.
  *
- * SPECTRUM PASS, 2026-09-23. What changed, and what it replaced:
- *   · Canvas left, instrument right from 1041px — the founder's App design
- *     puts the thing being judged on the left and the controls in a column
- *     beside it, and /create/tint already does. DOM order is unchanged
- *     (instrument first), so keyboard and screen-reader order is unchanged.
- *   · The two panels are <section>s with accessible names rather than `.card`
- *     divs. `.card` brought a gradient ground, `transition: all`, a hover
- *     border on a box that is not a control, and `overflow: hidden`.
- *   · One hairline list of checks, not a bordered box per check. Three
- *     sentences in three cards was a card drawn around every idea.
- *   · The AA/AAA control is a 10px segmented control, not a 999px pill: app
- *     controls are rounded rectangles; the pill is for meters and marketing.
- *   · `--brand` (three uses) and `--accent-strong` (one) are gone, and so is
- *     the hard-coded #D64545 on an invalid field.
- *   · The mono label is one size (10px, .14em) instead of the global
- *     `.seg-label`'s 8.5px.
+ * The verdict colours are the design's own status pair (D:1428-1430): a status
+ * hue in dark, the same hue mixed 50% toward #0B0C0E in light — so the words
+ * clear AA on the card in both themes. They NEVER paint with the pair under
+ * test (--cc-fg / --cc-bg): a verdict drawn in the failing pair is unreadable
+ * exactly when it is needed.
  *
- * CONTRAST WAS MEASURED ON THE COMPOSITED COLOUR in a built browser, both
- * themes; figures are beside the rules they belong to. */
+ * Ours, not the design's (kept functions): the editable hex fields in the pair footer,
+ * the picker chips beside them, and the "Make it pass" section. */
 
-.cc-page {
-  /* The quiet ground for a segmented control's well: --t0 at 4%, so it follows
-     the theme without a second value to keep in step. */
-  --cc-wash: color-mix(in srgb, var(--t0) 4%, transparent);
-  min-width: 0;
-  padding-bottom: var(--s-7);
+.cc {
+  --cc-ok: #8FCB9B;
+  --cc-warn: #D9B93C;
+  --cc-bad: #F0A58C;
 }
+[data-theme="light"] .cc {
+  --cc-ok: color-mix(in srgb, #8FCB9B 50%, #0B0C0E);
+  --cc-warn: color-mix(in srgb, #D9B93C 50%, #0B0C0E);
+  --cc-bad: color-mix(in srgb, #F0A58C 50%, #0B0C0E);
+}
+.cc .cc-tone--ok { color: var(--cc-ok); }
+.cc .cc-tone--warn { color: var(--cc-warn); }
+.cc .cc-tone--bad { color: var(--cc-bad); }
 
-/* ── Masthead — the h1 step /create/tint uses ─────────────────────────────── */
-
-.cc-page .cc-hero {
+/* ── Specimen (D:728-735) ───────────────────────────────────────────────── */
+.cc .cc-preview {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(min(380px, 100%), 560px);
-  gap: var(--s-8);
-  align-items: end;
-  margin-bottom: var(--s-6);
-}
-.cc-page .cc-hero h1 {
-  margin: 0;
-  font-family: var(--display);
-  font-size: clamp(38px, 5.6vw, 72px);
-  font-weight: 600;
-  line-height: .96;
-  letter-spacing: -.045em;
-  color: var(--t0);
-  text-wrap: balance;
-}
-.cc-page .cc-hero p {
-  max-width: 52ch;
-  margin: 0 0 6px;
-  font-size: 15.5px;
-  line-height: 1.62;
-  color: var(--t1);
-  text-wrap: pretty;
-}
-
-/* ── The two panels ──────────────────────────────────────────────────────────
-   NOT 1fr 1fr. The instrument is two fields, a radio pair and three sentences;
-   the preview is a rendered page with a chip beside every line, and equal
-   halves starved it. 06-colour-tool-workbenches holds preview > controls and
-   the ratio under 1.6, so it stays two real columns rather than a sliver
-   beside a slab. */
-.cc-page .cc-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
-  grid-template-areas: "preview controls";
-  gap: var(--s-5);
-  align-items: start;
-}
-.cc-page .cc-panel--controls { grid-area: controls; }
-.cc-page .cc-panel--preview { grid-area: preview; }
-.cc-page .cc-panel {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: clamp(18px, 2.2vw, 26px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  /* Opaque on purpose: the AA sweep in 06-colour-tool-workbenches walks up to
-     the first opaque ground, and this is the one every label here sits on. */
-  background: var(--card);
-  box-shadow: var(--shadow-s);
-}
-
-/* One small-label voice for the page. --t2, not --t3: 10px caps want the
-   headroom (#5F5F59 on #FFF 6.43:1 light; #9F9F98 on #111215 7.03:1 dark). */
-.cc-page .cc-label {
-  display: block;
-  margin: 0 0 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--t2);
-}
-
-/* ── Fields ───────────────────────────────────────────────────────────────── */
-
-/* `align-items:center`: each field carries its verdict badge UNDER its input,
-   so centring puts the swap button level with the controls it swaps. */
-.cc-page .cc-fields { display: flex; gap: 10px; align-items: center; }
-.cc-page .cc-field { flex: 1; min-width: 0; }
-.cc-page .cc-field-row { display: flex; gap: 8px; align-items: center; }
-.cc-page .cc-picker {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border-radius: var(--radius-s);
-  background: var(--inp);
-}
-.cc-page .cc-hex-input {
-  flex: 1;
-  min-width: 0;
-  height: 44px;
-  padding: 0 12px;
-  font-family: var(--mono);
-  color: var(--t0);
-  background: var(--inp);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
-  transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
-}
-/* THE SIZE IS IN A ZERO-SPECIFICITY WRAPPER, deliberately. The mobile 16px
-   floor in global.css sits at (0,1,1) so that iOS never zooms a focused field;
-   `.cc-page .cc-hex-input` is (0,2,0) and would outrank it. `:where()` leaves
-   this at (0,1,0): above the reset, below the floor. 38-input-specificity. */
-.cc-page :where(.cc-hex-input) { font-size: 13.5px; }
-.cc-page .cc-hex-input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-wash-4);
-}
-.cc-page .cc-hex-input--bad,
-.cc-page .cc-hex-input--bad:focus { border-color: var(--err); }
-.cc-page .cc-swap {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  font-size: 16px;
-  color: var(--t1);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
-  cursor: pointer;
-  transition: border-color var(--dur-1) ease, background var(--dur-1) ease, color var(--dur-1) ease;
-}
-.cc-page .cc-swap-word { display: none; }
-.cc-page .cc-swap:hover { border-color: var(--bh); background: var(--cc-wash); color: var(--t0); }
-.cc-page .cc-hint { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--t2); }
-
-/* Whereby's inline per-field verdict. Page tokens only, like `.cc-verdict`:
-   the moment it borrowed the user's colour it would go unreadable at exactly
-   the ratios it exists to report. */
-.cc-page .cc-field-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 8px 0 0;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--t1);
-}
-.cc-page .cc-field-badge-mark { font-weight: 700; }
-.cc-page .cc-field-badge--pass .cc-field-badge-mark { color: var(--ok-strong); }
-.cc-page .cc-field-badge--fail .cc-field-badge-mark { color: var(--err-strong); }
-.cc-page .cc-field-badge-vs { font-family: var(--font); font-weight: 400; color: var(--t2); }
-
-/* ── The ratio ────────────────────────────────────────────────────────────────
-   The numeral and its sentence are stacked at every width now, the way the
-   App design reads: the number is what people paste into a ticket, the
-   sentence is what they act on. Side by side they fought for one row and the
-   old 560px rule had to pull them apart anyway. */
-.cc-page .cc-ratio {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 22px 0 0;
-  padding: 20px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-/* `nowrap`: one token. At 390 the unit once wrapped under the number. */
-.cc-page .cc-ratio-num {
-  font-family: var(--display);
-  font-size: clamp(36px, 4.4vw, 48px);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -.04em;
-  font-variant-numeric: tabular-nums;
-  color: var(--t0);
-  white-space: nowrap;
-}
-.cc-page .cc-ratio-unit { font-size: .46em; font-weight: 500; letter-spacing: -.01em; color: var(--t2); }
-.cc-page .cc-ratio-verdict { font-size: 13.5px; font-weight: 500; line-height: 1.45; }
-/* The state tokens the page would tell you to use. On the card:
-   --ok-strong 7.47 / --warn-strong 7.37 / --err-strong 7.78 light, and the
-   dark values are --ok / --warn / a lighter --err, all over 6.5. */
-.cc-page .cc-pass { color: var(--ok-strong); }
-.cc-page .cc-mixed { color: var(--warn-strong); }
-.cc-page .cc-fail { color: var(--err-strong); }
-
-/* ── Level + checks ───────────────────────────────────────────────────────── */
-
-.cc-page .cc-level { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 6px; }
-.cc-page .cc-level .cc-label { margin: 0; }
-/* The segmented control /create/tint uses: a quiet well, and the selected
-   segment lifted onto the card with a hairline. The accent is not spent on
-   "which setting is on" — it belongs to the colour under test. */
-.cc-page .cc-level-opts {
-  display: inline-flex;
-  gap: 3px;
-  padding: 3px;
-  background: var(--cc-wash);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.cc-page .cc-level-opt {
-  min-width: 56px;
-  min-height: 32px;
-  padding: 6px 14px;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .06em;
-  color: var(--t2);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-s);
-  cursor: pointer;
-  transition: background var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
-}
-.cc-page .cc-level-opt:hover { color: var(--t0); }
-/* (0,3,0), so it outranks global.css's `.cc-level-opt.is-on` ink ground. */
-.cc-page .cc-level-opt.is-on {
-  color: var(--t0);
-  font-weight: 600;
-  background: var(--card);
-  border-color: var(--border);
-  box-shadow: var(--shadow-xs);
-}
-
-/* One list, hairline rows. Klaviyo's audit list and the App design's test
-   list both run their checks as rows under one boundary rather than a box
-   each (mobbin.com/screens/d873e98a-7a38-4411-bc69-965a42c07d45). */
-.cc-page .cc-checks { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
-.cc-page .cc-check {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 0;
-  font-size: 13px;
-  border-bottom: 1px solid var(--border);
-}
-/* The glyph sits on the card itself now, no tinted disc under it. */
-.cc-page .cc-check-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 20px;
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 700;
-}
-.cc-page .cc-check--pass .cc-check-mark { color: var(--ok-strong); }
-.cc-page .cc-check--fail .cc-check-mark { color: var(--err-strong); }
-.cc-page .cc-check-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.cc-page .cc-check-name { font-weight: 500; line-height: 1.5; color: var(--t0); }
-.cc-page .cc-check-foot { font-size: 12px; line-height: 1.45; color: var(--t2); }
-.cc-page .cc-check-min {
-  margin-left: auto;
-  padding-top: 2px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--t2);
-  white-space: nowrap;
-}
-
-/* ── Fixes ────────────────────────────────────────────────────────────────── */
-
-.cc-page .cc-fixes-label { margin-top: 20px; }
-.cc-page .cc-fixes { display: flex; flex-direction: column; }
-.cc-page .cc-fix {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-}
-.cc-page .cc-fix:first-child { border-top: 1px solid var(--border); }
-/* The proposed colour, painted in itself; its ink is solved per chip by
-   textColorForBg, so the label's contrast is a guarantee, not a choice. */
-.cc-page .cc-fix-chip {
-  flex-shrink: 0;
-  padding: 6px 10px;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: var(--radius-xs);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t0) 12%, transparent);
-  background: var(--cc-chip);
-  color: var(--cc-chip-ink);
-}
-.cc-page .cc-fix-desc { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.45; color: var(--t1); }
-.cc-page .cc-fix-apply,
-.cc-page .cc-fix-copy {
-  flex-shrink: 0;
-  min-height: 34px;
-  padding: 6px 13px;
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--t1);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-s);
-  cursor: pointer;
-  transition: border-color var(--dur-1) ease, background var(--dur-1) ease, color var(--dur-1) ease;
-}
-.cc-page .cc-fix-apply:hover,
-.cc-page .cc-fix-copy:hover { border-color: var(--bh); background: var(--cc-wash); color: var(--t0); }
-.cc-page .cc-unfixable { margin-top: 14px; }
-
-/* ── The live preview ────────────────────────────────────────────────────────
-   Design notes, Mobbin references and the one rule the chips obey are in the
-   header of src/pages/ContrastChecker.jsx. Everything inside `.cc-preview`
-   paints in the USER's pair via --cc-fg / --cc-bg, set on a ref; it must not
-   follow the app theme, because it is showing the pair, not the page. */
-.cc-page .cc-lede { margin: 0 0 16px; max-width: 60ch; font-size: 12.5px; line-height: 1.55; color: var(--t2); }
-.cc-page .cc-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  align-content: center;
+  min-height: clamp(240px, 38vh, 400px);
   padding: clamp(20px, 3vw, 34px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--cc-bg);
-  color: var(--cc-fg);
+  border-radius: 18px;
+  border: 1px solid var(--tl-line);
+  background: var(--cc-bg, #FFFFFF);
+  color: var(--cc-fg, #000000);
 }
-.cc-page .cc-spec-row { display: flex; align-items: flex-start; gap: 12px; }
-.cc-page .cc-spec-row > :first-child { flex: 1; min-width: 0; margin: 0; }
-.cc-page .cc-spec-h { font-family: var(--display); font-size: 24px; font-weight: 700; line-height: 1.25; letter-spacing: -.02em; }
-.cc-page .cc-spec-body { font-size: 16px; line-height: 1.55; }
-.cc-page .cc-spec-small { font-size: 12px; line-height: 1.5; }
-.cc-page .cc-spec-link { text-decoration: underline; text-underline-offset: 2px; }
-.cc-page .cc-spec-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-/* The solid button inverts the pair on purpose — same ratio, read the other
-   way round, which is the point the hint under the preview makes. The radius
-   is the app's control radius, not a pill, so the specimen reads as the kind
-   of button this product would draw. */
-.cc-page .cc-spec-btn {
+.cc .cc-preview p { margin: 0; }
+.cc .cc-spec-h { font-size: clamp(28px, 4.6vw, 52px); font-weight: 600; letter-spacing: -.035em; line-height: 1.02; }
+.cc .cc-spec-large { font-size: clamp(15px, 1.8vw, 19px); line-height: 1.5; max-width: min(42ch, 100%); }
+.cc .cc-spec-body { font-size: 14px; line-height: 1.6; max-width: min(56ch, 100%); }
+.cc .cc-spec-btn {
   display: inline-flex;
   align-items: center;
-  padding: 9px 16px;
+  gap: 8px;
+  justify-self: start;
+  padding: 9px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--cc-fg, currentColor);
+  font-size: 13px;
+}
+
+/* ── Common pairs in this kit (D:737-752) ───────────────────────────────── */
+.cc .cc-pairs { display: grid; gap: 9px; }
+.cc .cc-pair-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(168px, 100%), 1fr));
+  gap: 8px;
+}
+.cc .cc-pair {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background: var(--tl-card);
+  color: var(--tl-ink);
+  font-family: var(--font);
+  text-align: left;
+  cursor: pointer;
+  transition: transform .14s var(--tl-ease), border-color .16s ease;
+}
+.cc .cc-pair:active { transform: scale(.97); }
+.cc .cc-pair-chip {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--tl-line);
+  background: var(--cc-bg, #FFFFFF);
+  color: var(--cc-fg, #000000);
   font-size: 14px;
   font-weight: 600;
-  border: 2px solid var(--cc-fg);
-  border-radius: var(--radius-s);
-  background: var(--cc-fg);
-  color: var(--cc-bg);
 }
-.cc-page .cc-spec-btn--ghost { background: transparent; color: var(--cc-fg); }
+.cc .cc-pair-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.cc .cc-pair-label { font-size: 12.5px; color: var(--tl-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc .cc-pair-ratio { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); }
+.cc .cc-pair-mark { font-family: var(--mono); font-size: 10px; white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) {
+  .cc .cc-pair:hover { border-color: var(--tl-line-on); }
+}
 
-/* PAGE TOKENS ONLY. A chip painted in the pair under test goes unreadable
-   exactly when the pair fails. `--bg-1` and `--border` are opaque, so the chip
-   stays legible over any --cc-bg; 06-colour-tool-workbenches drives a failing
-   pair and measures these in both themes. A small rounded rectangle, not a
-   999px pill: this is a label on an element, not a meter. */
-.cc-page .cc-verdict {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  padding: 4px 8px;
+/* ── Ratio + verdict (D:757-760) ────────────────────────────────────────── */
+.cc .cc-ratio { gap: 6px; padding: 18px 16px; }
+.cc .cc-ratio-num {
+  font-size: clamp(34px, 5vw, 46px);
+  font-weight: 600;
+  letter-spacing: -.04em;
+  line-height: 1;
+  color: var(--tl-ink);
+  font-variant-numeric: tabular-nums;
+}
+.cc .cc-ratio-unit { font-size: .42em; font-weight: 500; color: var(--tl-dim); }
+.cc .cc-ratio-verdict { font-size: 13.5px; }
+
+/* ── The five tests (D:761-770) ─────────────────────────────────────────── */
+.cc .cc-tests { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.cc .cc-check { display: flex; align-items: center; gap: 10px; }
+.cc .cc-check-ico { flex: 0 0 auto; }
+.cc .cc-check-name { flex: 1; min-width: 0; font-size: 13px; color: var(--tl-soft); }
+.cc .cc-check-level { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--tl-faint); }
+.cc .cc-check-mark { font-family: var(--mono); font-size: 10.5px; white-space: nowrap; }
+
+/* ── Target, swatches, the pair (D:771-786) ─────────────────────────────── */
+.cc .cc-colours { gap: 11px; }
+.cc .cc-swatches { display: flex; flex-wrap: wrap; gap: 7px; }
+.cc .cc-swatch {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--t0) 14%, transparent);
+  background: var(--cc-sw, transparent);
+  cursor: pointer;
+}
+.cc .cc-swatch.is-on { border-color: var(--t0); }
+.cc .cc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cc .cc-field { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cc .cc-field-k { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); flex: 0 0 auto; }
+.cc .cc-field .cpk-wrap { flex: 0 0 auto; }
+.cc .cc-picker { width: 24px; height: 24px; min-height: 24px; border-radius: 8px; }
+.cc .cc-hex-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--tl-hair);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  color: var(--tl-ink);
   font-family: var(--mono);
   font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  color: var(--t1);
-  background: var(--bg-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
+  text-transform: uppercase;
 }
-.cc-page .cc-verdict-mark { font-weight: 700; }
-.cc-page .cc-verdict--pass .cc-verdict-mark { color: var(--ok-strong); }
-.cc-page .cc-verdict--fail .cc-verdict-mark { color: var(--err-strong); }
-.cc-page .cc-panel--preview > .cc-hint { margin-top: 16px; }
+.cc .cc-hex-input--bad { border-color: var(--err); }
+.cc .cc-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 
-/* ── Onward links ─────────────────────────────────────────────────────────── */
-
-.cc-page .cc-more {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  margin-top: var(--s-7);
-  padding-top: var(--s-5);
-  border-top: 1px solid var(--border);
+/* ── Make it pass ───────────────────────────────────────────────────────── */
+.cc .cc-fixes { display: grid; gap: 8px; }
+.cc .cc-fix { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cc .cc-fix-chip {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--cc-sw, transparent);
+  color: var(--cc-sw-ink, var(--t0));
+  border: 1px solid var(--tl-line);
 }
-.cc-page .cc-more-link {
-  display: inline-flex;
-  align-items: center;
+.cc .cc-fix-desc { flex: 1 1 120px; min-width: 0; font-size: 12px; color: var(--tl-dim); }
+.cc .cc-fix-btn {
+  height: 30px;
   min-height: 24px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--t1);
-  text-decoration: none;
-  border-radius: var(--radius-xs);
-  transition: color var(--dur-1) ease;
+  padding: 0 11px;
+  border: 1px solid var(--tl-line);
+  border-radius: var(--btn-radius);
+  background: transparent;
+  color: var(--tl-ink);
+  font-family: var(--font);
+  font-size: 12.5px;
+  cursor: pointer;
 }
-/* --accent-text, the derived step a premium theme moving --accent will follow.
-   On --bg-0, composited in a built browser: 5.28:1 light / 9.37:1 dark. */
-.cc-page .cc-more-link:hover { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
-
-/* ── Focus: one ring, on --accent ─────────────────────────────────────────── */
-
-.cc-page .cc-swap:focus-visible,
-.cc-page .cc-level-opt:focus-visible,
-.cc-page .cc-fix-apply:focus-visible,
-.cc-page .cc-fix-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.cc-page .cc-more-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-
-/* ── Widths ───────────────────────────────────────────────────────────────── */
-
-/* One column from 1040px, not 900. The instrument's narrower column at 900 is
-   ~400px, where the non-text sentence wraps to three lines and its "≥ 3:1"
-   drifts off its row. Instrument first when stacked: on a phone the fields
-   and the ratio are what someone came to use. */
-@media (max-width: 1040px) {
-  .cc-page .cc-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "controls" "preview"; }
+@media (hover: hover) and (pointer: fine) {
+  .cc .cc-fix-btn:hover { background: var(--tl-wash-2); }
 }
-/* 1100, not tint's 980: "Colour Contrast Checker" is a longer name, and in
-   the two-column masthead at 1024 it broke onto three lines of 57px type. */
-@media (max-width: 1100px) {
-  .cc-page .cc-hero { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
-}
-@media (max-width: 560px) {
-  .cc-page .cc-hero h1 { font-size: clamp(34px, 9vw, 42px); }
-  .cc-page .cc-hero p { font-size: 14px; }
-  .cc-page .cc-panel { padding: 18px; }
-  .cc-page .cc-fields { flex-direction: column; align-items: stretch; }
-  .cc-page .cc-swap { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
-  .cc-page .cc-swap-word { display: inline; font-size: 13px; font-weight: 500; }
-  /* Chip and its sentence on one row, the two actions in equal halves under
-     them. In one row the sentence that says WHAT to fix was the only thing
-     squeezed, down to ~85px at 390; the old two-column grid then made Apply
-     the width of the chip and Copy the rest, the secondary action the bigger. */
-  .cc-page .cc-fix { flex-wrap: wrap; }
-  .cc-page .cc-fix-desc { flex: 1 1 calc(100% - 120px); }
-  .cc-page .cc-fix-apply,
-  .cc-page .cc-fix-copy { flex: 1 1 calc(50% - 5px); min-height: 40px; }
-  /* The chip and a 24px heading fight for one line below ~520px and the
-     heading loses to a two-word wrap. Stacked, the chip reads as a caption. */
-  .cc-page .cc-spec-row { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .cc-page .cc-more { flex-direction: column; gap: 8px; }
-}
-
-/* ── Coarse pointers: 44px on the controls ──────────────────────────────────
-   Last in the file so it outranks the 560px band's 40px at equal specificity. */
 
 @media (pointer: coarse) {
-  .cc-page .cc-level-opt,
-  .cc-page .cc-fix-apply,
-  .cc-page .cc-fix-copy,
-  .cc-page .cc-more-link { min-height: 44px; }
+  .cc .cc-swatch { width: 44px; height: 44px; }
+  .cc .cc-picker { width: 44px; height: 44px; }
+  .cc .cc-hex-input { height: 44px; font-size: 16px; }
+  .cc .cc-fix-btn { height: 44px; }
+  .cc .cc-pair { min-height: 44px; }
+  .cc .cc-fields { grid-template-columns: 1fr; }
+}
+@media (max-width: 380px) {
+  .cc .cc-fields { grid-template-columns: 1fr; }
+}
+/* iOS zooms the page when a focused field is under 16px. The global ≤640
+   floor loses to this sheet's (0,2,0) size, so the floor is restated here. */
+@media (max-width: 640px) {
+  .cc .cc-hex-input { font-size: 16px; }
+}
+
+:where(html[data-reduced-motion="true"]) .cc .cc-pair { transition: none !important; }
+:where(html[data-reduced-motion="true"]) .cc .cc-pair:active { transform: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .cc .cc-pair { transition: none !important; }
+  :where(html:not([data-reduced-motion="false"])) .cc .cc-pair:active { transform: none !important; }
+}
+@media (forced-colors: active) {
+  .cc .cc-preview,
+  .cc .cc-pair-chip,
+  .cc .cc-swatch,
+  .cc .cc-fix-chip { forced-color-adjust: none; }
+  .cc .cc-swatch.is-on { outline: 2px solid Highlight; }
 }

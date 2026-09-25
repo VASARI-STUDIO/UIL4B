@@ -25,7 +25,7 @@ export default function ThemeSystems() {
         <p>
           A theme is a second set of values bound to the same set of names.{' '}
           <code>--bg-0</code> is a name; in this product it holds{' '}
-          <code>#EFEEE9</code> in the light theme and <code>#060607</code> in the
+          <code>#F5F5F2</code> in the light theme and <code>#060607</code> in the
           dark one. Nothing that consumes the name is told which is mounted, and
           that is the whole mechanism — there is no second stylesheet, no
           duplicated component and no branch in the markup.
@@ -68,17 +68,17 @@ export default function ThemeSystems() {
 
         <p>
           The ground very nearly does invert. Inverting this product&rsquo;s light
-          ground <code>#EFEEE9</code> gives <code>#101116</code>, and its real
-          dark ground is <code>#060607</code>; those two measure 1.07:1 against
+          ground <code>#F5F5F2</code> gives <code>#0A0A0D</code>, and its real
+          dark ground is <code>#060607</code>; those two measure 1.02:1 against
           each other. Neutrals
           are near-grey, and the inverse of a near-grey is another near-grey.
         </p>
         <p>
           Nothing chromatic survives the trip. Inversion in RGB is a 180&deg;
           rotation of hue, so every colour returns as its opposite: this
-          product&rsquo;s light link colour <code>#0B5ED7</code> is a blue at hue
-          216 and inverts to <code>#F4A128</code>, an orange at hue 36. Its real
-          dark link colour is <code>#4A90FF</code> — hue 217, the same blue,
+          product&rsquo;s light link colour <code>#1F4FD8</code> is a blue at hue
+          224 and inverts to <code>#E0B027</code>, an orange at hue 44. Its real
+          dark link colour is <code>#8FAEFF</code> — hue 223, the same blue,
           lifted until it clears the new ground. That is what the second value
           is: the same hue re-picked against a different background, rather than
           the arithmetic negative of the first.

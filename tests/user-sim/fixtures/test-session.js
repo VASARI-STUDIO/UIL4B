@@ -315,6 +315,17 @@ function applyFieldOps(target, patch) {
  */
 export const denials = DECLARED?.deny || []
 
+/* AN AUTH CALL THAT CAN BE TOLD TO REFUSE, for the same reason as `deny`.
+ * `signIn(page, { authFail: { updateEmail: 'auth/operation-not-allowed' } })`
+ * makes that one call reject with that Firebase code, so a spec can render what
+ * a person sees when Firebase says no — without it, "Email updated" on a
+ * failed change would go unseen. Nothing refuses unless
+ * a spec asks. */
+export function authFailFor(op) {
+  const code = DECLARED?.authFail?.[op]
+  return code ? authError(code, `[${FIXTURE_MARKER}] ${op} refused by the spec (${code})`) : null
+}
+
 export function deniedFor(path, op) {
   for (const entry of denials) {
     const pattern = typeof entry === 'string' ? entry : entry?.path

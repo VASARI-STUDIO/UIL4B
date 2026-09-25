@@ -1,6 +1,6 @@
 --- a/src/contexts/AuthContext.jsx
 +++ b/src/contexts/AuthContext.jsx
-@@ -1,26 +1,33 @@
+@@ -1,26 +1,23 @@
  import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 -import {
 -  signInWithPopup,
@@ -20,30 +20,20 @@
 -  sendPasswordResetEmail,
 -} from 'firebase/auth'
 -import { auth as firebaseAuth, db } from '../utils/firebase'
-+// FIREBASE ARRIVES THROUGH THE ACCESS BROKER, NOT AS A STATIC IMPORT.
++// Firebase is loaded through the access broker rather than as a static
++// import, so the SDK chunk is not in the entry graph or the modulepreload list.
 +//
-+// Nothing about the session machinery below changes. What changes is WHEN the
-+// 116268-byte SDK chunk is fetched: a static import of it here put it in the
-+// entry graph and in index.html's `modulepreload` list, so every visitor — the
-+// overwhelming majority of whom never sign in — paid for it in the first
-+// request wave, contending with the CSS and the entry bundle before anything
-+// had painted (#402 measured it at 25% of that wave).
++//   whenAuthSdk()   Used by the bootstrap listener only. Waits for the
++//                   deferral gate (LCP, idle, first touch, or a signed-in
++//                   hint). See src/utils/firebaseAccess.lazy.js.
++//   loadAuthSdk()   Used by user-initiated actions (sign in, sign up, sign
++//   loadFirestore() out, reset, switch, profile writes, delete). These open
++//                   the gate rather than wait on it.
++//   authNow()       Synchronous peek for the `currentUser` identity guards;
++//                   null before the SDK lands.
 +//
-+//   whenAuthSdk()  PATIENT. Used by the bootstrap listener ONLY. Waits for the
-+//                  deferral gate — LCP, idle, first touch, or a signed-in hint,
-+//                  whichever comes first. See src/utils/firebaseAccess.lazy.js.
-+//   loadAuthSdk()  URGENT. Used by every action a person actually initiates:
-+//   loadFirestore() sign in, sign up, sign out, reset, switch, profile writes,
-+//                  delete. These open the gate rather than wait on it, so no
-+//                  human ever waits on the optimisation.
-+//   authNow()      Synchronous peek for the `currentUser` identity guards. Null
-+//                  before the SDK lands, which every one of those guards already
-+//                  treats as "not the current session" — the same answer they
-+//                  give today when auth has not resolved yet.
-+//
-+// In an UNFLAGGED build the broker is `firebaseAccess.js`, where every promise
-+// is already resolved and `authNow()` is never null, so this file behaves
-+// exactly as it did before this change.
++// In an unflagged build the broker is `firebaseAccess.js`, where every promise
++// is already resolved and `authNow()` is never null.
 +//
  // deleteUser/deleteDoc are deliberately gone: deletion is now a single
  // server-side transaction (api/delete-account.js) that cancels billing and
@@ -53,7 +43,7 @@
  import { accountProviderIds, accountSelectionOutcome, authSwitchOutcome, isCurrentAuthSession } from '../utils/authSwitch'
  
  const AuthContext = createContext()
-@@ -112,7 +119,8 @@
+@@ -112,7 +109,8 @@
  
  async function loadProfileFromFirestore(uid) {
    try {
@@ -63,7 +53,7 @@
      return snap.exists() ? snap.data() : null
    } catch { return null }
  }
-@@ -127,7 +135,8 @@
+@@ -127,7 +125,8 @@
  // dropped connection.
  async function saveProfileToFirestore(uid, data) {
    try {
@@ -73,7 +63,7 @@
      return { ok: true }
    } catch (error) {
      const code = error?.code || 'unknown'
-@@ -161,7 +170,13 @@
+@@ -161,7 +160,13 @@
    const authEpochRef = useRef(0)
  
    useEffect(() => {
@@ -88,7 +78,7 @@
        const authEpoch = ++authEpochRef.current
        if (fbUser) {
          const expectedUid = fbUser.uid
-@@ -191,7 +206,7 @@
+@@ -191,7 +196,7 @@
          // background and merge it in once it arrives.
          setLoading(false)
          loadProfileFromFirestore(fbUser.uid).then((fsProfile) => {
@@ -97,7 +87,7 @@
            if (fsProfile) {
              const merged = { ...initial, ...fsProfile, email: fbUser.email || fsProfile.email }
              setProfile(merged)
-@@ -203,10 +218,10 @@
+@@ -203,10 +208,10 @@
                try { localStorage.setItem('vs-onboarded', '1') } catch {}
              }
            } else {
@@ -110,7 +100,7 @@
                setProfileSyncError(result.ok ? null : profileSaveMessage(result.code))
              })
            }
-@@ -218,8 +233,19 @@
+@@ -218,8 +223,19 @@
          setProfileSyncError(null)
          setLoading(false)
        }
@@ -131,7 +121,7 @@
    }, [])
  
    const user = firebaseUser ? { email: firebaseUser.email, uid: firebaseUser.uid } : null
-@@ -235,14 +261,18 @@
+@@ -235,14 +251,18 @@
      flair: profile.flair || '',
    } : null
  
@@ -153,7 +143,7 @@
      }
      const p = { ...DEFAULT_PROFILE, displayName: displayName || '', email }
      setCachedProfile(cred.user.uid, p)
-@@ -256,19 +286,22 @@
+@@ -256,19 +276,22 @@
    const clearPendingOnboarding = useCallback(() => setPendingOnboarding(false), [])
  
    const logout = useCallback(async () => {
@@ -181,7 +171,7 @@
        try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
        return result
      } catch (err) {
-@@ -281,9 +314,10 @@
+@@ -281,9 +304,10 @@
  
    // Sign in with a Google ID token from Google Identity Services (One Tap).
    const loginWithGoogleCredential = useCallback(async (idToken) => {
@@ -195,7 +185,7 @@
      try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
      return result
    }, [])
-@@ -293,17 +327,18 @@
+@@ -293,17 +317,18 @@
    // is compared with the requested uid and reported honestly to the caller.
    const switchAccount = useCallback(async (target) => {
      if (!target?.uid) return authSwitchOutcome('error', { firebaseCode: 'auth/invalid-switch-target' })
@@ -218,7 +208,7 @@
        try { localStorage.setItem(GOOGLE_RETURNING_KEY, '1') } catch { /* ignore */ }
        return accountSelectionOutcome(credential, target.uid)
      } catch (error) {
-@@ -314,7 +349,9 @@
+@@ -314,7 +339,9 @@
  
    const removeKnownAccount = useCallback((uid) => {
      // The signed-in account stays listed — sign out first to forget it.
@@ -229,7 +219,7 @@
      const list = getKnownAccounts().filter((a) => a.uid !== uid)
      persistKnownAccounts(list)
      setKnownAccounts(list)
-@@ -335,7 +372,7 @@
+@@ -335,7 +362,7 @@
        const fbFields = {}
        if (fields.displayName) fbFields.displayName = fields.displayName
        if (fields.photoURL) fbFields.photoURL = fields.photoURL
@@ -238,7 +228,7 @@
      }
    }, [firebaseUser])
  
-@@ -345,14 +382,16 @@
+@@ -345,14 +372,16 @@
  
    const reauthenticate = async (password) => {
      if (!firebaseUser?.email) throw { code: 'auth/requires-recent-login' }
@@ -258,7 +248,7 @@
      const updated = { ...profileRef.current, email: newEmail }
      setProfile(updated)
      profileRef.current = updated
-@@ -364,7 +403,8 @@
+@@ -364,7 +393,8 @@
    const updatePassword = useCallback(async (currentPassword, newPassword) => {
      if (!firebaseUser) throw { code: 'auth/requires-recent-login' }
      await reauthenticate(currentPassword)
@@ -268,7 +258,7 @@
    }, [firebaseUser])
  
    // True when this account can only sign in with Google, so the UI knows not to
-@@ -397,8 +437,9 @@
+@@ -397,8 +427,9 @@
      if (!firebaseUser) return
      const uid = firebaseUser.uid
  
@@ -279,7 +269,7 @@
      } else {
        await reauthenticate(password)
      }
-@@ -421,7 +462,7 @@
+@@ -421,7 +452,7 @@
  
      // The auth user is already gone server-side, so this session is dead —
      // signOut just clears the local state and listeners tidily.

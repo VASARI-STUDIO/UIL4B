@@ -42,19 +42,15 @@ test.describe('first-time visitor', () => {
     watch(page, PERSONA)
     await go(page, '/')
 
-    await page.locator('.spnav-burger').click()
-    // The menu is a full-screen panel with a staggered entrance. Waiting on the
-    // animation layer rather than a timeout: mid-stagger the panel is still at
-    // opacity 0, and a stopwatch that happens to read it there reports a menu
-    // that is present and invisible.
-    await page.evaluate(async () => {
-      await Promise.all((document.getAnimations?.() || []).map((a) => a.finished.catch(() => {})))
-    })
-
-    // The utility tools live under their own "Media" eyebrow, the same eyebrow
-    // the app header uses — both are built from the one tool tree.
-    await expect(page.locator('.spnav-tree-colhead', { hasText: /^Media$/ })).toBeVisible()
-    const tool = page.locator('.spnav-tool', { hasText: 'Aspect & Resolution' }).first()
+    // THROUGH THE FOOTER'S NAVIGATION.
+    // The marketing menu is the design's four items — no tool tree — so
+    // the front door's way to a named utility tool is the Footer landmark's
+    // Sitemap, which lists every tool from the one tree. Still navigation
+    // alone, still no search, still no app route typed by the test.
+    const footerNav = page.getByRole('navigation', { name: 'Footer' })
+    await footerNav.getByRole('link', { name: 'Sitemap', exact: true }).click()
+    await expect(page).toHaveURL(/\/sitemap$/)
+    const tool = page.getByRole('link', { name: 'Aspect & Resolution' }).first()
     await expect(tool).toBeVisible()
     await tool.click()
     await expect(page).toHaveURL(/\/create\/aspect-ratio/)
@@ -72,10 +68,10 @@ test.describe('first-time visitor', () => {
       fb.note('improve', 'No pricing link reachable from the landing page — going direct.')
       await go(page, '/plans')
     }
-    // Headline rewritten in the plans overhaul: it now leads with what is free
-    // rather than with the upgrade, because the toolkit genuinely is.
-    await expect(page.getByRole('heading', { level: 1, name: /The whole toolkit is free/ })).toBeVisible()
-    await expect(page.locator('.sub-tier', { hasText: 'Free' }).first()).toContainText('$0')
+    // /plans is the design's Pricing screen:
+    // the design's h1, and a Free card that prices at $0.
+    await expect(page.getByRole('heading', { level: 1, name: /less than 1 coffee per month/ })).toBeVisible()
+    await expect(page.locator('.pr-plan--free')).toContainText('$0')
   })
 
   test('wandering the main surfaces never hits a blank or broken page', async ({ page }) => {

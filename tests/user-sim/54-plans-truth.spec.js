@@ -34,13 +34,19 @@ import {
 import { AI_LIMITS, FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 import { COLOUR_SYSTEMS } from '../../src/config/colourSystems.js'
 import { BRAND_PALETTES } from '../../src/data/brandPalettes.js'
-import { SURFACE_LINE, line } from '../../src/data/positioning.js'
+import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
+
+// /plans IS THE DESIGN'S PRICING SCREEN (src/pages/Pricing.jsx,
+// built from "UIL4B - Spectrum.dc.html"). Every guard below keeps the intent it
+// had against the legacy page; the selectors are the new page's:
+//   .sub-tier-list → .pr-plan-list      .plans-free-card → .pr-plan--free
+//   .plans-page    → .pricing main      .plans-excludes  → the Free card's minus line
 
 const PERSONA = 'someone deciding whether this is worth paying for'
 
 test.describe('/plans advertises only what the product has', () => {
   test('no unbuilt export format is offered as a plan benefit', async ({ page }) => {
-    // THE CENTRAL GUARD, at the DOM. `.sub-tier-list` is what a buyer reads as
+    // THE CENTRAL GUARD, at the DOM. `.pr-plan-list` is what a buyer reads as
     // "this is what I get". An unbuilt format appearing in one is the exact
     // shape of the defect that shipped: "full design JSON" sold on a plan card
     // while `json` has never carried `live: true`.
@@ -49,7 +55,7 @@ test.describe('/plans advertises only what the product has', () => {
     await expectRendered(page)
 
     const benefitText = await page.evaluate(() =>
-      [...document.querySelectorAll('.sub-tier-list')].map((ul) => ul.innerText).join('\n'))
+      [...document.querySelectorAll('.pr-plan-list')].map((ul) => ul.innerText).join('\n'))
 
     expect(benefitText.length, 'the plan benefit lists rendered empty — this test would pass vacuously')
       .toBeGreaterThan(80)
@@ -71,20 +77,24 @@ test.describe('/plans advertises only what the product has', () => {
     }
   })
 
-  test('the unbuilt formats are disclosed rather than hidden', async ({ page }) => {
-    // The counterpart. Not selling them is the floor; SAYING they do not exist
-    // is the thing this page decided to do, and a silent removal would look
-    // identical to the guard above while being much less honest.
+  test('the export-formats answer names only what a plan delivers', async ({ page }) => {
+    // The FAQ answer is read as a list of what you get, so it follows the same
+    // rule as the plan cards: every Pro-gated format is named, and no unbuilt
+    // one is. It sits in a narrow column at tablet widths, so it stays short.
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page)
 
-    const page_ = await page.locator('.plans-page').innerText()
-    for (const format of unbuiltFormats()) {
-      expect(page_, `"${format.name}" is neither sold nor disclosed — the page has gone quiet about it instead of honest`)
-        .toContain(format.name)
+    const answer = page.locator('.pr-faq-row', { has: page.locator('h3', { hasText: 'Which export formats can I actually get?' }) })
+    await expect(answer).toBeVisible()
+    const text = await answer.innerText()
+    for (const format of proOnlyFormats()) {
+      expect(text, `the answer no longer names "${format.name}", the export Pro adds`).toContain(format.name)
     }
-    await expect(page.locator('.plans-soon-badge').first()).toBeVisible()
+    for (const format of unbuiltFormats()) {
+      expect(text, `the answer names "${format.name}", which no plan delivers`).not.toContain(format.name)
+    }
+    expect(text, 'the answer lists formats between dashes again').not.toContain('—')
   })
 
   test('every quoted limit matches the configuration the product enforces', async ({ page }) => {
@@ -94,7 +104,7 @@ test.describe('/plans advertises only what the product has', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    const text = await page.locator('.plans-page').innerText()
+    const text = await page.locator('.pricing main').innerText()
     const systemsFree = COLOUR_SYSTEMS.filter((s) => s.free).length
     const brandsFree = BRAND_PALETTES.filter((b) => b.free === true).length
 
@@ -110,9 +120,13 @@ test.describe('/plans advertises only what the product has', () => {
       expect(text, `${what} on the page does not match the enforced configuration`).toContain(value)
     }
 
-    // The paywall position, stated as an ordinal, must be the cap plus one.
-    expect(text, 'the page states the wrong project as the paywall')
-      .toContain(`${FREE_SAVE_LIMITS.projects + 1}th project`)
+    // The paywall is stated as the cap itself now (the design's comparison has
+    // a "Saved projects" row), so the Free cell of that row must BE the cap —
+    // a digit that merely appears somewhere on the page is not enough.
+    const saved = page.locator('.pr-compare-row', { has: page.locator('th', { hasText: /^Saved projects$/ }) })
+    await expect(saved.locator('td[data-plan="Free"]'), 'the page states the wrong free project cap')
+      .toHaveText(String(FREE_SAVE_LIMITS.projects))
+    await expect(saved.locator('td[data-plan="Pro"]')).toHaveText('Unlimited')
   })
 
   test('the free tier is not described as having more export formats than it has', async ({ page }) => {
@@ -120,16 +134,16 @@ test.describe('/plans advertises only what the product has', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    const freeCard = await page.locator('.plans-free-card').innerText()
+    const freeCard = await page.locator('.pr-plan--free').innerText()
     // Every format the free card names must be one a free user can produce.
     for (const format of EXPORT_FORMATS) {
       const shortName = /\(([^)]+)\)\s*$/.exec(format.name)?.[1] || format.name
       const named = new RegExp(`\\b${shortName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(freeCard)
       if (!named) continue
       const isFree = freeFormats().some((f) => f.id === format.id)
-      // A format may appear in the card's "Not on Free" exclusions block, which
-      // is the honest reason a non-free name would be there.
-      const excluded = await page.locator('.plans-excludes').innerText()
+      // A format may appear in the card's minus line — the design's exclusion
+      // row — which is the honest reason a non-free name would be there.
+      const excluded = await page.locator('.pr-plan--free .pr-plan-list li.is-off').innerText()
       const inExclusions = excluded.includes(format.name) || excluded.includes(shortName)
       expect(
         isFree || inExclusions,
@@ -138,37 +152,38 @@ test.describe('/plans advertises only what the product has', () => {
     }
   })
 
-  test('the closing call to action is actually painted, not merely present', async ({ page }) => {
+  test('the calls to action are actually painted, not merely present', async ({ page }) => {
     // THE REGRESSION GUARD for the invisible CTA. Asserted on computed opacity
-    // because that is precisely what was wrong and precisely what every other
-    // check missed: toBeVisible() passed, .innerText() returned the copy, and
-    // .click() worked — on a block no human could see.
+    // because that is precisely what was wrong on the legacy page and what
+    // every other check missed: toBeVisible() passed, .innerText() returned the
+    // copy, and .click() worked — on a block no human could see.
+    //
+    // The design's Pricing screen has no closing SystemCTA; its ways in are
+    // the two plan buttons and the footer's "Open the toolkit". Each one, and
+    // every ancestor it paints through, must be opaque after a scroll to it.
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page)
 
-    const cta = page.locator('.system-cta')
-    await expect(cta).toBeVisible()
-    await cta.scrollIntoViewIfNeeded()
-
-    // Settle on the element's own painted opacity rather than a fixed wait or
-    // getAnimations().finished — the page carries a looping animation, so
-    // awaiting `finished` never returns.
-    await expect
-      .poll(
-        () => page.evaluate(() => Number(getComputedStyle(document.querySelector('.system-cta-inner')).opacity)),
-        {
-          message:
-            'the closing CTA never became opaque. Plans.jsx must call useReveal() — SystemCTA renders its content '
-            + 'in a [data-reveal] div and global.css starts those at opacity:0, so a page that mounts it without a '
-            + 'reveal driver shows a blank box where its final call to action should be.',
-          timeout: 6000,
-        },
-      )
-      .toBeGreaterThan(0.9)
-
-    // …and the button inside it is a real, reachable control.
-    await expect(page.getByRole('button', { name: /Start building free/ })).toBeVisible()
+    const ctas = [
+      page.locator('.pr-plan--free .pr-cta'),
+      page.locator('.pr-plan--pro .pr-cta'),
+      page.getByRole('contentinfo').getByRole('link', { name: /Open the toolkit/ }),
+    ]
+    for (const cta of ctas) {
+      await expect(cta).toBeVisible()
+      await cta.scrollIntoViewIfNeeded()
+      await expect
+        .poll(
+          () => cta.evaluate((el) => {
+            let o = 1
+            for (let n = el; n && n.nodeType === 1; n = n.parentElement) o *= Number(getComputedStyle(n).opacity)
+            return o
+          }),
+          { message: 'a call to action on /plans is not painted — its effective opacity never reached 0.9', timeout: 6000 },
+        )
+        .toBeGreaterThan(0.9)
+    }
   })
 
   test('no invented urgency, social proof or metric appears on the page', async ({ page }) => {
@@ -180,7 +195,7 @@ test.describe('/plans advertises only what the product has', () => {
     await go(page, '/plans')
     await expectRendered(page)
 
-    const text = await page.locator('.plans-page').innerText()
+    const text = await page.locator('.pricing main').innerText()
     const banned = [
       /\b\d[\d,.]*k?\+? (?:teams|designers|users|customers|companies) (?:trust|use|choose)/i,
       /\b\d\.\d\s*(?:\/\s*5)?\s*rating\b/i,
@@ -196,22 +211,48 @@ test.describe('/plans advertises only what the product has', () => {
   })
 })
 
-test.describe('/plans says what the founder said', () => {
-  test('the hero carries the founder’s framing line, rendered, from positioning.js', async ({ page }) => {
-    // The unit guard proves Plans.jsx CALLS line(SURFACE_LINE.plansFraming).
-    // This proves the sentence reaches a visitor: the hero's text is compared
-    // to the module's own record of the line, computed here rather than read
-    // off the page, so a page that stopped rendering the paragraph goes red
-    // while the helper stays perfect.
+test.describe('/plans says what the design says', () => {
+  test('the hero carries the design’s pricing h1 and sub-line, with the facts derived', async ({ page }) => {
+    // The design's pricing h1 and sub-line, from
+    // "UIL4B - Spectrum.dc.html" (D:1085-1086), with the false clauses
+    // corrected. The expected sub-line is COMPUTED here from the modules that
+    // enforce the numbers, so a page that types "six" or "eight" goes red the
+    // day the config moves.
     watch(page, PERSONA)
     await go(page, '/plans')
     await expectRendered(page)
 
-    const hero = await page.locator('.plans-hero').innerText()
-    expect(hero.length, 'the plans hero rendered empty').toBeGreaterThan(40)
-    expect(hero, 'the hero no longer carries the founder’s framing line').toContain(line(SURFACE_LINE.plansFraming))
-    // The founder’s line is a plain paragraph in the hero, not a badge or a
-    // tagline slot — the taglines were retired 2026-09-07 and must not return.
-    await expect(page.locator('.plans-hero .plans-framing')).toHaveCount(1)
+    await expect(page.getByRole('heading', { level: 1 }))
+      .toHaveText('Improve your design systems for less than 1 coffee per month.')
+    await expect(page.locator('.pr-h1 em')).toHaveText('less than 1 coffee')
+
+    const multiple = AI_LIMITS.pro.daily / AI_LIMITS.free.daily
+    await expect(page.locator('.pr-hero .pr-sub')).toHaveText(
+      `Pro gives you the controls real client work needs: ${numberWord(multiple)} times the AI generations, `
+      + `all ${numberWord(COLOUR_SYSTEMS.length)} colour systems, unlimited projects and clean, unmarked exports.`,
+    )
+    // The Free card's first tick counts the real tools.
+    await expect(page.locator('.pr-plan--free .pr-plan-list li').first()).toHaveText(`All ${numberWord(TOOL_COUNT)} tools`)
+  })
+
+  test('the retired lines are nowhere on the page; cancelling is stated once', async ({ page }) => {
+    // "No card needed for Free" is a retired tagline and may not come back in
+    // any wording. Version history does not exist. "Cancel Pro any time" is
+    // true (Settings opens the billing portal's cancellation flow), but "in
+    // two clicks" is a count nobody has measured.
+    watch(page, PERSONA)
+    await go(page, '/plans')
+    await expectRendered(page)
+    const text = (await page.locator('body').innerText()).toLowerCase()
+    for (const phrase of ['no card', 'in two clicks', 'version history']) {
+      expect(text, `/plans says "${phrase}"`).not.toContain(phrase)
+    }
+    // The unit is a "project", never a "kit" ("toolkit", the
+    // product's name for itself, is not the unit and is allowed).
+    const main = await page.locator('.pricing main').innerText()
+    expect(main, 'the pricing page calls a saved project a "kit"').not.toMatch(/\bkits?\b/i)
+    expect(main, 'the pricing page no longer names the unit at all').toMatch(/\bprojects\b/)
+    // Positive control: the design's assurances minus the retired one, in order.
+    await expect(page.locator('.pr-assure li')).toHaveText(['Cancel Pro any time', 'Files stay in your browser'])
   })
 })

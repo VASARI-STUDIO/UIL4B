@@ -205,6 +205,11 @@ const appearanceFactory = (() => {
   }
 
   rewrite(/^import\s*\{([^}]*)\}\s*from\s*'react'\s*$/m, 'const {$1} = __react', 'the react import')
+  // The account-sync listener. Stubbed to a no-op
+  // subscription: this harness drives the provider's own resolution, and no
+  // account is ever signed in here.
+  rewrite(/^import\s*\{\s*onAccountApplied\s*\}\s*from\s*'..\/utils\/accountEvents'\s*$/m,
+    'const onAccountApplied = () => () => {}', 'the account-sync import')
   // The provider's only JSX. Its `value={{…}}` object IS the contract consumers
   // read, so it is kept and returned rather than stubbed away.
   rewrite(

@@ -1,10 +1,16 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react'
-import AuthGate from '../components/AuthGate'
+import {
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection,
+} from '../components/tool/ToolLayout'
 import { AI_LIMITS } from '../config/plans'
+import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
+import useExportGate from '../hooks/useExportGate'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { recordUsage, canUseFeature } from '../utils/usageTracker'
 import { useAiQuota } from '../hooks/useAiQuota'
 import QuotaMeter from '../components/QuotaMeter'
+import { AI_IMAGE_CONSENT } from '../config/aiImageConsent'
 import { auth as firebaseAuth } from '../utils/firebase'
 import { toCsv } from '../utils/csv'
 // The `alt-text` page stylesheet. Imported here rather than from global.css so
@@ -132,6 +138,16 @@ export default function AltTextGenerator({ toast }) {
   // consumed, so the meter reflects the account rather than this browser — and
   // so the MONTHLY ceiling is visible before it is hit.
   const quota = useAiQuota(ALT_TEXT_TOOL_ID)
+  // The tool opens signed out. An account is asked for only when a generation
+  // is requested, because that is the step that sends the image to /api/ai and
+  // spends an allowance the server meters per account.
+  const { user } = useAuth()
+  const { requireLogin } = useLoginPrompt()
+  const gateFile = useExportGate()
+  const ensureAccount = useCallback(async () => {
+    if (user) return true
+    return !!(await requireLogin('generate alt text', { free: true, signup: true }))
+  }, [user, requireLogin])
 
   const handleFiles = useCallback(async (files) => {
     const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
@@ -192,7 +208,7 @@ export default function AltTextGenerator({ toast }) {
     // check said they were fine — and the server's refusal then read as a
     // generic error. quota.blocked covers both, and quota.message names which.
     if (quota.blocked || !canUseFeature(ALT_TEXT_TOOL_ID, dailyLimit)) {
-      const why = quota.message || 'Daily limit reached — resets at midnight'
+      const why = quota.message || 'Daily limit reached — resets at 00:00 UTC'
       setItems(prev => prev.map(p => p.id === item.id ? { ...p, status: 'error', error: why } : p))
       toast?.(why)
       return false
@@ -237,7 +253,14 @@ export default function AltTextGenerator({ toast }) {
     }
   }
 
+  // One card's Generate or Retry: the same account check as the batch.
+  const generateOne = async (item) => {
+    if (!(await ensureAccount())) return
+    await generateForItem(item)
+  }
+
   const generateAll = async () => {
+    if (!(await ensureAccount())) return
     setBusy(true)
     const targets = items.filter(it => it.status === 'ready' || it.status === 'error')
     let done = 0
@@ -273,9 +296,10 @@ export default function AltTextGenerator({ toast }) {
     }
   }
 
-  const downloadCSV = () => {
+  const downloadCSV = async () => {
     const done = items.filter(it => it.altText)
     if (!done.length) return
+    if (!(await gateFile('download the alt text'))) return
     // Quoting alone was not enough: alt text is model output derived from a
     // user-supplied image, so a result beginning = + - or @ was executed as a
     // formula when the file was opened. See utils/csv.js.
@@ -300,221 +324,247 @@ export default function AltTextGenerator({ toast }) {
   const doneCount = items.filter(it => it.altText).length
   const activeTone = TONES.find(t => t.id === tone) || TONES[0]
 
-  return (
-    <div className="sec alt-page">
-      <header className="alt-hero">
-        {/* NO TAXONOMY EYEBROW. It read "AI Tools" at y=102 — the Create group
-            the visitor clicked through, above an h1 that names the tool.
-            #surface-headers-read-as-ai. */}
-        <h1>Alt Text <em>Generator</em></h1>
-        {/* Both plans resolve to the same model (see MODELS in
-            api/_lib/plans.js), so the old "upgrade for higher-quality models"
-            was selling something that does not exist. Pro buys CAPACITY. A
-            unit test fails if this claim comes back while the models match. */}
-        <p>Batch-upload images and generate WCAG-compliant alt text that also earns search relevance — by describing images accurately, not by stuffing keywords. {isPro ? 'Pro capacity active.' : 'Pro raises your daily and monthly generation limits.'}</p>
-      </header>
-
-      <AuthGate featureLabel="generate alt text">
-      {/* Above the dropzone, not beside the button: the allowance is something
-          to know BEFORE uploading forty images, not after the eighth refusal. */}
-      <QuotaMeter quota={quota} className="quota--tool" />
-      <div
-        className={`alt-dropzone${isDragging ? ' dragging' : ''}`}
-        onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={onDrop}
-        onClick={() => fileInputRef.current?.click()}
-        role="button"
-        tabIndex={0}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ACCEPT}
-          multiple
-          onChange={onInputChange}
-          hidden
-        />
-        <span className="alt-dropzone-ico" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <polyline points="21 15 16 10 5 21" />
-          </svg>
+  // The toolbar's actions, in row order. Each id carries what it acts on, so a
+  // change in the queue re-measures the row.
+  const tbItems = []
+  if (items.length > 0) {
+    tbItems.push({
+      id: `count-${items.length}-${doneCount}`,
+      menu: false,
+      render: () => (
+        <span className="tl-meta alt-count">
+          {items.length} image{items.length === 1 ? '' : 's'}{doneCount > 0 ? ` · ${doneCount} done` : ''}
         </span>
-        <div className="alt-dropzone-title">Drop images here or click to upload</div>
-        <div className="alt-dropzone-sub">JPG · PNG · WebP · HEIC · multiple files supported</div>
-      </div>
+      ),
+    })
+  }
+  tbItems.push({
+    id: 'add',
+    priority: 2,
+    render: () => (
+      <ToolButton icon="upload-simple" collapse onClick={() => fileInputRef.current?.click()} disabled={busy}>
+        Add images
+      </ToolButton>
+    ),
+    menu: { label: 'Add images', icon: 'upload-simple', onSelect: () => fileInputRef.current?.click(), disabled: busy },
+  })
+  if (doneCount > 0) {
+    tbItems.push({
+      id: 'copy-all',
+      align: 'end',
+      priority: 1,
+      render: () => <ToolButton icon="copy" collapse onClick={copyAll} disabled={busy}>Copy all</ToolButton>,
+      menu: { label: 'Copy all', icon: 'copy', onSelect: copyAll, disabled: busy },
+    })
+    tbItems.push({
+      id: 'csv',
+      priority: 0,
+      render: () => <ToolButton onClick={downloadCSV} disabled={busy}>Download CSV</ToolButton>,
+      menu: { label: 'Download CSV', onSelect: downloadCSV, disabled: busy },
+    })
+  }
+  if (items.length > 0) {
+    tbItems.push({
+      id: 'clear',
+      align: doneCount > 0 ? undefined : 'end',
+      priority: 0,
+      render: () => <ToolButton onClick={clearAll} disabled={busy}>Clear</ToolButton>,
+      menu: { label: 'Clear', icon: 'x', onSelect: clearAll, disabled: busy },
+    })
+  }
 
-      <div className="alt-options">
-        <div className="alt-context">
-          <label htmlFor="alt-context-input">Page context (optional)</label>
-          <input
-            id="alt-context-input"
-            type="text"
-            placeholder="e.g. blog post about hiking in the Alps"
-            value={context}
-            onChange={(e) => setContext(e.target.value)}
-            aria-describedby="alt-context-help"
-          />
-          {/* Says plainly what this field is NOT. It is the one input a
-              keyword-stuffing tool would abuse, and the server prompt refuses to
-              use it that way — the UI should not imply otherwise. */}
-          <p className="alt-field-help" id="alt-context-help">
-            What the page is about. Used to judge which details matter — never inserted as keywords, which Google treats as spam.
-          </p>
-        </div>
-        <div className="alt-context">
-          <span className="alt-label" id="alt-tone-label">Length</span>
-          <div className="alt-seg" role="group" aria-labelledby="alt-tone-label">
-            {TONES.map(t => (
-              <button
-                key={t.id}
-                type="button"
-                className="alt-seg-btn"
-                onClick={() => setTone(t.id)}
-                // The chips were styled-selected only. Without aria-pressed a
-                // screen-reader user cannot tell which length is active.
-                aria-pressed={tone === t.id}
-                aria-describedby={tone === t.id ? 'alt-tone-help' : undefined}
-                title={t.desc}
-              >
-                {t.label}
-              </button>
+  return (
+    <ToolLayout
+      className="alt-page"
+      title="Alt Text Generator"
+      titleId="alt-title"
+      items={tbItems}
+      primary={(
+        <ToolButton variant="accent" icon="magic-wand" onClick={generateAll} disabled={busy || readyCount === 0}>
+          {busy ? 'Generating…' : `Generate ${readyCount > 0 ? `(${readyCount})` : 'all'}`}
+        </ToolButton>
+      )}
+    >
+      <ToolGrid>
+        <ToolMain className="alt-main">
+          {/* Above the dropzone, not beside the button: the allowance is something
+              to know BEFORE uploading forty images, not after the eighth refusal. */}
+          <QuotaMeter quota={quota} className="quota--tool" />
+          {/* The line saying where an uploaded image goes sits here, between the
+              allowance and the dropzone, and describes the dropzone. */}
+          <p id="alt-ai-consent" className="ai-image-consent">{AI_IMAGE_CONSENT}</p>
+          <div
+            aria-describedby="alt-ai-consent"
+            className={`alt-dropzone${isDragging ? ' dragging' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={onDrop}
+            onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
+            role="button"
+            tabIndex={0}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ACCEPT}
+              multiple
+              onChange={onInputChange}
+              hidden
+            />
+            <span className="alt-dropzone-ico" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </span>
+            <div className="alt-dropzone-title">Drop images here or click to upload</div>
+            <div className="alt-dropzone-sub">JPG · PNG · WebP · HEIC · multiple files supported</div>
+          </div>
+
+          {items.length === 0 && (
+            <section className="alt-examples" aria-labelledby="alt-examples-title">
+              <h2 className="tl-sec-label" id="alt-examples-title">What good alt text looks like</h2>
+              <div className="alt-examples-grid">
+                <div className="alt-example good">
+                  <span className="alt-example-tag">Good</span>
+                  <p className="alt-example-text">“Golden retriever puppy curled asleep on a grey wool blanket”</p>
+                  <span className="alt-example-why">Specific subject, setting, and detail — describes what matters.</span>
+                </div>
+                <div className="alt-example bad">
+                  <span className="alt-example-tag">Avoid</span>
+                  <p className="alt-example-text">“image of a dog” · “IMG_4821.jpg” · “photo”</p>
+                  <span className="alt-example-why">Vague or filename-based — adds nothing for screen-reader users.</span>
+                </div>
+              </div>
+              <ul className="alt-tips">
+                <li>Keep it under ~125 characters — screen readers cut off long descriptions.</li>
+                <li>Don&rsquo;t start with “image of” or “picture of” — that&rsquo;s already announced.</li>
+                <li>Add <strong>page context</strong> for sharper results (e.g. the article topic).</li>
+                <li>For purely decorative images, leave alt text empty (<code>alt=&quot;&quot;</code>).</li>
+                {/* The honest version, stated where a user forms their mental model
+                    of what this tool is for. A stuffing tool would promise the
+                    opposite, and would earn them a spam penalty. */}
+                <li>Search engines reward <strong>accurate and specific</strong> descriptions. Stuffing keywords breaks Google&rsquo;s spam policy and helps nobody.</li>
+              </ul>
+            </section>
+          )}
+
+          <div className="alt-grid">
+            {items.map(it => (
+              <div key={it.id} className={`alt-card alt-card-${it.status}`}>
+                <div className="alt-card-preview">
+                  {it.previewUrl ? (
+                    <img src={it.previewUrl} alt="" />
+                  ) : (
+                    <div className="alt-card-preview-pending">Loading…</div>
+                  )}
+                  <button type="button" className="alt-card-remove" onClick={() => removeItem(it.id)} aria-label={`Remove ${it.name}`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="alt-card-body">
+                  <div className="alt-card-meta">
+                    <span className="alt-card-name" title={it.name}>{it.name}</span>
+                    <span className="alt-card-size">{formatBytes(it.size)}</span>
+                  </div>
+                  {it.status === 'generating' && <div className="alt-card-status">Generating…</div>}
+                  {/* Its own class, not the card's modifier: `alt-card-${status}`
+                      puts `alt-card-error` on the CARD, so a message sharing that
+                      name painted its tint and padding on the whole card.
+                      A polite status rather than an alert: a batch can fail card
+                      by card, and one press should not raise several assertive
+                      interruptions. `it.error` is the sentence on screen. */}
+                  {it.status === 'error' && <div className="alt-card-error-msg" role="status" aria-live="polite">{it.error}</div>}
+                  {it.altText && (
+                    <>
+                      {it.truncated && (
+                        <div className="alt-card-warn" role="status">
+                          The AI ran out of room and stopped mid-answer. Finish it below, or retry.
+                        </div>
+                      )}
+                      <AutoGrowTextarea
+                        className="alt-card-text"
+                        aria-label={`Alt text for ${it.name}`}
+                        value={it.altText}
+                        onChange={(e) => editAlt(it.id, e.target.value)}
+                      />
+                      <div className="alt-card-actions">
+                        <span className={`alt-card-count${it.altText.length > 125 ? ' over' : ''}`}>
+                          {it.altText.length} chars
+                        </span>
+                        <button type="button" className="alt-btn" onClick={() => copyOne(it)}>Copy</button>
+                        <button type="button" className="alt-btn" onClick={() => generateOne(it)} disabled={busy}>Retry</button>
+                      </div>
+                    </>
+                  )}
+                  {!it.altText && it.status !== 'generating' && it.status !== 'error' && (
+                    <button type="button" className="alt-btn" onClick={() => generateOne(it)} disabled={busy || !it.base64}>
+                      Generate
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
-          <p className="alt-field-help" id="alt-tone-help">
-            <strong>{activeTone.desc}.</strong> {activeTone.when}
-          </p>
-        </div>
-      </div>
+        </ToolMain>
 
-      {items.length === 0 && (
-        <div className="alt-examples">
-          <div className="alt-examples-title">What good alt text looks like</div>
-          <div className="alt-examples-grid">
-            <div className="alt-example good">
-              <span className="alt-example-tag">Good</span>
-              <p className="alt-example-text">“Golden retriever puppy curled asleep on a grey wool blanket”</p>
-              <span className="alt-example-why">Specific subject, setting, and detail — describes what matters.</span>
-            </div>
-            <div className="alt-example bad">
-              <span className="alt-example-tag">Avoid</span>
-              <p className="alt-example-text">“image of a dog” · “IMG_4821.jpg” · “photo”</p>
-              <span className="alt-example-why">Vague or filename-based — adds nothing for screen-reader users.</span>
-            </div>
-          </div>
-          <ul className="alt-tips">
-            <li>Keep it under ~125 characters — screen readers cut off long descriptions.</li>
-            <li>Don&rsquo;t start with “image of” or “picture of” — that&rsquo;s already announced.</li>
-            <li>Add <strong>page context</strong> above (e.g. the article topic) for sharper results.</li>
-            <li>For purely decorative images, leave alt text empty (<code>alt=&quot;&quot;</code>).</li>
-            {/* The honest version, stated where a user forms their mental model
-                of what this tool is for. A stuffing tool would promise the
-                opposite, and would earn them a spam penalty. */}
-            <li>Search engines reward <strong>accurate and specific</strong> descriptions. Stuffing keywords breaks Google&rsquo;s spam policy and helps nobody.</li>
-          </ul>
-        </div>
-      )}
+        <ToolPanel label="Alt text settings" className="alt-panel">
+          <ToolSection label="Page context" className="alt-context">
+            <label className="sr-only" htmlFor="alt-context-input">Page context (optional)</label>
+            <input
+              id="alt-context-input"
+              type="text"
+              className="alt-field"
+              placeholder="e.g. blog post about hiking in the Alps"
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              aria-describedby="alt-context-help"
+            />
+            {/* Says plainly what this field is NOT. It is the one input a
+                keyword-stuffing tool would abuse, and the server prompt refuses
+                to use it that way — the UI should not imply otherwise. */}
+            <p className="alt-field-help" id="alt-context-help">
+              Optional. What the page is about. Used to judge which details matter — never inserted as keywords, which Google treats as spam.
+            </p>
+          </ToolSection>
 
-      {items.length > 0 && (
-        <div className="alt-toolbar">
-          <div className="alt-toolbar-info">
-            <strong>{items.length}</strong> image{items.length === 1 ? '' : 's'}
-            {doneCount > 0 && <> · <strong>{doneCount}</strong> generated</>}
-          </div>
-          <div className="alt-toolbar-actions">
-            <button type="button" className="alt-btn" onClick={clearAll} disabled={busy}>Clear</button>
-            {doneCount > 0 && (
-              <>
-                <button type="button" className="alt-btn" onClick={copyAll} disabled={busy}>Copy all</button>
-                <button type="button" className="alt-btn" onClick={downloadCSV} disabled={busy}>Download CSV</button>
-              </>
-            )}
-            <button type="button" className="alt-btn alt-btn--primary" onClick={generateAll} disabled={busy || readyCount === 0}>
-              {busy ? 'Generating…' : `Generate ${readyCount > 0 ? `(${readyCount})` : 'all'}`}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="alt-grid">
-        {items.map(it => (
-          <div key={it.id} className={`alt-card alt-card-${it.status}`}>
-            <div className="alt-card-preview">
-              {it.previewUrl ? (
-                <img src={it.previewUrl} alt="" />
-              ) : (
-                <div className="alt-card-preview-pending">Loading…</div>
-              )}
-              <button type="button" className="alt-card-remove" onClick={() => removeItem(it.id)} aria-label={`Remove ${it.name}`}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <div className="alt-card-body">
-              <div className="alt-card-meta">
-                <span className="alt-card-name" title={it.name}>{it.name}</span>
-                <span className="alt-card-size">{formatBytes(it.size)}</span>
-              </div>
-              {it.status === 'generating' && <div className="alt-card-status">Generating…</div>}
-              {/* Its own class, not the card's modifier. `alt-card-${status}` puts
-                  `alt-card-error` on the CARD, and the message used to carry the
-                  same name — so the message's rule (red tint, 12px, 8px padding, a
-                  small radius, a red hairline) landed on the whole card: a refused
-                  generation turned the card into a padded red box with its preview
-                  inset. Rendered 2026-09-09 at 320 through 1920, both themes. */}
-              {/* AND IT IS A STATUS MESSAGE, which it was not.
-                  #435 gave this message its own class and stopped the green
-                  "Generated 1 alt text" toast from landing over a card that
-                  had failed — both of which fixed what a SIGHTED user saw. A
-                  screen-reader user still got nothing: rendered 2026-09-11
-                  signed in free with /api/ai answering 500, the card read "The
-                  generator is unavailable right now." and the page's only live
-                  region was the app toast, deliberately empty. Press Generate,
-                  hear silence, and the failure is indistinguishable from a
-                  press that did not register. WCAG 4.1.3.
-
-                  status, not alert, for two reasons: a batch can fail card by
-                  card and three assertive interruptions for one press is worse
-                  than three queued sentences; and `.alt-card-warn` eight lines
-                  below is the same card announcing the same kind of outcome
-                  politely already. No new sentence — `it.error` is the string
-                  that was on screen and unannounced. */}
-              {it.status === 'error' && <div className="alt-card-error-msg" role="status" aria-live="polite">{it.error}</div>}
-              {it.altText && (
-                <>
-                  {it.truncated && (
-                    <div className="alt-card-warn" role="status">
-                      The AI ran out of room and stopped mid-answer. Finish it below, or retry.
-                    </div>
-                  )}
-                  <AutoGrowTextarea
-                    className="alt-card-text"
-                    aria-label={`Alt text for ${it.name}`}
-                    value={it.altText}
-                    onChange={(e) => editAlt(it.id, e.target.value)}
-                  />
-                  <div className="alt-card-actions">
-                    <span className={`alt-card-count${it.altText.length > 125 ? ' over' : ''}`}>
-                      {it.altText.length} chars
-                    </span>
-                    <button type="button" className="alt-btn" onClick={() => copyOne(it)}>Copy</button>
-                    <button type="button" className="alt-btn" onClick={() => generateForItem(it)} disabled={busy}>Retry</button>
-                  </div>
-                </>
-              )}
-              {!it.altText && it.status !== 'generating' && it.status !== 'error' && (
-                <button type="button" className="alt-btn" onClick={() => generateForItem(it)} disabled={busy || !it.base64}>
-                  Generate
+          <ToolSection label="Length" labelId="alt-tone-label" className="alt-length">
+            <div className="tl-pills tl-pills--block alt-seg" role="group" aria-labelledby="alt-tone-label">
+              {TONES.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={tone === t.id ? 'tl-pill is-on' : 'tl-pill'}
+                  onClick={() => setTone(t.id)}
+                  // Without aria-pressed a screen-reader user cannot tell which
+                  // length is active.
+                  aria-pressed={tone === t.id}
+                  aria-describedby={tone === t.id ? 'alt-tone-help' : undefined}
+                  title={t.desc}
+                >
+                  {t.label}
                 </button>
-              )}
+              ))}
             </div>
-          </div>
-        ))}
-      </div>
-      </AuthGate>
-    </div>
+            <p className="alt-field-help" id="alt-tone-help">
+              <strong>{activeTone.desc}.</strong> {activeTone.when}
+            </p>
+          </ToolSection>
+
+          {/* Both plans resolve to the same model (MODELS in api/_lib/plans.js),
+              so Pro is described as capacity, never as a better model. A unit
+              test fails if that claim comes back while the models match. */}
+          <ToolSection label="About" className="alt-about">
+            <p className="alt-field-help">
+              Batch-upload images and generate WCAG-compliant alt text that also earns search relevance — by describing images accurately, not by stuffing keywords. {isPro ? 'Pro capacity active.' : 'Pro raises your daily and monthly generation limits.'}
+            </p>
+          </ToolSection>
+        </ToolPanel>
+      </ToolGrid>
+    </ToolLayout>
   )
 }

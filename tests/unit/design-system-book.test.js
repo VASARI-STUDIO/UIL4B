@@ -302,9 +302,11 @@ test('THE GATE FAILS CLOSED: it runs before the artefact is ever built', () => {
   assert.ok(gate < build,
     'the entitlement check must precede loading and running the book generator')
 
-  // And it must bail rather than fall through.
-  assert.match(PANEL.slice(gate, build), /openProModal\(\{[\s\S]*?\}\)\s*\n\s*return/,
-    'the gate opens the canonical upgrade modal and returns without exporting')
+  // And it must bail rather than fall through. The wall goes
+  // to /plans (every Pro CTA goes to /plans, never a
+  // modal or a login popup).
+  assert.match(PANEL.slice(gate, build), /navigate\('\/plans'\)\s*\n\s*return/,
+    'the gate sends the viewer to /plans and returns without exporting')
 })
 
 test('the gate is NAMED so the funnel can say which wall converted', () => {
@@ -313,9 +315,13 @@ test('the gate is NAMED so the funnel can say which wall converted', () => {
   assert.match(PANEL, /gate: 'design-system-book-export'/)
 })
 
-test('the gate uses the canonical upgrade modal rather than a local one', () => {
-  assert.match(PANEL, /import \{ useProModal \} from '\.\.\/contexts\/ProModalContext'/)
-  assert.match(PANEL, /const \{ openProModal \} = useProModal\(\)/)
+test('the gate goes to /plans, and asks for no account first', () => {
+  // A Pro CTA never opens a login popup or a modal, so
+  // the entitlement check now precedes the account check.
+  assert.ok(!/useProModal/.test(PANEL), 'the export wall must not raise the upgrade modal')
+  const pro = PANEL.indexOf('?.pro && !isPro')
+  const account = PANEL.indexOf('requireExportAccount(')
+  assert.ok(pro > -1 && account > -1 && pro < account, 'the Pro gate must run before the account gate')
 })
 
 test('a free user is told what they are hitting before they click', () => {

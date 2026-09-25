@@ -6,7 +6,7 @@
 // Rendered at 320, 390, 430, 768, 1024, 1097, 1120, 1136, 1280, 1440 and
 // 1920, light and dark, reduced-motion on and off, by a Playwright sweep that
 // measured boxes rather than reading stylesheets — the same reason
-// 23-responsive-mid-band and 25-defect-sweep give. Every test below pins a
+// 23-responsive-mid-band and 25-layout-target-sweep give. Every test below pins a
 // fault that sweep found, at the width and in the state it was found, and
 // each one was watched fail with the fix reverted (the mutation is named on
 // the test).
@@ -19,7 +19,7 @@ import { FREE_TOTAL_GENERATIONS } from '../../src/config/aiGeneration.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
-/** A phone context at an exact width, with real touch metrics (see 25-defect-sweep). */
+/** A phone context at an exact width, with real touch metrics (see 25-layout-target-sweep). */
 async function phone(browser, width, height = 844) {
   const ctx = await browser.newContext({
     viewport: { width, height },
@@ -294,7 +294,13 @@ test.describe('the Brand Starter, out of allowance', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const rgb = (s) => (s.match(/[\d.]+/g) || []).slice(0, 3).map(Number)
-const apart = (a, b) => rgb(a).some((v, i) => Math.abs(v - rgb(b)[i]) >= 6)
+// The alpha channel, 1 when the colour has none. The tray is
+// the app file's segment — an ink wash on an ink wash (9% on 5%, UIL4B App.dc
+// .html palettes line 232) — so two fills can share a hue and differ only in
+// how much of it they lay down. That is a real difference in paint; the dark
+// defect this guards was two OPAQUE fills of one hex, which still fails.
+const alpha = (s) => { const m = /\/\s*([\d.]+)\)|rgba\([^)]*,\s*([\d.]+)\)/.exec(s); return m ? Number(m[1] ?? m[2]) : 1 }
+const apart = (a, b) => rgb(a).some((v, i) => Math.abs(v - rgb(b)[i]) >= 6) || Math.abs(alpha(a) - alpha(b)) >= 0.03
 
 for (const theme of ['light', 'dark']) {
   test(`/discover/palettes · the chosen collection and mood are painted, not only recoloured, in ${theme}`, async ({ browser }) => {
@@ -390,7 +396,8 @@ test('/settings · Privacy & legal keeps both pills inside the card at 320', asy
   watch(page, 'someone on a small phone looking for the terms')
   await signIn(page, { plan: 'free' })
   await go(page, '/settings')
-  await page.getByRole('tab', { name: /Privacy/ }).click()
+  // At 320 the sections are a list of rows, not tabs.
+  await page.locator('#settab-privacy').click()
   await expect(page.getByRole('link', { name: 'Terms of service' })).toBeVisible()
   await settle(page)
   const m = await page.evaluate(() => {
@@ -424,7 +431,7 @@ test('/settings · at 320 the profile row and the Theme row both stay inside the
   await signIn(page, { plan: 'free' })
   await go(page, '/settings')
 
-  await page.getByRole('tab', { name: /Account/ }).click()
+  await page.locator('#settab-account').click()
   await expect(page.locator('.settings-profile-email')).toBeVisible()
   await settle(page)
   const profile = await page.evaluate(() => {
@@ -442,7 +449,9 @@ test('/settings · at 320 the profile row and the Theme row both stay inside the
   expect(profile.infoWidth, 'the name/email column must get the row less the avatar').toBeGreaterThan(150)
   expect(profile.signOutBelowAvatar, 'Sign out drops to its own row rather than squeezing the column').toBe(true)
 
-  await page.getByRole('tab', { name: /Accessibility/ }).click()
+  // Back to the section list first: on a phone one section shows at a time.
+  await page.getByRole('button', { name: 'All settings' }).click()
+  await page.locator('#settab-accessibility').click()
   await expect(page.locator('.theme-seg')).toBeVisible()
   await settle(page)
   const theme = await page.evaluate(() => {

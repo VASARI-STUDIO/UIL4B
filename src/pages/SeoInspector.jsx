@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ToolLayout } from '../components/tool/ToolLayout'
 import MetaInspector from '../components/seo/MetaInspector'
 import SchemaGenerator from '../components/seo/SchemaGenerator'
 import ContentAnalyzer from '../components/seo/ContentAnalyzer'
@@ -48,21 +49,10 @@ export default function SeoInspector({ onCopy, toast }) {
     requestAnimationFrame(() => document.getElementById(`seo-tab-${TABS[at].id}`)?.focus())
   }
 
+  // The shared tool pattern: the selected tool's name is the toolbar label
+  // and the page's h1; the three tools are a row of tabs under it.
   return (
-    <div className="sec seo-wrap seo-page">
-      <header className="seo-hero">
-        {/* NO TAXONOMY EYEBROW. Founder, 2026-09-14: "remove this text its such a
-            common AI trait, scan the whole site and remove alot of them where
-            applied." This continues #382 and #386, where he marked this exact
-            element "AI" and it was deleted from the Font Gallery, Font Pair,
-            the Type Scale and the Tint tool. A 10px mono-caps label restating
-            the page's own section, directly above an h1 that names the page,
-            on a route the nav already has lit. Hierarchy is a control, not a
-            label. */}
-        <h1>{active.title}</h1>
-        <p>{active.desc}</p>
-      </header>
-
+    <ToolLayout className="seo-page" title={active.title} titleId="seo-title">
       <div className="seo-tabs" role="tablist" aria-label="SEO tools">
         {TABS.map(tp => (
           <button
@@ -87,11 +77,13 @@ export default function SeoInspector({ onCopy, toast }) {
         ))}
       </div>
 
+      <p className="seo-about">{active.desc}</p>
+
       <div role="tabpanel" id={`seo-panel-${tab}`} aria-labelledby={`seo-tab-${tab}`}>
         {tab === 'meta' && <MetaInspector onCopy={onCopy} toast={toast} />}
         {tab === 'schema' && <SchemaGenerator onCopy={onCopy} toast={toast} />}
         {tab === 'content' && <ContentAnalyzer />}
       </div>
-    </div>
+    </ToolLayout>
   )
 }

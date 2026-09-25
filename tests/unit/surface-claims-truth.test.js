@@ -26,10 +26,8 @@ import { CREATE_GROUPS, DISCOVER_GROUPS, LEARN_GROUPS } from '../../src/data/too
 import { LEGACY_REDIRECTS } from '../../src/data/legacyRoutes.js'
 import { isSoonRoute } from '../../src/utils/routeMeta.js'
 
-// ── src/data/pipeline.js IS LOCAL-ONLY SINCE 2026-09-16 ────────────────────
-// The repository is public and the backlog's notes are candid prose written
-// for us, so the founder keeps the file on his machine and out of every clone.
-// .gitignore carries the decision. It is imported here rather than at the top
+// ── THE BACKLOG FILE MAY BE ABSENT ─────────────────────────────────────────
+// It is not part of every checkout. It is imported here rather than at the top
 // because a static import of an absent module takes the WHOLE file down, and
 // the other forty assertions in it have nothing to do with the backlog.
 //
@@ -190,7 +188,7 @@ test('/info does not promise a Pro preview the product does not have', () => {
   assert.ok(INFO.includes('Pro unlocks'), 'the Free vs Pro sentence is gone; this check is reading nothing')
   assert.ok(!/advanced previews/i.test(INFO),
     '/info says Pro unlocks "advanced previews" again. Nothing gates a preview on Pro — see the '
-    + 'Pro deltas Plans.jsx derives — and the phrase names a feature that does not exist.')
+    + 'Pro deltas Pricing.jsx derives — and the phrase names a feature that does not exist.')
 })
 
 // Split from the assertion above when pipeline.js became local-only, so that
@@ -249,8 +247,10 @@ test('the /info Preview link goes to the tool that has a Preview control', () =>
   // instead: /create/contrast is the other colour surface with a swatch and no
   // Preview control of its own.
   const contrast = stripComments(read('src/pages/ContrastChecker.jsx'))
-  assert.ok(builder.includes('aria-label="Preview"'), 'PaletteBuilder.jsx has lost its Preview control')
-  assert.ok(!contrast.includes('aria-label="Preview"'),
+  // The control is the Tools overflow's "Preview on a UI" row since the drawn
+  // toolbar.
+  assert.ok(builder.includes("label: 'Preview on a UI'"), 'PaletteBuilder.jsx has lost its Preview control')
+  assert.ok(!contrast.includes('Preview on a UI') && !contrast.includes('aria-label="Preview"'),
     'ContrastChecker.jsx now has a Preview control too, so the link target is ambiguous; revisit this test')
 
   const link = INFO.match(/<Link to=(\{[^}]+\}|"[^"]+")>Preview<\/Link>/)
@@ -326,20 +326,23 @@ test('/community does not promise a submission will appear while nothing shows t
   }
 })
 
-/* ── /plans: AI usage in the founder's words, never "free provider tiers" ──── */
+/* ── /plans: AI usage in approved words, never "free provider tiers" ──────── */
 
 const AI_BETA_LINE = 'AI usage is lowered while in Beta, if there is enough support then we will upgrade plans, API and MCPs to improve the app.'
 
-test('no surface in this lane says AI runs on free provider plans', () => {
-  const plans = stripComments(read('src/pages/Plans.jsx'))
-  // Positive control: the page carries his sentence, verbatim, and renders
-  // it in both places the old phrase stood (declaration + two uses).
-  assert.ok(plans.includes(`'${AI_BETA_LINE}'`),
-    "Plans.jsx has lost the founder's sentence on AI usage while in Beta, or changed a word of it")
-  assert.ok((plans.match(/AI_BETA_LINE/g) || []).length >= 3,
-    'Plans.jsx declares AI_BETA_LINE but no longer renders it in both the FAQ and the Before-you-pay note')
+test('no pricing surface says AI runs on free provider plans', () => {
+  const plans = stripComments(read('src/pages/Pricing.jsx'))
+  // /plans is the design's Pricing screen, which has neither the "Why are the
+  // AI limits not higher?" question nor a "Before you pay" section, so
+  // AI_BETA_LINE is not required there. If the sentence (or its subject)
+  // returns, it must be AI_BETA_LINE verbatim and never "free provider".
+  assert.ok(plans.includes('What counts as one generation?'),
+    'Pricing.jsx has changed shape; this check may be reading the wrong file')
+  if (plans.includes('AI usage is lowered')) {
+    assert.ok(plans.includes(AI_BETA_LINE), "Pricing.jsx paraphrases the approved AI-in-Beta sentence")
+  }
   const surfaces = {
-    'src/pages/Plans.jsx': plans,
+    'src/pages/Pricing.jsx': plans,
     'src/pages/InfoCentre.jsx': INFO,
     'src/data/routeMetaMap.js': stripComments(read('src/data/routeMetaMap.js')),
     'public/llms.txt': read('public/llms.txt'),

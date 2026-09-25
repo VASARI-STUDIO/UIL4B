@@ -2,29 +2,25 @@
 // and Palette Builder recovery controls.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { readSeed, setSeed, openPaletteTools } from './palette-helpers.js'
 import { appendCommunitySubmission, readCommunitySubmissions } from '../../src/utils/communitySubmissions.js'
 import { buildCommunityPromptRecord, resolvePromptProfileLink } from '../../src/utils/promptSubmission.js'
 import { COMMUNITY_PROMPTS } from '../../src/data/communityPrompts.js'
+import { getOwnerHandle } from '../../src/utils/constants.js'
 
-/* THE FOUNDER'S REAL ADDRESS, AND IT HAS TO BE THE LITERAL.
+/* The site-owner address, read from the environment.
  *
- * These fixtures exercise the legacy-record scrub: a community submission that
- * still carries his email must come back showing his PUBLIC HANDLE and never
- * the address. The lookup that does it is keyed by a SHA-256 DIGEST of the
- * address (src/utils/constants.js, OWNER_HANDLES) precisely so the plaintext
- * stopped shipping in the browser bundle — and a digest is one-way, so no
- * substitute address can be made to match. A reserved @uil4b.test address was
- * tried here and the scrub simply does not fire for it, which turns a real
- * test into a green one that proves nothing.
- *
- * So it stays, in ONE place rather than four, with the reason written down.
- * This is a known residue of the 2026-09-22 exposure review: the address is
- * already in this repository's git history and in the digest's pre-image, so
- * the marginal disclosure here is nil — but it IS still a plaintext copy in a
- * public repo, and the only real fixes are the founder changing the address or
- * re-keying OWNER_HANDLES on something else. Recorded in OWNER-ACTIONS.
- */
-const FOUNDER_EMAIL = 'dylanjacob1100@gmail.com'
+ * The owner-record scrub is keyed by a digest of the owner's address
+ * (OWNER_HANDLES in src/utils/constants.js), so these fixtures need an address
+ * whose digest is in that table. It is taken from OWNER_EMAIL, or from the
+ * ADMIN_EMAILS list, whichever entry resolves to an owner handle. When none
+ * does, the tests that depend on it skip with that reason instead of passing
+ * against an address the scrub ignores. */
+const OWNER_EMAIL = [
+  process.env.OWNER_EMAIL,
+  ...String(process.env.ADMIN_EMAILS || '').split(','),
+].map((address) => String(address || '').trim()).find((address) => address && getOwnerHandle(address)) || ''
+const NO_OWNER_EMAIL = 'needs OWNER_EMAIL (or an ADMIN_EMAILS entry) that resolves to an owner handle'
 
 /**
  * Fire the connectivity event and read back what the library's status pill
@@ -118,15 +114,21 @@ test.describe('public UI quality release', () => {
    *
    * '/create/color' left the loop with the colour landing's deletion — it is a
    * redirect now, so it was asserting the footer of '/create/palette' twice. */
-  test('every public surface has exactly one footer landmark and a persistent Plans route', async ({ page }) => {
+  // The site footer is on /, /plans, /mobile
+  // and the reading and legal pages, and on no app page. Where it renders there
+  // is exactly one landmark; where it does not, /plans is still one click away
+  // from the header's Upgrade pill.
+  test('reading pages have exactly one footer landmark, app pages none, and /plans stays reachable', async ({ page }) => {
     watch(page, 'visitor comparing the product before committing')
-    for (const route of ['/', '/discover', '/learn', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
+    for (const route of ['/', '/learn', '/privacy', '/help']) {
       await go(page, route)
       await expect(page.getByRole('contentinfo'), `${route} should render exactly one footer landmark`).toHaveCount(1)
       await expect(page.getByRole('link', { name: 'Plans', exact: true }).last()).toBeVisible()
-      if (['/create/palette', '/create/icons', '/create/aspect-ratio'].includes(route)) {
-        await expect(page.locator('.app-footer')).toHaveClass(/app-footer--compact/)
-      }
+    }
+    for (const route of ['/discover', '/create/palette', '/create/icons', '/create/aspect-ratio']) {
+      await go(page, route)
+      await expect(page.getByRole('contentinfo'), `${route} is an app page and draws no site footer`).toHaveCount(0)
+      await expect(page.locator('.pnav a[href="/plans"]').first()).toBeVisible()
     }
   })
 
@@ -144,7 +146,7 @@ test.describe('public UI quality release', () => {
    * the app, and on touch there is no hover to reveal that. */
   test('the footer credits Dylan Coleman on every route and marks the link as leaving the app', async ({ page }) => {
     watch(page, 'visitor wondering who made this')
-    for (const route of ['/', '/discover', '/create/palette']) {
+    for (const route of ['/', '/learn', '/privacy']) {
       await go(page, route)
       // BOTH footers, because '/' is Spectrum and mounts `.sp-footer` while the
       // app routes mount `.app-footer`. The credit is the founder's own ask and
@@ -224,23 +226,19 @@ test.describe('public UI quality release', () => {
   // their links (see the header comment in SurfaceLanding.jsx), and
   // src/components/WorldMap.jsx went with it. There is no blip left to size.
 
-  test('compact footer stays contained and exposes Plans on a narrow tool route', async ({ page }) => {
+  // The compact tool footer is gone. On a 320px phone the menu
+  // sheet is where plans and the tool list live now.
+  test('a narrow tool route keeps Plans and Typography one menu away', async ({ page }) => {
     watch(page, 'mobile visitor checking plans after using a tool')
     await page.setViewportSize({ width: 320, height: 720 })
     await go(page, '/create/aspect-ratio')
-
-    const footer = page.locator('.app-footer--compact')
-    await footer.scrollIntoViewIfNeeded()
-    const contained = await footer.locator('.app-footer-inner').evaluate(
-      (element) => element.scrollWidth <= element.clientWidth + 1,
-    )
-    expect(contained, 'Compact footer content should not overflow its mobile column').toBe(true)
-    await expect(footer.getByRole('link', { name: 'Plans', exact: true })).toBeVisible()
-    // Typography went live: the footer now links it for real, and straight to
-    // the Font Gallery rather than the redirect-only /create/typography category home.
-    await expect(footer.getByRole('link', { name: 'Typography', exact: true })).toBeVisible()
-    await expect(footer.locator('a[href="/create/font-gallery"]')).toHaveCount(1)
-    await expect(footer.locator('a[href="/create/typography"]')).toHaveCount(0)
+    await expect(page.locator('.app-footer')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Open menu' }).click()
+    const sheet = page.locator('.pnav-sheet')
+    await expect(sheet.locator('a[href="/plans"]').first()).toBeVisible()
+    await expect(sheet.locator('a[href="/create/font-gallery"]')).toHaveCount(1)
+    const contained = await sheet.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)
+    expect(contained, 'the sheet should not overflow a 320px phone').toBe(true)
   })
 
   test('Icon and Emoji modes switch from the keyboard and explain offline resilience', async ({ page, context }) => {
@@ -351,37 +349,38 @@ test.describe('public UI quality release', () => {
     watch(page, 'designer recovering an accidental palette reset')
     await go(page, '/create/palette')
 
-    const seed = page.getByRole('textbox', { name: 'Seed colour hex' })
-    await seed.fill('#FF0000')
-    await expect(seed).toHaveValue('#FF0000')
+    const seed = page.locator('.plb-seedchip-hex')
+    await setSeed(page, '#FF0000')
+    await expect(seed).toHaveText('#FF0000')
     await page.getByRole('button', { name: 'Lock Primary' }).click()
     await expect(page.getByRole('button', { name: 'Unlock Primary' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Reset' }).click()
+    await (await openPaletteTools(page)).getByRole('button', { name: 'Reset palette' }).click()
     // Founder request 2026-09-03: Reset restores the default SETTINGS but draws
     // a NEW random colour, so the post-reset seed is captured rather than pinned
     // to the old fixed #4338E0. What this test is actually about — the two-step
     // Undo chain — is unchanged, and the lock still has to be cleared.
-    await expect(seed).not.toHaveValue('#FF0000')
-    const afterReset = await seed.inputValue()
+    await expect(seed).not.toHaveText('#FF0000')
+    const afterReset = await readSeed(page)
     await expect(page.getByRole('button', { name: 'Lock Primary' })).toBeVisible()
 
-    const undo = page.getByRole('button', { name: 'Undo' })
+    const undo = page.getByRole('button', { name: 'Undo', exact: true })
     await expect(undo).toBeEnabled()
-    await seed.fill('#00FF00')
-    await expect(seed).toHaveValue('#00FF00')
+    await setSeed(page, '#00FF00')
+    await expect(seed).toHaveText('#00FF00')
     await undo.click()
-    await expect(seed).toHaveValue(afterReset)
+    await expect(seed).toHaveText(afterReset)
     await expect(page.getByRole('button', { name: 'Lock Primary' })).toBeVisible()
 
     await undo.click()
-    await expect(seed).toHaveValue('#FF0000')
+    await expect(seed).toHaveText('#FF0000')
     await expect(page.getByRole('button', { name: 'Unlock Primary' })).toBeVisible()
 
-    await expect(page.getByRole('button', { name: 'Save / export' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Save current' })).toBeVisible()
   })
 
   test('community records are scrubbed and unsafe external URLs never become links', async ({ page }) => {
+    test.skip(!OWNER_EMAIL, NO_OWNER_EMAIL)
     watch(page, 'privacy-conscious community visitor')
     // PASSED AS AN ARGUMENT, never closed over. `addInitScript` serialises this
     // function and runs it in the BROWSER, where a module constant from this
@@ -401,7 +400,7 @@ test.describe('public UI quality release', () => {
         c2: '#333333',
         saves: 0,
       }]))
-    }, FOUNDER_EMAIL)
+    }, OWNER_EMAIL)
     await go(page, '/community')
 
     const card = page.locator('.ch-card', { hasText: 'Unsafe link test' })
@@ -415,6 +414,7 @@ test.describe('public UI quality release', () => {
   })
 
   test('direct Discover load migrates legacy community records before the surface renders', async ({ page }) => {
+    test.skip(!OWNER_EMAIL, NO_OWNER_EMAIL)
     watch(page, 'visitor opening Discover from a saved link')
     await page.addInitScript((email) => {
       localStorage.setItem('vs-community-submissions', JSON.stringify([{
@@ -428,14 +428,11 @@ test.describe('public UI quality release', () => {
         c2: '#222222',
         saves: 0,
       }]))
-    }, FOUNDER_EMAIL)
+    }, OWNER_EMAIL)
     await go(page, '/discover')
 
-    // The h1 is the surface's name. "Find systems worth stealing." was here
-    // until 2026-09-09 — a line the founder had already thrown out on the
-    // homepage ('"Systems worth stealing." is bad copy', 56-founder-rejected-
-    // headlines.spec.js) with "Find" in front of it. 70-anti-slop-marketing
-    // and the 62 tagline walk keep it off every route.
+    // The h1 is the surface's name. 56-homepage-headline-copy,
+    // 70-anti-slop-marketing and the 62 tagline walk cover the retired copy.
     await expect(page.getByRole('heading', { level: 1, name: 'Discover' })).toBeVisible()
     await expect.poll(
       () => page.evaluate(() => JSON.parse(localStorage.getItem('vs-community-submissions'))),
@@ -449,13 +446,14 @@ test.describe('public UI quality release', () => {
   })
 
   test('Palette submission storage migrates legacy email records before appending', () => {
+    test.skip(!OWNER_EMAIL, NO_OWNER_EMAIL)
     const values = new Map([[
       'vs-community-submissions',
       JSON.stringify([{
         id: 'legacy',
         name: 'Legacy',
         author: 'Old',
-        authorEmail: FOUNDER_EMAIL,
+        authorEmail: OWNER_EMAIL,
         url: 'javascript:alert(1)',
       }]),
     ]])
@@ -482,8 +480,9 @@ test.describe('public UI quality release', () => {
   })
 
   test('prompt submissions omit email, use safe founder metadata, and reject unsafe profiles', () => {
+    test.skip(!OWNER_EMAIL, NO_OWNER_EMAIL)
     const founder = buildCommunityPromptRecord({
-      user: { uid: 'founder-uid', email: FOUNDER_EMAIL },
+      user: { uid: 'founder-uid', email: OWNER_EMAIL },
       userProfile: { displayName: 'Outdated name' },
       title: 'Founder prompt',
       text: 'Create a colour system.',

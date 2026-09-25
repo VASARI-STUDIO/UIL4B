@@ -1,6 +1,7 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { categoryDestination } from '../data/toolTree'
 import FounderNote from './FounderNote'
+import { footerShowsOn } from './nav/footerRoutes'
 
 // Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
 // decisions — 2026-08-20", decision 3 — and the Help Centre and Settings already
@@ -75,7 +76,9 @@ const FOOTER_GROUPS = [
 ]
 
 export default function AppFooter({ compact = false }) {
+  const { pathname } = useLocation()
   const year = new Date().getFullYear()
+  if (!footerShowsOn(pathname)) return null
   return (
     <footer className={compact ? 'app-footer app-footer--compact' : 'app-footer'}>
       <div className="app-footer-inner">

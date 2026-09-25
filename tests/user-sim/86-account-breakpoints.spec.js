@@ -1,6 +1,9 @@
 // /projects across the width matrix and the account states, asserted on
 // RENDERED GEOMETRY and on COMPUTED ROLES rather than on markup.
 //
+// Built to the design's "Your workspace" screen; each section says what it
+// holds.
+//
 // ─────────────────────────────────────────────────────────────────────────────
 // WHY IT EXISTS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,6 +82,7 @@
 // broken probe would report this surface perfect.
 import { test, expect } from './base.js'
 import { signIn, go, watch, expectRendered } from './helpers.js'
+import { createTools } from '../../src/data/toolTree.js'
 
 // Every width in the lane's matrix. 834 and 430 are in because the iPad mini
 // and the Pro Max are, and 320 is in because it is the floor the reflow gate
@@ -123,7 +127,7 @@ async function axControls(page, context) {
     // so the primary nav and the footer came back inside what was supposed to
     // be the page's own controls. Found by a mutation that should have failed
     // this file and did not.
-    const sel = parts.map((part) => '.sec.uh ' + part).join(',')
+    const sel = parts.map((part) => '.uh ' + part).join(',')
     const els = [...document.querySelectorAll(sel)].filter((el) => {
       const r = el.getBoundingClientRect()
       return r.width > 0 && r.height > 0
@@ -216,7 +220,7 @@ test.describe('/projects offers no folder it cannot keep', () => {
       // The word, anywhere a reader could see it on this surface. It covers the
       // chip row, the per-card select, the modal field and the sentence about
       // an allowance, without naming any of their classes.
-      await expect(page.locator('.sec.uh'), 'the surface still says "folder"')
+      await expect(page.locator('.uh'), 'the surface still says "folder"')
         .not.toContainText(/folder/i)
 
       // AN ALLOWLIST, NOT A DENYLIST, and the reason is a mutation that got
@@ -229,14 +233,21 @@ test.describe('/projects offers no folder it cannot keep', () => {
       // So this names what SHOULD be between the masthead and the grid, and
       // fails on anything else. Four controls: the two the masthead has always
       // carried, and the two that filter the list.
-      const ALLOWED_ABOVE_THE_GRID = ['Save Current', 'New Project', 'Search projects…', 'SORT']
+      //
+      // On the design's workspace screen the operable controls above the work are the design's two: New project, and the
+      // button that opens the Create menu (its count read off the tool tree).
+      // Every "Start something" tile is a link, not a control, and is not
+      // what a filter row is made of either.
+      const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen']
+      const live = createTools().filter((t) => !t.soon && !t.beta).length
+      const ALLOWED_ABOVE_THE_GRID = ['New project', `All ${WORDS[live] || live} tools`]
       const above = await page.evaluate((parts) => {
         const grid = document.querySelector('.uh-grid')
         const gridTop = grid.getBoundingClientRect().top + window.scrollY
         // Operable controls only — buttons, fields and menus. Links inside the
         // quota sentence ("Pro lifts the cap") are prose, they come and go with
         // the allowance, and they are not what a filter row is made of.
-        const sel = parts.map((part) => '.sec.uh ' + part).join(',')
+        const sel = parts.map((part) => '.uh ' + part).join(',')
         return [...document.querySelectorAll(sel)]
           .filter((el) => {
             const r = el.getBoundingClientRect()
@@ -272,139 +283,70 @@ test.describe('/projects offers no folder it cannot keep', () => {
     })
   }
 
-  test('the New project dialog asks for a name and a starting point, and nothing else', async ({ page }) => {
+  // THERE IS NO NEW PROJECT FORM TO FILE ANYTHING IN. The dialog this tested
+  // (name and starting point, and no folder) and its geometry test went with
+  // the current flow: New project goes straight into the Palette
+  // Builder on a new, unsaved project, named when it is saved. What remains to
+  // hold is that it asks for nothing on the way — no folder, no form.
+  test('New project asks for nothing: it opens the Palette Builder on a fresh design', async ({ page }) => {
     watch(page, 'somebody starting their second project')
     await signIn(page, { plan: 'free', projects: 1 })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
-    await page.getByRole('button', { name: 'New Project' }).click()
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible()
-    await expect(dialog, 'the dialog still asks which folder to file it in')
-      .not.toContainText(/folder/i)
-    // The two things it legitimately asks, unchanged.
-    await expect(dialog).toContainText('Project name')
-    await expect(dialog).toContainText('Start from')
+    await page.getByRole('button', { name: 'New project' }).click()
+    await expect(page).toHaveURL(/\/create\/palette$/)
+    await expect(page.getByRole('dialog'), 'a form stood between New project and the work').toHaveCount(0)
   })
-
-  // BOTH DIALOGS ARE DRAWN AS DIALOGS. `.fg-detail-overlay` lost its rule in
-  // #200 and nothing noticed: the project sheet and the New project form —
-  // aria-modal, focus-trapped, scroll-locked — were laid out in the document
-  // flow at the foot of the page, under the starters, while the lock froze the
-  // page above them. Asserted on geometry: the backdrop covers the viewport and
-  // the dialog's top edge is on screen the moment it opens, at a phone and a
-  // laptop width.
-  for (const width of [390, 1440]) {
-    test(`the project dialogs open over the page, not below it — ${width}`, async ({ page }) => {
-      watch(page, 'somebody opening a project to read it')
-      await page.setViewportSize({ width, height: width < 700 ? 844 : 900 })
-      await signIn(page, { plan: 'free', projects: 3 })
-      await go(page, '/projects')
-      await expectRendered(page, '/projects')
-
-      const covers = async () => page.evaluate(() => {
-        const overlay = document.querySelector('.fg-detail-overlay')
-        const dialog = overlay?.querySelector('[role="dialog"]')
-        if (!overlay || !dialog) return null
-        const o = overlay.getBoundingClientRect()
-        const d = dialog.getBoundingClientRect()
-        return {
-          position: getComputedStyle(overlay).position,
-          covers: o.top <= 0 && o.left <= 0 && o.width >= innerWidth - 1 && o.height >= innerHeight - 1,
-          dialogTop: Math.round(d.top),
-          viewport: innerHeight,
-        }
-      })
-
-      await page.locator('.uh-grid .uh-card-name').first().click()
-      await expect(page.getByRole('dialog')).toBeVisible()
-      const sheet = await covers()
-      expect(sheet, 'the project sheet did not open').not.toBeNull()
-      expect(sheet.position, 'the project sheet is laid out in the page flow').toBe('fixed')
-      expect(sheet.covers, 'the backdrop does not cover the screen').toBe(true)
-      expect(sheet.dialogTop, 'the project sheet opened off screen').toBeGreaterThanOrEqual(0)
-      expect(sheet.dialogTop).toBeLessThan(sheet.viewport / 2)
-      await page.keyboard.press('Escape')
-      await expect(page.getByRole('dialog')).toHaveCount(0)
-
-      await page.getByRole('button', { name: 'New Project' }).click()
-      await expect(page.getByRole('dialog')).toBeVisible()
-      const form = await covers()
-      expect(form?.position, 'the New project form is laid out in the page flow').toBe('fixed')
-      expect(form.dialogTop, 'the New project form opened off screen').toBeGreaterThanOrEqual(0)
-      expect(form.dialogTop).toBeLessThan(form.viewport / 2)
-    })
-  }
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. THE WORK COMES FIRST — the defect a person actually hits
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('a person sees their own projects before anything else', () => {
-  test('at 390x844 at the free cap, the first project is inside the fold', async ({ page }) => {
-    // THE MEASUREMENT THIS FILE EXISTS FOR. Before: top y=882 in an 844px
-    // viewport — the entire list below the fold for somebody who has filled
-    // their free plan. There is no scroll here on purpose: the question is what
-    // is on screen when the page arrives.
-    watch(page, 'a free account at the cap opening its projects on a phone')
-    await page.setViewportSize(PHONE)
+  // THE ORDER IS THE DESIGN'S. The workspace screen (UIL4B App.dc.html)
+  // sets the page as: title, plan strip, "Start
+  // something", Recent projects, New in Discover, the Pro panel. The tip band
+  // this section used to keep below the work is gone with the old page. What
+  // still holds — and what this file protects — is that a
+  // person's own work comes before anything the product is promoting.
+  test('at 1440x900 at the free cap, the first project is inside the fold', async ({ page }) => {
+    watch(page, 'a free account at the cap opening its workspace on a laptop')
+    await page.setViewportSize({ width: 1440, height: 900 })
     await signIn(page, { plan: 'free', projects: 3 })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
     const card = await boxOf(page, '.uh-grid .proj-card')
     expect(card, 'no project card rendered at all').not.toBeNull()
-    expect(card.top, `the first project opens at y=${card.top} in an 844px viewport`)
-      .toBeLessThan(PHONE.height)
-    expect(card.bottom, `the first project ends at y=${card.bottom}, past the fold`)
-      .toBeLessThanOrEqual(PHONE.height)
-
-    // And it is really the top one: nothing scrolled to make this true.
-    const scrolled = await page.evaluate(() => window.scrollY)
-    expect(scrolled, 'the page scrolled itself before we measured').toBe(0)
+    expect(card.bottom, `the first project ends at y=${card.bottom}, past the fold`).toBeLessThanOrEqual(900)
+    expect(await page.evaluate(() => window.scrollY), 'the page scrolled itself before we measured').toBe(0)
   })
 
-  // ONE TEST PER STATE, and the reason is worth recording: `signIn` seeds
-  // localStorage ONCE PER TAB (the `__uil4b_test_seeded` guard in helpers.js
-  // exists so the app's own writes are not overwritten on every navigation), so
-  // a loop that signs in four times inside one test measures the FIRST state
-  // four times. Written as a loop, this passed on `empty` and then reported
-  // “one project: no content rendered” — which was the harness, not the page.
   for (const state of STATES) {
-    test(`the tip band renders below the work, once — ${state.name}`, async ({ page }) => {
-      // #458 made this conditional on the account being empty. It is
-      // unconditional now: one render site, the same at 320 and at 1440, so the
-      // reading order cannot differ between an account with work and one
-      // without.
-      watch(page, `a ${state.name} account reading down the page it keeps its work on`)
+    test(`the work comes before Discover and the Pro panel — ${state.name}`, async ({ page }) => {
+      watch(page, `a ${state.name} account reading down its workspace`)
       await signIn(page, state.opts)
       await go(page, '/projects')
       await expectRendered(page, '/projects')
 
-      await expect(page.locator('.uh-band'), 'the band renders twice').toHaveCount(1)
-
-      // Whatever is the page's own content in this state — the grid, or the
-      // empty state that stands in for it — must come first.
       const contentSel = state.name === 'empty' ? '.uh-empty' : '.uh-grid'
       const tops = await page.evaluate((sel) => {
-        const at = (s) => {
-          const el = document.querySelector(s)
+        const at = (q) => {
+          const el = document.querySelector(q)
           return el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : null
         }
-        return { content: at(sel), band: at('.uh-band') }
+        return { start: at('.uh-start'), content: at(sel), discover: at('.uh-disc-head'), pro: at('.uh-pro') }
       }, contentSel)
-
       expect(tops.content, 'no content rendered — the state did not seed').not.toBeNull()
-      expect(tops.band, 'no band rendered').not.toBeNull()
-      expect(tops.band, `the tip band (y=${tops.band}) is above the work (y=${tops.content})`)
-        .toBeGreaterThan(tops.content)
+      expect(tops.start, '"Start something" sits above the recent projects').toBeLessThan(tops.content)
+      expect(tops.discover, `Discover (y=${tops.discover}) is above the work (y=${tops.content})`).toBeGreaterThan(tops.content)
+      if (state.opts.plan === 'pro') expect(tops.pro, 'a Pro account is sold Pro').toBeNull()
+      else expect(tops.pro, `the Pro panel (y=${tops.pro}) is above the work`).toBeGreaterThan(tops.content)
     })
   }
 
   test('the work is reached before the promos by keyboard', async ({ page }) => {
-    // The tab band carries a link. Before this branch it sat third in the tab
-    // order, ahead of every control belonging to the reader's own projects.
     watch(page, 'a keyboard user reaching for their own project')
     await signIn(page, { plan: 'free', projects: 2 })
     await go(page, '/projects')
@@ -412,11 +354,11 @@ test.describe('a person sees their own projects before anything else', () => {
 
     const controls = await axControls(page, page.context())
     const firstProject = controls.findIndex((c) => /^Seeded Project/.test(c.name))
-    const bandLink = controls.findIndex((c) => /^Open the /.test(c.name))
+    const promo = controls.findIndex((c) => /^Upgrade for /.test(c.name))
     expect(firstProject, 'no project control in the tab order at all').toBeGreaterThanOrEqual(0)
-    expect(bandLink, 'the band link is gone, so this test is measuring nothing').toBeGreaterThanOrEqual(0)
-    expect(firstProject, `the band's link (${bandLink}) comes before the first project (${firstProject})`)
-      .toBeLessThan(bandLink)
+    expect(promo, 'the Pro panel link is gone, so this test is measuring nothing').toBeGreaterThanOrEqual(0)
+    expect(firstProject, `the upgrade link (${promo}) comes before the first project (${firstProject})`)
+      .toBeLessThan(promo)
   })
 })
 
@@ -424,27 +366,18 @@ test.describe('a person sees their own projects before anything else', () => {
 // 4. ONE COUNTER FOR ONE QUANTITY
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('/projects states a number once', () => {
-  test('the masthead count is not repeated in the toolbar', async ({ page }) => {
+  test('the project count is on the slot meter, and nowhere else', async ({ page }) => {
     // Before: "3 of 3 projects" at y=203 and "3 projects" at y=567 at 1440.
+    // The design's workspace states it once, in the plan strip.
     watch(page, 'a free account at the cap counting its projects')
     await signIn(page, { plan: 'free', projects: 3 })
     await go(page, '/projects')
     await expectRendered(page, '/projects')
 
-    await expect(page.locator('[data-testid="project-quota-note"]')).toBeVisible()
-    await expect(page.locator('.proj-count'), 'a second counter of the same quantity')
-      .toHaveCount(0)
-  })
-
-  test('but it appears when a search has narrowed the list, which is when it says something new', async ({ page }) => {
-    watch(page, 'somebody searching a full free plan')
-    await signIn(page, { plan: 'free', projects: 3 })
-    await go(page, '/projects')
-    await expectRendered(page, '/projects')
-
-    await page.locator('.proj-search input').fill('Seeded Project 2')
-    await expect(page.locator('.uh-grid .proj-card')).toHaveCount(1)
-    await expect(page.locator('.proj-count')).toHaveText('1 project')
+    await expect(page.locator('[data-testid="project-quota-note"]'), 'a second counter of the same quantity').toHaveCount(1)
+    await expect(page.locator('[data-testid="project-quota-note"]')).toContainText('3 of 3')
+    const text = await page.locator('.uh').innerText()
+    expect(text.split('3 of 3').length - 1, 'the count is printed more than once').toBe(1)
   })
 })
 
@@ -518,14 +451,14 @@ test('the probe can see what it is looking for', async ({ page }) => {
   // (a) main's text is really being read.
   const before = await page.locator('main').innerText()
   expect(before.length, 'the text probe read an empty <main>').toBeGreaterThan(200)
-  expect(before, 'the text probe cannot see the page it is on').toContain('Projects')
+  expect(before, 'the text probe cannot see the page it is on').toContain('Your workspace')
 
   await page.evaluate(() => {
     // Planted into the PAGE's own container, because that is what the probes
     // above are scoped to. When the scope tightened from <main> to .sec.uh this
     // test went red and the four absence tests stayed green — which is the
     // entire reason it is here.
-    const main = document.querySelector('.sec.uh')
+    const main = document.querySelector('.uh .uh-main')
     const planted = document.createElement('div')
     planted.id = 'axprobe-control'
     planted.innerHTML = `
@@ -533,7 +466,7 @@ test('the probe can see what it is looking for', async ({ page }) => {
       <p>Filed under folder</p>
       <button type="button">Community</button>
       <button type="button">Marketing</button>
-      <span class="proj-count">99 projects</span>
+      <span data-testid="project-quota-note">99 of 99</span>
       <a href="#" style="display:block;width:10px;height:10px">x</a>`
     main.prepend(planted)
   })
@@ -543,7 +476,7 @@ test('the probe can see what it is looking for', async ({ page }) => {
   expect(text, 'the text probe missed a planted designer').toContain('Maya R.')
   expect(text, 'the text probe missed a planted fabrication').toContain('shared by the community')
   expect(text, 'the text probe missed a planted folder').toMatch(/folder/i)
-  await expect(page.locator('.proj-count'), 'the counter selector stopped matching').toHaveCount(1)
+  await expect(page.locator('[data-testid="project-quota-note"]'), 'the counter selector stopped matching').toHaveCount(2)
 
   // (c) the CDP accessibility probe is really resolving names, and really
   //     reaching elements added after load.
@@ -568,35 +501,33 @@ test('the probe can see what it is looking for', async ({ page }) => {
   expect(card.bottom, 'the geometry probe returned a zero-height box').toBeGreaterThan(card.top)
 })
 
-// WCAG 2.4.3. Each project row paints Load (or Restore) and then the ⋯ menu at
-// its end, but the DOM had ⋯ first, so Tab reached the menu before the button
-// painted to its left. Checked at a wide and a phone width: in DOM order, each
-// row's Load comes before its ⋯, and is painted before it in reading order
-// (left of it on the same line, or on an earlier line).
-test.describe('/projects rows tab in the order they are painted', () => {
+// WCAG 2.4.3. The old rows painted Load and then ⋯ with the DOM the other way
+// round. The design's card paints the icon pencil (top right of the strip) and then the
+// open link (the name block under it): Tab must meet them in that order.
+test.describe('/projects cards tab in the order they are painted', () => {
   for (const width of [1440, 390]) {
-    test(`Load before ⋯, in the DOM and on screen, at ${width}px`, async ({ browser }) => {
+    test(`the icon pencil before the open link, in the DOM and on screen, at ${width}px`, async ({ browser }) => {
       const context = await browser.newContext({ viewport: { width, height: 900 } })
       const page = await context.newPage()
       await signIn(page, { plan: 'free', projects: 2 })
       await go(page, '/projects')
       await expectRendered(page, '/projects')
       const rows = await page.locator('.uh-card').evaluateAll((cards) => cards.map((card) => {
-        const load = card.querySelector('.uh-card-foot button')
-        const menu = card.querySelector('.uh-actions-trigger')
-        if (!load || !menu) return null
-        const a = load.getBoundingClientRect()
-        const b = menu.getBoundingClientRect()
+        const pencil = card.querySelector('.uh-card-pencil')
+        const open = card.querySelector('.uh-card-name')
+        if (!pencil || !open) return null
+        const a = pencil.getBoundingClientRect()
+        const b = open.getBoundingClientRect()
         return {
-          domLoadFirst: !!(load.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING),
-          paintedLoadFirst: a.bottom <= b.top + 1 || (Math.abs(a.top - b.top) < a.height && a.left < b.left),
+          domPencilFirst: !!(pencil.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING),
+          paintedPencilFirst: a.bottom <= b.top + 1,
         }
       }))
-      // POSITIVE CONTROL: rows with both controls exist.
-      expect(rows.filter(Boolean).length, 'no project row carries both Load and ⋯').toBeGreaterThanOrEqual(2)
+      // POSITIVE CONTROL: cards with both controls exist.
+      expect(rows.filter(Boolean).length, 'no card carries both the pencil and the open link').toBeGreaterThanOrEqual(2)
       for (const r of rows.filter(Boolean)) {
-        expect(r.paintedLoadFirst, 'Load is not painted before ⋯').toBe(true)
-        expect(r.domLoadFirst, 'Tab reaches ⋯ before the Load painted ahead of it').toBe(true)
+        expect(r.paintedPencilFirst, 'the pencil is not painted before the open link').toBe(true)
+        expect(r.domPencilFirst, 'Tab reaches the open link before the pencil painted above it').toBe(true)
       }
       await context.close()
     })

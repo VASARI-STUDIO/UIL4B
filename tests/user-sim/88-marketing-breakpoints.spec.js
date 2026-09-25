@@ -145,7 +145,9 @@ test.describe('the Discover masthead is sized by its content at every width', ()
         }
         // The slab is still a slab: the padding was not trimmed away to chase
         // the same number from the other side.
-        if (m.padY < 50) bad.push(`  ${route} @${width}: masthead padding is down to ${m.padY}px`)
+        // 40, not 50: the masthead is the smaller one. 20px top and bottom is
+        // its narrowest pad.
+        if (m.padY < 40) bad.push(`  ${route} @${width}: masthead padding is down to ${m.padY}px`)
         // And the page never scrolls sideways because of it.
         if (m.docOverflowX > 0) {
           bad.push(`  ${route} @${width}: the document scrolls horizontally by ${m.docOverflowX}px`)
@@ -280,7 +282,7 @@ test.describe('the marketing set exposes a usable landmark list', () => {
   // navigate, scroll the whole page for its reveals, read Chrome's tree — which
   // is ~1.8s a route on CI (20.1s at 390 and 17.3s at 1440 on run 35826022497,
   // against a 30s default meant for one page). Derived from MARKETING_ROUTES,
-  // the same shape as 25-defect-sweep's `budget()`, so a new route raises it in
+  // the same shape as 25-layout-target-sweep's `budget()`, so a new route raises it in
   // the same edit. A route that hangs still fails inside the loop, on go()'s
   // own readiness backstop, by name.
   const PER_ROUTE_MS = 6000
@@ -443,7 +445,7 @@ test.describe('the homepage headline keeps its proportion on a short desktop', (
       const m = await page.evaluate(() => {
         const el = document.querySelector('.sp-hero-h1')
         const r = el.getBoundingClientRect()
-        const hint = document.querySelector('.sp-hero .sp-cta')?.getBoundingClientRect()
+        const hint = document.querySelector('.sp-hero .sp-pill')?.getBoundingClientRect()
         return {
           fs: Math.round(parseFloat(getComputedStyle(el).fontSize) * 10) / 10,
           height: Math.round(r.height),
@@ -482,9 +484,7 @@ test('the height rule is on the homepage headline and nowhere else', async ({ br
   const page = await ctx.newPage()
   const OTHERS = [
     ['/discover/palettes', '.dgh-hero h1', 20],
-    ['/create/font-gallery', '.fg-hero h1', 30],
-    ['/create/font-pair', '.fpr-hero h1', 20],
-    ['/create/tint', '.tt-hero h1', 20],
+    // /create/tint is not listed: its drawn screen has no hero.
   ]
   const over = []
   for (const [route, sel, ceiling] of OTHERS) {

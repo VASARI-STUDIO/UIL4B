@@ -172,6 +172,24 @@ export function prerenderRoutes() {
 }
 
 /**
+ * Routes the app renders that get NO shell of their own and no 301: the
+ * private and flow pages, Soon tools and category homes. vercel.json rewrites
+ * each one, by exact path, to the noindex 404 shell so the SPA boots there.
+ *
+ * They used to reach that shell through a catch-all rewrite, which also sent
+ * every path that is NOT a page there — with status 200, because a rewrite
+ * keeps the status of the file it serves. Listing them is what lets an
+ * unknown path answer a real 404 (tests/unit/real-404.test.js).
+ */
+export function clientOnlyRoutes() {
+  const { excluded } = routeMatrix()
+  return excluded
+    .filter((r) => r.route !== '/' && !RETIRED.has(r.route))
+    .map((r) => r.route)
+    .sort()
+}
+
+/**
  * Every `<loc>` in public/sitemap.xml, verbatim and in file order.
  *
  * sitemapRoutes() below throws away three things before any assertion can see

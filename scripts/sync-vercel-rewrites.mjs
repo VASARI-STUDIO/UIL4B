@@ -1,6 +1,12 @@
 // Generate the explicit per-route rewrites that make prerendering actually work.
 //
-// vercel.json's catch-all — `/((?!api/|assets/).*)` → `/index.html` — sends
+// THERE IS NO CATCH-ALL. Everything below that describes
+// one is the history of why each route is listed; the current shape is: every
+// prerendered route → its own shell, every client-only route → the noindex
+// 404 shell, and anything else matches nothing, so Vercel serves dist/404.html
+// with a real 404 status.
+//
+// vercel.json's catch-all — `/((?!api/|assets/).*)` → `/index.html` — sent
 // every path to the root shell. Vercel is documented to check the filesystem
 // before applying rewrites, which would serve dist/create/type-scale/index.html for
 // /create/type-scale and leave the catch-all alone. But "documented to" is not
@@ -24,7 +30,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { LEGACY_REDIRECTS } from '../src/data/legacyRoutes.js'
-import { prerenderRoutes } from './route-matrix.mjs'
+import { clientOnlyRoutes, prerenderRoutes } from './route-matrix.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -35,18 +41,20 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 // matrix, and the sitemap is the advertised subset of it.
 export { prerenderRoutes }
 
-export function buildRewrites(routes) {
+export function buildRewrites(routes, clientOnly = clientOnlyRoutes()) {
   return [
     { source: '/p/:code', destination: '/api/share?c=:code' },
     ...routes.map(r => ({ source: r, destination: `${r}/index.html` })),
-    // Everything that matched no explicit route above gets the NOINDEX 404
-    // shell, not index.html. Serving index.html made every typo and dead
-    // backlink a 200-status indexable copy of the homepage.
+    // Client-only routes get the NOINDEX 404 shell, by exact path. The SPA
+    // boots from it and renders the real page (/settings, /projects, …), which
+    // arrives carrying `noindex` — what a private page should carry.
     //
-    // The SPA still boots from this shell and renders normally, so private app
-    // routes (/settings, /projects, …) keep working — they simply arrive
-    // carrying `noindex`, which is what they should have had anyway.
-    { source: '/((?!api/|assets/).*)', destination: '/404.html' },
+    // This was ONE catch-all, `/((?!api/|assets/).*)` → `/404.html`. It also
+    // caught every path that is not a page, and a rewrite keeps the status of
+    // the file it serves, so every typo, probe and dead link answered 200: a
+    // soft 404. Anything that matches no rule now falls to Vercel, which
+    // serves the same dist/404.html with status 404.
+    ...clientOnly.map(r => ({ source: r, destination: '/404.html' })),
   ]
 }
 

@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useAppearance } from '../contexts/AppearanceContext'
 import { saveFeedback } from '../utils/analytics'
 import useModalDialog from '../hooks/useModalDialog'
+import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 
 // Type selector — mirrors HelpCentre's CONTACT_TYPES. Each type reveals its own
 // routing dropdown(s) so submissions land with the right team/triage label.
@@ -128,6 +129,9 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
   // dropped focus to the top of the document rather than back to the button
   // that opened it — from a dialog reachable on every page in the app.
   const dialogRef = useModalDialog(onClose, { enabled: open })
+  // Back closes the dialog (audit A3) and the page behind it is inert (A12).
+  useCloseOnBack(!!open, onClose)
+  useInertBehind(!!open)
 
   // Fully reset (including the chosen type) whenever the modal is freshly opened,
   // and focus the first control.
@@ -139,6 +143,10 @@ export default function FeedbackModal({ open, onClose, seed = null }) {
     // making the user say so again is a step for nothing.
     setTypeId(seed?.typeId || 'feedback')
     resetFields()
+    // A crash report arrives already written (RouteErrorBoundary → "Report
+    // this"); the person adds what they were doing, or just sends it.
+    if (seed?.subject) setSubject(seed.subject)
+    if (seed?.message) setMessage(seed.message)
     setRemoved([])
     setCapture(buildReportContext({
       pathname: location.pathname,

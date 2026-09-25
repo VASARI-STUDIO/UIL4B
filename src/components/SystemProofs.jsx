@@ -31,12 +31,17 @@ import { EXPORT_FORMATS, freeFormats, proOnlyFormats, unbuiltFormats } from '../
 import { LIVE_TOOLS, SOON_TOOLS } from '../data/helpStart'
 
 /** --bg-0 in each theme, from the :root blocks in src/styles/global.css. */
-const LIGHT_GROUND = '#EFEEE9'
+const LIGHT_GROUND = '#F5F5F2'
 const DARK_GROUND = '#060607'
-/** --accent-strong in each theme — the role every link in the app is painted in. */
-const LIGHT_LINK = '#0B5ED7'
-const DARK_LINK = '#4A90FF'
-/** --accent in light: the same blue one step brighter, used for fills and borders. */
+/** --link in each theme — the design's link colour (UIL4B App.dc.html lines 19-21). */
+const LIGHT_LINK = '#1F4FD8'
+const DARK_LINK = '#8FAEFF'
+/**
+ * The fill this proof was written against. It is not the product's accent:
+ * --accent (#2A60E8) measures 4.88:1 on the light page and so does not
+ * demonstrate the boundary-only case. Pinned until Principle 1's proof is
+ * rewritten.
+ */
 const LIGHT_FILL = '#0F6FFF'
 
 /** WCAG 2.2 SC 1.4.3 (text) and SC 1.4.11 (component boundaries). */
@@ -190,7 +195,7 @@ export function ThemeValueProof() {
         {panels.map((p) => (
           <div className="prn-th-panel" key={p.theme} style={{ background: p.ground }}>
             <span className="prn-th-theme" style={{ color: p.ink }}>{p.theme}</span>
-            <span className="prn-th-token" style={{ color: p.ink }}>--accent-strong</span>
+            <span className="prn-th-token" style={{ color: p.ink }}>--link</span>
             <span className="prn-th-hex" style={{ color: p.ink }}>{p.ink}</span>
             <span className="prn-th-ratio" style={{ color: p.ink }}>{p.ratio.toFixed(2)}:1</span>
           </div>

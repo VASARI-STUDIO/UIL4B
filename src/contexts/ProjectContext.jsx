@@ -12,6 +12,7 @@ import { reportSyncFailure, reportSyncNotice, reportSyncOk } from '../utils/sync
 import { useAuth } from './AuthContext'
 import { useSubscription } from './SubscriptionContext'
 import { DEFAULT_DESIGN } from '../data/designDefaults'
+import { onAccountApplied } from '../utils/accountEvents'
 
 const ProjectContext = createContext()
 
@@ -141,6 +142,11 @@ export function ProjectProvider({ children }) {
   useEffect(() => {
     saveCurrent(design)
   }, [design])
+
+  // The working design follows the account: when the
+  // account's copy is written into storage — at sign-in on a second device, or
+  // back to the blank design at sign-out — every tool shows it now.
+  useEffect(() => onAccountApplied([CURRENT_KEY], () => setDesign(loadCurrent())), [])
 
   const projects = useMemo(() => {
     if (!userKey) return []
@@ -376,7 +382,7 @@ export function ProjectProvider({ children }) {
   // project at all; every surface that lists projects — the palette save menu,
   // SaveTypeSystem's overwrite list, ColorStudio's Load row, the icon save
   // picker — is already guarded by `projects.length > 0` and renders its create
-  // path instead. tests/user-sim/73-founder-calls-0910.spec.js holds all of it.
+  // path instead. tests/user-sim/73-hero-headline-new-account.spec.js holds all of it.
 
   // ── Cross-device sync ───────────────────────────────────────────────────
   //
@@ -540,6 +546,10 @@ export function ProjectProvider({ children }) {
     saveProject,
     duplicateProject,
     overwriteProject,
+    // Exported for the workspace's project icon, which is stored
+    // ON the project so it syncs with it. It stamps updatedAt like every other
+    // edit, which is what lets the change win a merge on the next device.
+    updateProject,
     renameProject,
     loadProject,
     deleteProject,

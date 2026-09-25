@@ -45,17 +45,23 @@ import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
 
 const CAP = FREE_SAVE_LIMITS.projects
 
-/** Drive the real Save Current form on /projects, and report what it said. */
+/** Save the working design as a new project, and report what the page said.
+ *
+ *  The old /projects page had a "Save Current" form. The design's workspace
+ *  sends New project straight into the Palette
+ *  Builder, where a project is named as it is saved — so that is where this
+ *  saves: the builder's Save current menu, which calls the same saveProject()
+ *  and holds the same refusal in place (`palette-save-refusal`). */
 async function saveAProject(page, name) {
-  await page.getByRole('button', { name: 'Save Current' }).click()
-  await page.getByPlaceholder(/Brand v1/i).fill(name)
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
-  // The page answers in words either way — the saved name in the toast, or
-  // the refusal ProjectContext threw, held in the form under the field it
-  // refused (69-flow-audit moved it there from the toast, where it wore the
-  // success tick and was gone in 1.8s). Reading the sentence rather than the
-  // project count is deliberate: it is what the user is actually given.
-  const answer = page.locator('[data-testid="project-save-refusal"], .toast.show').first()
+  await go(page, '/create/palette')
+  await page.getByRole('button', { name: /^Save current/ }).click()
+  await page.locator('.plb-savemenu').getByLabel('Project name').fill(name)
+  await page.keyboard.press('Enter')
+  // The page answers in words either way — "Project saved", or the refusal
+  // ProjectContext threw, held under the field it refused. Reading the
+  // sentence rather than the project count is deliberate: it is what the user
+  // is actually given.
+  const answer = page.locator('[data-testid="palette-save-refusal"], .toast.show').first()
   await expect(answer).toBeVisible()
   return (await answer.innerText()).trim()
 }
@@ -70,7 +76,9 @@ test.describe('a signed-in free account', () => {
     // presence is proof the session was accepted, not just that a page loaded.
     const note = page.getByTestId('project-quota-note')
     await expect(note, 'a signed-in free account must be told its allowance').toBeVisible()
-    await expect(note).toContainText(`all ${CAP} projects on the free plan`)
+    // The workspace's plan strip: "Project slots  3 of 3".
+    await expect(note).toContainText('Project slots')
+    await expect(note).toContainText(`${CAP} of ${CAP}`)
 
     const said = await saveAProject(page, 'One Too Many')
     expect(said, 'the cap must refuse the save in the product’s own words')
@@ -94,7 +102,7 @@ test.describe('a signed-in free account', () => {
     await go(page, '/projects')
 
     const said = await saveAProject(page, 'Room To Spare')
-    expect(said, 'a save under the cap must succeed').toContain('Room To Spare')
+    expect(said, 'a save under the cap must succeed').toContain('Project saved')
 
     const stored = await page.evaluate(
       (email) => JSON.parse(localStorage.getItem('vs-projects') || '{}')[email]?.length ?? -1,
@@ -119,7 +127,7 @@ test.describe('a signed-in Pro account', () => {
       .toHaveCount(0)
 
     const said = await saveAProject(page, 'Beyond The Free Cap')
-    expect(said, 'Pro must save past the free cap').toContain('Beyond The Free Cap')
+    expect(said, 'Pro must save past the free cap').toContain('Project saved')
 
     const stored = await page.evaluate(
       (email) => JSON.parse(localStorage.getItem('vs-projects') || '{}')[email]?.length ?? -1,
@@ -186,9 +194,9 @@ test.describe('the export gate, driven', () => {
     context.on('page', (p) => popups.push(p))
     await action.click()
 
-    // The canonical upgrade modal, carrying the copy written for THIS document
-    // rather than the generic one — that distinction is what P-001 bought.
-    await expect(page.getByRole('dialog', { name: /Export the design system book/i })).toBeVisible()
+    // The wall goes to /plans (every Pro CTA goes to /plans, never a modal or
+    // a login popup). The gate id is still reported per document.
+    await expect(page).toHaveURL(/\/plans(\?|$)/)
     expect(popups, 'a free account must not reach the artefact').toHaveLength(0)
     await context.close()
   })
@@ -477,7 +485,7 @@ test('UI System mode is unreachable for an ADMIN too, which is not what the docs
 
   await go(page, '/create/palette')
   await expect(
-    page.getByRole('textbox', { name: 'Seed colour hex' }),
+    page.getByRole('button', { name: 'Pick seed colour' }),
     'control: the Palette Builder must have rendered, or an absence below means nothing',
   ).toBeVisible()
 

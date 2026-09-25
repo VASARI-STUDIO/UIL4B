@@ -91,7 +91,12 @@ test('the floating button hides on exactly the routes the mount newly reaches', 
   // Every path App.jsx early-returns on by name must also be in NO_BUTTON,
   // or hoisting the mount would give that route a button it never had.
   const named = new Set(
-    [...APP.matchAll(/location\.pathname === '([^']+)'/g)].map((m) => m[1]),
+    // Both spellings App.jsx uses: the bare comparison and the normalised one
+    // (lowercased, trailing slashes stripped). A return that only redirects
+    // never paints, so it needs no entry.
+    [...APP.matchAll(/location\.pathname(?:\.toLowerCase\(\)\.replace\([^)]*\))? === '([^']+)'/g)]
+      .filter((m) => !/^\)\s*\{\s*return <Navigate\b/.test(APP.slice(m.index + m[0].length, m.index + m[0].length + 80)))
+      .map((m) => m[1]),
   )
   assert.ok(named.size >= 3, 'expected App.jsx to still early-return on named paths')
   const literals = new Set(

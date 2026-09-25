@@ -1,0 +1,556 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRICING — /plans, built from the Pricing screen of "UIL4B - Spectrum.dc.html"
+   (design lines 1083–1220, its head styles 86–100, and the render values at
+   2205–2226, 2915–2964 and 3001–3002).
+   ═══════════════════════════════════════════════════════════════════════════
+
+   EVERY SELECTOR IS UNDER `.pricing`. The page root also carries `.spectrum`,
+   which is what gives it the Spectrum ground (`--sp-page`, `--sp-card`,
+   `--sp-ink`), the film grain, the colour band and the footer's styling —
+   those live in spectrum.css and are shared with `/`. Nothing here restyles a
+   `.sp-*` class; this sheet only styles its own `pr-*` classes.
+
+   ── THE DESIGN'S NUMBERS, KEPT AS ITS NUMBERS ───────────────────────────────
+   The design writes its secondary text as the ink at an opacity (`--ink-dim`
+   .62 dark / .80 light, `--ink-faint` .55 / .72) and its accent family as
+   fixed mixes of #2A60E8 toward #0B0C0E (light) or #EFEEEA (dark). Both are
+   reproduced here as the same arithmetic over tokens, so the page reads the
+   way the file reads and still follows the theme.
+
+   The accent itself is the design's #2A60E8 with #F4F7FF on it, in BOTH
+   themes. Measured:
+   4.98:1 at rest. It is declared on this root, not typed into the rules, so
+   when `.spectrum` or `:root` carries the same value this line can go.       */
+
+.pricing {
+  --accent: #2A60E8;
+  --accent-ink: #F4F7FF;
+
+  --pr-ink: var(--sp-ink);
+  --pr-dim: color-mix(in srgb, var(--sp-ink) 62%, transparent);
+  --pr-faint: color-mix(in srgb, var(--sp-ink) 55%, transparent);
+  --pr-a84: color-mix(in srgb, var(--sp-ink) 84%, transparent);
+  --pr-a86: color-mix(in srgb, var(--sp-ink) 86%, transparent);
+  --pr-a90: color-mix(in srgb, var(--sp-ink) 90%, transparent);
+  --pr-a80: color-mix(in srgb, var(--sp-ink) 80%, transparent);
+  --pr-a72: color-mix(in srgb, var(--sp-ink) 72%, transparent);
+  --pr-line-06: color-mix(in srgb, var(--sp-ink) 6%, transparent);
+  --pr-line-09: color-mix(in srgb, var(--sp-ink) 9%, transparent);
+  --pr-line-10: color-mix(in srgb, var(--sp-ink) 10%, transparent);
+  --pr-line-11: color-mix(in srgb, var(--sp-ink) 11%, transparent);
+  --pr-line-13: color-mix(in srgb, var(--sp-ink) 13%, transparent);
+  --pr-line-16: color-mix(in srgb, var(--sp-ink) 16%, transparent);
+  --pr-line-30: color-mix(in srgb, var(--sp-ink) 30%, transparent);
+  --pr-wash-05: color-mix(in srgb, var(--sp-ink) 5%, transparent);
+  --pr-wash-055: color-mix(in srgb, var(--sp-ink) 5.5%, transparent);
+
+  /* The design's accent mixes, dark theme (toward paper #EFEEEA). */
+  --pr-paper: #EFEEEA;
+  --pr-deep: #0B0C0E;
+  --pr-accent-mid: color-mix(in srgb, var(--accent) 78%, var(--pr-paper));
+  --pr-accent-text: color-mix(in srgb, var(--accent) 60%, var(--pr-paper));
+  --pr-accent-bright: color-mix(in srgb, var(--accent) 42%, var(--pr-paper));
+  /* THE HOVER MOVES TOWARD INK, NOT PAPER. The design's hover (14% toward
+     #EFEEEA) measured 3.98:1 under #F4F7FF — the button failed AA exactly
+     while the pointer was on it. The same 14% toward #0B0C0E is #2654C9,
+     6.14:1: still a visible lift, now on the readable side. */
+  --pr-accent-hover: color-mix(in srgb, var(--accent) 86%, var(--pr-deep));
+  --pr-accent-wash: color-mix(in srgb, var(--accent) 8%, transparent);
+  --pr-accent-border: color-mix(in srgb, var(--accent) 24%, transparent);
+  --pr-accent-ink-wash: color-mix(in srgb, var(--accent-ink) 16%, transparent);
+  --pr-pro-bg: linear-gradient(170deg, color-mix(in srgb, var(--accent) 12%, transparent), var(--sp-card) 58%);
+
+  /* The tertiary yellow (TERTIARY #E8C547) — the saving badge's wash and ink.
+     Yellow reads on near-black but not on paper, so the ink follows the
+     scheme exactly as the design's `tertiaryText` does. */
+  --pr-tertiary: #E8C547;
+  --pr-tertiary-wash: color-mix(in srgb, var(--pr-tertiary) 16%, transparent);
+  --pr-tertiary-text: var(--pr-tertiary);
+
+  --pr-shadow-1: rgba(0, 0, 0, .5);
+  --pr-shadow-2: rgba(0, 0, 0, .8);
+
+  --pr-gutter: clamp(20px, 4vw, 52px);
+  --pr-gutter-tight: clamp(16px, 4vw, 52px);
+  --pr-ease: cubic-bezier(.23, 1, .32, 1);
+}
+
+[data-theme="light"] .pricing {
+  --pr-dim: color-mix(in srgb, var(--sp-ink) 80%, transparent);
+  --pr-faint: color-mix(in srgb, var(--sp-ink) 72%, transparent);
+  --pr-accent-mid: color-mix(in srgb, var(--accent) 86%, var(--pr-deep));
+  --pr-accent-text: color-mix(in srgb, var(--accent) 80%, var(--pr-deep));
+  --pr-accent-bright: color-mix(in srgb, var(--accent) 72%, var(--pr-deep));
+  --pr-tertiary-text: color-mix(in srgb, var(--pr-tertiary) 42%, var(--pr-deep));
+  --pr-shadow-1: rgba(26, 30, 42, .08);
+  --pr-shadow-2: rgba(26, 30, 42, .128);
+}
+
+.pricing .pr-shell { min-width: 0; }
+
+/* THE DESIGN PADS INSIDE ITS 1400px BOX. Every section there is
+   `max-width:1400px;margin:0 auto;padding:… clamp(20px,4vw,52px)`, so at 1440
+   the content starts at 72px, not 20px. The section carries both here. */
+.pricing .pr-hero,
+.pricing .pr-plans-sec,
+.pricing .pr-assure-sec,
+.pricing .pr-compare-sec,
+.pricing .pr-faq-sec {
+  max-width: 1400px;
+  margin-inline: auto;
+}
+
+/* The design's body sets no line-height (it is `normal`); the app's body sets
+   1.65. Every measure below that does not name its own is the design's. */
+.pricing > main { line-height: normal; }
+
+/* ── hero ─────────────────────────────────────────────────────────────────── */
+
+/* The design's nav spacer is `--chrome-h` here, the convention `/` uses. */
+.pricing .pr-hero {
+  padding: calc(var(--chrome-h) + clamp(56px, 8vw, 104px)) var(--pr-gutter) 0;
+  text-align: center;
+}
+
+.pricing .pr-h1 {
+  margin: 20px auto 0;
+  max-width: 20ch;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(34px, 6vw, 84px);
+  line-height: 1;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.pricing .pr-h1 em { font-style: normal; font-weight: 600; color: var(--pr-accent-mid); }
+
+.pricing .pr-sub {
+  margin: 26px auto 0;
+  max-width: 48ch;
+  font-size: clamp(16px, 1.5vw, 18.5px);
+  line-height: 1.6;
+  color: var(--pr-dim);
+  text-wrap: pretty;
+}
+
+/* ── the billing toggle ───────────────────────────────────────────────────── */
+
+.pricing .pr-billing {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  margin-top: 32px;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--pr-wash-055);
+  border: 1px solid var(--pr-line-09);
+  max-width: 100%;
+}
+
+.pricing .pr-billing-tab {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 20px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  color: var(--pr-dim);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .14s var(--pr-ease), background .16s ease, color .16s ease;
+}
+.pricing .pr-billing-tab:active { transform: scale(.96); }
+/* The design's tab is 37px tall; a finger gets the 44px floor. */
+@media (pointer: coarse) { .pricing .pr-billing-tab { min-height: 44px; } }
+.pricing .pr-billing-tab[aria-selected="true"] { background: var(--pr-ink); color: var(--sp-page); }
+.pricing .pr-billing-tab:focus-visible { outline: 2px solid var(--link, var(--pr-accent-text)); outline-offset: 3px; }
+
+.pricing .pr-billing-save {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--pr-tertiary-wash);
+  color: var(--pr-tertiary-text);
+}
+.pricing .pr-billing-tab[aria-selected="true"] .pr-billing-save {
+  background: color-mix(in srgb, var(--sp-page) 10%, transparent);
+  color: var(--sp-page);
+}
+
+/* ── the plan cards ───────────────────────────────────────────────────────── */
+
+.pricing .pr-plans-sec { padding: clamp(28px, 4vw, 56px) var(--pr-gutter-tight) 0; }
+
+.pricing .pr-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(16px, 2vw, 26px);
+}
+
+.pricing .pr-plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 24px;
+  background: var(--sp-card);
+  border: 1px solid var(--pr-line-11);
+  padding: clamp(26px, 3vw, 36px);
+  text-align: left;
+}
+.pricing .pr-plan--pro {
+  background: var(--pr-pro-bg);
+  border-color: var(--pr-accent-border);
+  box-shadow: 0 2px 4px -2px var(--pr-shadow-1), 0 22px 44px -24px var(--pr-shadow-2);
+  overflow: hidden;
+}
+.pricing .pr-plan-edge { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); }
+
+.pricing .pr-plan-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 26px;
+}
+.pricing .pr-plan-tier { font-family: var(--mono); font-size: 10.5px; letter-spacing: .2em; color: var(--pr-faint); }
+.pricing .pr-plan--pro .pr-plan-tier { color: var(--pr-accent-text); }
+.pricing .pr-plan-aside { font-size: 12.5px; color: var(--pr-faint); }
+.pricing .pr-plan-badge {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--pr-accent-wash);
+  color: var(--pr-accent-bright);
+  white-space: nowrap;
+}
+
+.pricing .pr-plan-price {
+  margin: 18px 0 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(46px, 5.2vw, 66px);
+  line-height: 1;
+  letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+}
+.pricing .pr-plan-amount { display: flex; align-items: baseline; }
+/* A WORD IS NOT A PRICE. "Unavailable" is what a visitor reads whenever
+   /api/get-prices cannot answer; at the price's 66px it filled the card and
+   read as the Pro tier's headline (the legacy page learned this at 1440). */
+.pricing .pr-plan-amount.is-word { font-size: clamp(28px, 3vw, 36px); letter-spacing: -.02em; }
+.pricing .pr-plan-per,
+.pricing .pr-plan-was {
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--pr-faint);
+}
+.pricing .pr-plan-was { text-decoration: line-through; }
+
+.pricing .pr-plan-note {
+  margin: 12px 0 0;
+  min-height: 2.6em;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--pr-faint);
+}
+
+/* ── the two buttons ──────────────────────────────────────────────────────── */
+
+.pricing .pr-cta {
+  margin-top: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 999px;
+  font-family: var(--display);
+  line-height: normal;
+  font-size: 15px;
+  cursor: pointer;
+  text-decoration: none;
+  background-image: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .16s var(--pr-ease), background .16s ease, color .16s ease, border-color .16s ease;
+}
+.pricing .pr-cta:hover { text-decoration: none; }
+.pricing .pr-cta:active { transform: scale(.978); }
+.pricing .pr-cta:focus-visible { outline: 2px solid var(--link, var(--pr-accent-text)); outline-offset: 3px; }
+
+.pricing .pr-cta--ghost {
+  padding: 15px 22px;
+  border: 1px solid var(--pr-line-16);
+  background: transparent;
+  color: var(--pr-ink);
+  font-weight: 500;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pricing .pr-cta--ghost:hover { background: var(--pr-wash-05); border-color: var(--pr-line-30); color: var(--pr-ink); }
+}
+
+.pricing .pr-cta--pro {
+  gap: 12px;
+  padding: 12px 13px 12px 24px;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 540;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pricing .pr-cta--pro:hover { background: var(--pr-accent-hover); color: var(--accent-ink); }
+}
+/* Loading, and the outage: the button stays in its place and its shape, but
+   it says what is true and does not invite a click. */
+.pricing .pr-cta--pro[aria-disabled="true"] {
+  cursor: default;
+  background: var(--pr-wash-055);
+  color: var(--pr-dim);
+  box-shadow: inset 0 0 0 1px var(--pr-line-11);
+}
+.pricing .pr-cta--pro[aria-disabled="true"]:active { transform: none; }
+
+.pricing .pr-cta-icon {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--pr-accent-ink-wash);
+  display: grid;
+  place-items: center;
+  transition: transform .16s var(--pr-ease);
+}
+.pricing .pr-cta--pro[aria-disabled="true"] .pr-cta-icon { background: var(--pr-line-06); }
+@media (hover: hover) and (pointer: fine) {
+  .pricing .pr-cta--pro:not([aria-disabled="true"]):hover .pr-cta-icon { transform: rotate(45deg); }
+}
+
+/* The outage note and its retry. Functional, so it takes the card's own
+   quiet voice rather than an alert colour: nothing is broken for the visitor,
+   Free keeps working. */
+.pricing .pr-plan-retry {
+  align-self: flex-start;
+  margin-top: 10px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--pr-line-16);
+  background: transparent;
+  color: var(--pr-ink);
+  font-family: var(--font);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pricing .pr-plan-retry:hover { background: var(--pr-wash-05); border-color: var(--pr-line-30); }
+}
+.pricing .pr-plan-retry:focus-visible { outline: 2px solid var(--link, var(--pr-accent-text)); outline-offset: 3px; }
+
+/* ── the lists ────────────────────────────────────────────────────────────── */
+
+.pricing .pr-plan-rule { display: block; margin-top: 28px; height: 1px; background: var(--pr-line-11); }
+.pricing .pr-plan--pro .pr-plan-rule { background: var(--pr-accent-border); }
+
+.pricing .pr-plan-label {
+  margin: 22px 0 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .18em;
+  color: var(--pr-faint);
+}
+.pricing .pr-plan--pro .pr-plan-label { color: var(--pr-accent-text); }
+
+.pricing .pr-plan-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 12px; flex: 0 0 auto; }
+.pricing .pr-plan-list li {
+  display: flex;
+  gap: 11px;
+  min-width: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--pr-a84);
+}
+.pricing .pr-plan--pro .pr-plan-list li { color: var(--pr-a90); }
+.pricing .pr-plan-list li.is-off { color: var(--pr-dim); }
+.pricing .pr-plan-mark { flex: 0 0 auto; margin-top: 4px; display: inline-flex; color: var(--pr-faint); }
+.pricing .pr-plan--pro .pr-plan-mark { color: var(--pr-accent-text); }
+
+/* ── assurances ───────────────────────────────────────────────────────────── */
+
+.pricing .pr-assure-sec { padding: clamp(22px, 3vw, 34px) var(--pr-gutter) 0; }
+.pricing .pr-assure {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(14px, 2.4vw, 34px);
+}
+.pricing .pr-assure li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--pr-a80); }
+.pricing .pr-assure-icon { display: inline-flex; color: var(--pr-accent-mid); }
+
+/* ── comparison ───────────────────────────────────────────────────────────────
+   A REAL <table>. The design draws this as a 1.5fr / 1fr / 1fr grid of spans
+   with the group labels as full-width lines between rows; here the group
+   labels are full-width `colgroup` header rows and every value has a row and
+   column header, so a screen reader hears "Saved projects, Free, 3". The
+   column proportions and the gap are the design's. */
+
+.pricing .pr-compare-sec { padding: clamp(56px, 9vw, 124px) var(--pr-gutter-tight) 0; }
+.pricing .pr-compare-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--pr-line-13);
+}
+.pricing .pr-h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 560;
+  font-size: clamp(28px, 4vw, 52px);
+  line-height: 1;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+
+/* The rows are the design's grid — `1.5fr 1fr 1fr`, gap clamp(10px,2.4vw,40px),
+   baseline-aligned (D:90) — laid over table elements. A table's own column
+   algorithm cannot express fr tracks with a gap (Chrome ignores calc() on
+   <col>), and the phone layout below has to restack the cells anyway, so the
+   table parts carry explicit roles in Pricing.jsx: a display change must not
+   cost a screen reader its row and column headers. */
+.pricing .pr-compare {
+  --pr-cmp-gap: clamp(10px, 2.4vw, 40px);
+  --pr-cmp-cols: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  display: block;
+  width: 100%;
+  border-collapse: collapse;
+}
+.pricing .pr-compare thead,
+.pricing .pr-compare tbody { display: block; }
+
+.pricing .pr-compare-headrow,
+.pricing .pr-compare-row {
+  display: grid;
+  grid-template-columns: var(--pr-cmp-cols);
+  gap: var(--pr-cmp-gap);
+  align-items: baseline;
+}
+.pricing .pr-compare-headrow > *,
+.pricing .pr-compare-row > * { display: block; padding: 0; text-align: left; min-width: 0; overflow-wrap: anywhere; }
+
+.pricing .pr-compare-headrow {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--pr-line-10);
+}
+.pricing .pr-compare-headrow th {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: .16em;
+  color: var(--pr-faint);
+}
+.pricing .pr-compare-headrow th:last-child { color: var(--pr-accent-bright); }
+
+.pricing .pr-compare-group { display: block; }
+.pricing .pr-compare-group th {
+  display: block;
+  padding: 26px 0 8px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: .18em;
+  text-align: left;
+  color: var(--pr-faint);
+}
+
+.pricing .pr-compare-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--pr-line-06);
+}
+.pricing .pr-compare-row th { font-size: 15px; font-weight: 400; line-height: 1.5; color: var(--pr-a86); }
+.pricing .pr-compare-row td { font-size: 13.5px; line-height: 1.5; color: var(--pr-a72); }
+.pricing .pr-compare-row td.is-pro { color: var(--pr-accent-text); }
+
+/* Below 760px the design stacks each row into one column, drops the header
+   row, and labels each value with its plan. The labels are pseudo-content for
+   the eye only; the accessible names still come from the header cells. */
+@media (max-width: 760px) {
+  .pricing .pr-compare thead { display: none; }
+  .pricing .pr-compare-row { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .pricing .pr-compare-row td::before {
+    content: attr(data-plan);
+    display: inline-block;
+    min-width: 36px;
+    color: var(--pr-faint);
+  }
+}
+
+/* ── questions ────────────────────────────────────────────────────────────── */
+
+.pricing .pr-faq-sec { padding: clamp(76px, 9vw, 124px) var(--pr-gutter); }
+.pricing .pr-faq {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: clamp(28px, 4vw, 64px);
+  align-items: start;
+}
+.pricing .pr-faq-head .pr-h2 { max-width: 18ch; }
+.pricing .pr-faq-lede { margin: 18px 0 0; max-width: 34ch; font-size: 15.5px; line-height: 1.62; color: var(--pr-dim); }
+.pricing .pr-faq-lede a { color: inherit; text-decoration: underline; text-decoration-color: var(--pr-line-30); text-underline-offset: 3px; }
+.pricing .pr-faq-lede a:hover { color: var(--pr-ink); text-decoration-color: currentColor; }
+
+.pricing .pr-faq-grid {
+  border-top: 1px solid var(--pr-line-13);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(24px, 3vw, 48px);
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .pricing .pr-faq-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.pricing .pr-faq-row { padding: 22px 0; border-bottom: 1px solid var(--pr-line-06); min-width: 0; }
+.pricing .pr-faq-row h3 { margin: 0; font-size: 16.5px; font-weight: 540; text-wrap: balance; }
+.pricing .pr-faq-row p { margin: 11px 0 0; max-width: 52ch; font-size: 14.5px; line-height: 1.6; color: var(--pr-dim); text-wrap: pretty; }
+
+/* The colour band directly after the questions: the section's own bottom
+   padding plus the band's margin is the design's spacing, so the band's top
+   margin is the one spectrum.css already gives `.sp-ramp--close`. */
+
+/* ── reduced motion ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  :where(html:not([data-reduced-motion="false"])) .pricing .pr-billing-tab,
+  :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta,
+  :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta-icon { transition: none; }
+  :where(html:not([data-reduced-motion="false"])) .pricing .pr-billing-tab:active,
+  :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta:active,
+  :where(html:not([data-reduced-motion="false"])) .pricing .pr-cta--pro:hover .pr-cta-icon { transform: none; }
+}
+:where(html[data-reduced-motion="true"]) .pricing .pr-billing-tab,
+:where(html[data-reduced-motion="true"]) .pricing .pr-cta,
+:where(html[data-reduced-motion="true"]) .pricing .pr-cta-icon { transition: none; }
+:where(html[data-reduced-motion="true"]) .pricing .pr-billing-tab:active,
+:where(html[data-reduced-motion="true"]) .pricing .pr-cta:active,
+:where(html[data-reduced-motion="true"]) .pricing .pr-cta--pro:hover .pr-cta-icon { transform: none; }

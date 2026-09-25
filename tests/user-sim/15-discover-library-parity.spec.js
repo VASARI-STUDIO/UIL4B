@@ -31,8 +31,12 @@ const TEASED = 3 // LOCKED_TEASE — placeholders shown before the wall
 // above an <h3> that repeated it verbatim — the motif this very file asserts
 // gone from the hero six lines below. See src/pages/PaletteGallery.jsx.
 const LIBRARIES = [
-  { route: '/discover/palettes', title: 'Palette Library', noun: 'palette', eyebrow: 'Everything you can browse' },
-  { route: '/discover/gradients', title: 'Gradient Library', noun: 'gradient', eyebrow: 'Curated collection' },
+  // The Palette Library follows the app file's palettes
+  // screen exactly: a blurb under the title, and a results row of h2 + count
+  // with no eyebrow. The Gradient Library is not drawn in that file and keeps
+  // its shape. `blurb` says whether the masthead carries a sentence.
+  { route: '/discover/palettes', title: 'Palette Library', noun: 'palette', eyebrow: null, blurb: true },
+  { route: '/discover/gradients', title: 'Gradient Library', noun: 'gradient', eyebrow: 'Curated collection', blurb: false },
 ]
 
 test.describe('Discover libraries share one header', () => {
@@ -55,7 +59,7 @@ test.describe('Discover libraries share one header', () => {
       // its rendered surface, which the two tests below this one measure
       // directly; a slot that is empty on both is still parity, and this
       // asserts the template cannot come back rather than asserting the slot.
-      await expect(hero.locator('p')).toHaveCount(0)
+      await expect(hero.locator('p')).toHaveCount(library.blurb ? 1 : 0)
       // REGRESSION GUARD (#surface-headers-read-as-ai). The founder marked both
       // of these "AI" on the Font Gallery masthead: a taxonomy eyebrow above an
       // h1 that already says it, and a display numeral counting the catalogue.
@@ -67,7 +71,8 @@ test.describe('Discover libraries share one header', () => {
       // Shared results row, with the live count announced politely.
       const resultHead = page.locator('.drh-head')
       await expect(resultHead).toBeVisible()
-      await expect(resultHead.locator('span')).toHaveText(library.eyebrow)
+      if (library.eyebrow) await expect(resultHead.locator('span')).toHaveText(library.eyebrow)
+      else await expect(resultHead.locator('span')).toHaveCount(0)
       await expect(resultHead.locator('p')).toHaveAttribute('aria-live', 'polite')
       await expect(resultHead.locator('p')).toContainText(new RegExp(`\\d+ ${library.noun}`))
 
@@ -89,7 +94,10 @@ test.describe('Discover libraries share one header', () => {
         return {
           eyebrow: !!hero.querySelector('.dgh-eyebrow'),
           h1: !!hero.querySelector('h1'),
-          description: !!hero.querySelector('p'),
+          // The DESCRIPTION is per library (the palettes
+          // screen draws one, the Gradient Library is not drawn), and the
+          // first test in this block asserts it per library. Structure is
+          // what is compared here.
           mark: !!hero.querySelector('.dgh-mark'),
           radius: styles.borderTopLeftRadius,
           background: styles.backgroundColor,
@@ -145,7 +153,7 @@ test.describe('Discover libraries share one header', () => {
       const h1 = await hero.getByRole('heading', { level: 1 }).innerText()
       expect(h1.endsWith('.')).toBe(false)
 
-      // THE DESCRIPTION RAMP MOVED OUT OF THIS OBJECT (2026-09-13) and is
+      // THE DESCRIPTION RAMP MOVED OUT OF THIS OBJECT and is
       // compared separately below. It used to be read as
       // `getComputedStyle(el.querySelector('p'))` unconditionally, which throws
       // outright on a masthead with no description - and two of these four have
@@ -328,7 +336,7 @@ test.describe('Discover libraries share one header', () => {
 // BRAND_PALETTES existed but only the Palette Builder could see them. They now
 // browse alongside the curated set, and must stay TELLABLE APART from it.
 test.describe('the Palette Library carries the brand systems', () => {
-  // ── WHICH VIEWER SEES A BRAND SYSTEM, SINCE THE TIER CAP (2026-09-18) ──────
+  // ── WHICH VIEWER SEES A BRAND SYSTEM, SINCE THE TIER CAP ──────
   //
   // The founder's rungs are 3 / 10 / everything, counted down the library in
   // its own order, and the brand systems sit after the 64 curated palettes. So
@@ -393,7 +401,8 @@ test.describe('the Palette Library carries the brand systems', () => {
     await page.getByRole('button', { name: 'Brand', exact: true }).click()
     await expect(page.locator('.pgal-card')).toHaveCount(BRAND_LIBRARY_PALETTES.length)
     await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(0)
-    await expect(page.locator('.drh-head h2')).toHaveText('Identities you already know')
+    // The design's heading for the Brand filter (App file, galHeading).
+    await expect(page.locator('.drh-head h2')).toHaveText('Brand palettes')
     await expect(page.locator('.drh-head p')).toHaveText(`${BRAND_LIBRARY_PALETTES.length} palettes`)
 
     await page.getByRole('button', { name: 'Curated', exact: true }).click()

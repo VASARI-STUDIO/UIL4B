@@ -1,5 +1,6 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { readSeed } from './palette-helpers.js'
 
 async function enter(page) {
   await go(page, '/create/palette')
@@ -49,7 +50,7 @@ test.describe.skip('UI System Builder', () => {
     watch(page, 'designer evaluating UI mode without committing it')
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await go(page, '/create/palette')
-    const seed = await page.getByRole('textbox', { name: 'Seed colour hex' }).inputValue()
+    const seed = await readSeed(page)
     const palette = await page.locator('.plb-col .plb-hex').allTextContents()
 
     await page.getByRole('button', { name: 'Open UI System Pro mode' }).click()
@@ -66,7 +67,7 @@ test.describe.skip('UI System Builder', () => {
     await expect(page.locator('.uis-lab-canvas')).toHaveAttribute('data-theme', 'dark')
 
     await page.getByRole('button', { name: 'Back to palette' }).click()
-    await expect(page.getByRole('textbox', { name: 'Seed colour hex' })).toHaveValue(seed)
+    await expect(page.locator('.plb-seedchip-hex')).toHaveText(seed)
     expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(palette)
   })
 

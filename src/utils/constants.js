@@ -1,52 +1,12 @@
-// ── THE OWNER'S ADDRESS IS NOT IN THIS FILE, DELIBERATELY ───────────────────
+// Owner and administrator identities for the client.
 //
-// Measured against LIVE production on 2026-09-13, with no credentials sent:
+// Addresses are stored only as SHA-256 digests (see ownerEmailDigest) and
+// lookups hash their input before comparing. The client admin check decides
+// what to render; access is enforced server-side against a verified Firebase ID
+// token (api/verify-admin.js, api/_lib/adminEmails.js).
 //
-//   curl https://uil4b.com/assets/constants-KnpCfm5i.js
-//   -> 200, 1945 bytes, containing the founder's personal address TWICE
-//
-// This module sits in the `modulepreload` list of all 39 prerendered shells, so
-// that chunk was fetched in the FIRST REQUEST WAVE by every anonymous visitor,
-// on every route, signed in or not. Two things followed:
-//
-//   1. a personal address, harvestable by any scraper, published on every page;
-//   2. the exact account to phish or credential-stuff in order to reach /admin,
-//      named for the attacker. The address alone grants nothing — it is still a
-//      step, and it was a step this repository handed over for free.
-//
-// So the address is stored here as a SHA-256 digest, and the two lookups hash
-// their input before comparing. BOTH occurrences are gone: ADMIN_EMAILS became
-// ADMIN_EMAIL_DIGESTS, and OWNER_HANDLES — which was KEYED by the same address
-// — is re-keyed by the same digest. Hashing only the first would have fixed
-// nothing.
-//
-// ── WHAT THIS IS NOT ───────────────────────────────────────────────────────
-//
-// The digest is not a secret and does not pretend to be one. The scope string
-// below is public, and anyone who already knows the address can confirm it in
-// one line. Neither this nor the plaintext it replaces was ever a security
-// boundary: that is /api/verify-admin and `isAdminEmail` in api/_lib/plans.js,
-// both of which read a VERIFIED Firebase ID token. api/_lib/admin.js keeps its
-// own plaintext copy and should — it is never bundled and never reaches a
-// browser. What the digest removes is the DISCLOSURE, which is the whole defect.
-//
-// ── WHY NOT AN ENV VAR ─────────────────────────────────────────────────────
-//
-// `import.meta.env.VITE_*` is substituted by Vite as a STRING LITERAL at build
-// time. A variable holding the address would put exactly the same plaintext in
-// exactly the same chunk — that does not fix the leak, it relocates its source.
-// It only works if the variable holds a digest, which is this, plus a
-// deployment step that can silently go missing and lock the founder out of
-// /admin on a build nobody notices. A constant beats configuration here.
-//
-// ── WHY A HAND-WRITTEN SHA-256 AND NOT crypto.subtle ───────────────────────
-//
-// `crypto.subtle.digest` is async. All six call sites decide what to RENDER — a
-// route guard, a nav item, a command-palette entry, a table row — synchronously,
-// during render. Making them async would trade a leak for a flash of the wrong
-// surface, which is a change to what a visitor sees. Forty lines of pure
-// arithmetic is the cheaper trade, and it is checked against node:crypto in
-// tests/unit/owner-email-not-public.test.js rather than trusted.
+// sha256Hex is synchronous because its callers decide what to render during
+// render. The unit tests check it against node:crypto.
 
 const K = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -112,65 +72,27 @@ function sha256Hex(text) {
   return hex
 }
 
-// Domain separation, not a secret. It stops a digest lifted from this bundle
-// from being answered by a rainbow table of bare email hashes. Bump the version
-// suffix and recompute FOUNDER_DIGEST if it ever changes.
+// Domain-separation prefix for the digests below. Changing it requires
+// recomputing every digest constant.
 const OWNER_DIGEST_SCOPE = 'uil4b/owner-email/v1:'
 
 /**
- * The value both maps below are keyed by. Lower-cases exactly as the plaintext
- * comparisons it replaces did, so nothing that matched before stops matching.
+ * The value both maps below are keyed by. The address is lower-cased first.
  */
 export function ownerEmailDigest(email) {
   return sha256Hex(OWNER_DIGEST_SCOPE + String(email).toLowerCase())
 }
 
-// ownerEmailDigest of the founder's address. The address itself lives in
-// api/_lib/admin.js and api/_lib/plans.js, server-side, where it belongs;
-// tests/unit/owner-email-not-public.test.js reads it from there and proves this
-// constant is still the digest of it, so the two cannot drift in silence.
+// ownerEmailDigest of the site owner's address.
 const FOUNDER_DIGEST = 'a21225151329be64a7df9091c4a9cc016f6925ac48fa1f7321004537578a1ca1'
 
-/* THE TEST ADMIN, AND WHY IT IS A DIGEST TOO.
- *
- * The acceptance suite's admin fixture signs in as `admin@uil4b.test` — a
- * reserved domain, chosen when the server allowlist moved to `ADMIN_EMAILS` so
- * the founder's real address stopped being the thing tests hardcode. But THIS
- * list is the client gate, `RequireAdmin` reads it, and a digest cannot be
- * satisfied by a substitute address. So four admin tests went red the moment
- * the fixture changed: the server said yes and the browser said no.
- *
- * This is the digest of that reserved address, and it is only in the list under
- * `--mode test`. `import.meta.env.MODE` is replaced at BUILD time by Vite, so
- * the entry is not dead code in a production bundle — it is absent from it, the
- * same mechanism that keeps the test auth double out of production
- * (tests/unit/test-session-not-in-production.test.js proves that separately).
- *
- * It is a digest rather than a plaintext for consistency, not secrecy: an
- * address on a reserved TLD that cannot receive mail is not a credential. What
- * matters is that the gate takes one shape, so nobody later adds a plaintext
- * branch here and reopens the disclosure this whole file exists to close. */
+// ownerEmailDigest of the acceptance-suite admin fixture. Included only when
+// import.meta.env.MODE is 'test', which Vite resolves at build time, so it is
+// absent from production bundles.
 const TEST_ADMIN_DIGEST = '2adf140688fd8cebaceeddf03ce7cddc7b73a131dcb2926aa18c39781b2e569f'
 
-/* THE ROLE ADDRESS, ADDED 2026-09-23 — and BOTH are listed on purpose.
- *
- * `admin@uil4b.com` is the better administrator: a role on the product's own
- * domain rather than the founder's personal identity, so it can be handed over,
- * revoked or shared without touching his own account.
- *
- * BOTH stay listed because this gate and the SERVER's `ADMIN_EMAILS` are
- * separate lists, and the failure when they disagree is confusing rather than
- * loud: the server would grant the API while this gate bounced the browser off
- * /admin, or worse, the reverse — the admin UI rendering for somebody whose
- * every request then 403s. Listing both here means whichever address
- * `ADMIN_EMAILS` is set to, the browser agrees with the server, and there is a
- * second way in if the domain mailbox ever stops being able to sign in.
- *
- * This is NOT a weakening. This list only decides what to RENDER — the bundle
- * ships to every visitor, so it can hide a surface and can never protect data.
- * `api/_lib/adminEmails.js` is the boundary, it reads a VERIFIED Firebase ID
- * token, and an address that is not in `ADMIN_EMAILS` gets nothing from it no
- * matter what this file says. */
+// ownerEmailDigest of the administrator role address. The client list mirrors
+// the server allowlist so rendered admin surfaces match what the server grants.
 const ROLE_ADMIN_DIGEST = '2b612d4e9520b271cc3e3745856a8b12c49d1280d7cfa54e624f637fa2b0b70d'
 
 export const ADMIN_EMAIL_DIGESTS = import.meta.env?.MODE === 'test'
@@ -178,60 +100,27 @@ export const ADMIN_EMAIL_DIGESTS = import.meta.env?.MODE === 'test'
   : [FOUNDER_DIGEST, ROLE_ADMIN_DIGEST]
 
 /**
- * Client-side admin check. Keep in sync with `isAdminEmail` in
- * api/_lib/plans.js — that one reads a verified Firebase ID token and is the
- * actual security boundary. THIS one only decides what to render: the bundle
- * ships to every visitor, so it can hide a surface but can never protect data.
- * Anything that must not leak belongs behind /api/verify-admin, the way the
- * Admin dashboard does it.
- *
- * Six call sites had this expression inlined and one of them lower-cased
- * differently, so it lives here now. Four of them were STILL inlining
- * `ADMIN_EMAILS.includes(...)` against the plaintext list; three now call this,
- * and the fourth cannot be touched — see ADMIN_EMAILS below.
+ * Client-side admin check. It only decides what to render; data access is
+ * enforced by /api/verify-admin and the server allowlist.
  */
 export function isAdminEmail(email) {
   return !!email && ADMIN_EMAIL_DIGESTS.includes(ownerEmailDigest(email))
 }
 
 /**
- * The allowlist as a MEMBERSHIP TEST, not as a list of addresses.
- *
- * This exists for exactly one caller. src/contexts/SubscriptionContext.jsx
- * writes `ADMIN_EMAILS.includes(user.email.toLowerCase())`, and it is
- * FOUNDER-GATED: tests/unit/firebase-deferral.test.js fails if this branch
- * modifies it, because docs/design/firebase-deferral-gated.patch is waiting on
- * approval to land in that exact file and a quiet edit here would invalidate
- * it. The three other call sites that inlined the same expression were not
- * gated and call isAdminEmail() directly now.
- *
- * So the SHAPE had to survive even though the contents could not, and keeping
- * the contents was never an option: that array WAS the leak. It is deliberately
- * not a list — there is nothing in it to index, iterate, spread or print, which
- * is the whole point. Returning digests under this name would be worse than
- * either: `.includes(anAddress)` would quietly answer false and the founder
- * would lose his Pro entitlement on a green build.
- *
- * When the gate lifts, replace that one call with isAdminEmail(user?.email) and
- * delete this.
+ * The allowlist as a membership test with an `includes` method, for callers
+ * that use `ADMIN_EMAILS.includes(email)`. It holds no addresses and is not
+ * indexable.
  */
 export const ADMIN_EMAILS = Object.freeze({
   includes: (email) => isAdminEmail(email),
 })
 export const PUBLIC_OWNER_ID = 'uil4b-founder'
 
-// Site owner(s). Keyed by ownerEmailDigest(email) — it used to be keyed by the
-// lowercase address, which is how the address reached the bundle a SECOND time.
-// When a matching user's name renders anywhere in the app, UserName upgrades it
-// to this canonical handle + crown and a "Site owner" tooltip.
-//
-// THE VALUES ARE DELIBERATE PUBLIC IDENTITY AND STAY VERBATIM. The founder's
-// name is meant to be public; his address is not. Removing the crown, the
-// handle, the tooltip or the publicId is a product change, not a cleanup, and
-// tests/unit/owner-email-not-public.test.js fails if one goes missing.
-//
-// Distinct from ADMIN_EMAIL_DIGESTS (access control) — this is purely
-// presentational identity.
+// Site owner display identity, keyed by ownerEmailDigest(email). When a
+// matching user's name renders, UserName shows this handle, crown and a
+// "Site owner" tooltip. Presentational only; access control is
+// ADMIN_EMAIL_DIGESTS.
 export const OWNER_HANDLES = {
   [FOUNDER_DIGEST]: {
     name: 'Dylan Coleman',

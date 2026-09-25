@@ -202,10 +202,13 @@ test.describe('the Discover surfaces say what they are made of', () => {
       ).toHaveText(new RegExp(`^0 ${lib.noun}s$`))
 
       const whenEmpty = await landmarks(page)
+      // Signed out, the closing offer replaces the locked tease once the tease
+      // has nothing to tease, so it may join the list; nothing may leave it.
+      const CLOSE = 'region("Can’t find what you’re looking for?")'
       expect(
-        whenEmpty.join(' | '),
+        whenEmpty.filter((l) => l !== CLOSE).join(' | '),
         'the landmark list changed when the grid emptied',
-      ).toBe(onArrival.join(' | '))
+      ).toBe(onArrival.filter((l) => l !== CLOSE).join(' | '))
 
       // Said directly, so a future change that keeps the LIST stable by
       // deleting the region from both states still fails here.

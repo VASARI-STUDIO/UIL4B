@@ -13,7 +13,7 @@
 // that make it a fix rather than a smaller version of the same bug —
 // continuity, monotonicity and magnetism — plus the callers that must not
 // change. The rendered proof (a real drag across zero) is in
-// tests/user-sim/17-founder-batch-3.spec.js.
+// tests/user-sim/17-nav-auth-fontpair-temperature.spec.js.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { snapToTarget } from '../../src/utils/sliderKeys.js'

@@ -7,7 +7,19 @@
  * including over the old `.fc-tabs` / `.fc-alpha` / `.fc-drop` rules that still
  * sit in global.css, which this lane may not edit.
  *
- * ── SPECTRUM PASS, 2026-09-23 ───────────────────────────────────────────────
+ * ── THE TOOL PATTERN ─────────────────────────────────────────────────────────
+ *
+ * The root is also the ToolLayout root (`.tl.fc`): the sticky tool toolbar
+ * carries the name, the Alpha tag and the way to the 3D viewer, so the page
+ * has no hero. The mode tabs sit under it as a row of pills. Each mode's
+ * bench is the canvas column beside a side column that holds the settings
+ * card and, under it, the run's action bar (Convert / Build / Extract). At
+ * 960px and below the bench is one column and the action bar is pinned to the
+ * bottom of the screen, so the run's action is in reach from the frames or
+ * the source and its result — which sits directly under them — is brought
+ * into view when the run finishes (revealResult in converter/shared.js).
+ *
+ * ── SPECTRUM PASS ───────────────────────────────────────────────────────────
  *
  * The page moved out of deferred/studio.css (where every `fc` rule lived beside
  * the keyboard overlay, the colour-system popup and the quota meter) and out
@@ -24,10 +36,9 @@
  *   object, decision, action in one column under 900px, which is the order
  *   the queue comment in FileConverter.jsx was measured into.
  *
- * - CONTROLS ARE RECTANGLES. 12px buttons and 10px fields over a hairline, as
- *   in the app file and as /create/tint and /admin already do. 999px is kept
- *   for the one meter-shaped object, the progress bar. The tabs were a pill
- *   segmented control; they are an underline tab row now, and real ARIA tabs.
+ * - BUTTONS ARE PILLS (--radius-pill), as on the sales page and in the shared
+ *   ToolButton; fields keep 10px corners over a hairline. The mode tabs are
+ *   real ARIA tabs drawn as pills.
  *
  * - ACCENT IS SPENT ON THE ACTION. `--accent-strong` is gone (the ALPHA tag
  *   was filled with it; the old spinner and progress bar used `--brand`). The
@@ -43,42 +54,19 @@
 .fc {
   --fc-ease: cubic-bezier(.23, 1, .32, 1);
   --fc-check: repeating-conic-gradient(var(--bg-2) 0 25%, var(--card) 0 50%) 0 0 / 16px 16px;
+  /* The sticky tool toolbar's height (9px padding, a 36px row, the hairline);
+     the side column sticks under it. */
+  --fc-bar-h: 55px;
+  --fc-pad: clamp(12px, 2vw, 20px);
   min-width: 0;
-  padding-bottom: var(--s-7);
 }
 
-/* ── Hero ─────────────────────────────────────────────────────────────────── */
-
-.fc .fc-hero { margin: 0 0 var(--s-6); }
-
-/* Spectrum's hero metrics, the same step /create/tint and /create/gradient use. */
-.fc .fc-hero h1 {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  margin: 0 0 var(--s-4);
-  font-family: var(--display);
-  font-size: clamp(38px, 5.6vw, 72px);
-  font-weight: 600;
-  line-height: .96;
-  letter-spacing: -.045em;
-  color: var(--t0);
-  text-wrap: balance;
-}
-
-.fc .fc-hero p {
-  max-width: 62ch;
-  margin: 0;
-  font-size: 15.5px;
-  line-height: 1.62;
-  color: var(--t1);
-  text-wrap: pretty;
-}
+/* The Alpha tag rides the toolbar row. */
 
 /* A status tag, not a badge: mono, hairline, neutral ink. It was a filled
    `--accent-strong` chip, the loudest object in the header. */
 .fc .fc-alpha {
+  flex: 0 0 auto;
   margin: 0;
   padding: 4px 8px;
   font-family: var(--mono);
@@ -93,25 +81,25 @@
   border-radius: var(--radius-xs);
 }
 
-/* ── Tabs ─────────────────────────────────────────────────────────────────── */
+/* ── Modes ────────────────────────────────────────────────────────────────── */
 
-/* ONE ROW AT EVERY WIDTH. At 320 the row wrapped and put "Extract frames" on a
-   second line under the first line's underline; it scrolls sideways instead.
-   The rule under the row is an inset shadow rather than a border so a tab's
-   own 2px underline can sit on it without a negative margin, which a
-   scrolling row would clip. */
+.fc .fc-modes { display: grid; gap: 10px; margin: 0 0 16px; }
+
+/* ONE ROW AT EVERY WIDTH: the four modes are pills that scroll sideways at
+   320 rather than wrapping. The selected pill is the ink wash of the tool
+   pattern's chips; the accent belongs to each mode's one action. */
 .fc .fc-tabs {
   display: flex;
   flex-wrap: nowrap;
-  gap: 2px 4px;
-  margin: 0 0 var(--s-3);
+  gap: 5px;
+  margin: 0;
   padding: 0;
   overflow-x: auto;
   scrollbar-width: none;
   background: none;
   border: 0;
   border-radius: 0;
-  box-shadow: inset 0 -1px 0 var(--border);
+  box-shadow: none;
 }
 .fc .fc-tabs::-webkit-scrollbar { display: none; }
 
@@ -119,63 +107,45 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  min-height: 40px;
+  min-height: 36px;
   white-space: nowrap;
   padding: 0 14px;
   font-family: var(--font);
-  font-size: 13.5px;
-  font-weight: 540;
-  letter-spacing: -.005em;
-  color: var(--t2);
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--tl-dim);
+  background: transparent;
+  border: 1px solid var(--tl-line);
+  border-radius: 999px;
   box-shadow: none;
   cursor: pointer;
-  transition: color var(--dur-1) ease, border-color var(--dur-1) ease;
+  transition: color var(--dur-1) ease, background var(--dur-1) ease, border-color var(--dur-1) ease;
 }
 
-.fc .fc-tab:hover { color: var(--t0); }
+.fc .fc-tab:hover { color: var(--tl-ink); }
 
-/* The selected tab is ink, not accent: the accent on this page belongs to the
-   one action in each panel. */
 .fc .fc-tab[aria-selected="true"] {
-  color: var(--t0);
-  border-bottom-color: var(--t0);
+  color: var(--tl-ink);
+  background: var(--tl-wash-on);
+  border-color: var(--tl-line-on);
 }
 
-.fc .fc-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fc .fc-tab:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
 
-/* ── Where 3D went ───────────────────────────────────────────────────────────
-   One line under the tabs, replacing a "3D → Blender · soon" tab that led to a
-   disabled button. The link is the only accent-coloured text on the line. */
-.fc .fc-3d {
-  margin: 0 0 var(--s-5);
-  font-size: 13px;
+.fc .fc-about {
+  max-width: 78ch;
+  margin: 0;
+  font-size: 12.5px;
   line-height: 1.55;
-  color: var(--t2);
+  color: var(--tl-dim);
 }
 
-/* INLINE, not an inline-flex box: a 24px (44px on touch) box taller than the
-   13px line opened a loose gap wherever the sentence wrapped. A link inside a
-   sentence is the inline exception in WCAG 2.5.8, so it keeps the line. */
-.fc .fc-3d a {
-  display: inline;
-  font-weight: 540;
-  /* --accent-mid, not the global link's --accent-strong: that one is a
-     per-theme literal that does not follow --accent. Contrast measured in
-     tests/user-sim/71-media-tools-breakpoints.spec.js. */
-  color: var(--accent-mid);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  border-radius: var(--radius-xs);
+.fc .fc-3d-note {
+  margin: 20px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--tl-dim);
 }
-
-.fc .fc-3d a:hover { color: var(--accent-text); }
-
-.fc .fc-3d a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── The bench: canvas column + inspector ─────────────────────────────────── */
 
@@ -192,14 +162,40 @@
   min-width: 0;
 }
 
-.fc .fc-inspector {
+/* The side column is ONE card: the settings, then the action bar under a
+   hairline. It sticks under the toolbar, and when it is taller than the
+   screen the settings scroll inside it so the action never leaves. */
+.fc .fc-side {
   position: sticky;
-  top: var(--nav-clear);
+  top: calc(var(--chrome-h) + var(--fc-bar-h) + 12px);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  max-height: calc(100dvh - var(--chrome-h) - var(--fc-bar-h) - 24px);
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-2xl);
 }
+
+.fc .fc-inspector {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.fc .fc-actionbar {
+  flex: none;
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.fc .fc-actionbar-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.fc .fc-actionbar-row .fc-btn--wide { flex: 1 1 160px; width: auto; }
 
 .fc .fc-insp-sec {
   display: grid;
@@ -301,7 +297,7 @@
   color: var(--t0);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background var(--dur-1) ease, border-color var(--dur-1) ease, transform var(--dur-1) var(--fc-ease);
 }
@@ -320,15 +316,13 @@
    themes and has undone a contrast fix on this branch before. */
 .fc .fc-btn--primary {
   color: var(--accent-ink);
-  background: var(--accent-mid);
+  background: var(--accent-fill);
   border-color: transparent;
 }
 
-.fc .fc-btn--primary:hover:not(:disabled) { background: var(--accent-text); border-color: transparent; }
+.fc .fc-btn--primary:hover:not(:disabled) { background: var(--accent-fill-hover); border-color: transparent; }
 
 .fc .fc-btn--wide { width: 100%; }
-
-.fc .fc-btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .fc .fc-actions { gap: 10px; }
 
@@ -484,7 +478,7 @@
   color: var(--t1);
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: color var(--dur-1) ease, border-color var(--dur-1) ease;
 }
@@ -867,15 +861,33 @@
 
 /* ── Widths ───────────────────────────────────────────────────────────────── */
 
-@media (max-width: 900px) {
-  .fc .fc-bench { grid-template-columns: minmax(0, 1fr); }
-  .fc .fc-inspector { position: static; }
+/* ONE COLUMN FROM 960px DOWN. The bench stacks object, result, settings, and
+   the side card dissolves (display: contents) so its action bar becomes a
+   child of the bench: pinned to the bottom of the screen for as long as any
+   of the bench is on it. The settings keep their card. */
+@media (max-width: 960px) {
+  .fc .fc-bench { display: flex; flex-direction: column; align-items: stretch; }
+  .fc .fc-side { display: contents; }
+  .fc .fc-inspector {
+    overflow: visible;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+  }
+  .fc .fc-actionbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin: 0 calc(-1 * var(--fc-pad));
+    padding: 10px var(--fc-pad) calc(10px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--bg-0) 90%, transparent);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--tl-hair);
+  }
 }
 
 @media (max-width: 640px) {
-  .fc .fc-hero { margin-bottom: var(--s-5); }
-  .fc .fc-hero p { font-size: 14.5px; }
-  .fc .fc-tab { padding: 0 11px; font-size: 13px; }
   .fc .fc-video { max-height: 260px; }
 }
 
@@ -887,6 +899,7 @@
 /* Touch: every control this page draws reaches 44px under a coarse pointer
    (24px is the floor everywhere else, and the smallest here is 28). */
 @media (pointer: coarse) {
+  .fc { --fc-bar-h: 63px; }
   .fc .fc-tab,
   .fc .fc-btn,
   .fc .fc-field,

@@ -27,9 +27,8 @@ import '../styles/pages/palette-gallery.css'
 
 // ── TWO QUESTIONS, TWO TRAYS ────────────────────────────────────────
 //
-// Founder request (2026-09-07): "for our pallete library lets include filters
-// of neutral, and others" — all eight of Neutral, Warm, Cool, Pastel, Vivid,
-// Dark, Light, Monochrome.
+// Mood filters: all eight of Neutral, Warm, Cool, Pastel, Vivid, Dark, Light,
+// Monochrome.
 //
 // Those eight did not go into the tray the page already had, and the reason is
 // the whole of this change. That tray was ONE single-select group holding
@@ -96,8 +95,8 @@ const MOOD_FILTERS = [
 
 // ── Categories, in browse order ─────────────────────────────────────────────
 //
-// Founder request (2026-08-08): "trending/popular first, then brand palettes,
-// then community". Two of those three do not exist yet, and neither is faked:
+// The intended order is trending/popular first, then brand palettes, then
+// community. Two of those three do not exist yet, and neither is faked:
 //
 //   TRENDING is blocked on real usage data. There is no ranking signal in the
 //   product — see the `upgrade-activation-events` queue item — and sorting by
@@ -149,6 +148,15 @@ const MOODS = new Map(LIBRARY_PALETTES.map((palette) => [palette.id, classifyPal
 // "blue", "green", "warm" and "pastel" each returned 0 palettes while the
 // Gradient Library answered all four. The moods were classified one line up
 // and never indexed. The classification is handed in rather than re-run.
+// The card's meta line, as the design writes it: "Warm, 5 colours" — the
+// palette's first mood in MOOD_IDS order, then its size. Every mood comes from
+// the classifier above, so the word is measured, not tagged.
+const cardMeta = (palette) => {
+  const moods = MOODS.get(palette.id) || {}
+  const first = MOOD_IDS.find((id) => moods[id])
+  const size = `${palette.colors.length} ${palette.colors.length === 1 ? 'colour' : 'colours'}`
+  return first ? `${MOOD_LABELS[first]}, ${size}` : size
+}
 const HAYSTACKS = new Map(LIBRARY_PALETTES.map((palette) => [palette.id, paletteHaystack(palette, MOODS.get(palette.id))]))
 
 export default function PaletteGallery({ toast }) {
@@ -231,9 +239,8 @@ export default function PaletteGallery({ toast }) {
   // beneath it, which broke in two ways at once. It MIS-DESCRIBED the page —
   // browse mode shows curated AND brand, so the head named the first of two
   // groups as if it were the whole library — and it put a taxonomy eyebrow
-  // roughly forty pixels above an <h3> that repeated it word for word, which is
-  // the exact motif the founder marked "AI" on the Font Gallery masthead and
-  // that #391 was meant to have finished off. Measured on the rendered page:
+  // roughly forty pixels above an <h3> that repeated it word for word, a motif
+  // that reads as generated. Measured on the rendered page:
   // "CURATED COLLECTION / Colours worth building with / 71 palettes" sat
   // directly on top of "Curated collection / 64".
   //
@@ -251,10 +258,16 @@ export default function PaletteGallery({ toast }) {
   // in bands and narrows to a flat list: when it bands, its eyebrow is a claim
   // about scope ("Hand-picked, not scraped") precisely so it cannot restate the
   // band headings; when it narrows, it names what was matched.
-  const eyebrow = group === 'brand' ? 'Brand systems'
+  // THE DESIGN'S HEADING, NO EYEBROW (UIL4B App.dc.html, palettes screen,
+  // line 252: an h2 and the count over a hairline). The h2 is the design's
+  // `galHeading` for the collection filter; the eyebrow that sat above it is
+  // gone, which also retires the "taxonomy label restating the heading under
+  // it" problem the note above describes — there is no label left to restate.
+  // A mood alone reaches into both collections, so only the collection filter
+  // may rename the heading.
+  const heading = group === 'brand' ? 'Brand palettes'
     : group === 'curated' ? 'Curated collection'
-      : browsing ? 'Everything you can browse'
-        : 'Across both collections'
+      : 'Colours worth building with'
 
   // The teased tail of the library: on the Pro rung's near side, three
   // placeholders and one wall. Three is the gallery's desktop column count, so
@@ -309,18 +322,13 @@ export default function PaletteGallery({ toast }) {
             without a name this is an unexplained second grid. */}
         <h4 className="sr-only" id="pgl-locked-more">Palettes included with Pro</h4>
         <LibraryGrid className="pgal-grid" labelledBy="pgl-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} />)}
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} gate="palette-library-locked-card" />)}
         </LibraryGrid>
         <LockedTeaseCta
           gate="palette-library-brand-lock"
           heading={`Another ${lockedCount} ${lockedCount === 1 ? 'palette' : 'palettes'} with Pro`}
           body={`Free covers ${browsable.length} of the ${LIBRARY_PALETTES.length}. Pro opens the remaining ${lockedCount}, including every brand system.`}
           action="See what Pro includes"
-          modal={{
-            eyebrow: 'Pro colour tools',
-            title: 'The full brand library',
-            subtitle: `Free covers ${browsable.length} of the ${LIBRARY_PALETTES.length} palettes. Pro opens the remaining ${lockedCount}, and a brand system applies the brand’s whole colour system rather than its swatches alone.`,
-          }}
         />
       </>
     )
@@ -328,19 +336,20 @@ export default function PaletteGallery({ toast }) {
 
   return (
     <div className="sec lib-surface pgl-page">
-      {/* NO `description` (founder decision, 2026-09-13). The sentence that sat
-          here — "Colour systems with a point of view … make it yours." — was the
-          same template line the Gradient Library ran, word for word in its second
-          half, and it is why both pages scored 7 on purpose-and-content: a
-          sentence written to fit any catalogue describes none of them. It is
-          deleted rather than replaced; the founder owns the replacement if one is
-          wanted, and the /discover card already says what this library holds.
-          The masthead no longer opens a hole when the copy is short — see the
+      {/* The design's blurb, with the one fact in it made true: the file says
+          "Seventy-one", the library holds 101 today (64 curated, 37 brand
+          systems, 30 of them Pro), so the number is derived rather than typed.
+          The masthead does not open a hole when the copy is short — see the
           height note above .dgh-hero in global.css. */}
-      <DiscoverGalleryHero title="Palette Library" />
+      <DiscoverGalleryHero
+        title="Palette Library"
+        description={`${LIBRARY_PALETTES.length} palettes, named for the job they do. Open one and it lands in the builder with every stop editable.`}
+      />
 
       <LibraryToolbar
         className="pgl-toolbar"
+        quick={0}
+        activeFilters={(group !== 'all' ? 1 : 0) + (mood !== 'all' ? 1 : 0)}
         search={{
           value: query,
           onChange: setQuery,
@@ -349,7 +358,14 @@ export default function PaletteGallery({ toast }) {
           placeholder: 'Search by name, hex, colour or mood…',
           label: 'Search palettes',
         }}
-        action={<Link className="pgl-build-link" to="/create/palette">Create a palette <span aria-hidden="true">↗</span></Link>}
+        action={(
+          <Link className="pgl-build-link" to="/create/palette">
+            <span className="pgl-build-label">Create a palette</span>
+            <span className="pgl-build-icon" aria-hidden="true">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M8 7h9v9" /></svg>
+            </span>
+          </Link>
+        )}
       >
         <LibraryFilterGroup
           label="Filter palettes by collection"
@@ -402,8 +418,7 @@ export default function PaletteGallery({ toast }) {
           head, the same empty state, one element moved. */}
       <section aria-labelledby="pgl-grid-heading">
         <DiscoverResultHead
-          eyebrow={eyebrow}
-          title={group === 'brand' ? 'Identities you already know' : 'Colours worth building with'}
+          title={heading}
           count={visible.length}
           noun="palette"
           id="pgl-grid-heading"
@@ -425,6 +440,8 @@ export default function PaletteGallery({ toast }) {
                     </div>
                     <PaletteGalleryGrid
                       toast={toast}
+                      metaOf={cardMeta}
+                      hexChips
                       palettes={section.palettes}
                       labelledBy={`pgl-section-${section.id}`}
                     />
@@ -447,7 +464,7 @@ export default function PaletteGallery({ toast }) {
                     {brandCount === 1 ? ' system' : ' systems'}, badged <strong>Brand</strong> on the card.
                   </p>
                 )}
-                <PaletteGalleryGrid toast={toast} palettes={visible} />
+                <PaletteGalleryGrid toast={toast} palettes={visible} metaOf={cardMeta} hexChips />
                 {/* `mood === 'all'` is now written out. It used to be implied — one
                     tray meant picking Dark cleared Brand — and with two trays
                     the rule two comments above ("under a search or a mood filter
@@ -490,12 +507,26 @@ export default function PaletteGallery({ toast }) {
           belongs: the Builder's Submit button runs the same requireLogin flow
           09-auth-modal-accessibility covers, and the user reaches it having
           actually made something. */}
-      <GalleryCloseCta
-        className="pgl-cta"
-        detail="Build one in the Palette Builder — then submit it to the community from there."
-        action="Create and submit your own"
-        to="/create/palette"
-      />
+      {/* "create and submit your
+          own" is for Pro viewers only; everyone else, at the end of a capped
+          result, is offered more access instead. Where the locked tease is
+          already on screen (every unsearched, mood-free view) it IS that offer,
+          so the close does not repeat it. */}
+      {isPro === true ? (
+        <GalleryCloseCta
+          className="pgl-cta"
+          detail="Build one in the Palette Builder — then submit it to the community from there."
+          action="Create and submit your own"
+          to="/create/palette"
+        />
+      ) : !(mood === 'all' && !query.trim()) && lockedCount > 0 ? (
+        <GalleryCloseCta
+          className="pgl-cta"
+          detail={`Free covers ${browsable.length} of the ${LIBRARY_PALETTES.length}. Pro opens all of them.`}
+          action="See what Pro includes"
+          to="/plans"
+        />
+      ) : null}
     </div>
   )
 }

@@ -134,7 +134,23 @@ test('the message names the right period AND the right reset', () => {
   const day = quotaState({ server: { used: 5, limit: 5, monthUsed: 6, monthLimit: 40 }, ...FREE })
   const dmsg = quotaMessage(day)
   assert.match(dmsg, /today/)
-  assert.match(dmsg, /midnight/)
+  assert.match(dmsg, /00:00 UTC/)
+})
+
+// THE SERVER'S DAY IS UTC. api/ai.js keys the daily bucket on the function's
+// clock, which is UTC on Vercel, so "resets at midnight" was 10 am in
+// Brisbane and 5 pm the day before in San Francisco. The message now says
+// UTC, and gives the viewer's own clock time beside it.
+test('the daily reset is stated in UTC, with the viewer\'s own time beside it', () => {
+  const now = new Date(Date.UTC(2026, 8, 24, 3, 0))
+  const day = quotaState({ server: { used: 5, limit: 5, monthUsed: 6, monthLimit: 40 }, ...FREE, now })
+  const bne = quotaMessage(day, { timeZone: 'Australia/Brisbane' })
+  assert.match(bne, /It resets at 00:00 UTC/)
+  assert.match(bne, /10:00\s?(am|AM)/, bne)
+  const utc = quotaMessage(day, { timeZone: 'UTC' })
+  assert.match(utc, /It resets at 00:00 UTC\.$/, 'no "your time" when your time is UTC')
+  const month = quotaState({ server: { used: 0, limit: 5, monthUsed: 40, monthLimit: 40 }, ...FREE, now })
+  assert.match(quotaMessage(month, { timeZone: 'Australia/Brisbane' }), /resets on the 1st at 00:00 UTC\.$/)
 })
 
 test('the message counts down before it blocks', () => {
@@ -150,20 +166,16 @@ test('a limit of one reads as singular', () => {
 
 // ── Reset times ─────────────────────────────────────────────────────────────
 
-test('the daily reset is the next local midnight', () => {
-  const at = dailyResetAt(new Date(2026, 7, 12, 15, 30))
-  assert.equal(at.getDate(), 13)
-  assert.equal(at.getHours(), 0)
-  assert.equal(at.getMinutes(), 0)
+test('the daily reset is the next UTC midnight, which is when the server rolls over', () => {
+  const at = dailyResetAt(new Date(Date.UTC(2026, 7, 12, 15, 30)))
+  assert.equal(at.toISOString(), '2026-08-13T00:00:00.000Z')
+  // Just before UTC midnight is still the same UTC day, whatever the local clock says.
+  assert.equal(dailyResetAt(new Date(Date.UTC(2026, 7, 12, 23, 59))).toISOString(), '2026-08-13T00:00:00.000Z')
 })
 
-test('the monthly reset is the 1st of the next month, and rolls the year', () => {
-  const mid = monthlyResetAt(new Date(2026, 7, 12))
-  assert.equal(mid.getMonth(), 8)
-  assert.equal(mid.getDate(), 1)
-  const dec = monthlyResetAt(new Date(2026, 11, 31))
-  assert.equal(dec.getFullYear(), 2027)
-  assert.equal(dec.getMonth(), 0)
+test('the monthly reset is 00:00 UTC on the 1st of the next month, and rolls the year', () => {
+  assert.equal(monthlyResetAt(new Date(Date.UTC(2026, 7, 12))).toISOString(), '2026-09-01T00:00:00.000Z')
+  assert.equal(monthlyResetAt(new Date(Date.UTC(2026, 11, 31, 12))).toISOString(), '2027-01-01T00:00:00.000Z')
 })
 
 // ── Junk in ─────────────────────────────────────────────────────────────────

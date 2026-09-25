@@ -319,7 +319,7 @@ test('the dashboard decides from the token, not only from the bundled email list
   const src = read('src/pages/Admin.jsx')
   assert.match(src, /const \{ role, loading: roleLoading \} = useModerationRole\(\)/,
     'Admin.jsx no longer reads the server-verified role')
-  assert.match(src, /const effectiveUnlocked = unlocked \|\| isAdminUser \|\| canReview\(role\)/,
+  assert.match(src, /const effectiveUnlocked = isAdminUser \|\| canReview\(role\)/,
     'the signed-claim path into the dashboard is gone')
   assert.match(src, /canSeeEmail=\{canSeeReporterEmail\(role\)\}/,
     'the reporter address is no longer gated on the role at the call site')
@@ -628,7 +628,7 @@ test('a NON-FOUNDER cannot appoint a moderator', async () => {
     moderatorAction: 'grant', targetUid: 'target-uid',
   })
   assert.equal(res.statusCode, 403)
-  assert.match(res.body.error, /Only the founder may assign moderators/)
+  assert.match(res.body.error, /Only an administrator can assign moderators/)
   // ...and the refusal is a refusal, not a message printed after the fact.
   assert.deepEqual(app.roster(), [], 'the roster was written by somebody who was refused')
   assert.deepEqual(app.claimsOf('target-uid'), {}, 'a claim was minted by somebody who was refused')

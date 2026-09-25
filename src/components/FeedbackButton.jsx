@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import FeedbackModal from './FeedbackModal'
 import FeedbackContextMenu from './FeedbackContextMenu'
 import { chromelessRoutes } from '../data/toolTree'
+import { REPORT_PROBLEM_EVENT } from '../utils/errorReport'
 
 // Persistent, low-profile way to reach the feedback form from anywhere in the app.
 // Clicking it opens a modal (rather than navigating) so the user keeps their place.
@@ -45,7 +46,9 @@ const NO_BUTTON = new Set([
   // mount out of the app shell would otherwise give a new early-return route a
   // button it never had, in a corner global.css already records as colliding
   // with the footer attribution.
-  '/', '/home', '/welcome', '/onboarding', '/feedback',
+  // '/plans' and '/mobile' are Spectrum screens now, with the marketing nav and
+  // footer like '/', so they take no fixed button either.
+  '/', '/home', '/plans', '/mobile', '/welcome', '/onboarding', '/feedback',
 ])
 
 export default function FeedbackButton() {
@@ -59,6 +62,19 @@ export default function FeedbackButton() {
   const openFromButton = useCallback(() => { setSeed(null); setOpen(true) }, [])
   const openFromMenu = useCallback((next) => { setSeed(next); setOpen(true) }, [])
   const close = useCallback(() => setOpen(false), [])
+
+  // The crash screen's "Report this" (components/RouteErrorBoundary.jsx) asks
+  // for this same dialog, prefilled with the route and the error. Cancelling
+  // the event tells it the dialog opened, so it does not fall back to /feedback.
+  useEffect(() => {
+    const onReport = (event) => {
+      event.preventDefault()
+      setSeed(event.detail || null)
+      setOpen(true)
+    }
+    window.addEventListener(REPORT_PROBLEM_EVENT, onReport)
+    return () => window.removeEventListener(REPORT_PROBLEM_EVENT, onReport)
+  }, [])
 
   // Normalised the same way App.jsx normalises before its chromeless check, so
   // a trailing slash or a capital cannot leak a chromeless route past this and

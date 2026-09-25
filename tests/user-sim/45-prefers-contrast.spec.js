@@ -32,7 +32,7 @@ const ratio = (a, b) => {
 }
 
 const GROUNDS = {
-  light: ['#FFFFFF', '#EFEEE9', '#F6F5F1'],
+  light: ['#FFFFFF', '#F5F5F2', '#F6F5F1'],
   dark: ['#060607', '#0B0C0E', '#111215', '#17181B'],
 }
 const rgbOf = (hex) => {
@@ -115,9 +115,13 @@ test.describe('a visitor who asks their OS for more contrast gets a different pa
 
       const worst = (token) => Math.min(...GROUNDS[theme].map((g) => ratio(t[token], rgbOf(g))))
       const failures = []
-      for (const token of ['--t1', '--t2', '--t3', '--accent', '--accent-strong']) {
+      for (const token of ['--t1', '--t2', '--t3', '--accent-strong']) {
         if (worst(token) < 7) failures.push(`  ${token} ${worst(token)}:1 (AAA body text is 7:1)`)
       }
+      // --accent is a FILL (one accent, #F4F7FF ink, both
+      // themes), so it is held to 7:1 UNDER its ink rather than on the ground.
+      const onFill = ratio(rgbOf('#F4F7FF'), t['--accent'])
+      if (onFill < 7) failures.push(`  #F4F7FF on --accent ${onFill}:1 (7:1 under prefers-contrast)`)
       if (worst('--border') < 3) failures.push(`  --border ${worst('--border')}:1 (1.4.11 asks 3:1)`)
       if (worst('--bh') < 4.5) failures.push(`  --bh ${worst('--bh')}:1 (must stay distinct from --border)`)
       // The ladder has to survive, or the preference has flattened the page.

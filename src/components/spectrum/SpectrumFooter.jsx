@@ -1,180 +1,137 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { categoryDestination } from '../../data/toolTree'
 import FounderNote from '../FounderNote'
-import SpectrumIcon from './SpectrumIcon'
+import PhGlyph from './PhGlyph'
+import { PH_ARROW_UP_RIGHT } from './phosphorNav'
+import { crossRouteHashClick, salesHref } from './salesLinks'
+import '../../styles/pages/spectrum-chrome.css'
 
-// The Spectrum footer.
+// The marketing footer — `UIL4B - Spectrum.dc.html` lines 1595-1633.
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// THIS REPLACES <AppFooter /> ON THIS ROUTE, AND MUST LOSE NOTHING
-// ─────────────────────────────────────────────────────────────────────────────
-// App.jsx renders `<Home /><AppFooter />` for `/` and `/home` today. Spectrum
-// ships its own footer because the design's is part of the page — a display-size
-// handoff line and a CTA sitting in the same band as the link columns, over the
-// spectrum rule — and stacking it above AppFooter would put two <footer>
-// landmarks and two copyright lines on the front door.
+/// The design's composition, reproduced: the display handoff "Save time, and
+// save your mind." over the ink "Open the toolkit" pill, then link columns
+// headed in uppercase mono (TOOLS / PROJECT / LEGAL), all in one auto-fit grid
+// of 220px floors, and a mono baseline under a hairline carrying the copyright
+// line, "© 2026 UI L4B. Spectrum." (the year is computed).
 //
-// So this file carries EVERY destination AppFooter carries. That is not
-// politeness, it is the founder's stated top priority for this whole redesign:
-// "make sure to not remove any functionality of the app this is important."
-// A footer link is functionality. `tests/unit/spectrum-footer-parity.test.js`
-// reads both files and fails the build if AppFooter gains a destination this one
-// does not have — so the two can be edited independently without this one
-// quietly falling behind.
+// WHERE IT DEPARTS FROM THE FILE, AND WHY:
 //
-// ── THE FOUNDER'S NOTE IS THE ONE NON-NEGOTIABLE ────────────────────────────
-// "i also still want my little about message accessable in the footer" is an
-// open founder ask, and `FounderNote` is that message. It keeps the two
-// properties its own file spends sixty lines defending:
+//   · ONE EXTRA COLUMN, EXPLORE. This footer replaces AppFooter on the
+//     marketing screens, and every destination AppFooter reaches has to stay
+//     reachable (tests/unit/spectrum-structure.test.js holds that). The three
+//     drawn columns have no room for Discover, Learn, Community, Principles,
+//     Plans, Sitemap, Help, Info and Feedback, so they share one column in the
+//     same style, placed before LEGAL. Five cells fit the 220px floor at 1440
+//     in one row.
+//   · CREDITS SITS IN LEGAL, where Cookies was. There is no cookies page, so
+//     Cookies is dropped; /credits is a licence condition (the CC-BY icon sets
+//     and OFL faces ask for their notices to be reachable).
+//   · THE BASELINE KEEPS THE FOUNDER'S NOTE AND THE BRISBANE CREDIT beside the
+//     copyright line. The note never opens by itself: it is a button a person
+//     presses.
 //
-//   · IT NEVER OPENS ITSELF. Nothing here mounts it open, times it, watches
-//     scroll depth or remembers a visitor. It renders a <button>; a person
-//     presses it. That was his explicit choice over the welcome popup he was
-//     offered, and this page — the front door, the single most tempting surface
-//     on the site to greet somebody from — does not relitigate it.
-//   · IT SITS IN THE LEGAL ROW, beside "Built in Brisbane by Dylan Coleman",
-//     exactly where AppFooter puts it. A reader who has just read who built the
-//     app finds the longer answer in the same row rather than going looking.
-//     Its TRIGGER is restyled to Spectrum (spectrum.css restyles
-//     `.app-footer-note` inside this footer); its prose, its label and its
-//     behaviour are untouched.
-//
-// ── CITATION ────────────────────────────────────────────────────────────────
-// Footer geometry — link columns above a thin baseline rule carrying the
-// copyright on the left and the "Built in …" line on the right — is Sequence's:
-// https://mobbin.com/sites/sections/91ab3ff8-d285-4695-8ffd-15c86b43b467
-// It is the arrangement that already had a slot for a place-and-people line,
-// which is what this footer has to keep, and it is why the attribution and the
-// note share the baseline row rather than becoming a fourth column.
+// "Open the toolkit" enters the app directly for everybody, with no sign-up
+// gate.
 
-// Founder attribution. The URL is a settled decision — CHANGELOG.md, "Founder
-// decisions — 2026-08-20", decision 3 — and AppFooter, the Help Centre and
-// Settings already link it exactly this way.
+// The designer credit link in the baseline.
 const FOUNDER_PORTFOLIO = 'https://dylan-coleman.com/'
 
-// The Create column names CREATE_GROUPS ids, never URLs: `categoryDestination()`
-// answers where a category actually opens, which is the trap AppFooter's own
-// comment records — "Imagery" pointed at /create/imagery, a category home with
-// no screen of its own, and CreateTool.jsx bounced the visitor onward.
-const FOOTER_CREATE = [
-  ['colour', 'Colour systems'],
-  ['type', 'Typography'],
-  ['icons', 'Icons & emoji'],
+// TOOLS — the design's four labels (1609-1612). Each names a CREATE_GROUPS id,
+// and categoryDestination() answers where that category actually opens.
+const TOOLS = [
+  ['colour', 'Colour'],
+  ['type', 'Type'],
+  ['icons', 'Assets'],
   ['imagery', 'Imagery'],
 ]
 
-// ── THE COLUMNS ARE THE DESIGN'S, THE DESTINATIONS ARE THE PRODUCT'S ────────
-//
-// The design draws TOOLS · PROJECT · LEGAL — three short columns with legal
-// pulled out into its own — and that shape is what this follows, including
-// giving Privacy and Terms a column of their own rather than burying them at the
-// foot of Support the way AppFooter does. Those are the two pages a reader goes
-// looking for deliberately, and a reader looking for them is not browsing.
-//
-// WHAT DOES NOT FOLLOW THE DESIGN IS THE COUNT. Its middle column carries three
-// invented rows; this product has nine real destinations that exist nowhere else
-// in this footer, and dropping one to match a prototype's rhythm would be
-// dropping functionality to gain a screenshot. So the middle splits in two —
-// Explore for the places you browse, Support for the places you ask — which is
-// the design's own logic applied to a bigger inventory rather than a compromise
-// with it. `tests/unit/spectrum-structure.test.js` fails if any destination
-// AppFooter reaches stops being reachable from here.
-const FOOTER_GROUPS = [
-  {
-    label: 'Tools',
-    links: FOOTER_CREATE.map(([groupId, label]) => [categoryDestination(groupId), label]),
-  },
-  {
-    label: 'Explore',
-    links: [
-      ['/discover', 'Discover'],
-      ['/learn', 'Learn'],
-      ['/community', 'Community'],
-      ['/principles', 'Design principles'],
-      ['/plans', 'Plans'],
-      ['/sitemap', 'Sitemap'],
-    ],
-  },
-  {
-    label: 'Support',
-    links: [
-      ['/help', 'Help centre'],
-      ['/info', 'Info centre'],
-      ['/feedback', 'Send feedback'],
-    ],
-  },
-  {
-    label: 'Legal',
-    links: [
-      ['/privacy', 'Privacy'],
-      ['/terms', 'Terms'],
-      // The third legal destination, and the one that is a licence CONDITION
-      // rather than a policy we chose to publish: CC-BY icon sets, SIL OFL
-      // typefaces and an Apache-2.0 SDK all ask that their notices be reachable
-      // from wherever the work appears. This footer replaces AppFooter on the
-      // front door, so a link only AppFooter carries is a notice the homepage
-      // does not discharge — which is exactly what
-      // tests/unit/spectrum-structure.test.js fails the build over.
-      ['/credits', 'Credits'],
-    ],
-  },
+// PROJECT — the design's three (1617-1619): sections of the sales page, by anchor.
+const PROJECT = [
+  ['#bench', 'The bench'],
+  ['#specimens', 'Specimens'],
+  ['#index', 'Index'],
 ]
 
-export default function SpectrumFooter({ onOpenToolkit, toolkitTo }) {
-  const year = new Date().getFullYear()
+// EXPLORE — the destinations AppFooter reaches that the drawn columns do not.
+const EXPLORE = [
+  ['/discover', 'Discover'],
+  ['/learn', 'Learn'],
+  ['/community', 'Community'],
+  ['/principles', 'Design principles'],
+  ['/plans', 'Plans'],
+  ['/sitemap', 'Sitemap'],
+  ['/help', 'Help centre'],
+  ['/info', 'Info centre'],
+  ['/feedback', 'Send feedback'],
+]
 
-  // The handoff CTA is the same control as the hero's, so it behaves the same
-  // way: a signed-out visitor gets the sign-up dialog in place (no unmount, no
-  // lost scroll position) and a signed-in one follows a real link. The page owns
-  // that decision and hands it down, rather than this file asking auth a second
-  // time and answering it slightly differently.
-  const handoff = onOpenToolkit
-    ? (
-      <button type="button" className="sp-cta sp-cta--ink" onClick={onOpenToolkit} aria-haspopup="dialog">
-        <span>Open the toolkit</span>
-        <span className="sp-cta-icon" aria-hidden="true"><SpectrumIcon name="arrow-up-right" size={13} /></span>
-      </button>
-      )
-    : (
-      <Link className="sp-cta sp-cta--ink" to={toolkitTo || '/projects'}>
-        <span>Open the toolkit</span>
-        <span className="sp-cta-icon" aria-hidden="true"><SpectrumIcon name="arrow-up-right" size={13} /></span>
-      </Link>
-      )
+// LEGAL — the design's Privacy and Terms (1625-1626), and Credits where Cookies was.
+const LEGAL = [
+  ['/privacy', 'Privacy'],
+  ['/terms', 'Terms'],
+  ['/credits', 'Credits'],
+]
+
+function Column({ heading, children }) {
+  return (
+    <div className="sp-footer-col">
+      <h2 className="sp-footer-col-h">{heading}</h2>
+      <ul>{children}</ul>
+    </div>
+  )
+}
+
+export default function SpectrumFooter({ toolkitTo = '/projects' }) {
+  const year = new Date().getFullYear()
+  const { pathname } = useLocation()
 
   return (
     <footer className="sp-footer">
       <div className="sp-footer-inner">
         <div className="sp-footer-grid">
           <div className="sp-footer-brand">
-            {/* The design's own line, from the founder's brief. It is the only
-                sentence in this footer and it replaces nothing — AppFooter
-                deliberately carries no tagline (anti-slop audit, 2026-09-09),
-                and this is a handoff above a button rather than a claim under a
-                wordmark on every page of the site. */}
             <p className="sp-footer-say">Save time, and save your mind.</p>
-            {handoff}
+            <Link className="sp-footer-cta" to={toolkitTo}>
+              <span>Open the toolkit</span>
+              <span className="sp-footer-cta-icon" aria-hidden="true"><PhGlyph d={PH_ARROW_UP_RIGHT} size={13} /></span>
+            </Link>
           </div>
 
+          {/* `display:contents`, so the columns are cells of the one grid
+              while still sitting inside a Footer navigation landmark. */}
           <nav className="sp-footer-links" aria-label="Footer">
-            {FOOTER_GROUPS.map((group) => (
-              <div className="sp-footer-col" key={group.label}>
-                <h2 className="sp-footer-col-h">{group.label}</h2>
-                <ul>
-                  {group.links.map(([to, label]) => (
-                    <li key={to}><NavLink to={to}>{label}</NavLink></li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <Column heading="TOOLS">
+              {TOOLS.map(([groupId, label]) => (
+                <li key={groupId}><NavLink to={categoryDestination(groupId)}>{label}</NavLink></li>
+              ))}
+            </Column>
+            <Column heading="PROJECT">
+              {PROJECT.map(([hash, label]) => {
+                const href = salesHref(hash, pathname)
+                return (
+                  <li key={hash}>
+                    {href.startsWith('#')
+                      ? <a href={href}>{label}</a>
+                      : <Link to={href} onClick={crossRouteHashClick(href)}>{label}</Link>}
+                  </li>
+                )
+              })}
+            </Column>
+            <Column heading="EXPLORE">
+              {EXPLORE.map(([to, label]) => (
+                <li key={to}><NavLink to={to}>{label}</NavLink></li>
+              ))}
+            </Column>
+            <Column heading="LEGAL">
+              {LEGAL.map(([to, label]) => (
+                <li key={to}><NavLink to={to}>{label}</NavLink></li>
+              ))}
+            </Column>
           </nav>
         </div>
 
         <div className="sp-footer-legal">
-          <span className="sp-footer-copy">© {year} UIL4B</span>
-          {/* ── THE OPT-IN NOTE. See the block comment at the top of this file,
-                and the far longer one in FounderNote.jsx, for why it is a button
-                here and never a popup that opens itself. ── */}
+          <span className="sp-footer-copy">© {year} UI L4B. Spectrum.</span>
           <FounderNote />
           <span className="sp-footer-place">
             Built in Brisbane by{' '}

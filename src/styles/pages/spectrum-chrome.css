@@ -1,0 +1,329 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE MARKETING CHROME — nav, "give it a try", footer, and the design's link.
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Everything the marketing screens (/, /home, /mobile, and /plans once it is
+   rebuilt as the design's Pricing screen) share, from `UIL4B - Spectrum.dc.html`:
+   SpectrumNav (lines 217-258), TryItMark (269-275, 166-170), SpectrumFooter
+   (1595-1633) and the page's link rule (50-53).
+
+   These rules lived in global.css (nav, mark) and spectrum.css (footer). They
+   moved here so the marketing chrome has one owner and the app chrome's sheet
+   (global.css) another. The sheet is imported by the three components that
+   use it, so it arrives wherever they are mounted.
+
+   SCOPING. Every selector is rooted in a component root this sheet owns —
+   .spnav, .spnav-menu, .tim-anchor, .sp-footer — or in `.spectrum`, the
+   marketing page root. Nothing here reaches an app surface.
+
+   TOKENS. Ink and ground are the app's (--t0 / --bg-0): the near-black dark
+   and warm light. The accent is var(--accent) and its derived family, never
+   a literal, so one value moves app-wide. The design's LINK colour is its own
+   token (#8FAEFF dark / #1F4FD8 light); this sheet reads --link and
+   --link-hover, with the accent family as the fallback where they are not
+   declared. */
+
+/* ── #10 THE DESIGN'S LINK (lines 50-53) ────────────────────────────────────
+   Links in the link colour with an underline that GROWS from the left over
+   .26s on a fine-pointer hover — drawn as a 1px background, not
+   text-decoration, which is how the design gets the growth. The design exempts
+   every link that is a component (data-cta, data-row, data-kit…); here that is
+   every link carrying a class, so the rule reaches only bare prose links on the
+   marketing pages, plus the footer's columns, which the design draws with it. */
+.spectrum a:not([class]),
+.sp-footer .sp-footer-col a{color:var(--link,var(--accent-text));text-decoration:none;background-image:linear-gradient(currentColor,currentColor);background-repeat:no-repeat;background-position:0 100%;background-size:0 1px;transition:color .16s ease,background-size .26s cubic-bezier(.23,1,.32,1)}
+@media(hover:hover) and (pointer:fine){
+  .spectrum a:not([class]):hover,
+  .sp-footer .sp-footer-col a:hover{color:var(--link-hover,var(--accent-bright));background-size:100% 1px;text-decoration:none}
+}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spectrum a:not([class]),
+  html:not([data-reduced-motion="false"]) .sp-footer .sp-footer-col a{transition:none}
+}
+html[data-reduced-motion="true"] .spectrum a:not([class]),
+html[data-reduced-motion="true"] .sp-footer .sp-footer-col a{transition:none}
+
+/* == SpectrumNav -- the MARKETING nav, `UIL4B - Spectrum.dc.html` 217-258 ==
+   A floating pill on the marketing screens, not a shelf. Every rule is rooted
+   in .spnav / .spnav-menu, the component's own roots.
+
+   THE WRAPPER IS pointer-events:none AND THE PILL IS pointer-events:auto.
+   That is the design's own arrangement (line 218) and it is load-bearing: the
+   nav spans the full width so the pill can centre itself, and without this the
+   invisible 100px-tall band would eat clicks on whatever the hero puts up
+   there.
+
+   HIDE-ON-SCROLL, AND THE REDUCED-MOTION ANSWER IS "DO NOT HIDE".
+   Spectrum's own script branches on prefers-reduced-motion and leaves the bar
+   in place rather than teleporting it (setNav, standalone source line 2045),
+   which is the right call: a bar that vanishes with no transition reads as a
+   rendering fault, and someone who asked for less motion has not asked for
+   less navigation. Both companions below say so. */
+.spnav{position:fixed;top:0;left:0;right:0;z-index:120;display:flex;justify-content:center;padding:clamp(14px,2vw,26px) clamp(14px,3vw,40px) 0;pointer-events:none;transition:transform var(--dur-3) cubic-bezier(.32,.72,0,1),opacity var(--dur-2) var(--ease-standard)}
+.spnav[data-nav-hidden="1"]{transform:translateY(calc(-100% - 14px));opacity:0}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
+}
+html[data-reduced-motion="true"] .spnav{transition:none}
+html[data-reduced-motion="true"] .spnav[data-nav-hidden="1"]{transform:none;opacity:1}
+/* flex-wrap is the design's (line 219) and it is the overflow guard: at a width
+   where the pill cannot hold its row it stacks rather than pushing the page
+   sideways. The media queries at the end of this block mean it never gets
+   there on a real phone. */
+/* The pill's surface is the design's, line 219: page at 62% under a 26px blur,
+   a 9% ink hairline, and a long soft drop (0 28px 70px -32px, the design's
+   shade at .96 of its alpha) over a 9% ink top highlight. --spnav-shade is that
+   shade per theme: a pale slate in light, black in dark. */
+.spnav-bar{--spnav-shade:rgba(26,30,42,.154);pointer-events:auto;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:7px;max-width:100%;padding:6px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-0) 62%,transparent);border:1px solid color-mix(in srgb,var(--t0) 9%,transparent);-webkit-backdrop-filter:blur(26px);backdrop-filter:blur(26px);box-shadow:0 28px 70px -32px var(--spnav-shade),inset 0 1px 0 color-mix(in srgb,var(--t0) 9%,transparent)}
+[data-theme="dark"] .spnav-bar{--spnav-shade:rgba(0,0,0,.96)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .spnav-bar{background:var(--bg-1)}
+}
+.spnav-mark{display:flex;align-items:baseline;gap:10px;padding:8px 14px;border-radius:var(--radius-pill);color:var(--t0);text-decoration:none}
+.spnav-mark:hover{text-decoration:none}
+/* line-height:normal is the design's (it sets none, so the button's UA
+   `normal` applies); the body's 1.65 made the pill 65px tall against the
+   design's 55. */
+.spnav-mark{line-height:normal}
+.spnav-word{font-size:21px;font-weight:560;letter-spacing:-.01em;white-space:nowrap}
+/* --accent-mid, the design's own `{{ accentMid }}`, and a DERIVED token: a
+   premium theme template moves --accent alone and this follows. */
+.spnav-word-mark{color:var(--accent-mid)}
+.spnav-eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--t2);white-space:nowrap}
+.spnav-rule{flex:0 0 auto;width:1px;height:20px;background:color-mix(in srgb,var(--t0) 11%,transparent)}
+.spnav-quiet{display:flex;align-items:center;gap:1px}
+/* No transition: the design writes `transition:none` inline on these three
+   (226-228), which outranks its own [data-quiet] colour fade. */
+.spnav-quiet-link{display:inline-flex;align-items:center;min-height:24px;padding:9px 14px;border-radius:var(--radius-pill);font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);text-decoration:none;transition:none}
+@media(hover:hover){.spnav-quiet-link:hover{color:var(--t0);text-decoration:none}}
+/* THE SCREEN YOU ARE ON. The design colours the current screen's link with
+   --ink and the others with --ink-faint (`navLanding` / `navMobile`,
+   2368-2371) — colour alone, which is why the markup also carries
+   aria-current="page". */
+.spnav-quiet-link.is-active{color:var(--t0)}
+/* 5.5% ink at rest, 11% on hover (230-233). */
+.spnav-icon{display:grid;place-items:center;width:38px;height:38px;flex:0 0 auto;border:0;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--t0) 5.5%,transparent);color:var(--t0);cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+.spnav-icon:hover{background:color-mix(in srgb,var(--t0) 11%,transparent)}
+/* THE BURGER MORPH. Three bars, two of which rotate into a cross while the
+   middle one squashes and fades -- Spectrum lines 234-237 and 129-132, with its
+   own .34s curve. The 5.15px offsets are the design's; they are what make the
+   two bars meet exactly on the centre line. */
+.spnav-burger-ico{position:relative;display:block;width:16px;height:12px}
+.spnav-burger-ico > span{position:absolute;left:0;width:100%;height:1.7px;border-radius:2px;background:currentColor;transition:transform .34s cubic-bezier(.65,0,.35,1),opacity var(--dur-2) var(--ease-standard)}
+.spnav-burger-ico > span:nth-child(1){top:0}
+.spnav-burger-ico > span:nth-child(2){top:5.15px}
+.spnav-burger-ico > span:nth-child(3){top:10.3px}
+.spnav-burger-ico[data-burger="in"] > span:nth-child(1){transform:translateY(5.15px) rotate(45deg)}
+.spnav-burger-ico[data-burger="in"] > span:nth-child(2){transform:scaleX(.2);opacity:0}
+.spnav-burger-ico[data-burger="in"] > span:nth-child(3){transform:translateY(-5.15px) rotate(-45deg)}
+/* The morph's reduced-motion companion: the cross still forms, it just forms
+   in one frame. The STATE has to survive -- it is the only thing telling a
+   sighted user the button is now "close". */
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-burger-ico > span{transition:none}
+}
+html[data-reduced-motion="true"] .spnav-burger-ico > span{transition:none}
+/* Ink pill, page-coloured label -- `background:var(--ink);color:var(--page)`
+   (line 240). Inverse of the body pairing, so its contrast is the body's. */
+.spnav-cta{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding:6px 7px 6px 18px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:13.5px;font-weight:540;white-space:nowrap;cursor:pointer;transition:background var(--dur-1) var(--ease-standard)}
+/* --ink-hover (line 240): ink 14% of the way to the page. */
+.spnav-cta:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
+.spnav-cta-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-0) 10%,transparent);transition:transform var(--dur-1) var(--ease-standard)}
+/* 45 degrees on hover -- the design's one signature nav gesture (line 70),
+   scoped to pointers that can hover so a tap does not leave it stuck rotated. */
+@media(hover:hover) and (pointer:fine){.spnav-cta:hover .spnav-cta-icon{transform:rotate(45deg)}}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-cta-icon{transition:none}
+  html:not([data-reduced-motion="false"]) .spnav-cta:hover .spnav-cta-icon{transform:none}
+}
+html[data-reduced-motion="true"] .spnav-cta-icon{transition:none}
+html[data-reduced-motion="true"] .spnav-cta:hover .spnav-cta-icon{transform:none}
+
+/* -- The full-screen menu (lines 247-257) ------------------------------------
+   HIS MENU, EXACTLY: page at 90% under a 34px blur; the four big items and the
+   mono note, centred vertically, at padding clamp(28px,7vw,96px) inside a
+   1200px column; the Close pill at top 26px / right clamp(20px,5vw,52px); a
+   .28s fade in and a .24s fade out. Nothing else is in it (SpectrumNav.jsx says
+   why). The safe-area terms are 0 on every current page (no viewport-fit=cover)
+   and only keep the pill clear of a notch if that ever changes.
+
+   THE GROUND IS 97%, NOT THE DESIGN'S 90% — the one departure in this block.
+   Rendered in WebKit at 390x844 the page behind showed through at 90% as
+   crisp second copy under the menu items (the blur was not painted). At 97%
+   the items read cleanly whether or not the engine paints the blur. */
+.spnav-menu{position:fixed;inset:0;z-index:130;display:flex;flex-direction:column;justify-content:center;padding:clamp(28px,7vw,96px);background:color-mix(in srgb,var(--bg-0) 97%,transparent);-webkit-backdrop-filter:blur(34px);backdrop-filter:blur(34px);overflow-y:auto;overscroll-behavior:contain}
+.spnav-menu[data-menu="in"]{animation:spnav-menu-in .28s cubic-bezier(.23,1,.32,1) both}
+.spnav-menu[data-menu="out"]{animation:spnav-menu-out .24s ease both;pointer-events:none}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .spnav-menu{background:var(--bg-0)}
+}
+@keyframes spnav-menu-in{from{opacity:0}to{opacity:1}}
+@keyframes spnav-menu-out{from{opacity:1}to{opacity:0}}
+/* Ink pill, 11px 18px, 14px/540, 9px gap (line 249); transition:none is the
+   design's inline value. Geist, where the design's button renders in the UA's
+   default face because it sets none. */
+.spnav-menu .spnav-close{position:absolute;top:max(26px,env(safe-area-inset-top));right:max(clamp(20px,5vw,52px),env(safe-area-inset-right));display:flex;align-items:center;gap:9px;padding:11px 18px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:14px;font-weight:540;line-height:normal;cursor:pointer;transition:none}
+.spnav-menu .spnav-close:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0))}
+.spnav-menu .spnav-close > span:last-child{display:grid;place-items:center}
+.spnav-rail{max-width:1200px;width:100%;margin:0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+/* The big items (251-254): Geist 560 at clamp(42px,9vw,96px), line-height
+   1.04, no tracking, ink — the fourth in --accent-text. text-wrap:pretty is the
+   design's body rule, and it is why its 390px menu breaks "Open the / toolkit"
+   rather than stranding the arrow on a line alone. */
+.spnav-mi{position:relative;display:inline-block;padding:0;border:0;background:none;font-family:var(--display);font-size:clamp(42px,9vw,96px);font-weight:560;line-height:1.04;color:var(--t0);text-align:left;text-decoration:none;text-wrap:pretty;cursor:pointer;transition:color .2s ease,opacity .2s ease}
+.spnav-mi:hover{text-decoration:none;color:var(--t0)}
+.spnav-mi--accent,.spnav-mi--accent:hover{color:var(--accent-text)}
+.spnav-mi::after{content:"";position:absolute;left:0;right:0;bottom:.06em;height:2px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .34s cubic-bezier(.23,1,.32,1)}
+/* The note (255): mono 11px, .14em, faint, 30px under the items. */
+.spnav-mi-note{margin:30px 0 0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--t2)}
+.spnav-mi-note::after{display:none}
+/* Hovering ANYWHERE on the open menu dims the items to .42, and the one under
+   the pointer comes back to full in the link-hover colour with its underline
+   drawn -- the design's own `[data-menu="in"]:hover [data-mi]` (189-194),
+   keyed on the whole layer, not the list. The note stays at full. Pointer
+   only: on touch there is no hover to leave. The link-hover colour is the
+   link token when the app has one, the accent family until then. */
+@media(hover:hover) and (pointer:fine){
+  .spnav-menu[data-menu="in"]:hover .spnav-rail [data-mi]{opacity:.42}
+  .spnav-menu[data-menu="in"] .spnav-rail [data-mi]:hover{opacity:1;color:var(--link-hover,var(--accent-bright))}
+  .spnav-menu[data-menu="in"]:hover .spnav-rail [data-mi-note]{opacity:1}
+  .spnav-mi:hover::after{transform:scaleX(1)}
+}
+.spnav-mi:focus-visible::after{transform:scaleX(1)}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-mi,html:not([data-reduced-motion="false"]) .spnav-mi::after{transition:none}
+}
+html[data-reduced-motion="true"] .spnav-mi,html[data-reduced-motion="true"] .spnav-mi::after{transition:none}
+/* The staggered entrance (135-145) and the exit (136, 140). Delays are the
+   design's: .04 / .09 / .14 / .19 for the four items and .26 for the note. */
+@keyframes spnav-mi-in{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes spnav-mi-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(10px)}}
+.spnav-menu[data-menu="in"] [data-mi]{animation:spnav-mi-in .52s cubic-bezier(.16,1,.3,1) both}
+.spnav-menu[data-menu="out"] [data-mi]{animation:spnav-mi-out .2s ease both}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(1){animation-delay:.04s}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(2){animation-delay:.09s}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(3){animation-delay:.14s}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(4){animation-delay:.19s}
+.spnav-menu[data-menu="in"] .spnav-rail [data-mi]:nth-child(5){animation-delay:.26s}
+/* The companions. `animation:none` rather than a 0.01ms duration: the items
+   are `both`-filled, so cancelling the animation outright is what leaves them
+   at their natural opacity. SpectrumNav also skips the 260ms exit wait under
+   reduced motion, so the layer goes at once. */
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .spnav-menu,
+  html:not([data-reduced-motion="false"]) .spnav-menu [data-mi]{animation:none}
+}
+html[data-reduced-motion="true"] .spnav-menu,
+html[data-reduced-motion="true"] .spnav-menu [data-mi]{animation:none}
+
+/* -- Responsive. The pill sheds, it never wraps on a real phone -------------
+   THE DESIGN HAS NO BREAKPOINT FOR THE PILL: it relies on flex-wrap, and at
+   390px its pill wraps to three rows and sits over the headline (rendered and
+   screenshotted from the design file). So the bands below are the smallest
+   departure that keeps the design's one-row pill, and each is set where the
+   full row stops fitting, MEASURED on the built page: the whole pill is 695px
+   wide, so the quiet links and their rule stay until 760px (the design's own
+   pill at 768 is one row, and so is this one); the eyebrow goes under 480
+   (with it the phone pill is ~432px, which wrapped at 430); the
+   CTA stays on phones as the design has it and only goes under 390, where it
+   cannot share the row (with it the pill is 360px, and 390 leaves 362). Nothing dropped is lost: the quiet links are
+   the menu's first three items and the CTA is its fourth. */
+@media(max-width:759px){
+  .spnav-quiet,.spnav-rule{display:none}
+}
+@media(max-width:479px){
+  .spnav-eyebrow{display:none}
+  .spnav-mark{padding:8px 10px}
+}
+@media(max-width:389px){
+  .spnav-cta{display:none}
+}
+/* On phones the pill spans the viewport less a 16px gutter each side, the
+   mark at its start and the controls at its end. */
+@media(max-width:767px){
+  .spnav{padding-left:16px;padding-right:16px}
+  .spnav-bar{width:100%;flex-wrap:nowrap;justify-content:flex-start}
+  .spnav-bar > .spnav-mark{margin-right:auto}
+}
+/* The icon buttons are drawn at 38px; on a touch screen each takes a 44px hit
+   area centred on it, so the drawn size stays and the target is 44px. */
+@media(pointer:coarse){
+  .spnav-icon,.spnav-cta,.spnav-mark{position:relative}
+  .spnav-icon::after,.spnav-cta::after,.spnav-mark::after{content:"";position:absolute;inset:50% auto auto 50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+}
+
+
+/* ── "give it a try" (lines 269-275, responsive 166-170) ─────────────────────
+   The design's hand-drawn mark: Caveat
+   27px rotated -5° over a 150x52 arrow at 75%, both in ink at 50%, hung 186px
+   left of and 30px above the 660px search wrapper. Below 1180px it is NOT
+   hidden: it drops into the flow above the bar, left-aligned 12px in, with the
+   arrow at 104x34 turned 12° to point down into the field. The
+   anchor becomes a column so the mark can sit above the bar. */
+.tim-anchor{position:relative}
+.tim-anchor .tim{position:absolute;left:-186px;top:-30px;width:170px;display:grid;justify-items:center;gap:2px;color:color-mix(in srgb,var(--t0) 50%,transparent);pointer-events:none}
+.tim-anchor .tim-word{display:block;font-family:var(--hand);font-size:27px;font-weight:500;line-height:1;transform:rotate(-5deg)}
+.tim-anchor .tim-arrow{display:block;opacity:.75}
+@media(max-width:1180px){
+  .tim-anchor{display:flex;flex-direction:column}
+  .tim-anchor .tim{order:-1;position:static;left:auto;top:auto;width:auto;justify-items:start;margin:0 0 6px 12px}
+  .tim-anchor .tim-arrow{width:104px;height:34px;transform:rotate(12deg);margin-left:26px}
+}
+
+/* ── the footer (lines 1595-1633) ────────────────────────────────────────────
+   The design's values: a 9% ink hairline on top; a 1400px shell at padding
+   clamp(48px,6vw,80px) clamp(20px,4vw,52px); ONE auto-fit grid of
+   minmax(min(220px,100%),1fr) at a 36px gap holding the brand cell and the
+   link columns (the Footer nav is display:contents so its columns are cells of
+   that grid); headings in 10px mono at .18em, faint, weight 540; lists at an
+   11px gap, 16px under the heading; links in the design's link style above;
+   the baseline in 10.5px mono at .1em, faint, over another 9% hairline. */
+.sp-footer{position:relative;z-index:2;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);background:var(--bg-0);color:var(--t0)}
+.sp-footer .sp-footer-inner{max-width:1400px;margin:0 auto;padding:clamp(48px,6vw,80px) clamp(20px,4vw,52px)}
+.sp-footer .sp-footer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:36px;align-items:start}
+.sp-footer .sp-footer-links{display:contents}
+.sp-footer .sp-footer-say{margin:0;font-family:var(--display);font-weight:560;font-size:clamp(26px,3vw,38px);line-height:1.06;max-width:min(22ch,100%);text-wrap:balance}
+/* The ink pill (1600-1603): 8/9/8/22, 15px/540, a 28px well at 10% page. */
+.sp-footer .sp-footer-cta{margin-top:22px;display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:8px 9px 8px 22px;border:0;border-radius:var(--radius-pill);background:var(--t0);color:var(--bg-0);font-family:var(--font);font-size:15px;font-weight:540;line-height:normal;text-decoration:none;white-space:nowrap;transition:transform .16s cubic-bezier(.23,1,.32,1),background .16s ease}
+.sp-footer .sp-footer-cta:hover{background:color-mix(in srgb,var(--t0) 86%,var(--bg-0));color:var(--bg-0);text-decoration:none}
+.sp-footer .sp-footer-cta:active{transform:scale(.978)}
+.sp-footer .sp-footer-cta-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--bg-0) 10%,transparent);transition:transform .16s cubic-bezier(.23,1,.32,1)}
+@media(hover:hover) and (pointer:fine){.sp-footer .sp-footer-cta:hover .sp-footer-cta-icon{transform:rotate(45deg)}}
+@media(prefers-reduced-motion:reduce){
+  html:not([data-reduced-motion="false"]) .sp-footer .sp-footer-cta,
+  html:not([data-reduced-motion="false"]) .sp-footer .sp-footer-cta-icon{transition:none}
+  html:not([data-reduced-motion="false"]) .sp-footer .sp-footer-cta:hover .sp-footer-cta-icon,
+  html:not([data-reduced-motion="false"]) .sp-footer .sp-footer-cta:active{transform:none}
+}
+html[data-reduced-motion="true"] .sp-footer .sp-footer-cta,
+html[data-reduced-motion="true"] .sp-footer .sp-footer-cta-icon{transition:none}
+html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:hover .sp-footer-cta-icon,
+html[data-reduced-motion="true"] .sp-footer .sp-footer-cta:active{transform:none}
+.sp-footer .sp-footer-col{min-width:0}
+.sp-footer .sp-footer-col-h{margin:0;font-family:var(--mono);font-size:10px;font-weight:540;letter-spacing:.18em;color:var(--t2)}
+/* The design's 11px gap between rows. Every footer link holds at least a 24px
+   box (WCAG 2.5.8, 58-target-size-24). */
+.sp-footer .sp-footer-col ul{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:11px}
+/* 16px, the design's body size. inline-flex + min-height:24px is the 24px
+   target without moving the text. */
+.sp-footer .sp-footer-col a{display:inline-flex;align-items:center;min-height:24px;font-size:16px;line-height:normal}
+/* On a touch screen each row is a 44px target spanning the column, stacked
+   with no gap, so neighbouring links never share a finger's contact area. */
+@media(pointer:coarse){
+  .sp-footer .sp-footer-col ul{gap:0}
+  .sp-footer .sp-footer-col a{display:flex;min-height:44px}
+}
+/* The baseline (1631). */
+.sp-footer .sp-footer-legal{display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(14px,2vw,28px);margin:clamp(36px,4vw,56px) 0 0;padding-top:22px;border-top:1px solid color-mix(in srgb,var(--t0) 9%,transparent);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t2)}
+.sp-footer .sp-footer-legal a{color:var(--t1)}
+.sp-footer .sp-footer-legal a:hover{color:var(--t0)}
+/* THE FOUNDER CREDIT IS UNDERLINED AT REST: the one link that LEAVES the app has to be discoverable without hover, because
+   on touch there is no hover. 70% of the current ink at a 2px offset;
+   07-public-shell-library-palette measures it by contrast in both themes. */
+.sp-footer .sp-footer-legal a.sp-footer-attrib{color:var(--t0);text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 70%,transparent);text-underline-offset:2px}
+.sp-footer .sp-footer-legal a.sp-footer-attrib:hover{text-decoration-color:currentColor}
+/* The founder's note trigger, restyled to the baseline and nothing else — its
+   element, label, aria-haspopup and press-only opening are FounderNote's. */
+.sp-footer .app-footer-note{min-height:24px;padding:0;border:0;background:none;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--t1);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.sp-footer .app-footer-note:hover{color:var(--t0)}

@@ -292,6 +292,8 @@ export default function EmojiLibrary({ onCopy }) {
           accessible name. */}
       <LibraryToolbar
         className="emoji-toolbar"
+        quick={0}
+        activeFilters={activeCat ? 1 : 0}
         search={{
           value: search,
           onChange: (next) => { setSearch(next); requestIndex() },

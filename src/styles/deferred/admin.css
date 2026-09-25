@@ -26,10 +26,7 @@
 .adm-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ok-strong)}
 .adm-status-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:adm-pulse 2s infinite}
 .adm-actions{display:flex;gap:6px;flex-wrap:wrap}
-.adm-tab-badge{margin-left:6px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--accent-text);color:var(--accent-fg)}
-
-/* Time filter */
-.adm-time-filter{display:flex;gap:2px;padding:2px;background:var(--bg-2);border-radius:var(--radius-s)}
+.adm-tab-badge{margin-left:6px;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--accent-fill);color:var(--accent-fg)}
 
 /* Section header */
 .adm-section{margin-bottom:32px}
@@ -40,7 +37,6 @@
 .adm-stat:hover{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
 .adm-stat-label{font-size:11px;font-weight:600;color:var(--t2);margin-top:8px;letter-spacing:.02em}
 .adm-stat-sub{font-size:10px;color:var(--t3);margin-top:3px}
-.adm-stat-delta{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:8px}
 /* auto-FIT, not auto-fill — the same correction made for the hairline stat
    grid further down this file, applied to the instance it missed. auto-fill
    KEEPS the empty tracks it creates: measured on the rendered Overview tab at
@@ -55,10 +51,6 @@
 .adm-card{background:var(--card-grad);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow);overflow:hidden}
 .adm-card-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .adm-card-title{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t2)}
-
-/* Chart wrapper */
-.adm-chart{width:100%;position:relative}
-.adm-chart svg{display:block;width:100%;overflow:visible}
 
 /* Bar chart */
 .adm-bar{display:flex;flex-direction:column;gap:10px}
@@ -78,7 +70,6 @@
 .adm-list{display:flex;flex-direction:column}
 .adm-list-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);gap:10px}
 .adm-list-row:last-child{border-bottom:none}
-.adm-list-rank{width:20px;font-size:10px;font-weight:700;color:var(--t3);text-align:center;flex-shrink:0}
 .adm-list-name{font-size:12px;font-weight:500;color:var(--t0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 
 /* Activity feed */
@@ -107,24 +98,8 @@
 .adm-check-label{font-size:12px;font-weight:600;color:var(--t0)}
 .adm-check-note{font-size:11px;color:var(--t2);margin-top:2px;line-height:1.5}
 
-/* Colour swatch list */
-.adm-swatch-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
-.adm-swatch-row:last-child{border-bottom:none}
-.adm-swatch{width:24px;height:24px;border-radius:var(--radius-s);border:1px solid var(--border);flex-shrink:0}
-.adm-swatch-grid{display:flex;flex-wrap:wrap;gap:4px}
-.adm-swatch-grid .adm-swatch{cursor:default;transition:transform var(--dur-2) var(--ease-standard)}
-.adm-swatch-grid .adm-swatch:hover{transform:scale(1.15)}
-
 /* Empty state */
 .adm-empty{padding:32px 16px;text-align:center;font-size:13px;color:var(--t3)}
-
-/* Pipeline tab */
-.adm-pipe-bar{height:5px;border-radius:var(--radius-pill);background:var(--bg-2);overflow:hidden}
-.adm-pipe-bar-fill{display:block;height:100%;border-radius:var(--radius-pill);transition:width var(--t)}
-.adm-pipe-todo{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);transition:border-color var(--dur-1) var(--ease-standard)}
-.adm-pipe-todo:hover{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
-.adm-pipe-prio{flex-shrink:0;font-size:10px;font-weight:700;letter-spacing:.04em;font-family:var(--mono);padding:3px 7px;border:1px solid;border-radius:var(--radius-xs,4px);line-height:1}
-.adm-pipe-status{font-size:10px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:var(--radius-pill);white-space:nowrap}
 
 /* Submission cards */
 .adm-submission{border-left:3px solid var(--border);transition:opacity var(--dur-2) var(--ease-standard)}
@@ -143,11 +118,6 @@
 .adm-prompt-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
 .adm-prompt-tag{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--bg-2);color:var(--t2);font-weight:600}
 .adm-prompt-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;border-top:1px solid var(--border);padding-top:10px}
-
-/* Sparkline */
-.adm-sparkline{display:flex;align-items:end;gap:2px;height:32px}
-.adm-sparkline-bar{flex:1;border-radius:2px 2px 0 0;background:var(--accent);opacity:.6;transition:opacity var(--dur-1) var(--ease-standard),height var(--dur-3) var(--ease-standard)}
-.adm-sparkline-bar:hover{opacity:1}
 
 /* Verify error banner */
 .adm-verify-error{padding:16px;border-left:3px solid var(--err);margin-bottom:20px}
@@ -186,7 +156,7 @@
 .adm-mask{display:inline-flex;align-items:center;gap:6px;max-width:100%}
 .adm-mask-text{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .adm-mask-blur{filter:blur(4px);user-select:none;-webkit-user-select:none;opacity:.8}
-.adm-eye-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:none;background:none;border-radius:var(--radius-s);color:var(--t3);cursor:pointer;flex-shrink:0;transition:color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.adm-eye-btn{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;border:none;background:none;border-radius:var(--btn-radius);color:var(--t3);cursor:pointer;flex-shrink:0;transition:color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .adm-eye-btn:hover{color:var(--t0);background:var(--bg-2)}
 .adm-user-sub{font-size:11px;color:var(--t3);margin-top:3px}
 .adm-flag{font-size:15px;line-height:1}
@@ -255,7 +225,7 @@
  *
  * It borrows the dashboard's existing vocabulary rather than introducing a
  * second one: .adm-card's border and radius, .btn/.btn-s, the signal tokens
- * (--ok / --warn / --err / --pending) that the Submissions badges already use,
+ * (--ok / --warn / --err, and --info for anything awaiting) that the badges use,
  * and the left-rule-on-a-panel shape that .adm-submission and .adm-verify-error
  * already carry. A new colour or a new radius here would make the Users tab a
  * different product from the tab beside it. */
@@ -266,7 +236,7 @@
  * reads 155 / 249 workers this way round
  * (https://mobbin.com/screens/9f5af254-f966-4810-adbb-c428854523e3). */
 .adm-user-views{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:8px;margin-bottom:14px}
-.adm-user-view{display:flex;flex-direction:column;gap:2px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card-grad);font-family:var(--font);text-align:left;cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
+.adm-user-view{display:flex;flex-direction:column;gap:2px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:var(--btn-radius);background:var(--card-grad);font-family:var(--font);text-align:left;cursor:pointer;transition:border-color var(--dur-1) var(--ease-standard),background var(--dur-1) var(--ease-standard)}
 .adm-user-view:hover{border-color:var(--bh)}
 .adm-user-view.active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card-grad))}
 .adm-user-view-n{font-size:22px;font-weight:600;line-height:1.1;color:var(--t0);font-family:var(--display,var(--font));letter-spacing:-.02em}
@@ -284,7 +254,7 @@
 .adm-plan--ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok-strong)}
 .adm-plan--warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn-strong)}
 .adm-plan--err{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err-strong)}
-.adm-plan--pending{background:color-mix(in srgb,var(--pending) 14%,transparent);color:var(--pending)}
+.adm-plan--pending{background:color-mix(in srgb,var(--info) 14%,transparent);color:var(--info)}
 .adm-plan--neutral{background:var(--bg-2);color:var(--t2)}
 .adm-plan-interval{margin-left:6px;font-size:10px;color:var(--t3);font-family:var(--mono)}
 
@@ -499,7 +469,6 @@
 .adm-user-view-n,
 .adm-bar-value,
 .adm-donut-count,
-.adm-list-rank,
 .adm-user-count,
 .adm-tab-badge,
 .adm-plan-interval,
@@ -741,19 +710,14 @@
 
 /* ── CORRECTED AGAINST `UIL4B App.dc.html`, 2026-09-18 ─────────────────────
  * These were 999px pills in the first pass, taken from the SALES page, which
- * uses a 999px radius 130 times. That was the wrong source. The founder's
- * correction names `UIL4B App.dc.html` as the design for the app, and the app
- * file does not pill its controls: its toolbars, search field and secondary
- * buttons are 12px and 10px rounded rectangles over a hairline border
- * (`border-radius:12px;border:1px solid rgba(var(--ink-rgb),.09)`), and 999px
- * is reserved there for progress bars and one 26px round CTA glyph. A pill on
- * a dense admin control also costs horizontal room that a rectangle does not.
+ * uses a 999px radius 130 times. Buttons, tabs and chips read --btn-radius
+ * (the app-wide pill); fields and panels keep the radius tokens.
  * The radius scale is the app's: 12px for a control, 10px for a small one. */
 .adm-tab,
 .adm-time-btn,
 .adm-country-chip,
 .cq-filter {
-  border-radius: var(--radius);
+  border-radius: var(--btn-radius);
   font-family: var(--mono);
   text-transform: uppercase;
   letter-spacing: var(--adm-label-track);
@@ -794,7 +758,7 @@
   font-size: 10px;
   border: 1px solid var(--border);
   background: transparent;
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
 }
 
 .adm-time-btn:hover {
@@ -812,7 +776,7 @@
 .adm-country-chip {
   padding: 5px 11px;
   font-size: 10px;
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
 }
 
 .adm-country-chip.active {
@@ -841,7 +805,7 @@
 .cq-filter {
   padding: 6px 12px;
   font-size: 10px;
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
 }
 
 .cq-filter.is-on {
@@ -984,7 +948,7 @@
 }
 
 .adm-user-view {
-  border-radius: var(--radius);
+  border-radius: var(--btn-radius);
   background: var(--card);
   padding: 11px 13px;
   transition:
@@ -1052,7 +1016,6 @@
   font-weight: 560;
 }
 
-.adm-cq-h2,
 .adm-cat-head h2 {
   font-weight: 560;
   letter-spacing: -.02em;
@@ -1155,7 +1118,7 @@
 }
 
 .adm-eye-btn {
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
   transition:
     color var(--adm-t-color) var(--adm-ease),
     background var(--adm-t-color) var(--adm-ease),
@@ -1167,8 +1130,7 @@ html[data-reduced-motion="true"] .adm-time-btn:active,
 html[data-reduced-motion="true"] .adm-country-chip:active,
 html[data-reduced-motion="true"] .cq-filter:active,
 html[data-reduced-motion="true"] .adm-user-view:active,
-html[data-reduced-motion="true"] .adm-eye-btn:active,
-html[data-reduced-motion="true"] .adm-swatch-grid .adm-swatch:hover {
+html[data-reduced-motion="true"] .adm-eye-btn:active {
   transform: none;
 }
 
@@ -1182,8 +1144,7 @@ html[data-reduced-motion="true"] .adm-status-dot {
   html:not([data-reduced-motion="false"]) .adm-country-chip:active,
   html:not([data-reduced-motion="false"]) .cq-filter:active,
   html:not([data-reduced-motion="false"]) .adm-user-view:active,
-  html:not([data-reduced-motion="false"]) .adm-eye-btn:active,
-  html:not([data-reduced-motion="false"]) .adm-swatch-grid .adm-swatch:hover {
+  html:not([data-reduced-motion="false"]) .adm-eye-btn:active {
     transform: none;
   }
 

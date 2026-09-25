@@ -112,7 +112,10 @@ function CheckGlyph() {
 // `selectedId` (optional) marks a card as the currently-imported palette: it gets
 // a tick badge and its action flips to "Selected", so clicking it again toggles
 // the import off (the builder reverts to the pre-import system).
-export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = GALLERY_PALETTES, labelledBy }) {
+// metaOf and hexChips are the Palette Library card foot as the app file draws
+// it ("Warm, 5 colours" beside the name, the hexes as mono chips under it).
+// Opt-in, so the Palette Builder gallery popup keeps its compact card.
+export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedId = null, palettes = GALLERY_PALETTES, labelledBy, metaOf, hexChips = false }) {
   const [likes, setLikes] = useState(loadLikes)
   const navigate = useNavigate()
   const { setPalette, canSaveProjects } = useProject()
@@ -291,6 +294,12 @@ export default function PaletteGalleryGrid({ toast, onPick, onCompare, selectedI
             </>
           ) : null}
           name={p.name}
+          meta={metaOf ? metaOf(p) : undefined}
+          footExtra={hexChips ? (
+            <span className="pgal-chips" aria-hidden="true">
+              {p.colors.map((hex) => <span key={hex} className="pgal-chip">{hex.toUpperCase()}</span>)}
+            </span>
+          ) : undefined}
           tail={(
             <>
             {onCompare && (

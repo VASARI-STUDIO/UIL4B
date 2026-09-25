@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { trackActivation } from '../utils/analytics'
+import { reportUpgradeGate } from '../contexts/ProModalContext'
 import { getLenis } from '../hooks/useSmoothScroll'
 import { useProject } from '../contexts/ProjectContext'
-import { useProModal } from '../contexts/ProModalContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import useExportGate from '../hooks/useExportGate'
 import { buildStyleGuideHtml, buildStyleGuideMarkdown } from '../utils/styleGuideExport'
@@ -12,6 +13,7 @@ import BrandLogoField from './BrandLogoField'
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/overlay.css'
+import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 
 // The Export dialog. It works from any page (it reads nothing from the current
 // tool) and is opened from the PillNav search cluster.
@@ -30,15 +32,13 @@ import '../styles/deferred/overlay.css'
 // Tab is trapped, Escape and a backdrop click close it, and focus is restored to
 // the opener (the Export button) on unmount.
 
-// Moved to src/config/exportFormats.js on 2026-09-05 so /plans can read the
-// same array instead of describing the export offer from memory — which it had
-// been doing wrongly, selling a JSON export that has never been built. The
-// flags and their meanings are unchanged; the file-top note here still applies.
+// Lives in src/config/exportFormats.js so /plans reads the same array instead
+// of describing the export offer from memory. The file-top note here applies.
 const FORMATS = EXPORT_FORMATS
 
 // WHAT EACH PAID DOCUMENT SAYS WHEN IT IS BEHIND THE WALL.
 //
-// One entry per Pro format, because P-001 wants the funnel to say WHICH wall
+// One entry per Pro format, because the funnel says WHICH wall
 // converted, and because two documents with one shared modal would sell neither:
 // somebody who clicked "Brand guidelines" and was answered with a description of
 // a 12-page A4 token manual has been told the wrong thing about what they are
@@ -74,6 +74,9 @@ const PRO_GATE = {
 }
 
 export default function ExportPanel({ onClose }) {
+  // Mounted only while open: Back closes it (audit A3) and the page is inert (A12).
+  useCloseOnBack(true, onClose)
+  useInertBehind(true)
   const [format, setFormat] = useState('html')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -81,10 +84,10 @@ export default function ExportPanel({ onClose }) {
   const { isPro } = useSubscription()
   // A file needs an account; a copy never does. See useExportGate.js.
   const requireExportAccount = useExportGate()
-  const { openProModal } = useProModal()
+  const navigate = useNavigate()
   const activeFormat = FORMATS.find(f => f.id === format)
-  const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', book: 'book', guidelines: 'guidelines' }
-  // P-003, "every gate EXPLICIT rather than silent". The free user is told what
+  const EXPORT_LABEL = { md: 'Markdown', html: 'HTML', png: 'PNG', jpeg: 'JPEG', css: 'CSS', json: 'JSON', book: 'book', guidelines: 'guidelines' }
+  // Every gate is explicit rather than silent. The free user is told what
   // they are about to hit BEFORE they click, by the button's own label, rather
   // than finding out from a modal after it.
   const locked = Boolean(activeFormat?.pro) && !isPro
@@ -146,37 +149,31 @@ export default function ExportPanel({ onClose }) {
     const projectName = design?.name || 'Design System'
     const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'style-guide'
 
-    // ── ACCOUNT GATE, BEFORE THE ENTITLEMENT ONE. ─────────────────────────
-    //
-    // Founder decision 2026-09-15: producing a FILE needs a free account;
-    // copying a value never does. See src/hooks/useExportGate.js for the map
-    // that put the line here — signed out, only two of the fourteen tools
-    // asked for an account before this.
-    //
-    // It sits above the Pro check and inside this function for the same reason
-    // that check does, argued directly below: nothing has been generated yet,
-    // so a visitor cannot reach the artefact by calling this directly either.
-    // Account first, then plan — you cannot hold Pro without an account, so
-    // asking in the other order would show a purchase wall to someone who has
-    // no account to attach it to.
-    if (!(await requireExportAccount('export this style guide'))) return
-
     // ── ENTITLEMENT GATE. FAILS CLOSED. ───────────────────────────────────
     // The check lives HERE, at the top of the function that builds the file,
     // and not only on the button. A disabled or relabelled button is a hint;
     // this is the gate. Nothing has been generated at this point, so a free
     // user cannot reach the artefact by calling this directly either.
     //
-    // `gate` is named rather than left to fall back to the modal title — P-001
-    // wants the funnel to say WHICH wall converted, and "Unlock everything with
-    // Pro" groups every wall into one.
+    // WHERE IT SENDS YOU: /plans (every Pro CTA goes to /plans, never to a
+    // login popup or a modal). That is also why it runs BEFORE the account
+    // gate: the plans page is where a visitor with no account starts one, so
+    // asking them to sign in first would put a login popup in front of a Pro
+    // CTA. The gate id is still reported, so the funnel can say WHICH wall
+    // converted.
     if (FORMATS.find(f => f.id === format)?.pro && !isPro) {
-      openProModal({
-        ...PRO_GATE[format],
-        seed: design?.palette?.colors?.[0],
-      })
+      reportUpgradeGate(PRO_GATE[format]?.gate || 'export-pro-format')
+      onClose()
+      navigate('/plans')
       return
     }
+
+    // ── ACCOUNT GATE ──────────────────────────────────────────────────────
+    // Producing a FILE needs a free account; copying a value never does
+    // (sign-in only for saving, exporting and account actions). See
+    // src/hooks/useExportGate.js for the map that puts the line here.
+    const tokenFile = format === 'css' || format === 'json'
+    if (!(await requireExportAccount(tokenFile ? 'export these design tokens' : 'export this style guide'))) return
 
     setBusy(true)
     setError('')
@@ -209,6 +206,20 @@ export default function ExportPanel({ onClose }) {
           setBusy(false)
           keepOpen = true
         }
+      } else if (tokenFile) {
+        // Both token files come from one token list (utils/designTokens.js), so
+        // they always carry the same names and values. Loaded on demand like the
+        // other generators.
+        const { buildTokensCss, buildTokensJson } = await import('../utils/designTokens')
+        activation = 'design-tokens'
+        const css = format === 'css'
+        const body = css
+          ? buildTokensCss(design, { projectName, watermark: !isPro })
+          : buildTokensJson(design, { projectName, watermark: !isPro })
+        download(
+          new Blob([body], { type: css ? 'text/css;charset=utf-8' : 'application/json;charset=utf-8' }),
+          `${slug}.tokens.${css ? 'css' : 'json'}`,
+        )
       } else if (format === 'png' || format === 'jpeg') {
         // Drawn on a canvas rather than rasterised from the HTML — see the note
         // at the top of utils/styleGuideRaster.js. Loaded on demand so the
@@ -226,7 +237,7 @@ export default function ExportPanel({ onClose }) {
           `${slug}-style-guide.${markdown ? 'md' : 'html'}`,
         )
       }
-      // P-001 ACTIVATION (export half). Fired only after the file actually
+      // ACTIVATION (export half). Fired only after the file actually
       // downloaded — an export that threw is not a piece of completed work,
       // and counting the attempt would inflate the one number meant to say
       // whether the product was useful. The book reports under its own name so
@@ -298,8 +309,8 @@ export default function ExportPanel({ onClose }) {
             <span className="exp-eyebrow">Export</span>
             <h2 className="exp-title" id="exp-title">Export your design system</h2>
             <p className="exp-sub">
-              The Pro documents and the style guide export for real. The token formats are still on
-              their way and say so.
+              The Pro documents, the style guide and the CSS and JSON tokens export for real. The
+              other formats are still on their way and say so.
             </p>
           </div>
           <button type="button" className="exp-close" onClick={onClose} aria-label="Close export">

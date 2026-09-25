@@ -100,6 +100,13 @@ const GLYPHS = {
       <path d="M6.5 14.5h3" />
     </>
   ),
+  // ph-arrow-u-up-left
+  undo: (
+    <>
+      <path d="M8 13.5 4 9.5l4-4" />
+      <path d="M4 9.5h10.5a5.5 5.5 0 0 1 0 11H10" />
+    </>
+  ),
   // ph-lock-simple
   lock: (
     <>

@@ -2,10 +2,12 @@ import { useCallback, useMemo, useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, NavLink } from 'react-router-dom'
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js'
 import { useAuth } from '../contexts/AuthContext'
-import { AI_LIMITS, useSubscription } from '../contexts/SubscriptionContext'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { PRO_POINTS, BILLING_OPTIONS } from '../config/planFacts'
 import { getStripe, hasStripeKey } from '../utils/stripeClient'
 import { refreshPrices, useProPrice } from '../hooks/usePrices'
 import { PLAN_LADDER } from '../config/planLadder'
+import { EVENTS, sendEvent } from '../utils/productEvents'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -63,19 +65,19 @@ const PLANS = {
 // Derived, never typed. This list is read at the moment money changes hands,
 // which makes it the worst possible place for a figure the server will not
 // honour — it advertised 1,000 AI actions/day against a limit of 30.
-const FEATURES = [
-  `${AI_LIMITS.pro.daily} AI generations a day · ${AI_LIMITS.pro.monthly} a month`,
-  'Unlimited project and custom-icon saves',
-  'Advanced colour controls',
-  // WAS 'Full design JSON export', removed 2026-09-05. There is no JSON export
-  // to sell: `json` in ExportPanel's FORMATS has no `live: true`, renders a
-  // "Soon" badge and a disabled button, and runExport() has no branch that
-  // could build one. This list is read at the moment money changes hands, so
-  // it was the single worst place in the product for that claim to sit.
-  // What Pro's export entitlement actually IS, and all it is:
-  'The design system book (PDF) — a 12-page A4 manual',
-  'Style guides with no UIL4B credit line',
-]
+//
+// And it is /plans' list, word for word (src/config/planFacts.js). It used to
+// be its own — "Advanced colour controls", "a 12-page A4 manual" — so the step
+// where money changes hands described a different Pro from the step before it.
+const FEATURES = PRO_POINTS
+
+// "Monthly, Quarterly or Yearly" — read off the buyable cadences, never typed.
+// Built without a regex replacement: the price guard reads `$1` in source as
+// a dollar amount.
+const CADENCE_WORDS = (() => {
+  const labels = BILLING_OPTIONS.map((o) => o.label)
+  return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} or ${labels[labels.length - 1]}` : labels.join('')
+})()
 
 function Check() {
   return (
@@ -124,8 +126,16 @@ export default function Checkout() {
     ? (amount
       ? `Live pricing is unreachable · showing the canonical ${proPrice.currencyLabel} amount`
       : 'Live pricing is unreachable · no price can be shown right now')
+    // THE SERVICE ANSWERED, BUT NOT FOR THIS CURRENCY. Without this branch the
+    // yearly line would print "GBP · null/mo". Settings' sentence for the same
+    // state.
+    : proPrice.loaded && !amount
+      ? `No ${proPrice.currencyLabel} price for this billing period right now`
     : planKey === 'yearly'
       ? `${proPrice.currencyLabel} · ${proPrice.yearlyPerMonth}/mo${proPrice.savingsPct > 0 ? ` · save ${proPrice.savingsPct}%` : ''}`
+      // Quarterly has its own note, so a quarterly buyer is never told
+      // "billed monthly".
+      : planKey === 'quarterly' ? `${proPrice.currencyLabel} · ${proPrice.quarterlyPerMonth}/mo · billed every 3 months`
       : planKey === 'lifetime' ? `${proPrice.currencyLabel} · one-off purchase · no renewal`
         : `${proPrice.currencyLabel} · billed monthly · cancel anytime`
   const [error, setError] = useState('')
@@ -137,6 +147,9 @@ export default function Checkout() {
     if (plan.interval === 'lifetime' && !proPrice.availability.lifetime) {
       return Promise.reject(new Error(`One-off checkout is not available in ${proPrice.currencyLabel} yet`))
     }
+    // Stripe's embedded checkout calls this when it starts, so this is the
+    // moment a checkout began, not a visit to the page.
+    sendEvent(EVENTS.checkoutStarted, { plan: plan.interval })
     return createCheckoutSession(plan.interval).catch(e => {
       setError(e?.message || 'Could not start checkout')
       throw e
@@ -158,7 +171,9 @@ export default function Checkout() {
           <div className="card checkout-return-card">
             <div className="checkout-error-icon" aria-hidden="true">!</div>
             <h1>Invalid checkout selection</h1>
-            <p>Choose Monthly or Yearly from Plans. No payment session was created.</p>
+            {/* The cadences are read, not typed: this said "Monthly or Yearly"
+                after quarterly went on sale. */}
+            <p>Choose {CADENCE_WORDS} from Plans. No payment session was created.</p>
             <NavLink to="/plans" className="btn btn-accent">Back to Plans</NavLink>
           </div>
         </div>

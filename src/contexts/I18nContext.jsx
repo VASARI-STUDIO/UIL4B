@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import en from '../locales/en.json'
+import { onAccountApplied } from '../utils/accountEvents'
 import enUS from '../locales/en-US.json'
 
 const I18nContext = createContext()
@@ -65,6 +66,11 @@ export function I18nProvider({ children }) {
   useEffect(() => {
     document.documentElement.lang = lang
   }, [lang])
+
+  // The language follows the account.
+  useEffect(() => onAccountApplied([STORAGE_KEY], () => {
+    try { setLangState(localStorage.getItem(STORAGE_KEY) || detectBrowserLang()) } catch { /* keep the current one */ }
+  }), [])
 
   useEffect(() => {
     let cancelled = false

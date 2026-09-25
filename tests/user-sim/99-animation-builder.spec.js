@@ -356,6 +356,55 @@ test.describe('the animation builder', () => {
     await expect(width).toHaveValue('16')
   })
 
+  // ON A PHONE THE BUILD IS IN REACH AND ITS RESULT LANDS IN VIEW.
+  // Measured before: at 390 the Build button sat at the foot of the settings,
+  // about 1,870px down, and the result appeared about 900px ABOVE the screen
+  // with only a toast to say so. Now Build lives in an action bar pinned to
+  // the bottom of the screen on a one-column bench, the result sits directly
+  // under the frame strip, and a finished build brings it into view — at once
+  // under reduced motion, smoothly otherwise.
+  // MUTATION: drop the revealResult call from AnimationBuilder's result
+  // effect — pressing Build from the settings leaves the result off screen.
+  // Or remove `position: sticky` from `.fc .fc-actionbar` in the 960px query —
+  // Build is not on screen while the frame strip is.
+  for (const motion of ['no-preference', 'reduce']) {
+    test(`390px (${motion} motion): Build is on screen from the frame strip, and the result is brought into view`, async ({ page }) => {
+      test.setTimeout(120_000)
+      watch(page, 'someone building a GIF on a phone')
+      await page.setViewportSize({ width: 390, height: 844 })
+      await page.emulateMedia({ reducedMotion: motion })
+      await serveCore(page)
+      await openBuilder(page)
+      const build = page.getByRole('button', { name: 'Build GIF' })
+
+      // Looking at the frame strip, Build is on screen without scrolling.
+      await page.locator('.fc-strip').evaluate((el) => el.scrollIntoView({ block: 'center' }))
+      await expect(build).toBeInViewport()
+
+      // Press it from further down, at the settings — where the old page had
+      // it — so the result is certain to be born off screen.
+      await page.getByLabel('Quality').evaluate((el) => el.scrollIntoView({ block: 'center' }))
+      await expect(build).toBeInViewport()
+      await build.click()
+      const result = page.locator('.fc-result')
+      await expect(result.locator('img[alt="GIF result"]')).toBeAttached({ timeout: 120_000 })
+
+      // The result's top sits between the sticky toolbar and the pinned bar.
+      const place = async () => result.evaluate((el) => {
+        const r = el.getBoundingClientRect()
+        const bar = document.querySelector('[data-tool-toolbar]').getBoundingClientRect()
+        const foot = document.querySelector('.fc-actionbar').getBoundingClientRect()
+        return { top: Math.round(r.top), barBottom: Math.round(bar.bottom), footTop: Math.round(foot.top) }
+      })
+      await expect.poll(async () => {
+        const p = await place()
+        return p.top >= p.barBottom - 1 && p.top < p.footTop - 40
+      }, { timeout: motion === 'reduce' ? 1500 : 5000, message: 'the result did not come into view' }).toBe(true)
+      // The download is right there with it.
+      await expect(page.getByRole('button', { name: 'Download GIF' })).toBeInViewport()
+    })
+  }
+
   test('with reduced motion the preview waits on frame one for Play', async ({ page }) => {
     watch(page, PERSONA)
     await page.emulateMedia({ reducedMotion: 'reduce' })

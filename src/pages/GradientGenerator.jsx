@@ -4,7 +4,10 @@ import { useProject } from '../contexts/ProjectContext'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { useProModal } from '../contexts/ProModalContext'
 import ColorPickerPop from '../components/ColorPickerPop'
-import ShuffleIcon from '../components/ShuffleIcon'
+import {
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills, ToolSlider, ToolIcon,
+} from '../components/tool/ToolLayout'
+import { sampleStopsOklch } from '../components/tool/oklch'
 import { GRAD_TYPE_WEIGHTS, pickGradientType, pickStopCount } from '../utils/gradientRandom'
 import { hexToRgb } from '../utils/colors'
 import { gradientCss, decodeGradientParams } from '../data/gradientGallery'
@@ -16,25 +19,21 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useModalDialog from '../hooks/useModalDialog'
 import { COMMUNITY_SUBMIT_REASONS, consumeSubmitIntent, hasSubmitIntent, resetSubmitIntent, setSubmitIntent } from '../utils/submitIntent'
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/colour.css'
+// This page's own sheet. Every rule is scoped under `.grd`, the page root, so
+// nothing depends on import order.
+// tool-shell.css carries the .ui-form / .ui-field rules the submit modal uses.
 import '../styles/deferred/tool-shell.css'
-// This page's OWN sheet, and it must stay LAST. The `ggn` family's base rules
-// live in global.css and in the shared deferred/colour.css, neither of which
-// this route may edit — colour.css alone is imported by ten pages. Importing
-// last means this sheet loads after both and wins at equal specificity, which
-// is the same mechanism tint.css and contrast.css use.
 import '../styles/pages/gradient.css'
 
-// ── Gradient Generator ──
-// The standalone /create/gradient tool: build any linear / radial / conic
-// gradient with draggable stops, a live angle dial and copy-ready CSS — all on
-// one screen and styled with the app design tokens so it follows the active
-// theme. It reads + writes the shared design.gradient (ProjectContext) so a
-// gradient authored here survives a jump to any other colour tool.
-// (Class prefix `ggn-` = gradient generator.)
+// ── Gradient ──
+// The standalone /create/gradient tool, rebuilt to the design
+// (UIL4B App.dc.html, `isGradient`, D:610-716): the shared sticky
+// tool toolbar, a canvas + stop rail + code well on the left, and a 336px card
+// of STOPS / SELECTED STOP / GEOMETRY on the right, with a 6-up preset strip
+// under both. Every function the previous build had is kept and placed in that
+// layout — see the notes at each block. It reads + writes the shared
+// design.gradient (ProjectContext) so a gradient authored here survives a jump
+// to any other colour tool. (Class prefix `grd-`.)
 
 const GRAD_TYPES = GRAD_TYPE_WEIGHTS.map(([type]) => type)
 
@@ -98,8 +97,12 @@ const EXPORT_FORMATS = [
 // angle (0deg = up, 90deg = right, clockwise) is converted to the gradient
 // vector SVG wants. Conic isn't representable as an SVG gradient, so callers
 // only offer SVG for linear/radial.
-function gradientSvg(type, angle, stops) {
-  const stopEls = [...stops]
+function gradientSvg(type, angle, stops, space = 'srgb') {
+  // SVG gradients only interpolate in sRGB, so an OKLCH gradient is exported
+  // as sRGB stops sampled every 5% along the OKLCH path — the SVG then paints
+  // the same ramp the CSS does rather than silently a different one.
+  const source = space === 'oklch' ? sampleStopsOklch(stops, 5) : stops
+  const stopEls = [...source]
     .sort((a, b) => a.position - b.position)
     .map(s => `      <stop offset="${Math.round(s.position)}%" stop-color="${s.color.toUpperCase()}" />`)
     .join('\n')
@@ -120,6 +123,35 @@ function gradientSvg(type, angle, stops) {
 // underscores as spaces inside arbitrary values, so every space becomes `_`.
 const tailwindValue = (css) => `bg-[${css.replace(/ /g, '_')}]`
 
+// INTERPOLATION — the design's GEOMETRY "Interpolation: OKLCH | sRGB" control
+// (D:692-699), implemented for real. `in oklch` is a CSS Color 4 colour-
+// interpolation method; it goes after the angle/position part of the gradient
+// function (`linear-gradient(135deg in oklch, …)`, `radial-gradient(in oklch,
+// …)`, `conic-gradient(from 90deg at 50% 50% in oklch, …)`). sRGB is the
+// function's default, so it writes nothing.
+const SPACES = [
+  { value: 'oklch', label: 'OKLCH' },
+  { value: 'srgb', label: 'sRGB' },
+]
+function gradientCssIn(type, angle, stops, space) {
+  const css = gradientCss(type, angle, stops)
+  if (space !== 'oklch') return css
+  const open = css.indexOf('(') + 1
+  if (type === 'Radial') return `${css.slice(0, open)}in oklch, ${css.slice(open)}`
+  const comma = css.indexOf(', ', open)
+  return `${css.slice(0, comma)} in oklch${css.slice(comma)}`
+}
+
+// A browser without `in oklch` (Chrome < 111, Safari < 16.2) drops the whole
+// declaration, and the canvas would paint nothing. It paints the sRGB twin
+// instead; the COPIED code still says what the person chose.
+const supportsOklchGradients = (() => {
+  try { return typeof CSS !== 'undefined' && CSS.supports('background-image', 'linear-gradient(90deg in oklch, red, blue)') } catch { return false }
+})()
+
+// SELECTED STOP swatches — the design's ten (GRAD_SWATCHES, D:1150).
+const STOP_SWATCHES = ['#2F6BFF', '#1B3FA8', '#8B5CF0', '#E894AC', '#E0784E', '#D9B93C', '#3FAFA0', '#52A069', '#0B0C0E', '#F7F7F4']
+
 // Hex text field with a local draft, so partially-typed values aren't wiped by
 // the controlled stop colour on every keystroke. Commits when the text is a
 // valid #rrggbb; reverts to the stop's colour on blur if left invalid.
@@ -129,10 +161,10 @@ function StopHexInput({ color, label, onCommit }) {
   const valid = isValidHex(draft)
   const revert = () => setDraft(color.toUpperCase())
   return (
-    <span className="ggn-stop-hex-field">
+    <span className="grd-hex-field">
       <input
         type="text"
-        className="ggn-stop-hex"
+        className="grd-hex"
         value={draft}
         onChange={(e) => {
           const v = e.target.value
@@ -155,59 +187,10 @@ function StopHexInput({ color, label, onCommit }) {
         spellCheck="false"
         autoComplete="off"
       />
-      {!valid && <span className="ggn-field-error" role="status">Use a 6-digit hex</span>}
+      {!valid && <span className="grd-field-error" role="status">Use a 6-digit hex</span>}
     </span>
   )
 }
-
-function StopPositionInput({ value, label, disabled, onCommit }) {
-  const [draft, setDraft] = useState(String(Math.round(value)))
-  useEffect(() => { setDraft(String(Math.round(value))) }, [value])
-
-  const commit = () => {
-    const parsed = Number(draft)
-    if (!Number.isFinite(parsed)) {
-      setDraft(String(Math.round(value)))
-      return
-    }
-    const next = Math.max(0, Math.min(100, Math.round(parsed)))
-    setDraft(String(next))
-    onCommit(next)
-  }
-
-  return (
-    <div className="ggn-stop-pos">
-      <input
-        type="number"
-        min="0"
-        max="100"
-        inputMode="numeric"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            commit()
-            e.currentTarget.blur()
-          } else if (e.key === 'Escape') {
-            setDraft(String(Math.round(value)))
-            e.currentTarget.blur()
-          }
-        }}
-        disabled={disabled}
-        aria-label={label}
-      />
-      <span aria-hidden="true">%</span>
-    </div>
-  )
-}
-
-// Upload glyph for the "Submit for review" action.
-const IcoSubmit = ({ size = 15 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v13" />
-  </svg>
-)
 
 // Submit-for-review modal for the gradient library. Same shape and the same
 // `ui-modal` chrome the Community Hub's design submission already uses, on the
@@ -242,7 +225,7 @@ function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
           </button>
         </div>
         <div className="ui-modal-body">
-          <div className="ggn-submit-preview" style={{ background: gradient.css }} aria-hidden="true" />
+          <div className="grd-submit-preview" style={{ background: gradient.css }} aria-hidden="true" />
           <div className="ui-form">
             <label className="ui-field">
               <span>Name</span>
@@ -275,29 +258,20 @@ function SubmitGradientModal({ gradient, authorName, onClose, onSubmit }) {
   )
 }
 
-// Padlock glyph — open shackle when unlocked, closed when locked — so a locked
-// control reads at a glance. Stroke-based to match the other ggn icons.
-const IcoLock = ({ size = 13, open = false }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="4" y="11" width="16" height="10" rx="2" />
-    {open
-      ? <path d="M8 11V7a4 4 0 0 1 7.9-.9" />
-      : <path d="M8 11V7a4 4 0 0 1 8 0v4" />}
-  </svg>
-)
-
-// Small lock toggle used across the tool — pins a setting so it survives a
-// randomise. `on` = locked; the glyph flips its shackle to reflect state.
+// Small lock toggle — pins a setting so it survives a randomise. `on` = locked;
+// the glyph flips its shackle to say so. Drawn at the size of the design's
+// row-end icon buttons (the stop row's remove ×, 26px) so it sits in a row
+// without adding a new control shape.
 const LockBtn = ({ on, onClick, label, className = '' }) => (
   <button
     type="button"
-    className={`ggn-lock${on ? ' is-on' : ''}${className ? ' ' + className : ''}`}
+    className={`grd-iconbtn grd-lock${on ? ' is-on' : ''}${className ? ' ' + className : ''}`}
     onClick={onClick}
     aria-pressed={on}
     aria-label={label}
     title={label}
   >
-    <IcoLock open={!on} />
+    <ToolIcon name={on ? 'lock-simple' : 'lock-simple-open'} size={13} />
   </button>
 )
 
@@ -340,6 +314,14 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const [activeStop, setActiveStop] = useState(0)
   const [copied, setCopied] = useState(false)
   const [fmt, setFmt] = useState('css') // export format: css | tailwind | svg
+  // Interpolation space — the design's GEOMETRY control. OKLCH is its default
+  // (D:1306, gSpace: 0). A saved gradient keeps the space it was saved in; one
+  // saved before this control existed was drawn in sRGB, so it stays sRGB.
+  const [space, setSpace] = useState(() => {
+    const saved = design?.gradient
+    if (saved?.space === 'oklch' || saved?.space === 'srgb') return saved.space
+    return saved?.stops?.some?.((s) => s?.color) ? 'srgb' : 'oklch'
+  })
 
   // A gradient carried in from the Discover gallery is free to preview + copy,
   // but reshaping it is a Pro tool. `fromLibrary` is set on the ?gs= hand-off
@@ -365,31 +347,32 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   const [submitOpen, setSubmitOpen] = useState(false)
 
   const barRef = useRef(null)
-  const dialRef = useRef(null)
   // Handle elements by stop index, so a stop added by pressing the rail can be
   // focused the moment it renders — that is what makes the arrow keys work on it
   // straight away instead of only after the user hunts it down and clicks it.
   const handleEls = useRef(new Map())
   const focusStopRef = useRef(null)
 
-  const css = gradientCss(type, angle, stops)
+  const css = gradientCssIn(type, angle, stops, space)
+  // What the canvas paints: the chosen space where the browser can, else sRGB.
+  const paintCss = supportsOklchGradients ? css : gradientCss(type, angle, stops)
 
   // Export code for the copy panel. SVG only applies to linear/radial, so a
   // conic gradient falls back to CSS even if SVG was the last-picked format.
   const effFmt = fmt === 'svg' && type === 'Conic' ? 'css' : fmt
   const exportCode = useMemo(() => {
     if (effFmt === 'tailwind') return tailwindValue(css)
-    if (effFmt === 'svg') return gradientSvg(type, angle, stops)
+    if (effFmt === 'svg') return gradientSvg(type, angle, stops, space)
     return `background: ${css};`
-  }, [effFmt, css, type, angle, stops])
+  }, [effFmt, css, type, angle, stops, space])
 
   // Persist to the shared design so the gradient follows the user across tools.
   // `source` travels with it so the Pro gate on gallery gradients survives a
   // remount/refresh and stays consistent with ColorStudio's gradient editor.
   useEffect(() => {
-    setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position })), angle, type, source: fromLibrary ? 'gallery' : 'own' })
+    setGradient({ stops: stops.map(s => ({ color: s.color, position: s.position })), angle, type, space, source: fromLibrary ? 'gallery' : 'own' })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stops, angle, type, fromLibrary])
+  }, [stops, angle, type, space, fromLibrary])
 
   // Commit the Palette Builder hand-off. Effects only run for a committed tree,
   // so this empties the slot exactly once — a remount, a Back/Forward navigation
@@ -410,6 +393,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
       setType(incoming.type)
       setAngle(incoming.angle)
       setActiveStop(0)
+      // A library gradient is drawn in sRGB there, so it opens in sRGB here —
+      // the preview matches the card it came from until the person changes it.
+      setSpace('srgb')
       setFromLibrary(true)
       toast?.(`Loaded ${incoming.name || 'gradient'}`)
     } else {
@@ -599,16 +585,6 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     return list
   }, [design?.palette?.colors, projects])
 
-  const importColors = useCallback((src) => {
-    setStops(src.colors.map((color, i) => ({
-      color: color.toUpperCase(),
-      position: Math.round((i / (src.colors.length - 1)) * 100),
-    })))
-    setActiveStop(0)
-    setFromLibrary(false)
-    toast?.(`Imported ${src.name}`)
-  }, [toast])
-
   // ── Presets built from the user's own palettes/projects ──
   // Each import source becomes a ready-made gradient (colours spread evenly
   // across a linear ramp) so a saved palette is a one-tap gradient. These lead
@@ -775,7 +751,7 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   // propagation), so they never reach here.
   const railPointerDown = useCallback((e) => {
     if (e.button != null && e.button > 0) return
-    if (e.target.closest?.('.ggn-handle')) return
+    if (e.target.closest?.('.grd-handle')) return
     const rect = barRef.current?.getBoundingClientRect()
     if (!rect || !rect.width) return
     if (e.cancelable) e.preventDefault()
@@ -785,29 +761,9 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
     beginStopDrag(idx)
   }, [addStopAt, beginStopDrag])
 
-  // ── Drag: the angle dial ──
+  // The angle applies to linear and conic; a radial gradient has none, and the
+  // design hides the row for it (gradAngleDisplay, D:1831).
   const angleActive = type !== 'Radial'
-  const dragDial = useCallback((e) => {
-    if (!angleActive) return
-    if (!guardEdit()) return
-    const compute = (ev) => {
-      const rect = dialRef.current?.getBoundingClientRect()
-      if (!rect) return
-      const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2
-      let deg = Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI + 90
-      setAngle((Math.round(deg) + 360) % 360)
-    }
-    compute(e)
-    const move = (ev) => compute(ev)
-    const up = () => {
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
-      window.removeEventListener('pointercancel', up)
-    }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
-    window.addEventListener('pointercancel', up)
-  }, [angleActive, guardEdit])
 
   // Focus a freshly added handle once it exists in the DOM. Keyed on the stop
   // count so it fires exactly on the render that added one.
@@ -819,133 +775,107 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
   }, [stops.length])
 
   const sortedForBar = [...stops.map((s, i) => ({ ...s, i }))].sort((a, b) => a.position - b.position)
+  const selected = stops[activeStop] || stops[0]
+  // The rail reads the stops left to right, so it is always a 90deg ramp in the
+  // chosen space whatever the gradient's type — the design paints the gradient
+  // itself there, which for a radial or conic would put no stop where its
+  // handle sits.
+  const railCss = gradientCssIn('Linear', 90, stops, supportsOklchGradients ? space : 'srgb')
+  const allPresets = [...palettePresets, ...PRESETS]
+  const presetOn = (p) => p.type === type
+    && p.stops.length === stops.length
+    && [...p.stops].sort((a, b) => a.position - b.position)
+      .every((s, i) => s.color.toUpperCase() === sortedForBar[i].color.toUpperCase() && Math.round(s.position) === Math.round(sortedForBar[i].position))
+  const fmtLabel = EXPORT_FORMATS.find((f) => f.id === effFmt)?.label || 'CSS'
 
   return (
-    <div className="ggn">
-      {/* Header */}
-      {/* THE TAXONOMY EYEBROW IS GONE (`.ggn-eyebrow`).
-          ------------------------------------------------------------------
-          "Create / Colour" in 11px caps at 1.76px tracking, measured at y=140
-          directly above an h1 that says "Gradient Generator", on the route
-          /create/gradient with the Create menu already lit in the nav. Same
-          element #382 deleted from the Font Gallery and Font Pair and #386
-          from the Type Scale, under a third class name. Below it sit four
-          controls you can actually press — Random, From palette, Reset, Submit
-          for review — which is where this header states where you are. */}
-      <header className="ggn-head">
-        <div className="ggn-head-id">
-          <div className="ggn-title-row">
-            <h1 className="ggn-title">Gradient Generator</h1>
-          </div>
-          {/* THE LEDE STATES THE MODEL, NOT THE WORKFLOW. It used to read
-              "Compose on a direct canvas, refine every stop in the inspector,
-              then hand off production-ready CSS, Tailwind or SVG." — the same
-              three-clause workflow narration #386 removed from the Type Scale
-              and this pass removed from the Tint Scale, down to the shared
-              phrase "production-ready". Compose / refine / hand off are three
-              things a visitor can already see on this screen; what they cannot
-              infer is that a gradient here is only ever stops and positions,
-              and that the same two facts drive all three exports. Type and
-              angle ride on top of that, which is why this says "where each one
-              sits" rather than naming a line — the tool builds linear, radial
-              AND conic. */}
-          <p className="ggn-sub">Colour stops and where each one sits. Everything below is those two facts, as CSS, Tailwind or SVG.</p>
+    <ToolLayout
+      className="grd"
+      title="Gradient"
+      titleId="grd-title"
+      items={[
+        // THE TOOL'S OWN ACTIONS. The drawn toolbar carries only the name, the
+        // stop count and Copy CSS; these four are the previous build's header
+        // actions, kept (the tool's actions live in the toolbar)
+        // in its quiet-button shape. What does not fit goes to More.
+        {
+          id: 'random', priority: 3,
+          render: () => <ToolButton icon="shuffle" onClick={randomise} title="Random gradient">Random</ToolButton>,
+          menu: { label: 'Random', icon: 'shuffle', onSelect: randomise },
+        },
+        {
+          id: 'from-palette', priority: 1,
+          render: () => (
+            <ToolButton
+              icon="swatches"
+              onClick={() => canRandomFromPalette && randomiseFromPalette()}
+              aria-disabled={!canRandomFromPalette || undefined}
+              aria-label={canRandomFromPalette ? undefined : 'From palette — add 2+ colours in the Palette Builder to use this'}
+              title={canRandomFromPalette ? 'Build a random gradient from your current palette' : 'Add 2+ colours in the Palette Builder to use this'}
+            >
+              From palette
+            </ToolButton>
+          ),
+          menu: {
+            label: 'From palette', icon: 'swatches', ariaDisabled: !canRandomFromPalette,
+            title: canRandomFromPalette ? 'Build a random gradient from your current palette' : 'Add 2+ colours in the Palette Builder to use this',
+            onSelect: () => canRandomFromPalette && randomiseFromPalette(),
+          },
+        },
+        {
+          id: 'reset', priority: 1,
+          render: () => <ToolButton icon="arrow-counter-clockwise" onClick={reset} title="Reset to the starting gradient">Reset</ToolButton>,
+          menu: { label: 'Reset', icon: 'arrow-counter-clockwise', onSelect: reset },
+        },
+        {
+          id: 'submit', priority: 0,
+          render: () => (
+            <ToolButton
+              icon="upload-simple"
+              onClick={openSubmit}
+              disabled={authLoading}
+              aria-busy={authLoading || undefined}
+              title={authLoading ? 'Checking your account…' : 'Submit this gradient for review for the gradient library'}
+            >
+              Submit for review
+            </ToolButton>
+          ),
+          menu: { label: 'Submit for review', icon: 'upload-simple', disabled: authLoading, onSelect: openSubmit },
+        },
+        {
+          id: 'count', priority: 2, align: 'end', menu: false,
+          render: () => <span className="tl-meta grd-count">{stops.length} {stops.length === 1 ? 'stop' : 'stops'}</span>,
+        },
+      ]}
+      primary={(
+        <ToolButton variant="accent" icon="copy" iconSize={14} onClick={copyCode}>
+          {copied ? 'Copied' : `Copy ${fmtLabel}`}
+        </ToolButton>
+      )}
+    >
+      <ToolGrid>
+        <ToolMain>
           {editLocked && (
-            <p className="ggn-lock-note">
-              <IcoLock size={12} />
+            <p className="grd-note">
+              <ToolIcon name="lock-simple" size={13} />
               <span>Gallery gradient — free to preview &amp; copy. Editing it is a Pro tool; Reset or Random to start a free, editable one.</span>
             </p>
           )}
-        </div>
-        <div className="ggn-head-actions">
-          <button type="button" className="ggn-btn ggn-btn-accent" onClick={randomise}>
-            <ShuffleIcon size={15} /> Random
-          </button>
-          <button
-            type="button"
-            className="ggn-btn ggn-btn-ghost"
-            onClick={() => canRandomFromPalette && randomiseFromPalette()}
-            aria-disabled={!canRandomFromPalette || undefined}
-            aria-label={canRandomFromPalette
-              ? 'Random gradient from your palette'
-              : 'From palette — add 2+ colours in the Palette Builder to use this'}
-            title={canRandomFromPalette
-              ? 'Build a random gradient from your current palette'
-              : 'Add 2+ colours in the Palette Builder to use this'}
-          >
-            <ShuffleIcon size={15} /> From palette
-          </button>
-          <button type="button" className="ggn-btn ggn-btn-ghost" onClick={reset}>Reset</button>
-          <button
-            type="button"
-            className="ggn-btn ggn-btn-ghost"
-            onClick={openSubmit}
-            disabled={authLoading}
-            aria-busy={authLoading || undefined}
-            title={authLoading
-              ? 'Checking your account…'
-              : 'Submit this gradient for review for the gradient library'}
-          >
-            <IcoSubmit size={15} /> Submit for review
-          </button>
-        </div>
-      </header>
+          <div className="grd-canvas" style={{ background: paintCss }} role="img" aria-label={`${type} gradient preview`} />
 
-      {/* THE FOUR-UP FIGURE STRIP IS GONE (`.ggn-status`).
-          ------------------------------------------------------------------
-          Every one of its four figures was already on the same screen, at the
-          control that sets it. Measured at 1440x900, strip bottom edge y=426:
-
-            "Linear gradient"     `.ggn-pill` says "Linear" at +131px and the
-                                  segmented button that sets it is on at +173px.
-            "3 editable stops"    `.ggn-badge` says "3/12 stops" at +45px — and
-                                  the badge is strictly better, because it also
-                                  tells you how many you have left.
-            "135° direction"      `.ggn-pill` says "135°" at +131px.
-            "CSS handoff"         `.ggn-fmt-btn` for CSS is on at +393px.
-
-          So it was a band of duplicates above the canvas, inside an
-          aria-live="polite" region that re-announced all four every time one
-          stop moved. This is the motif the founder marked "AI" on the Font
-          Gallery header, one column wider.
-
-          Framer's gradient inspector on Mobbin
-          (mobbin.com/screens/4ade6802-3d3f-4adb-a256-2fb85fa62782) and Rive's
-          (mobbin.com/screens/9f95defe-f313-4c2e-90aa-aa1da9e137d9) both run a
-          canvas with a right-hand inspector and neither states its values twice:
-          the colours, the seed, the angle and the fill mode live only on the
-          controls that change them.
-
-          NOT REMOVED: `.ggn-badge` ("3/12 stops"). It is the only place the
-          stop LIMIT appears, and it is what tells you when Add Stop will stop
-          working. */}
-
-      <div className="ggn-grid" aria-label="Gradient workbench">
-        {/* Preview */}
-        <section className="ggn-stage" aria-labelledby="ggn-stage-title">
-          <div className="ggn-stage-head">
-            <div>
-              <span className="ggn-step">01 · Canvas</span>
-              <h2 id="ggn-stage-title">Shape the gradient</h2>
-            </div>
-            <span className="ggn-badge">{stops.length}/{MAX_STOPS} stops</span>
-          </div>
-          <div className="ggn-preview-wrap">
-            <div className="ggn-preview" style={{ background: css }}>
-              <div className="ggn-preview-pills">
-                <span className="ggn-pill">{type}</span>
-                {angleActive && <span className="ggn-pill">{Math.round(angle)}°</span>}
-              </div>
-            </div>
+          {/* The stop rail. Press empty rail to drop a stop where you press and
+              keep dragging to place it; drag or arrow a handle to move it
+              (Shift + arrow moves 10%, Home/End jump, Delete removes). */}
+          <div className="grd-rail-wrap">
             <div
-              className="ggn-bar"
+              className="grd-rail"
               ref={barRef}
               onPointerDown={railPointerDown}
               title="Press the rail to add a stop, then drag to place it"
               role="group"
               aria-label="Gradient stop rail. Press empty space to add a stop and drag to place it."
+              style={{ background: railCss }}
             >
-              <div className="ggn-bar-track" style={{ background: `linear-gradient(90deg, ${[...stops].sort((a, b) => a.position - b.position).map(s => `${s.color} ${Math.round(s.position)}%`).join(', ')})` }} />
               {sortedForBar.map(s => (
                 <button
                   key={s.i}
@@ -954,8 +884,8 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                     if (el) handleEls.current.set(s.i, el)
                     else handleEls.current.delete(s.i)
                   }}
-                  className={`ggn-handle${activeStop === s.i ? ' is-active' : ''}${dragIdx === s.i ? ' is-dragging' : ''}${s.locked ? ' is-locked' : ''}`}
-                  style={{ left: `${s.position}%`, '--h-color': s.color }}
+                  className={`grd-handle${activeStop === s.i ? ' is-active' : ''}${dragIdx === s.i ? ' is-dragging' : ''}${s.locked ? ' is-locked' : ''}`}
+                  style={{ left: `${s.position}%`, '--grd-stop': s.color }}
                   onPointerDown={(e) => dragStop(e, s.i)}
                   onFocus={() => setActiveStop(s.i)}
                   onKeyDown={(e) => {
@@ -978,259 +908,206 @@ export default function GradientGenerator({ onCopy, onExport = onCopy, toast }) 
                   }}
                   aria-label={`Gradient stop ${s.i + 1} at ${Math.round(s.position)}%${s.locked ? ', locked' : ''}`}
                 >
-                  {/* Live position, shown while dragging or keyboard-focused, so
-                      a fine adjustment is read off the handle rather than guessed. */}
-                  <span className="ggn-handle-val" aria-hidden="true">{Math.round(s.position)}%</span>
+                  <span className="grd-handle-dot" aria-hidden="true" />
+                  {/* Live position while dragging or keyboard-focused, so a
+                      fine adjustment is read off the handle, not guessed. */}
+                  <span className="grd-handle-val" aria-hidden="true">{Math.round(s.position)}%</span>
                 </button>
               ))}
             </div>
-            <p className="ggn-preview-hint">
-              {editLocked
-                ? 'Editing gallery gradients is a Pro feature — Reset or Random to start a free, editable gradient.'
-                : 'Press the rail to add a stop and drag to place it · drag or arrow a handle to move it · Shift + arrow moves 10%'}
-            </p>
           </div>
-        </section>
 
-        {/* Control panel. The slot stretches to the canvas column's height and the
-            panel is absolutely positioned inside it, so the inspector always matches
-            the canvas height and a long export block scrolls in .ggn-panel-body
-            instead of stretching the row. Both are unset in the single-column
-            breakpoints, where the panel simply flows. */}
-        <div className="ggn-panel-slot">
-          <aside className="ggn-panel" aria-labelledby="ggn-inspector-title">
-            <div className="ggn-panel-head">
-              <div>
-                <span className="ggn-step">02 · Inspector</span>
-                <h2 id="ggn-inspector-title">Refine &amp; export</h2>
-              </div>
+          <div className="grd-code">
+            <div className="grd-fmt" role="tablist" aria-label="Export format">
+              {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={effFmt === f.id}
+                  className={`tl-pill tl-pill--mono grd-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
+                  onClick={() => setFmt(f.id)}
+                >{f.label}</button>
+              ))}
             </div>
-            <div className="ggn-panel-body" tabIndex={0} role="group" aria-label="Inspector controls">
-              <div className="ggn-field">
-                <div className="ggn-label-row">
-                  <span className="ggn-label" id="ggn-type-label">Type</span>
-                  <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked — unlock to randomise it' : 'Lock type when randomising'} />
-                </div>
-                {/* THE CHOSEN TYPE WAS IN A CSS CLASS AND NOWHERE ELSE.
-                    Measured 2026-09-15 on the built preview at 1440x900,
-                    reading Chrome's own accessibility tree over CDP
-                    (Accessibility.getFullAXTree) rather than the markup:
+            <pre className={`grd-code-text${effFmt === 'svg' ? ' grd-code-text--block' : ''}`} tabIndex={0} aria-label={`${fmtLabel} code`}><code>{exportCode}</code></pre>
+          </div>
+        </ToolMain>
 
-                      button "Linear"  {invalid:false, focusable:true}
-                      button "Radial"  {invalid:false, focusable:true}
-                      button "Conic"   {invalid:false, focusable:true}
-
-                    No pressed, no selected, no checked on any of the three —
-                    `is-on` painted the choice and told no one. Thirty pixels
-                    below, in the same panel, the export format group already
-                    reported tab "CSS" {selected:true} | tab "Tailwind"
-                    {selected:false} | tab "SVG" {selected:false}, so the two
-                    adjacent choices on one panel disagreed about whether a
-                    choice is something a reader is told about.
-
-                    aria-pressed rather than a second tablist: these buttons
-                    select a gradient TYPE, not a panel, and the shape matches
-                    `.fpr-preset-switch` on /create/font-pair and `.rc-tab` on
-                    /create/aspect-ratio. The group takes its name from the
-                    "Type" label already beside it — aria-labelledby, so no
-                    sentence had to be written for it. */}
-                <div className="ggn-seg" role="group" aria-labelledby="ggn-type-label">
-                  {GRAD_TYPES.map(t => (
-                    <button key={t} type="button" className={`ggn-seg-btn${type === t ? ' is-on' : ''}`} aria-pressed={type === t} onClick={() => { if (guardEdit()) setType(t) }}>{t}</button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="ggn-field">
-                <div className="ggn-label-row">
-                  <span className="ggn-label">Angle</span>
-                  <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked — unlock to randomise it' : 'Lock angle when randomising'} />
-                </div>
-                <div className={`ggn-angle${angleActive ? '' : ' is-disabled'}`}>
-                  <div className="ggn-dial" ref={dialRef} onPointerDown={dragDial} role="slider" aria-label="Gradient angle" aria-valuenow={Math.round(angle)} aria-valuemin={0} aria-valuemax={360} tabIndex={angleActive ? 0 : -1}
-                    onKeyDown={(e) => {
-                      if (!angleActive) return
-                      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); if (guardEdit()) setAngle(a => (a + 1) % 360) }
-                      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); if (guardEdit()) setAngle(a => (a + 359) % 360) }
-                    }}>
-                    <div className="ggn-dial-hand" style={{ transform: `rotate(${angle}deg)` }} />
-                    <div className="ggn-dial-center" />
-                  </div>
-                  <div className="ggn-angle-ctrl">
-                    {angleActive ? (
-                      <div className="ggn-angle-num">
-                        <input
-                          type="number" min="0" max="360" value={Math.round(angle)}
-                          onChange={(e) => { const v = e.target.value; if (v === '') return; if (guardEdit()) setAngle(((Math.round(+v) % 360) + 360) % 360) }}
-                          disabled={editLocked}
-                          className="ggn-angle-input"
-                          aria-label="Gradient angle in degrees"
-                        />
-                        <span className="ggn-angle-deg" aria-hidden="true">°</span>
-                      </div>
-                    ) : (
-                      <div className="ggn-angle-val">n/a for radial</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="ggn-field">
-                <div className="ggn-label-row">
-                  <span className="ggn-label">Code</span>
-                  <button type="button" className="ggn-copy" onClick={copyCode}>{copied ? '✓ Copied' : 'Copy'}</button>
-                </div>
-                <div className="ggn-fmt" role="tablist" aria-label="Export format">
-                  {EXPORT_FORMATS.filter(f => f.id !== 'svg' || type !== 'Conic').map(f => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={effFmt === f.id}
-                      className={`ggn-fmt-btn${effFmt === f.id ? ' is-on' : ''}`}
-                      onClick={() => setFmt(f.id)}
-                    >{f.label}</button>
-                  ))}
-                </div>
-                <button type="button" className={`ggn-css${effFmt === 'svg' ? ' ggn-css--block' : ''}`} onClick={copyCode} title="Click to copy">
-                  <code>{exportCode}</code>
+        <ToolPanel label="Gradient controls" className="grd-panel">
+          <ToolSection
+            label="Stops"
+            aside={(
+              <span className="grd-sec-tools">
+                <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked — unlock to randomise it' : 'Lock the number of stops when randomising'} />
+                <button type="button" className="grd-iconbtn" onClick={flip} aria-label="Flip the stops" title="Flip the stops">
+                  <ToolIcon name="arrows-left-right" size={13} />
                 </button>
+              </span>
+            )}
+          >
+            {stops.map((s, i) => (
+              <div key={i} className={`grd-stop${activeStop === i ? ' is-on' : ''}`}>
+                <button
+                  type="button"
+                  className="grd-stop-swatch"
+                  style={{ background: s.color }}
+                  onClick={() => setActiveStop(i)}
+                  aria-pressed={activeStop === i}
+                  aria-label={`Select stop ${i + 1}, ${s.color.toUpperCase()}`}
+                />
+                <span className="grd-stop-hex">{s.color.toUpperCase()}</span>
+                <span className="grd-stop-pos">{Math.round(s.position)}%</span>
+                <LockBtn
+                  on={!!s.locked}
+                  onClick={() => toggleStopLock(i)}
+                  className="grd-stop-lock"
+                  label={s.locked ? `Stop ${i + 1} locked — colour & position kept on randomise` : `Lock stop ${i + 1} colour & position when randomising`}
+                />
+                {stops.length > 2 && (
+                  <button type="button" className="grd-iconbtn grd-stop-x" onClick={() => removeStop(i)} aria-label={`Remove stop ${i + 1}`} title="Remove this stop">
+                    <ToolIcon name="x" size={12} />
+                  </button>
+                )}
               </div>
-            </div>
-          </aside>
-        </div>
-      </div>
+            ))}
+            {stops.length < MAX_STOPS && (
+              <ToolButton variant="dashed" icon="plus" iconSize={13} className="grd-add" onClick={addStop}>
+                Add a stop
+              </ToolButton>
+            )}
+          </ToolSection>
 
-      {/* Stops */}
-      <section className="ggn-block">
-        <div className="ggn-block-head">
-          <span className="ggn-label">Stops</span>
-          <div className="ggn-block-actions">
-            <LockBtn on={locks.count} onClick={() => setLocks(l => ({ ...l, count: !l.count }))} label={locks.count ? 'Stop count locked — unlock to randomise it' : 'Lock the number of stops when randomising'} />
-            <button
-              type="button"
-              className="ggn-btn ggn-btn-ghost ggn-btn-sm"
-              onClick={addStop}
-              disabled={stops.length >= MAX_STOPS}
-            >
-              {editLocked && <IcoLock size={12} />} + Add Stop
-            </button>
-            <button type="button" className="ggn-btn ggn-btn-ghost ggn-btn-sm" onClick={flip}>{editLocked && <IcoLock size={12} />} ⇄ Flip</button>
-          </div>
-        </div>
-        <div className="ggn-stops">
-          {stops.map((s, i) => (
-            <div key={i} className={`ggn-stop${activeStop === i ? ' is-active' : ''}`} onClick={() => setActiveStop(i)}>
-              <span className="ggn-stop-idx" aria-hidden="true">{i + 1}</span>
-              <div className="ggn-stop-swatch">
-                <ColorPickerPop
-                  value={s.color}
-                  onChange={(hex) => updateStop(i, { color: hex.toUpperCase() })}
-                  ariaLabel={`Stop ${i + 1} colour`}
-                  disabled={editLocked}
-                  onDisabledClick={guardEdit}
+          <ToolSection label="Selected stop">
+            <div className="grd-swatches" role="group" aria-label="Quick colours for the selected stop">
+              {STOP_SWATCHES.map((hex) => {
+                const on = selected?.color?.toUpperCase() === hex
+                return (
+                  <button
+                    key={hex}
+                    type="button"
+                    className={`grd-swatch${on ? ' is-on' : ''}`}
+                    style={{ background: hex }}
+                    aria-label={`Use ${hex}`}
+                    aria-pressed={on}
+                    title={hex}
+                    onClick={() => updateStop(activeStop, { color: hex })}
+                  />
+                )
+              })}
+            </div>
+            {selected && (
+              <div className="grd-pick">
+                <span className="grd-pick-swatch">
+                  <ColorPickerPop
+                    value={selected.color}
+                    onChange={(hex) => updateStop(activeStop, { color: hex.toUpperCase() })}
+                    ariaLabel={`Stop ${activeStop + 1} colour`}
+                    disabled={editLocked}
+                    onDisabledClick={guardEdit}
+                  />
+                </span>
+                <StopHexInput
+                  color={selected.color}
+                  label={`Stop ${activeStop + 1} hex`}
+                  onCommit={(v) => updateStop(activeStop, { color: v })}
                 />
               </div>
-              <StopHexInput
-                color={s.color}
-                label={`Stop ${i + 1} hex`}
-                onCommit={(v) => updateStop(i, { color: v })}
+            )}
+            <ToolSlider
+              label="Position"
+              value={Math.round(selected?.position ?? 0)}
+              min={0}
+              max={100}
+              step={1}
+              onChange={(v) => updateStop(activeStop, { position: v })}
+              display={`${Math.round(selected?.position ?? 0)}%`}
+              track={railCss}
+              ariaLabel="Stop position"
+              ariaValueText={`${Math.round(selected?.position ?? 0)}%`}
+              disabled={editLocked}
+            />
+          </ToolSection>
+
+          <ToolSection label="Geometry" className="grd-geo">
+            <div className="grd-row">
+              <ToolPills
+                label="Gradient type"
+                options={GRAD_TYPES}
+                value={type}
+                onChange={(t) => { if (guardEdit()) setType(t) }}
               />
-              <StopPositionInput
-                value={s.position}
-                disabled={editLocked}
-                label={`Stop ${i + 1} position`}
-                onCommit={(position) => updateStop(i, { position })}
-              />
-              <LockBtn
-                on={!!s.locked}
-                onClick={(e) => { e.stopPropagation(); toggleStopLock(i) }}
-                className="ggn-stop-lock"
-                label={s.locked ? `Stop ${i + 1} locked — colour & position kept on randomise` : `Lock stop ${i + 1} colour & position when randomising`}
-              />
-              <button type="button" className="ggn-stop-x" onClick={(e) => { e.stopPropagation(); removeStop(i) }} disabled={stops.length <= 2} aria-label={`Remove stop ${i + 1}`}>×</button>
+              <LockBtn on={locks.type} onClick={() => setLocks(l => ({ ...l, type: !l.type }))} label={locks.type ? 'Type locked — unlock to randomise it' : 'Lock type when randomising'} />
             </div>
-          ))}
-        </div>
-      </section>
+            {angleActive && (
+              <div className="grd-row">
+                <ToolSlider
+                  label="Angle"
+                  className="grd-angle"
+                  value={Math.round(angle)}
+                  min={0}
+                  max={360}
+                  step={1}
+                  onChange={(v) => { if (guardEdit()) setAngle(v % 360) }}
+                  display={`${Math.round(angle)}°`}
+                  ariaLabel="Gradient angle"
+                  ariaValueText={`${Math.round(angle)} degrees`}
+                  disabled={editLocked}
+                />
+                <LockBtn on={locks.angle} onClick={() => setLocks(l => ({ ...l, angle: !l.angle }))} label={locks.angle ? 'Angle locked — unlock to randomise it' : 'Lock angle when randomising'} />
+              </div>
+            )}
+            <div className="grd-interp">
+              <span className="grd-interp-k" id="grd-interp-label">Interpolation</span>
+              <ToolPills labelledBy="grd-interp-label" mono options={SPACES} value={space} onChange={setSpace} />
+            </div>
+          </ToolSection>
+        </ToolPanel>
+      </ToolGrid>
 
-      {/* ── Start from ─────────────────────────────────────────────────────
-          This was TWO cards making the same offer, and the first of them was a
-          numbered step. "03 - Starting points / Begin with colours you trust"
-          sat BELOW the canvas and the inspector, so the page told you where to
-          begin after you had already composed and exported; and for anyone
-          without a saved palette that whole numbered step rendered a single
-          apology ("Nothing to import yet") in a full-height card.
-
-          There are two real steps on this page - compose (01) and refine and
-          export (02). Where the colours come from is not a third one, it is a
-          source, so it is one unnumbered block that always has something in it:
-          the curated rail is never empty, and your own palettes join it above
-          when they exist. */}
-      <section className="ggn-block ggn-starting" aria-labelledby="ggn-start-title">
-        <div className="ggn-block-head">
-          <div>
-            <span className="ggn-label">Start from</span>
-            <h2 id="ggn-start-title">Pick a direction, then make it yours in the canvas</h2>
-          </div>
-          <Link className="ggn-gal-link" to="/discover/gradients">
-            Browse the Gradient Library <span aria-hidden="true">→</span>
+      {/* START FROM A PRESET (D:703-713). The drawn strip is six across; the
+          build's set is the person's own palettes first (one-tap gradients of
+          their saved colours), then the curated sixteen, in the same grid. */}
+      <section className="grd-presets" aria-labelledby="grd-presets-title">
+        <div className="grd-presets-head">
+          <h2 id="grd-presets-title">Start from a preset</h2>
+          <Link className="grd-lib" to="/discover/gradients">
+            <span>Gradient Library</span>
+            <ToolIcon name="caret-right" size={12} className="grd-lib-caret" />
           </Link>
         </div>
-
-        {importSources.length > 0 && (
-          <div className="ggn-start-group">
-            <span className="ggn-start-label">From your palettes</span>
-            <div className="ggn-imports">
-              {importSources.map(src => (
-                <button key={src.key} type="button" className="ggn-import" onClick={() => importColors(src)}>
-                  <span className="ggn-import-stripes" aria-hidden="true">
-                    {src.colors.map((c, i) => <span key={i} style={{ background: c }} />)}
-                  </span>
-                  <span className="ggn-import-id">
-                    <span className="ggn-import-name">{src.name}</span>
-                    <span className="ggn-import-meta">{src.meta} · {src.colors.length} colours</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="ggn-start-group">
-          <span className="ggn-start-label">Curated gradients</span>
-          <div className="ggn-presets rail-overflow">
-            {palettePresets.map((p, i) => (
-              <button key={`mine-${i}`} type="button" className="ggn-preset ggn-preset--mine" onClick={() => applyPreset(p)} title={`Gradient from ${p.n}`}>
-                <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />
-                <span className="ggn-preset-name">{p.n}</span>
+        <div className="grd-preset-grid">
+          {allPresets.map((p, i) => {
+            const on = presetOn(p)
+            return (
+              <button
+                key={`${p.mine ? 'mine' : 'p'}-${i}`}
+                type="button"
+                className={`grd-preset${p.mine ? ' grd-preset--mine' : ''}${on ? ' is-on' : ''}`}
+                aria-pressed={on}
+                onClick={() => applyPreset(p)}
+                title={p.mine ? `Gradient from ${p.n}` : undefined}
+              >
+                <span className="grd-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} aria-hidden="true" />
+                <span className="grd-preset-row">
+                  <span className="grd-preset-name">{p.n}</span>
+                  <span className="grd-preset-meta">{p.stops.length} stops</span>
+                </span>
               </button>
-            ))}
-            {PRESETS.map(p => (
-              <button key={p.n} type="button" className="ggn-preset" onClick={() => applyPreset(p)}>
-                <span className="ggn-preset-swatch" style={{ background: gradientCss(p.type, p.angle, p.stops) }} />
-                <span className="ggn-preset-name">{p.n}</span>
-              </button>
-            ))}
-          </div>
+            )
+          })}
         </div>
-
-        {importSources.length === 0 && (
-          <p className="ggn-import-empty">
-            Building a palette in the <Link to="/create/palette">Palette Builder</Link> adds its colours here as gradient stops.
-          </p>
-        )}
       </section>
 
       {/* Only ever mounted for a signed-in user — see openSubmit above. */}
       {submitOpen && uid && (
         <SubmitGradientModal
-          gradient={{ css, name: '' }}
+          gradient={{ css: paintCss, name: '' }}
           authorName={userProfile?.displayName || user?.displayName || ''}
           onClose={() => setSubmitOpen(false)}
           onSubmit={submitForReview}
         />
       )}
-    </div>
+    </ToolLayout>
   )
 }

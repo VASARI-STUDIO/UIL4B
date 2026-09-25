@@ -7,6 +7,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useAuth } from '../contexts/AuthContext'
 import { isAdminEmail } from '../utils/constants'
 import useModalDialog from '../hooks/useModalDialog'
+import { useCloseOnBack, useInertBehind } from '../hooks/useCloseOnBack'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
@@ -28,6 +29,22 @@ export default function CommandPalette({ open, onClose }) {
   const listRef = useRef(null)
   const uid = useId()
   const dialogRef = useModalDialog(onClose, { enabled: !!open, initialFocus: '.cp-input' })
+  // On a phone, Back closes the palette instead of leaving the
+  // page, and the page behind it is inert while it is open.
+  useCloseOnBack(!!open, onClose)
+  useInertBehind(!!open)
+  // A10: on a phone the keyboard shrinks the VISUAL viewport, which dvh does
+  // not follow. The panel's max-height reads --vvh, the visual viewport's own
+  // height, so the results list ends above the keyboard instead of under it.
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    if (!open || !vv) return undefined
+    const root = document.documentElement
+    const sync = () => root.style.setProperty('--vvh', `${Math.round(vv.height)}px`)
+    sync()
+    vv.addEventListener('resize', sync)
+    return () => { vv.removeEventListener('resize', sync); root.style.removeProperty('--vvh') }
+  }, [open])
   const { recent } = useWorkspace()
   const { user } = useAuth()
   const { t } = useI18n()

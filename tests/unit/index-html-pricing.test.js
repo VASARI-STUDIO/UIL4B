@@ -153,18 +153,20 @@ test('the currency is the ladder\'s, not the AUD the old block claimed', () => {
 })
 
 test('no tier that cannot reach checkout is advertised as an Offer', () => {
-  // Quarterly is defined in the ladder, has an approved amount, and has no
-  // Stripe price or Checkout.jsx entry — src/pages/Checkout.jsx dead-ends it on
-  // "Invalid selection". A machine-readable Offer for something nobody can buy
-  // is the same class of false claim about money as the wrong amount.
-  const unbuyable = PLAN_LADDER.filter((p) => !p.checkoutPlan)
-  assert.ok(unbuyable.length >= 1,
-    'every tier is purchasable, so this guard is asserting nothing — if that is '
-    + 'genuinely true now, delete it rather than leaving it green and empty')
-  const names = ladderOffers().map((o) => o.name)
-  for (const plan of unbuyable) {
-    assert.ok(!names.includes(`Pro — ${plan.label}`),
-      `${plan.id} has no checkoutPlan but is advertised as a buyable Offer`)
+  // A machine-readable Offer for something nobody can buy is the same class of
+  // false claim about money as the wrong amount. So every Offer names a tier with a checkoutPlan that Checkout.jsx has a
+  // case for, and a tier without one is not an Offer.
+  const checkout = fs.readFileSync(path.join(process.cwd(), 'src/pages/Checkout.jsx'), 'utf8')
+  const offers = ladderOffers().map((o) => o.name)
+  assert.ok(offers.length >= 2, 'the static shell advertises fewer than two cadences')
+  for (const plan of PLAN_LADDER) {
+    const advertised = offers.includes(`Pro — ${plan.label}`)
+    if (!plan.checkoutPlan) {
+      assert.ok(!advertised, `${plan.id} has no checkoutPlan but is advertised as a buyable Offer`)
+      continue
+    }
+    assert.ok(new RegExp(`^  ${plan.checkoutPlan}: \\{`, 'm').test(checkout),
+      `${plan.id} is buyable in the ladder but Checkout.jsx has no ${plan.checkoutPlan} case — it would dead-end`)
   }
 })
 

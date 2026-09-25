@@ -65,6 +65,13 @@ const OLDER = '2026-09-01T09:00:00.000Z'
 const NEWER = '2026-09-05T09:00:00.000Z'
 const DELETED_AT = '2026-09-06T09:00:00.000Z'
 
+/** A project's card on the workspace, by its exact name. The card's open
+ *  link is what marks a project as on screen; its actions live on the
+ *  project's own page. */
+function projectCard(page, name) {
+  return page.locator('.uh-card-name').filter({ has: page.locator('.uh-card-title', { hasText: new RegExp(`^${name}$`) }) })
+}
+
 test.describe('sync has a visible state, in both directions', () => {
   test('a healthy signed-in session says NOTHING — the control for everything below', async ({ page }) => {
     // Every assertion in this file is of the form "a banner appeared". That is
@@ -74,7 +81,7 @@ test.describe('sync has a visible state, in both directions', () => {
     await signIn(page, { plan: 'free', projects: 2 })
     await go(page, '/projects')
 
-    await expect(page.getByRole('button', { name: 'Actions for Seeded Project 1' }),
+    await expect(projectCard(page, 'Seeded Project 1'),
       'the page has to have actually rendered, or "no banner" means nothing').toBeVisible()
     // Past the push debounce (1500 ms) with room to spare — if a healthy push
     // reported a failure, this is where it would show up.
@@ -111,7 +118,7 @@ test.describe('sync has a visible state, in both directions', () => {
     // The other half of the promise the sentence makes: the projects really are
     // still there. A banner that said this while the grid had emptied would be
     // a worse lie than the silence it replaced.
-    await expect(page.getByRole('button', { name: 'Actions for Seeded Project 1' })).toBeVisible()
+    await expect(projectCard(page, 'Seeded Project 1')).toBeVisible()
     expect((await stored(page, 'free.user@uil4b.test')).length).toBe(2)
   })
 
@@ -195,7 +202,7 @@ test.describe('sync has a visible state, in both directions', () => {
     expect(said, 'and must say where it came from').toMatch(/another device/i)
 
     // And the merge really did keep the newer side, on screen and on disk.
-    await expect(page.getByRole('button', { name: 'Actions for Autumn Rebrand v2' })).toBeVisible()
+    await expect(projectCard(page, 'Autumn Rebrand v2')).toBeVisible()
     const kept = await stored(page, account.email)
     expect(kept.length, 'a conflict must not multiply the project').toBe(1)
     expect(kept[0].name).toBe('Autumn Rebrand v2')
@@ -223,9 +230,9 @@ test.describe('sync has a visible state, in both directions', () => {
     })
     await go(page, '/projects')
 
-    await expect(page.getByRole('button', { name: 'Actions for Thrown Away' }),
+    await expect(projectCard(page, 'Thrown Away'),
       'the delete must propagate — v1 resurrected it on every pull').toHaveCount(0, { timeout: 10_000 })
-    await expect(page.getByRole('button', { name: 'Actions for Still Working On It' }),
+    await expect(projectCard(page, 'Still Working On It'),
       'and must take exactly the one project it was told to').toBeVisible()
 
     const kept = await stored(page, account.email)
@@ -247,6 +254,8 @@ test.describe('sync has a visible state, in both directions', () => {
         { message: 'the account must be receiving this list in the first place', timeout: 10_000 })
       .toBe(2)
 
+    // The ⋯ menu lives on the project's own page since the workspace rebuild.
+    await projectCard(page, 'Seeded Project 1').click()
     await page.getByRole('button', { name: 'Actions for Seeded Project 1' }).click()
     await expect(page.getByRole('group', { name: 'Actions for Seeded Project 1' })).toBeVisible()
     await page.getByRole('button', { name: 'Delete…', exact: true }).click()
@@ -283,7 +292,7 @@ test.describe('sync has a visible state, in both directions', () => {
     await expect(notice).toBeVisible({ timeout: 10_000 })
     await notice.getByRole('button', { name: 'Dismiss sync message' }).click()
     await expect(notice).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Actions for Autumn Rebrand v2' }),
+    await expect(projectCard(page, 'Autumn Rebrand v2'),
       'dismissing the message must not put the older copy back').toBeVisible()
   })
 })

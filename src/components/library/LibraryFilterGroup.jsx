@@ -3,6 +3,7 @@ import { isOn, selectionSummary, toggleSelection } from './filterSelection'
 import { trayOverflowsRow } from './filterFit'
 import useMediaQuery from '../../hooks/useMediaQuery'
 import usePopover from '../../hooks/usePopover'
+import { useToolbarMode } from './toolbarMode'
 
 // A segmented filter tray with a sliding indicator — the one filter idiom for
 // every Library browse surface.
@@ -191,7 +192,14 @@ export default function LibraryFilterGroup({
   const intrinsicRef = useRef({ options: null, width: 0 })
   const narrowBand = useMediaQuery(COLLAPSE_QUERY)
   const [overflows, setOverflows] = useState(false)
-  const collapsed = alwaysCollapsed || narrowBand || overflows
+  // The toolbar has the last word when it has one (see ToolbarModeContext in
+  // LibraryToolbar): its row never wraps, so it may force every group down to
+  // the trigger, and inside its Filters panel or a phone's chip row there is
+  // room for the chips even for a group that is a menu everywhere else.
+  const toolbarMode = useToolbarMode()
+  const collapsed = toolbarMode === 'expand' ? false
+    : toolbarMode === 'collapse' ? true
+      : alwaysCollapsed || narrowBand || overflows
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
   const { triggerRef, popRef } = usePopover(open, close, { arrowNav: true })

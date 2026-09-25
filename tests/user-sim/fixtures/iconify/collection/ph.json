@@ -1,6 +1,6 @@
 {
   "prefix": "ph",
-  "total": 21,
+  "total": 26,
   "title": "Phosphor",
   "uncategorized": [
     "arrow-right",
@@ -23,6 +23,11 @@
     "calendar",
     "camera",
     "copy",
-    "download-simple"
+    "download-simple",
+    "heart-bold",
+    "house-bold",
+    "house-duotone",
+    "heart-duotone",
+    "star-duotone"
   ]
 }

@@ -1,4 +1,5 @@
 import { useTheme } from '../../contexts/ThemeContext'
+import { PH_CIRCLE_HALF, PH_MOON, PH_SUN } from '../spectrum/phosphorNav'
 
 // THE ONE-BUTTON THEME CONTROL, from both design sources.
 //
@@ -57,21 +58,43 @@ function SystemGlyph() {
 }
 
 const GLYPH = { light: SunGlyph, dark: MoonGlyph, system: SystemGlyph }
+
+// THE MARKETING NAV'S SET — `glyphs="phosphor"`. The Spectrum design's control
+// (line 230, and `themeIcon` at 1935) draws Phosphor's own sun, moon and
+// circle-half — System is the half-filled circle, not a monitor. SpectrumNav
+// asks for that set so the pill matches the design exactly; the app header
+// keeps the hand-drawn set above.
+function phosphor(d) {
+  return function PhosphorGlyph() {
+    return (
+      <svg viewBox="0 0 256 256" width="16" height="16" fill="currentColor" aria-hidden="true">
+        <path d={d} />
+      </svg>
+    )
+  }
+}
+const PHOSPHOR = { light: phosphor(PH_SUN), dark: phosphor(PH_MOON), system: phosphor(PH_CIRCLE_HALF) }
 const NAME = { light: 'Light', dark: 'Dark', system: 'System' }
 
-export default function ThemeCycle({ className = 'pnav-iconbtn pnav-theme' }) {
+export default function ThemeCycle({ className = 'pnav-iconbtn pnav-theme', glyphs }) {
   const { theme, themePref, setTheme } = useTheme()
   const current = ORDER.includes(themePref) ? themePref : 'system'
   const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length]
-  const Glyph = GLYPH[current]
+  const Glyph = (glyphs === 'phosphor' ? PHOSPHOR : GLYPH)[current]
 
   // The accessible name says what the press DOES, which is the only thing a
   // non-sighted user can act on — and it names how System currently resolves,
   // for the same reason ThemeChoice does: otherwise "System theme" is an
   // instruction to pick something whose outcome is unstated.
-  const label = next === 'system'
-    ? `Switch to the system theme — currently ${theme}`
-    : `Switch to the ${NAME[next].toLowerCase()} theme`
+  // The marketing pill takes the design's own label too — `themeNextLabel`,
+  // "Theme: auto. Switch to light." (line 1936) — which names the state it is
+  // in as well as the one it moves to. The design calls System "auto".
+  const word = (t) => (t === 'system' ? 'auto' : t)
+  const label = glyphs === 'phosphor'
+    ? `Theme: ${word(current)}. Switch to ${word(next)}.`
+    : next === 'system'
+      ? `Switch to the system theme — currently ${theme}`
+      : `Switch to the ${NAME[next].toLowerCase()} theme`
 
   return (
     <button

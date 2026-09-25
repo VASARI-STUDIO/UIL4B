@@ -182,7 +182,7 @@ test.describe('projects states only quotas the product enforces', () => {
       await expect(page.locator('.proj-folder-chip'), 'no chip survives').toHaveCount(0)
       await expect(page.locator('.uh-card-folder'), 'no per-card filer').toHaveCount(0)
       // The word itself, anywhere a reader could see it on this surface.
-      await expect(page.locator('.sec.uh'), 'the surface still says "folder"')
+      await expect(page.locator('.uh'), 'the surface still says "folder"')
         .not.toContainText(/folder/i)
     })
   }
@@ -205,8 +205,9 @@ test.describe('projects states only quotas the product enforces', () => {
     // Removing the false quota must not have taken the true one with it.
     const quota = page.locator('[data-testid="project-quota-note"]')
     await expect(quota).toBeVisible()
-    await expect(quota).toContainText('You’ve used all 3 projects on the free plan')
-    await expect(quota).toContainText('Nothing has been removed')
+    // The workspace's plan strip: "Project slots  3 of 3".
+    await expect(quota).toContainText('Project slots')
+    await expect(quota).toContainText('3 of 3')
   })
 })
 

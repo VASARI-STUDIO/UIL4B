@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "installCommand": "npm ci",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD -- src api public index.html vite.config.js vercel.json package.json package-lock.json scripts",
+  "trailingSlash": false,
   "redirects": [
     {
       "source": "/color",
@@ -321,6 +322,10 @@
       "destination": "/create/icons/index.html"
     },
     {
+      "source": "/create/icons/groups",
+      "destination": "/create/icons/groups/index.html"
+    },
+    {
       "source": "/create/palette",
       "destination": "/create/palette/index.html"
     },
@@ -409,6 +414,10 @@
       "destination": "/learn/typeface-metrics/index.html"
     },
     {
+      "source": "/mobile",
+      "destination": "/mobile/index.html"
+    },
+    {
       "source": "/plans",
       "destination": "/plans/index.html"
     },
@@ -433,7 +442,71 @@
       "destination": "/terms/index.html"
     },
     {
-      "source": "/((?!api/|assets/).*)",
+      "source": "/admin",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/checkout/return",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/ai-prompt",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/ai-tools",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/box-shadow",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/component-designer",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/components",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/icons-emoji",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/imagery",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/landing-prompts",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/create/typography",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/onboarding",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/projects",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/style-guide",
       "destination": "/404.html"
     }
   ],
@@ -453,6 +526,49 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), usb=()"
+        },
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.iconify.design https://img.logo.dev https://flagcdn.com https://*.googleusercontent.com https://*.stripe.com https://firebasestorage.googleapis.com; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://api.iconify.design https://cdn.jsdelivr.net https://api.stripe.com https://checkout.stripe.com https://accounts.google.com; frame-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; media-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        }
+      ]
+    },
+    {
+      "source": "/((?!previews/).*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
+      ]
+    },
+    {
+      "source": "/previews/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
         }
       ]
     }

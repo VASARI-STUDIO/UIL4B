@@ -31,7 +31,9 @@ const PAIRS = [
   ['Headings', '--t0', '--bg-0'],
   ['Body text', '--t1', '--bg-0'],
   ['Captions', '--t3', '--bg-0'],
-  ['Links', '--accent-strong', '--bg-0'],
+  // --link, the design's link token (a plain hex per theme). --accent-strong
+  // is a color-mix() alias, and a mix is not read here.
+  ['Links', '--link', '--bg-0'],
 ]
 
 const HEX = /^#[0-9a-f]{6}$/i

@@ -20,8 +20,8 @@
  *     switch (global.css). Selected is ink, as on the converter's tabs; the
  *     accent is the Copy action.
  *   - The panels were `--card-grad` with a warm drop shadow; they are the app
- *     file's flat card over a hairline. Buttons are 12px rectangles; the
- *     phrase chips and the seg switch are rectangles, not pills.
+ *     file's flat card over a hairline. Buttons and the seg switch are
+ *     pills (--radius-pill); the phrase chips are small rectangles.
  *   - Twenty inline styles in components/seo/ are gone: margins became
  *     `.seo-tags--flush` / `.seo-checklist-h--flush|--tight`, colours became
  *     tones. What remains inline is a bar's width, which is data.
@@ -32,7 +32,18 @@
  * the social card's image gradient, whose inks tests/user-sim/48 was built to
  * measure. */
 
-.seo-page { min-width: 0; padding-bottom: var(--s-7); }
+/* The page root is also the ToolLayout root (`.tl.seo-page`). /seo renders in
+   the app shell's `.app-page` rather than the Create shell's `.rail-content`,
+   so the full-bleed margins that tuck the toolbar under the header are this
+   container's: its top padding is the chrome height plus the clamp taken back
+   here, its bottom padding the clamp below. */
+.seo-page { min-width: 0; }
+
+.tl.seo-page { margin: calc(-1 * clamp(14px, 2.6vw, 32px)) calc(-1 * var(--page-inline)) calc(-1 * clamp(48px, 6vw, 80px)); }
+
+/* `.app-page > :first-child` pads the top of every app page; the toolbar has
+   to meet the header, so the tool root takes none. */
+.app-page > .tl.seo-page { padding-top: 0; }
 
 .seo-page .seo-tone--ok { --seo-tone: var(--ok); --seo-tone-ink: var(--ok-strong); }
 
@@ -40,50 +51,40 @@
 
 .seo-page .seo-tone--err { --seo-tone: var(--err); --seo-tone-ink: var(--err-strong); }
 
-/* ── Hero ─────────────────────────────────────────────────────────────────── */
-
-.seo-page .seo-hero { margin: 0 0 var(--s-6); }
-
-.seo-page .seo-hero h1 {
-  margin: 0 0 var(--s-4);
-  font-family: var(--display);
-  font-size: clamp(38px, 5.6vw, 72px);
-  font-weight: 600;
-  line-height: .96;
-  letter-spacing: -.045em;
-  color: var(--t0);
-  text-wrap: balance;
-}
-
-.seo-page .seo-hero p { max-width: 62ch; margin: 0; font-size: 15.5px; line-height: 1.62; color: var(--t1); text-wrap: pretty; }
-
 /* ── Tabs ─────────────────────────────────────────────────────────────────── */
 
-.seo-page .seo-tabs { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-bottom: var(--s-5); border-bottom: 1px solid var(--border); }
+.seo-page .seo-tabs { display: flex; flex-wrap: nowrap; gap: 5px; margin: 0 0 10px; overflow-x: auto; scrollbar-width: none; border: 0; }
 
+.seo-page .seo-tabs::-webkit-scrollbar { display: none; }
+
+/* Tabs are pills (the tool pattern's chips): selected is the ink wash, the
+   accent stays on the Copy action. */
 .seo-page .seo-tab {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  min-height: 40px;
-  margin-bottom: -1px;
+  min-height: 36px;
   padding: 0 14px;
   font-family: var(--font);
-  font-size: 13.5px;
-  font-weight: 540;
-  color: var(--t2);
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  font-size: 13px;
+  font-weight: 450;
+  white-space: nowrap;
+  color: var(--tl-dim);
+  background: transparent;
+  border: 1px solid var(--tl-line);
+  border-radius: 999px;
+  box-shadow: none;
   cursor: pointer;
-  transition: color var(--dur-1) ease, border-color var(--dur-1) ease;
+  transition: color var(--dur-1) ease, background var(--dur-1) ease, border-color var(--dur-1) ease;
 }
 
-.seo-page .seo-tab:hover { color: var(--t0); }
+.seo-page .seo-tab:hover { color: var(--tl-ink); }
 
-.seo-page .seo-tab.is-active { color: var(--t0); border-bottom-color: var(--t0); }
+.seo-page .seo-tab.is-active { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); }
 
-.seo-page .seo-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.seo-page .seo-tab:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 2px; }
+
+.seo-page .seo-about { max-width: 78ch; margin: 0 0 18px; font-size: 12.5px; line-height: 1.55; color: var(--tl-dim); }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 
@@ -101,7 +102,7 @@
   color: var(--t0);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   cursor: pointer;
   transition: background var(--dur-1) ease, border-color var(--dur-1) ease;
 }
@@ -110,9 +111,9 @@
 
 .seo-page .seo-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.seo-page .seo-btn--primary { color: var(--accent-ink); background: var(--accent-mid); border-color: transparent; }
+.seo-page .seo-btn--primary { color: var(--accent-ink); background: var(--accent-fill); border-color: transparent; }
 
-.seo-page .seo-btn--primary:hover { background: var(--accent-text); border-color: transparent; }
+.seo-page .seo-btn--primary:hover { background: var(--accent-fill-hover); border-color: transparent; }
 
 /* ── Inputs ───────────────────────────────────────────────────────────────── */
 
@@ -183,7 +184,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.seo-page .seo-seg { display: flex; gap: 2px; padding: 2px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-s); }
+.seo-page .seo-seg { display: flex; gap: 2px; padding: 2px; background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-pill); }
 
 .seo-page .seo-seg button {
   display: inline-flex;
@@ -199,7 +200,7 @@
   color: var(--t2);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
   cursor: pointer;
 }
 
@@ -299,7 +300,7 @@
 /* min 24px: the 14px glyph plus 2px padding made this an 18x18 target at
    every width from 320 to 1920 (2026-09-09), under WCAG 2.2 AA 2.5.8 and the
    floor 58-target-size-24 holds the shell to. The glyph stays 14px. */
-.seo-page .seo-faq-del { display: flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 2px; color: var(--t2); background: none; border: none; border-radius: var(--radius-s); cursor: pointer; transition: color var(--dur-1) var(--ease-standard); }
+.seo-page .seo-faq-del { display: flex; align-items: center; justify-content: center; min-width: 24px; min-height: 24px; padding: 2px; color: var(--t2); background: none; border: none; border-radius: var(--radius-pill); cursor: pointer; transition: color var(--dur-1) var(--ease-standard); }
 
 .seo-page .seo-faq-del:hover { color: var(--err-strong); }
 
@@ -352,8 +353,7 @@
 }
 
 @media (max-width: 560px) {
-  .seo-page .seo-hero p { font-size: 14.5px; }
-  .seo-page .seo-tab { padding: 0 10px; font-size: 13px; }
+  .seo-page .seo-tab { padding: 0 12px; }
   .seo-page .seo-ca-stats { grid-template-columns: repeat(2, 1fr); }
   .seo-page .seo-ca-kw-grid { grid-template-columns: 1fr; }
 }

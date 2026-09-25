@@ -489,3 +489,56 @@ test.describe('a lazy route is only "rendered" once it has actually arrived', ()
     expect(recorded, 'a healthy page load must leave the build-asset ledger empty').toEqual([])
   })
 })
+
+/* ── A crash is a recovery screen with a way to report it, on every route ────
+ *
+ * Every Create tool, `/`, /home, /onboarding, /discover and /learn return
+ * before App.jsx's app shell, so an error boundary inside that shell alone
+ * would leave a crash there as a blank page with no nav, no reload and no
+ * feedback button.
+ *
+ * Here the route's own chunk is served as a module that throws on evaluation.
+ * It ARRIVES (200), so this is a render crash, not the missing asset above.
+ */
+const PROBE = 'probe crash for the recovery screen'
+
+async function crashChunk(page, glob) {
+  await page.route(glob, (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/javascript',
+    body: `throw new Error(${JSON.stringify(PROBE)})`,
+  }))
+}
+
+async function expectRecoveryScreen(page) {
+  // A thrown import goes through vite:preloadError first, and main.jsx reloads
+  // once for what looks like a stale deploy; the crash lands on the second try.
+  const card = page.locator('.error-boundary')
+  await expect(card).toBeVisible({ timeout: 20000 })
+  await expect(card.getByRole('heading', { name: 'Something went wrong' })).toBeVisible()
+  await expect(card.getByRole('button', { name: 'Reload' })).toBeVisible()
+  await expect(card.getByRole('button', { name: 'Report this' })).toBeVisible()
+  return card
+}
+
+for (const [route, chunk, where] of [
+  ['/create/palette', '**/assets/PaletteBuilder-*.js', 'a Create tool, which returns before the app shell'],
+  ['/learn', '**/assets/SurfaceIndex-*.js', 'a surface index, which returns before the app shell'],
+  ['/settings', '**/assets/Settings-*.js', 'a page inside the app shell'],
+]) {
+  test(`a crash on ${route} (${where}) shows Reload and Report this, and the report is prefilled`, async ({ page }) => {
+    test.setTimeout(60000)
+    await crashChunk(page, chunk)
+    await goRaw(page, route)
+    const card = await expectRecoveryScreen(page)
+
+    await card.getByRole('button', { name: 'Report this' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.locator('#fb-subject')).toHaveValue(new RegExp(`^Crash on ${route}: .*${PROBE}`))
+    await expect(dialog.locator('#fb-message')).toHaveValue(new RegExp(`Route: ${route}\\n`))
+    // Bug is preselected: the person should not have to say what kind of
+    // report a crash is.
+    await expect(dialog.getByRole('button', { name: 'Bug', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  })
+}

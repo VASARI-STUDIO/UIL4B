@@ -64,7 +64,7 @@ test.describe('upgrade gates report under their own name', () => {
     // POSITIVE CONTROL 2: the control exists and opening it really raises the
     // canonical modal. Without this, an assertion about the counter would pass
     // on a page where the button had silently stopped rendering.
-    await page.getByRole('button', { name: 'Show contrast guidance for PRIMARY' }).click()
+    await page.getByRole('button', { name: 'Contrast of PRIMARY — a Pro check' }).click()
     await expect(page.getByRole('dialog', { name: 'Check contrast, light and dark' })).toBeVisible()
 
     await counter(page, 'gate:palette-contrast-view').toBe(1)
@@ -82,7 +82,8 @@ test.describe('upgrade gates report under their own name', () => {
 
     // A SECOND, DIFFERENT WALL. Both of these used to be one line of the
     // dashboard whenever their titles matched; they must never merge.
-    await page.getByRole('button', { name: 'Edit PRIMARY in HCT' }).click()
+    await page.getByRole('button', { name: 'More actions for PRIMARY' }).click()
+    await page.getByRole('menu', { name: 'Colour actions' }).getByRole('menuitem', { name: 'Edit in HCT' }).click()
     await expect(page.getByRole('dialog', { name: 'Fine-tune any colour in HCT' })).toBeVisible()
 
     await counter(page, 'gate:palette-hct-picker').toBe(1)
@@ -161,7 +162,7 @@ test.describe('activation fires from the export, not from its neighbours', () =>
 
     expect((await usage(page))['activation:gradient:export'], 'nothing recorded yet').toBe(undefined)
 
-    const copy = page.locator('.ggn-copy')
+    const copy = page.locator('.grd .tl-primary .tl-btn')
     await expect(copy, 'the export control is on the page').toBeVisible()
     await copy.click()
     await clipboard(page).toMatch(/gradient/i)
@@ -179,7 +180,7 @@ test.describe('activation fires from the export, not from its neighbours', () =>
     await go(page, '/create/tint')
     await ready(page, '/create/tint')
 
-    const copy = page.getByRole('button', { name: 'Copy row' }).first()
+    const copy = page.getByRole('button', { name: 'Copy variables' }).first()
     // POSITIVE CONTROL: this page really does copy — otherwise "no activation"
     // would be true of a page with no working controls at all.
     await expect(copy, 'the tint tool has a copy control').toBeVisible()

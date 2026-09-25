@@ -44,70 +44,69 @@ const settle = async (page) => {
 }
 
 test.describe('Palette Builder toolbar, 961–1080px', () => {
-  test('the colour-system trigger is clickable at every width in the band', async ({ page }) => {
+  // The colour system is the drawn System select (D:990). Where the row has
+  // room it sits on the row; where it does not, it is the Tools overflow's
+  // select. Either way it must take the pointer at every width in the band —
+  // the audit found a trigger here that nothing could click.
+  test('the colour system is reachable and takes the pointer at every width in the band', async ({ page }) => {
     watch(page, 'a designer choosing a colour harmony on a small laptop')
     await page.setViewportSize({ width: TOOLBAR_WIDTHS[0], height: 900 })
     await go(page, '/color/palette')
-    await expect(page.locator('.plb-harm')).toBeVisible()
+    const bar = page.locator('.plb [data-tool-toolbar]')
+    await expect(bar).toBeVisible()
     await settle(page)
 
     const failures = []
     for (const width of TOOLBAR_WIDTHS) {
       await page.setViewportSize({ width, height: 900 })
+      await expect(bar).not.toHaveClass(/is-measuring/)
       await page.waitForTimeout(150)
-
-      // Geometry first: five points across the control must all land on the
-      // control. The audit sampled 20/50/80% and found none of them did.
-      const covered = await page.evaluate(() => {
-        const harm = document.querySelector('.plb-harm')
-        const b = harm.getBoundingClientRect()
+      let scope = bar
+      const inline = bar.getByRole('combobox', { name: 'Colour system' })
+      if (!(await inline.count() && await inline.isVisible())) {
+        await bar.getByRole('button', { name: 'Tools' }).click()
+        scope = page.getByRole('dialog', { name: 'Tools' })
+        await expect(scope).toBeVisible()
+      }
+      const select = scope.getByRole('combobox', { name: 'Colour system' })
+      // Five points across the drawn control must all land on it.
+      const covered = await select.evaluate((el) => {
+        const box = el.closest('.tl-select').getBoundingClientRect()
         return [0.05, 0.2, 0.5, 0.8, 0.95]
           .filter((f) => {
-            const el = document.elementFromPoint(b.left + b.width * f, b.top + b.height / 2)
-            return !(el && el.closest('.plb-harm'))
+            const hit = document.elementFromPoint(box.left + box.width * f, box.top + box.height / 2)
+            return !(hit && hit.closest('.tl-select') === el.closest('.tl-select'))
           })
           .map((f) => `${f * 100}%`)
       })
-      if (covered.length) {
-        failures.push(`${width}px: covered at ${covered.join(', ')}`)
-        continue
-      }
-
-      // Then the real interaction. A short timeout so a regression reports in
-      // seconds rather than stalling the run at 30s a width.
-      try {
-        await page.click('.plb-harm', { timeout: 2500 })
-        await expect(page.locator('.plb-harmmenu')).toBeVisible({ timeout: 2500 })
+      if (covered.length) failures.push(`${width}px: covered at ${covered.join(', ')}`)
+      if (scope !== bar) {
         await page.keyboard.press('Escape')
-        await page.waitForTimeout(120)
-      } catch {
-        failures.push(`${width}px: the trigger did not open the colour-system menu`)
+        await expect(page.getByRole('dialog', { name: 'Tools' })).toHaveCount(0)
       }
     }
-
-    expect(failures, `the colour-system trigger is unreachable:\n  ${failures.join('\n  ')}`).toEqual([])
+    expect(failures, `the colour system is unreachable:\n  ${failures.join('\n  ')}`).toEqual([])
   })
 
-  test('the dropdown still opens as a popover, not a bottom sheet, above 960px', async ({ page }) => {
-    // The 769–960 band turns the action group into a horizontal scroller, and a
-    // scroll container clips on both axes, so its dropdowns have to escape as
-    // fixed bottom sheets. Extending that treatment upward was the other way to
-    // close this gap; wrapping was chosen so these widths keep their popovers.
-    // If someone later swaps the wrap for a scroller, this is what tells them.
+  test('the Tools overflow opens as a popover, not a bottom sheet, above 767px', async ({ page }) => {
+    // What the row cannot hold goes to the overflow, a popover
+    // under its button from 768px and a bottom sheet below. Nothing may paint
+    // over the open popover.
     watch(page, 'a designer on a small laptop')
     await page.setViewportSize({ width: 1000, height: 900 })
     await go(page, '/color/palette')
-    await expect(page.locator('.plb-harm')).toBeVisible()
+    const bar = page.locator('.plb [data-tool-toolbar]')
+    await expect(bar).not.toHaveClass(/is-measuring/)
     await settle(page)
 
-    await page.click('.plb-harm')
-    const menu = page.locator('.plb-harmmenu')
+    await bar.getByRole('button', { name: 'Tools' }).click()
+    const menu = page.getByRole('dialog', { name: 'Tools' })
     await expect(menu).toBeVisible()
-    await expect(menu).toHaveCSS('position', 'absolute')
+    await expect(menu).toHaveClass(/tl-pop/)
+    await expect(page.locator('.tl-sheet')).toHaveCount(0)
 
     // And nothing paints over it: sixteen points across the open menu.
-    const behind = await page.evaluate(() => {
-      const pop = document.querySelector('.plb-harmmenu')
+    const behind = await menu.evaluate((pop) => {
       const b = pop.getBoundingClientRect()
       let n = 0
       for (let x = 1; x <= 4; x++) {
@@ -121,45 +120,10 @@ test.describe('Palette Builder toolbar, 961–1080px', () => {
     expect(behind, 'points of the open menu covered by something else').toBe(0)
   })
 
-  test('the 769–960 swipeable ribbon and the ≥1180 single row are both untouched', async ({ page }) => {
-    // The mid-band fix that already worked, and the desktop layout that was
-    // already clean. Both are one row with the two groups side by side; only
-    // the band between them wraps.
-    watch(page, 'a designer resizing across the tablet and desktop bands')
-    await page.setViewportSize({ width: 900, height: 900 })
-    await go(page, '/color/palette')
-    await expect(page.locator('.plb-harm')).toBeVisible()
-    await settle(page)
-
-    const shape = () => page.evaluate(() => {
-      const tb = document.querySelector('.plb-toolbar')
-      const groups = [...tb.querySelectorAll(':scope > .plb-toolbar-group')]
-      const a = groups[0].getBoundingClientRect()
-      const b = groups[groups.length - 1].getBoundingClientRect()
-      return {
-        sameRow: Math.abs(a.top - b.top) < 4,
-        actionsScroll: groups[groups.length - 1].scrollWidth > groups[groups.length - 1].clientWidth + 1,
-      }
-    })
-
-    // 769–960: one row, and the action group is the internal scroller.
-    for (const width of [769, 900, 960]) {
-      await page.setViewportSize({ width, height: 900 })
-      await page.waitForTimeout(150)
-      const s = await shape()
-      expect(s.sameRow, `${width}px should keep both groups on one row`).toBe(true)
-      expect(s.actionsScroll, `${width}px should keep the action group scrollable`).toBe(true)
-    }
-
-    // ≥1180: one row, and nothing needs to scroll.
-    for (const width of [1180, 1440]) {
-      await page.setViewportSize({ width, height: 900 })
-      await page.waitForTimeout(150)
-      const s = await shape()
-      expect(s.sameRow, `${width}px should keep both groups on one row`).toBe(true)
-      expect(s.actionsScroll, `${width}px should not need a scroller`).toBe(false)
-    }
-  })
+  // Not tested: 'the 769–960 swipeable ribbon and the ≥1180 single row
+  // are both untouched'. The palette's two-group toolbar with its scrolling
+  // action ribbon is gone; the drawn toolbar is one row at every width with an
+  // overflow, held for 320–1920 by 100-tool-toolbar-one-row.spec.js.
 })
 
 test.describe('workbench two-column threshold', () => {
@@ -182,7 +146,7 @@ test.describe('workbench two-column threshold', () => {
   }, pane)
 
   const cases = [
-    { route: '/color/tint', grid: '.tt-grid', pane: '.tt-output', persona: 'a designer building a tonal ramp' },
+    { route: '/color/tint', grid: '.tt .tl-grid', pane: '.tt .tl-main', persona: 'a designer building a tonal ramp' },
     { route: '/typescale', grid: '.tsc-grid', pane: '.tsc-output', persona: 'a designer reading a type scale back' },
     { route: '/fontpairs', grid: '.fpr-grid', pane: '.fpr-output', persona: 'a designer testing a type pairing' },
   ]
@@ -227,7 +191,7 @@ test.describe('workbench two-column threshold', () => {
     watch(page, 'a designer reading the dark end of a tonal ramp')
     await page.setViewportSize({ width: 981, height: 900 })
     await go(page, '/color/tint')
-    await expect(page.locator('.tt-ramp').first()).toBeVisible()
+    await expect(page.locator('.tt-cols').first()).toBeVisible()
     await settle(page)
 
     const missing = []
@@ -235,7 +199,7 @@ test.describe('workbench two-column threshold', () => {
       await page.setViewportSize({ width, height: 900 })
       await page.waitForTimeout(140)
       const hidden = await page.evaluate(() => {
-        const ramp = document.querySelector('.tt-ramp')
+        const ramp = document.querySelector('.tt-cols')
         const r = ramp.getBoundingClientRect()
         const cells = [...ramp.querySelectorAll('.tt-cell')]
         return {
@@ -250,75 +214,9 @@ test.describe('workbench two-column threshold', () => {
   })
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1097–1136px: the band where the toolbar expanded onto a row it did not fit
-// ─────────────────────────────────────────────────────────────────────────────
-// The founder's standing report is "the palette toolbar … wrapped to 105px tall".
-// The band above pins 961–1080 and the workbench tests pin 980→981, so this
-// band sat between two pinned ranges and was reported by neither.
-//
-// WHAT WAS WRONG, and why the unit test could not see it. `fitRail()` in
-// PaletteBuilder.jsx asked `railOverflowsToolbar()` whether the exploratory
-// cluster fits beside the lead group, and passed `row.clientWidth` as the
-// available space. `.plb-toolbar` is `padding:10px var(--page-inline)` — 20px
-// a side here — and `clientWidth` INCLUDES that padding, so the rule was
-// credited with 40px the flex line cannot use.
-//
-// MEASURED on `main`, fresh context per width, geometry settled:
-//     viewport   content width   lead+gap+rail   toolbar height   rows
-//       1096         1056            1097            57px           1
-//       1097         1057            1097           105px           2
-//       1136         1096            1097           105px           2
-//       1137         1097            1097            57px           1
-// Forty pixels of padding, forty pixels of band: the cluster expanded at 1097
-// and did not fit until 1137.
-//
-// tests/unit/toolbar-fit.test.js passed throughout, because its measured table
-// hands the helper VIEWPORT widths as `rowWidth` while the call site handed it
-// `clientWidth`. The helper was right; the wiring was wrong. So this asserts
-// the RENDERED height at the widths that were wrong, which is the only place
-// the two can be caught disagreeing.
-//
-// MUTATION: restore `rowWidth: row.clientWidth` in fitRail() and 1097/1110/1136
-// go red at 105px while the unit suite stays green.
-test.describe('Palette Builder toolbar, 1097–1136px', () => {
-  const BAND = [1097, 1110, 1136]
-  const NEIGHBOURS = [1080, 1096, 1137, 1180]
-
-  test('the toolbar stays on one row across the band and its neighbours', async ({ page }) => {
-    watch(page, 'a designer working in a window a little narrower than full width')
-    await page.setViewportSize({ width: BAND[0], height: 900 })
-    await go(page, '/create/palette')
-    await expect(page.locator('.plb-toolbar')).toBeVisible()
-    await settle(page)
-
-    // Positive control: the toolbar really is measurable here, so a later
-    // "0 failures" cannot come from a page that never rendered the toolbar.
-    const control = await page.evaluate(() => {
-      const tb = document.querySelector('.plb-toolbar')
-      return {
-        groups: tb.querySelectorAll('.plb-toolbar-group').length,
-        height: Math.round(tb.getBoundingClientRect().height),
-      }
-    })
-    expect(control.groups, 'the toolbar renders both groups').toBe(2)
-    expect(control.height, 'the toolbar has a real height').toBeGreaterThan(30)
-
-    const twoRow = []
-    for (const width of [...BAND, ...NEIGHBOURS]) {
-      await page.setViewportSize({ width, height: 900 })
-      await settle(page)
-      const m = await page.evaluate(() => {
-        const tb = document.querySelector('.plb-toolbar')
-        const groups = [...tb.querySelectorAll('.plb-toolbar-group')]
-          .filter((g) => getComputedStyle(g).display !== 'none')
-        const tops = new Set(groups.map((g) => Math.round(g.getBoundingClientRect().top)))
-        return { height: Math.round(tb.getBoundingClientRect().height), rows: tops.size }
-      })
-      // One row of 36px controls plus 10px padding a side measures 57px here;
-      // 70 leaves room for a font or token change without admitting a wrap.
-      if (m.rows > 1 || m.height > 70) twoRow.push(`${width}px: ${m.height}px tall, ${m.rows} rows`)
-    }
-    expect(twoRow, `the toolbar wrapped to a second row at:\n  ${twoRow.join('\n  ')}`).toEqual([])
-  })
-})
+// Not tested: 'Palette Builder toolbar, 1097–1136px'. It pinned the
+// band where the old toolbar's fitRail() credited itself with the row's
+// padding and wrapped to 105px. That code is gone with the two-group toolbar;
+// the shared ToolToolbar measures its own content box, and its single row at
+// every width from 320 to 1920 — this band included — is asserted by
+// 100-tool-toolbar-one-row.spec.js.

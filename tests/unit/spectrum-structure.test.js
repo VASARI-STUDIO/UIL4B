@@ -20,7 +20,9 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { assertStripperWorks, read, stripComments } from './helpers/source-text.js'
 
-import { BENCH } from '../../src/components/spectrum/spectrumFacts.js'
+import { EX_FILES, ICONS, IMG_MODES } from '../../src/components/spectrum/spectrumKit.js'
+import { PH_REGULAR } from '../../src/components/spectrum/phosphorRegular.js'
+import { PH_WEIGHTS } from '../../src/components/spectrum/phosphorWeights.js'
 import { CREATE_GROUPS, categoryDestination } from '../../src/data/toolTree.js'
 // WHERE THE SHEET IS TODAY, FOUND RATHER THAN TYPED.
 // It sits in `styles/deferred/` while the old Home page is still routed (see the
@@ -37,6 +39,8 @@ const FOOTER = stripComments(read('src/components/spectrum/SpectrumFooter.jsx'))
 const APP_FOOTER = stripComments(read('src/components/AppFooter.jsx'))
 const WORDS = stripComments(read('src/components/spectrum/SpectrumWords.jsx'))
 const BENCH_SRC = stripComments(read('src/components/spectrum/SpectrumBench.jsx'))
+const CONVERTER_SRC = stripComments(read('src/components/spectrum/BenchConverter.jsx'))
+const EXPORTS_SRC = stripComments(read('src/components/spectrum/SpectrumExports.jsx'))
 // Comments stripped first — see the note in spectrum-truth.test.js. The header
 // of spectrum.css quotes the very strings these tests ban.
 const CSS = read(SPECTRUM_CSS_PATH).replace(/\/\*[\s\S]*?\*\//g, '')
@@ -47,6 +51,12 @@ const SOURCES = {
   'src/components/spectrum/SpectrumWords.jsx': WORDS,
   'src/components/spectrum/SpectrumRamp.jsx': stripComments(read('src/components/spectrum/SpectrumRamp.jsx')),
   'src/components/spectrum/SpectrumIcon.jsx': stripComments(read('src/components/spectrum/SpectrumIcon.jsx')),
+  'src/components/spectrum/BenchConverter.jsx': CONVERTER_SRC,
+  'src/components/spectrum/SpectrumExports.jsx': EXPORTS_SRC,
+  'src/components/spectrum/SpectrumSearch.jsx': stripComments(read('src/components/spectrum/SpectrumSearch.jsx')),
+  'src/components/spectrum/PhIcon.jsx': stripComments(read('src/components/spectrum/PhIcon.jsx')),
+  'src/components/spectrum/OpenPill.jsx': stripComments(read('src/components/spectrum/OpenPill.jsx')),
+  'src/components/spectrum/SpectrumProof.jsx': stripComments(read('src/components/spectrum/SpectrumProof.jsx')),
 }
 
 test('the stripper still works, so every source read below can be trusted', () => {
@@ -184,7 +194,7 @@ test('every moving thing has a reduced-motion companion, under both spellings', 
   const start = CSS.indexOf('html[data-reduced-motion="true"]')
   assert.ok(start > -1, 'spectrum.css has no reduced-motion block at all')
   const blocks = CSS.slice(start)
-  for (const cls of ['.sp-w', '.sp-ramp-bar', '.sp-stack-card', '.sp-cta-icon', '.sp-disc-card', '.sp-chip']) {
+  for (const cls of ['.sp-w', '.sp-ramp-bar', '.sp-stack-card', '.sp-panel', '.sp-pill-icon', '.sp-cta-icon', '.sp-disc-card', '.sp-disc-cta', '.sp-chip']) {
     assert.ok(blocks.includes(cls),
       `${cls} moves but is not named in spectrum.css's reduced-motion blocks`)
   }
@@ -217,73 +227,72 @@ test('the page adds no third-party origin', () => {
   }
 })
 
-test('every glyph the page asks for is one SpectrumIcon draws', () => {
-  // SpectrumIcon renders nothing for an unknown name rather than a fallback
-  // circle, so a typo is silently invisible. This is what catches it.
-  //
-  // The id list is read out of the source rather than imported: `node --test`
-  // runs plain Node, which cannot parse JSX, so every other test in this suite
-  // that needs a fact out of a .jsx file reads it as text too.
+test('every glyph the page asks for is one the page ships', () => {
+  // The landing's glyphs are real Phosphor paths now
+  // (phosphorRegular.js, generated), drawn by PhIcon; SpectrumIcon still draws
+  // the terms rows' arrow and the footer's. Either component renders NOTHING for
+  // an unknown name, so a typo is silently invisible — this is what catches it.
+  const asked = new Set()
+  for (const [, src] of Object.entries(SOURCES)) {
+    for (const m of src.matchAll(/PhIcon name="([^"]+)"/g)) asked.add(m[1])
+  }
+  // The tables the windows draw their icons from, checked the same way.
+  for (const [, icon] of IMG_MODES) if (icon) asked.add(icon)
+  for (const [icon] of EX_FILES) asked.add(icon)
+  for (const [slug] of ICONS) asked.add(slug)
+  assert.ok(asked.size >= 30, `only ${asked.size} glyph names found — the extractor is blind`)
+  const missing = [...asked].filter((n) => !PH_REGULAR[n])
+  assert.deepEqual(missing, [], `PhIcon is asked for ${missing.join(', ')}, which phosphorRegular.js does not carry`)
+
+  // The Icon panel's other four weights exist for every glyph it offers, so
+  // picking Thin or Fill can never draw an empty tile.
+  for (const w of ['thin', 'light', 'bold', 'fill']) {
+    const gone = ICONS.filter(([slug]) => !PH_WEIGHTS[w][slug]).map(([slug]) => slug)
+    assert.deepEqual(gone, [], `phosphorWeights.js has no ${w} for ${gone.join(', ')}`)
+  }
+
   const iconSrc = SOURCES['src/components/spectrum/SpectrumIcon.jsx']
   const table = /const GLYPHS = \{([\s\S]*?)\n\}/.exec(iconSrc)
   assert.ok(table, 'SpectrumIcon.jsx no longer declares a GLYPHS table; the extractor is blind')
   const drawn = [...table[1].matchAll(/^ {2}'?([a-z-]+)'?:/gm)].map((m) => m[1])
-  assert.ok(drawn.length >= 10, `only ${drawn.length} glyphs found in SpectrumIcon.jsx`)
-
-  const asked = new Set()
-  for (const [, src] of Object.entries(SOURCES)) {
-    for (const m of src.matchAll(/SpectrumIcon name="([^"]+)"/g)) asked.add(m[1])
-    for (const m of src.matchAll(/SpectrumIcon name=\{([a-z.]+)\}/gi)) asked.add(`dynamic:${m[1]}`)
+  // The landing and its footer draw with PhIcon / PhGlyph now; SpectrumIcon's
+  // callers are the reading pages, so those are read as well.
+  const spCallers = ['src/pages/DesignPrinciples.jsx', 'src/pages/HelpCentre.jsx', 'src/pages/InfoCentre.jsx']
+    .map((p) => stripComments(read(p)))
+  const spAsked = new Set()
+  for (const src of [...Object.values(SOURCES), ...spCallers]) {
+    for (const m of src.matchAll(/SpectrumIcon name="([^"]+)"/g)) spAsked.add(m[1])
   }
-  assert.ok(asked.size >= 6, `only ${asked.size} glyph names found — the extractor is blind`)
-  const missing = [...asked].filter((n) => !n.startsWith('dynamic:') && !drawn.includes(n))
-  assert.deepEqual(missing, [], `SpectrumIcon is asked for ${missing.join(', ')} and draws none of them`)
-
-  // The one dynamic caller is the assurance row, whose icon names live in
-  // spectrumFacts.js. Check those against the same table rather than exempting
-  // them — a typo there is exactly as invisible.
-  const facts = stripComments(read('src/components/spectrum/spectrumFacts.js'))
-  const dynamic = [...facts.matchAll(/icon: '([a-z-]+)'/g)].map((m) => m[1])
-  assert.ok(dynamic.length >= 2, 'the assurance row no longer names any icon')
-  const missingDynamic = dynamic.filter((n) => !drawn.includes(n))
-  assert.deepEqual(missingDynamic, [],
-    `spectrumFacts.js names glyphs SpectrumIcon does not draw: ${missingDynamic.join(', ')}`)
+  assert.ok(spAsked.size >= 1, 'no SpectrumIcon name found — the extractor is blind')
+  const spMissing = [...spAsked].filter((n) => !drawn.includes(n))
+  assert.deepEqual(spMissing, [], `SpectrumIcon is asked for ${spMissing.join(', ')} and draws none of them`)
 })
 
-/* ── the bench is an index of what is live ─────────────────────────────────── */
+/* ── the bench is the design's four tool windows ─────────────────────────────────────── */
 
-test('the bench shows every live Create category and no empty one', () => {
-  const live = CREATE_GROUPS.filter((g) => g.tools.some((t) => !t.soon))
-  assert.deepEqual(BENCH.map((p) => p.id), live.map((g) => g.id),
-    'the bench no longer matches the live Create groups in tree order')
-
-  const soonOnly = CREATE_GROUPS.filter((g) => g.tools.every((t) => t.soon))
-  // POSITIVE CONTROL: there is at least one group with nothing live, so the
-  // exclusion below is about something. When the last one ships, this retires.
-  assert.ok(soonOnly.length >= 1,
-    'every Create group has something live; delete this half with the commit that shipped the last one')
-  for (const group of soonOnly) {
-    assert.ok(!BENCH.some((p) => p.id === group.id),
-      `the bench renders a panel for "${group.label}", whose tools are all Soon — a whole window `
-      + 'promising a bench that is not there')
-  }
-
-  // And no panel links a Soon tool.
-  for (const panel of BENCH) {
-    for (const tool of panel.tools) {
-      assert.equal(tool.soon, false, `the bench panel "${panel.label}" links ${tool.label}, which is Soon`)
-    }
-  }
+test('the bench is the design\'s four tool windows, in order, beside a four-row rail', () => {
+  // The design's 4 bench tool windows, not the 5 category panels.
+  const names = [...BENCH_SRC.matchAll(/<Chrome\s+no="(\d\d)"\s+name="([^"]+)"/g)].map((m) => `${m[1]} ${m[2]}`)
+  assert.deepEqual(names, ['01 Palette builder', '02 Icon library', '03 Font Gallery', '04 File converter'])
+  const panels = [...BENCH_SRC.matchAll(/data-panel="(\d)"/g)].map((m) => m[1])
+  assert.deepEqual(panels, ['0', '1', '2', '3'], 'the bench no longer renders four [data-panel] windows')
+  assert.match(BENCH_SRC, /const RAIL = \['Palette builder', 'Icon library', 'Font gallery', 'File conversion'\]/,
+    'the rail no longer lists the design\'s four rows')
+  // AI Studio is not one of the design's windows.
+  assert.ok(!/AI Studio/.test(BENCH_SRC), 'the bench has an AI Studio window again')
 })
 
 test('the bench writes down no route', () => {
-  assert.ok(!/to="\/create\//.test(BENCH_SRC), 'SpectrumBench.jsx carries a literal /create/ route')
-  assert.ok(!/to="\/discover\//.test(BENCH_SRC), 'SpectrumBench.jsx carries a literal /discover/ route')
-  assert.ok(BENCH_SRC.includes('panel.to') && BENCH_SRC.includes('tool.route'),
-    'SpectrumBench.jsx no longer reads its destinations off the tool tree')
+  // Every window CTA reads its destination off the tool tree through route(),
+  // so a renamed tool fails the build rather than shipping a dead link.
+  for (const [file, src] of [['SpectrumBench.jsx', BENCH_SRC], ['BenchConverter.jsx', CONVERTER_SRC]]) {
+    assert.ok(!/to="\/create\//.test(src), `${file} carries a literal /create/ route`)
+    assert.ok(!/to="\/discover\//.test(src), `${file} carries a literal /discover/ route`)
+  }
+  const called = [...(BENCH_SRC + CONVERTER_SRC).matchAll(/route\('([a-z-]+)'\)/g)].map((m) => m[1]).sort()
+  assert.deepEqual(called, ['file-converter', 'font-gallery', 'font-pair', 'gradient', 'icons', 'palette', 'ratio'],
+    'the four windows no longer open their seven destinations through route()')
 })
-
-/* ── accessibility structure ───────────────────────────────────────────────── */
 
 test('the split headline keeps one readable sentence for assistive tech', () => {
   assert.ok(WORDS.includes('className="sr-only"'),
@@ -293,15 +302,36 @@ test('the split headline keeps one readable sentence for assistive tech', () => 
     'the visible word split is no longer aria-hidden, so the headline is announced twice')
 })
 
-test('the comparison is a real table with row and column headers', () => {
-  // The design builds it from divs and injects the plan name with a CSS
-  // pseudo-element at phone width, which is not reliably in the accessibility
-  // tree — so a screen-reader user hears "3 Unlimited" with no way to tell which
-  // number belongs to which plan.
-  assert.ok(PAGE.includes('<table className="sp-compare-table">'), 'the plan comparison is no longer a table')
-  assert.ok(PAGE.includes('<th scope="col">'), 'the comparison table has no column headers')
-  assert.ok(PAGE.includes('<th scope="row">'), 'the comparison table has no row headers')
-  assert.ok(PAGE.includes('<caption className="sr-only">'), 'the comparison table has no caption')
+test('the landing is the design\'s six blocks in order, and pricing is not one of them', () => {
+  // In the design the plan comparison and FAQ live on the Pricing screen,
+  // which is /plans. The landing is hero, bench, discover,
+  // exports (#specimens), the terms band (#index) and the handoff.
+  const ids = [...PAGE.matchAll(/<section id="([a-z]+)"/g)].map((m) => m[1])
+  assert.deepEqual(ids, ['bench', 'discover', 'specimens'],
+    'the landing sections are no longer bench, discover, specimens in that order')
+  // Then the design's proof band (#index, SpectrumProof.jsx), then the handoff.
+  const proofAt = PAGE.indexOf('<SpectrumProof />')
+  assert.ok(proofAt > PAGE.indexOf('id="specimens"') && proofAt < PAGE.indexOf('className="sp-close"'),
+    'the proof band no longer sits between the exports and "Start your first project today."')
+  assert.match(stripComments(read('src/components/spectrum/SpectrumProof.jsx')), /<section id="index"/,
+    'the proof band lost the #index anchor the footer links to')
+  for (const gone of ['id="pricing"', 'id="faq"', '<table', 'sp-compare', 'sp-plans']) {
+    assert.ok(!PAGE.includes(gone), `Spectrum.jsx carries ${gone} again — pricing belongs on /plans`)
+  }
+  // THE STACK NESTS. A sticky card pins only inside its own containing block,
+  // so each card must sit in a wrapper that also holds the cards after it.
+  const nests = EXPORTS_SRC.split('<div className="sp-stack-nest">').length - 1
+  assert.equal(nests, 3, 'the exports stack no longer nests its three cards (A ⊃ B ⊃ C)')
+  const order = ['<Card index={0}', '<div className="sp-stack-nest">', '<Card index={1}', '<Card index={2}', 'sp-stack-pad--tail']
+  let at = EXPORTS_SRC.indexOf('<div className="sp-stack-nest">')
+  for (const needle of order) {
+    const next = EXPORTS_SRC.indexOf(needle, at)
+    assert.ok(next > -1, `the stack lost ${needle}, or it moved out of order`)
+    at = next
+  }
+  assert.match(EXPORTS_SRC, /const TOPS = \[84, 116, 148\]/, 'the cards no longer pin at 84 / 116 / 148')
+  assert.match(EXPORTS_SRC, /1 - docked \* 0\.045/, 'covered cards no longer shrink by .045 per card')
+  assert.match(EXPORTS_SRC, /1 - docked \* 0\.05/, 'covered cards no longer dim by .05 per card')
 })
 
 test('the page never removes an outline', () => {

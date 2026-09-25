@@ -1,5 +1,6 @@
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
+import { readSeed, seedChip, paletteToolbar, openPaletteTools } from './palette-helpers.js'
 import { hexToHct } from '../../src/utils/colors.js'
 
 /** The Palette Builder writes the board into the saved project on a ~200ms
@@ -27,18 +28,25 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     watch(page, 'first-time palette designer')
     await go(page, '/create/palette')
 
-    const seed = page.getByRole('textbox', { name: 'Seed colour hex' })
     const firstHex = page.locator('.plb-col .plb-hex').first()
-    await expect(seed).toHaveValue(/^#[0-9A-F]{6}$/)
-    await expect(firstHex).toHaveText(await seed.inputValue())
+    await expect(seedChip(page)).toHaveText(/#[0-9A-F]{6}/)
+    await expect(firstHex).toHaveText(await readSeed(page))
 
-    const initial = await seed.inputValue()
-    const pickerColour = await page.locator('.plb-seedpick .cpk-trigger-chip').evaluate(
+    const initial = await readSeed(page)
+    const pickerColour = await page.locator('.plb-seedchip-sw').evaluate(
       element => getComputedStyle(element).backgroundColor,
     )
-    const firstColour = await page.locator('.plb-col').first().evaluate(
-      element => getComputedStyle(element).backgroundColor,
-    )
+    // The column paints its colour through `--plb-c` (a gradient, so a vision
+    // check can split it); resolve that to the same rgb() the chip reports.
+    const firstColour = await page.locator('.plb-col').first().evaluate((element) => {
+      const probe = document.createElement('span')
+      probe.style.color = getComputedStyle(element).getPropertyValue('--plb-c').trim()
+      document.body.append(probe)
+      const rgb = getComputedStyle(probe).color
+      probe.remove()
+      return rgb
+    })
+    expect(firstColour).toMatch(/^rgb\(/)
     expect(pickerColour).toBe(firstColour)
 
     // This used to assert the seed SURVIVED a reload, which was true because
@@ -52,162 +60,115 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     // once they have TOUCHED the board it survives a reload. An untouched draw
     // is not work; a randomised one is.
     await page.getByRole('button', { name: /Randomise/ }).click()
-    await expect(seed).not.toHaveValue(initial)
-    const chosen = await seed.inputValue()
+    await expect.poll(() => readSeed(page)).not.toBe(initial)
+    const chosen = await readSeed(page)
     // The project write is debounced ~200ms. Wait for the value to actually be
     // in storage rather than for a duration — reloading a moment early would
     // fail this for a reason that has nothing to do with what it tests.
     await waitForSavedSeed(page, chosen)
 
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(seed).toHaveValue(chosen)
+    await expect(page.locator('.plb-seedchip-hex')).toHaveText(chosen)
     await expect(firstHex).toHaveText(chosen)
   })
 
-  test('the shell aligns, controls stay level, and a hover label grows its own button', async ({ page }) => {
+  test('the shell aligns, controls stay level, and the toolbar holds one row', async ({ page }) => {
     watch(page, 'precision-focused desktop designer')
     await page.setViewportSize({ width: 1440, height: 900 })
     await go(page, '/create/palette')
-    await expect(page.locator('.plb-toolbar')).toBeVisible()
+    const toolbar = paletteToolbar(page)
+    await expect(toolbar).toBeVisible()
+    await expect(toolbar).not.toHaveClass(/is-measuring/)
 
-    // WHAT MOVED, AND WHY THIS STILL GUARDS THE SAME THING. The page's h1 was
-    // `.plb-title` (15px, inside the toolbar), then `.plb-hero h1` (a 38-64px
-    // heading ABOVE the toolbar). On 2026-09-14 the founder struck the words
-    // "Palette Generator" off a screenshot of this page: a workspace does not
-    // spend a display heading restating the route's own name. The heading area
-    // now renders ONLY when PALETTE_LEDE has a sentence in it; with the lede
-    // still empty the h1 is sr-only and the toolbar is once again the first
-    // thing under the nav.
-    //
-    // Both halves of the original guarantee survive: the content edge still
-    // lines up with the nav's, and the h1 still exists and still names the
-    // board. What changed is which element sits flush to the nav.
+    // The palette is a full-bleed workspace (D:947): its toolbar runs edge to
+    // edge directly under the nav, with its own clamp(12px,2vw,18px) inset,
+    // rather than inside the site's content column. The h1 names the board
+    // for assistive tech and is not painted.
     const geometry = await page.evaluate(() => {
       const nav = document.querySelector('.pnav')
-      const navInner = document.querySelector('.pnav-inner')
-      const toolbar = document.querySelector('.plb-toolbar')
+      const toolbar = document.querySelector('.plb [data-tool-toolbar]')
       const title = document.querySelector('h1#plb-page-title')
-      const toolbarGroup = document.querySelector('.plb-toolbar-group')
       const controls = [
-        document.querySelector('.plb-seedpick .cpk-trigger'),
-        document.querySelector('.plb-hexfield'),
-        document.querySelector('.plb-harm'),
+        document.querySelector('.plb-seedchip'),
+        document.querySelector('.plb .tl-select'),
+        document.querySelector('.plb-random'),
+        document.querySelector('.plb-save'),
       ]
-      const navLeft = navInner.getBoundingClientRect().left + parseFloat(getComputedStyle(navInner).paddingLeft)
       const board = document.querySelector('.plb-board')
+      const box = toolbar.getBoundingClientRect()
       return {
-        heroPresent: !!document.querySelector('.plb-hero'),
-        gap: toolbar.getBoundingClientRect().top - nav.getBoundingClientRect().bottom,
-        toolbarLeftDelta: toolbarGroup.getBoundingClientRect().left - navLeft,
-        // POSITIVE CONTROL for the delta above: a probe that read a detached or
-        // zero-width node would report 0 and pass. The toolbar group has to be
-        // a real, painted, non-trivial box first.
-        toolbarWidth: toolbarGroup.getBoundingClientRect().width,
+        gap: box.top - nav.getBoundingClientRect().bottom,
+        left: box.left,
+        right: window.innerWidth - box.right,
+        inset: parseFloat(getComputedStyle(toolbar).paddingLeft),
+        toolbarWidth: box.width,
+        rowHeight: box.height,
         titlePresent: !!title,
         titleText: title ? title.textContent.trim() : null,
-        // The h1 is hidden from sight but NOT from the accessibility tree: the
-        // board is aria-labelledby it, so a clipped-to-1px box is the pass and
-        // display:none would be a regression that takes the board's name away.
         titleBox: title ? Math.round(title.getBoundingClientRect().width) : null,
         titleDisplay: title ? getComputedStyle(title).display : null,
         boardLabelledBy: board ? board.getAttribute('aria-labelledby') : null,
-        heights: controls.map(element => element.getBoundingClientRect().height),
+        heights: controls.map(element => (element ? element.getBoundingClientRect().height : 0)),
       }
     })
-    expect(geometry.heroPresent, 'no heading area paints while the lede is empty').toBe(false)
     expect(geometry.titlePresent, 'the h1 still exists for the board to be named by').toBe(true)
     expect(geometry.titleText).toBe('Palette Generator')
     expect(geometry.titleDisplay, 'sr-only, not display:none').not.toBe('none')
     expect(geometry.titleBox, 'the h1 is visually clipped').toBeLessThanOrEqual(2)
     expect(geometry.boardLabelledBy, 'the board still takes its name from the h1').toBe('plb-page-title')
-    expect(geometry.toolbarWidth, 'the toolbar group is actually painted').toBeGreaterThan(100)
+    expect(geometry.toolbarWidth, 'the toolbar is actually painted').toBeGreaterThan(100)
     expect(Math.abs(geometry.gap), 'the toolbar is flush to the nav').toBeLessThanOrEqual(1)
-    expect(Math.abs(geometry.toolbarLeftDelta)).toBeLessThanOrEqual(1)
+    expect(Math.abs(geometry.left), 'the toolbar starts at the viewport edge').toBeLessThanOrEqual(1)
+    expect(Math.abs(geometry.right), 'the toolbar ends at the viewport edge').toBeLessThanOrEqual(1)
+    expect(geometry.inset, 'the drawn inset, clamp(12px, 2vw, 18px)').toBe(18)
+    expect(geometry.heights.every(h => h > 0), 'every measured control is on the row').toBe(true)
     expect(new Set(geometry.heights.map(value => Math.round(value))).size).toBe(1)
+    // The drawn toolbar measures 61px at 1440 (9px padding, the 42px undo
+    // tray, a hairline); a second row would at least double it.
+    expect(geometry.rowHeight, 'one row, as drawn').toBeLessThanOrEqual(62)
 
-    // The toolbar is sticky: scroll the heading area away and it must sit flush
-    // under the nav, which is where it used to start.
+    // The toolbar is sticky: scroll away and it must sit flush under the nav.
     await page.evaluate(() => window.scrollTo(0, 600))
     await page.waitForFunction(() => {
       const nav = document.querySelector('.pnav')
-      const toolbar = document.querySelector('.plb-toolbar')
+      const toolbar = document.querySelector('.plb [data-tool-toolbar]')
       return Math.abs(toolbar.getBoundingClientRect().top - nav.getBoundingClientRect().bottom) <= 1
     })
     await page.evaluate(() => window.scrollTo(0, 0))
 
-    await page.evaluate(() => document.fonts.ready)
-    await page.waitForTimeout(800)
-    const preview = page.getByRole('button', { name: 'Preview' })
-    const next = page.getByRole('button', { name: 'Gradient' })
-    // The label sits in the button's normal flow (founder batch 2): hovering
-    // EXPANDS the button rather than floating a pill over its neighbour. What
-    // must still hold is that the toolbar stays exactly one line tall and full
-    // width, and that the group is right-anchored so the controls to the right
-    // of the hovered one do not move under the pointer.
-    const collapsedLabel = await preview.locator('.plb-lbl').evaluate(element => {
-      const style = getComputedStyle(element)
-      return {
-        position: style.position,
-        opacity: style.opacity,
-        width: element.getBoundingClientRect().width,
-      }
-    })
-    expect(collapsedLabel.position).toBe('static')
-    expect(collapsedLabel.opacity).toBe('0')
-    expect(collapsedLabel.width).toBeLessThan(1)
-    const before = await page.evaluate(() => ({
-      toolbar: document.querySelector('.plb-toolbar').getBoundingClientRect().toJSON(),
-      preview: document.querySelector('.plb-icobtn[aria-label="Preview"]').getBoundingClientRect().toJSON(),
-      next: document.querySelector('[title="Open this palette in the Gradient Generator"]').getBoundingClientRect().toJSON(),
-    }))
-    await preview.hover()
-    await expect.poll(
-      async () => Number(await preview.locator('.plb-lbl').evaluate(el => getComputedStyle(el).opacity)),
-      { timeout: 4000 },
-    ).toBe(1)
-    const after = await page.evaluate(() => ({
-      toolbar: document.querySelector('.plb-toolbar').getBoundingClientRect().toJSON(),
-      preview: document.querySelector('.plb-icobtn[aria-label="Preview"]').getBoundingClientRect().toJSON(),
-      next: document.querySelector('[title="Open this palette in the Gradient Generator"]').getBoundingClientRect().toJSON(),
-    }))
-    expect(after.toolbar.height, 'the toolbar never gains a second row').toBe(before.toolbar.height)
-    expect(after.toolbar.width).toBe(before.toolbar.width)
-    expect(after.preview.width, 'the hovered button holds its own label').toBeGreaterThan(before.preview.width)
-    expect(after.next.x, 'controls to the right of it stay put').toBe(before.next.x)
-    await expect(next).toBeVisible()
-
-    await page.locator('.app-footer').scrollIntoViewIfNeeded()
-    const footerDelta = await page.evaluate(() => {
-      const navInner = document.querySelector('.pnav-inner')
-      const navLeft = navInner.getBoundingClientRect().left + parseFloat(getComputedStyle(navInner).paddingLeft)
-      return document.querySelector('.app-footer-mark').getBoundingClientRect().left - navLeft
-    })
-    expect(Math.abs(footerDelta)).toBeLessThanOrEqual(1)
+    // No site footer under a tool.
+    await expect(page.locator('.app-footer')).toHaveCount(0)
   })
 
   test('shared chrome uses the wide desktop span', async ({ page }) => {
     watch(page, 'designer using a large desktop display')
     await page.setViewportSize({ width: 1909, height: 900 })
     await go(page, '/create/palette')
-    await expect(page.locator('.plb-toolbar')).toBeVisible()
+    await expect(paletteToolbar(page)).toBeVisible()
     await expect(page.locator('.plb-adjust')).toBeVisible()
 
+    // The nav keeps the shared 1680px content span; the palette's toolbar and
+    // its Adjust bar are the workspace's own full-bleed chrome (D:947, D:1037)
+    // and are not boxed into that span on a large display.
     const geometry = await page.evaluate(() => {
       const nav = document.querySelector('.pnav-inner')
-      const toolbar = document.querySelector('.plb-toolbar')
-      const footer = document.querySelector('.plb-adjust')
       const inset = element => parseFloat(getComputedStyle(element).paddingLeft)
+      const span = (s) => { const r = document.querySelector(s).getBoundingClientRect(); return { left: r.left, right: window.innerWidth - r.right } }
       return {
-        navInset: inset(nav),
-        toolbarInset: inset(toolbar),
-        footerInset: inset(footer),
         navContentWidth: nav.clientWidth - inset(nav) * 2,
+        navInset: inset(nav),
+        toolbar: span('.plb [data-tool-toolbar]'),
+        footer: span('.plb-adjust'),
       }
     })
 
     expect(geometry.navContentWidth, 'large screens expose the new 1680px shared span').toBeGreaterThanOrEqual(1679)
-    expect(Math.abs(geometry.toolbarInset - geometry.navInset)).toBeLessThanOrEqual(1)
-    expect(Math.abs(geometry.footerInset - geometry.navInset)).toBeLessThanOrEqual(1)
+    for (const [name, box] of Object.entries({ toolbar: geometry.toolbar, footer: geometry.footer })) {
+      expect(Math.abs(box.left), `${name} starts at the edge`).toBeLessThanOrEqual(1)
+      expect(Math.abs(box.right), `${name} ends at the edge`).toBeLessThanOrEqual(1)
+    }
+    // The header sits on its own clamp(14px,2vw,22px) gutter: 22px here.
+    expect(geometry.navInset).toBe(22)
   })
 
   test('temperature stays under the pointer for the entire first drag', async ({ page }) => {
@@ -249,53 +210,27 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     expect(after.footer).toEqual(before.footer)
     await expect(reset).toBeVisible()
 
-    // THE EDITED VALUE IS EMPHASISED — asserted as a COMPARISON against an
-    // untouched sibling rather than against a typed weight.
-    //
-    // This said `toHaveCSS('font-weight', '800')` and measured 700. That is not
-    // a regression: the Spectrum foundation swapped the type stack, and
-    // `.snapv-value` is set in `var(--mono)`, which is Geist Mono — a variable
-    // face whose weight axis stops at 600 (read off the page's own @font-face
-    // rules: `Geist Mono 300 600`, against `Geist 300 700`). Asking a browser
-    // for 800 there buys a synthetic bold, not a cut, so the rule moved to 700
-    // with the foundation. The number was never the guarantee; the guarantee is
-    // that a value you have MOVED reads differently from one you have not, and
-    // there are three untouched sliders on this strip to prove it against.
-    const value = temperature.locator('xpath=..').locator('.snapv-value')
-    const weights = await page.locator('.snapv').evaluateAll((wraps) => wraps.map((w) => ({
-      edited: w.classList.contains('snapv--edited'),
-      weight: Number(getComputedStyle(w.querySelector('.snapv-value')).fontWeight),
-    })))
-    const edited = weights.filter((w) => w.edited)
-    const resting = weights.filter((w) => !w.edited)
-    // ANTI-VACUITY, both ways: one drag must have marked exactly one control as
-    // edited, and there must be an untouched one left to compare it with.
-    expect(edited.length, 'the drag did not mark its own control as edited').toBe(1)
-    expect(resting.length, 'every control reads as edited, so there is nothing to compare against').toBeGreaterThan(0)
-    await expect(value).toBeVisible()
-    expect(
-      edited[0].weight,
-      `the edited value is set at ${edited[0].weight} and the untouched ones at`
-      + ` ${[...new Set(resting.map((r) => r.weight))].join(', ')} — a moved control reads exactly like an unmoved one`,
-    ).toBeGreaterThan(Math.max(...resting.map((r) => r.weight)))
-
-    await expect(page.locator('label[for="plb-temp"]')).not.toHaveCSS('text-shadow', 'none')
+    // The value beside the slider reads the signed amount (D:1043).
+    await expect(temperature.locator('xpath=..').locator('.tl-slider-v')).toHaveText(/^\+\d+$/)
   })
 
-  test('adjustment tracks are equal, explanatory, and mark the neutral centre', async ({ page }) => {
+  // The drawn Adjust bar (D:1037-1044) gives each slider its own row with a
+  // flex basis of 210px, so tracks are as long as their label allows rather
+  // than equal, and carries no centre tick. What still holds is that every
+  // track explains itself: it paints the gradient of what it does.
+  test('adjustment tracks explain what they do', async ({ page }) => {
     watch(page, 'designer tuning colour relationships')
     await go(page, '/create/palette')
 
     const tracks = page.locator('.plb-adjust input[type="range"]')
     await expect(tracks).toHaveCount(4)
-    const details = await tracks.evaluateAll(elements => elements.map((element) => ({
-      width: element.getBoundingClientRect().width,
-      background: getComputedStyle(element).backgroundImage,
-    })))
-    expect(Math.max(...details.map(item => item.width)) - Math.min(...details.map(item => item.width))).toBeLessThan(0.1)
+    const details = await tracks.evaluateAll(elements => elements.map((element) => {
+      const track = element.style.getPropertyValue('--tl-track')
+      return { name: element.getAttribute('aria-label'), track, width: element.getBoundingClientRect().width }
+    }))
     for (const item of details) {
-      expect(item.background).toContain('linear-gradient')
-      expect(item.background).toContain('50%')
+      expect(item.track, `${item.name} carries a gradient track`).toContain('linear-gradient')
+      expect(item.width, `${item.name} keeps a usable length`).toBeGreaterThanOrEqual(100)
     }
   })
 
@@ -305,8 +240,16 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(page.locator('.plb-col .plb-hex')).toHaveCount(5)
     const before = await page.locator('.plb-col .plb-hex').allTextContents()
 
-    const previewButton = page.getByRole('button', { name: 'Preview' })
-    await previewButton.focus()
+    // Preview lives in the Tools overflow; both the trigger and the row are
+    // pressed with Space, and neither may reach the page's randomise.
+    const tools = paletteToolbar(page).getByRole('button', { name: 'Tools' })
+    await expect(paletteToolbar(page)).not.toHaveClass(/is-measuring/)
+    await tools.focus()
+    await page.keyboard.press('Space')
+    const row = page.getByRole('dialog', { name: 'Tools' }).getByRole('button', { name: 'Preview on a UI' })
+    await expect(row).toBeVisible()
+    expect(await page.locator('.plb-col .plb-hex').allTextContents()).toEqual(before)
+    await row.focus()
     await page.keyboard.press('Space')
     await expect(page.getByRole('dialog', { name: 'Palette preview' })).toBeVisible()
     await page.getByRole('button', { name: 'Dark', exact: true }).focus()
@@ -327,11 +270,15 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     const swatchHexes = page.locator('.plb-col .plb-hex')
     await expect(swatchHexes).toHaveCount(5)
     const before = await swatchHexes.allTextContents()
-    await page.getByRole('button', { name: 'Choose a direction to swap PRIMARY' }).click()
-    await expect(page.getByRole('menuitem', { name: 'Swap left' })).toHaveCount(0)
-    await page.getByRole('menuitem', { name: 'Swap right' }).click()
+    // Swapping is in each colour's actions menu; the first colour offers
+    // only the direction it can move in.
+    await page.getByRole('button', { name: 'More actions for PRIMARY' }).click()
+    const actions = page.getByRole('menu', { name: 'Colour actions' })
+    await expect(actions.getByRole('menuitem', { name: 'Swap right' })).toBeVisible()
+    await expect(actions.getByRole('menuitem', { name: 'Swap left' })).toHaveCount(0)
+    await actions.getByRole('menuitem', { name: 'Swap right' }).click()
     await expect(page.locator('.plb-col .plb-hex').first()).toHaveText(before[1])
-    await expect(page.getByRole('textbox', { name: 'Seed colour hex' })).toHaveValue(before[1])
+    await expect(page.locator('.plb-seedchip-hex')).toHaveText(before[1])
 
     await page.locator('.plb-gap').first().click({ button: 'right' })
     const insertMenu = page.getByRole('menu', { name: 'Insert colours' })
@@ -339,7 +286,7 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     await expect(insertMenu.getByRole('menuitem')).toHaveCount(4)
 
     await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: 'Preview' }).click()
+    await (await openPaletteTools(page)).getByRole('button', { name: 'Preview on a UI' }).click()
     await expect(page.locator('.plb-preview-item')).toHaveCount(6)
     await expect(page.locator('.plb-preview-item--locked')).toHaveCount(3)
     await expect(page.getByRole('button', { name: 'Unlock preview' })).toHaveCount(3)
@@ -365,12 +312,17 @@ test.describe('Palette Builder recovery and tool continuity', () => {
     watch(page, 'free designer discovering advanced colour checks')
     await go(page, '/create/palette')
 
-    await expect(page.locator('.plb-toolbar').getByRole('button', { name: /Contrast/i })).toHaveCount(0)
-    await page.getByRole('button', { name: 'Show contrast guidance for PRIMARY' }).click()
+    await expect(paletteToolbar(page).getByRole('button', { name: /Contrast/i })).toHaveCount(0)
+    // The AA chip on each colour (D:1032) is the Pro contrast check; free, it
+    // says so on the chip and opens the explanation.
+    const chip = page.locator('.plb-col').first().getByRole('button', { name: 'Contrast of PRIMARY — a Pro check' })
+    await expect(chip).toHaveText(/AA · Pro/)
+    await chip.click()
     await expect(page.getByRole('dialog', { name: 'Check contrast, light and dark' })).toBeVisible()
     await page.getByRole('button', { name: 'Close', exact: true }).click()
 
-    await page.getByRole('button', { name: 'Edit PRIMARY in HCT' }).click()
+    await page.getByRole('button', { name: 'More actions for PRIMARY' }).click()
+    await page.getByRole('menu', { name: 'Colour actions' }).getByRole('menuitem', { name: 'Edit in HCT' }).click()
     await expect(page.getByRole('dialog', { name: 'Fine-tune any colour in HCT' })).toBeVisible()
   })
 
@@ -379,28 +331,30 @@ test.describe('Palette Builder recovery and tool continuity', () => {
       watch(page, `palette designer at ${width}px`)
       await page.setViewportSize({ width, height: 820 })
       await go(page, '/create/palette')
-      await expect(page.locator('.plb-toolbar')).toBeVisible()
+      await expect(paletteToolbar(page)).toBeVisible()
 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
       expect(overflow).toBeLessThanOrEqual(1)
 
-      await page.locator('.app-footer').scrollIntoViewIfNeeded()
-      const gutterDelta = await page.evaluate(() => {
-        const navInner = document.querySelector('.pnav-inner')
-        const navLeft = navInner.getBoundingClientRect().left + parseFloat(getComputedStyle(navInner).paddingLeft)
-        return document.querySelector('.app-footer-mark').getBoundingClientRect().left - navLeft
-      })
-      expect(Math.abs(gutterDelta)).toBeLessThanOrEqual(1)
+      // No site footer under a tool; the header's gutter is the
+      // App file's clamp(14px,2vw,22px), or 16px on a phone header.
+      await expect(page.locator('.app-footer')).toHaveCount(0)
+      const navPad = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.pnav-inner')).paddingLeft))
+      expect(navPad).toBeCloseTo(width < 768 ? 16 : Math.min(22, Math.max(14, width * 0.02)), 0)
     })
   }
 
-  test('Tint Generator offers an immediate route back to the Palette Builder', async ({ page }) => {
+  // Every tool's toolbar opens on the design's drawn back
+  // button, which returns to the workspace (D:613). The Palette Builder is one
+  // press away in the Create menu; what is held here is that the tool still
+  // offers an immediate way out, at the start of its toolbar.
+  test('Tint offers an immediate route back, at the start of its toolbar', async ({ page }) => {
     watch(page, 'designer moving between colour tools')
     await go(page, '/create/tint')
-    const back = page.getByRole('link', { name: 'Back to Palette Builder' })
+    const back = page.locator('[data-tool-toolbar]').getByRole('link', { name: 'Back to workspace' })
     await expect(back).toBeVisible()
     await back.click()
-    await expect(page).toHaveURL(/\/create\/palette$/)
+    await expect(page).toHaveURL(/\/projects$/)
   })
 })
 
@@ -460,7 +414,7 @@ test.describe('the Palette Builder opens on a random palette', () => {
     // ProjectContext, so it read "Auto" for months while the board was actually
     // being built by `generateHarmony(seed, 'analogous')` — a PAID system. A
     // free user was looking at output they could not themselves produce.
-    await expect(page.locator('.plb-harm')).toContainText('Auto')
+    await expect(page.getByRole('combobox', { name: 'Colour system' })).toHaveValue('auto')
     await expect(page.locator('.plb-collapsed')).toHaveCount(0)
 
     // So this checks the ENGINE, through a signature only the tonal engine
@@ -512,16 +466,17 @@ test.describe('the Palette Builder opens on a random palette', () => {
     await expect(page.getByRole('button', { name: 'Unlock PRIMARY' })).toHaveCount(1)
     const before = await boardColors(page)
 
-    const reset = page.getByRole('button', { name: 'Reset' })
-    await reset.click()
+    // Reset is a Tools row ("Reset palette"), next to History.
+    const reset = async () => (await openPaletteTools(page)).getByRole('button', { name: 'Reset palette' }).click()
+    await reset()
     const afterFirst = await boardColors(page)
     expect(afterFirst).not.toEqual(before)
-    await expect(page.locator('.plb-harm')).toContainText('Auto')
+    await expect(page.getByRole('combobox', { name: 'Colour system' })).toHaveValue('auto')
     await expect(page.locator('[aria-label^="Unlock "]')).toHaveCount(0)
 
     // Pressing it again draws again: Reset randomises the colour, it does not
     // return to one fixed board.
-    await reset.click()
+    await reset()
     await expect
       .poll(async () => (await boardColors(page)).join(), { timeout: 5000 })
       .not.toBe(afterFirst.join())

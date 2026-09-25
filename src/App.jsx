@@ -1,4 +1,4 @@
-import { Component, useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react'
+import { useEffect, useLayoutEffect, useRef, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import PillNav from './components/PillNav'
 import Toast from './components/Toast'
@@ -25,6 +25,8 @@ import { useFirestoreSync } from './hooks/useFirestoreSync'
 import { useSessionHint } from './hooks/useSessionHint'
 import { chromelessRoutes } from './data/toolTree'
 import { CLIENT_REDIRECT_ROUTES } from './data/legacyRoutes'
+import RouteErrorBoundary from './components/RouteErrorBoundary'
+import { EVENTS, sendEvent } from './utils/productEvents'
 
 // Static imports — small or always-visited pages (instant load)
 //
@@ -55,8 +57,14 @@ const Credits = lazy(() => import('./pages/Credits'))
 const SiteMap = lazy(() => import('./pages/SiteMap'))
 const Admin = lazy(() => import('./pages/Admin'))
 const Projects = lazy(() => import('./pages/Projects'))
+// One project's page, /projects/:id.
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'))
 const Checkout = lazy(() => import('./pages/Checkout'))
-const Plans = lazy(() => import('./pages/Plans'))
+const Pricing = lazy(() => import('./pages/Pricing'))
+// /mobile — the Spectrum design's "On mobile" screen. Lazy: it is a second
+// marketing page reached from the nav, not the front door, and spectrum.css
+// (which it shares) is already in the entry graph via <Spectrum />.
+const SpectrumMobile = lazy(() => import('./pages/SpectrumMobile'))
 const CheckoutReturn = lazy(() => import('./pages/CheckoutReturn'))
 const StyleGuide = lazy(() => import('./pages/StyleGuide'))
 const HelpCentre = lazy(() => import('./pages/HelpCentre'))
@@ -97,33 +105,6 @@ const SurfaceIndex = lazy(() => import('./pages/SurfaceIndex'))
 // return and the app-wide feedback mount at the bottom of the file cannot drift
 // apart when a tool is added. tests/unit/feedback-reach.test.js fails if they do.
 const CHROMELESS_PATHS = new Set(chromelessRoutes())
-
-class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props)
-    this.state = { hasError: false }
-  }
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-  componentDidCatch(error, info) {
-    console.error('ErrorBoundary caught:', error, info)
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="error-boundary">
-          <div className="error-boundary-card">
-            <h2>Something went wrong</h2>
-            <p>This page ran into an unexpected error. Reloading usually fixes it.</p>
-            <button onClick={() => window.location.reload()}>Reload page</button>
-          </div>
-        </div>
-      )
-    }
-    return this.props.children
-  }
-}
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -285,6 +266,9 @@ function AppInner() {
   // and a replace-navigation to the path we're already on is a no-op.
   useEffect(() => {
     if (authLoading || !authUser || !pendingOnboarding) return
+    // pendingOnboarding is raised only for a brand-new account, email or
+    // Google, and cleared on the next line, so this counts each sign-up once.
+    sendEvent(EVENTS.signUp)
     clearPendingOnboarding()
     // `fresh` tells Onboarding this is a brand-new account: it must render the
     // flow even if this browser holds another account's completion flag.
@@ -383,6 +367,36 @@ function AppInner() {
   if (location.pathname === '/home') {
     return <><Spectrum /><GoogleOneTap /></>
   }
+  // The sales page's second screen. Same chrome as `/` — the marketing nav and
+  // SpectrumFooter are part of the page — so it returns above the app shell
+  // exactly as `/home` does, with its own Suspense boundary because the shell's
+  // is below this line.
+  if (location.pathname.toLowerCase().replace(/\/+$/, '') === '/mobile') {
+    return (
+      <>
+        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <SpectrumMobile />
+        </Suspense>
+        <GoogleOneTap />
+      </>
+    )
+  }
+  // /plans IS THE PRICING SCREEN: a marketing page with the Spectrum nav and footer, like `/`, so it returns
+  // before the app shell rather than rendering inside PillNav + AppFooter. Its
+  // own Suspense boundary for the same reason /discover has one: the shell's
+  // <Suspense> is below this line. Matched on the normalised path so
+  // `/plans/` cannot leak into the shell and render a second, different page.
+  // The exact-match half is what tests/unit/feedback-reach.test.js reads.
+  if (location.pathname === '/plans' || location.pathname.toLowerCase().replace(/\/+$/, '') === '/plans') {
+    return (
+      <>
+        <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
+          <Pricing />
+        </Suspense>
+        <GoogleOneTap />
+      </>
+    )
+  }
   if (location.pathname === '/onboarding') {
     return <Onboarding />
   }
@@ -471,7 +485,7 @@ function AppInner() {
       <PillNav />
 
       <main className="app-page" id="main" tabIndex={-1} key={location.pathname}>
-        <ErrorBoundary>
+        <RouteErrorBoundary resetKey={location.pathname}>
           <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
             <Routes location={location}>
               {/* Every retired URL → its live replacement, rendered from the one
@@ -539,7 +553,7 @@ function AppInner() {
                   property tests/user-sim/20-billing-banner.spec.js actually
                   guards, and it still guards it. */}
               <Route path="/projects" element={<Projects toast={toast} />} />
-              <Route path="/plans" element={<Plans />} />
+              <Route path="/projects/:id" element={<ProjectDetail toast={toast} />} />
               <Route path="/checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
               <Route path="/checkout/return" element={<RequireAuth><CheckoutReturn /></RequireAuth>} />
               <Route path="/settings" element={<Settings toast={toast} />} />
@@ -562,7 +576,7 @@ function AppInner() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
-        </ErrorBoundary>
+        </RouteErrorBoundary>
       </main>
 
       <AppFooter />
@@ -578,6 +592,7 @@ function AppInner() {
 // the outer of the two so the Pro modal's CTA can call requireLogin. Both sit
 // inside AuthProvider (main.jsx), which LoginPromptProvider depends on.
 export default function App() {
+  const { pathname } = useLocation()
   return (
     <LoginPromptProvider>
       <ProModalProvider>
@@ -585,7 +600,13 @@ export default function App() {
             user's first Tab bypasses the repeated PillNav and jumps to #main
             (WCAG 2.4.1). Each layout tags its content-start with id="main". */}
         <a href="#main" className="skip-link">Skip to content</a>
-        <AppInner />
+        {/* Every route, including the ones that return before the app shell
+            (the Create tools, `/`, /home, /onboarding, /discover, /learn), so
+            a crash is a recovery screen rather than a blank page. The shell
+            keeps its own boundary inside <main> so the nav survives there. */}
+        <RouteErrorBoundary resetKey={pathname}>
+          <AppInner />
+        </RouteErrorBoundary>
         {/* Mounted out here rather than inside AppInner's shell: every Create
             tool takes the CHROMELESS_PATHS early return, and those are exactly
             the pages where a lapsed subscription is about to be felt. */}

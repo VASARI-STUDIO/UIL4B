@@ -27,16 +27,12 @@ const BOB = 'bob-uid'
 let testEnv
 // ── The SECOND environment, and why this file needs one ─────────────────────
 //
-// Everything above section (d) runs against `firestore.rules` AS PUBLISHED, and
-// keeping that is the point: it is the only emulator coverage the file the
-// founder is actually serving has.
+// Everything above section (d) runs against `firestore.rules` as committed, so
+// the emulator covers the rules file itself.
 //
-// The moderator role is not in that file. It is founder-gated — the auto-mode
-// classifier refuses to stage firestore.rules whether or not permission has
-// been granted — so it lives as a committed, unapplied patch that
-// `npm run apply:gated` puts in. A test written against the published rules
-// could therefore only pass AFTER the founder runs the command, and would be
-// red every day until then.
+// The moderator role may live as a committed patch that `npm run apply:gated`
+// puts in, so a test written only against the committed rules could not pass
+// until that patch is applied.
 //
 // So section (d) gets its own environment, loaded from the PATCHED text the way
 // tests/rules/per-project-sync.test.js does. The patch is the single source of
@@ -45,8 +41,7 @@ let testEnv
 // assertion below holds identically on both sides of the command.
 //
 // Its OWN projectId, because initializeTestEnvironment loads rules into the
-// emulator PER PROJECT ID — two rule sets under one id race, which is exactly
-// how the per-project suite lost to this file's live rules on 2026-09-09.
+// emulator PER PROJECT ID — two rule sets under one id race.
 let reviewerEnv
 
 before(async () => {
@@ -297,6 +292,29 @@ for (const kind of ['gradient', 'design', 'palette']) {
   })
 }
 
+// EVERY SUBMIT PATH SENDS `localId`. Community.jsx (designs and icons),
+// GradientGenerator.jsx and PaletteBuilder.jsx all publish
+// `{ ...buildQueueRecord(...), localId }`, and the "my submissions" list pairs
+// the server copy with this browser's copy on it (communityQueue.js,
+// mergeSubmissions). The sample above has no localId, so these cover it
+// separately, using the id shapes the call sites write.
+for (const [where, localId] of [
+  ['PaletteBuilder', 'u1727136000000'],
+  ['GradientGenerator', 'g1727136000000'],
+  ['Community (design)', 'lz3k9x2abc'],
+]) {
+  test(`a submission as ${where} sends it, with its localId, is accepted`, async () => {
+    await assertSucceeds(
+      setDoc(submissionDoc(aliceDb(), `local-${localId}`), submission({ localId })),
+    )
+  })
+}
+
+test('localId is an identifier, not a place to put a payload', async () => {
+  await assertFails(setDoc(submissionDoc(aliceDb(), 'long-local'), submission({ localId: 'x'.repeat(65) })))
+  await assertFails(setDoc(submissionDoc(aliceDb(), 'map-local'), submission({ localId: { a: 1 } })))
+})
+
 test('a submission cannot be created under someone else\'s name', async () => {
   await assertFails(
     setDoc(submissionDoc(bobDb(), 'forged'), submission({ authorUid: ALICE })),
@@ -330,6 +348,19 @@ test('an author can withdraw and delete their own submission', async () => {
   await assertSucceeds(deleteDoc(submissionDoc(aliceDb(), 'mine')))
 })
 
+test('a withdrawal changes the status and nothing else', async () => {
+  await seedSubmission('mine', submission())
+  await assertFails(
+    setDoc(submissionDoc(aliceDb(), 'mine'), submission({ status: 'withdrawn', name: 'Renamed' })),
+  )
+  await assertFails(
+    setDoc(submissionDoc(aliceDb(), 'mine'), submission({ status: 'withdrawn', authorUid: BOB })),
+  )
+  await assertFails(
+    setDoc(submissionDoc(aliceDb(), 'mine'), submission({ status: 'withdrawn', payload: { colors: ['#000000'] } })),
+  )
+})
+
 test('a stranger can neither moderate nor delete a submission', async () => {
   await seedSubmission('mine', submission())
   await assertFails(
@@ -351,15 +382,12 @@ test('a reviewer with the admin claim can approve', async () => {
 // ── (e) The moderator role — AGAINST THE PATCHED RULES ──────────────────────
 //
 // Everything from here down runs on `reviewerEnv`, not `testEnv`. See the note
-// beside its declaration: the moderator role is a founder-gated patch, so these
-// exercise the rules the founder is being asked to publish rather than the ones
-// already published, and they pass identically once he has published them.
+// beside its declaration: these exercise the patched rules, and pass
+// identically whether or not the patch is already applied.
 //
-// The founder's [community-backend] decision is that nothing publishes until it
-// is approved, chosen on liability grounds because he is a solo developer. That
-// is only affordable if approving is not a one-person job. `isReviewer()` is
-// what makes the second person possible, and these tests are the whole
-// difference between a role that works and a role that is decoration.
+// Nothing in the community queue publishes until a reviewer approves it.
+// `isReviewer()` lets more than one person do that, and these tests check the
+// role grants what it should and nothing more.
 //
 // EVERY "cannot" below is paired with a "can" on the SAME seeded document. A
 // refused read and a document that was never written look identical from the
@@ -369,7 +397,7 @@ test('a reviewer with the admin claim can approve', async () => {
 
 const MOD = 'mod-uid'
 const modDb = () => reviewerEnv.authenticatedContext(MOD, { moderator: true, email_verified: true }).firestore()
-const founderDb = () => reviewerEnv.authenticatedContext('founder-uid', { admin: true, email_verified: true }).firestore()
+const revAdminDb = () => reviewerEnv.authenticatedContext('admin-uid', { admin: true, email_verified: true }).firestore()
 const revAliceDb = () => reviewerEnv.authenticatedContext(ALICE).firestore()
 const revBobDb = () => reviewerEnv.authenticatedContext(BOB).firestore()
 const revAnonDb = () => reviewerEnv.unauthenticatedContext().firestore()
@@ -486,33 +514,32 @@ test('a moderator can delete a submission, and a stranger still cannot', async (
   await assertSucceeds(deleteDoc(revSubmissionDoc(modDb(), 'm2')))
 })
 
-test('the founder keeps every permission the moderator just gained', async () => {
+test('an administrator keeps every permission the moderator just gained', async () => {
   // isReviewer() replaced isAdmin(). If the admin arm of that OR were dropped,
-  // every test above would still pass and the founder would be locked out of
-  // his own queue.
+  // every test above would still pass and administrators would lose the queue.
   await seedReviewer([FEEDBACK, 'f1'], report())
-  await assertSucceeds(getDoc(feedbackDoc(founderDb(), 'f1')))
-  await assertSucceeds(setDoc(feedbackDoc(founderDb(), 'f1'), { status: 'done' }, { merge: true }))
+  await assertSucceeds(getDoc(feedbackDoc(revAdminDb(), 'f1')))
+  await assertSucceeds(setDoc(feedbackDoc(revAdminDb(), 'f1'), { status: 'done' }, { merge: true }))
   await seedReviewer([QUEUE, 'f2'], submission())
-  await assertSucceeds(setDoc(revSubmissionDoc(founderDb(), 'f2'), submission({ status: 'approved' })))
-  await assertSucceeds(deleteDoc(revSubmissionDoc(founderDb(), 'f2')))
+  await assertSucceeds(setDoc(revSubmissionDoc(revAdminDb(), 'f2'), submission({ status: 'approved' })))
+  await assertSucceeds(deleteDoc(revSubmissionDoc(revAdminDb(), 'f2')))
 })
 
 // ── The role cannot spread, and does not leak sideways ──────────────────────
 
 test('NOBODY can reach the moderator roster from a browser — not even a moderator', async () => {
   // The roster has no rules block at all, and that is the security property
-  // rather than an omission: Firestore denies by default, so the list of people
-  // worth phishing is unreadable, and no client can write itself onto it.
+  // rather than an omission: Firestore denies by default, so no client can read
+  // the roster or write itself onto it.
   // Only the Admin SDK touches it, and the Admin SDK bypasses rules entirely.
-  await seedReviewer(['moderators', MOD], { uid: MOD, grantedByUid: 'founder-uid' })
+  await seedReviewer(['moderators', MOD], { uid: MOD, grantedByUid: 'admin-uid' })
   // Control: the document really is there — so these are refusals, not misses.
   await reviewerEnv.withSecurityRulesDisabled(async (ctx) => {
     const snap = await getDoc(doc(ctx.firestore(), 'moderators', MOD))
     assert.equal(snap.exists(), true, 'the roster fixture was never written')
   })
 
-  for (const [who, db] of [['a moderator', modDb()], ['the founder', founderDb()], ['a plain user', revAliceDb()]]) {
+  for (const [who, db] of [['a moderator', modDb()], ['an administrator', revAdminDb()], ['a plain user', revAliceDb()]]) {
     await assertFails(getDoc(doc(db, 'moderators', MOD)), `${who} could read the roster`)
     await assertFails(setDoc(doc(db, 'moderators', 'self-appointed'), { uid: 'x' }), `${who} could write the roster`)
   }
@@ -520,7 +547,7 @@ test('NOBODY can reach the moderator roster from a browser — not even a modera
 
 test('a moderator CANNOT appoint another moderator by writing a claim-shaped doc', async () => {
   // The self-replication guard, at the data layer. canAssignModerators() is
-  // founder-only in src/utils/moderation.js and api/verify-admin.js refuses the
+  // admin-only in src/utils/moderation.js and api/verify-admin.js refuses the
   // action with a 403 — this pins the third and last way it could be attempted.
   await assertFails(setDoc(doc(modDb(), 'moderators', BOB), { uid: BOB, moderator: true }))
 })

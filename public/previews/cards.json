@@ -9,21 +9,21 @@
       "ai": "#BE185D",
       "icons": "#047857"
     },
-    "accent": "#0F6FFF",
+    "accent": "#2A60E8",
     "hi": "#E9FF64",
     "hiFg": "#0F0F10",
-    "ground": "#EFEEE9",
+    "ground": "#F5F5F2",
     "ink": "#0F0F10"
   },
   "hero": {
     "kicker": null,
     "headline": [
       {
-        "text": "Build and export UI and brand design kits, ",
+        "text": "Build and export UI and brand kits from ",
         "hi": false
       },
       {
-        "text": "in one unified location",
+        "text": "one place",
         "hi": true
       },
       {
@@ -31,7 +31,7 @@
         "hi": false
       }
     ],
-    "sub": "Gone are the days of searching through bookmark folders upon bookmark folders to find each tool."
+    "sub": "Pick your colours, type, icons and imagery in the browser, then export the whole kit as one file."
   },
   "sections": [
     {

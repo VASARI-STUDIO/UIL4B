@@ -38,6 +38,9 @@ export default function LibraryCard({
   name,
   meta,
   tail,
+  // A full-width line under the name row: the Palette Library's hex chips
+  // (UIL4B App.dc.html, palettes screen, line 271).
+  footExtra,
   // Consumers that already have a test hook or a type-specific treatment on the
   // name or meta line keep it here rather than nesting another span inside the
   // shared one — nesting would leave two boxes competing for the same ellipsis.
@@ -62,13 +65,14 @@ export default function LibraryCard({
           </div>
         )}
       </div>
-      {(name || meta || tail) && (
+      {(name || meta || tail || footExtra) && (
         <div className="lbry-card-foot">
           <div className="lbry-card-id">
             {name && <span className={`lbry-card-name${nameClassName ? ` ${nameClassName}` : ''}`}>{name}</span>}
             {meta && <span className={`lbry-card-meta${metaClassName ? ` ${metaClassName}` : ''}`}>{meta}</span>}
           </div>
           {tail && <div className="lbry-card-tail">{tail}</div>}
+          {footExtra && <div className="lbry-card-extra">{footExtra}</div>}
         </div>
       )}
     </article>

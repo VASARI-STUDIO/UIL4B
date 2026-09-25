@@ -2,7 +2,13 @@
 // responsive information hierarchy must remain usable without animation.
 import { test, expect } from './base.js'
 import { go, goRaw, ready, watch } from './helpers.js'
-import { heroHeadlineText } from '../../src/data/positioning.js'
+// The front door's headline is the design's Spectrum line. Its accent run renders as ONE revealed word, as the design
+// draws it, so the word count is the sentence's words less the run's extras.
+import { SPECTRUM_HERO } from '../../src/components/spectrum/spectrumHero.js'
+import { TOOL_COUNT, numberWord } from '../../src/components/spectrum/spectrumFacts.js'
+
+const HERO_UNITS = SPECTRUM_HERO.text.trim().split(/\s+/).length
+  - (SPECTRUM_HERO.mark.trim().split(/\s+/).length - 1)
 
 const PERSONA = 'prospective UI-system builder'
 
@@ -141,7 +147,7 @@ test.describe('premium homepage', () => {
         expect(
           shell.length,
           'the served `/` shell headline is not the founder headline word for word — prerender wrote a different one, or none',
-        ).toBe(heroHeadlineText().trim().split(/\s+/).length)
+        ).toBe(HERO_UNITS)
         expect(shell[0].letterSpacing, 'the shell headline was read before the stylesheet applied').not.toBe('normal')
       } finally {
         release()
@@ -183,8 +189,11 @@ test.describe('premium homepage', () => {
     // line stands for is that the h1 names the work, and "design kits" is how
     // the shipped headline names it. 10-home-chaos-to-calm still owns the
     // property pins.
+    // The design's Spectrum line ("Build and export UI and brand kits from
+    // one place.") names the output as "UI
+    // and brand kits".
     const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toContainText(/design kits|unified location/i)
+    await expect(heading).toContainText(/UI and brand kits/i)
 
     // THE KICKER ASSERTION IS GONE, AND ITS INVERSE TAKES ITS PLACE.
     // `.home-hero-kicker` carried "UI system toolkit"; the founder removed it
@@ -207,56 +216,34 @@ test.describe('premium homepage', () => {
     await expect(page.locator('.htools-facts'), 'the figure strip is back').toHaveCount(0)
     await expect(page.locator('.home-proof-item')).toHaveCount(0)
 
-    /* ── THE BENCH IS THE PROOF, AND ITS ARITHMETIC MUST AGREE WITH ITSELF ───
+    /* ── THE BENCH IS THE PROOF ──────────────────────────────────────────────
      *
-     * The old page argued "eleven tools, five ways of working" with a tabbed
-     * workbench. Spectrum argues the same thing with a numbered rail: five
-     * category rows, each carrying a count, over five panels that each end at
-     * the real tool.
+     * The design's four tool windows — Palette builder, Icon library, Font
+     * Gallery, File converter — beside a four-row rail, replacing the five
+     * category panels. The count the lede states is still COUNTED: it must be
+     * the live, non-beta tool count, spelled out, never typed.
      *
-     * THE RAIL'S COUNTS MUST SUM TO THE HEADLINE'S NUMBER. This is the S6
-     * defect written down as a test: the rail printed `panel.tools.length`
-     * (live only) while the lede counted live-and-not-beta, so five rows summed
-     * to fourteen a finger-width from a sentence saying thirteen. Summed here
-     * rather than pinned per row, so re-tiering a tool moves both or fails.
-     *
-     * THE UNBUILT TOOL IS NOT ON THIS PAGE AT ALL. The old grid carried a "UI
-     * Component Builder" card marked Soon, and this spec asserted the Soon
-     * badge. Spectrum omits unbuilt tools instead of badging them, which keeps
-     * the same honesty rule by a different route — nothing here claims a tool
-     * that does not exist. The one shipped-but-unfinished tool DOES appear and
-     * says so, which is the case worth guarding. */
+     * Each window still ends at the real tool rather than at a picture of it:
+     * its primary CTA is a link to that tool's live route. */
     const rail = page.locator('.sp-rail-row')
-    await expect(rail).toHaveCount(5)
+    await expect(rail).toHaveCount(4)
+    await expect(rail).toHaveText([/Palette builder/, /Icon library/, /Font gallery/, /File conversion/])
 
-    const counts = await rail.locator('.sp-rail-count').allTextContents()
-    const summed = counts.reduce((total, n) => total + Number(n), 0)
-    const lede = await page.locator('.sp-lede').first().innerText()
-    expect(
-      lede.toLowerCase(),
-      'the bench lede no longer states a tool count, so the rail has nothing to agree with',
-    ).toContain('thirteen')
-    expect(
-      summed,
-      `the rail's five counts sum to ${summed} while the lede beside them says thirteen`,
-    ).toBe(13)
+    const lede = (await page.locator('.sp-bench-lede').innerText()).toLowerCase()
+    expect(lede, 'the bench lede no longer states the tool count the tree gives')
+      .toContain(`${numberWord(TOOL_COUNT)} tools`)
 
-    // Shipped but unfinished is declared, not hidden — the founder's rule is
-    // that a tool on the shelf is never dressed up as more finished than it is.
-    // Two tools carry the flag since the 3D Viewer shipped beside the Brand
-    // Starter, so every label is checked rather than "the" label.
-    const betas = page.locator('.sp-beta')
-    await expect(betas.first()).toHaveText('Beta')
-    expect(await betas.allTextContents()).toEqual(Array(await betas.count()).fill('Beta'))
-    await expect(page.getByRole('link', { name: 'Brand Starter Beta' })).toHaveCount(1)
-    await expect(page.getByRole('link', { name: '3D Viewer Beta' })).toHaveCount(1)
-
-    // Each panel ends at the real tool rather than at a screenshot of it.
     const bench = page.locator('#bench')
     await bench.scrollIntoViewIfNeeded()
-    await expect(page.locator('.sp-panel')).toHaveCount(5)
-    await expect(page.getByRole('link', { name: /Open Colour System Generator/ }))
-      .toHaveAttribute('href', '/create/palette')
+    await expect(page.locator('.sp-panel[data-panel]')).toHaveCount(4)
+    for (const [name, href] of [
+      ['Open Palette Builder', '/create/palette'],
+      ['Open Icon Library', '/create/icons'],
+      ['Open Font Gallery', '/create/font-gallery'],
+      ['Open File Converter', '/create/file-converter'],
+    ]) {
+      await expect(page.getByRole('link', { name }), `the "${name}" window CTA`).toHaveAttribute('href', href)
+    }
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -271,16 +258,18 @@ test.describe('premium homepage', () => {
     await go(page, '/')
 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    // The hero's own call to action. Signed out it is a real <Link> to the
-    // sign-up, not a button — Home.jsx's reasoning, which Spectrum kept: a link
-    // survives middle-click, "open in new tab" and a JS failure.
-    await expect(page.locator('.sp-hero .sp-cta').first()).toBeVisible()
-    // Every category still reachable from the front door on a phone.
-    await expect(page.locator('.sp-rail-row')).toHaveCount(5)
+    // The hero's own call to action: a real <Link> straight into the app —
+    // /projects, no sign-up gate — so it survives middle-click,
+    // "open in new tab" and a JS failure.
+    const cta = page.locator('.sp-hero .sp-pill').first()
+    await expect(cta).toBeVisible()
+    await expect(cta).toHaveAttribute('href', '/projects')
+    // The design's four tool windows, each with its rail row, on a phone as well.
+    await expect(page.locator('.sp-rail-row')).toHaveCount(4)
     // The phone gets the calm stacked arrangement: the rail does not stick, so
     // the bench reads as one column instead of pinning a third of a small
-    // screen. Same guarantee `.hsteps-sticky` used to give on the old page.
-    const stickyPosition = await page.locator('.sp-rail-col').evaluate(
+    // screen. The design's own rule (below 1000px the bench column is static).
+    const stickyPosition = await page.locator('.sp-bench-col').evaluate(
       (element) => getComputedStyle(element).position,
     )
     expect(stickyPosition).toBe('static')

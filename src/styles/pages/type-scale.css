@@ -1,430 +1,244 @@
-/* type-scale.css — /create/type-scale (TypeScale.jsx), on Spectrum.
+/* type-scale.css — /create/type-scale (TypeScale.jsx), on the shared tool
+ * pattern.
  *
- * The page's base rules are split across global.css (`.tsc-scale-bar`,
- * `.tsc-row*`, `.tsc-width-btn`, `.tsc-bp`, `.tsc-panel-title`, `.seg-label`,
- * `.card`) and deferred/type.css (the rest of `.tsc-*`). This sheet restyles
- * them, and EVERY SELECTOR IS ROOTED AT `.tsc-page`: Vite orders chunk CSS by
- * the dependency graph, so an imported-last sheet is not a loaded-last sheet
- * (8d30f37a). One class more than the base rule is what makes order moot.
+ * The toolbar, the 1fr/336 grid, the side panel, its sections, the pills and
+ * the buttons come from pages/tool-layout.css. This sheet is the output: the
+ * ladder card (the base × ratio bar, the result and width switch, and the
+ * rows), the design preview and the code; plus the panel's fine-tuning
+ * groups.
  *
- * ── WHAT CHANGED ────────────────────────────────────────────────────────────
- *
- * - THE MASTHEAD DOES NOT TAKE THE DISPLAY STEP the other Create tools open on
- *   (clamp(38px,5.6vw,72px)), and that is deliberate. #386 cut this h1 to a
- *   quiet size because on a page ABOUT type the largest type must be the
- *   specimen, not the one string the visitor cannot change, and
- *   54-type-scale-overhaul holds it under 40px and under the ladder's top
- *   step. It takes Spectrum's weight and tracking (600, -.035em) at the size
- *   it already had.
- * - Panels are the flat card over a hairline at the 2xl radius, not `.card`'s
- *   gradient ground, warm shadow, ring and `transition: all`.
- * - Every switch on the page (preview width, output view, export format,
- *   fluid/fixed) is one segmented control, the shape /create/tint uses. They
- *   were four near-identical 10.5-11px/600 variants.
- * - The step names (`--text-5xl` …) were `--accent-strong`: nine accent labels
- *   down the left of the ladder, none of them an action. They are ink now; the
- *   specimen is the content and the name is its caption.
- * - The Save trigger was the shared accent `.btn` pill. It is a secondary
- *   rectangle: "Copy CSS" is the page's primary action and keeps the one fill.
- * - Section titles move from 16px/650 to the Spectrum section step (19/560).
- *
- * Selection (the chosen weight, the chosen switch segment) is ink or the
- * raised card, never accent — see deferred/type.css for the weight chips.
- *
- * ── MOTION ──────────────────────────────────────────────────────────────────
- *
- * Colour, border and shadow transitions only. Nothing on this page moves a box
- * except the press scale on the two copy buttons, which carries the house
- * reduced-motion pair at the foot of the file. */
+ * Every selector is scoped under `.tsc-page`, the ToolLayout root. One
+ * surface per block: the ladder card holds the bar and the rows, separated by
+ * hairlines rather than boxes. */
 
-.tsc-page {
-  --tsc-ease: cubic-bezier(.23, 1, .32, 1);
-  --tsc-wash: color-mix(in srgb, var(--t0) 4%, transparent);
-  padding-bottom: var(--s-7);
+.tsc-page .tsc-output { gap: var(--tl-gap); }
+
+/* ── The ladder card ────────────────────────────────────────────────────── */
+.tsc-page .tsc-card {
+  display: grid;
+  min-width: 0;
+  border-radius: 18px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+  overflow: hidden;
 }
 
-/* ── Masthead ─────────────────────────────────────────────────────────────── */
-
-.tsc-page .tsc-masthead {
-  align-items: flex-end;
-  gap: var(--s-5);
-  margin-bottom: var(--s-6);
+/* base × ratio: the two numbers that make the scale, above what they drive. */
+.tsc-page .tsc-scale-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(180px, .8fr);
+  gap: 10px 14px;
+  align-items: end;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--tl-hair);
 }
-
-.tsc-page .tsc-masthead-copy { max-width: none; }
-
-.tsc-page .tsc-masthead h1 {
-  font-family: var(--display);
-  font-size: clamp(28px, 3vw, 36px);
-  font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: -.035em;
-  color: var(--t0);
-  text-wrap: balance;
-}
-
-.tsc-page .tsc-masthead-copy > p {
-  max-width: 56ch;
-  margin: 8px 0 0;
-  font-size: 14.5px;
-  line-height: 1.62;
-  color: var(--t1);
-}
-
-.tsc-page .tsc-reset {
-  min-height: 36px;
-  padding: 8px 14px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--t1);
-  border-color: var(--bh);
-  border-radius: var(--radius-s);
-}
-
-.tsc-page .tsc-reset:hover { color: var(--t0); background: var(--hvr); border-color: color-mix(in srgb, var(--t0) 34%, transparent); }
-
-/* ── The scale bar and the panels ─────────────────────────────────────────── */
-
-.tsc-page .tsc-scale-bar,
-.tsc-page .tsc-panel {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-s);
-}
-
-.tsc-page .tsc-scale-bar { padding: 18px 20px; margin-bottom: var(--s-5); }
-
-.tsc-page .tsc-panel {
-  padding: clamp(18px, 2.2vw, 26px);
-  transition: none;
-}
-
-.tsc-page .tsc-panel.card:hover { border-color: var(--border); }
-
-.tsc-page .tsc-grid { gap: var(--s-5); }
-
-.tsc-page .tsc-scale-custom {
-  padding: 14px 20px;
-  background: var(--card);
-  border-radius: var(--radius-xl);
-}
-
-.tsc-page .seg-label {
-  margin: 0 0 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .14em;
-  color: var(--t2);
-}
-
-.tsc-page .tsc-sample-row .seg-label { margin-bottom: 0; }
-
-/* The two terms and their product. The numbers are the page's subject, so
-   they read in the display face at 600 rather than a bold mono. */
-.tsc-page .tsc-scale-bar .snapv-value {
-  font-family: var(--display);
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -.02em;
-  font-variant-numeric: tabular-nums;
-}
-
-.tsc-page .tsc-scale-x,
-.tsc-page .tsc-scale-eq { color: var(--t2); }
-
-.tsc-page .tsc-scale-out { font-size: 12px; }
-
-.tsc-page .tsc-scale-out strong {
-  font-family: var(--display);
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -.02em;
-}
-
-.tsc-page .tsc-scale-range { font-size: 12.5px; }
-
-.tsc-page .tsc-scale-hint { font-size: 12px; color: var(--t2); }
+.tsc-page .tsc-scale-term { display: grid; gap: 6px; min-width: 0; }
+.tsc-page .tsc-scale-custom { grid-column: 1 / -1; }
+.tsc-page .tsc-scale-bar .snapv-value { min-width: 58px; font-size: 15px; font-weight: 600; color: var(--tl-ink); }
+.tsc-page .tsc-scale-x { padding-bottom: 9px; font-family: var(--mono); font-size: 15px; color: var(--tl-faint); }
 
 .tsc-page .tsc-select {
-  font-size: 13.5px;
-  border-radius: var(--radius-s);
-  transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
-}
-
-.tsc-page .tsc-scale-bar .tsc-select { height: 42px; font-weight: 560; }
-
-.tsc-page .tsc-select:hover { border-color: var(--bh); }
-
-.tsc-page .tsc-select:focus-visible { box-shadow: 0 0 0 3px var(--accent-wash-4); }
-
-/* ── Section heads ────────────────────────────────────────────────────────── */
-
-.tsc-page .tsc-panel-title,
-.tsc-page .tsc-ladder-head h2,
-.tsc-page .tsc-delivery-head h2 {
-  font-family: var(--display);
-  font-size: 19px;
-  font-weight: 560;
-  letter-spacing: -.02em;
-}
-
-.tsc-page .tsc-panel-note,
-.tsc-page .tsc-ladder-head p,
-.tsc-page .tsc-delivery-head p {
-  margin-top: 4px;
-  max-width: 56ch;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--t2);
-}
-
-/* ── Segmented controls ──────────────────────────────────────────────────── */
-
-.tsc-page .tsc-width-switch,
-.tsc-page .tsc-view-switch,
-.tsc-page .tsc-fmt {
-  gap: 3px;
-  padding: 3px;
-  background: var(--tsc-wash);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.tsc-page .tsc-width-btn,
-.tsc-page .tsc-view-btn,
-.tsc-page .tsc-fmt-btn,
-.tsc-page .tsc-mode-btn {
-  min-height: 36px;
-  padding: 7px 12px;
+  width: 100%;
+  height: 36px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--tl-line);
+  border-radius: 12px;
+  background-color: transparent;
+  color: var(--tl-ink);
   font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+}
+.tsc-page .tsc-scale-select { font-weight: 540; }
+.tsc-page .tsc-select option { background: var(--card); color: var(--t0); }
+
+/* The result, and which end of the scale the ladder shows. */
+.tsc-page .tsc-ladder-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tl-hair);
+}
+.tsc-page .tsc-scale-out { display: flex; align-items: baseline; gap: 4px 8px; flex-wrap: wrap; min-width: 0; margin: 0; font-size: 12px; color: var(--tl-dim); }
+.tsc-page .tsc-scale-out strong { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--tl-ink); }
+.tsc-page .tsc-scale-range { font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
+.tsc-page .tsc-scale-hint { font-size: 12px; color: var(--tl-dim); }
+.tsc-page .tsc-width-switch { flex-wrap: nowrap; }
+.tsc-page .tsc-width-btn { white-space: nowrap; }
+
+/* The rows. */
+.tsc-page .tsc-ladder { display: flex; flex-direction: column; min-width: 0; width: 100%; }
+.tsc-page .tsc-ladder--clamped { max-width: var(--tsc-w); margin-inline: auto; border-inline: 1px dashed var(--tl-hair); }
+.tsc-page .tsc-fit-note {
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tl-hair);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--t2);
+  line-height: 1.45;
+  color: var(--tl-soft);
+}
+.tsc-page .tsc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 0;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-s);
-  box-shadow: none;
-  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease;
+  color: var(--tl-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .16s ease;
+}
+.tsc-page .tsc-row + .tsc-row { border-top: 1px solid var(--tl-hair); }
+.tsc-page .tsc-row:focus-visible { position: relative; z-index: 1; outline-offset: -2px; }
+.tsc-page .tsc-row-meta { display: flex; flex-direction: column; gap: 2px; flex: 0 0 120px; min-width: 0; }
+.tsc-page .tsc-row-name { overflow: hidden; font-family: var(--mono); font-size: 11px; color: var(--tl-ink); text-overflow: ellipsis; }
+.tsc-page .tsc-row-num { font-family: var(--mono); font-size: 10.5px; color: var(--tl-dim); }
+.tsc-page .tsc-row-sub { font-family: var(--mono); font-size: 10px; color: var(--tl-dim); }
+.tsc-page .tsc-row-text {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  color: var(--tl-ink);
+  font-family: var(--tsc-body-ff);
+  font-size: var(--tsc-fs);
+  font-weight: var(--tsc-body-fw);
+  line-height: var(--tsc-lh);
+  letter-spacing: var(--tsc-body-ls);
+}
+.tsc-page .tsc-row-text--heading {
+  font-family: var(--tsc-heading-ff);
+  font-weight: var(--tsc-heading-fw);
+  letter-spacing: var(--tsc-heading-ls);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tsc-page .tsc-row:hover { background: var(--tl-wash); }
 }
 
-.tsc-page .tsc-width-btn:hover,
-.tsc-page .tsc-view-btn:hover,
-.tsc-page .tsc-fmt-btn:hover,
-.tsc-page .tsc-mode-btn:hover { color: var(--t0); }
+/* ── Design preview / developer handoff ─────────────────────────────────── */
+.tsc-page .tsc-delivery { display: grid; gap: 10px; min-width: 0; margin-top: 8px; }
+.tsc-page .tsc-delivery-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.tsc-page .tsc-delivery-head h2 { margin: 0; font-size: 15px; font-weight: 560; letter-spacing: -.01em; color: var(--tl-ink); }
+.tsc-page .tsc-view-switch { flex-wrap: nowrap; }
+.tsc-page .tsc-delivery-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--tl-dim); }
 
-.tsc-page .tsc-width-btn--on,
-.tsc-page .tsc-view-btn--on,
-.tsc-page .tsc-fmt-btn--on,
-.tsc-page .tsc-mode-btn--on {
-  color: var(--t0);
-  font-weight: 560;
-  background: var(--card);
-  border-color: var(--border);
-  box-shadow: var(--shadow-xs);
+.tsc-page .tsc-article {
+  padding: clamp(16px, 3vw, 32px);
+  border: 1px solid var(--tl-line);
+  border-radius: 18px;
+  background: var(--tl-card);
 }
-
-/* The fluid/fixed pair sits in its own wash, like the other three. */
-.tsc-page .tsc-bp-mode {
-  gap: 3px;
-  padding: 3px;
-  background: var(--tsc-wash);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+.tsc-page .tsc-article-h1,
+.tsc-page .tsc-article-h2 {
+  margin: 14px 0 8px;
+  color: var(--tl-ink);
+  font-family: var(--tsc-heading-ff);
+  font-size: var(--tsc-fs);
+  font-weight: var(--tsc-heading-fw);
+  line-height: var(--tsc-lh);
+  letter-spacing: var(--tsc-heading-ls);
+  overflow-wrap: break-word;
 }
+.tsc-page .tsc-article-h1 { margin-top: 0; }
+.tsc-page .tsc-article-lede,
+.tsc-page .tsc-article-body,
+.tsc-page .tsc-article-small {
+  max-width: 64ch;
+  margin: 0 0 14px;
+  color: var(--tl-soft);
+  font-family: var(--tsc-body-ff);
+  font-size: var(--tsc-fs);
+  font-weight: var(--tsc-body-fw);
+  line-height: var(--tsc-lh);
+  letter-spacing: var(--tsc-body-ls);
+}
+.tsc-page .tsc-article-small { margin-bottom: 0; color: var(--tl-dim); }
 
-/* ── The ladder ───────────────────────────────────────────────────────────── */
+.tsc-page .tsc-developer-view { display: grid; gap: 10px; min-width: 0; }
+.tsc-page .tsc-export { max-height: 420px; overflow: auto; font-size: 12px; }
+.tsc-page .tsc-keep { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.tsc-page .tsc-keep-note { flex: 1; min-width: 200px; margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 
+/* ── The panel ──────────────────────────────────────────────────────────── */
 .tsc-page .tsc-sample-input {
-  height: 40px;
-  font-size: 13.5px;
-}
-
-.tsc-page .tsc-sample-input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash-4); }
-
-.tsc-page .tsc-ladder { border-radius: var(--radius); }
-
-.tsc-page .tsc-row { transition: background-color var(--dur-1) ease; }
-
-.tsc-page .tsc-row:hover { background: var(--tsc-wash); }
-
-.tsc-page .tsc-row-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--t0);
-}
-
-.tsc-page .tsc-row-num { color: var(--t2); }
-
-.tsc-page .tsc-row-sub { font-size: 9.5px; color: var(--t2); }
-
-.tsc-page .tsc-fit-note { color: var(--t1); }
-
-/* ── The rail ─────────────────────────────────────────────────────────────── */
-
-.tsc-page .tsc-weight {
-  min-height: 32px;
-  padding: 5px 10px;
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--t1);
-  background: transparent;
-  border-color: var(--border);
-  border-radius: var(--radius-s);
-}
-
-.tsc-page .tsc-weight:hover { border-color: var(--bh); color: var(--t0); }
-
-.tsc-page .tsc-weight--on,
-.tsc-page .tsc-weight--on:hover { color: var(--bg-0); background: var(--t0); border-color: var(--t0); }
-
-.tsc-page .tsc-handoff {
-  min-height: 38px;
-  padding: 8px 14px;
-  font-size: 12.5px;
-  border-color: var(--bh);
-  border-radius: var(--radius-s);
-}
-
-.tsc-page .tsc-tuning-toggle { font-size: 12.5px; }
-
-.tsc-page .tsc-bp {
-  padding: 12px 14px 14px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.tsc-page .tsc-bp legend {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: .14em;
-}
-
-/* ── Delivery ─────────────────────────────────────────────────────────────── */
-
-.tsc-page .tsc-article { border-radius: var(--radius-l); }
-
-.tsc-page .tsc-export { border-radius: var(--radius); }
-
-.tsc-page .tsc-copy-all,
-.tsc-page .svt-trigger {
-  min-height: 38px;
-  padding: 8px 14px;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--tl-hair);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  color: var(--tl-ink);
   font-family: var(--font);
-  font-size: 12.5px;
-  font-weight: 560;
-  color: var(--t0);
+  font-size: 13px;
+}
+.tsc-page .tsc-sample-input::placeholder { color: var(--tl-faint); }
+.tsc-page .tsc-sample-input:focus,
+.tsc-page .tsc-select:focus { border-color: var(--tl-line-on); }
+.tsc-page .tsc-weights { gap: 4px; margin-top: -2px; }
+
+/* Fine tuning: a text disclosure, then groups separated by hairlines — never
+   a box inside the panel. */
+.tsc-page .tsc-tuning-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
   background: transparent;
-  border: 1px solid var(--bh);
-  border-radius: var(--radius-s);
-  box-shadow: none;
+  color: var(--tl-ink);
+  font-family: var(--font);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
 }
-
-.tsc-page .tsc-copy-all:hover,
-.tsc-page .svt-trigger:hover {
-  color: var(--t0);
-  background: var(--hvr);
-  border-color: color-mix(in srgb, var(--t0) 34%, transparent);
+.tsc-page .tsc-tuning-caret { color: var(--tl-faint); transition: transform .16s var(--tl-ease); }
+.tsc-page .tsc-tuning-toggle[aria-expanded="true"] .tsc-tuning-caret { transform: rotate(90deg); }
+.tsc-page .tsc-tuning:not([hidden]) { display: grid; gap: 0; }
+.tsc-page .tsc-bp {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--tl-hair);
 }
+.tsc-page .tsc-bp legend { float: left; width: 100%; margin: 0 0 2px; padding: 0; }
+.tsc-page .tsc-slider-row { display: grid; gap: 4px; min-width: 0; }
+.tsc-page .tsc-slider-k { font-size: 12.5px; color: var(--tl-dim); }
+.tsc-page .tsc-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tl-dim); }
 
-.tsc-page .tsc-copy-primary {
-  min-height: 38px;
-  padding: 8px 16px;
-  font-size: 12.5px;
-  font-weight: 560;
-  border-radius: var(--radius-s);
-}
-
-.tsc-page .tsc-keep-note { font-size: 12px; }
-
-/* ── More tools ───────────────────────────────────────────────────────────── */
-
-.tsc-page .tsc-more-link {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--t1);
-}
-
-/* ── Focus ────────────────────────────────────────────────────────────────── */
-
-.tsc-page .tsc-reset:focus-visible,
-.tsc-page .tsc-width-btn:focus-visible,
-.tsc-page .tsc-view-btn:focus-visible,
-.tsc-page .tsc-fmt-btn:focus-visible,
-.tsc-page .tsc-mode-btn:focus-visible,
-.tsc-page .tsc-weight:focus-visible,
-.tsc-page .tsc-handoff:focus-visible,
-.tsc-page .tsc-copy-all:focus-visible,
-.tsc-page .tsc-copy-primary:focus-visible,
-.tsc-page .svt-trigger:focus-visible,
-.tsc-page .tsc-more-link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.tsc-page .tsc-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-/* ── Widths ───────────────────────────────────────────────────────────────── */
-
-@media (max-width: 560px) {
-  .tsc-page .tsc-masthead { margin-bottom: var(--s-5); }
-  .tsc-page .tsc-masthead-copy > p { font-size: 14px; }
-  .tsc-page .tsc-scale-bar { padding: 16px; }
-  /* The width switch spans the head and splits it three ways, so its labels
-     get the column rather than their own padding. At 320 the padded labels
-     pushed the switch 15px past the viewport (21-reflow-320). */
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .tsc-page .tsc-scale-bar { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px; }
+  .tsc-page .tsc-scale-x { display: none; }
+  .tsc-page .tsc-ladder-head { padding: 10px 12px; }
   .tsc-page .tsc-width-switch { width: 100%; }
-  .tsc-page .tsc-width-btn { flex: 1 1 0; min-width: 0; padding: 7px 4px; }
-  /* Stacked, the row is a column, and type.css's flex:1 on the field then
-     sized its HEIGHT from a zero basis: measured 20px tall at 390. */
-  .tsc-page .tsc-sample-row .tsc-sample-input { flex: 0 0 auto; }
+  .tsc-page .tsc-width-btn { flex: 1 1 0; min-width: 0; justify-content: center; padding-inline: 6px; font-size: 11.5px; }
+  .tsc-page .tsc-row { align-items: flex-start; flex-direction: column; gap: 6px; padding: 12px; }
+  .tsc-page .tsc-row-meta { flex-direction: row; flex-basis: auto; flex-wrap: wrap; gap: 8px; }
 }
-
-@media (max-width: 380px) {
-  .tsc-page .tsc-ladder-head .tsc-width-btn { font-size: 11px; white-space: normal; line-height: 1.2; }
+/* iOS zooms a focused field under 16px. */
+@media (max-width: 640px) {
+  .tsc-page .tsc-sample-input,
+  .tsc-page .tsc-select { font-size: 16px; }
 }
-
-/* ── Touch floors ─────────────────────────────────────────────────────────── */
-
 @media (pointer: coarse) {
-  .tsc-page .tsc-width-btn,
-  .tsc-page .tsc-view-btn,
-  .tsc-page .tsc-fmt-btn,
-  .tsc-page .tsc-mode-btn,
-  .tsc-page .tsc-weight,
-  .tsc-page .tsc-reset,
-  .tsc-page .tsc-handoff,
-  .tsc-page .tsc-copy-all,
-  .tsc-page .tsc-copy-primary,
-  .tsc-page .svt-trigger,
-  .tsc-page .tsc-tuning-toggle,
-  .tsc-page .tsc-more-link { min-height: 44px; }
-  /* A weight numeral is three characters; the chip is square at the floor
-     rather than 41px wide. */
-  .tsc-page .tsc-weight { min-width: 44px; }
-  .tsc-page .tsc-more-link { display: inline-flex; align-items: center; }
+  /* 8px between neighbouring targets, and every control 44px on a finger. */
+  .tsc-page .tl-pills { gap: 8px; }
+  .tsc-page .svt-trigger { min-height: 44px; }
+  .tsc-page .snapv input[type="range"] { height: 44px; }
+  .tsc-page .tsc-sample-input,
   .tsc-page .tsc-select,
-  .tsc-page .tsc-scale-bar .tsc-select,
-  .tsc-page .tsc-sample-input { height: 44px; }
-  .tsc-page .snapv-value { min-height: 44px; }
-}
-
-/* ── Press feedback, with the house reduced-motion pair ──────────────────── */
-
-.tsc-page .tsc-copy-primary:active,
-.tsc-page .tsc-copy-all:active { transform: scale(.97); }
-
-.tsc-page .tsc-copy-primary,
-.tsc-page .tsc-copy-all {
-  transition: background-color var(--dur-1) ease, border-color var(--dur-1) ease, color var(--dur-1) ease, transform var(--dur-1) var(--tsc-ease);
-}
-
-html[data-reduced-motion="true"] .tsc-page .tsc-copy-primary:active,
-html[data-reduced-motion="true"] .tsc-page .tsc-copy-all:active { transform: none; }
-
-@media (prefers-reduced-motion: reduce) {
-  html:not([data-reduced-motion="false"]) .tsc-page .tsc-copy-primary:active,
-  html:not([data-reduced-motion="false"]) .tsc-page .tsc-copy-all:active { transform: none; }
+  .tsc-page .tsc-tuning-toggle { height: 44px; min-height: 44px; font-size: 16px; }
 }

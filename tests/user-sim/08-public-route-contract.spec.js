@@ -10,6 +10,8 @@ const STATIC_INDEXABLE_ROUTES = [
   // deletion — see the note there.
   '/discover',
   '/plans',
+  // The Spectrum design's "On mobile" screen, a marketing page like /plans.
+  '/mobile',
   '/community',
   '/help',
   '/info',
@@ -40,7 +42,9 @@ const STATIC_INDEXABLE_ROUTES = [
 ]
 
 const LIVE_CREATE_ROUTES = CREATE_GROUPS.flatMap((group) => (
-  group.soon ? [] : group.tools.filter((tool) => !tool.soon).map((tool) => tool.route)
+  // A tool's `views` (tabs with their own route, e.g. /create/icons/groups)
+  // are live wherever the tool is.
+  group.soon ? [] : group.tools.filter((tool) => !tool.soon).flatMap((tool) => [tool.route, ...(tool.views || [])])
 ))
 
 const LIVE_DISCOVER_ROUTES = DISCOVER_GROUPS

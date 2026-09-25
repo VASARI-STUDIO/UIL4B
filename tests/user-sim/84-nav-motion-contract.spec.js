@@ -48,7 +48,7 @@
 // missing.
 //
 //   · `.pnav-search-field` 300 → 390px on hover. Founder-directed, and
-//     30-founder-requests-0808 holds the expansion, the typed placeholder and
+//     30-gradient-random-nav-search holds the expansion, the typed placeholder and
 //     the fact that the section menus and the theme cycle do not move when it
 //     happens — sampled every frame of the transition. `transform` cannot do
 //     this job — the field reflows its own text — and it moves nothing that is
@@ -94,8 +94,10 @@ const LAYOUT_PROPS = [
   'min-width', 'max-width', 'min-height', 'max-height', 'border-width',
 ]
 
-// The two documented exceptions, by the class that carries them.
-const ALLOWED = ['pnav-search-field', 'pnav-cta']
+// No documented exceptions: the search field keeps the App file's width
+// instead of growing on hover, and there is no sliding "Start for Free" pill. Nothing in the bar or the panel may
+// transition a layout property.
+const ALLOWED = []
 
 /**
  * Every element of the bar and the open panel that transitions a layout
@@ -159,10 +161,8 @@ test.describe('the nav does not animate layout', () => {
       `these nav elements animate a layout property:\n${offenders.map((o) => `  .${o.className} -> ${o.props.join(', ')}`).join('\n')}`,
     ).toEqual([])
 
-    // And the two that are supposed to be there still are, so this spec cannot
-    // be satisfied by deleting the founder's search expansion.
-    const kept = found.map((f) => f.className.split(/\s+/).find((c) => ALLOWED.includes(c))).filter(Boolean)
-    expect(new Set(kept), 'a documented layout transition went missing').toEqual(new Set(ALLOWED))
+    // The positive control for this sweep is the scanned count above and the
+    // POSITIVE CONTROL test below, which proves the detector fires.
   })
 
   // ── THE POSITIVE CONTROL ──────────────────────────────────────────────────
@@ -271,32 +271,31 @@ test.describe('the nav does not animate layout', () => {
     ).toBe(0)
   })
 
-  test('a row hover moves nothing — it changes colour and shows its category rail', async ({ page }) => {
+  // The App file's hover (lines 138-139, 2036-2042): the row takes an ink .07
+  // wash and its tile turns accent. There is no category rail any more (no hue
+  // colours in the rebuilt menu). The FIRST row is lit at rest, as the file
+  // opens every menu, so the second row is the one pointed at.
+  test('a row hover moves nothing — it changes its wash and its tile', async ({ page }) => {
     watch(page, 'a visitor pointing at one tool')
     await go(page, ROUTE)
     await openMenu(page)
 
-    const first = page.locator('#pnav-mega .pnav-tool').first()
-    const read = () => first.evaluate((el) => ({
+    const row = page.locator('#pnav-mega .pnav-tool').nth(1)
+    const read = () => row.evaluate((el) => ({
       icon: getComputedStyle(el.querySelector('.pnav-tool-ico')).transform,
       rowX: Math.round(el.getBoundingClientRect().x),
       background: getComputedStyle(el).backgroundColor,
-      rail: getComputedStyle(el, '::before').opacity,
-      railTransform: getComputedStyle(el, '::before').transform,
+      tile: getComputedStyle(el.querySelector('.pnav-tool-ico')).backgroundColor,
     }))
 
     const rest = await read()
-    await first.hover()
-    // The rail fades over --dur-1; poll rather than sleep.
-    await expect.poll(async () => (await read()).rail).toBe('1')
+    await row.hover()
+    await expect.poll(async () => (await read()).background).not.toBe(rest.background)
     const hot = await read()
 
     expect(hot.icon, 'the tool icon lifts on hover again').toBe(rest.icon)
     expect(hot.rowX, 'the row moves when it is pointed at').toBe(rest.rowX)
-    expect(hot.railTransform, 'the category rail grows instead of appearing').toBe(rest.railTransform)
-    // And the state really is being reported, by two channels that are not motion.
-    expect(hot.background, 'hover changed nothing the eye can use').not.toBe(rest.background)
-    expect(rest.rail, 'the rail is showing at rest, so it marks nothing').toBe('0')
+    expect(hot.tile, 'the tile does not turn accent on hover').not.toBe(rest.tile)
   })
 })
 
@@ -407,16 +406,13 @@ test.describe('reduced motion', () => {
       // THE POINT OF REDUCED MOTION IS NOT SILENCE, IT IS THAT NOTHING WAS
       // ONLY EVER SAID BY MOVING. The row still has to report that it is the
       // one being pointed at.
-      const row = page.locator('#pnav-mega .pnav-tool').first()
+      // The second row: the first is lit at rest, as the App file opens a menu.
+      const row = page.locator('#pnav-mega .pnav-tool').nth(1)
       const rest = await row.evaluate((el) => getComputedStyle(el).backgroundColor)
       await row.hover()
-      await expect
-        .poll(() => row.evaluate((el) => getComputedStyle(el, '::before').opacity),
-          { message: 'with motion off, a hovered row shows no category rail' })
-        .toBe('1')
-      expect(
-        await row.evaluate((el) => getComputedStyle(el).backgroundColor),
-        'with motion off, a hovered row is indistinguishable from a resting one',
+      await expect.poll(
+        () => row.evaluate((el) => getComputedStyle(el).backgroundColor),
+        { message: 'with motion off, a hovered row is indistinguishable from a resting one', timeout: 3000 },
       ).not.toBe(rest)
 
       await ctx.close()

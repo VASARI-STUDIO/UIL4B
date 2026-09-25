@@ -114,13 +114,13 @@ test('the guides under test are the ones that are published', () => {
 test('the theme guide quotes this product’s own grounds and accents', () => {
   const lightGround = token('light', '--bg-0')
   const darkGround = token('dark', '--bg-0')
-  const lightAccent = token('light', '--accent-strong')
-  const darkAccent = token('dark', '--accent-strong')
+  const lightAccent = token('light', '--link')
+  const darkAccent = token('dark', '--link')
 
-  assert.equal(lightGround, '#EFEEE9')
+  assert.equal(lightGround, '#F5F5F2')
   assert.equal(darkGround, '#060607')
-  assert.equal(lightAccent, '#0B5ED7')
-  assert.equal(darkAccent, '#4A90FF')
+  assert.equal(lightAccent, '#1F4FD8')
+  assert.equal(darkAccent, '#8FAEFF')
 
   for (const hex of [lightGround, darkGround, lightAccent, darkAccent]) {
     assert.match(themeProse, new RegExp(hex, 'i'), `the guide no longer names ${hex}`)
@@ -129,27 +129,27 @@ test('the theme guide quotes this product’s own grounds and accents', () => {
 
 test('the ground very nearly inverts, by the margin the guide states', () => {
   const flipped = invert(token('light', '--bg-0'))
-  assert.equal(flipped, '#101116', 'inverting the light ground no longer gives #101116')
+  assert.equal(flipped, '#0A0A0D', 'inverting the light ground no longer gives #0A0A0D')
   const against = ratio(flipped, token('dark', '--bg-0'))
-  assert.equal(shown(against), '1.07:1',
+  assert.equal(shown(against), '1.02:1',
     `the inverted light ground now measures ${shown(against)} against the real dark ground`)
-  assert.match(themeProse, /#101116/)
-  assert.match(themeProse, /1\.07:1/)
+  assert.match(themeProse, /#0A0A0D/)
+  assert.match(themeProse, /1\.02:1/)
 })
 
 test('the accent does not invert at all, and the guide’s hues are the real ones', () => {
-  const lightAccent = token('light', '--accent-strong')
+  const lightAccent = token('light', '--link')
   const flipped = invert(lightAccent)
-  assert.equal(flipped, '#F4A128', 'inverting the light accent no longer gives #F4A128')
-  assert.equal(hue(lightAccent), 216)
-  assert.equal(hue(flipped), 36)
-  assert.equal(hue(token('dark', '--accent-strong')), 217)
+  assert.equal(flipped, '#E0B027', 'inverting the light link no longer gives #E0B027')
+  assert.equal(hue(lightAccent), 224)
+  assert.equal(hue(flipped), 44)
+  assert.equal(hue(token('dark', '--link')), 223)
   // 180 degrees apart is the claim; the arithmetic is what makes it one.
   assert.equal(Math.abs(hue(lightAccent) - hue(flipped)), 180)
-  assert.match(themeProse, /#F4A128/i)
-  assert.match(themeProse, /hue 216\b/)
-  assert.match(themeProse, /hue 36\b/)
-  assert.match(themeProse, /hue 217\b/)
+  assert.match(themeProse, /#E0B027/i)
+  assert.match(themeProse, /hue 224\b/)
+  assert.match(themeProse, /hue 44\b/)
+  assert.match(themeProse, /hue 223\b/)
 })
 
 test('the linearisation figures in the formula block are the real ones', () => {
@@ -182,7 +182,7 @@ test('THE ONE THAT MATTERS: the inverted pair disagrees with the real one in eve
   // every row and do not disagree in a consistent direction. The table computes
   // itself in the browser; this asserts the claim ABOUT it, in both themes, on
   // the four pairs ThemeInversionTable actually reads.
-  const pairs = ['--t0', '--t1', '--t3', '--accent-strong']
+  const pairs = ['--t0', '--t1', '--t3', '--link']
   const directions = new Set()
   for (const theme of ['light', 'dark']) {
     const ground = token(theme, '--bg-0')
@@ -239,6 +239,15 @@ test('inverting a state colour really does produce the opposite meaning', () => 
 
 /* ── Choosing a brand colour ─────────────────────────────────────────────── */
 
+// The brand guide measures against #EFEEE9, the light page it was written on.
+// The product's light page is now #F5F5F2; the guide keeps its own worked ground and no longer calls it
+// this product's, so it is pinned here and checked against the article itself.
+const BRAND_LIGHT_GROUND = '#EFEEE9'
+test('the brand guide declares the ground its figures are measured on', () => {
+  assert.ok(brandSource.includes("const LIGHT_GROUND = '#EFEEE9'"), 'brandColour.jsx measures a different light ground now')
+  assert.doesNotMatch(brandProse, /this product.s light ground/, 'the guide calls #EFEEE9 the product ground again')
+})
+
 // The generator call the article says it is showing. Kept beside the assertions
 // that check ColorStudio.jsx and designDefaults.js still make it this way.
 const SEED = '#2563EB'
@@ -265,7 +274,7 @@ test('the ramp table is wired to the Colour Studio’s real defaults', () => {
   // And the component publishes the same call and the same two grounds.
   assert.ok(rampSource.includes(`hex: SEED, anchor: 5, hueShift: 0, satMin: -12, satMax: 6, lMin: 3, lMax: 82, mode: 'perceived'`),
     'BrandRampTable no longer generates the ramp with the configuration this test asserts')
-  assert.ok(rampSource.includes(`const LIGHT_GROUND = '${token('light', '--bg-0')}'`),
+  assert.ok(rampSource.includes(`const LIGHT_GROUND = '${BRAND_LIGHT_GROUND}'`),
     'BrandRampTable measures against a light ground global.css no longer uses')
   assert.ok(rampSource.includes(`const DARK_GROUND = '${token('dark', '--bg-0')}'`),
     'BrandRampTable measures against a dark ground global.css no longer uses')
@@ -276,7 +285,7 @@ test('THE OTHER ONE THAT MATTERS: no stop in the ramp clears 4.5:1 on both groun
   // a value per theme. If it ever became false the paragraph would be wrong in
   // the direction that matters — it would be telling readers to do something
   // unnecessary.
-  const light = token('light', '--bg-0')
+  const light = BRAND_LIGHT_GROUND
   const dark = token('dark', '--bg-0')
   const stops = ramp()
   assert.equal(stops.length, 11, 'the guide says eleven stops')
@@ -296,7 +305,7 @@ test('THE OTHER ONE THAT MATTERS: no stop in the ramp clears 4.5:1 on both groun
 })
 
 test('the windows the guide names are the windows the ramp produces', () => {
-  const light = token('light', '--bg-0')
+  const light = BRAND_LIGHT_GROUND
   const dark = token('dark', '--bg-0')
   const stops = ramp()
   const firstOnLight = T_LABELS[stops.findIndex((hex) => ratio(hex, light) >= 4.5)]
@@ -308,7 +317,7 @@ test('the windows the guide names are the windows the ramp produces', () => {
 })
 
 test('the seed misses the threshold by exactly the margin quoted', () => {
-  const onGround = ratio(SEED, token('light', '--bg-0'))
+  const onGround = ratio(SEED, BRAND_LIGHT_GROUND)
   assert.equal(shown(onGround), '4.45:1')
   assert.ok(onGround < 4.5, 'the seed now passes on the light ground')
   assert.equal(Math.round((4.5 - onGround) * 100), 5, 'the shortfall is no longer five hundredths')
@@ -324,7 +333,7 @@ test('tinting a neutral moves its ratio upwards, by the amounts quoted', () => {
   // that 8% costs about two tenths and 16% about four, and that both move up.
   // Recomputed here from the same lightnesses without the product's converter,
   // by constructing the HSL triple's sRGB values directly.
-  const ground = token('light', '--bg-0')
+  const ground = BRAND_LIGHT_GROUND
   const hslToHex = (h, s, l) => {
     const S = s / 100
     const L = l / 100
@@ -364,10 +373,9 @@ test('the brand red and the error red really are indistinguishable', () => {
 /* ── the register the founder chose ──────────────────────────────────────── */
 
 test('no guide slips into the first person or into marketing', () => {
-  // Founder decision, 2026-09-05, recorded in CHANGELOG.md: Learn is neutral
-  // and factual, explicitly NOT his voice, so it can be written at scale and
-  // fact-checked rather than signed. The contrast with the founder note, which
-  // is nothing but his voice, is deliberate.
+  // Learn is neutral and factual, NOT a personal voice, so it can be written
+  // at scale and fact-checked rather than signed. The contrast with the
+  // founder note, which is nothing but a personal voice, is deliberate.
   // Case-SENSITIVE for the pronoun "I": proseOf leaves the odd arrow-function
   // parameter behind, and `(i) =>` inside a table-building expression is not
   // the founder's voice. Everything else is a word no reference register uses.

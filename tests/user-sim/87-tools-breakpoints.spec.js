@@ -146,13 +146,42 @@ test.describe('every tool surface renders operable controls and stays inside its
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('the emoji category facet is a labelled control that opens a list', () => {
-  test('it is a trigger, never a wrapped chip tray, at all ten widths', async ({ page }) => {
+  // A PHONE GETS THE CATEGORIES AS ONE SCROLLING STRIP. Toolbars never wrap:
+  // one scrollable chip row plus a filter sheet. Below 641px the toolbar
+  // keeps its first group on screen as a single line that scrolls sideways —
+  // the shape every platform emoji keyboard uses. What is asserted there is
+  // that it is ONE line, holds all twelve, and does not scroll the page.
+  test('it is a trigger from 641px up and one scrolling strip on a phone, never a wrapped tray', async ({ page }) => {
     watch(page, 'someone looking for an emoji on a phone')
     await go(page, '/create/emoji')
 
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 844 })
       await settle(page)
+
+      if (PHONE_WIDTHS.includes(width)) {
+        // Waited for, not read once: the emoji library is a lazy chunk, and at
+        // the first width it can still be "Opening the emoji library".
+        await expect(page.locator('.lbry-toolbar-quick .lbry-filters'),
+          `@${width} no category strip on a phone`).toBeVisible({ timeout: 15_000 })
+        const strip = await page.evaluate(() => {
+          const row = document.querySelector('.lbry-toolbar-quick .lbry-filters')
+          if (!row) return null
+          const chips = [...row.querySelectorAll('.lbry-filter')]
+          return {
+            chips: chips.length,
+            lines: new Set(chips.map((c) => Math.round(c.getBoundingClientRect().top))).size,
+            triggers: document.querySelectorAll('.lbry-toolbar .lbry-filtertrig').length,
+            pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          }
+        })
+        expect(strip, `@${width} no category strip on a phone`).not.toBeNull()
+        expect(strip.chips, `@${width} the strip does not carry all twelve categories`).toBe(12)
+        expect(strip.lines, `@${width} the category strip wraps`).toBe(1)
+        expect(strip.triggers, `@${width} a trigger AND a strip for one facet`).toBe(0)
+        expect(strip.pageOverflow, `@${width} the strip scrolls the page sideways`).toBeLessThanOrEqual(1)
+        continue
+      }
 
       const trigger = page.locator('.lbry-filtertrig')
       await expect(
@@ -237,7 +266,8 @@ test.describe('the filter menu opens somewhere a finger can reach it', () => {
       await page.emulateMedia({ colorScheme: theme })
       await go(page, '/create/emoji')
 
-      for (const width of WIDTHS) {
+      // The menu exists from 641px up; a phone's strip is hit-tested below.
+      for (const width of WIDTHS.filter((w) => !PHONE_WIDTHS.includes(w))) {
         await page.setViewportSize({ width, height: 844 })
         await settle(page)
 
@@ -270,7 +300,9 @@ test.describe('the filter menu opens somewhere a finger can reach it', () => {
   test('choosing a category closes the menu and hands focus back', async ({ page }) => {
     watch(page, 'a keyboard user picking an emoji category')
     await go(page, '/create/emoji')
-    await page.setViewportSize({ width: 390, height: 844 })
+    // 834, not 390: a phone has no menu to close (see the
+    // strip test above); the tablet band is where the menu is narrowest.
+    await page.setViewportSize({ width: 834, height: 844 })
     await settle(page)
 
     const trigger = page.locator('.lbry-filtertrig').first()
@@ -379,7 +411,9 @@ test.describe('tool controls transition named properties, never `all`', () => {
         property,
         `${selector} still transitions \`all\`, which includes every layout property it owns`,
       ).not.toBe('all')
-      expect(property).toContain('background-color')
+      // The hover colour still animates, named either way: `background-color`,
+      // or the `background` shorthand the shared tool button lists.
+      expect(property.split(',').map((p) => p.trim())).toEqual(expect.arrayContaining([expect.stringMatching(/^background(-color)?$/)]))
     })
   }
 })

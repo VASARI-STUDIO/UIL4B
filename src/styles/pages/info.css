@@ -109,7 +109,7 @@
   height: 32px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-s);
+  border-radius: var(--btn-radius);
   background: transparent;
   color: var(--cpg-faint);
   cursor: pointer;
@@ -343,7 +343,7 @@
   width: 14px;
   height: 14px;
   border-radius: var(--radius-pill);
-  background: var(--accent-mid);
+  background: var(--accent-fill);
   border: 2px solid var(--cpg-card);
   box-shadow: 0 0 0 1px var(--accent-mid);
   transform: translate(-50%, -50%);

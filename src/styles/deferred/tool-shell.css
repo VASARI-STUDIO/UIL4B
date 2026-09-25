@@ -22,17 +22,7 @@
 /* Alpha badge */
 .nav-alpha-badge{font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--accent-bg);color:var(--accent-text);margin-left:auto;flex-shrink:0}
 
-/* Admin group in footer */
-.nav-admin-group{border-top:1px solid var(--border);padding-top:4px;margin-top:4px}
-
-/* Right-click context menu */
-.nav-ctx-menu{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--warm-shadow-lg);padding:4px;min-width:180px;max-width:calc(100vw - 16px);animation:cp-rise var(--dur-2) var(--ease-entrance)}
-.nav-ctx-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:500;color:var(--t0);border-radius:var(--radius-s);transition:background var(--t);text-align:left}
-.nav-ctx-menu button:hover{background:var(--hvr)}
-
 /* Collapsible Categories */
-.nav-cat-arr{width:11px;height:11px;transition:transform var(--dur-2) var(--ease-standard)}
-.nav-cat-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 .sec-h-eyebrow::before{content:'';width:24px;height:1px;background:var(--t3)}
 .lib-loading{display:flex;min-height:280px;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:var(--t2)}
 .lib-loading strong{font-size:var(--fs-body);color:var(--t0)}
@@ -43,93 +33,18 @@
 .pl-empty svg{opacity:.25}
 .pl-empty p{font-size:14px;margin:0}
 
-/* Generic ghost rows reused inside card skeletons */
-.sk-line{display:block;height:10px;border-radius:var(--radius-xs)}
-.sk-line.w-40{width:40%}
-.sk-line.w-60{width:60%}
-.sk-line.w-80{width:80%}
-.sk-block{flex:1;min-height:56px;border-radius:var(--radius)}
-
-/* Hero greeting line — matches .bento-hero-title line box so no reflow */
-.sk-hero-line{height:1.2em;width:min(62%,340px);border-radius:var(--radius-s);margin:0}
-
-/* Bento card ghost — IS a .bento-card so it inherits border/radius/shadow/grid */
-.bento-card.sk-card{pointer-events:none}
-
-/* Top-bar / sidebar-footer avatar ghost — circle, never a guest icon */
-.sk-avatar{width:32px;height:32px;border-radius:var(--radius-pill);flex-shrink:0}
-.sk-avatar-name{height:12px;width:84px;border-radius:var(--radius-xs)}
-
-/* Sidebar pinned-nav reserve + row ghosts — hold vertical space so no reflow */
-.sk-nav-reserve{min-height:var(--sk-nav-h,0px)}
-.sk-navrow{height:34px;border-radius:var(--radius-s);margin:2px 0}
-
-/* Plan chip ghost — neutral until subscription.loading is false (never guesses) */
-.sk-chip{display:inline-block;height:14px;width:128px;border-radius:var(--radius-xs);vertical-align:middle}
-
-/* Font-of-the-Day ghost — identical box to .bento-fotd so type fades in with no
-   metric shift once verifyFontLoaded() confirms the real face */
-.sk-fotd{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px 16px 16px;min-height:150px}
-.sk-fotd-sample{height:clamp(52px,6vw,76px);width:1.4em;border-radius:var(--radius-s)}
-.sk-fotd-name{height:18px;width:120px;border-radius:var(--radius-xs)}
-.sk-fotd-meta{height:9px;width:64px;border-radius:var(--radius-xs)}
-
 /* FOTD type held behind the reserved box until the real face is confirmed */
-.bento-fotd-sample,.bento-fotd-name{transition:opacity var(--fl-reveal)}
-.bento-fotd.is-font-loading .bento-fotd-sample,
-.bento-fotd.is-font-loading .bento-fotd-name{opacity:0}
 @media(min-width:981px) and (max-height:900px){
   .dash{padding:12px 0 24px;gap:14px}}
-
-@media(min-width:981px) and (max-height:900px){
-  .bento-card{padding:16px}
-  .bento-hero-title{font-size:clamp(20px,2.4vw,26px)}
-  .bento-color-strip{min-height:96px}
-  .bento-typo-preview,.bento-img-preview,.bento-fotd,.sk-fotd{min-height:78px}}
-
-@media(min-width:981px) and (max-height:900px){
-
-  /* Category dashboard */
-  .cat-bento{gap:10px}
-  .cat-bento-hero{min-height:auto;padding:20px}
-  .cat-bento-hero-title{font-size:clamp(20px,3vw,28px)}
-  .cat-bento-quick{padding:14px}}
 
 
 /* ─── Docs sticky TOC ─── */
 
 /* ─── ColorStudio UI Preview bento ─── */
-.cs-bento .cs-b-2{grid-column:span 2}
-.cs-bento .cs-b-3{grid-column:span 3}
-.cs-bento .cs-b-6{grid-column:span 6}
-@media(max-width:980px){
-  .cs-bento{grid-template-columns:repeat(4,1fr)!important}
-  .cs-bento .cs-b-2{grid-column:span 2}
-  .cs-bento .cs-b-3{grid-column:span 4}
-  .cs-bento .cs-b-6{grid-column:span 4}
-}
-@media(max-width:640px){
-  .cs-bento{grid-template-columns:1fr!important;gap:10px!important}
-  .cs-bento .cs-b-2,.cs-bento .cs-b-3,.cs-bento .cs-b-6{grid-column:span 1}
-}
 
 /* ─── Hero (Dashboard) ─── */
-.hero-section{position:relative;margin-bottom:40px;padding:8px 0 0}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t2);text-transform:uppercase;margin-bottom:20px;position:relative;z-index:1}
 .hero-title{font-size:clamp(40px,6vw,72px);font-weight:700;letter-spacing:-.045em;line-height:1.1;color:var(--t0);margin-bottom:18px;position:relative;z-index:1}
 .hero-title em{font-style:normal;color:var(--accent)}
-.hero-sub{font-size:18px;color:var(--t1);max-width:580px;line-height:1.7;position:relative;z-index:1}
-.nav-switch-item-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
-.nav-switch-item-label{font-size:13px;font-weight:600;color:var(--t0);line-height:1.2}
-.nav-switch-desc{font-size:11px;font-weight:400;color:var(--t1);line-height:1.35}
-.nav-switch-check{width:16px;height:16px;flex-shrink:0;color:var(--accent);align-self:center}
-.nav-switch-divider{height:1px;background:var(--border);margin:6px 4px}
-.nav-switch-link{display:flex;align-items:center;gap:var(--s-3);width:100%;padding:9px 10px;background:none;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;color:var(--t0);border-radius:var(--radius-s);transition:background var(--t);text-align:left}
-.nav-switch-link:hover{background:var(--hvr)}
-.nav-switch-link-icon{width:16px;height:16px;flex-shrink:0;color:var(--t1)}
-@media(max-width:980px){
-  .cat-bento-hero{padding:80px 26px 26px;min-height:260px}
-  .cat-bento-hero-icon{top:22px;left:26px}}
 
 @media(max-width:640px){
 
@@ -140,9 +55,6 @@
 .sub-tier-head{display:flex;flex-direction:column;gap:4px}
 .sub-tier-price{display:flex;align-items:baseline;gap:7px}
 .sub-tier-list .sub-check{margin-top:1px}
-.sub-tier-foot{text-align:center;font-size:11px;color:var(--t3)}
-.plans-price-slot .sub-tier-amount{min-width:5.5ch}
-.plans-price-slot .sub-tier-amount.is-loading{color:var(--t3)}
 /* THE TABLE FITS. `min-width:520px` against a 358px box is what put the whole
    Pro column off-screen; the honest fix on a pricing page is not a better hint
    but a table that needs no gesture, because the comparison IS the page.
@@ -181,7 +93,7 @@
    bottom, and only the specimen between them scrolling. `min()` against both
    the viewport and a content height, so a two-weight family still gets a
    dialog the size of its contents rather than a fixed slab with a hole in it. */
-.fg-detail{display:flex;flex-direction:column;max-width:860px;max-height:min(88vh,900px);padding:0;overflow:hidden}
+.fg-detail{display:flex;flex-direction:column;max-width:860px;max-height:min(88dvh,900px);padding:0;overflow:hidden}
 .fg-detail-close{flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--bg-2);border:1px solid var(--border);border-radius:50%;color:var(--t2);cursor:pointer;transition:background var(--t),color var(--t)}
 .fg-detail-close:hover{background:var(--bg-3);color:var(--t0)}
 .fg-detail-section{margin-bottom:32px}
@@ -207,7 +119,7 @@
 @media(max-width:560px){
   /* The frame stays a frame on a phone — that is where a 1,763px dialog hurt
      most — but takes more of the screen, because there is none to spare. */
-  .fg-detail{max-height:min(92vh,900px)}}
+  .fg-detail{max-height:min(92dvh,900px)}}
 
 @media(max-width:560px){
   .fg-detail-actions{padding:12px 18px}}
@@ -260,7 +172,7 @@
 .aipg-rulecat-head{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;cursor:pointer;font-family:var(--font);padding:0;color:var(--t0)}
 .aipg-rulecat-arr{transition:transform var(--dur-2) var(--ease-standard);flex-shrink:0;color:var(--t2)}
 .aipg-rulecat-label{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--t1)}
-.aipg-rulecat-count{margin-left:auto;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;background:var(--accent-text);color:var(--accent-fg)}
+.aipg-rulecat-count{margin-left:auto;font-size:10px;font-weight:700;padding:1px 8px;border-radius:10px;background:var(--accent-fill);color:var(--accent-fg)}
 .aipg-rules{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 
 /* Live preview sidebar */
@@ -295,7 +207,7 @@
 .bkit-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .bkit-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
 .bkit-card-eyebrow{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
-.bkit-card-close{width:28px;height:28px;flex-shrink:0;border-radius:var(--radius-s);border:1px solid transparent;background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
+.bkit-card-close{width:28px;height:28px;flex-shrink:0;border-radius:var(--btn-radius);border:1px solid transparent;background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
 .bkit-card-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 .bkit-card-title{font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:8px}
 .bkit-card-body{font-size:13px;color:var(--t1);line-height:1.6;margin-bottom:16px}
@@ -320,7 +232,7 @@
 .bkit-rail-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .bkit-rail-help{border:0;background:transparent;padding:4px 2px;font-size:12px;color:var(--t2);text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap}
 .bkit-rail-help:hover{color:var(--t0)}
-.bkit-rail-close{flex-shrink:0;width:30px;height:30px;border-radius:var(--radius-s);border:1px solid var(--border);background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
+.bkit-rail-close{flex-shrink:0;width:30px;height:30px;border-radius:var(--btn-radius);border:1px solid var(--border);background:transparent;color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--dur-2) var(--ease-standard)}
 .bkit-rail-close:hover{border-color:var(--bh);color:var(--t0);background:var(--hvr)}
 
 /* Narrow: the rail stacks, the steps keep their own horizontal scroller rather
@@ -338,75 +250,6 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 @media(prefers-reduced-motion:reduce){
   html:not([data-reduced-motion="false"]) .bkit-card{animation:none;opacity:1;transform:none}
 }
-.cs-csys-harm-diagram{flex:0 0 auto;color:var(--t2)}
-.cs-csys-harm-label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cs-csys-drop-title{font-size:13px;font-weight:600;color:var(--t1)}
-.cs-csys-drop-sub{font-size:12px;color:var(--t3)}
-.cs-csys-drop-err{margin-top:6px;font-size:12px;font-weight:550;color:var(--err-strong);text-align:center}
-.cs-csys-file{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);border:0}
-
-.cs-csys-zoom{display:inline-flex;align-self:flex-start;gap:2px;margin-bottom:var(--s-3);padding:2px;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s)}
-.cs-pv-lock-art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:var(--s-5);
-  filter:grayscale(1);opacity:.5}
-.cs-pv-lock-phone{width:90px;display:flex;flex-direction:column;gap:7px;padding:12px;
-  border:2px solid var(--t3);border-radius:14px}
-.cs-pv-lock-phone .cs-pv-lock-bar{height:18px;border-radius:5px;background:var(--border)}
-.cs-pv-lock-phone .cs-pv-lock-block{height:24px;border-radius:5px;background:var(--border)}
-.cs-pv-lock-doc{width:60%;max-width:220px;display:flex;flex-direction:column;gap:8px}
-.cs-pv-lock-line{height:7px;border-radius:var(--radius-pill);background:var(--border)}
-.cs-pv-lock-line.is-kicker{width:35%;background:var(--t3)}
-.cs-pv-lock-head{height:14px;border-radius:5px;background:var(--t3)}
-.cs-pv-lock-rule{height:2px;width:30px;border-radius:var(--radius-pill);background:var(--t3);margin:2px 0}
-.cs-pv-lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:var(--s-3);text-align:center;padding:var(--s-5);
-  background:color-mix(in srgb,var(--bg-2) 72%,transparent)}
-.cs-pv-lock-label{color:var(--t1);font-size:13px;font-weight:700}
-.cs-pv-upsell-copy{display:flex;flex-direction:column;gap:3px}
-.cs-pv-upsell-copy strong{color:var(--t0);font-size:15px;font-weight:700}
-.cs-pv-upsell-copy span{color:var(--t2);font-size:12px}
-.cs-pv-upsell-cta{flex-shrink:0;min-height:44px}
-
-.dsc-wrap{padding-bottom:64px}
-.dsc-head{margin-bottom:28px}
-.dsc-submit{margin-top:20px}
-
-/* Offline banner — never silent */
-.dsc-offline{display:flex;align-items:center;gap:10px;padding:12px 16px;margin-bottom:20px;border:1px solid var(--border);border-radius:var(--radius);background:color-mix(in srgb,var(--warn) 9%,var(--bg-1));color:var(--t1);font-size:13px;line-height:1.5}
-.dsc-offline svg{color:var(--warn);flex-shrink:0}
-.dsc-search{flex:1 1 240px;max-width:380px}
-.dsc-chips-row{flex:1 1 100%;order:3}
-.dsc-chip-cat{display:inline-flex;align-items:center;gap:7px}
-.dsc-chip-dot{width:7px;height:7px;border-radius:50%;background:var(--dsc-c);flex-shrink:0}
-
-/* Featured rail — horizontal scroll-snap */
-.dsc-featured{margin-bottom:40px}
-.dsc-featured-h{margin-bottom:16px}
-.dsc-rail-track::-webkit-scrollbar{height:8px}
-.dsc-rail-track::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:var(--radius-pill)}
-.dsc-feat-card:hover{transform:translateY(-3px);border-color:var(--bh);box-shadow:var(--warm-shadow-lg)}
-.dsc-feat-card::before{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--dsc-c);z-index:1}
-.dsc-feat-badge{position:absolute;top:12px;right:12px;z-index:2;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dsc-text);background:color-mix(in srgb,var(--dsc-c) 14%,var(--bg-1));border:1px solid color-mix(in srgb,var(--dsc-c) 30%,transparent);padding:4px 8px;border-radius:var(--radius-pill)}
-.dsc-feat-top{display:flex;flex-direction:column;gap:14px;padding:20px;cursor:pointer;flex:1}
-/* No radius hoisted to rest for this one: #348 left the block with no JSX
-   consumer, so there is no rendered shape to preserve and a new rule here
-   would be dead CSS added on top of dead CSS. The geometry override is just
-   dropped. */
-.dsc-feat-top:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
-.dsc-feat-face{display:flex;align-items:center;justify-content:center;height:96px;border-radius:var(--radius);background:linear-gradient(135deg,color-mix(in srgb,var(--dsc-c) 24%,var(--bg-2)),color-mix(in srgb,var(--dsc-c) 8%,var(--bg-2)));color:var(--dsc-c)}
-.dsc-feat-meta{display:flex;flex-direction:column;gap:8px}
-.dsc-feat-title{font-size:16px;font-weight:700;color:var(--t0);letter-spacing:-.01em;margin:0}
-.dsc-feat-desc{font-size:13px;color:var(--t2);line-height:1.55;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.dsc-feat-foot{padding:0 20px 18px}
-
-/* Browse-by-type tiles */
-.dsc-browse{margin-bottom:40px}
-.dsc-tile-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:var(--radius-s);color:var(--dsc-text);background:color-mix(in srgb,var(--dsc-c) 12%,transparent)}
-.dsc-tile-label{font-size:13px;font-weight:600;color:var(--t0)}
-.dsc-tile-count{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--t2)}
-
-/* Grid band */
-.dsc-grid-band{margin-bottom:40px;scroll-margin-top:88px}
-.dsc-grid{margin-top:4px}
 /* SnapSlider — shared range control: snap points, double-click reset, and a
    click-to-edit value readout for custom values beyond the track range. */
 .snapv{display:flex;flex:1 1 auto;align-items:center;gap:12px;min-width:0}
@@ -475,10 +318,9 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .snapv--grad input[type="range"]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--accent),0 1px 3px rgba(0,0,0,.45)}
 .snapv--grad input[type="range"]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 1.5px rgba(11,13,16,.82),0 0 0 4px var(--accent),0 1px 3px rgba(0,0,0,.45)}
 .snapv--grad input[type="range"]:disabled{opacity:.5;cursor:not-allowed}
-.plb-pop-x{display:flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;color:var(--t1);background:none;border:none;border-radius:7px;cursor:pointer;transition:all var(--t)}
+.plb-pop-x{display:flex;align-items:center;justify-content:center;width:26px;height:26px;flex-shrink:0;color:var(--t1);background:none;border:none;border-radius:var(--btn-radius);cursor:pointer;transition:all var(--t)}
 .plb-pop-x:hover{color:var(--t0);background:var(--bg-2)}
 .plb-picker-row .snapv{flex:1;min-width:0}
-.plb-adjust-field .snapv{min-width:0}
 .ui-modal-sub{margin:7px 0 0;font-size:13.5px;line-height:1.5;color:var(--t2)}
 .ui-modal-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px}
 .ui-modal-link{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:transparent;border:none;color:var(--t2);font-family:var(--font);font-size:12.5px;font-weight:500;cursor:pointer;text-decoration:none;transition:color var(--t)}
@@ -524,7 +366,7 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .uis-seed-hex--error{border-color:#C43D3D}
 .uis-seed-control>span{font-size:10px;color:var(--t3)}
 .uis-neutral-control{display:flex;align-items:center;gap:4px;padding-left:var(--s-4);border-left:1px solid var(--border)}
-.uis-choice{height:32px;padding:0 9px;font-size:11px;font-weight:650;color:var(--t2);background:none;border:1px solid transparent;border-radius:var(--radius-s);cursor:pointer}
+.uis-choice{height:32px;padding:0 9px;font-size:11px;font-weight:650;color:var(--t2);background:none;border:1px solid transparent;border-radius:var(--btn-radius);cursor:pointer}
 .uis-choice:hover{color:var(--t0);background:var(--bg-2)}
 .uis-choice--on{color:var(--t0);background:var(--bg-2);border-color:var(--border)}
 .uis-command-actions{display:flex;align-items:center;gap:var(--s-2);margin-left:auto}
@@ -744,12 +586,12 @@ html[data-reduced-motion="true"] .bkit-card{animation:none;opacity:1;transform:n
 .uis-export-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--s-2)}
 
 .uis-editor-layer{position:fixed;inset:0;z-index:220;display:grid;place-items:center;padding:var(--s-4);background:rgba(0,0,0,.42)}
-.uis-editor{width:min(620px,100%);max-height:min(760px,92vh);overflow:auto;padding:var(--s-5);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg)}
+.uis-editor{width:min(620px,100%);max-height:min(760px,92dvh);overflow:auto;padding:var(--s-5);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-l);box-shadow:var(--warm-shadow-lg)}
 .uis-editor-head{display:flex;align-items:flex-start;gap:var(--s-3)}
 .uis-editor-head>div:first-child{flex:1}
 .uis-editor-head h2{font-size:20px}
 .uis-hct-help{position:relative;display:inline-flex}
-.uis-help-button{height:30px;padding:0 9px;font-size:10px;font-weight:650;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-s);cursor:help}
+.uis-help-button{height:30px;padding:0 9px;font-size:10px;font-weight:650;color:var(--t2);background:var(--bg-2);border:1px solid var(--border);border-radius:var(--btn-radius);cursor:help}
 .uis-hct-tooltip{position:absolute;right:0;bottom:calc(100% + 8px);z-index:3;width:260px;padding:var(--s-3);font-size:10px;line-height:1.5;color:var(--t1);background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);box-shadow:var(--shadow-s);opacity:0;transform:translateY(4px);pointer-events:none;transition:opacity var(--dur-1) var(--ease-standard),transform var(--dur-2) var(--ease-entrance)}
 .uis-hct-help:hover .uis-hct-tooltip,.uis-hct-help:focus-within .uis-hct-tooltip{opacity:1;transform:none}
 .uis-editor-fields{display:grid;gap:var(--s-4);margin-top:var(--s-5)}
@@ -1218,16 +1060,6 @@ html[data-reduced-motion="true"] .lbry-card-actions{transition:opacity var(--dur
    is right for a swatch tile and wrong for a table row — a row that rises 3px
    under the pointer drags the rule under it out of line with its neighbours. */
 .fg-card .lbry-card-shot{border-radius:0}
-@media(max-width:480px){
-  /* No 128px cap. The link is an `inline-flex` carrying its own `border-bottom`,
-     so capping it made the label wrap after "Font" and left the rule sitting
-     under "Gallery ↗" alone — an underline detached from most of the text it is
-     supposed to underline. `white-space:nowrap` keeps the label and its arrow on
-     one line, which is what makes the border match the text; the link is ~150px
-     and its row has the space once it is not being squeezed into 128. */
-  .fg-filter-right{width:100%}
-  .fg-sort{width:100%;overflow-x:auto}
-  .fg-sort-btn{flex:1}}
 
 
 /* ── AI quota meter ─────────────────────────────────────────────────────────

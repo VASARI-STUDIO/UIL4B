@@ -9,7 +9,7 @@
 // a few hundred live third-party round trips. After a day of full-suite runs
 // from one machine the API answered 429 Too Many Requests and both fallbacks
 // answered 403 with no CORS headers. The grid then filled from whichever packs
-// still got through, 25-defect-sweep's pack-label test went red with "one pack
+// still got through, 25-layout-target-sweep's pack-label test went red with "one pack
 // name under every cell", every /create/icons visit logged ~100 CORS findings,
 // and the gate for unrelated PRs was decided by a third party's rate limit.
 //

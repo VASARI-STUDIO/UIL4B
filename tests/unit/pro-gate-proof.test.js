@@ -88,13 +88,7 @@ test('a missing or malformed gate never crashes, and never guesses', () => {
   assert.equal(showsColourRail({ seed: '' }), false, 'an empty seed is not a seed')
 })
 
-test('the ExportPanel really does still pass a seed', () => {
-  // The previous test asserts what the predicate does with a seed. This one
-  // asserts the caller still sends it — otherwise the export wall silently
-  // loses its rail and nothing above would notice.
-  const src = fs.readFileSync(path.join(SRC, 'components/ExportPanel.jsx'), 'utf8')
-  assert.match(src, /seed:\s*design\?\.palette\?\.colors\?\.\[0\]/,
-    'ExportPanel no longer passes a palette seed to openProModal, so the ' +
-    'design-system-book wall would drop its colour rail. If that is intended, ' +
-    'delete this test; if not, restore the seed.')
-})
+// 'the ExportPanel really does still pass a seed' is DELETED, as its own
+// message said to do if intended: the export wall links to
+// /plans rather than raising the modal, so there is no
+// modal on that path to carry a colour rail.

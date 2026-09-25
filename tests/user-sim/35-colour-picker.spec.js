@@ -1,7 +1,7 @@
 // The shared colour picker's new controls, measured in a browser.
 //
-// Founder request (2026-08-08): "Solid / Gradient / Image tabs, an SV field,
-// hue and alpha sliders, a format dropdown and saved swatches."
+// The picker offers Solid / Gradient / Image tabs, an SV field, hue and alpha
+// sliders, a format dropdown and saved swatches.
 //
 // The SV field, hue slider and presets already existed. What is asserted here
 // is what was added — the notation dropdown and the shared recent swatches —
@@ -35,7 +35,7 @@ test.describe('colour picker', () => {
 
   test('the notation dropdown rewrites the field without changing the colour', async ({ page }) => {
     await openPicker(page)
-    const swatch = page.locator('.ggn-stop-swatch .cpk-trigger-chip').first()
+    const swatch = page.locator('.grd-pick-swatch .cpk-trigger-chip').first()
     const before = await swatch.evaluate(el => getComputedStyle(el).backgroundColor)
 
     await expect(page.locator(FIELD)).toHaveValue(/^#[0-9a-f]{6}$/i)
@@ -53,7 +53,7 @@ test.describe('colour picker', () => {
     // Still on hex, pasting rgb — the case of someone copying out of devtools.
     await page.locator(FIELD).fill('rgb(67 56 224)')
     await page.locator(FIELD).press('Enter')
-    await expect.poll(() => page.locator('.ggn-stop-swatch .cpk-trigger-chip').first()
+    await expect.poll(() => page.locator('.grd-pick-swatch .cpk-trigger-chip').first()
       .evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(67, 56, 224)')
   })
 
@@ -272,7 +272,10 @@ test.describe('colour picker', () => {
   // gradient opens one of these per stop, and before this they were identical.
   test('the panel names the colour it is editing', async ({ page }) => {
     await go(page, ROUTE)
-    await page.locator(TRIGGER).nth(1).click()
+    // The rebuilt gradient edits the SELECTED stop with one
+    // picker, so choose stop 2 first; the panel must then say so.
+    await page.getByRole('button', { name: /^Select stop 2,/ }).click()
+    await page.locator(TRIGGER).first().click()
     await expect(page.locator(PANEL)).toBeVisible()
     await expect(page.locator('.cpk-head-name')).toHaveText('Stop 2 colour')
   })

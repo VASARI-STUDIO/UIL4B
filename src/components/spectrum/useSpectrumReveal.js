@@ -45,6 +45,12 @@ import { prefersReducedMotion } from './reducedMotion'
 // Nothing here can leave text on the page that a reader cannot see, which is the
 // only property that actually matters.
 //
+// ── WHAT `.is-in` DRIVES ─────────────────────────────────────────────────────
+// Only the word reveal. The design keeps every block at rest (`[data-reveal]
+// {opacity:1;transform:none}`) and moves only the words, so the block fade
+// (`sp-rise`) is gone and `[data-sp-reveal]` is purely the trigger for the
+// headings inside it. The trigger line is the design's: 6% up from the bottom.
+//
 // ── AND IT STILL OBSERVES, BECAUSE THE ENTRANCE IS WORTH HAVING ─────────────
 // `rootMargin` pulls the trigger line up from the bottom edge so a block starts
 // moving as it comes into view rather than once it is already read, and each
@@ -75,7 +81,7 @@ export function useSpectrumReveal() {
       // block taller than the viewport can never reach while it is the thing
       // being read. Here the cost of a late trigger is only a late animation, so
       // the generous threshold is the right trade.
-      { threshold: 0, rootMargin: '0px 0px -10% 0px' },
+      { threshold: 0, rootMargin: '0px 0px -6% 0px' },
     )
     nodes.forEach((n) => io.observe(n))
     return () => io.disconnect()

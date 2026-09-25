@@ -14,6 +14,7 @@ import {
   savingsVsMonthly,
 } from '../../config/planLadder.js'
 import { GALLERY_GRADIENTS } from '../../data/gradientGallery.js'
+import { ICON_PACK_TIERS } from '../../data/iconPackTiers.js'
 import { LIBRARY_PALETTES } from '../../data/paletteLibrary.js'
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -35,8 +36,7 @@ import { LIBRARY_PALETTES } from '../../data/paletteLibrary.js'
 // the module that decides it rather than against a screenshot.
 //
 // WHAT THE DESIGN CLAIMED AND WHAT IS ACTUALLY TRUE — each of these is a defect
-// that would have shipped by copying the prototype, and each is listed in the
-// handover so the founder can see what moved:
+// that would have shipped by copying the prototype:
 //
 //   MOCK                                  TRUTH (and its owner)
 //   ───────────────────────────────────── ──────────────────────────────────────
@@ -135,7 +135,7 @@ export const LIBRARY_COUNTS = {
 /* ── Plans ────────────────────────────────────────────────────────────────────
  *
  * DISPLAY-ONLY, AND DELIBERATELY. `resolvePlanLadder()` with no `prices`
- * argument returns the founder-approved fallbacks and opens no request.
+ * argument returns the approved fallback prices and opens no request.
  * Home.jsx makes the same call for the same reason, stated in its own comment:
  * /plans is the one surface that quotes a live, currency-correct,
  * checkout-backed price, and the front door does not spend an LCP budget on a
@@ -241,28 +241,10 @@ export const COMPARE = [
 
 /* ── The reassurance row ──────────────────────────────────────────────────── */
 
-// The design's three assurances, minus the two that may not ship.
-//
-// "Cancel Pro any time" is the claim /plans deleted under a founder flag,
-// because the Stripe portal has no cancellation flow enabled; re-adding it on
-// the front page would retract nothing.
-//
-// "No card needed for Free" IS THE RETIRED TAGLINE, and it came back here
-// because whoever built this row did not know it had been retired. The founder,
-// 2026-09-07: *"remove the no credit card required tag line … these all over the
-// place is a huge AI Slop feature"*. It is swept by
-// tests/user-sim/62-retired-taglines.spec.js on every prerendered route, and it
-// was failing on `/` and `/home` — the two routes that matter most — from the
-// day Spectrum became the front door.
-//
-// DELETED, NOT REWORDED. That was his instruction for this class of line the
-// last time one was removed: a payment-reassurance line reworded is still a
-// payment-reassurance line. The fact itself is not lost — the Free plan card
-// under #pricing says "No account needed to use the tools" and prices at $0,
-// which is the same reassurance made by the product rather than asserted at the
-// reader.
-//
-// The remaining two are true and stay in his words.
+// The design's three assurances, minus the two that may not ship: a
+// cancellation claim (the Stripe portal has no cancellation flow) and a
+// payment-reassurance tagline (tests/user-sim/62-retired-taglines.spec.js
+// sweeps every prerendered route for it). The remaining two are true.
 export const ASSURANCES = [
   { icon: 'lock', label: 'Image and video work happens in your browser' },
   { icon: 'check', label: `Every one of the ${numberWord(TOOL_COUNT)} tools opens without an account` },
@@ -279,14 +261,8 @@ export const ASSURANCES = [
  * three of them. They are placeholder proof, and shipping them on the front door
  * is the single most expensive sentence on this page.
  *
- * Substituting better-behaved numbers was considered and rejected twice over.
- * Home.jsx's own note records why: its community grid printed `{design.saves}`
- * on every card, every one of them zero, and the conclusion drawn there was
- * "the fix for empty social proof is to stop making a social claim — not to
- * find a better zero". And the obvious fallback — a three-up strip of countable
- * figures — is the component the founder marked "AI" by name on the Font
- * Gallery masthead, which is why `.htools-facts` was deleted from this very
- * page in the 2026-09-09 audit.
+ * A three-up strip of countable figures is not a substitute either: it reads
+ * as generic, which is why `.htools-facts` was deleted from this page.
  *
  * So the slot keeps its JOB — the last reassurance before the price — and
  * changes its EVIDENCE. Each row is a property of the product a visitor can
@@ -294,14 +270,29 @@ export const ASSURANCES = [
  * proves it named beside it. It claims nothing about anyone else using it,
  * because we cannot yet say anything true about that.
  *
- * A REAL testimonial band belongs here the day there is a real testimonial, and
- * the heading "Don't just take it from us" is the founder's and is waiting for
- * it. That is in the handover, not invented here.
+ * A REAL testimonial band belongs here the day there is a real testimonial.
+ *
+ * ON THE LANDING the band is rebuilt as drawn — heading, four count-up
+ * figures, the rules above and below — with FOUR REAL FIGURES, each counted
+ * off the array that decides it (PROOF_STATS below). Still no usage stats: the
+ * product measures none, so every figure is about the toolkit itself. PROOF is
+ * kept for any surface that still wants the three checkable rows.
  */
+export const PROOF_STATS = [
+  // live, non-beta tools in toolTree.js — the same count the bench states
+  { value: TOOL_COUNT, label: 'tools, each free to open without an account' },
+  // LIBRARY_PALETTES, which /discover/palettes renders
+  { value: LIBRARY_PALETTES.length, label: 'palettes in the Discover library' },
+  // GALLERY_GRADIENTS, which /discover/gradients renders
+  { value: GALLERY_GRADIENTS.length, label: 'gradients in the Discover library' },
+  // one row per pack in iconPackTiers.js, the Icon Library's own table
+  { value: Object.keys(ICON_PACK_TIERS).length, label: 'icon sets to search in the Icon Library' },
+]
+
 export const PROOF = [
   {
     claim: 'Nothing here is saved unless you ask.',
-    note: 'Colour, type and image work runs in the browser. Only AI prompts leave the machine, and they carry text, not your assets.',
+    note: 'Colour, type and image work runs in the browser.',
     toolId: 'file-converter',
     linkLabel: 'Open File Converter',
   },
@@ -321,8 +312,7 @@ export const PROOF = [
 
 /* ── FAQ ──────────────────────────────────────────────────────────────────────
  *
- * The design ships four. Three are kept — they came from the founder's brief and
- * the answers hold — and the fourth ("Can I cancel? From the dashboard, in two
+ * The design ships four. Three are kept — the answers hold — and the fourth ("Can I cancel? From the dashboard, in two
  * clicks, no email required.") is replaced, because it is false twice over: the
  * portal has no cancellation flow, and there is no two-click path to one.
  *
@@ -342,7 +332,7 @@ export const FAQS = [
   },
   {
     q: 'Do my files get uploaded?',
-    a: 'Image and video work happens in the browser. Only AI prompts leave the machine, and they carry text, not your assets.',
+    a: 'Image and video work happens in the browser.',
   },
   {
     q: 'Which export formats can I actually get?',

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import AuthGate from '../components/AuthGate'
+import { ToolLayout, ToolGrid, ToolMain, ToolPanel, ToolSection } from '../components/tool/ToolLayout'
 import { useAuth } from '../contexts/AuthContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import useOnline from '../hooks/useOnline'
 import { useSubscription } from '../contexts/SubscriptionContext'
 import { auth as firebaseAuth } from '../utils/firebase'
@@ -253,7 +254,7 @@ function ladder(base, ratio) {
  * behaviour. The default export below is what wires the real token getter, and
  * tests/unit/ai-generation-truth.test.js asserts that it does.
  */
-export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
+export function BrandStarterWorkbench({ planId = 'free', getToken, ensureAccount, toast, aside = null, sample = null }) {
   const online = useOnline()
   const [brief, setBrief] = useState('')
   const [status, setStatus] = useState('idle') // idle | working | done | error
@@ -295,6 +296,9 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
 
   const generate = useCallback(async () => {
     if (!canGenerate) return
+    // Signed out, the account is asked for here and nowhere earlier: the brief
+    // is written without one, and a dismissed dialog leaves it untouched.
+    if (ensureAccount && !(await ensureAccount())) return
     setStatus('working')
     setError(null)
     try {
@@ -338,7 +342,7 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
       setError(err.message || 'Something went wrong.')
       setStatus('error')
     }
-  }, [canGenerate, getToken, trimmed, toast])
+  }, [canGenerate, ensureAccount, getToken, trimmed, toast])
 
   // Move focus to the result so a keyboard or screen-reader user is not left at
   // the button wondering whether anything happened. Only on a NEW result, and
@@ -362,7 +366,8 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
   }
 
   return (
-    <div className="bs">
+    <ToolGrid className="bs">
+      <ToolMain className="bs-main">
       {/* THE ALLOWANCE, BEFORE THE FIELD. Someone about to spend the only
           generation they will ever get on the free plan should know that
           before they write the brief, not after they press the button — the
@@ -617,120 +622,120 @@ export function BrandStarterWorkbench({ planId = 'free', getToken, toast }) {
           </p>
         </section>
       )}
-    </div>
+
+      {!result && sample}
+      </ToolMain>
+      {aside && <ToolPanel label="About the Brand Starter" className="bs-panel">{aside}</ToolPanel>}
+    </ToolGrid>
   )
 }
 
 /**
- * The page. Auth gate, plan, and the one thing the fixture cannot supply — a
- * real Firebase ID token.
+ * The page: the tool toolbar, the plan, the account check that runs when
+ * Generate is pressed, and the one thing the fixture cannot supply — a real
+ * Firebase ID token.
  */
 export default function BrandStarter({ toast }) {
   const { plan } = useSubscription()
-  // AuthGate owns the sign-in UI; this only decides whether the EXAMPLE is
-  // worth showing. A signed-in visitor gets the workbench and does not need a
-  // sample of what they are about to generate.
+  // Decides only whether the EXAMPLE is worth showing. A signed-in visitor gets
+  // the workbench alone and does not need a sample of what they are about to
+  // generate.
   const { user } = useAuth()
+  const { requireLogin } = useLoginPrompt()
+  // The tool opens signed out: the brief is written without an account, and
+  // one is asked for when Generate is pressed, because a generation is metered
+  // per account on the server.
+  const ensureAccount = useCallback(async () => {
+    if (user) return true
+    return !!(await requireLogin('generate a brand starter', { free: true, signup: true }))
+  }, [user, requireLogin])
 
   return (
-    <div className="sec bs-page">
-      <header className="bs-head">
-        {/* NO <em> ON THE SECOND WORD. Founder, 2026-09-14: "the brand starter
-            page needs a UI overhaul i dont like the heading it looks so AI
-            generated."
-
-            The italic-second-word h1 is a house formula, not a decision — the
-            same shape as "Make it <em>yours</em>.", "Privacy &amp; <em>data</em>."
-            and "The whole <em>map</em>." It reads as styling applied to a
-            heading rather than a heading that means something, which is exactly
-            the tell he has named on four surfaces now. The tool's name is two
-            words; it does not need one of them leaning. */}
-        <h1>
-          Brand Starter{' '}
-          {/* The word, and only the word. No sparkle, no shimmer, no gradient —
-              a badge that decorates itself is doing marketing, and the honest
-              content of "beta" is a limit rather than an event. */}
-          <span className="bs-beta" data-testid="brand-starter-beta">Beta</span>
-        </h1>
-        <p>
-          Describe what you are making and get a palette, a font pairing and a type scale to start
-          from. Each one opens in the tool that owns it, with the values loaded, so you can change
-          anything you disagree with.
-        </p>
-        <p className="bs-beta-note">{BETA_NOTE}</p>
-      </header>
-
-      {/* WHAT YOU GET, SHOWN BEFORE THE WALL.
-          Founder, 2026-09-14: the page "needs a UI overhaul". Rendered
-          signed-out at 1280 before this, the whole page below the lede was a
-          lock icon and two buttons — a promise ("get a palette, a font pairing
-          and a type scale") followed immediately by a sign-in gate, with
-          nothing between them. A visitor was asked to make an account to find
-          out what an account gets, on a site whose nav says "Start for Free".
-
-          This is the SAME three bands the generator returns, in the same order,
-          with the same labels, drawn from `SAMPLE_STARTER` — real hexes, the
-          two families that actually ship, and a real 1.25 scale. It is marked
-          as an example in words rather than implied, because a specimen a
-          visitor mistakes for their own result is worse than no specimen.
-
-          Signed-in visitors never see it: AuthGate renders its children
-          instead, and the workbench is the page from that point on. */}
-      {!user && (
-        <section className="bs-sample" aria-labelledby="bs-sample-h">
-          <h2 className="bs-sample-h" id="bs-sample-h">
-            An example of what comes back
-          </h2>
-          <p className="bs-sample-note">
-            Generated from the brief &ldquo;{SAMPLE_STARTER.brief}&rdquo;. Yours will differ.
-          </p>
-
-          <div className="bs-sample-bands">
-            <div className="bs-sample-band">
-              <span className="bs-sample-n" aria-hidden="true">{BANDS[0].n}</span>
-              <h3 className="bs-sample-label">{BANDS[0].label}</h3>
-              <ul className="bs-sample-swatches">
-                {SAMPLE_STARTER.palette.map((c) => (
-                  <li key={c.hex}>
-                    <span className="bs-sample-chip" style={{ background: c.hex }} aria-hidden="true" />
-                    <span className="bs-sample-role">{c.role}</span>
-                    <span className="bs-sample-hex">{c.hex}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bs-sample-band">
-              <span className="bs-sample-n" aria-hidden="true">{BANDS[1].n}</span>
-              <h3 className="bs-sample-label">{BANDS[1].label}</h3>
-              <p className="bs-sample-pair">
-                <strong>{tokenFace('--display')}</strong> over {tokenFace('--mono')}
+    <ToolLayout
+      className="bs-page"
+      title="Brand Starter"
+      titleId="bs-title"
+      items={[{
+        id: 'beta',
+        menu: false,
+        // The word, and only the word. No sparkle, no shimmer, no gradient —
+        // the honest content of "beta" is a limit rather than an event.
+        render: () => <span className="bs-beta" data-testid="brand-starter-beta">Beta</span>,
+      }]}
+    >
+      <BrandStarterWorkbench
+        planId={plan?.id || 'free'}
+        getToken={() => firebaseAuth.currentUser?.getIdToken()}
+        ensureAccount={ensureAccount}
+        toast={toast}
+        aside={(
+          <>
+            <ToolSection label="What it does">
+              <p className="bs-about">
+                Describe what you are making and get a palette, a font pairing and a type scale to start
+                from. Each one opens in the tool that owns it, with the values loaded, so you can change
+                anything you disagree with.
               </p>
-            </div>
+            </ToolSection>
+            <ToolSection label="Beta">
+              <p className="bs-beta-note">{BETA_NOTE}</p>
+            </ToolSection>
+          </>
+        )}
+        sample={user ? null : (
+          // WHAT YOU GET, shown before any account is asked for: the same
+          // three bands the generator returns, in the same order, with the same
+          // labels, drawn from SAMPLE_STARTER — real hexes, the two families
+          // that actually ship, and a real 1.25 scale — and marked as an
+          // example in words, because a specimen mistaken for the visitor's
+          // own result is worse than no specimen.
+          <section className="bs-sample" aria-labelledby="bs-sample-h">
+            <h2 className="bs-sample-h" id="bs-sample-h">
+              An example of what comes back
+            </h2>
+            <p className="bs-sample-note">
+              Generated from the brief &ldquo;{SAMPLE_STARTER.brief}&rdquo;. Yours will differ.
+            </p>
 
-            <div className="bs-sample-band">
-              <span className="bs-sample-n" aria-hidden="true">{BANDS[2].n}</span>
-              <h3 className="bs-sample-label">{BANDS[2].label}</h3>
-              <ul className="bs-sample-scale">
-                {SAMPLE_STARTER.scale.map((s) => (
-                  <li key={s.name}>
-                    <span className="bs-sample-step">{s.name}</span>
-                    <span className="bs-sample-px">{s.px}px</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-      )}
+            <div className="bs-sample-bands">
+              <div className="bs-sample-band">
+                <span className="bs-sample-n" aria-hidden="true">{BANDS[0].n}</span>
+                <h3 className="bs-sample-label">{BANDS[0].label}</h3>
+                <ul className="bs-sample-swatches">
+                  {SAMPLE_STARTER.palette.map((c) => (
+                    <li key={c.hex}>
+                      <span className="bs-sample-chip" style={{ background: c.hex }} aria-hidden="true" />
+                      <span className="bs-sample-role">{c.role}</span>
+                      <span className="bs-sample-hex">{c.hex}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-      <AuthGate featureLabel="generate a brand starter">
-        <BrandStarterWorkbench
-          planId={plan?.id || 'free'}
-          getToken={() => firebaseAuth.currentUser?.getIdToken()}
-          toast={toast}
-        />
-      </AuthGate>
-    </div>
+              <div className="bs-sample-band">
+                <span className="bs-sample-n" aria-hidden="true">{BANDS[1].n}</span>
+                <h3 className="bs-sample-label">{BANDS[1].label}</h3>
+                <p className="bs-sample-pair">
+                  <strong>{tokenFace('--display')}</strong> over {tokenFace('--mono')}
+                </p>
+              </div>
+
+              <div className="bs-sample-band">
+                <span className="bs-sample-n" aria-hidden="true">{BANDS[2].n}</span>
+                <h3 className="bs-sample-label">{BANDS[2].label}</h3>
+                <ul className="bs-sample-scale">
+                  {SAMPLE_STARTER.scale.map((s) => (
+                    <li key={s.name}>
+                      <span className="bs-sample-step">{s.name}</span>
+                      <span className="bs-sample-px">{s.px}px</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        )}
+      />
+    </ToolLayout>
   )
 }

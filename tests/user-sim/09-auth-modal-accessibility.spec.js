@@ -36,7 +36,7 @@ test('dismissing an in-place auth prompt restores its persistent opener', async 
   // forever — gating the menu gated those too. What this test is about is
   // unchanged: dismissing an in-place prompt returns focus to the control that
   // raised it. That control is now the Save button inside the menu.
-  const opener = page.getByTitle('Save, share or export this palette')
+  const opener = page.getByRole('button', { name: 'Save current' })
   await expect(opener).toBeVisible()
   await opener.click()
   const save = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })
@@ -85,7 +85,9 @@ test('community submission entry points explain sign-in before showing a form', 
  * keyboard user on <body> behind code that looked correct. */
 test('closing the dialog restores focus even when its opener was in a menu that closed', async ({ page }) => {
   watch(page, PERSONA)
-  await go(page, '/plans')
+  // An app-header page (PillNav's "Menu"). /plans is the design's Pricing
+  // screen, with the marketing nav, so it cannot serve here.
+  await go(page, '/help')
 
   const more = page.getByRole('button', { name: 'Menu', exact: true })
   await more.click()
@@ -117,7 +119,8 @@ test('a reason-less sign-up says what the account is for before asking for one',
   // into the product: a bare three-field form and nothing saying what for.
   await expect(dialog).toContainText('What a free account gets you')
   await expect(dialog).toContainText('An account is where your saved work lives')
-  await expect(dialog.locator('.ui-login-gets li')).toHaveCount(3)
+  // No default unlock list: the pane's height goes to the Terms/Privacy line.
+  await expect(dialog.locator('.ui-login-gets li')).toHaveCount(0)
 })
 
 /* Phone, with REAL device metrics. isMobile + hasTouch are what make
@@ -133,7 +136,7 @@ test.describe('on a phone', () => {
     await go(page, '/palette')
 
     // Same move as above: the opener opens the menu, Save raises the gate.
-    const opener = page.getByTitle('Save, share or export this palette')
+    const opener = page.getByRole('button', { name: 'Save current' })
     await opener.waitFor({ state: 'visible' })
     await opener.tap()
     const save = page.locator('.plb-savemenu').getByRole('button', { name: 'Save', exact: true })

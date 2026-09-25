@@ -20,18 +20,14 @@ import '../styles/pages/curated-resources.css'
 
 // /discover/resources — the Curated Resources library.
 //
-// THE PROMISE WAS ALREADY IN THE NAV AND THE PAGE DID NOT EXIST. toolTree.js
-// has advertised `{ id: 'curated', label: 'Curated Resources', route:
-// '/discover', soon: true }` for months, and src/data/discoverResources.js has
-// held 22 hand-written, curated resources the whole time — the founder's own
-// bookmarks, each with a reason and a hand-off into the tool that finishes the
-// job. #196 deleted the Discover shell that used to render them as "dead
-// pages"; the DATA survived and nothing has imported it since. This page is
-// that data given its home, not a new invention.
+// THIS PAGE IS THE HOME OF src/data/discoverResources.js: hand-written,
+// curated resources, each with a reason and a hand-off into the tool that
+// finishes the job. toolTree.js names it `{ id: 'curated', label: 'Curated
+// Resources', route: '/discover' }`.
 //
 // ── Why rows and not a card grid ───────────────────────────────────────────
 //
-// A curated set is SMALL BY DESIGN — 22 items across seven categories, three
+// A curated set is SMALL BY DESIGN — 13 items across four categories, three
 // or four each — and it has to look deliberate at that size, because it starts
 // nearly empty and grows one hand-picked entry at a time.
 //
@@ -80,15 +76,21 @@ import '../styles/pages/curated-resources.css'
 
 // Filter options are built once at module scope — a fresh array identity every
 // keystroke would re-measure LibraryFilterGroup's sliding indicator.
+// Only the categories that hold a resource. The category table is shared with
+// the community surfaces, which still use Gradients, Palettes and Fonts; this
+// page lists none of those (a UIL4B tool already does that job), and a chip that filters to nothing is a dead
+// control. Derived, so a category comes back the day a resource does.
+const LISTED_CATEGORIES = FILTER_CATEGORIES.filter(c => DISCOVER_RESOURCES.some(r => r.category === c.key))
+
 const CATEGORY_OPTIONS = [
   { id: 'all', label: 'All' },
-  ...FILTER_CATEGORIES.map(c => ({ id: c.key, label: c.label })),
+  ...LISTED_CATEGORIES.map(c => ({ id: c.key, label: c.label })),
 ]
 
 // Display order for the bands. Driven by the category table rather than by the
 // order resources happen to appear in, so adding a resource cannot reorder the
 // page.
-const BAND_ORDER = FILTER_CATEGORIES.map(c => c.key)
+const BAND_ORDER = LISTED_CATEGORIES.map(c => c.key)
 
 function ExternalArrow() {
   return <span className="cur-ext" aria-hidden="true">&#8599;</span>
@@ -115,7 +117,7 @@ function ResourceLink({ resource, className }) {
 }
 
 // The real sample swatches a palette resource carries in its own record. Shown
-// ONLY where `palette` exists (3 of 22): a swatch strip under a resource that
+// ONLY where `palette` exists (none since the palette sites left): a strip under one that
 // has no colours to show would be decoration pretending to be content.
 function PaletteStrip({ colors }) {
   return (
@@ -130,7 +132,7 @@ function PaletteStrip({ colors }) {
 // The in-product hand-off — the spine of Discover. `primaryAvailableTool`
 // returns the first related tool that is NOT `soon`, so a resource whose only
 // destination has not shipped renders no button at all rather than a CTA that
-// dead-ends on the Coming Soon screen. Nine of the 22 are in that state today
+// dead-ends on the Coming Soon screen. Nine of the 13 are in that state today
 // (everything pointing at Component Designer or Box Shadow); that is a
 // curation fact, and the page shows it honestly by staying quiet.
 function ToolHandoff({ resource, compact }) {
@@ -238,7 +240,7 @@ export default function CuratedResources() {
     <div className="sec lib-surface cur-wrap">
       <DiscoverGalleryHero
         title="Curated Resources"
-        description="Hand-picked tools from outside UI L4B that are genuinely worth a tab — each one with the reason it earned its place, and a way straight into the UI L4B tool that finishes the job."
+        description="Hand-picked tools from outside UI L4B that are genuinely worth a tab — each one with the reason it earned its place."
         action={(
           <Link className="btn" to="/feedback">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></svg>
@@ -249,6 +251,8 @@ export default function CuratedResources() {
 
       <LibraryToolbar
         className="cur-toolbar"
+        quick={0}
+        activeFilters={category !== 'all' ? 1 : 0}
         search={{
           value: rawQuery,
           onChange: setRawQuery,

@@ -87,7 +87,8 @@ function galleryState(page) {
       locked: document.querySelectorAll(lockedSel).length,
       // A gate that withholds a family would have to say so somewhere.
       proMentions: (document.body.innerText.match(/\bPro\b/g) || []).length,
-      upgradeControls: document.querySelectorAll('[class*="upgrade"], [data-testid*="wall"]').length,
+      // Inside the page, not the app header, whose Upgrade pill is on every route.
+      upgradeControls: document.querySelectorAll('main [class*="upgrade"], main [data-testid*="wall"]').length,
     }
   }, LOCKED)
 }
@@ -259,6 +260,7 @@ test.describe('Typography: the save gate at every quota state', () => {
         allowance: s.querySelector('[data-testid="type-save-allowance"]')?.innerText.trim() || null,
         overwrites: s.querySelectorAll('.svt-item').length,
         upgrade: !!s.querySelector('.svt-wall-btn'),
+        upgradeHref: s.querySelector('.svt-wall-btn')?.getAttribute('href') || null,
       }
     }, id)
 
@@ -281,6 +283,8 @@ test.describe('Typography: the save gate at every quota state', () => {
     expect(full.inputs, 'a name field survives at the cap').toBe(0)
     expect(full.saves, 'a save button survives at the cap').toBe(0)
     expect(full.upgrade, 'the wall offers no way to upgrade').toBe(true)
+    // The upgrade is the plans page, never a checkout or a popup.
+    expect(full.upgradeHref, 'the upgrade does not go to /plans').toBe('/plans')
     // Savee's rule: the paid step is blocked, the work is not.
     expect(full.overwrites, 'the overwrite list was taken away at the cap').toBe(LIMIT)
   })

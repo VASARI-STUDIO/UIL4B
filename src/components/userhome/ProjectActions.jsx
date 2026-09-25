@@ -2,7 +2,8 @@ import { useState } from 'react'
 import usePopover from '../../hooks/usePopover'
 import { SYSTEM_PARTS } from '../../utils/userHome'
 
-// Everything you can do to one project, from the card, without opening it.
+// Everything you can do to one project, from the ⋯ beside Save on its page
+// (/projects/:id). It sat on every row of the old list; the rows are gone.
 //
 // ── WHY A MENU AND NOT A ROW OF BUTTONS ────────────────────────────────
 //

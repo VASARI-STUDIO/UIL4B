@@ -88,7 +88,10 @@ export async function readIconTokens() {
     if (!m) throw new Error(`brand-icons: ${name} is no longer declared in the light theme block`)
     return m[1].toUpperCase()
   }
-  return { accent: pick('--accent'), ground: pick('--bg-0') }
+  // --brand-mark, not --accent: the mark has its own token, so a change to the
+  // UI accent never recolours the icons by accident. The two currently share
+  // the value #2A60E8.
+  return { accent: pick('--brand-mark'), ground: pick('--brand-mark-ground') }
 }
 
 /** The mark knocked out in white, which is the only ink it ever uses. */

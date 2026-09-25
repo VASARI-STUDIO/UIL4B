@@ -2,7 +2,7 @@
 // browser rather than reasoned about.
 //
 // WHY THE RENDER HALF EXISTS AT ALL. tests/unit/discover-handoff.test.js is the
-// wide half: it drives the real GATED_ROUTES derivation over all 22 curated
+// wide half: it drives the real GATED_ROUTES derivation over all 13 curated
 // records, which no browser needs to do. This half exists because THE BUILD AND
 // THE UNIT SUITE BOTH WENT GREEN ON A PAGE THAT RENDERED NOTHING once already in
 // this repo (#colorstudio-dead-sections), and because the properties below are
@@ -15,10 +15,10 @@
 //   • an external link's rel is a source fact, but whether the arrow and the
 //     sr-only phrase actually reach the accessibility tree is not.
 //
-// SPARSE IS THE DEFAULT CASE HERE, NOT AN EDGE CASE. Seven categories hold
+// SPARSE IS THE DEFAULT CASE HERE, NOT AN EDGE CASE. Four categories hold
 // three or four resources each. A gallery that only looks right full is a real
 // defect for a section whose whole premise is that it is curated, so the filter
-// path below is asserted at its SMALLEST — one category — and not just at 22.
+// path below is asserted at its SMALLEST — three rows — and not just at 13.
 import { test, expect } from './base.js'
 import { go, watch } from './helpers.js'
 
@@ -68,19 +68,28 @@ test('the curated library renders its real contents, not an empty shell', async 
   const s = await page.evaluate(SURVEY)
 
   expect(s.h1).toBe('Curated Resources')
-  // Seven category bands, each with a lead item, 22 resources in total. These
+  // Four category bands, each with a lead item, 13 resources in total. These
   // are the counts the DATA holds; a band that silently rendered zero rows
   // would still leave the page looking plausible from the hero alone.
-  expect(s.bands.length).toBe(7)
-  expect(s.leads).toBe(7)
-  expect(s.rows + s.leads).toBe(22)
+  expect(s.bands.length).toBe(4)
+  expect(s.leads).toBe(4)
+  expect(s.rows + s.leads).toBe(13)
   for (const b of s.bands) {
     expect(b.hasLead, `band ${b.cat} lost its lead item`).toBe(true)
   }
-  // The three resources whose records carry real sample swatches draw them.
-  // The other 19 must NOT — a swatch strip under a resource with no colours
-  // would be decoration pretending to be content.
-  expect(s.palettes).toBe(3)
+  // the gradient, palette and font
+  // sites left this page, because a UIL4B library already does that job, and
+  // no category may stay behind as an empty band or a chip that filters to
+  // nothing. The three palette sites were the only records carrying sample
+  // swatches, so no swatch strip may be drawn either: a strip under a resource
+  // with no colours would be decoration pretending to be content.
+  expect(s.bands.map(b => b.cat)).toEqual(['inspiration', 'dev-tools', 'free-assets', 'components'])
+  expect(s.palettes).toBe(0)
+  const chips = await page.locator('.cur-toolbar .lbry-filter').allTextContents()
+  expect(chips.length, 'no category chip is rendered — the check below would be vacuous').toBeGreaterThan(1)
+  for (const gone of ['Gradients', 'Palettes', 'Fonts']) {
+    expect(chips.map(c => c.trim()), `the ${gone} chip filters to nothing`).not.toContain(gone)
+  }
 })
 
 test('every outbound link is a real external link with the full rel convention', async ({ page }) => {
@@ -88,7 +97,7 @@ test('every outbound link is a real external link with the full rel convention',
   await go(page, ROUTE)
 
   const { externals } = await page.evaluate(SURVEY)
-  expect(externals.length).toBe(22)
+  expect(externals.length).toBe(13)
   for (const a of externals) {
     expect(a.rel, `rel on “${a.text}”`).toBe('noopener noreferrer nofollow')
     expect(a.target, `target on “${a.text}”`).toBe('_blank')
@@ -102,17 +111,17 @@ test('no hand-off lands on a Coming Soon placeholder', async ({ page }) => {
   await go(page, ROUTE)
 
   const { handoffs } = await page.evaluate(SURVEY)
-  // EXACTLY 13 of the 22 resources hand off today. The other nine point only at
+  // EXACTLY 4 of the 13 resources hand off today. The other nine point only at
   // Component Designer or Box Shadow, both still `soon`, so they must render NO
   // button rather than one that dead-ends.
   //
   // THE EXACT NUMBER IS THE ASSERTION, not `> 0`. A mutation that dropped the
   // gate and offered `relatedTools[0]` unconditionally SURVIVED the first
-  // version of this test: the count check was toBeGreaterThan(0), which 22
-  // satisfies just as well as 13, and the navigation check below was blind for
-  // a separate reason (see the dead-end detector). 13 vs 22 is the difference
+  // version of this test: the count check was toBeGreaterThan(0), which 13
+  // satisfies just as well as 4, and the navigation check below was blind for
+  // a separate reason (see the dead-end detector). 4 vs 13 is the difference
   // the gate makes, so it is what gets pinned.
-  expect(handoffs.length).toBe(13)
+  expect(handoffs.length).toBe(4)
 
   // Follow every distinct destination and prove a real tool is on the other
   // side. A href is not a destination until something has been there.
@@ -145,7 +154,7 @@ test('the library still reads as an edited list at its sparsest', async ({ page 
   await page.evaluate(() => {
     const input = document.querySelector('.cur-toolbar input')
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-    setter.call(input, 'font')
+    setter.call(input, 'component')
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
   await expect(page.locator('.cur-row')).toHaveCount(3)
@@ -181,12 +190,16 @@ test('the page holds up at 390 and at 1440', async ({ page }) => {
     await go(page, ROUTE)
     const s = await page.evaluate(SURVEY)
     expect(s.overflowX, `horizontal overflow at ${w}px`).toBe(false)
-    expect(s.bands.length, `bands lost at ${w}px`).toBe(7)
+    expect(s.bands.length, `bands lost at ${w}px`).toBe(4)
 
     // Nothing may spill past the viewport edge. Filtered to visible elements,
     // because a hidden sibling's rect is meaningless.
+    // The phone's category strip (`.lbry-toolbar-quick`) is the one container
+    // that is DESIGNED to scroll sideways (toolbars never wrap), so the chips it holds past its edge are scrolled, not spilled. The
+    // strip itself is still measured.
     const spills = await page.evaluate(() => [...document.querySelectorAll('.cur-wrap *')]
       .filter(e => e.offsetParent !== null)
+      .filter(e => !e.parentElement?.closest('.lbry-toolbar-quick'))
       .filter(e => e.getBoundingClientRect().right > window.innerWidth + 1)
       .map(e => e.className))
     expect(spills, `elements overflow at ${w}px`).toEqual([])

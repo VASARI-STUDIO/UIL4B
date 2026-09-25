@@ -47,13 +47,22 @@ test.describe('the marketing pill', () => {
     expect(barPe, 'the pill itself has stopped taking clicks').toBe('auto')
   })
 
-  test('the quiet links point at sections that exist on this page', async ({ page }) => {
+  test('the quiet links are the design\'s three, and each goes somewhere real', async ({ page }) => {
     await salesPage(page)
-    const hrefs = await page.locator('.spnav-quiet-link').evaluateAll((els) => els.map((a) => a.getAttribute('href')))
-    expect(hrefs.length, 'the three quiet links').toBe(3)
-    for (const href of hrefs) {
+    const links = await page.locator('.spnav-quiet-link').evaluateAll((els) => els.map((a) => ({
+      label: a.textContent.trim(), href: a.getAttribute('href'), current: a.getAttribute('aria-current'),
+    })))
+    // Tools / Pricing / On mobile — `UIL4B - Spectrum.dc.html` lines 226-228.
+    expect(links.map((l) => l.label), 'the design\'s three quiet links, in its order').toEqual(['Tools', 'Pricing', 'On mobile'])
+    // Tools is a section of THIS page; Pricing and On mobile are screens.
+    for (const { href } of links.filter((l) => l.href.startsWith('#'))) {
       await expect(page.locator(href), `${href} is a link to nothing`).toHaveCount(1)
     }
+    expect(links.find((l) => l.label === 'On mobile').href).toBe('/mobile')
+    // Pricing is the design's separate Pricing screen, which is /plans.
+    expect(links.find((l) => l.label === 'Pricing').href).toBe('/plans')
+    // The sales page is the design's "Tools" screen, so Tools is the current one.
+    expect(links.map((l) => l.current)).toEqual(['page', null, null])
   })
 
   test('the bar hides on the way down and comes back on the way up', async ({ page }) => {
@@ -143,56 +152,35 @@ test.describe('the full-screen menu carries what the pill drops', () => {
       'Tab walked out of the back of the menu').toBe(true)
   })
 
-  test('every tool in the tree is reachable, with its real route and its real badge', async ({ page }) => {
-    await salesPage(page)
-    await page.locator('.spnav-burger').click()
-    await expect(page.locator('.spnav-menu')).toBeVisible()
-
-    const rows = await page.locator('.spnav-tool').evaluateAll((els) => els.map((a) => ({
-      label: a.querySelector('.spnav-tool-label')?.textContent?.trim(),
-      href: a.getAttribute('href'),
-      soon: a.hasAttribute('data-soon'),
-      desc: a.querySelector('.spnav-tool-desc')?.textContent?.trim() || '',
-      badges: [...a.querySelectorAll('.soon-badge,.beta-badge')].map((b) => b.textContent.trim()),
-    })))
-    // The pill has no mega menus, so this list IS the navigation on `/`.
-    expect(rows.length, 'the marketing menu is not listing the tool tree').toBeGreaterThan(25)
-    for (const r of rows) {
-      expect(r.href, `${r.label} has no route`).toMatch(/^\//)
-      // menuDescription's first rule: describing an unbuilt tool is a sentence
-      // about something that does not exist.
-      if (r.soon) {
-        expect(r.desc, `the Soon row "${r.label}" describes what it will do once it exists`).toBe('')
-        expect(r.badges, `${r.label} is Soon and says so`).toContain('Soon')
-      }
-      // Soon and Beta can never both render: a Soon tool is not mounted.
-      expect(r.badges.length, `${r.label} wears two badges`).toBeLessThan(2)
-    }
-    const beta = rows.filter((r) => r.badges.includes('Beta'))
-    if (beta.length) {
-      const [soonColour, betaColour] = await page.evaluate(() => [
-        getComputedStyle(document.querySelector('.spnav-tool .soon-badge')).color,
-        getComputedStyle(document.querySelector('.spnav-tool .beta-badge')).color,
-      ])
-      expect(betaColour, 'Beta is painting as a second Soon').not.toBe(soonColour)
-    }
-  })
-
-  test('search, the theme control and the auth path all survive into the menu', async ({ page }) => {
+  test('it is the design\'s menu: four big items and the note, nothing else', async ({ page }) => {
+    // The design is the spec and it has no mega menu. The design's menu (UIL4B - Spectrum.dc.html 248-257) is these four and the
+    // note. An earlier pass hung the whole tool tree, search, the theme segment
+    // and the account block underneath; this fails if any of it comes back.
     await salesPage(page)
     await page.locator('.spnav-burger').click()
     const menu = page.locator('.spnav-menu')
-    await expect(menu).toBeVisible()
+    await expect(menu).toHaveAttribute('data-menu', 'in')
+    const items = await menu.locator('.spnav-rail .spnav-mi').evaluateAll((els) => els.map((a) => ({
+      label: a.textContent.trim(), href: a.getAttribute('href'),
+    })))
+    expect(items).toEqual([
+      { label: 'Tools', href: '#bench' },
+      { label: 'Pricing', href: '/plans' },
+      { label: 'On mobile', href: '/mobile' },
+      { label: 'Open the toolkit ↗', href: '/projects' },
+    ])
+    await expect(menu.locator('.spnav-mi-note')).toHaveText('EVERY CORE TOOL IS FREE, FOREVER')
+    // Nothing else that can take focus: the Close pill plus the four items.
+    const focusables = await menu.locator('a[href], button').count()
+    expect(focusables, 'the menu carries more than the design\'s items again').toBe(5)
+  })
 
-    // The three-way control, not just the pill's one-press cycle: the cycle
-    // cannot be READ, and /settings documents the segment.
-    await expect(menu.locator('.theme-seg-btn')).toHaveCount(3)
-    await expect(menu.getByRole('button', { name: /Search tools/ })).toBeVisible()
-    await expect(menu.getByRole('button', { name: 'Start for Free' })).toBeVisible()
-    await expect(menu.getByRole('button', { name: 'Log in' })).toBeVisible()
-
-    // The "/" shortcut still opens the palette, and the menu gets out of its way.
-    await page.keyboard.press('Escape')
+  test('the "/" shortcut still opens tool search, and the theme cycle is on the pill', async ({ page }) => {
+    // What the old menu carried that the product still offers from the front
+    // door: search on the same shortcut (it draws nothing), and the theme, as
+    // the design's own one-press cycle on the bar.
+    await salesPage(page)
+    await expect(page.locator('.spnav-bar .spnav-icon[aria-label^="Theme:"]')).toBeVisible()
     await page.keyboard.press('/')
     await expect(page.locator('.cp-panel')).toBeVisible()
   })
@@ -201,7 +189,9 @@ test.describe('the full-screen menu carries what the pill drops', () => {
 test.describe('the pill at every width', () => {
   // The nav is the most common cause of horizontal overflow on this site, and
   // this one wraps by default — so each band has to SHED rather than stack.
-  for (const w of [320, 360, 390, 414, 768, 834, 1024, 1280, 1440]) {
+  // 430, 480 and 560 are where the eyebrow and CTA bands sit; 430 caught a
+  // wrap the original list could not see.
+  for (const w of [320, 360, 390, 414, 430, 480, 560, 768, 834, 1024, 1280, 1440]) {
     test(`no horizontal overflow and one row of pill at ${w}px`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: 900 })
       await salesPage(page)

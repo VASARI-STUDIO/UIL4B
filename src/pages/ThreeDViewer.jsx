@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import useExportGate from '../hooks/useExportGate'
+import { ToolLayout, ToolButton } from '../components/tool/ToolLayout'
 import { useAppearance } from '../contexts/AppearanceContext'
 import {
   INPUT_FORMATS,
@@ -34,9 +35,11 @@ import '../styles/pages/three-d-viewer.css'
 // tests/unit/three-d-viewer.test.js builds the app and fails if three.js
 // reaches the entry chunk or this page's chunk.
 //
-// LAYOUT is the app file's tool grid (UIL4B App.dc.html, `[data-toolgrid]`):
-// the stage and a 336px panel beside it, the panel dropping under the stage
-// below 900px. Mobbin references for the two halves:
+// LAYOUT is the shared tool pattern (components/tool/ToolLayout.jsx): a sticky
+// toolbar with the tool's name, the Beta tag and the way to open a file; under
+// it the app file's tool grid (UIL4B App.dc.html, `[data-toolgrid]`) — the
+// stage and a 336px panel beside it, the panel dropping under the stage below
+// 900px. Mobbin references for the two halves:
 //   Magnific's model view — canvas left, "Model information" (size, triangles,
 //   vertices, meshes, materials, extent) and the download beside it:
 //     https://mobbin.com/screens/e653b264-0fce-4f34-a1d9-79623c3f025b
@@ -327,20 +330,28 @@ export default function ThreeDViewer({ toast }) {
   const cancellable = busy && (busy.stage !== 'parsing' || busy.cad)
   const pct = busy?.total ? Math.min(100, Math.round((busy.loaded / busy.total) * 100)) : null
 
-  return (
-    <div className="v3d" data-state={state}>
-      <header className="v3d-head">
-        <h1>
-          3D Viewer{' '}
-          <span className="v3d-beta">Beta</span>
-        </h1>
-        {model && (
-          <button type="button" className="v3d-btn" onClick={choose} disabled={!!busy}>
-            Open another file
-          </button>
-        )}
-      </header>
+  const openLabel = model ? 'Open another file' : 'Open a file'
 
+  return (
+    <ToolLayout
+      className="v3d"
+      data-state={state}
+      title="3D Viewer"
+      titleId="v3d-title"
+      items={[
+        // The word and only the word: beta is a limit, not an action.
+        { id: 'beta', menu: false, render: () => <span className="v3d-beta">Beta</span> },
+        {
+          id: `open-${model ? 'another' : 'first'}`,
+          align: 'end',
+          priority: 1,
+          render: () => (
+            <ToolButton icon="upload-simple" collapse onClick={choose} disabled={!!busy}>{openLabel}</ToolButton>
+          ),
+          menu: { label: openLabel, icon: 'upload-simple', onSelect: choose, disabled: !!busy },
+        },
+      ]}
+    >
       <div className="v3d-grid">
         <section className="v3d-stage" aria-label="Model view">
           <div
@@ -514,6 +525,9 @@ export default function ThreeDViewer({ toast }) {
                 const blocked = pointCloud && !f.points
                 return (
                   <label key={f.id} className={`v3d-out${outId === f.id ? ' is-on' : ''}${blocked ? ' is-off' : ''}`}>
+                    {/* The native radio covers the whole choice, so the control
+                        itself — not only its label — is the size of the tile
+                        (44px tall on a coarse pointer). The dot is its picture. */}
                     <input
                       type="radio"
                       name={`${uid}-out`}
@@ -522,6 +536,7 @@ export default function ThreeDViewer({ toast }) {
                       disabled={blocked}
                       onChange={() => { setOutId(f.id); setOutput(null) }}
                     />
+                    <span className="v3d-out-dot" aria-hidden="true" />
                     <span className="v3d-out-l">{f.label}</span>
                   </label>
                 )
@@ -560,6 +575,6 @@ export default function ThreeDViewer({ toast }) {
       </div>
 
       <p className="sr-only" role="status" aria-live="polite">{announce}</p>
-    </div>
+    </ToolLayout>
   )
 }

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import FontPicker from '../components/FontPicker'
-import ShuffleIcon from '../components/ShuffleIcon'
 import UIKitGuide from '../components/UIKitGuide'
 import SaveTypeSystem from '../components/SaveTypeSystem'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
+import {
+  ToolLayout, ToolButton, ToolGrid, ToolMain, ToolPanel, ToolSection, ToolPills,
+} from '../components/tool/ToolLayout'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
 import { trackFontCopy } from '../utils/analytics'
@@ -12,13 +14,8 @@ import {
   bodyWeight, fontStack, getFontImportUrl, headingWeight, loadFont, suggestPairings,
 } from '../utils/googleFonts'
 import { consumePairDraft, readPairDraft, setScaleDraft } from '../utils/typeHandoff'
-// The `font-pair` page stylesheet. Imported here rather than from global.css so
-// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
-// opens this page downloads it, and it arrives with the chunk, before paint.
-// The stylesheet families this surface needs, split out of the one
-// render-blocking global sheet (see src/styles/deferred/). They ride this
-// route's own lazy chunk, so they arrive with it and never with the homepage.
-import '../styles/deferred/colour.css'
+// The shared sheets for the font picker, the catalogue notice and the loader,
+// then the page's own sheet, scoped under `.fpr-page`, the page root.
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
 import '../styles/pages/font-pair.css'
@@ -240,28 +237,76 @@ export default function FontMatcher({ onCopy, toast }) {
     navigate('/create/type-scale')
   }
 
-  if (status === 'loading') {
-    return (
-      <div className="sec fpr-page">
-        <FontCatalogLoading label="Opening Font Pair" />
-      </div>
-    )
-  }
+  const ready = status !== 'loading' && catalog.length > 0 && headingFont && bodyFont
 
-  if (!catalog.length || !headingFont || !bodyFont) {
-    // Belt and braces: fetchFontCatalog always resolves to at least the bundled
-    // list, so this is unreachable in practice — but a genuinely empty catalogue
-    // must show a way forward rather than a blank workbench.
-    return (
-      <div className="sec fpr-page">
-        <div className="typ-loading" role="status">
-          <strong>No font catalogue is available right now.</strong>
-          <span>Font Pair needs at least a handful of families to work with. Retry the catalogue, or browse the gallery once it&rsquo;s back.</span>
-          <button type="button" className="typ-notice-retry" onClick={retry} disabled={retrying}>
-            {retrying ? 'Retrying…' : 'Retry'}
-          </button>
-        </div>
-      </div>
+  // The toolbar's actions. They exist in every state so the row keeps its
+  // shape while the catalogue loads; each one is disabled until it can act.
+  const items = [
+    {
+      id: 'shuffle',
+      priority: 1,
+      render: () => (
+        <ToolButton icon="shuffle" collapse onClick={shuffle} disabled={!ready} title="Shuffle the heading face">
+          Shuffle
+        </ToolButton>
+      ),
+      menu: { label: 'Shuffle the heading', icon: 'shuffle', onSelect: shuffle, disabled: !ready },
+    },
+    {
+      id: 'gallery',
+      priority: 0,
+      render: () => (
+        <ToolButton as={NavLink} to="/create/font-gallery" icon="swatches" aria-label="Browse the Font Gallery">
+          Font Gallery
+        </ToolButton>
+      ),
+      menu: { label: 'Browse the Font Gallery', icon: 'swatches', onSelect: () => navigate('/create/font-gallery') },
+    },
+    {
+      id: 'scale',
+      priority: 2,
+      render: () => (
+        <ToolButton icon="caret-right" className="fpr-handoff" onClick={openInTypeScale} disabled={!ready} aria-label="Build a scale from this pair">
+          Build a scale
+        </ToolButton>
+      ),
+      menu: { label: 'Build a scale from this pair', icon: 'caret-right', onSelect: openInTypeScale, disabled: !ready },
+    },
+    { id: 'div', divider: true, align: 'end' },
+    {
+      id: 'import',
+      priority: 3,
+      render: () => (
+        <ToolButton className="fpr-copy-all" onClick={copyImport} disabled={!importUrl}>Copy font import</ToolButton>
+      ),
+      menu: { label: 'Copy font import', icon: 'copy', onSelect: copyImport, disabled: !importUrl },
+    },
+  ]
+  const primary = (
+    <ToolButton variant="accent" icon="copy" iconSize={14} className="fpr-copy-primary" onClick={() => onCopy?.(cssExport)} disabled={!cssExport}>
+      Copy CSS
+    </ToolButton>
+  )
+  const layout = (body) => (
+    <ToolLayout className="fpr-page" title="Font Pair" titleId="fpr-title" items={items} primary={primary}>
+      {body}
+    </ToolLayout>
+  )
+
+  if (status === 'loading') return layout(<FontCatalogLoading label="Opening Font Pair" />)
+
+  if (!ready) {
+    // fetchFontCatalog always resolves to at least the bundled list, so this
+    // is unreachable in practice; a genuinely empty catalogue still shows a
+    // way forward rather than a blank workbench.
+    return layout(
+      <div className="typ-loading" role="status">
+        <strong>No font catalogue is available right now.</strong>
+        <span>Font Pair needs at least a handful of families to work with. Retry the catalogue, or browse the gallery once it&rsquo;s back.</span>
+        <button type="button" className="typ-notice-retry" onClick={retry} disabled={retrying}>
+          {retrying ? 'Retrying…' : 'Retry'}
+        </button>
+      </div>,
     )
   }
 
@@ -280,76 +325,19 @@ export default function FontMatcher({ onCopy, toast }) {
     for (const key of Object.keys(vars)) el.style.setProperty(key, vars[key])
   }
 
-  return (
-    <div className="sec fpr-page">
-      {/* The structural twin of the Font Gallery masthead, and it carried the
-          same two faults (#surface-headers-read-as-ai): a decorative
-          "Create / Typography" taxonomy eyebrow restating the <h1> below it,
-          and the page's onward action parked in the top-right corner as an 11px
-          underlined text link. Both are gone; the link is now a real button in
-          the copy column, under the paragraph that gives it a reason.
+  const weightPills = (font, value, onPick, label) => (
+    <ToolPills
+      mono
+      label={label}
+      className="fpr-weights"
+      options={font.variants.map((w) => ({ value: w, label: String(w) }))}
+      value={value}
+      onChange={onPick}
+    />
+  )
 
-          WHAT STAYS, and why it is not the thing the founder marked: the
-          `.fpr-hero-pair` readout is the page's LIVE STATE — the two families
-          currently selected. It changes as you work and you cannot get it
-          anywhere else on screen. That is the opposite of a catalogue counter,
-          which is fixed, decorative, and tells you about the product rather
-          than about your work.
-
-          SPECTRUM, 2026-09-23: NOT THE GALLERY'S SLAB ANY MORE. The
-          `fpr-hero--premium` modifier is gone, and with it global.css's
-          near-black slab, its purple-and-teal glow, the 124px white h1 and the
-          lilac hover — this page is a workbench, not a library, and now opens
-          like the other Create tools (pages/font-pair.css). The ghost "Aa"
-          behind the copy is deleted rather than restyled: it was a <p>, so a
-          screen reader read "Aa" aloud between the title and the lede. The
-          pair readout stays, and is now set in the two families it names. */}
-      <header className="fpr-hero" ref={varsRef(specimenVars)}>
-        <div className="fpr-hero-copy">
-          <div>
-            <h1>Font Pair</h1>
-          </div>
-          <div className="fpr-hero-intro">
-            {/* THE THIRD INSTANCE OF THE LEDE MOTIF, and the worst of them.
-                ────────────────────────────────────────────────────────────
-                It read: "Pair type like a creative director. Choose a voice
-                for the headline, a workhorse for the body, and test the
-                relationship in real layouts."
-
-                Two faults in one sentence. The three clauses are the page
-                describing its own workflow — choose, choose, test are the
-                controls directly below — which is the shape #386 removed from
-                the Type Scale and this pass removed from the Tint Scale and
-                the Gradient Generator. And "like a creative director" is the
-                other named motif: copy that argues for the product instead of
-                showing it. It flatters the reader and tells them nothing; the
-                specimens below are the only thing that can make that claim.
-
-                What replaces it is the model — two families in two roles, and
-                the fact that everything under the fold is those two together.
-                That is what a first-time visitor cannot infer from a hero
-                that currently reads "Inter + Inter".
-
-                NOT changed here: that this hero fills the whole first screen
-                at 390px, so the first control a phone user meets is a link to
-                a different tool. That is a layout decision for the founder,
-                and it is filed rather than fixed. */}
-            <p>
-              Two families — one for headings, one for body. Every preview below is
-              those two, together.
-            </p>
-            <div className="fpr-hero-pair" aria-label="Current font pair">
-              <span>{headingFont.family}</span>
-              <i aria-hidden="true">+</i>
-              <span>{bodyFont.family}</span>
-            </div>
-            <NavLink to="/create/font-gallery" className="btn fpr-hero-cta">
-              Browse the Font Gallery <span aria-hidden="true">↗</span>
-            </NavLink>
-          </div>
-        </div>
-      </header>
-
+  return layout(
+    <>
       <FontCatalogNotice
         online={online}
         degraded={degraded}
@@ -358,278 +346,75 @@ export default function FontMatcher({ onCopy, toast }) {
         count={catalog.length}
       />
 
-      {/* THE FOUR-UP FIGURE STRIP IS GONE (`.fpr-status`), AND THE HERO
-          READOUT #382 KEPT IS WHY.
-          ------------------------------------------------------------------
-          #382 deleted this page's eyebrow and reseated its action, and kept
-          `.fpr-hero-pair` on the grounds that the two selected families are
-          live state "you cannot get anywhere else on screen". That was true of
-          the readout and false of the page: this strip sat 350px under it and
-          said the same two families again. Measured at 1440x900, hero pair at
-          y=274, strip at y=624.
-
-          The other two figures were the motif itself:
-
-            "N suggestions"  counts the `.fpr-card`s rendered in the panel
-                             below it. The eye orders them without help.
-            "N families"     the CATALOGUE COUNTER. This is the same figure the
-                             founder marked "AI" on the Font Gallery ("1,798
-                             text families"), reading off the same catalogue.
-                             #382 moved it into the Gallery's search
-                             placeholder, where it tells you the size of what
-                             you are about to search; here it told you the size
-                             of the product. On a degraded catalogue it was also
-                             restated 207px ABOVE itself by FontCatalogNotice
-                             ("Showing a bundled list of 84 families.").
-
-          `.fpr-hero-pair` stays, and it is now true that it is the only place
-          the current pair is stated. */}
-
-      <div className="fpr-grid">
-        {/* ── Controls ── */}
-        <section className="card fpr-panel fpr-config" aria-labelledby="fpr-config-title">
-          {/* THE 01 / 02 / 03 / 04 BADGES ARE GONE FROM ALL FOUR PANELS, AND
-              THE REASON IS THE ONE #386 FOUND ON THE TYPE SCALE.
-              ------------------------------------------------------------
-              THEY READ RIGHT TO LEFT. Measured at 1440x900 before this change:
-              "01 Choose the pair" had its badge at x=1087 and "02 Read the
-              pairing" at x=79, both on the same line at y=735. `.fpr-grid`
-              puts the config rail in the right-hand column at this width, so
-              the sequence a reader meets is 02, 01, 03, 04. A numbered
-              sequence that has to be read against the reading direction is
-              worse than no numbering — which is the identical measurement
-              #386 recorded on the Type Scale (01 at x=1079, 02 at x=71) and
-              the identical fix.
-
-              AND THEY WERE DECORATION DOING HIERARCHY'S JOB: four panels, two
-              of them nested inside a third, ranked by a mono numeral in a
-              tinted box rather than by size, position or weight. The headings
-              already name the order in words — choose, read, compare, hand
-              off — and they still do. */}
-          <div className="fpr-section-head">
-            <div>
-              <h2 id="fpr-config-title">Choose the pair</h2>
-              <p>The heading drives the suggestions; the body is yours to override.</p>
+      <ToolGrid className="fpr-grid">
+        {/* ── The output: the pair set as a page, then what else would pair,
+            then the code. First in the source, so a phone opens on it. ── */}
+        <ToolMain className="fpr-output">
+          <section className="fpr-stage" aria-labelledby="fpr-output-title">
+            <h2 id="fpr-output-title" className="sr-only">Read the pairing</h2>
+            <div className="fpr-stage-head">
+              <ToolPills
+                label="Preview layout"
+                options={PREVIEW_PRESETS.map((p) => ({ value: p.id, label: p.label }))}
+                value={preset}
+                onChange={setPreset}
+              />
+              {/* The current pair, set in the two families it names: the one
+                  place on the page that states it. */}
+              <div className="fpr-pair" role="group" aria-label="Current font pair" ref={varsRef(specimenVars)}>
+                <span>{headingFont.family}</span>
+                <i aria-hidden="true">+</i>
+                <span>{bodyFont.family}</span>
+              </div>
             </div>
-          </div>
 
-          {/* ONE LINE, NOT THREE. Founder, 2026-09-14: "the choose the pair
-              panel should not be scrollable."
+            <div className="fpr-specimen" ref={varsRef(specimenVars)}>
+              {preset === 'article' && (
+                <article className="fpr-article">
+                  <h3 className="fpr-h1">{headline}</h3>
+                  <p className="fpr-lede">
+                    {sample || 'A heading face sets the tone; the body face has to survive four hundred words of it.'}
+                  </p>
+                  <h4 className="fpr-h2">{sample || 'Where the pairing earns its keep'}</h4>
+                  <p className="fpr-body">{bodyText}</p>
+                </article>
+              )}
 
-              MEASURED at 1440x900 before this: the panel's content was 849px
-              against 796px of usable height, so it overflowed by 53px and
-              carried its own scrollbar inside the page — a nested scroller in
-              a column that is already sticky. This callout was 114px of that,
-              the tallest single thing in a panel whose job is the two pickers
-              below it, and it is a LINK AWAY from the tool rather than part of
-              choosing a pair.
-
-              The second line went: "Browse live specimens, compare families,
-              then send one back here" explained a destination that the name of
-              the destination and an arrow already name. Dropping it, and
-              tightening the mark and the spacing, returns 54px — which is the
-              53 the panel was over by. The scroller is then unnecessary rather
-              than suppressed, and nothing is clipped. */}
-          <NavLink to="/create/font-gallery" className="fpr-gallery-callout">
-            <span className="fpr-gallery-callout-mark" aria-hidden="true">Aa</span>
-            <strong>Select from the Font Gallery</strong>
-            <span aria-hidden="true">↗</span>
-          </NavLink>
-
-          <FontPicker
-            label="Heading family"
-            intent="heading"
-            fonts={catalog}
-            value={headingFont}
-            onChange={chooseHeading}
-          />
-          <div className="fpr-weights" role="group" aria-label="Heading weight">
-            {headingFont.variants.map(w => (
-              <button
-                key={w}
-                type="button"
-                className={headingW === w ? 'fpr-weight fpr-weight--on' : 'fpr-weight'}
-                aria-pressed={headingW === w}
-                onClick={() => {
-                  setHeadingW(w)
-                  setFonts({ heading: { family: headingFont.family, weight: w, category: headingFont.category } })
-                }}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
-
-          {/* PICK THE BODY FROM THE HEADING. Founder, 2026-09-14: "when
-              selecting a second font, show a wand button to pick automatically
-              based on the first font."
-
-              IT REUSES THE RANKING THAT IS ALREADY ON THE PAGE rather than
-              inventing a second opinion. `suggestions` is what the panel below
-              scores and explains; taking its first entry means the wand and the
-              cards can never disagree about which body face wins, and the
-              reasoning for what it chose is already written and one click away
-              under that card.
-
-              It is DISABLED until there is something to apply — no heading yet,
-              or the catalogue has not answered — instead of being hidden, so
-              the control does not appear and disappear under the pointer. The
-              title says what it will do; the visible label is an icon because
-              the row it sits in is already two fields deep. */}
-          <div className="fpr-bodyrow">
-            <FontPicker
-              label="Body family"
-              fonts={catalog}
-              value={bodyFont}
-              onChange={chooseBody}
-            />
-            <button
-              type="button"
-              className="fpr-wand"
-              onClick={() => { if (suggestions[0]) applyPair(suggestions[0].font) }}
-              disabled={!suggestions.length}
-              title={suggestions.length
-                ? `Use ${suggestions[0].font.family}, the best match for ${headingFont.family}`
-                : 'No suggestions yet'}
-              aria-label={suggestions.length
-                ? `Pick a body face automatically: use ${suggestions[0].font.family} with ${headingFont.family}`
-                : 'Pick a body face automatically — no suggestions yet'}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8 19 13M17.8 6.2 19 5M3 21l9-9M12.2 6.2 11 5" />
-              </svg>
-              <span className="fpr-wand-label">Auto</span>
-            </button>
-          </div>
-          <div className="fpr-weights" role="group" aria-label="Body weight">
-            {bodyFont.variants.map(w => (
-              <button
-                key={w}
-                type="button"
-                className={bodyW === w ? 'fpr-weight fpr-weight--on' : 'fpr-weight'}
-                aria-pressed={bodyW === w}
-                onClick={() => {
-                  setBodyW(w)
-                  setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
-                }}
-              >
-                {w}
-              </button>
-            ))}
-          </div>
-
-          <label className="seg-label" htmlFor="fpr-text">Preview text</label>
-          <input
-            id="fpr-text"
-            className="fpr-input"
-            type="text"
-            value={previewText}
-            placeholder="Your own words…"
-            maxLength={90}
-            spellCheck="false"
-            onChange={e => setPreviewText(e.target.value)}
-          />
-          <p className="typ-hint">
-            Brand words behave differently from a pangram — try the real headline
-            before you commit to a face.
-          </p>
-
-          <button type="button" className="fpr-shuffle" onClick={shuffle}>
-            <ShuffleIcon size={14} />
-            Shuffle the heading
-          </button>
-          <button type="button" className="fpr-handoff" onClick={openInTypeScale}>
-            Build a scale from this pair &rarr;
-          </button>
-        </section>
-
-        {/* ── Specimen + suggestions ── */}
-        <section className="card fpr-panel fpr-output" aria-labelledby="fpr-output-title">
-          {/* THE HEADING AND ITS BLURB ARE GONE FROM SIGHT. Founder, 2026-09-14:
-              "remove this text its not needed it takes up space again its
-              another AI thing."
-
-              "Read the pairing" + "The two faces together, at the sizes and
-              weights they'll actually ship at" sat directly above a preview
-              that demonstrates precisely that, with a three-way switch naming
-              the three layouts underneath it. Ninety-six pixels explaining a
-              picture that is already on screen.
-
-              THE h2 STAYS IN THE DOCUMENT, sr-only, because this <section> is
-              aria-labelledby it — deleting it outright would leave the main
-              region of the page unnamed, and the page's outline would drop
-              from four headings to three with no replacement. Same shape as
-              /create/palette. */}
-          <h2 id="fpr-output-title" className="sr-only">Read the pairing</h2>
-
-          <div className="fpr-preset-switch" role="group" aria-label="Preview layout">
-            {PREVIEW_PRESETS.map(p => (
-              <button
-                key={p.id}
-                type="button"
-                className={preset === p.id ? 'fpr-preset-btn fpr-preset-btn--on' : 'fpr-preset-btn'}
-                aria-pressed={preset === p.id}
-                onClick={() => setPreset(p.id)}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="fpr-specimen" ref={varsRef(specimenVars)}>
-            {preset === 'article' && (
-              <article className="fpr-article">
-                {/* NO KICKER. Founder, 2026-09-14, striking "INTERFACE" off a
-                screenshot of this panel: "remove this text its such a common AI
-                trait". All three previews carried one — "Long-form", "Interface",
-                "Letterforms" — each restating the preset ALREADY SELECTED in the
-                switch directly above the panel, and the last one word-for-word.
-                A label that repeats the control that produced it is the tell. */}
-                <h3 className="fpr-h1">{headline}</h3>
-                <p className="fpr-lede">
-                  {sample || 'A heading face sets the tone; the body face has to survive four hundred words of it.'}
-                </p>
-                <h4 className="fpr-h2">{sample || 'Where the pairing earns its keep'}</h4>
-                <p className="fpr-body">{bodyText}</p>
-              </article>
-            )}
-
-            {preset === 'product' && (
-              <div className="fpr-product">
-                    <h3 className="fpr-h1">{headline}</h3>
-                <p className="fpr-body">{sample || 'Short body copy, buttons and labels — the register most interfaces actually live in.'}</p>
-                <div className="fpr-product-actions">
-                  <span className="fpr-product-primary">Get started</span>
-                  <span className="fpr-product-secondary">See how it works</span>
+              {preset === 'product' && (
+                <div className="fpr-product">
+                  <h3 className="fpr-h1">{headline}</h3>
+                  <p className="fpr-body">{sample || 'Short body copy, buttons and labels — the register most interfaces actually live in.'}</p>
+                  <div className="fpr-product-actions">
+                    <span className="fpr-product-primary">Get started</span>
+                    <span className="fpr-product-secondary">See how it works</span>
+                  </div>
+                  <div className="fpr-product-stats">
+                    {[['—', 'Teams'], ['—', 'Rating'], ['—', 'Uptime']].map(([n, l]) => (
+                      <div key={l}>
+                        <strong className="fpr-h2">{n}</strong>
+                        <span className="fpr-body">{l}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="fpr-product-stats">
-                  {[['12k', 'Teams'], ['4.9', 'Rating'], ['99.9%', 'Uptime']].map(([n, l]) => (
-                    <div key={l}>
-                      <strong className="fpr-h2">{n}</strong>
-                      <span className="fpr-body">{l}</span>
-                    </div>
-                  ))}
+              )}
+
+              {preset === 'specimen' && (
+                <div className="fpr-specimen-raw">
+                  <p className="fpr-h1">{sample || 'Aa Bb Cc'}</p>
+                  <p className="fpr-glyphs fpr-glyphs--heading">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+                  <p className="fpr-glyphs fpr-glyphs--heading">abcdefghijklmnopqrstuvwxyz 0123456789</p>
+                  <p className="fpr-glyphs">{sample || PANGRAM}</p>
+                  <p className="fpr-body">{bodyText}</p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          </section>
 
-            {preset === 'specimen' && (
-              <div className="fpr-specimen-raw">
-                    <p className="fpr-h1">{sample || 'Aa Bb Cc'}</p>
-                <p className="fpr-glyphs fpr-glyphs--heading">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
-                <p className="fpr-glyphs fpr-glyphs--heading">abcdefghijklmnopqrstuvwxyz 0123456789</p>
-                <p className="fpr-glyphs">{sample || PANGRAM}</p>
-                <p className="fpr-body">{bodyText}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="fpr-suggest">
-            <div className="fpr-section-head fpr-section-head--sub">
-              <div>
-                <h2>Body faces that work under {headingFont.family}</h2>
-                <p>Scored on popularity and weight range, filtered by what actually contrasts with a {headingFont.category} heading.</p>
-              </div>
+          <section className="fpr-suggest" aria-labelledby="fpr-suggest-title">
+            <div className="fpr-section-head">
+              <h2 id="fpr-suggest-title">Body faces that work under {headingFont.family}</h2>
+              <p>Scored on popularity and weight range, filtered by what actually contrasts with a {headingFont.category} heading.</p>
             </div>
 
             {suggesting ? (
@@ -668,20 +453,8 @@ export default function FontMatcher({ onCopy, toast }) {
                       <p className="fpr-card-body">
                         {font.family} carries the body copy — {PANGRAM.toLowerCase()}.
                       </p>
-                      {/* THE REASON IS ON DEMAND, NOT ALWAYS ON. Founder's
-                          choice, 2026-09-14: "card previews the pairing, reason
-                          on hover/expand".
-
-                          It is what makes this tool more than a font list, so
-                          it is NOT deleted — but printed on every card it was
-                          the tallest thing in each one, and the grid is the
-                          second of three stacked sections under a preview that
-                          should dominate. A <details> keeps the words one click
-                          away, keeps them in the DOM for a screen reader and
-                          for find-in-page, and needs no JavaScript or state.
-
-                          `fpr-card-why` rather than a bare <summary> marker so
-                          the affordance reads as a control at 11.5px. */}
+                      {/* The reason is one click away rather than always on:
+                          the card previews the pairing, the details say why. */}
                       <details className="fpr-card-why">
                         <summary>Why this pairs</summary>
                         <p className="fpr-card-reason">{reason}</p>
@@ -691,72 +464,113 @@ export default function FontMatcher({ onCopy, toast }) {
                           {font.family}
                           <em>{font.category} · {font.variants.length}w</em>
                         </span>
-                        <button
-                          type="button"
+                        <ToolButton
                           className="fpr-card-apply"
                           onClick={() => applyPair(font)}
                           aria-pressed={active}
                         >
                           {active ? 'In use' : 'Use this pair'}
-                        </button>
+                        </ToolButton>
                       </div>
                     </li>
                   )
                 })}
               </ul>
             )}
-          </div>
+          </section>
 
-          <div className="fpr-delivery">
-            <div className="fpr-section-head fpr-section-head--sub">
-              <div>
-                <h2>Prepare the handoff</h2>
-                <p>One import and one block of CSS — both families at the weights you chose.</p>
-              </div>
+          <section className="fpr-delivery" aria-labelledby="fpr-delivery-title">
+            <div className="fpr-section-head">
+              <h2 id="fpr-delivery-title">Prepare the handoff</h2>
+              <p>One import and one block of CSS — both families at the weights you chose.</p>
             </div>
-            <div className="fpr-code-actions">
-              <button type="button" className="fpr-copy-all" onClick={copyImport}>Copy font import</button>
-              <button type="button" className="fpr-copy-primary" onClick={() => onCopy?.(cssExport)}>Copy CSS</button>
-            </div>
-            <pre id="fpr-export" className="fpr-export" tabIndex="0"><code>{cssExport}</code></pre>
-
-            {/* Copying is free; keeping is the paid step. Founder decision
-                2026-09-05: browsing is free, saving is Pro — and the gate is
-                the shared project slot the colour tools already use, not a
-                second scheme. Everything above this line works signed out. */}
+            <pre id="fpr-export" className="tl-code fpr-export" tabIndex={0} aria-label="CSS for this pair"><code>{cssExport}</code></pre>
+            {/* Copying is free; keeping the pair in a project is the step
+                that asks for an account. */}
             <div className="fpr-keep">
               <SaveTypeSystem
                 gate="type-save-font-pair"
                 label="this pairing"
-                summary={headingFont && bodyFont
-                  ? `${headingFont.family} ${headingW} for headings, ${bodyFont.family} ${bodyW} for body.`
-                  : ''}
+                summary={`${headingFont.family} ${headingW} for headings, ${bodyFont.family} ${bodyW} for body.`}
                 toast={toast}
               />
               <p className="fpr-keep-note">
                 Keeps both families and their weights with the project’s palette and type scale.
               </p>
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </ToolMain>
 
-      <nav className="fpr-more" aria-label="More typography tools">
-        <div>
-          <span className="fpr-more-kicker">Continue your typography system</span>
-          <strong>Two faces chosen. Now give them sizes that hold up.</strong>
-        </div>
-        <div className="fpr-more-links">
-          <NavLink to="/create/type-scale" className="fpr-more-link">Build a type scale &rarr;</NavLink>
-          <NavLink to="/create/font-gallery" className="fpr-more-link">Browse the font gallery &rarr;</NavLink>
-          <NavLink to="/create/palette" className="fpr-more-link">Build a colour palette &rarr;</NavLink>
-        </div>
-      </nav>
+        {/* ── Controls ── */}
+        <ToolPanel label="Font Pair controls" className="fpr-panel fpr-config">
+          <ToolSection>
+            <FontPicker
+              label="Heading family"
+              intent="heading"
+              fonts={catalog}
+              value={headingFont}
+              onChange={chooseHeading}
+            />
+            {weightPills(headingFont, headingW, (w) => {
+              setHeadingW(w)
+              setFonts({ heading: { family: headingFont.family, weight: w, category: headingFont.category } })
+            }, 'Heading weight')}
+          </ToolSection>
 
-      {/* Step 2 of the guided UI-kit flow (colour → fonts → type scale → icons).
-          `fonts` is the id in UIKIT_STEPS; the old page passed `fontpairs`,
-          which matched nothing and made this look like the last step. */}
+          <ToolSection>
+            {/* The wand takes the first suggestion, the same ranking the cards
+                show, so the two can never name different winners. Disabled,
+                not hidden, until there is a suggestion to apply. */}
+            <div className="fpr-bodyrow">
+              <FontPicker
+                label="Body family"
+                fonts={catalog}
+                value={bodyFont}
+                onChange={chooseBody}
+              />
+              <ToolButton
+                icon="magic-wand"
+                className="fpr-wand"
+                onClick={() => { if (suggestions[0]) applyPair(suggestions[0].font) }}
+                disabled={!suggestions.length}
+                title={suggestions.length
+                  ? `Use ${suggestions[0].font.family}, the best match for ${headingFont.family}`
+                  : 'No suggestions yet'}
+                aria-label={suggestions.length
+                  ? `Pick a body face automatically: use ${suggestions[0].font.family} with ${headingFont.family}`
+                  : 'Pick a body face automatically — no suggestions yet'}
+              >
+                Auto
+              </ToolButton>
+            </div>
+            {weightPills(bodyFont, bodyW, (w) => {
+              setBodyW(w)
+              setFonts({ body: { family: bodyFont.family, weight: w, category: bodyFont.category } })
+            }, 'Body weight')}
+          </ToolSection>
+
+          <ToolSection>
+            <label className="tl-sec-label" htmlFor="fpr-text">Preview text</label>
+            <input
+              id="fpr-text"
+              className="fpr-input"
+              type="text"
+              value={previewText}
+              placeholder="Your own words…"
+              maxLength={90}
+              spellCheck="false"
+              onChange={e => setPreviewText(e.target.value)}
+            />
+            <p className="fpr-hint">
+              Brand words behave differently from a pangram — try the real headline
+              before you commit to a face.
+            </p>
+          </ToolSection>
+        </ToolPanel>
+      </ToolGrid>
+
+      {/* Step 2 of the guided UI-kit flow (colour → fonts → type scale → icons). */}
       <UIKitGuide step="fonts" />
-    </div>
+    </>,
   )
 }

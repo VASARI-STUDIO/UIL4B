@@ -194,9 +194,9 @@ for (const rung of RUNGS) {
       await cta.focus()
       await expect(cta).toBeFocused()
       await page.keyboard.press('Enter')
-      await expect(rung.wall === 'account'
-        ? page.locator('[role="dialog"]')
-        : page.locator('[role="dialog"]').filter({ hasText: 'The full gradient library' })).toBeVisible()
+      // The Pro step goes to /plans.
+      if (rung.wall === 'account') await expect(page.locator('[role="dialog"]')).toBeVisible()
+      else await expect(page).toHaveURL(/\/plans$/)
     })
 
     test('the placeholders carry no payload, no control and no wrong price', async ({ page }) => {
@@ -205,8 +205,14 @@ for (const rung of RUNGS) {
       // "Pro", and the next gradients are not Pro's — they come with a free
       // account. At the free rung the pill is true and the three are back.
       await expect(cards).toHaveCount(rung.placeholders)
-      expect(await cards.locator('button, a, [tabindex]').count(),
-        'a placeholder carries a focusable control').toBe(0)
+      // Each placeholder carries ONE
+      // control: an "Upgrade to Pro" link to /plans, shown on hover/focus. It
+      // opens nothing and copies nothing of the item it stands for.
+      const controls = cards.locator('button, a, [tabindex]')
+      expect(await controls.count(), 'each placeholder carries exactly one control').toBe(rung.placeholders)
+      for (let i = 0; i < rung.placeholders; i++) {
+        await expect(controls.nth(i)).toHaveAttribute('href', '/plans')
+      }
       const painted = await cards.locator('*').evaluateAll(
         (els) => els.map((el) => getComputedStyle(el).backgroundImage).join(' ').toUpperCase())
       expect(TELLTALE.filter((hex) => painted.includes(hex)),

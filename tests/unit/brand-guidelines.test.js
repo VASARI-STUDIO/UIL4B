@@ -289,7 +289,9 @@ test('the paywall names the document the user clicked, not the other one', () =>
   // The gate expression itself is pinned by tests/unit/plans-truth.test.js. What
   // is asserted here is that the COPY behind it is keyed per format — one shared
   // modal would describe a token manual to somebody buying a brand book.
-  assert.match(code, /\.\.\.PRO_GATE\[format\]/, 'the upgrade modal no longer reads its copy per format')
+  // The wall links to /plans instead of raising the modal, so what is keyed per format is the gate id it
+  // reports — which is the half of this test that still means something.
+  assert.match(code, /PRO_GATE\[format\]\?\.gate/, 'the export wall no longer reports its gate per format')
   for (const f of proOnlyFormats()) {
     assert.match(code, new RegExp(`\\n\\s{2}${f.id}: \\{`),
       `PRO_GATE has no entry for the Pro format "${f.id}" — clicking it opens an undefined modal`)

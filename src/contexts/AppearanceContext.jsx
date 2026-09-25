@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { onAccountApplied } from '../utils/accountEvents'
 
 const AppearanceContext = createContext()
 const STORAGE_KEY = 'vs-appearance'
@@ -75,6 +76,10 @@ export function AppearanceProvider({ children }) {
   }, [])
 
   // Consumers get a plain boolean; the third state stays inside this file.
+  // Follows the account: re-read when the account's
+  // value lands in storage, so it shows without a reload.
+  useEffect(() => onAccountApplied([STORAGE_KEY], () => setState(load())), [])
+
   const reducedMotion = state.reducedMotion ?? osReduce
   const resolved = { ...state, reducedMotion }
 

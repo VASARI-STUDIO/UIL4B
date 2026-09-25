@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { FontCatalogLoading, FontCatalogNotice } from '../components/FontCatalogState'
-import LibraryToolbar from '../components/library/LibraryToolbar'
-import LibraryFilterGroup from '../components/library/LibraryFilterGroup'
+import LibrarySearch from '../components/library/LibrarySearch'
 import LibraryGrid from '../components/library/LibraryGrid'
 import LibraryCard from '../components/library/LibraryCard'
 import LibraryEmpty from '../components/library/LibraryEmpty'
 import useModalDialog from '../hooks/useModalDialog'
+import {
+  ToolLayout, ToolButton, ToolPills, ToolSelect,
+} from '../components/tool/ToolLayout'
 import { FontAboutPanel, FontDossierTabs, FontExamplesPanel, FontInUsePanel } from '../components/FontDossier'
 import { useFontCatalog } from '../hooks/useFontCatalog'
 import { useProject } from '../contexts/ProjectContext'
@@ -24,8 +26,7 @@ import '../styles/deferred/colour.css'
 import '../styles/deferred/library.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/deferred/type.css'
-// This page's own Spectrum sheet. Rooted at .fg-page, so it outranks the
-// four shared sheets above however the chunk CSS is ordered.
+// The page's own sheet, scoped under `.fg-page`, the page root.
 import '../styles/pages/font-gallery.css'
 
 // Font Gallery — the standalone /create/font-gallery page. Browse the Google Fonts
@@ -279,56 +280,6 @@ function GalleryCard({ font, rank, onOpen, inCompare, onToggleCompare, previewTe
         </span>
       ) : null}
     />
-  )
-}
-
-/* ── Page header ───────────────────────────────────────────────────────────── */
-
-// One header for every state of the page. The loading branch renders it too, so
-// the Gallery never blinks out of existence and back while the catalogue
-// resolves.
-//
-// WHAT WAS REMOVED HERE, AND WHY — founder marked TWO elements of this exact
-// header "AI" (#surface-headers-read-as-ai):
-//
-//   • THE EYEBROW ("Discover / Typography"). A decorative taxonomy path in
-//     letter-spaced mono caps, sitting directly above an <h1> that says the
-//     same thing. It was also WRONG: this page lives at /create/font-gallery,
-//     and the eyebrow announced "Discover". No browse catalogue on Mobbin
-//     carries one — GoDaddy's Font Library opens on a real back control plus
-//     the title, Hume AI's and ElevenLabs' voice libraries open on the title
-//     and their tabs. Hierarchy is expressed by a control you can press, not
-//     by a label you cannot.
-//
-//   • THE THREE-UP FIGURE STRIP (families / classifications / weights). The
-//     standard generated-landing motif, and it measured the CATALOGUE rather
-//     than helping anyone choose a typeface. Two of the three figures were
-//     empty on inspection: "classifications" counted the filter tabs rendered
-//     immediately below it, and "weights to preview" is not a number a visitor
-//     can act on. The one figure that does work — how much type there is to
-//     search — moved into the search placeholder, which is where Readymag puts
-//     it ("Search 1638 fonts"): the same number, now scoping the search you are
-//     about to run instead of decorating a masthead.
-//
-// The pair link is no longer in the top-right corner. See `.fg-hero-cta` in
-// global.css for that argument; in short, it is the page's onward action and
-// it now sits under the copy that motivates it, as a real button.
-function GalleryHero() {
-  return (
-    <header className="fg-hero fg-hero--premium">
-      <div className="fg-hero-copy">
-        <h1>Font<br />Gallery</h1>
-        <div className="fg-hero-intro">
-          <p>
-            A live catalogue for choosing type with confidence. Test your own words,
-            compare families side by side, then take the winner into a real pairing.
-          </p>
-          <NavLink to="/create/font-pair" className="btn fg-hero-cta">
-            Build a font pair <span aria-hidden="true">↗</span>
-          </NavLink>
-        </div>
-      </div>
-    </header>
   )
 }
 
@@ -884,23 +835,102 @@ export default function FontGallery({ onCopy, toast }) {
     navigate('/create/type-scale')
   }, [navigate, setFonts, toast])
 
-  // The workbench is still withheld until the catalogue resolves — half-working
-  // filters over an empty list are worse than none — but the header and the row
-  // geometry are not, so the page has an identity and a shape from first paint.
-  if (status === 'loading') {
+  const ready = status !== 'loading'
+  const sizeControl = (
+    <label className="fg-size">
+      <span className="fg-size-k">Size</span>
+      {/* The ceiling is the reserved sample box, not a round number: a 72px
+          face needs ~84px of ascent plus descent inside its 92px line. */}
+      <input
+        type="range"
+        min="22"
+        max="72"
+        value={previewSize}
+        onChange={e => setPreviewSize(+e.target.value)}
+        aria-label="Specimen size"
+        aria-valuetext={`${previewSize} pixels`}
+      />
+      <span className="fg-size-v" aria-hidden="true">{previewSize}px</span>
+    </label>
+  )
+  const categoryPills = (
+    <ToolPills
+      label="Filter by category"
+      className="fg-cats"
+      options={CATS.map(c => ({ value: c.id, label: c.label }))}
+      value={category}
+      onChange={setCategory}
+    />
+  )
+  const sortSelect = (
+    <ToolSelect
+      label="Sort"
+      ariaLabel="Sort families"
+      value={sort}
+      options={SORTS.map(s => ({ value: s.id, label: s.label }))}
+      onChange={setSort}
+      disabled={!ready}
+    />
+  )
+
+  // Category, sort and size change what is shown and how; they sit on the row
+  // while it has room and move into the overflow (a sheet on a phone) when it
+  // does not. The row never wraps.
+  const items = [
+    { id: 'category', priority: 2, render: () => categoryPills, menu: () => categoryPills },
+    { id: 'sort', priority: 1, render: () => sortSelect, menu: () => sortSelect },
+    { id: 'size', priority: 0, render: () => sizeControl, menu: () => sizeControl },
+    { id: 'div', divider: true, align: 'end' },
+    {
+      id: 'pair',
+      priority: 3,
+      render: () => (
+        <ToolButton as={NavLink} to="/create/font-pair" icon="caret-right" className="fg-pair-link">
+          Build a font pair
+        </ToolButton>
+      ),
+      menu: { label: 'Build a font pair', icon: 'caret-right', onSelect: () => navigate('/create/font-pair') },
+    },
+  ]
+
+  // Search and the preview words: the two fields a visitor types into, at the
+  // head of the results.
+  const fields = (
+    <div className="fg-controls">
+      <LibrarySearch
+        value={query}
+        onChange={setQuery}
+        placeholder={searchPlaceholder}
+        label="Search font families"
+      />
+      <label className="fg-preview-field">
+        <span className="fg-preview-k">Preview text</span>
+        <input
+          type="text"
+          value={previewText}
+          maxLength={72}
+          spellCheck="false"
+          placeholder="Type something beautiful…"
+          onChange={e => setPreviewText(e.target.value)}
+        />
+      </label>
+    </div>
+  )
+
+  // The layout, the fields and the row geometry are withheld from nothing
+  // while the catalogue resolves; only the filters wait, so half-working
+  // filters never run over an empty list.
+  if (!ready) {
     return (
-      <div className="sec lib-surface fg-page">
-        <GalleryHero />
+      <ToolLayout className="fg-page lib-surface" title="Font Gallery" titleId="fg-title" items={items} overflowLabel="Filters" overflowIcon="sliders-horizontal">
         <FontCatalogLoading label="Opening the Font Gallery" />
         <SkeletonRows />
-      </div>
+      </ToolLayout>
     )
   }
 
   return (
-    <div className="sec lib-surface fg-page">
-      <GalleryHero />
-
+    <ToolLayout className="fg-page lib-surface" title="Font Gallery" titleId="fg-title" items={items} overflowLabel="Filters" overflowIcon="sliders-horizontal">
       <FontCatalogNotice
         online={online}
         degraded={degraded}
@@ -909,95 +939,10 @@ export default function FontGallery({ onCopy, toast }) {
         count={galleryCatalog.length}
       />
 
-      {/* Search, filtering and the preview controls are one block and travel
-          together — pinning the search row while the category and sort controls
-          scrolled out from under it left half the toolbar stranded off screen.
-          It is now the shared Library toolbar, so this page, the Palette Library
-          and the Gradient Library are one implementation rather than three
-          lookalikes. Preview text and size sit on the toolbar's second row:
-          they change how results are RENDERED, not which results there are. */}
-      <LibraryToolbar
-        className="fg-controls"
-        search={{
-          value: query,
-          onChange: setQuery,
-          placeholder: searchPlaceholder,
-          label: 'Search font families',
-        }}
-        extra={(
-          <>
-            <label className="fg-command-text">
-              <span>Preview text</span>
-              <input
-                value={previewText}
-                maxLength={72}
-                spellCheck="false"
-                placeholder="Type something beautiful…"
-                onChange={e => setPreviewText(e.target.value)}
-              />
-            </label>
-            <label className="fg-command-size">
-              <span>Size</span>
-              {/* Ceiling is the reserved sample box, not a round number: the
-                  slider must never offer a size the geometry cannot honour, or
-                  the row clips its own descenders rather than reflow. The box
-                  grew with the row (68px → 92px), so the ceiling grows with it:
-                  a 72px face needs ~1.17em of ascent plus descent, which is 84px
-                  inside a 92px line. */}
-              <input type="range" min="22" max="72" value={previewSize} onChange={e => setPreviewSize(+e.target.value)} />
-              <strong>{previewSize}px</strong>
-            </label>
-          </>
-        )}
-      >
-        <LibraryFilterGroup
-          label="Filter by category"
-          triggerLabel="Category"
-          value={category}
-          onChange={setCategory}
-          options={CATS}
-        />
-        <LibraryFilterGroup
-          label="Sort families"
-          triggerLabel="Sort"
-          value={sort}
-          onChange={setSort}
-          options={SORTS}
-        />
-      </LibraryToolbar>
+      {fields}
 
-      {/* THE RESULTS WERE IN NO LANDMARK AT ALL.
-
-          Measured 2026-09-15 on the built preview at 1440x900, signed out,
-          walking Chrome's accessibility tree from the root through childIds
-          (Accessibility.getFullAXTree; the flat array is not in document
-          order). /create/font-gallery reported exactly four landmarks —
-          navigation("Primary") | main | navigation("More typography tools") |
-          contentinfo | navigation("Footer") — with nothing naming content, on
-          a page carrying 24 result cards, 88 controls and ONE heading in the
-          whole document. A reader moving by landmark found the chrome and the
-          cross-links to other tools, and never the gallery.
-
-          It was also the odd one out among its own siblings: /create/tint
-          reports three regions, /create/font-pair two, /create/gradient two
-          and a complementary. Four of the eight Create tools named their
-          content and four did not.
-
-          THE SECTION WRAPS THE COUNT AND BOTH ARMS, not just the populated
-          one. A <section aria-labelledby> around only the grid vanishes from
-          the landmark list the moment a filter empties it — the exact fault
-          fixed on /discover/palettes — so the empty state would lose the only
-          landmark describing the results at precisely the moment a reader
-          needs to find out why there are none. Searching "zzzzqqq" now moves
-          the list from region("77 families") to region("0 families matching
-          “zzzzqqq”") instead of from one region to none.
-
-          NAMED FROM THE COUNT LINE THAT WAS ALREADY THERE. It is derived from
-          the filtered array, so the landmark states how many families are
-          inside it and stays true as the filters move; no sentence was
-          written for this. The page has no second heading to borrow, and
-          inventing one is the founder's call, not this lane's — filed in
-          pipeline.js. */}
+      {/* The results are a region named by the live count line, so it stays
+          in the landmark list in the empty state too. */}
       <section className="fg-results" aria-labelledby="fg-count">
         <p className="fg-count" id="fg-count" aria-live="polite">
           {filtered.length.toLocaleString()} famil{filtered.length === 1 ? 'y' : 'ies'}
@@ -1104,18 +1049,6 @@ export default function FontGallery({ onCopy, toast }) {
           onSendToScale={sendToScale}
         />
       )}
-
-      <nav className="fg-more-nav" aria-label="More typography tools">
-        <div>
-          <span className="fg-more-kicker">Continue your typography system</span>
-          <strong>Found a family? Give it a partner and a set of sizes.</strong>
-        </div>
-        <div className="fg-more-links">
-          <NavLink to="/create/font-pair" className="fg-more-link">Pair two families &rarr;</NavLink>
-          <NavLink to="/create/type-scale" className="fg-more-link">Build a type scale &rarr;</NavLink>
-          <NavLink to="/create/palette" className="fg-more-link">Build a colour palette &rarr;</NavLink>
-        </div>
-      </nav>
-    </div>
+    </ToolLayout>
   )
 }

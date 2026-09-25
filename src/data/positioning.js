@@ -16,28 +16,24 @@
 // when a surface types a competing one. `tests/unit/positioning-truth.test.js`
 // is that test.
 //
-// ── The lines below are the founder's, verbatim ─────────────────────────────
+// ── The positioning lines, verbatim ─────────────────────────────────────────
 //
-// Given 2026-09-07 in his own messages. The ONLY edits applied are the two a
-// proofreader would make and nothing else: "your" → "you're", and sentence
-// case with a closing full stop. No tightening, no re-ordering, no synonyms.
-// If a line reads oddly, that is his voice and it stays — he asked for "real
-// australian style english to sound like me not an AI written statement", and
-// an agent smoothing these sentences is exactly the failure that request names.
+// The ONLY edits applied to the source phrases are the two a proofreader would
+// make and nothing else: "your" → "you're", and sentence case with a closing
+// full stop. No tightening, no re-ordering, no synonyms. The voice is
+// deliberately plain Australian English; if a line reads oddly, it stays.
 //
-// DO NOT ADD A LINE TO THIS ARRAY. It is not a copy deck an agent tops up; it
-// is a record of what the founder said. A new claim needs him to say it.
-// `docs/reference/positioning.md` carries the same four lines as prose and is
-// the doc-authority owner; this module is the machine-readable copy of them.
+// DO NOT ADD A LINE TO THIS ARRAY. It is not a copy deck to top up; a new line
+// is new approved copy, not an edit.
 
 /**
- * @typedef {object} FounderLine
+ * @typedef {object} PositioningLine
  * @property {string} id     stable key, so a surface names WHICH line it uses
  * @property {string} text   the sentence, as it renders
- * @property {string} source the founder's raw phrase, before the two edits
+ * @property {string} source the raw phrase, before the two edits
  */
 
-/** @type {readonly FounderLine[]} */
+/** @type {readonly PositioningLine[]} */
 export const VALUE_PROPOSITION = Object.freeze([
   Object.freeze({
     id: 'forget-the-app-name',
@@ -59,23 +55,12 @@ export const VALUE_PROPOSITION = Object.freeze([
     text: "All the design tools you're constantly searching for, in one unified location.",
     source: 'all the design tools your constantly searching for in one unified location',
   }),
-  // FOUNDER, 2026-09-14. He quoted `one-unified-location` back and said it
-  // "should be" this instead — first as "stop tirelessly searching those
-  // bookmark folders and trying to remember Site names of each Design Tool
-  // youre looking for", then, asked whether to use that verbatim or trim it,
-  // he wrote a shorter one himself: "no more trying to remember the names of
-  // the 1 tool websites."
+  // The successor to `one-unified-location` on the surfaces that displayed
+  // it. The phrasing is kept whole, including "1 tool websites"; only the
+  // leading capital is added.
   //
-  // His sentence, his phrasing, including "1 tool websites". Only the leading
-  // capital is added, the way the apostrophe was added to the line above.
-  //
-  // IT IS A NEW ENTRY RATHER THAN AN EDIT OF `one-unified-location`, and that
-  // is not tidiness. HERO_HEADLINE is spliced from that line — its marked run
-  // "in one unified location" is taken from it verbatim, and `cutFrom` names it
-  // so a test can check the trace. Rewriting the line in place would have
-  // silently invalidated a headline he approved on 2026-09-10 and broken the
-  // provenance the splice depends on. The old line stays as the hero's source;
-  // the surfaces that DISPLAYED it now show this one.
+  // IT IS A NEW ENTRY RATHER THAN AN EDIT OF `one-unified-location`, so any
+  // splice that names the older line in `cutFrom` still traces to real text.
   Object.freeze({
     id: 'one-tool-websites',
     text: 'No more trying to remember the names of the 1 tool websites.',
@@ -88,49 +73,33 @@ export const VALUE_PROPOSITION = Object.freeze([
  *  carry is a build failure, not a silently missing sentence. */
 export function line(id) {
   const found = VALUE_PROPOSITION.find((l) => l.id === id)
-  if (!found) throw new Error(`positioning: no founder line with id "${id}"`)
+  if (!found) throw new Error(`positioning: no positioning line with id "${id}"`)
   return found.text
 }
 
 // ── The hero headline ───────────────────────────────────────────────────────
 //
-// ASSEMBLED, NOT WRITTEN — AND APPROVED BY THE FOUNDER ON 2026-09-10.
+// The front door's h1 is the headline drawn in the Spectrum design
+// ("UIL4B - Spectrum.dc.html", the hero). "kit" is right here, because kits
+// are what the product EXPORTS. It is not a splice of the positioning lines
+// above; it is the design's sentence as drawn, so `cutFrom` is empty and
+// `source` names where it comes from.
 //
-// The founder chose "build one from my words only" over an agent draft, so this
-// headline is a splice of two of the lines above and contains no word that is
-// not in one of them:
+// DO NOT REWORD IT. `tests/unit/positioning-truth.test.js` pins the exact
+// string, so an edit here fails the build until the pin is moved with it.
 //
-//   "Build and export UI and brand design kits"  ← build-and-export, verbatim
-//                                                  head of the sentence
-//   "in one unified location"                    ← one-unified-location,
-//                                                  verbatim tail
-//
-// The comma between them is punctuation, not a word. Nothing else was added,
-// and no synonym was substituted.
-//
-// HE READ IT AND SAID SHIP IT, 2026-09-10. It was put to him beside the two
-// phrases it was cut from, and the answer was yes. So this is no longer an
-// agent's proposal waiting on him — it is his line, and it is the first
-// sentence a visitor reads.
-//
-// DO NOT REWORD IT WITHOUT HIM. Not a tightening, not a synonym, not a comma.
-// The only replacement that would not need asking him again is another splice
-// of these same founder lines, and even that changes a sentence he has
-// personally approved. `tests/unit/positioning-truth.test.js` pins the exact
-// string, so an edit here fails the build until somebody moves the pin — which
-// is the moment to go and ask.
-//
-// The marked run is the highlight the page paints (`<mark class="home-mark">`)
-// and the one `--hi` element in the hero viewport — design-language-v2.md
-// budgets at most one per viewport, and scripts/og-cards.mjs throws if the h1
-// stops highlighting a phrase, because the share card paints the same mark.
+// ONE SOURCE, THREE READERS: the landing (via src/components/spectrum/
+// spectrumHero.js), the served `/` shell (scripts/home-shell.mjs) and the share
+// card (scripts/og-cards.mjs). The marked run is the one the page paints in the
+// accent and the share card highlights; og-cards throws if there is none.
 export const HERO_HEADLINE = Object.freeze({
-  lead: 'Build and export UI and brand design kits,',
-  mark: 'in one unified location',
+  lead: 'Build and export UI and brand kits from',
+  mark: 'one place',
   tail: '.',
-  /** The ids this line was cut from, so the trace is checkable by a test
-   *  rather than only asserted in a comment. */
-  cutFrom: Object.freeze(['build-and-export', 'one-unified-location']),
+  /** Where the sentence comes from, so a test can check the trace. */
+  source: 'UIL4B - Spectrum.dc.html (hero h1)',
+  /** Positioning lines it was spliced from — none: it is the design's sentence whole. */
+  cutFrom: Object.freeze([]),
 })
 
 /** The headline as one plain string — for tests, share cards and llms.txt. */
@@ -144,35 +113,18 @@ export const heroHeadlineText = () =>
 // module (rather than in each page) is what lets positioning-truth.test.js
 // check every surface against the same table.
 export const SURFACE_LINE = Object.freeze({
-  // The hero's sub-line, under the assembled headline. The headline says what
-  // you get; this says what stops. Chosen over `forget-the-app-name` because
-  // the hero already names the product's output above it, and the bookmark
-  // sentence is the one that describes the visitor's current afternoon.
-  homeHeroSub: 'bookmark-folders',
-  // /plans opens on the outcome the money buys, which is the build-and-export
-  // sentence — the only one of the four that names a deliverable.
-  plansFraming: 'build-and-export',
+  // `homeHeroSub` is gone: the landing's sub-line is its own sentence
+  // (SPECTRUM_HERO_SUB in components/spectrum/spectrumHero.js), and the share
+  // card reads it from there.
+  // `plansFraming` is gone: /plans renders the pricing screen's own heading
+  // and sub-line, and the landing no longer carries a pricing section.
   // /help greets somebody who arrived looking for a specific tool, which is
   // precisely what `forget-the-app-name` is about.
   helpOpening: 'forget-the-app-name',
   // llms.txt is read by a machine deciding what this product IS.
   llmsSummary: 'build-and-export',
-  // The homepage tools section, on the founder's 2026-09-07 instruction that
-  // the heading should read "more something like" this line.
-  toolsSectionHeading: 'one-tool-websites',
-  // `homeExportHeading` WAS HERE and it is gone, 2026-09-18. It named the
-  // homepage export section's heading, rendered by HomeExportKit.jsx and passed
-  // down from Home.jsx; the founder replaced that whole page with Spectrum, so
-  // both files were deleted and the mapping had no surface left to describe.
-  //
-  // NO FOUNDER LINE WAS TOUCHED. It pointed at `build-and-export`, which is
-  // still in VALUE_PROPOSITION above and is still read by `llmsSummary` and by
-  // the hero itself. A mapping with no consumer is the thing this module's own
-  // test calls "a promise the module makes and nothing keeps", so it goes
-  // rather than sits.
-  // /plans's closing band. It read "Build first. Upgrade when your workflow
-  // asks for it." over a "No trial clock on Free" reassurance hint — agent copy
-  // in the slot where the retired "No credit card required" line used to sit.
-  // The founder's own closing claim is the unified-location sentence.
-  plansClosing: 'one-tool-websites',
+  // No mapping for the landing's bench heading: it is the design's own line
+  // ("Say goodbye to bookmark folders."). No mapping for /plans's closing
+  // band either: the Pricing screen has none. A mapping with no consumer is
+  // "a promise the module makes and nothing keeps", so none is kept.
 })

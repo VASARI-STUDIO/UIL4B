@@ -39,7 +39,8 @@ import {
   proOnlyFormats,
   unbuiltFormats,
 } from '../../src/config/exportFormats.js'
-import { FREE_SAVE_LIMITS } from '../../src/config/plans.js'
+import * as PLAN_CONFIG from '../../src/config/plans.js'
+const { FREE_SAVE_LIMITS } = PLAN_CONFIG
 
 const read = (p) => fs.readFileSync(path.join(process.cwd(), p), 'utf8')
 const stripComments = (src) => src
@@ -47,19 +48,25 @@ const stripComments = (src) => src
   .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
   .replace(/^\s*\/\/.*$/gm, ' ')
 
-const PLANS = read('src/pages/Plans.jsx')
+const PLANS = read('src/pages/Pricing.jsx')
 const CHECKOUT = read('src/pages/Checkout.jsx')
+const PLAN_FACTS_SRC = read('src/config/planFacts.js')
+const PLANS_AND_FACTS = `${PLANS}
+${PLAN_FACTS_SRC}`
 const MODAL = read('src/components/ProUpgradeModal.jsx')
 const SETTINGS = read('src/pages/Settings.jsx')
 const PANEL = read('src/components/ExportPanel.jsx')
+// The one module every paid surface's benefit lines come from. It is itself a paid surface.
+const PLAN_FACTS = read('src/config/planFacts.js')
 
 // Every surface that sells Pro. A claim is only dangerous where money is being
 // asked for, so these are the files the format rules apply to.
 const PAID_SURFACES = [
-  ['Plans.jsx', PLANS],
+  ['Pricing.jsx', PLANS],
   ['Checkout.jsx', CHECKOUT],
   ['ProUpgradeModal.jsx', MODAL],
   ['Settings.jsx', SETTINGS],
+  ['planFacts.js', PLAN_FACTS],
 ]
 
 test('the export table is internally coherent — nothing is Pro without being built', () => {
@@ -99,11 +106,20 @@ test('the table still describes a real offer — the arithmetic is not vacuous',
 function sellingRegions(src) {
   const code = stripComments(src)
   const regions = []
-  // Plan feature lists, on /plans and in Settings' upgrade panel.
+  // Plan feature lists, in Settings' upgrade panel.
   for (const m of code.matchAll(/<ul className="sub-tier-list">([\s\S]*?)<\/ul>/g)) regions.push(m[1])
+  // /plans (src/pages/Pricing.jsx, the design's Pricing screen) renders its
+  // two cards from FREE_POINTS and PRO_POINTS — PRO_POINTS is caught by the
+  // PRO_ pattern below, FREE_POINTS here.
+  for (const m of code.matchAll(/const FREE_[A-Z_]+ = \[([\s\S]*?)\]/g)) regions.push(m[1])
   // The flat benefit arrays: Checkout's FEATURES and the upgrade modal's.
   for (const m of code.matchAll(/const [A-Z_]*FEATURES[A-Z_]* = \[([\s\S]*?)\]/g)) regions.push(m[1])
   for (const m of code.matchAll(/const PRO_[A-Z_]+ = \[([\s\S]*?)\]/g)) regions.push(m[1])
+  // The frozen lists in config/planFacts.js.
+  for (const m of code.matchAll(/const (?:PRO|FREE)_[A-Z_]+ = Object\.freeze\(\[([\s\S]*?)\]\)/g)) regions.push(m[1])
+  // A surface that takes its lines from planFacts sells what planFacts says, so
+  // its regions are planFacts' regions — read, not assumed.
+  if (src !== PLAN_FACTS && /from '\.\.\/config\/planFacts'/.test(src)) regions.push(...sellingRegions(PLAN_FACTS))
   return regions
 }
 
@@ -124,13 +140,13 @@ test('the selling regions this test scopes to actually exist', () => {
   // `length > 0` while claims in the renamed list had become invisible.
   // Partial blindness is the realistic failure, not total blindness.
   assert.ok(sellingRegions(PLANS).length >= 2,
-    'Plans.jsx yields fewer than two benefit lists — it sells two tiers, so one of them is no longer being read')
+    'Pricing.jsx yields fewer than two benefit lists — it sells two tiers, so one of them is no longer being read')
 
   // And the parser must actually be reaching the export claims, not just some
   // arbitrary list. At least one region has to name a real format.
   const known = EXPORT_FORMATS.map((f) => f.name)
   const plansRegions = sellingRegions(PLANS).join('')
-  assert.ok(known.some((n) => plansRegions.includes(n)) || /listNames|PRO_EXPORTS|FREE_EXPORTS/.test(plansRegions),
+  assert.ok(known.some((n) => plansRegions.includes(n)) || /listNames|PRO_EXPORTS|FREE_EXPORTS|PRO_EXPORT_NAMES|FREE_EXPORT_NAMES/.test(plansRegions),
     'no export claim is visible inside the parsed benefit lists — the format guard is reading the wrong region')
 })
 
@@ -179,28 +195,28 @@ test('the specific claim that shipped — "design JSON" — is gone from every p
   }
 })
 
-test('Plans.jsx derives its figures instead of typing them', () => {
+test('Pricing.jsx derives its figures instead of typing them', () => {
   // The page's own rule, enforced. Each of these must be IMPORTED, because each
   // one has a module that also drives the behaviour it describes.
   for (const symbol of ['AI_LIMITS', 'FREE_SAVE_LIMITS', 'COLOUR_SYSTEMS', 'BRAND_PALETTES']) {
     assert.match(PLANS, new RegExp(`import[^\\n]*\\b${symbol}\\b`),
-      `Plans.jsx no longer imports ${symbol} — a typed figure has replaced a derived one`)
+      `Pricing.jsx no longer imports ${symbol} — a typed figure has replaced a derived one`)
   }
   assert.match(PLANS, /from '\.\.\/config\/exportFormats'/,
-    'Plans.jsx no longer reads the export table, so its export claims are prose again')
+    'Pricing.jsx no longer reads the export table, so its export claims are prose again')
 
   const code = stripComments(PLANS)
 
   // The AI numbers must not be spelled out. These are the values that shipped
   // wrong once; a literal reappearing is the regression.
   for (const literal of ['1,000', '1000 AI']) {
-    assert.ok(!code.includes(literal), `Plans.jsx contains the literal ${literal}`)
+    assert.ok(!code.includes(literal), `Pricing.jsx contains the literal ${literal}`)
   }
 
   // The counts the page quotes must come from .length, never from a digit. If
   // someone hard-codes "7 of 37" and the arrays change, the page lies silently.
-  assert.ok(!/\b7 of 37\b/.test(code), 'Plans.jsx hard-codes the brand palette split')
-  assert.ok(!/\b2 of 8\b/.test(code), 'Plans.jsx hard-codes the colour system split')
+  assert.ok(!/\b7 of 37\b/.test(code), 'Pricing.jsx hard-codes the brand palette split')
+  assert.ok(!/\b2 of 8\b/.test(code), 'Pricing.jsx hard-codes the colour system split')
   assert.match(code, /BRANDS_TOTAL|BRAND_PALETTES\.length/, 'the brand total is not derived')
   assert.match(code, /SYSTEMS_TOTAL|COLOUR_SYSTEMS\.length/, 'the colour system total is not derived')
 })
@@ -242,19 +258,70 @@ test('the free tier limits quoted on the page are the ones the product enforces'
   assert.equal(typeof FREE_SAVE_LIMITS.projects, 'number')
   assert.ok(FREE_SAVE_LIMITS.projects > 0, 'a cap of zero is not a tier this page can describe')
 
-  const code = stripComments(PLANS)
+  // The page's plan lines live in src/config/planFacts.js, so
+  // the page is read together with the module it quotes.
+  const code = stripComments(PLANS_AND_FACTS)
 
-  // The page states where the wall is as "your Nth project". That sentence is
-  // only true if N is the cap plus one, so it is written as an expression.
-  assert.match(code, /FREE_SAVE_LIMITS\.projects \+ 1/,
-    'the paywall position is typed rather than computed from the cap')
+  // The design's Pricing screen states the cap itself ("3 saved projects",
+  // and the comparison's Saved projects row) rather than the legacy page's
+  // "your Nth project". The cap must be read from the config in both places,
+  // never typed.
+  const capReads = (code.match(/FREE_SAVE_LIMITS\.projects/g) || []).length
+  assert.ok(capReads >= 2,
+    `the free project cap is read from FREE_SAVE_LIMITS ${capReads} time(s); the plan card and the comparison both quote it`)
+  assert.ok(!/\b\d+ saved projects\b/.test(code), 'the free project cap is typed as a digit')
 
-  // Mutation testing caught the weakness in the assertion above: the page says
-  // "your Nth project" in THREE places, so hard-coding one of them left the
-  // expression present elsewhere and the suite green. Ban the typed ordinal
-  // outright — that is the thing that actually goes stale when the cap moves.
+  // A typed ordinal paywall position ("your 4th project") is the thing that
+  // actually goes stale when the cap moves, so it stays banned outright.
   const ordinal = /\b\d+(?:st|nd|rd|th) project\b/.exec(code)
   assert.equal(ordinal, null,
-    `Plans.jsx hard-codes the paywall position as "${ordinal && ordinal[0]}" — `
+    `Pricing.jsx hard-codes the paywall position as "${ordinal && ordinal[0]}" — `
     + 'it must be computed from FREE_SAVE_LIMITS.projects, or it will contradict the cap the product enforces')
 })
+
+
+// ── The design's Pricing screen: the design's lines, with the facts put in ──────────
+//
+// /plans reproduces "UIL4B - Spectrum.dc.html". The design's copy carries claims the product does not make;
+// each was replaced by the real value, and these keep them out.
+test('/plans does not ship the design’s untrue claims', () => {
+  const code = stripComments(PLANS)
+  const banned = [
+    [/no card/i, 'the retired "no card" payment reassurance'],
+    [/version history/i, 'version history does not exist'],
+    [/OKLCH colour engine|OKLCH controls/i, 'there is no OKLCH engine; Pro opens colour systems'],
+    [/saved kits|unlimited kits/i, 'the limit is on projects, not "kits"'],
+    [/in two clicks/i, 'the design’s cancel answer describes a flow that does not exist'],
+    [/every export format/i, 'Free does not get every export format'],
+  ]
+  for (const [pattern, why] of banned) {
+    assert.ok(!pattern.test(code), `Pricing.jsx matches ${pattern}: ${why}`)
+  }
+})
+
+test('/plans derives the numbers inside the design’s sub-line', () => {
+  // "six times the AI generations, all eight colour systems" — both numbers
+  // are computed, and the multiple is only a fair "times" if it is whole.
+  assert.match(PLANS, /AI\.pro\.daily \/ AI\.free\.daily/, 'the AI multiple is typed rather than computed')
+  assert.match(PLANS, /numberWord\(SYSTEMS_TOTAL\)/, 'the colour-system count in the sub-line is typed')
+  assert.ok(!/\bsix times\b|\beight colour systems\b/.test(stripComments(PLANS)),
+    'the sub-line types a number the config owns')
+  const { AI_LIMITS } = PLAN_CONFIG
+  assert.ok(Number.isInteger(AI_LIMITS.pro.daily / AI_LIMITS.free.daily),
+    'Pro’s daily ceiling is no longer a whole multiple of Free’s; "N times the AI generations" would round a fact')
+})
+
+test('/plans offers only the cadences checkout accepts, from the one ladder', () => {
+  const code = stripComments(PLANS)
+  // The toggle's cadences come from planFacts' BILLING_OPTIONS, which is the
+  // purchasable ladder; the page must read that, not build its own.
+  assert.match(code, /\bBILLING_OPTIONS\b/, 'the billing toggle no longer reads BILLING_OPTIONS')
+  assert.match(stripComments(PLAN_FACTS_SRC), /PLAN_LADDER\.filter\(\(p\) => p\.checkoutPlan\)/,
+    'the billing toggle is no longer the purchasable ladder — a cadence with no checkout could be offered')
+  assert.ok(!/'quarterly'/.test(code), 'Pricing.jsx names quarterly directly')
+  // The prices are the live service's, never typed.
+  assert.match(code, /useProPrice\(\)/, 'the live price hook is gone')
+  // ($0 is the Free plan's price by definition, not a Stripe amount.)
+  assert.ok(!/\$(?:[1-9]|0\.)/.test(code.replace(/\$\{/g, '')), 'Pricing.jsx types a Pro dollar amount')
+})
+

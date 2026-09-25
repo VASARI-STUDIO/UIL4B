@@ -490,7 +490,7 @@ test('every selection on /create/aspect-ratio is announced, not just painted', a
 test('/create/aspect-ratio exposes its tool as a named region', async ({ page }) => {
   watch(page, 'someone jumping between landmarks with a screen reader')
   await go(page, '/create/aspect-ratio')
-  const region = page.getByRole('region', { name: 'Aspect & Resolution Calculator', exact: true })
+  const region = page.getByRole('region', { name: 'Aspect & Resolution', exact: true })
   await expect(region, 'the calculator is not a named landmark').toHaveCount(1)
   // POSITIVE CONTROL: the region must hold the tool, not merely the heading.
   await expect(region.locator('.arc-ratio-card').first()).toBeVisible()

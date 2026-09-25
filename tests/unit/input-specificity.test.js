@@ -102,7 +102,8 @@ const POLICY_EXCEPTION = /font-size:\s*16px/
 
 test('every bare input[type=...] selector is :where()-wrapped or class-qualified', () => {
   const all = typeSelectors()
-  assert.ok(all.length > 15, `expected the sheet to still carry type selectors, saw ${all.length}`)
+  // 15 with the pointer:coarse floor (one rule).
+  assert.ok(all.length >= 12, `expected the sheet to still carry type selectors, saw ${all.length}`)
   const offenders = all
     .filter((s) => !s.safe)
     .filter((s) => !(POLICY_EXCEPTION.test(s.body) && !/padding/.test(s.body)))

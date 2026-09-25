@@ -2,7 +2,7 @@
 //
 // Three separately-editable places describe what a user may do:
 //
-//   • src/pages/Plans.jsx            what the user is PROMISED
+//   • src/pages/Pricing.jsx            what the user is PROMISED
 //   • src/contexts/SubscriptionContext.jsx   what the client BELIEVES
 //   • api/_lib/plans.js              what the server ENFORCES  ← the only real one
 //
@@ -55,11 +55,11 @@ test('the pricing page quotes the numbers the server actually enforces', () => {
   // this asserts the absence of the literals that used to be typed in by hand.
   // "1,000 AI actions per day" was in three places on that page and true in
   // none of them.
-  const page = read('src/pages/Plans.jsx')
-  assert.ok(page.includes('AI_LIMITS'), 'Plans.jsx must derive its figures from AI_LIMITS')
+  const page = read('src/pages/Pricing.jsx')
+  assert.ok(page.includes('AI_LIMITS'), 'Pricing.jsx must derive its figures from AI_LIMITS')
   const shipped = stripComments(page)
   for (const stale of ['1,000', '1000 AI', '40 AI actions each day']) {
-    assert.ok(!shipped.includes(stale), `Plans.jsx still ships the retired figure "${stale}"`)
+    assert.ok(!shipped.includes(stale), `Pricing.jsx still ships the retired figure "${stale}"`)
   }
 })
 
@@ -78,7 +78,7 @@ test('the pricing page quotes the numbers the server actually enforces', () => {
 // therefore blind to an unused React component.
 const QUOTA_SURFACES = [
   'src/App.jsx',
-  'src/pages/Plans.jsx',
+  'src/pages/Pricing.jsx',
   'src/pages/Checkout.jsx',
   'src/pages/Onboarding.jsx',
   'src/pages/Settings.jsx',
@@ -97,9 +97,9 @@ test('the one-off tier is no longer offered for sale', () => {
   // The founder pulled it: a third billing tab whose checkout stayed disabled
   // pending a live Stripe price. Existing entitlements are still honoured by
   // planForUser — this only asserts it stopped being ADVERTISED.
-  const plans = stripComments(read('src/pages/Plans.jsx'))
-  assert.ok(!plans.includes("id: 'lifetime'"), 'Plans.jsx must not offer a lifetime billing option')
-  assert.ok(!/One-off/.test(plans), 'Plans.jsx must not advertise the One-off tier')
+  const plans = stripComments(read('src/pages/Pricing.jsx'))
+  assert.ok(!plans.includes("id: 'lifetime'"), 'Pricing.jsx must not offer a lifetime billing option')
+  assert.ok(!/One-off/.test(plans), 'Pricing.jsx must not advertise the One-off tier')
 })
 
 test('a monthly ceiling exists and is larger than a single day, on both plans', () => {
@@ -153,7 +153,7 @@ test('no plan copy may claim Pro buys a better AI model — it buys capacity', (
   assert.ok(freeModel && proModel, 'both plan model defaults must be readable')
   if (freeModel[1] !== proModel[1]) return   // they diverged; the claim is now fair
 
-  for (const file of ['src/pages/Plans.jsx', 'src/pages/AltTextGenerator.jsx']) {
+  for (const file of ['src/pages/Pricing.jsx', 'src/pages/AltTextGenerator.jsx']) {
     const text = stripComments(read(file)).toLowerCase()
     for (const claim of ['higher-quality model', 'better model', 'higher quality models', 'higher-quality models']) {
       assert.ok(!text.includes(claim),

@@ -117,18 +117,16 @@ test('quarterly is fully wired and still not offered for sale', () => {
   // same class of false claim about money as the wrong amount — which is what
   // index-html-pricing.test.js#"no tier that cannot reach checkout" enforces.
   //
-  // The founder chose test-mode-first on 2026-09-15. When the test-mode price
-  // exists and a checkout has been run through it, set `checkoutPlan` to
-  // 'quarterly' and delete this test. Do not delete it to make a red suite
-  // green — the thing it is protecting is a customer being charged for
-  // something that cannot be bought.
+  // Quarterly is offered. The live Stripe price: lookup key uil4b_pro_quarterly, US$18, recurring
+  // month × 3, on the Pro product — see the note on the ladder entry. The test
+  // stays, turned around: quarterly is offered, and the path it depends on is
+  // still whole. If any precondition below regresses, turn quarterly OFF.
   const quarterly = PLAN_LADDER.find((p) => p.id === 'quarterly')
-  assert.equal(quarterly.checkoutPlan, null,
-    'quarterly is now offered — confirm the Stripe price exists, then delete this test')
+  assert.equal(quarterly.checkoutPlan, 'quarterly',
+    'quarterly is no longer offered — if that is deliberate, restore the null switch and its note')
 
-  // The preconditions, asserted here too so that flipping the switch above
-  // cannot be done against a half-built path. If any of these has regressed,
-  // quarterly must NOT be turned on.
+  // The preconditions, asserted so that the switch above cannot stand on a
+  // half-built path.
   assert.ok(BILLING_INTERVALS.includes('quarterly'), 'quarterly can no longer reach create-checkout')
   assert.ok(PRICE_ENV_KEYS.quarterly, 'the quarterly price env key has gone')
   assert.equal(INTERVAL_COUNTS.quarterly, 3,

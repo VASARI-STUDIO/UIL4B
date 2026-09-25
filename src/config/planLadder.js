@@ -5,34 +5,22 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE AMOUNTS BELOW ARE DISPLAY FALLBACKS. THEY ARE NOT WHAT STRIPE CHARGES.
 //
-//     `approvedTotal` below is the founder-approved ladder — recorded in
-//     docs/reference/design-language-v2.md ("Deviations from the mock",
-//     2026-08-16) and re-approved as decision 2 of 2026-08-20 in CHANGELOG.md,
-//     both local-only since 2026-09-16: $7 monthly · $18 quarterly · $48 yearly.
+//     `approvedTotal` below is the approved ladder: $7 monthly · $18
+//     quarterly · $48 yearly.
 //
-//     SETTLED 2026-08-20: api/_lib/pricing.js used to disagree with this file —
-//     its DEFAULT_PRICES read monthly.usd 4.99 and yearly.usd 39.99 with no
-//     quarterly interval at all, so the same visitor could be shown either
-//     number. Its USD fallbacks are now this ladder, and quarterly has its
-//     DEFAULT_PRICES row, LOOKUP_KEYS entry and INTERVAL_MAP entry.
-//     tests/unit/price-ladder.test.js fails the build if they drift again.
+// api/_lib/pricing.js holds the same USD fallbacks; tests/unit/price-ladder.test.js fails if they differ.
 //
 //     Both files hold DISPLAY fallbacks. The amounts Stripe charges live in
 //     Stripe price objects (STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY, or the
-//     lookup keys), which are founder-configured in the dashboard and are not
-//     in this repository. Keeping the two in step is the founder's, tracked in
-//     docs/OWNER-ACTIONS.md — local-only since 2026-09-16, per .gitignore. The
-//     ladder below is the part a reader needs and it is all here.
+//     lookup keys), which are configured in the Stripe dashboard, not in this
+//     repository. The ladder below is the part a reader needs and it is all
+//     here.
 //
 //     Consequences, by design rather than by accident:
 //       1. Live prices WIN. When /api/get-prices returns an amount for an
 //          interval, that amount is displayed — we never advertise a number we
 //          do not charge. `approvedTotal` is only the pre-settle fallback.
 //       2. A tier with no `checkoutPlan` is NOT rendered by the upgrade modal.
-//          src/pages/Checkout.jsx only accepts plan=monthly|yearly|lifetime, so
-//          offering quarterly today would dead-end on "Invalid selection".
-//          Quarterly stays defined here so it lights up the moment a founder
-//          adds the Stripe price and the Checkout entry — nothing else changes.
 //       3. The "from $X/month" headline is COMPUTED from whatever is actually
 //          renderable, never typed. If the ladder changes, the headline follows.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,12 +32,12 @@ import { PRICE_SYMBOLS } from '../utils/currency.js'
 
 // `trialDays` MIRRORS api/_lib/pricing.js#TRIAL_DAYS, which is what Stripe is
 // actually told. Saying "start your free trial" over a plan that bills
-// immediately would be exactly the manufactured promise
-// docs/reference/growth-persuasion.md forbids, so the CTA reads the flag — and
-// a flag that disagrees with the server is the same lie with an extra step,
-// which is why tests/unit/trial-cadence.test.js compares the two tables.
+// immediately would be exactly the manufactured promise this ladder must
+// avoid, so the CTA reads the flag — and a flag that disagrees with the
+// server is the same lie with an extra step, which is why
+// tests/unit/trial-cadence.test.js compares the two tables.
 //
-// Founder, 2026-09-15: THE TRIAL IS EARNED BY THE CADENCE. Monthly bills today
+// THE TRIAL IS EARNED BY THE CADENCE. Monthly bills today
 // and says so; quarterly and yearly each get seven days. Yearly granted 7
 // before this change and grants 7 after it, so no promise already made moved.
 export const PLAN_LADDER = Object.freeze([
@@ -69,26 +57,16 @@ export const PLAN_LADDER = Object.freeze([
     cadence: 'billed every 3 months',
     months: 3,
     liveKey: 'quarterly',
-    // ONE FIELD IS THE SWITCH, and it is deliberately still null.
-    //
-    // Everything else quarterly needs was built on 2026-09-15 with the
-    // founder's approval for the gated payment files: BILLING_INTERVALS,
-    // PRICE_ENV_KEYS, the Checkout.jsx case, useProPrice.quarterlyTotal, the
-    // trial, and `interval_count` in setup-stripe so the price is a genuine
-    // three-month recurrence rather than $18 a month.
-    //
-    // What does NOT exist is the Stripe price itself, which lives in the
-    // dashboard. Setting this to 'quarterly' publishes a machine-readable
-    // Offer in index.html and puts the cadence in front of buyers, and today
-    // that Offer would be a claim about money nobody can act on: create-checkout
-    // would resolve no price and answer 503.
-    //
-    // He chose test-mode-first. So: create the price in Stripe TEST mode, run a
-    // checkout through it, then change this one field to 'quarterly'.
-    // docs/OWNER-ACTIONS.md carries the steps (local-only since 2026-09-16, not
-    // in this repository); tests/unit/price-ladder.test.js holds the line until
-    // then, and that test is here.
-    checkoutPlan: null,
+    // Quarterly is buyable. It relies on BILLING_INTERVALS, PRICE_ENV_KEYS,
+    // the Checkout.jsx case, useProPrice.quarterlyTotal, the trial, and
+    // `interval_count` in setup-stripe. The Stripe price has the lookup key
+    // `uil4b_pro_quarterly` and recurs { interval: 'month', interval_count: 3 },
+    // so it bills once a quarter. /api/get-prices resolves it the same way
+    // create-checkout does. Pro is granted by subscription status, not price id
+    // (api/_lib/plans.js planForSubscription), so a quarterly subscriber gets
+    // Pro exactly as a monthly or yearly one does.
+    // tests/unit/price-ladder.test.js keeps the preconditions pinned.
+    checkoutPlan: 'quarterly',
     approvedTotal: 18,
     trialDays: 7,
   }),

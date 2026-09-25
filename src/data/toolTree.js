@@ -41,7 +41,10 @@ export const CREATE_GROUPS = [
     desc: 'Icons and every emoji, copy-ready.',
     soon: false,
     tools: [
-      { id: 'icons', label: 'Icon Library', route: '/create/icons', soon: false },
+      // `views` are further routes of the same tool (a tab inside it). They are
+      // routed, prerendered and titled like the tool's own route, but are not
+      // separate tools: no nav row, no search entry, not in the tool count.
+      { id: 'icons', label: 'Icon Library', route: '/create/icons', views: ['/create/icons/groups'], soon: false },
       { id: 'emoji', label: 'Emoji Library', route: '/create/emoji', soon: false },
     ],
   },
@@ -368,10 +371,10 @@ const DISCOVER_SPEC = [
   // already written for the live page and is untouched.
   { id: 'inspiration', label: 'Inspiration', desc: 'Community-submitted UI systems — browse, save and submit your own.', route: '/community', soon: false },
   { id: 'community-prompts', icon: 'community-prompts', label: 'Prompt Library', desc: 'Ready-to-use prompts for UI, web design and marketing — a free selection for everyone, the full library with Pro.', route: '/discover/prompts', soon: false },
-  // Live as of this change. The 22 curated resources in discoverResources.js
+  // Live as of this change. The curated resources in discoverResources.js
   // have existed since Slice 2; only the page was missing, so this entry
   // pointed at /discover and said “Soon” while the content sat unrendered.
-  { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab, each with a way into the tool that finishes the job.', route: '/discover/resources', soon: false },
+  { id: 'curated', label: 'Curated Resources', desc: 'Hand-picked external tools that earn a tab.', route: '/discover/resources', soon: false },
   { id: 'collections', label: 'Collections', desc: 'Save and organise everything you find.', route: '/discover', soon: true },
 ]
 
@@ -744,7 +747,7 @@ export function createRoutes() {
   const seen = new Set()
   const out = []
   for (const g of CREATE_GROUPS) {
-    for (const r of [g.home, ...g.tools.map((t) => t.route)]) {
+    for (const r of [g.home, ...g.tools.flatMap((t) => [t.route, ...(t.views || [])])]) {
       const path = normalise(r)
       if (!seen.has(path)) {
         seen.add(path)
@@ -771,11 +774,16 @@ export function chromelessRoutes() {
 }
 
 // Which Create group owns a pathname (its category home or any tool route).
+// A tool owns its own route and any of its `views`.
+function toolOwns(tool, path) {
+  return normalise(tool.route) === path || (tool.views || []).some((v) => normalise(v) === path)
+}
+
 export function findCreateGroup(pathname) {
   const path = normalise(pathname)
   return (
     CREATE_GROUPS.find(
-      (g) => normalise(g.home) === path || g.tools.some((t) => normalise(t.route) === path),
+      (g) => normalise(g.home) === path || g.tools.some((t) => toolOwns(t, path)),
     ) || null
   )
 }
@@ -788,7 +796,7 @@ export function resolveTool(pathname) {
   const group = findCreateGroup(path)
   if (!group) return { group: null, tool: null, name: 'This tool', isHome: false }
   const isHome = normalise(group.home) === path
-  const tool = isHome ? null : group.tools.find((t) => normalise(t.route) === path) || null
+  const tool = isHome ? null : group.tools.find((t) => toolOwns(t, path)) || null
   const name = tool ? tool.label : group.label
   return { group, tool, name, isHome }
 }
@@ -798,7 +806,7 @@ export function routeLabel(pathname) {
   const path = normalise(pathname)
   for (const g of CREATE_GROUPS) {
     if (normalise(g.home) === path) return g.label
-    const t = g.tools.find((tool) => normalise(tool.route) === path)
+    const t = g.tools.find((tool) => toolOwns(tool, path))
     if (t) return t.label
   }
   return null

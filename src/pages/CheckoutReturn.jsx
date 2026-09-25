@@ -18,7 +18,6 @@ export default function CheckoutReturn() {
   const sessionId = params.get('session_id')
   // Missing session id is an error state from the start — no effect needed.
   const [state, setState] = useState(sessionId ? 'loading' : 'error') // loading | success | error
-  const [email, setEmail] = useState('')
   const [checkoutMode, setCheckoutMode] = useState('subscription')
   // A paid one-off whose entitlement hasn't landed yet must not be reported as
   // active — the payment is confirmed, the access is still settling.
@@ -39,7 +38,6 @@ export default function CheckoutReturn() {
             setState('error')
             return
           }
-          setEmail(data.customerEmail || '')
           setCheckoutMode(data.mode || 'subscription')
           // Both modes, not just the one-off. This page used to state flatly
           // that "Your Pro subscription is active" for every completed
@@ -80,7 +78,6 @@ export default function CheckoutReturn() {
             </div>
             <h1>{activationPending ? 'Payment received' : 'You’re on UIL4B Pro'}</h1>
             <p>
-              {email ? <>A confirmation has been sent to <strong>{email}</strong>. </> : null}
               {checkoutMode !== 'payment'
                 ? activationPending
                   ? 'Your payment is confirmed. Pro access is still being attached to this account — keep this reference and reload in a moment if it hasn’t appeared.'

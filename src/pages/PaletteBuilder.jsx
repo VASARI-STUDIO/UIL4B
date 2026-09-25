@@ -3,7 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import SnapSlider from '../components/SnapSlider'
 import ColorPickerPop from '../components/ColorPickerPop'
 import {
-  adjustHandleColors, adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
+  ToolLayout, ToolBack, ToolButton, ToolSelect, ToolSlider, ToolTray, ToolIcon,
+} from '../components/tool/ToolLayout'
+import {
+  adjustTrackGradientsFromStops, adjustTrackStops, applyAdjust,
   autoTonalFromSeed, contrastRatio, generateHarmony, hctToHex,
   hexToHct, hexToHsl, hslToHex, mixHex, randomSystemPalette, simCvd, textColorForBg,
   tonalRamp,
@@ -42,10 +45,8 @@ import { boardDraftAge, consumeBoardDraft, readBoardDraft, resetGradientDraft, r
 // colours and the slider values are persisted separately.
 import useModalDialog from '../hooks/useModalDialog'
 import useExportGate from '../hooks/useExportGate'
-import useMediaQuery from '../hooks/useMediaQuery'
 // The measured collapse for the action rail — the rule, the measurements that
 // found the band nobody had reported, and why one band is exempt.
-import { railOverflowsToolbar, RIBBON_QUERY } from '../utils/toolbarFit'
 import { normaliseHex, persistedPalette, readSavedPalette, ZERO_ADJUST } from '../utils/paletteAdjust'
 // What a fresh board and a Reset open on, plus the ?c= > hand-off > saved >
 // random precedence — kept pure so the free-settings default and “a shared link
@@ -94,33 +95,6 @@ import '../styles/pages/palette-builder.css'
 // HCT edit, tints, right-click menu), and a bottom global-adjust bar. Runs on
 // the exact same colour engine as the merged Colour Studio (utils/colors.js),
 // so palettes built here match the studio's output.
-
-// The action rail's exploratory cluster, in one of its two forms.
-//
-// ON THE ROW it renders its children and NOTHING ELSE — no wrapper, not even a
-// `display:contents` one. That is the point: the five controls stay direct
-// children of the rail, so every `>` selector aimed at the rail keeps matching
-// and the row is laid out to the pixel as it was before this existed. See the
-// markup note in utils/toolbarFit.js for what happened when a wrapper was
-// there — a band this change does not touch moved by 54px.
-//
-// COLLAPSED it is a panel behind one labelled trigger. Each control keeps its
-// own `.plb-menuwrap` and its own popover, so nothing about how any of them
-// works changes; only where they live does.
-function ToolCluster({ collapsed, open, children }) {
-  if (!collapsed) return children
-  return (
-    <div
-      className="plb-tools plb-tools--panel"
-      id="plb-tools-panel"
-      role="menu"
-      aria-label="More palette tools"
-      hidden={!open}
-    >
-      {children}
-    </div>
-  )
-}
 
 const DEFAULT_SEED = '#4338E0'
 const ROLES = ['PRIMARY', 'SECONDARY', 'ACCENT', 'SUBTLE', 'DEEP']
@@ -177,6 +151,15 @@ const ADJUST_FIELDS = [
   { key: 'b', label: 'Tone', min: -100, max: 100, unit: '%', snaps: [{ value: -50, radius: 6 }, { value: 0, radius: 12 }, { value: 50, radius: 6 }] },
   { key: 'temp', label: 'Temperature', min: -100, max: 100, unit: '', snaps: [{ value: -50, radius: 6 }, { value: 0, radius: 12 }, { value: 50, radius: 6 }] },
 ]
+
+// The design's slider tracks (D:2171-2174), shown until the live tracks
+// (what each slider would do to THIS palette) have been computed.
+const ADJUST_TRACKS = {
+  h: 'linear-gradient(90deg,#3FAFA0,#4B7BFF,#A483C5)',
+  s: 'linear-gradient(90deg,#4A4E57,#4B7BFF)',
+  b: 'linear-gradient(90deg,#14224A,#7D9FFF,#FAFAF8)',
+  temp: 'linear-gradient(90deg,#3FAFA0,#8E93A0,#E8845F)',
+}
 
 // Tones for the expanded per-colour tints panel (click the mini ramp to open).
 const TINT_TONES = [95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
@@ -745,11 +728,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const [colors, setColors] = useState(initial.colors)
   const [seed, setSeed] = useState(initial.seed)
   const [seedInput, setSeedInput] = useState(seed)
-  // The hex field is an EDITING BUFFER while focused and a READOUT otherwise —
-  // see `shownSeed` below for why the two cannot be the same value. Tracking
-  // focus is what lets a half-typed "#4A5" survive as the user types it while
-  // the resting field still reports the colour on screen.
-  const [seedFocused, setSeedFocused] = useState(false)
   // A hand-off names the system explicitly and outranks the carried-in project,
   // because it describes what the visitor just did rather than what this device
   // last held. The id is validated against HARMONIES here — utils/colorHandoff
@@ -790,9 +768,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // outside pointerdown or Escape — handled by the shared effect below).
   const [saveOpen, setSaveOpen] = useState(false)  // merged Save & share menu
   const [saveError, setSaveError] = useState('')   // the cap's refusal, held under the field — see doSave
-  const [harmOpen, setHarmOpen] = useState(false)
-  const [visionOpen, setVisionOpen] = useState(false)
-  const [toolsOpen, setToolsOpen] = useState(false)  // the collapsed Tools panel
 
   // Image picker (Wave 4): a free, no-login dropdown. Once an image is loaded
   // it stays nested in the menu with draggable picker points sampling its
@@ -825,7 +800,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const skipVarInvalidate = useRef(false)
   const [tintsIdx, setTintsIdx] = useState(null)   // column with the tints panel open
   const [pickerIdx, setPickerIdx] = useState(null) // column with the HCT editor open
-  const [swapIdx, setSwapIdx] = useState(null)     // column with the directional swap chooser open
   const [ctxMenu, setCtxMenu] = useState(null)     // { kind: 'swatch' | 'gap', i, x, y } right-click menu
   const [preview, setPreview] = useState(null)     // { mode, tab, compare } modal
   const [saveName, setSaveName] = useState('')
@@ -895,7 +869,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   const outTimer = useRef(null)
   useEffect(() => () => { clearTimeout(animTimer.current); clearTimeout(outTimer.current) }, [])
 
-  const seedValid = normaliseHex(seedInput) != null
 
   // The adjust lens is non-destructive: `colors` stays raw, exports/labels use
   // the adjusted values, and the board shows the vision-simulated version.
@@ -951,7 +924,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // …and the handle lens: the colour the track above paints at each slider's
   // CURRENT position, sampled from those very stops. It follows the drag, which
   // is the whole point — the dot is a window onto the bar, not a lid over it.
-  const handleColors = useMemo(() => adjustHandleColors(trackStops, adjust), [trackStops, adjust])
   const variations = useMemo(() => (varBase ? paletteVariations(varBase) : []), [varBase])
 
   // Any genuine change to the palette (manual edit, randomise, harmony change,
@@ -1051,7 +1023,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       return
     }
     setHarmony(h.id)
-    setHarmOpen(false)
     regen(seed, h.id)
   }
 
@@ -1089,9 +1060,9 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // and this layer closes anything whose pointerdown misses a .plb-menuwrap —
   // which is every press inside the modal, including dragging a picker point.
   // useModalDialog owns its Escape and the scrim owns its outside press.
-  const anyPopover = saveOpen || harmOpen || visionOpen
+  const anyPopover = saveOpen || imgOpen
     || galleryOpen || histOpen
-    || tintsIdx != null || pickerIdx != null || swapIdx != null || ctxMenu != null || preview != null
+    || tintsIdx != null || pickerIdx != null || ctxMenu != null || preview != null
 
   // Both of this page's dialogs declared aria-modal="true" and trapped nothing:
   // Tab walked out into the builder behind them, the canvas scrolled, and
@@ -1126,124 +1097,19 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   // Close every toolbar menu in one call — used by the dismiss layer and by each
   // toolbar button (so opening one always closes the rest). Setters are stable.
   const closeAllMenus = useCallback(() => {
-    setSaveOpen(false); setSaveError(''); setHarmOpen(false); setVisionOpen(false); setImgOpen(false); setGalleryOpen(false); setHistOpen(false); setToolsOpen(false)
+    setSaveOpen(false); setSaveError(''); setImgOpen(false); setGalleryOpen(false); setHistOpen(false)
   }, [])
 
-  /* ── Does the action rail fit? (palette-toolbar-rendering) ────────────────
-   *
-   * The rule and the whole argument for it live in utils/toolbarFit.js. This
-   * is only the measuring half, and it follows LibraryFilterGroup's contract
-   * exactly, because that contract is what keeps a measure-then-change-layout
-   * loop from oscillating:
-   *
-   *   · the intrinsic width is taken ONCE per band, while the cluster is
-   *     still on the row, and cached. It is never re-read while collapsed,
-   *     where the cluster is a vertical menu and would measure as one.
-   *   · the budget comes from the toolbar's width and a CONSTANT ceiling, so
-   *     nothing on that side of the comparison moves when the cluster
-   *     collapses.
-   *
-   * The band is part of the cache key: below 961px the rail's buttons carry
-   * visible labels and the same five controls measure 964px instead of 712px,
-   * so one cached number would be wrong on one side of that line.
-   */
-  const railRef = useRef(null)
-  const intrinsicRef = useRef({ band: null, width: 0 })
-  const ribbonBand = useMediaQuery(RIBBON_QUERY)
-  const [railOverflows, setRailOverflows] = useState(false)
-  const toolsCollapsed = railOverflows && !ribbonBand
-
-  // Closing the panel when the band changes is adjust-state-during-render (the
-  // documented React pattern), not an effect: a resize that un-collapses the
-  // cluster while its panel is open would otherwise leave a menu mounted with
-  // no trigger to hand focus back to.
-  const [wasCollapsed, setWasCollapsed] = useState(toolsCollapsed)
-  if (wasCollapsed !== toolsCollapsed) {
-    setWasCollapsed(toolsCollapsed)
-    setToolsOpen(false)
-  }
-
-  const fitRail = useCallback(() => {
-    const rail = railRef.current
-    const row = rail?.closest('.plb-toolbar')
-    if (!rail || !row) return
-    const band = window.matchMedia('(min-width:961px)').matches ? 'wide' : 'narrow'
-    let intrinsic = intrinsicRef.current.width
-    if (intrinsicRef.current.band !== band) {
-      // Only measurable while the cluster is on the row. `scrollWidth` is the
-      // rail's own content width — it is a scroll container below 961px, so
-      // this is the one number that reports the full line rather than the
-      // visible slice of it.
-      // The intrinsic width can only be read while the cluster is ON THE ROW.
-      // Returning here — the obvious guard — is a trap: it leaves the previous
-      // answer standing AND leaves the cache empty, so once collapsed the rail
-      // could never re-measure and never expand again. Measured: after the
-      // font-swap invalidation below, the toolbar froze collapsed at every
-      // width up to 1920.
-      //
-      // So say "I cannot answer yet" by expanding, and answer on the next pass
-      // with a row that can be measured. This cannot loop: it runs only when
-      // the BAND has changed, and the pass that follows caches a number, after
-      // which the branch is not taken again until the band changes once more.
-      if (toolsCollapsed) { setRailOverflows(false); return }
-      intrinsic = rail.scrollWidth
-      if (!intrinsic) return
-      intrinsicRef.current = { band, width: intrinsic }
-    }
-    // THE ROW'S CONTENT BOX, NOT ITS `clientWidth`. `.plb-toolbar` carries
-    // `padding:10px var(--page-inline)` (20px a side at these widths) and
-    // `clientWidth` includes it, so passing `clientWidth` credited the flex
-    // line with 40px it does not have. Measured consequence on `main`: the
-    // cluster expanded at 1097px and did not fit until 1137px, so every width
-    // in 1097–1136 wrapped the toolbar to two rows at 105px instead of one at
-    // 57px. See the note above `railOverflowsToolbar` for the full table.
-    const cs = getComputedStyle(row)
-    const rowWidth = row.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
-    setRailOverflows(railOverflowsToolbar({ intrinsic, rowWidth }))
-  }, [toolsCollapsed])
-
-  // No separate mount call: ResizeObserver fires once when observation begins,
-  // which is both the first measurement and the only place this state is set.
-  // Setting it from an effect body instead would be the cascading-render shape
-  // `react-hooks/set-state-in-effect` exists to catch.
-  useEffect(() => {
-    const row = railRef.current?.closest('.plb-toolbar')
-    if (!row || typeof ResizeObserver === 'undefined') return undefined
-    const obs = new ResizeObserver(fitRail)
-    obs.observe(row)
-    return () => obs.disconnect()
-  }, [fitRail])
-
-  // THE FONT-SWAP INVALIDATION IS ITS OWN EFFECT, AND RUNS ONCE.
-  //
-  // It began life inside the observer effect above, which was wrong in a way
-  // that only a rendered browser shows. That effect re-runs whenever the
-  // collapse flips, `document.fonts.ready` is an ALREADY-RESOLVED promise by
-  // then, and so every flip re-registered a callback that fired immediately,
-  // invalidated the cache and expanded the row — which measured, collapsed,
-  // flipped, and started again. Measured: 981, 1000, 1080 and 662 never
-  // settled, and 981 sat in the broken 105px two-row form half the time.
-  //
-  // A font swap happens once. So does this.
-  const fontsSettled = useRef(false)
-  useEffect(() => {
-    let cancelled = false
-    document.fonts?.ready?.then(() => {
-      if (cancelled || fontsSettled.current) return
-      fontsSettled.current = true
-      // Every control width has changed, so the cached number is stale.
-      // Expanding alongside the invalidation is what makes the re-measure
-      // possible at all — see the guard in fitRail.
-      intrinsicRef.current = { band: null, width: 0 }
-      setRailOverflows(false)
-    }).catch(() => {})
-    return () => { cancelled = true }
-  }, [])
+  // The rail-fit measurement that lived here is gone: the shared ToolToolbar
+  // (components/tool/ToolLayout.jsx) measures its own row and moves what does
+  // not fit into the Tools overflow.
   useEffect(() => {
     if (!anyPopover) return
-    const closePops = () => { setTintsIdx(null); setPickerIdx(null); setSwapIdx(null); setCtxMenu(null) }
+    const closePops = () => { setTintsIdx(null); setPickerIdx(null); setCtxMenu(null) }
     const onDown = (e) => {
-      if (!e.target.closest('.plb-menuwrap')) closeAllMenus()
+      // The image dialog is a modal of its own (it closes on its scrim), so a
+      // drag inside it is not an outside press.
+      if (!e.target.closest('.plb-menuwrap, .plb-modal')) closeAllMenus()
       if (!e.target.closest('.plb-pop')) closePops()
     }
     const onEsc = (e) => {
@@ -1308,7 +1174,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       return next
     })
     if (nextFirst) { setSeed(nextFirst); setSeedInput(nextFirst) }
-    setSwapIdx(null)
     setLiveMsg(`Colour swapped ${direction}`)
   }
 
@@ -1696,7 +1561,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     importedSigRef.current = null
     setTintsIdx(null)
     setPickerIdx(null)
-    setSwapIdx(null)
     setCtxMenu(null)
     setPreview(null)
     setVarBase(null)
@@ -1706,7 +1570,48 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
     toast?.('Palette reset · Undo is available')
   }
 
+
+  // ── Redo (the drawn tray has both). Undo pushes the board it leaves onto
+  // this stack; redo restores it. Any other change to the board empties it.
+  const redoRef = useRef([])
+  const restoringRef = useRef(null)
+  const [redoTick, setRedoTick] = useState(0)
+  const boardNow = () => ({
+    colors: [...colors], seed, seedInput, harmony, locked: [...locked], adjust: { ...adjust },
+    vision, showContrast, importedGalleryId, at: Date.now(),
+  })
+  const applySnapshot = (h) => {
+    const restored = h.colors.slice(0, HARD_MAX)
+    setColors(restored)
+    setSeed(h.seed || restored[0])
+    setSeedInput(h.seedInput || h.seed || restored[0])
+    setHarmony(h.harmony || DEFAULT_SYSTEM)
+    setLocked(new Set(h.locked || []))
+    setAdjust({ ...(h.adjust || ZERO_ADJUST) })
+    setVision(h.vision || 'normal')
+    setShowContrast(Boolean(h.showContrast))
+    setImportedGalleryId(h.importedGalleryId || null)
+  }
+  const currentSig = paletteSignature(boardNow())
+  useEffect(() => {
+    // A change that is not the restore itself ends the redo line.
+    if (restoringRef.current && restoringRef.current === currentSig) { restoringRef.current = null; return }
+    if (redoRef.current.length) { redoRef.current = []; setRedoTick((t) => t + 1) }
+  }, [currentSig])
+  const redoPalette = () => {
+    const next = redoRef.current.pop()
+    if (!next) return
+    restoringRef.current = paletteSignature(next)
+    applySnapshot(next)
+    setRedoTick((t) => t + 1)
+    setLiveMsg('Palette change redone')
+  }
+  const canRedo = redoTick >= 0 && redoRef.current.length > 0
   const undoPalette = () => {
+    const leaving = boardNow()
+    redoRef.current.push(leaving)
+    setRedoTick((t) => t + 1)
+    const markRestore = (target) => { restoringRef.current = paletteSignature(target) }
     const resetSnapshot = resetSnapshotRef.current
     if (resetSnapshot) {
       const current = {
@@ -1715,6 +1620,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       }
       const editedAfterReset = paletteSignature(current) !== paletteSignature(resetSnapshot.baseline)
       const target = editedAfterReset ? resetSnapshot.baseline : resetSnapshot.before
+      markRestore(target)
       setColors(target.colors)
       setSeed(target.seed || target.colors[0])
       setSeedInput(target.seedInput || target.seed || target.colors[0])
@@ -1743,7 +1649,8 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
       colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
     })
     const entry = history.find((item) => paletteSignature(item) !== currentSignature)
-    if (!entry) return
+    if (!entry) { redoRef.current.pop(); setRedoTick((t) => t + 1); return }
+    markRestore(entry)
     const restored = entry.colors.slice(0, HARD_MAX)
     setColors(restored)
     setSeed(entry.seed || restored[0])
@@ -2136,509 +2043,166 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
   }
 
   const adjustDirty = ADJUST_FIELDS.some(f => adjust[f.key] !== 0)
-  const canUndo = resetSnapshotRef.current != null
+  const canUndo = resetSnapshotRef.current != null || history.some((h) => paletteSignature(h) !== currentSig)
     || history.some((entry) => paletteSignature(entry) !== paletteSignature({
       colors, seed, harmony, locked: [...locked], adjust, vision, showContrast, importedGalleryId,
     }))
-  const activeHarmony = HARMONIES.find(h => h.id === harmony) || HARMONIES[0]
-  const activeVision = VISION_MODES.find(([id]) => id === vision) || VISION_MODES[0]
+
+  // ── Pick: the design's third labelled tool (D:1159-1162) ──
+  // The EyeDropper API reads any pixel on the screen. Chrome and Edge ship it;
+  // where it does not exist the button says so rather than doing nothing.
+  const pickFromScreen = async () => {
+    if (typeof window === 'undefined' || !('EyeDropper' in window)) {
+      toast?.('This browser cannot pick from the screen. Use the seed colour picker instead.')
+      return
+    }
+    try {
+      const { sRGBHex } = await new window.EyeDropper().open()
+      const hex = normaliseHex(sRGBHex)
+      if (hex) { setFromSeedInput(hex); setLiveMsg(`Seed set to ${hex}`) }
+    } catch { /* the person pressed Escape */ }
+  }
+
+  const openGallery = (tab) => { closeAllMenus(); setGalleryTab(tab); setGalleryOpen(true) }
+  const toggleMenu = (isOpen, set) => { const n = !isOpen; closeAllMenus(); set(n) }
+
+  const systemOptions = HARMONIES.map(h => ({ value: h.id, label: h.free || isPro ? h.label : `${h.label} (Pro)` }))
+  const visionOptions = VISION_MODES.map(([id, label]) => ({ value: id, label }))
+  // From the Tools overflow a choice also closes the panel, so that a Pro
+  // wall raised by the choice is not opened underneath it.
+  const systemSelect = (className, closePanel) => (
+    <ToolSelect
+      className={className}
+      label="System"
+      ariaLabel="Colour system"
+      value={harmony}
+      options={systemOptions}
+      onChange={(id) => { const h = HARMONIES.find(x => x.id === id); closePanel?.(); if (h) pickHarmony(h) }}
+    />
+  )
+  const visionSelect = (className, closePanel) => (
+    <ToolSelect
+      className={className}
+      label="Vision"
+      ariaLabel="Colour vision check"
+      value={vision}
+      options={visionOptions}
+      onChange={(v) => { closePanel?.(); setVision(v) }}
+    />
+  )
+  const seedChip = (
+    <span className="plb-seedpick">
+      <ColorPickerPop
+        value={shownSeed}
+        onChange={(hex) => setFromSeedInput(hex.toUpperCase())}
+        ariaLabel="Pick seed colour"
+        triggerClassName="tl-btn plb-seedchip"
+        triggerChildren={(
+          <>
+            <span className="plb-seedchip-sw" ref={barRef(shownSeed)} aria-hidden="true" />
+            <span className="plb-seedchip-hex">{shownSeed}</span>
+          </>
+        )}
+      />
+    </span>
+  )
+  const undoRedo = (
+    <ToolTray label="History">
+      <ToolButton variant="square" icon="arrow-counter-clockwise" onClick={undoPalette} disabled={!canUndo} aria-label="Undo" title="Undo the last palette change" className="plb-undo" />
+      <ToolButton variant="square" icon="arrow-clockwise" onClick={redoPalette} disabled={!canRedo} aria-label="Redo" title="Redo" className="plb-redo" />
+    </ToolTray>
+  )
+
+  // THE TOOLBAR, as drawn (D:947-1015): back · seed chip · From image /
+  // Suggest / Pick · System · Vision · divider · undo/redo · Randomise, with
+  // "Save current" as the accent primary. What the drawn row has no room for —
+  // Explore, Preview, the Gradient hand-off, History and Reset, all functions
+  // the previous build had — lives in the Tools overflow, and on a phone the
+  // row keeps Randomise, undo/redo, Save and Tools.
+  const toolbarItems = [
+    {
+      id: 'back', priority: 2,
+      render: () => <ToolBack to="/projects" label="Back to projects" />,
+      menu: { label: 'Back to projects', icon: 'arrow-left', onSelect: () => navigate('/projects') },
+    },
+    { id: 'seed', priority: 3, render: () => seedChip, menu: () => <div className="plb-menu-seed">{seedChip}</div> },
+    {
+      id: 'image', priority: 1,
+      render: () => (
+        <span className="plb-menuwrap">
+          <ToolButton icon="image" collapse onClick={() => toggleMenu(imgOpen, setImgOpen)} aria-label="Pull colours from an image" title="Pull colours from an image" aria-haspopup="dialog" aria-expanded={imgOpen}>From image</ToolButton>
+        </span>
+      ),
+      menu: { label: 'From image', icon: 'image', onSelect: () => { closeAllMenus(); setImgOpen(true) } },
+    },
+    {
+      id: 'suggest', priority: 1,
+      render: () => (
+        <span className="plb-menuwrap">
+          <ToolButton icon="magic-wand" collapse onClick={() => (galleryOpen && galleryTab === 'variations' ? closeAllMenus() : openGallery('variations'))} aria-label="Suggest a palette" title="Suggest a palette" aria-haspopup="dialog" aria-expanded={galleryOpen && galleryTab === 'variations'}>Suggest</ToolButton>
+        </span>
+      ),
+      menu: { label: 'Suggest', icon: 'magic-wand', onSelect: () => openGallery('variations') },
+    },
+    {
+      id: 'pick', priority: 1,
+      render: () => <ToolButton icon="eyedropper" collapse onClick={pickFromScreen} aria-label="Pick a colour from the screen" title="Pick a colour from the screen">Pick</ToolButton>,
+      menu: { label: 'Pick from the screen', icon: 'eyedropper', onSelect: pickFromScreen },
+    },
+    { id: 'system', priority: 0, align: 'end', render: () => systemSelect(), menu: (close) => systemSelect('plb-menu-select', close) },
+    { id: 'vision', priority: 0, render: () => visionSelect(), menu: (close) => visionSelect('plb-menu-select', close) },
+    { id: 'div', priority: 0, divider: true },
+    { id: 'undo', priority: 5, render: () => undoRedo, menu: () => <div className="plb-menu-tray">{undoRedo}</div> },
+    {
+      id: 'random', priority: 4,
+      render: () => <ToolButton icon="shuffle" iconSize={14} kbd="SPACE" onClick={randomize} className="plb-random" aria-label="Randomise" collapse>Randomise</ToolButton>,
+      menu: { label: 'Randomise', icon: 'shuffle', hint: 'SPACE', onSelect: randomize },
+    },
+    // Overflow only — never on the row.
+    { id: 'explore', inline: false, menu: { label: 'Explore palettes', icon: 'swatches', onSelect: () => openGallery('community') } },
+    { id: 'preview', inline: false, menu: { label: 'Preview on a UI', icon: 'image', onSelect: () => { closeAllMenus(); setPreview({ mode: 'light', tab: 'ui', compare: null }) } } },
+    { id: 'gradient', inline: false, menu: { label: 'Open in Gradient', icon: 'arrows-left-right', onSelect: openInGradient } },
+    { id: 'history', inline: false, menu: { label: 'History', icon: 'arrow-counter-clockwise', onSelect: () => { closeAllMenus(); setHistOpen(true) } } },
+    { id: 'reset', inline: false, menu: { label: 'Reset palette', icon: 'arrow-clockwise', onSelect: resetPalette } },
+  ]
 
   return (
     // `data-board-source` is the instrumentation for
-    // `palette-opens-with-wrong-state`. The report — "sometimes I open the
-    // palette builder and it has added many colours and it's a different
-    // swatch" — was impossible to triage because the four ways a board can be
-    // populated (a ?c= link, a hand-off, this device's saved project, a fresh
-    // random draw) are indistinguishable once painted. This attribute names the
-    // branch that won, and `data-board-cols` the count the founder was
-    // counting, so a screenshot of the inspector or one line in the console
-    // settles which path produced the board instead of the next reporter having
-    // to reconstruct it. It is inert: nothing reads it to decide anything, and
-    // it carries no colour values, so it stays safe to leave on in production.
-    <div className="plb" data-board-source={initial.source} data-board-cols={colors.length}>
-      <p className="sr-only" aria-live="polite">{liveMsg}</p>
-
-      {/* ── Page heading ──
-          FOUNDER, 2026-09-14, with a screenshot of this page at ~700px: the
-          words "Palette Generator" struck through, the whole header boxed in
-          red, "horrible UI and UX".
-
-          What he approved on 2026-09-13 was a heading SLOT — "Build the slot,
-          then I'll write the line." What shipped in the slot was the ROUTE'S
-          OWN NAME at clamp(38px,5vw,64px), above an empty lede. So the page
-          spent up to 64px of display type, plus the block's own padding,
-          restating a word that is already in the nav, the browser tab and the
-          share card — and then opened the working area below the fold on a
-          phone. A workspace that titles itself is the tell: not one of
-          Squarespace's palette editor, Arcade's Colors, Gamma's theme editor
-          or Adobe Color spends a heading row on its own name. They open on the
-          work.
-
-          THE SLOT IS NOT DELETED, it just stops painting nothing. The heading
-          area renders only when PALETTE_LEDE has something in it — the day he
-          writes the line, the h1 and his sentence appear together, which is
-          what the slot was for. Until then the h1 is still IN THE DOCUMENT,
-          carrying id="plb-page-title", because `.plb-board` below is
-          aria-labelledby it: the board's accessible name is this heading, and
-          hiding it visually must not take the board's name away. Screen-reader
-          users lose nothing; the page keeps exactly one h1 either way. */}
-      {PALETTE_LEDE ? (
-        <header className="plb-hero">
-          <h1 id="plb-page-title">Palette Generator</h1>
-          <p className="plb-hero-lede">{PALETTE_LEDE}</p>
-        </header>
-      ) : (
-        <h1 id="plb-page-title" className="sr-only">Palette Generator</h1>
-      )}
-
-      {/* ── Toolbar ── */}
-      <header className="plb-toolbar">
-        <div className="plb-toolbar-group">
-          <div className="plb-seedpick">
-            <ColorPickerPop
-              value={shownSeed}
-              onChange={(hex) => setFromSeedInput(hex.toUpperCase())}
-              ariaLabel="Pick seed colour"
-            />
-          </div>
-          <input
-            type="text"
-            className={seedValid ? 'plb-hexfield' : 'plb-hexfield plb-hexfield--bad'}
-            value={seedFocused ? seedInput : shownSeed}
-            onChange={(e) => setFromSeedInput(e.target.value)}
-            onFocus={() => { setSeedInput(shownSeed); setSeedFocused(true) }}
-            onBlur={() => { setSeedFocused(false); setSeedInput(shownSeed) }}
-            placeholder={DEFAULT_SEED}
-            spellCheck="false"
-            autoComplete="off"
-            aria-invalid={!seedValid}
-            aria-label="Seed colour hex"
-          />
-          <div className="plb-menuwrap">
-            <button
-              type="button"
-              className="btn btn-s plb-harm"
-              aria-expanded={harmOpen}
-              aria-haspopup="menu"
-              onClick={() => { const n = !harmOpen; closeAllMenus(); setHarmOpen(n) }}
-            >
-              <IcoSystem />
-              <span className="plb-harm-k">System</span>
-              {activeHarmony.label}
-              <IcoChevron />
-            </button>
-            {harmOpen && (
-              <div className="plb-menu plb-menu--left plb-harmmenu" role="menu" aria-label="Colour system">
-                <div className="plb-menu-title">Colour system</div>
-                <div className="plb-harm-grid">
-                  {HARMONIES.map(h => (
-                    <button
-                      key={h.id}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={harmony === h.id}
-                      className={harmony === h.id ? 'plb-harm-opt plb-harm-opt--on' : 'plb-harm-opt'}
-                      onClick={() => pickHarmony(h)}
-                    >
-                      <HarmonyGlyph id={h.id} size={15} />
-                      <span className="plb-harm-opt-l">{h.label}</span>
-                      {h.free
-                        ? <span className="plb-free">Free</span>
-                        : (!isPro && <span className="plb-tab-lock"><IcoLock size={10} /></span>)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* `rail-overflow` carries the shared scroller affordances (peek fade,
-            visible scrollbar, snap). It is switched back OFF above 960px in
-            global.css, where this group must not be a scroll container at all —
-            its dropdowns are absolutely-positioned popups and a scroll
-            container would clip them. */}
-        <div className="plb-toolbar-group rail-overflow" ref={railRef}>
-          {/* THE EXPLORATORY CLUSTER.
-              Uncollapsed this wrapper is `display:contents` — it has no box, so
-              the row is laid out exactly as it was before it existed and every
-              measurement, rule and shipped test that reads this rail sees the
-              same geometry. Collapsed it becomes a panel behind one labelled
-              trigger. Each control keeps its own `.plb-menuwrap` and its own
-              popover, so nothing about how they work changes; only where they
-              live does. */}
-          {toolsCollapsed && (
-            <div className="plb-menuwrap plb-toolswrap">
-              <button
-                type="button"
-                className="btn btn-s plb-toolsbtn"
-                aria-expanded={toolsOpen}
-                aria-haspopup="menu"
-                aria-controls={toolsOpen ? 'plb-tools-panel' : undefined}
-                title="Image, Explore, Preview, Gradient and History"
-                onClick={() => { const n = !toolsOpen; closeAllMenus(); setToolsOpen(n) }}
-              >
-                <IcoSliders />
-                {/* A WORD, not a tenth icon. The founder's desktop complaint is
-                    a run of icon-only buttons reading as unresolved; answering
-                    an overflow with one more glyph would deepen exactly that.
-                    Mobbin: Substack's editor toolbar collapses to "More ▾" set
-                    beside its other labelled dropdowns, so the overflow reads
-                    as a peer of Style and Button rather than as another
-                    mystery square. */}
-                <span className="plb-harm-k">Tools</span>
-                <IcoChevron />
-              </button>
-            </div>
-          )}
-          <ToolCluster collapsed={toolsCollapsed} open={toolsOpen}>
-          <div className="plb-menuwrap">
-            <button
-              type="button"
-              className="btn btn-s plb-icobtn"
-              aria-label="Image"
-              aria-haspopup="dialog"
-              aria-expanded={imgOpen}
-              title="Pull colours from an image"
-              onClick={() => { const n = !imgOpen; closeAllMenus(); setImgOpen(n) }}
-            >
-              <IcoImage /><span className="plb-lbl"><span className="plb-lbl-i">Image</span></span>
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" className="plb-file" onChange={onImageFile} aria-hidden="true" tabIndex={-1} />
-          </div>
-
-          {/* One gallery button → a large community-gallery popup with three
-              nested tabs: browse Community palettes, this palette's Variations,
-              and curated Brand systems. */}
-          <div className="plb-menuwrap">
-            <button
-              type="button"
-              className="btn btn-s plb-icobtn"
-              aria-label="Explore"
-              aria-expanded={galleryOpen}
-              aria-haspopup="dialog"
-              title="Explore — community palettes, variations and brand systems"
-              onClick={() => { const n = !galleryOpen; closeAllMenus(); setGalleryOpen(n) }}
-            >
-              <IcoExplore /><span className="plb-lbl"><span className="plb-lbl-i">Explore</span></span>
-            </button>
-            {galleryOpen && (
-              <div className="plb-menu plb-menu--left plb-galpopup" role="dialog" aria-label="Colour gallery" data-lenis-prevent>
-                <div className="plb-galpopup-head">
-                  <div className="plb-menu-title">{galleryTab === 'community' ? 'Community gallery' : galleryTab === 'variations' ? 'Variations' : 'Brand systems'}</div>
-                  <div className="plb-galtabs" role="tablist" aria-label="Gallery sections">
-                    <button type="button" role="tab" aria-selected={galleryTab === 'community'} className={galleryTab === 'community' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('community')}><IcoGallery /> Community</button>
-                    <button type="button" role="tab" aria-selected={galleryTab === 'variations'} className={galleryTab === 'variations' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('variations')}><IcoSpark /> Variations</button>
-                    <button type="button" role="tab" aria-selected={galleryTab === 'brands'} className={galleryTab === 'brands' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('brands')}><IcoBookmark /> Brands</button>
-                  </div>
-                </div>
-
-                {galleryTab === 'community' && (
-                  <div className="plb-galpopup-body">
-                    <PaletteGalleryGrid
-                      toast={toast}
-                      selectedId={importedGalleryId}
-                      onPick={(cols, name, id) => importGalleryPalette(cols, name, id)}
-                      onCompare={(cols, name) => comparePalette(name, cols)}
-                    />
-                    <div className="plb-menu-sub">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
-                  </div>
-                )}
-
-                {galleryTab === 'variations' && (
-                  <div className="plb-galpopup-body">
-                    <div className="plb-galpopup-note">
-                      <span>Generated from your current palette</span>
-                      <span className="plb-score" title="Palette quality score — tone range, evenness, chroma profile and distinctness">Current {paletteScore}</span>
-                    </div>
-                    {variations.map((v, idx) => {
-                      const gated = !isPro && idx >= FREE_VARIATIONS
-                      const active = activeVar === v.id
-                      return (
-                        <div key={v.id} className={`plb-varrow${gated ? ' plb-varrow--locked' : ''}${active ? ' plb-varrow--active' : ''}`}>
-                          <button type="button" className="plb-varrow-main" onClick={() => pickVariation(v, idx)} aria-pressed={active}>
-                            <span className="plb-strip" aria-hidden="true">
-                              {v.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
-                            </span>
-                            <span className="plb-varrow-name">{v.label}<small>{v.desc}</small></span>
-                            {active && <span className="plb-varrow-tick" aria-label="Active variation"><IcoCheck size={13} /></span>}
-                            <span className="plb-score">{v.score}</span>
-                            {gated && <span className="plb-tab-lock"><IcoLock size={11} /></span>}
-                          </button>
-                          {!gated && (
-                            <button
-                              type="button"
-                              className="plb-varrow-cmp"
-                              title="Compare with the current palette"
-                              aria-label={`Compare ${v.label} with the current palette`}
-                              onClick={() => compareVariation(v, idx)}
-                            >
-                              <IcoEye />
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                    {variations.length === 0 && <div className="plb-menu-sub">No distinct variations for this palette</div>}
-                  </div>
-                )}
-
-                {galleryTab === 'brands' && (
-                  <div className="plb-galpopup-body">
-                    {/* openBrands holds only the rows this viewer may load. A
-                        Pro-gated brand is not in the list, so its colours never
-                        reach barRef and never enter the DOM — the lock is the
-                        absence of the row, not a style over it. */}
-                    {openBrands.map(b => (
-                      <div key={b.id} className="plb-varrow">
-                        <button type="button" className="plb-varrow-main" onClick={() => pickBrand(b)}>
-                          <span className="plb-strip" aria-hidden="true">
-                            {b.colors.map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
-                          </span>
-                          <span className="plb-varrow-name">{b.name}</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="plb-varrow-cmp"
-                          title="Compare with the current palette"
-                          aria-label={`Compare ${b.name} with the current palette`}
-                          onClick={() => comparePalette(b.name, b.colors)}
-                        >
-                          <IcoEye />
-                        </button>
-                      </div>
-                    ))}
-                    {lockedBrands.map(preview => <LockedPaletteRow key={preview.id} preview={preview} />)}
-                    {lockedBrandCount > 0 && (
-                      <LockedTeaseCta
-                        gate="palette-builder-brand-lock"
-                        heading={`Another ${lockedBrandCount} brand ${lockedBrandCount === 1 ? 'system' : 'systems'} with Pro`}
-                        body="Loading a brand applies its whole colour system, not only its swatches."
-                        action="See what Pro includes"
-                        modal={{
-                          eyebrow: 'Pro colour tools',
-                          title: 'Load any brand system',
-                          subtitle: `Free covers ${BRAND_PALETTES.length - lockedBrandCount} starter brands. Pro opens the remaining ${lockedBrandCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <button type="button" className="btn btn-s plb-icobtn" aria-label="Preview" title="Preview the palette on a UI mockup" onClick={() => setPreview({ mode: 'light', tab: 'ui', compare: null })}>
-            <IcoEye /><span className="plb-lbl"><span className="plb-lbl-i">Preview</span></span>
-          </button>
-          <div className="plb-menuwrap">
-            <button
-              type="button"
-              className="btn btn-s"
-              aria-expanded={visionOpen}
-              aria-haspopup="menu"
-              title="Vision type — split each swatch to preview it through a colour-vision deficiency"
-              onClick={() => { const n = !visionOpen; closeAllMenus(); setVisionOpen(n) }}
-            >
-              <VisionGlyph id={vision} size={13} />
-              <span className="plb-harm-k">Vision type</span>
-              {activeVision[1]}
-              <IcoChevron />
-            </button>
-            {visionOpen && (
-              <div className="plb-menu plb-menu--left plb-vismenu" role="menu" aria-label="Colour-vision preview">
-                <div className="plb-menu-title">Colour-vision preview</div>
-                {VISION_MODES.map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={vision === id}
-                    className={vision === id ? 'plb-visopt plb-visopt--on' : 'plb-visopt'}
-                    onClick={() => { setVision(id); setVisionOpen(false) }}
-                  >
-                    <VisionGlyph id={id} size={15} />
-                    <span className="plb-visopt-l">{label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            className="btn btn-s plb-icobtn"
-            aria-label="Gradient"
-            title="Open this palette in the Gradient Generator"
-            onClick={openInGradient}
+    // `palette-opens-with-wrong-state`: it names which of the four ways the
+    // board was populated won (a ?c= link, a hand-off, this device's saved
+    // project, a fresh draw), and `data-board-cols` the count. Inert.
+    <ToolLayout
+      className="plb"
+      title="Palette Generator"
+      titleId="plb-page-title"
+      showTitle={false}
+      back={false}
+      bleed
+      overflowLabel="Tools"
+      overflowIcon="sliders-horizontal"
+      items={toolbarItems}
+      primary={(
+        <span className="plb-menuwrap plb-savewrap">
+          <ToolButton
+            variant="accent"
+            icon="bookmark-simple"
+            className="plb-save"
+            aria-haspopup="dialog"
+            aria-expanded={saveOpen}
+            // No gate here: this menu holds Copy rows, and copying is free
+            // forever. The account is asked for at the save and at the PNG.
+            onClick={() => toggleMenu(saveOpen, setSaveOpen)}
           >
-            <IcoGradient /><span className="plb-lbl"><span className="plb-lbl-i">Gradient</span></span>
-          </button>
-          </ToolCluster>
-          {/* ── end of the exploratory cluster ─────────────────────────────────
-              What stays on the row is what a person is mid-task with: generate,
-              step back, and commit. What collapses is what they went LOOKING
-              for. That split is also why the cluster is contiguous in the DOM:
-              a collapse that reordered the row would move focus order for
-              everyone to buy space for one band. */}
-          {/* NOT `btn-accent`. Measured 2026-09-14: this button and "Save /
-              export" both carried it, so the row showed TWO filled accent
-              buttons of equal weight and the eye had no way to tell the
-              reversible act from the committing one. Randomise is the cheap,
-              undoable, repeatable act — Space does it, and Undo sits next to
-              it. Save / export is the one that leaves the page. One primary
-              per row; this is the one that gives it up. */}
-          <button type="button" className="btn btn-s plb-random" onClick={randomize}>
-            <IcoShuffle /> Randomise <kbd className="plb-kbd">Space</kbd>
-          </button>
-          {/* `plb-undo` / `plb-reset` are layout hooks, not new styling: below
-              961px these two are promoted out of the rail's overflow and drop
-              their visible label (see the max-width:960px block in global.css).
-              The accessible name stays on aria-label either way. */}
-          <button type="button" className="btn btn-s plb-icobtn plb-undo" aria-label="Undo" onClick={undoPalette} disabled={!canUndo} title="Undo the last palette change">
-            <IcoUndo /><span className="plb-lbl"><span className="plb-lbl-i">Undo</span></span>
-          </button>
-          <button type="button" className="btn btn-s plb-icobtn plb-reset" aria-label="Reset" onClick={resetPalette} title="Reset every palette control to its default">
-            <IcoReset /><span className="plb-lbl"><span className="plb-lbl-i">Reset</span></span>
-          </button>
-          <div className="plb-menuwrap">
-            <button
-              type="button"
-              className="btn btn-s plb-icobtn"
-              aria-label="History"
-              aria-expanded={histOpen}
-              aria-haspopup="menu"
-              title="Palette history — jump back to any board you've had"
-              onClick={() => { const n = !histOpen; closeAllMenus(); setHistOpen(n) }}
-            >
-              <IcoHistory /><span className="plb-lbl"><span className="plb-lbl-i">History</span></span>
-            </button>
-            {histOpen && (
-              <div className="plb-menu plb-histmenu" role="menu" aria-label="Palette history" data-lenis-prevent>
-                <div className="plb-menu-title">History</div>
-                {history.length === 0 ? (
-                  <div className="plb-menu-sub">No history yet — every palette you build lands here automatically</div>
-                ) : (
-                  <>
-                    <div className="plb-scrolllist">
-                      {history.map((h, i) => (
-                        <button
-                          key={`${h.at}-${i}`}
-                          type="button"
-                          role="menuitem"
-                          className="plb-varrow"
-                          onClick={() => {
-                            setColors(h.colors.slice(0, HARD_MAX))
-                            setSeed(h.seed || h.colors[0])
-                            setSeedInput(h.seedInput || h.seed || h.colors[0])
-                            setHarmony(h.harmony || DEFAULT_SYSTEM)
-                            setLocked(new Set(h.locked || []))
-                            setAdjust({ ...(h.adjust || ZERO_ADJUST) })
-                            setVision(h.vision || 'normal')
-                            setShowContrast(Boolean(h.showContrast))
-                            setImportedGalleryId(h.importedGalleryId || null)
-                            setLiveMsg('Palette restored from history')
-                            toast?.('Palette restored from history')
-                            setHistOpen(false)
-                          }}
-                        >
-                          <span className="plb-strip" aria-hidden="true">
-                            {h.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
-                          </span>
-                          <span className="plb-varrow-name">{h.colors.length} colours<small>{timeAgo(h.at)}</small></span>
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      className="plb-menu-item plb-histclear"
-                      onClick={() => { setHistory([]); try { localStorage.removeItem(HISTORY_KEY) } catch { /* disabled */ } }}
-                    >
-                      Clear history
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          <span className="plb-toolbar-sep" aria-hidden="true" />
-          {/* The order hook goes on the WRAPPER, not the button: the wrapper is
-              the rail's flex item, so `order` on the button would do nothing. */}
-          <div className="plb-menuwrap plb-savewrap">
-            <button
-              type="button"
-              className="btn btn-s btn-accent plb-icobtn"
-              aria-label="Save / export"
-              aria-expanded={saveOpen}
-              aria-haspopup="dialog"
-              title="Save, share or export this palette"
-              onClick={() => {
-                // No gate here — see the note on doSave. This menu holds three
-                // Copy rows, and copying is free forever; the account is asked
-                // for at the save and at the PNG, which are the two things that
-                // keep or produce something.
-                const n = !saveOpen; closeAllMenus(); setSaveOpen(n)
-              }}
-            >
-              <IcoBookmark /><span className="plb-lbl"><span className="plb-lbl-i">Save / export</span></span>
-            </button>
-            {saveOpen && (
-              <div className="plb-menu plb-menu--left plb-savemenu" role="dialog" aria-label="Save, share and export this palette" data-lenis-prevent>
-                <div className="plb-menu-title">Save to a project</div>
-                <div className="plb-menu-row">
-                  <input
-                    type="text"
-                    value={saveName}
-                    onChange={(e) => setSaveName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') doSave() }}
-                    placeholder="Project name…"
-                    aria-label="Project name"
-                  />
-                  <button type="button" className="btn btn-s btn-accent" onClick={doSave}>Save</button>
-                </div>
-                {saveError && <SaveRefusal message={saveError} testId="palette-save-refusal" />}
-                {projects.length > 0 && (
-                  <>
-                    <div className="plb-menu-sub">Overwrite existing</div>
-                    <div className="plb-scrolllist">
-                      {projects.slice(-5).map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          className="plb-menu-item"
-                          onClick={() => {
-                            try { overwriteProject(p.id); setSaveOpen(false); toast?.('Updated: ' + p.name) }
-                            catch (err) { toast?.(err?.message || 'Couldn’t save', 'error') }
-                          }}
-                        >
-                          {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-                <div className="plb-menu-div" role="separator" />
-                <div className="plb-menu-sub">Share</div>
-                <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(shareLink()); setSaveOpen(false) }}><IcoCopy /> Copy link to this palette</button>
-                <div className="plb-menu-sub">Export</div>
-                <button type="button" className="plb-menu-item" onClick={() => { copyCssExport(); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
-                <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
-                <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
-                <div className="plb-menu-sub">Community</div>
-                <button
-                  type="button"
-                  className="plb-menu-item"
-                  onClick={openSubmit}
-                  disabled={authLoading}
-                  aria-busy={authLoading || undefined}
-                  title={authLoading ? 'Checking your account…' : undefined}
-                ><IcoUsers /> Submit to the community…</button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+            Save current
+          </ToolButton>
+        </span>
+      )}
+      data-board-source={initial.source}
+      data-board-cols={colors.length}
+    >
+      <p className="sr-only" aria-live="polite">{liveMsg}</p>
+      <input ref={fileRef} type="file" accept="image/*" className="plb-file" onChange={onImageFile} aria-hidden="true" tabIndex={-1} />
 
-      {/* ── The board ── */}
       {/* P-003: name the paid edge instead of quietly stepping around it. */}
       {collapsedSystem && (
         <div className="plb-collapsed" role="status">
@@ -2648,7 +2212,7 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           </span>
           <button
             type="button"
-            className="btn btn-s plb-collapsed-cta"
+            className="tl-btn plb-collapsed-cta"
             onClick={() => openProModal({
               gate: 'palette-system-collapse',
               eyebrow: 'Pro colour tools',
@@ -2661,350 +2225,205 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* THE BOARD IS THE PAGE, SO IT CARRIES A NAME AND THE COLUMNS DO NOT.
-          ------------------------------------------------------------------
-          Measured on the built preview at 1440x900, signed out and signed in,
-          off Chrome's own accessibility tree rather than off the markup: this
-          route's landmark list was
-
-            navigation(Primary) | main | contentinfo
-            | region("PRIMARY #664BB7") | region("SECONDARY #CE70B4")
-            | region("ACCENT #B39CFF") | region("SUBTLE #E6E0EC")
-            | region("DEEP #352565") | navigation(Footer)
-
-          Five of the nine landmarks on the page were colour swatches, named
-          with raw hex, and the count GREW with the palette — a sixth colour
-          made a sixth landmark, up to PRO_MAX. The board itself, which is the
-          thing the page exists to produce, was anonymous, and the only
-          heading in the document was the 15px toolbar h1 above.
-
-          The cause was one element choice: each column was a <section> with
-          an accessible name, and a named <section> IS role=region. The five
-          sibling colour tools use that element for exactly the opposite job —
-          /create/tint, /create/gradient and /create/semantic-color each wrap a
-          major page section in one and point aria-labelledby at that section's
-          own h2, so their landmark lists read "Choose source colours", "Tune
-          the system", "Shape the gradient". Same element, two meanings, which
-          is the failure principle-ai-slop-diagnostic names under system
-          coherence: similar treatment without a semantic reason.
-
-          The correction is the one this repo had already written for the OTHER
-          renderer of this board. HomeWorkbench.jsx paints .plb-board with a
-          grouping role and a name, and .plb-badges below has grouped its two
-          contrast readings the same way since launch. So the set is the named
-          unit and a swatch is an item inside it — which is also what every
-          colour surface read on Mobbin does (Mural, Discord, V7 and Canva all
-          put one heading over the whole set; Arcade, Gamma and Squarespace
-          name the palette and leave the swatches carrying a name and a value).
-
-          The name is borrowed from the h1 rather than typed, so there is no
-          second string that can drift from the page's own title.
-
-          NOTHING PAINTED MOVES. A role attribute has no rule in any stylesheet
-          here, and <section> and <div> are both display:block before .plb-col
-          sets its own — 64-computed-style-snapshot passes all 25 routes
-          unregenerated. */}
-      <div className="plb-board" role="group" aria-labelledby="plb-page-title">
-        {adjusted.map((c, i) => {
-          // Vision type split: TOP half paints the real palette colour, BOTTOM
-          // half simulates it through the selected colour-vision deficiency.
-          // 'normal' leaves the swatch as a single flat colour.
-          const isSplit = vision !== 'normal'
-          const sim = isSplit ? simCvd(c, vision) : c
-          const ink = textColorForBg(sim)
-          // Deferred (see columnMeta): during a drag these lag the swatch by a
-          // frame or two rather than re-solving CAM16 for every column. The
-          // fallback covers the render where a colour has just been added and
-          // the deferred palette is still one shorter.
-          const meta = columnMeta[i]
-          const contrast = meta ? meta.contrast : contrastPair(c)
-          const ramp = meta ? meta.ramp : tonalRamp(c)
-          const name = columnNames[i]
-          // The DISPLAYED role, which varies by system. ROLES[i] stays the
-          // stable slot identity that exports, tints and the UI preview key
-          // off — see utils/paletteRoles.js for why those must not move.
-          const role = roleLabel(harmony, i)
-          const isLocked = locked.has(i)
-          const colClass = [
-            'plb-col',
-            isLocked && 'plb-col--locked',
-            isSplit && 'plb-col--split',
-            animIdx?.has(i) && 'plb-col--in',
-            outIdx === i && 'plb-col--out',
-            overIdx === i && dragFrom.current != null && 'plb-col--over',
-          ].filter(Boolean).join(' ')
-          return (
-            <div
-              role="group"
-              key={i}
-              className={colClass}
-              ref={colRef(c, ink, sim)}
-              aria-label={`${role} ${adjusted[i]}`}
-              // Whole-swatch drag: grab anywhere on the column to reorder (the
-              // grip glyph stays as a visual affordance). Disabled while a tints
-              // or HCT popover is open on this column so slider drags aren't
-              // hijacked by the native element drag.
-              draggable={pickerIdx !== i && tintsIdx !== i}
-              onDragStart={(e) => {
-                dragFrom.current = i
-                e.dataTransfer.effectAllowed = 'move'
-                try { e.dataTransfer.setData('text/plain', String(i)) } catch { /* older engines */ }
-              }}
-              onDragEnd={() => { dragFrom.current = null; setOverIdx(null) }}
-              onContextMenu={(e) => {
-                e.preventDefault()
-                setTintsIdx(null); setPickerIdx(null)
-                setCtxMenu({ kind: 'swatch', i, x: e.clientX, y: e.clientY })
-              }}
-              onDragOver={(e) => {
-                if (dragFrom.current == null) return
-                e.preventDefault()
-                e.dataTransfer.dropEffect = 'move'
-                if (overIdx !== i) setOverIdx(i)
-              }}
-              onDrop={(e) => {
-                e.preventDefault()
-                moveCol(dragFrom.current, i)
-                dragFrom.current = null
-                setOverIdx(null)
-              }}
-            >
-              <div className="plb-col-tools">
-                <span
-                  className="plb-tool plb-tool--grip"
-                  title="Drag anywhere on this colour to reorder"
-                  aria-hidden="true"
-                >
-                  <IcoGrip />
-                </span>
-                <button
-                  type="button"
-                  className={isLocked ? 'plb-tool plb-tool--key plb-tool--on' : 'plb-tool plb-tool--key'}
-                  aria-pressed={isLocked}
-                  title={isLocked ? 'Unlock — allow randomise to change it' : 'Lock — keep this colour through randomise'}
-                  aria-label={isLocked ? `Unlock ${role}` : `Lock ${role}`}
-                  onClick={() => toggleLock(i)}
-                >
-                  <IcoLock open={!isLocked} />
-                </button>
-                <button
-                  type="button"
-                  className="plb-tool"
-                  title={isPro ? 'Edit in HCT' : 'Edit in HCT — Pro'}
-                  aria-label={`Edit ${role} in HCT`}
-                  onClick={() => openHctPicker(i)}
-                >
-                  <IcoSliders />
-                </button>
-                <button
-                  type="button"
-                  className={showContrast ? 'plb-tool plb-tool--on' : 'plb-tool'}
-                  aria-pressed={showContrast}
-                  title={isPro ? 'Show WCAG contrast for this palette' : 'Show WCAG contrast — Pro'}
-                  aria-label={`Show contrast guidance for ${role}`}
-                  onClick={() => {
-                    if (!isPro) {
-                      openProModal({ gate: 'palette-contrast-view', eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })
-                      return
-                    }
-                    setShowContrast(v => !v)
-                  }}
-                >
-                  <IcoContrast />
-                </button>
-                {adjusted.length > 1 && (
+      {/* THE BOARD (D:1017-1043). The set is the named unit (role=group,
+          named by the page's h1) and each colour an item inside it — never a
+          landmark per swatch. */}
+      <div className="plb-stage">
+        <div className="plb-board" role="group" aria-labelledby="plb-page-title">
+          {adjusted.map((c, i) => {
+            // Vision check: the TOP half paints the real colour, the BOTTOM
+            // half simulates it through the chosen colour-vision deficiency.
+            const isSplit = vision !== 'normal'
+            const sim = isSplit ? simCvd(c, vision) : c
+            const ink = textColorForBg(sim)
+            const anti = ink === '#000000' ? '#FFFFFF' : '#000000'
+            const meta = columnMeta[i]
+            const ramp = meta ? meta.ramp : tonalRamp(c)
+            const name = columnNames[i]
+            const role = roleLabel(harmony, i)
+            const isLocked = locked.has(i)
+            const ratio = contrastRatio(c, ink)
+            const inkWord = ink === '#000000' ? 'dark text' : 'light text'
+            const colClass = [
+              'plb-col',
+              isLocked && 'plb-col--locked',
+              isSplit && 'plb-col--split',
+              animIdx?.has(i) && 'plb-col--in',
+              outIdx === i && 'plb-col--out',
+              overIdx === i && dragFrom.current != null && 'plb-col--over',
+            ].filter(Boolean).join(' ')
+            const actionsOpen = ctxMenu?.kind === 'swatch' && ctxMenu.i === i
+            return (
+              <div
+                role="group"
+                key={i}
+                className={colClass}
+                ref={(el) => { colRef(c, ink, sim)(el); if (el) el.style.setProperty('--plb-anti', anti) }}
+                aria-label={`${role} ${adjusted[i]}`}
+                // Whole-swatch drag reorders; off while a tints or HCT popover
+                // is open on this column so slider drags aren't hijacked.
+                draggable={pickerIdx !== i && tintsIdx !== i}
+                onDragStart={(e) => {
+                  dragFrom.current = i
+                  e.dataTransfer.effectAllowed = 'move'
+                  try { e.dataTransfer.setData('text/plain', String(i)) } catch { /* older engines */ }
+                }}
+                onDragEnd={() => { dragFrom.current = null; setOverIdx(null) }}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setTintsIdx(null); setPickerIdx(null)
+                  setCtxMenu({ kind: 'swatch', i, x: e.clientX, y: e.clientY })
+                }}
+                onDragOver={(e) => {
+                  if (dragFrom.current == null) return
+                  e.preventDefault()
+                  e.dataTransfer.dropEffect = 'move'
+                  if (overIdx !== i) setOverIdx(i)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  moveCol(dragFrom.current, i)
+                  dragFrom.current = null
+                  setOverIdx(null)
+                }}
+              >
+                {/* The drawn lock (D:1021), always visible, and beneath it
+                    the one control this build adds: every other action on a
+                    colour (HCT edit, tints, swap, insert, remove, use as seed)
+                    is in its Colour actions menu. */}
+                <div className="plb-col-tools">
                   <button
                     type="button"
-                    className={swapIdx === i ? 'plb-tool plb-tool--on' : 'plb-tool'}
-                    title="Choose a swap direction"
-                    aria-label={`Choose a direction to swap ${role}`}
+                    className={isLocked ? 'plb-tool plb-tool--key plb-tool--on' : 'plb-tool plb-tool--key'}
+                    aria-pressed={isLocked}
+                    title={isLocked ? 'Unlock this colour' : 'Lock this colour'}
+                    aria-label={isLocked ? `Unlock ${role}` : `Lock ${role}`}
+                    onClick={() => toggleLock(i)}
+                  >
+                    <ToolIcon name={isLocked ? 'lock-simple' : 'lock-simple-open'} size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={actionsOpen ? 'plb-tool plb-tool--more plb-tool--on' : 'plb-tool plb-tool--more'}
+                    title="More colour actions"
+                    aria-label={`More actions for ${role}`}
                     aria-haspopup="menu"
-                    aria-expanded={swapIdx === i}
-                    onClick={() => {
-                      setTintsIdx(null); setPickerIdx(null); setCtxMenu(null)
-                      setSwapIdx(current => current === i ? null : i)
+                    aria-expanded={actionsOpen}
+                    onClick={(e) => {
+                      const r = e.currentTarget.getBoundingClientRect()
+                      setTintsIdx(null); setPickerIdx(null)
+                      setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i) ? null : { kind: 'swatch', i, x: r.left, y: r.bottom + 6 })
                     }}
                   >
-                    <IcoSwap />
+                    <ToolIcon name="dots-three" size={15} />
                   </button>
-                )}
-                <button type="button" className="plb-tool plb-tool--key" title="Copy hex" aria-label={`Copy ${adjusted[i]}`} onClick={() => onCopy?.(adjusted[i])}>
-                  <IcoCopy />
-                </button>
-                {adjusted.length > 2 && (
-                  <button type="button" className="plb-tool" title="Remove colour" aria-label={`Remove ${role}`} onClick={() => removeCol(i)}>
-                    <IcoX />
-                  </button>
-                )}
-                {/* Touch-band overflow. See the @media(min-width:769px) and
-                    (hover:none) block in global.css for why it exists: that band
-                    inherits the desktop VERTICAL tool column while hover:none
-                    pins it permanently open, which puts seven unlabelled icons
-                    down the top of every swatch. Only .plb-tool--key survives
-                    there; the rest move behind this one control, which opens the
-                    existing labelled "Colour actions" menu rather than adding a
-                    second surface to maintain. */}
+                </div>
+
+                {/* The 5-bar tint strip (D:1022-1026): one button — it opens
+                    this colour's tints. */}
                 <button
                   type="button"
-                  className={ctxMenu?.kind === 'swatch' && ctxMenu.i === i ? 'plb-tool plb-tool--more plb-tool--on' : 'plb-tool plb-tool--more'}
-                  title="More colour actions"
-                  aria-label={`More actions for ${role}`}
-                  aria-haspopup="menu"
-                  aria-expanded={ctxMenu?.kind === 'swatch' && ctxMenu.i === i}
-                  onClick={(e) => {
-                    const r = e.currentTarget.getBoundingClientRect()
-                    setTintsIdx(null); setPickerIdx(null); setSwapIdx(null)
-                    setCtxMenu(cur => (cur && cur.kind === 'swatch' && cur.i === i)
-                      ? null
-                      : { kind: 'swatch', i, x: r.left, y: r.bottom + 6 })
-                  }}
+                  className="plb-ramp"
+                  title="View tints"
+                  aria-label={`Tonal ramp of ${adjusted[i]} — view all tints`}
+                  onClick={() => { setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
                 >
-                  <IcoMore />
+                  {ramp.map((rc, k) => (
+                    <span key={k} className="plb-ramp-bar" ref={barRef(rc)} aria-hidden="true" />
+                  ))}
                 </button>
-              </div>
-
-              {swapIdx === i && (
-                <div className="plb-pop plb-swappop" role="menu" aria-label={`Swap ${role}`}>
-                  {i > 0 && (
-                    <button type="button" role="menuitem" className="plb-swapdir" onClick={() => swapCols(i, 'left')}>
-                      <IcoArrowLeft /> Swap left
-                    </button>
-                  )}
-                  {i < colors.length - 1 && (
-                    <button type="button" role="menuitem" className="plb-swapdir" onClick={() => swapCols(i, 'right')}>
-                      Swap right <IcoArrowRight />
-                    </button>
-                  )}
+                <div className="plb-col-body">
+                  <div className="plb-name">{name}</div>
+                  {/* Canonical uppercase in the DOM: what a screen reader reads,
+                      what the copy puts on the clipboard, what a test reads. */}
+                  <button type="button" className="plb-hex" title="Copy hex" onClick={() => onCopy?.(adjusted[i].toUpperCase())}>{adjusted[i].toUpperCase()}</button>
+                  <div className="plb-role">{role}</div>
                 </div>
-              )}
-
-              {/* ONE button, five decorative bars — it used to be five buttons.
-                  They were identical: same aria-label, same onClick, no
-                  per-bar behaviour, so the ramp offered one function through
-                  five targets. That cost a WCAG 2.5.8 failure (14px wide with a
-                  4px gap puts the centres 18px apart, so the 24px spacing
-                  exception cannot apply either), 20 redundant tab stops per
-                  page, and "View the tints of #009549, button" announced five
-                  times per swatch. As one button the target is 86x34, and the
-                  bars become the same aria-hidden chip-strip idiom already used
-                  by .plb-strip-c and .plb-pvg-sw. */}
-              <button
-                type="button"
-                className="plb-ramp"
-                title="View tints"
-                aria-label={`Tonal ramp of ${adjusted[i]} — view all tints`}
-                onClick={() => { setPickerIdx(null); setCtxMenu(null); setTintsIdx(t => (t === i ? null : i)) }}
-              >
-                {ramp.map((rc, k) => (
-                  <span key={k} className="plb-ramp-bar" ref={barRef(rc)} aria-hidden="true" />
-                ))}
-              </button>
-              {/* The title describes the COLOUR in this slot, so it changes
-                  with the colour system. The role below it describes the SLOT
-                  — it is what exports, tints and the UI preview key off, so it
-                  stays, demoted to an eyebrow. */}
-              <div className="plb-name">{name}</div>
-              {/* Canonical uppercase in the DOM, not just via text-transform.
-                  The CSS already displayed it uppercase, so the lowercase
-                  underneath was what a screen reader announced, what the copy
-                  button put on the clipboard, and what a test read back — three
-                  ways of disagreeing with the one thing the user can see. The
-                  seed field beside it reports normaliseHex's canonical form, so
-                  this is also what makes "the field names swatch 0" checkable
-                  as a string rather than only as a colour. */}
-              <button type="button" className="plb-hex" title="Copy hex" onClick={() => onCopy?.(adjusted[i].toUpperCase())}>{adjusted[i].toUpperCase()}</button>
-              <div className="plb-role">{role}</div>
-              {showContrast && (
-                <span className="plb-badges" role="group" aria-label={`Contrast of ${adjusted[i]} — white text ${contrast.light.ratio.toFixed(1)} to 1, black text ${contrast.dark.ratio.toFixed(1)} to 1`}>
-                  <span className={`plb-badge plb-badge--${contrast.light.level.toLowerCase()}`} title={`With white text — ${contrast.light.ratio.toFixed(2)}:1`}>
-                    <span className="plb-badge-ink plb-badge-ink--w" aria-hidden="true" />{contrast.light.level} {contrast.light.ratio.toFixed(1)}
+                {/* THE AA CHIP (D:1032-1034), in the design's visuals — and Pro, which
+                    is a Pro check. A free person sees the
+                    chip's place and what it would tell them, and it opens Pro. */}
+                {isPro ? (
+                  <span className="plb-aa" title={`${ratio.toFixed(2)}:1 with ${inkWord}`}>
+                    <ToolIcon name={ratio >= 4.5 ? 'check-circle' : 'warning-circle'} size={12} />
+                    {ratio.toFixed(1)}:1 on {inkWord}
                   </span>
-                  <span className={`plb-badge plb-badge--${contrast.dark.level.toLowerCase()}`} title={`With black text — ${contrast.dark.ratio.toFixed(2)}:1`}>
-                    <span className="plb-badge-ink plb-badge-ink--b" aria-hidden="true" />{contrast.dark.level} {contrast.dark.ratio.toFixed(1)}
-                  </span>
-                </span>
-              )}
-
-              {tintsIdx === i && (
-                <div className="plb-pop plb-tintpop" role="dialog" aria-label={`Tints of ${adjusted[i]}`}>
-                  <div className="plb-pop-head">
-                    <span className="plb-pop-title">Tints</span>
-                    <button type="button" className="plb-pop-x" aria-label="Close tints" onClick={() => setTintsIdx(null)}><IcoX /></button>
-                  </div>
-                  <div className="plb-tint-list">
-                    {tonalRamp(adjusted[i], TINT_TONES).map((tc, k) => (
-                      <button key={k} type="button" className="plb-tint-row" onClick={() => onCopy?.(normaliseHex(tc) || tc)}>
-                        <span className="plb-tint-chip" ref={barRef(tc)} aria-hidden="true" />
-                        <span className="plb-tint-tone">T{TINT_TONES[k]}</span>
-                        <span className="plb-tint-hex">{(normaliseHex(tc) || tc)}</span>
-                      </button>
-                    ))}
-                  </div>
+                ) : (
                   <button
                     type="button"
-                    className="btn btn-s plb-tintopen"
-                    onClick={() => openInTint(adjusted[i])}
+                    className="plb-aa plb-aa--locked"
+                    aria-label={`Contrast of ${role} — a Pro check`}
+                    onClick={() => openProModal({ gate: 'palette-contrast-view', eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })}
                   >
-                    Open in Tint Generator
+                    <ToolIcon name="lock-simple" size={12} />
+                    AA · Pro
                   </button>
-                </div>
-              )}
+                )}
 
-              {pickerIdx === i && (
-                <HctPicker
-                  key={i}
-                  hex={colors[i]}
-                  label={role}
-                  onChange={(hex) => setColorAt(i, hex)}
-                  onClose={() => setPickerIdx(null)}
-                />
-              )}
+                {tintsIdx === i && (
+                  <div className="plb-pop plb-tintpop" role="dialog" aria-label={`Tints of ${adjusted[i]}`}>
+                    <div className="plb-pop-head">
+                      <span className="plb-pop-title">Tints</span>
+                      <button type="button" className="plb-pop-x" aria-label="Close tints" onClick={() => setTintsIdx(null)}><IcoX /></button>
+                    </div>
+                    <div className="plb-tint-list">
+                      {tonalRamp(adjusted[i], TINT_TONES).map((tc, k) => (
+                        <button key={k} type="button" className="plb-tint-row" onClick={() => onCopy?.(normaliseHex(tc) || tc)}>
+                          <span className="plb-tint-chip" ref={barRef(tc)} aria-hidden="true" />
+                          <span className="plb-tint-tone">T{TINT_TONES[k]}</span>
+                          <span className="plb-tint-hex">{(normaliseHex(tc) || tc)}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button type="button" className="btn btn-s plb-tintopen" onClick={() => openInTint(adjusted[i])}>
+                      Open in Tint Generator
+                    </button>
+                  </div>
+                )}
 
-              {i < adjusted.length - 1 && (
-                <button
-                  type="button"
-                  className="plb-gap"
-                  aria-label={`Insert a colour between position ${i + 1} and ${i + 2} — right-click, or open the menu key, to insert more than one`}
-                  title="Insert a colour here — right-click for more"
-                  onClick={() => insertBetween(i)}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setTintsIdx(null); setPickerIdx(null)
-                    // A real right-click carries the pointer position; a
-                    // keyboard-triggered contextmenu event (Menu key /
-                    // Shift+F10) typically reports (0,0) or detail 0 — anchor
-                    // to the button itself instead of the viewport corner.
-                    const synthetic = (e.clientX === 0 && e.clientY === 0) || e.detail === 0
-                    const pos = synthetic
-                      ? (() => { const r = e.currentTarget.getBoundingClientRect(); return { x: r.left, y: r.bottom } })()
-                      : { x: e.clientX, y: e.clientY }
-                    setCtxMenu({ kind: 'gap', i, ...pos })
-                  }}
-                  onKeyDown={(e) => {
-                    // Explicit fallback for the Menu key / Shift+F10 in case
-                    // the browser doesn't dispatch a native contextmenu event
-                    // from the keyboard — keeps this reachable without a mouse.
-                    if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return
-                    e.preventDefault()
-                    setTintsIdx(null); setPickerIdx(null)
-                    const r = e.currentTarget.getBoundingClientRect()
-                    setCtxMenu({ kind: 'gap', i, x: r.left, y: r.bottom })
-                  }}
-                >
-                  <span className="plb-gap-dot"><IcoPlus size={13} /></span>
-                </button>
-              )}
-            </div>
-          )
-        })}
+                {pickerIdx === i && (
+                  <HctPicker key={i} hex={colors[i]} label={role} onChange={(hex) => setColorAt(i, hex)} onClose={() => setPickerIdx(null)} />
+                )}
+
+                {i < adjusted.length - 1 && (
+                  <button
+                    type="button"
+                    className="plb-gap"
+                    aria-label={`Insert a colour between position ${i + 1} and ${i + 2} — right-click, or open the menu key, to insert more than one`}
+                    title="Insert a colour here — right-click for more"
+                    onClick={() => insertBetween(i)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setTintsIdx(null); setPickerIdx(null)
+                      const synthetic = (e.clientX === 0 && e.clientY === 0) || e.detail === 0
+                      const pos = synthetic
+                        ? (() => { const r = e.currentTarget.getBoundingClientRect(); return { x: r.left, y: r.bottom } })()
+                        : { x: e.clientX, y: e.clientY }
+                      setCtxMenu({ kind: 'gap', i, ...pos })
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'ContextMenu' && !(e.key === 'F10' && e.shiftKey)) return
+                      e.preventDefault()
+                      setTintsIdx(null); setPickerIdx(null)
+                      const r = e.currentTarget.getBoundingClientRect()
+                      setCtxMenu({ kind: 'gap', i, x: r.left, y: r.bottom })
+                    }}
+                  >
+                    <span className="plb-gap-dot"><IcoPlus size={13} /></span>
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        {/* The ADD rail (D:1037-1040). */}
         <button type="button" className="plb-add" onClick={addCol} aria-label="Add a colour">
-          <span className="plb-add-dot"><IcoPlus size={18} /></span>
-          <span className="plb-add-label">Add</span>
+          <ToolIcon name="plus" size={19} />
+          <span className="plb-add-label">ADD</span>
         </button>
       </div>
 
-      {/* ── Right-click menu ── */}
+      {/* ── Colour actions / insert menus (right-click and ⋯) ── */}
       {ctxMenu && ctxMenu.kind === 'gap' && (
         <div className="plb-pop plb-ctx" role="menu" aria-label="Insert colours" ref={ctxPosRef(ctxMenu.x, ctxMenu.y)}>
           {(() => {
@@ -3054,21 +2473,6 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { toggleLock(ctxMenu.i); setCtxMenu(null) }}>
             <IcoLock open={locked.has(ctxMenu.i)} size={15} /> {locked.has(ctxMenu.i) ? 'Unlock' : 'Lock'}
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="plb-ctx-item"
-            onClick={() => {
-              setCtxMenu(null)
-              if (!isPro) {
-                openProModal({ gate: 'palette-contrast-view', eyebrow: 'Pro colour tools', title: 'Check contrast, light and dark', subtitle: 'See WCAG contrast on every colour against both white and black text — so you know which colours carry legible text in light and dark UI.' })
-                return
-              }
-              setShowContrast(v => !v)
-            }}
-          >
-            <IcoContrast /> {showContrast ? 'Hide contrast' : 'Show contrast'}
-          </button>
           <div className="plb-ctx-sep" aria-hidden="true" />
           {ctxMenu.i > 0 && (
             <button type="button" role="menuitem" className="plb-ctx-item" onClick={() => { swapCols(ctxMenu.i, 'left'); setCtxMenu(null) }}><IcoArrowLeft /> Swap left</button>
@@ -3081,6 +2485,209 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
           {colors.length > 2 && (
             <button type="button" role="menuitem" className="plb-ctx-item plb-ctx-item--danger" onClick={() => { removeCol(ctxMenu.i); setCtxMenu(null) }}><IcoX /> Remove</button>
           )}
+        </div>
+      )}
+
+      {/* ── The floating panels: Suggest / Explore, History, Save current ──
+          Fixed under the toolbar (a bottom sheet on a phone) rather than
+          anchored to a button, because on a phone the button that opened one
+          may be in the Tools sheet. `.plb-menuwrap` keeps the page's one
+          dismiss layer from closing a panel on a press inside it. */}
+      {galleryOpen && (
+        <div className="plb-menuwrap plb-float">
+          <div className="plb-menu plb-galpopup" role="dialog" aria-label="Colour gallery" data-lenis-prevent>
+            <div className="plb-galpopup-head">
+              <div className="plb-menu-title">{galleryTab === 'community' ? 'Community gallery' : galleryTab === 'variations' ? 'Suggestions' : 'Brand systems'}</div>
+              <div className="plb-galtabs" role="tablist" aria-label="Gallery sections">
+                <button type="button" role="tab" aria-selected={galleryTab === 'variations'} className={galleryTab === 'variations' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('variations')}><IcoSpark /> Variations</button>
+                <button type="button" role="tab" aria-selected={galleryTab === 'community'} className={galleryTab === 'community' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('community')}><IcoGallery /> Community</button>
+                <button type="button" role="tab" aria-selected={galleryTab === 'brands'} className={galleryTab === 'brands' ? 'plb-galtab plb-galtab--on' : 'plb-galtab'} onClick={() => setGalleryTab('brands')}><IcoBookmark /> Brands</button>
+              </div>
+              <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
+            </div>
+
+            {galleryTab === 'community' && (
+              <div className="plb-galpopup-body">
+                <PaletteGalleryGrid
+                  toast={toast}
+                  selectedId={importedGalleryId}
+                  onPick={(cols, name, id) => importGalleryPalette(cols, name, id)}
+                  onCompare={(cols, name) => comparePalette(name, cols)}
+                />
+                <div className="plb-menu-sub">Browse the full set in <Link to="/discover" onClick={() => setGalleryOpen(false)}>Discover</Link></div>
+              </div>
+            )}
+
+            {galleryTab === 'variations' && (
+              <div className="plb-galpopup-body">
+                <div className="plb-galpopup-note">
+                  <span>Generated from your current palette</span>
+                  <span className="plb-score" title="Palette quality score — tone range, evenness, chroma profile and distinctness">Current {paletteScore}</span>
+                </div>
+                {variations.map((v, idx) => {
+                  const gated = !isPro && idx >= FREE_VARIATIONS
+                  const active = activeVar === v.id
+                  return (
+                    <div key={v.id} className={`plb-varrow${gated ? ' plb-varrow--locked' : ''}${active ? ' plb-varrow--active' : ''}`}>
+                      <button type="button" className="plb-varrow-main" onClick={() => pickVariation(v, idx)} aria-pressed={active}>
+                        <span className="plb-strip" aria-hidden="true">
+                          {v.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
+                        </span>
+                        <span className="plb-varrow-name">{v.label}<small>{v.desc}</small></span>
+                        {active && <span className="plb-varrow-tick" aria-label="Active variation"><IcoCheck size={13} /></span>}
+                        <span className="plb-score">{v.score}</span>
+                        {gated && <span className="plb-tab-lock"><IcoLock size={11} /></span>}
+                      </button>
+                      {!gated && (
+                        <button type="button" className="plb-varrow-cmp" title="Compare with the current palette" aria-label={`Compare ${v.label} with the current palette`} onClick={() => compareVariation(v, idx)}>
+                          <IcoEye />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+                {variations.length === 0 && <div className="plb-menu-sub">No distinct variations for this palette</div>}
+              </div>
+            )}
+
+            {galleryTab === 'brands' && (
+              <div className="plb-galpopup-body">
+                {/* openBrands holds only the rows this viewer may load; a
+                    Pro-gated brand's colours never enter the DOM. */}
+                {openBrands.map(b => (
+                  <div key={b.id} className="plb-varrow">
+                    <button type="button" className="plb-varrow-main" onClick={() => pickBrand(b)}>
+                      <span className="plb-strip" aria-hidden="true">
+                        {b.colors.map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
+                      </span>
+                      <span className="plb-varrow-name">{b.name}</span>
+                    </button>
+                    <button type="button" className="plb-varrow-cmp" title="Compare with the current palette" aria-label={`Compare ${b.name} with the current palette`} onClick={() => comparePalette(b.name, b.colors)}>
+                      <IcoEye />
+                    </button>
+                  </div>
+                ))}
+                {lockedBrands.map(p => <LockedPaletteRow key={p.id} preview={p} />)}
+                {lockedBrandCount > 0 && (
+                  <LockedTeaseCta
+                    gate="palette-builder-brand-lock"
+                    heading={`Another ${lockedBrandCount} brand ${lockedBrandCount === 1 ? 'system' : 'systems'} with Pro`}
+                    body="Loading a brand applies its whole colour system, not only its swatches."
+                    action="See what Pro includes"
+                    modal={{
+                      eyebrow: 'Pro colour tools',
+                      title: 'Load any brand system',
+                      subtitle: `Free covers ${BRAND_PALETTES.length - lockedBrandCount} starter brands. Pro opens the remaining ${lockedBrandCount}, and each one applies the brand’s whole colour system rather than its swatches alone.`,
+                    }}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {histOpen && (
+        <div className="plb-menuwrap plb-float">
+          <div className="plb-menu plb-histmenu" role="menu" aria-label="Palette history" data-lenis-prevent>
+            <div className="plb-float-head">
+              <div className="plb-menu-title">History</div>
+              <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
+            </div>
+            {history.length === 0 ? (
+              <div className="plb-menu-sub">No history yet — every palette you build lands here automatically</div>
+            ) : (
+              <>
+                <div className="plb-scrolllist">
+                  {history.map((h, i) => (
+                    <button
+                      key={`${h.at}-${i}`}
+                      type="button"
+                      role="menuitem"
+                      className="plb-varrow"
+                      onClick={() => {
+                        applySnapshot(h)
+                        setLiveMsg('Palette restored from history')
+                        toast?.('Palette restored from history')
+                        setHistOpen(false)
+                      }}
+                    >
+                      <span className="plb-strip" aria-hidden="true">
+                        {h.colors.slice(0, 6).map((c, k) => <span key={k} className="plb-strip-c" ref={barRef(c)} />)}
+                      </span>
+                      <span className="plb-varrow-name">{h.colors.length} colours<small>{timeAgo(h.at)}</small></span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="plb-menu-item plb-histclear"
+                  onClick={() => { setHistory([]); try { localStorage.removeItem(HISTORY_KEY) } catch { /* disabled */ } }}
+                >
+                  Clear history
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {saveOpen && (
+        <div className="plb-menuwrap plb-float">
+          <div className="plb-menu plb-savemenu" role="dialog" aria-label="Save, share and export this palette" data-lenis-prevent>
+            <div className="plb-float-head">
+              <div className="plb-menu-title">Save to a project</div>
+              <button type="button" className="plb-pop-x" aria-label="Close" onClick={closeAllMenus}><IcoX /></button>
+            </div>
+            <div className="plb-menu-row">
+              <input
+                type="text"
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') doSave() }}
+                placeholder="Project name…"
+                aria-label="Project name"
+              />
+              <button type="button" className="btn btn-s btn-accent" onClick={doSave}>Save</button>
+            </div>
+            {saveError && <SaveRefusal message={saveError} testId="palette-save-refusal" />}
+            {projects.length > 0 && (
+              <>
+                <div className="plb-menu-sub">Overwrite existing</div>
+                <div className="plb-scrolllist">
+                  {projects.slice(-5).map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="plb-menu-item"
+                      onClick={() => {
+                        try { overwriteProject(p.id); setSaveOpen(false); toast?.('Updated: ' + p.name) }
+                        catch (err) { toast?.(err?.message || 'Couldn’t save', 'error') }
+                      }}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+            <div className="plb-menu-div" role="separator" />
+            <div className="plb-menu-sub">Share</div>
+            <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(shareLink()); setSaveOpen(false) }}><IcoCopy /> Copy link to this palette</button>
+            <div className="plb-menu-sub">Export</div>
+            <button type="button" className="plb-menu-item" onClick={() => { copyCssExport(); setSaveOpen(false) }}><IcoCopy /> Copy CSS variables</button>
+            <button type="button" className="plb-menu-item" onClick={() => { onCopy?.(adjusted.join(', ')); setSaveOpen(false) }}><IcoCopy /> Copy hex values</button>
+            <button type="button" className="plb-menu-item" onClick={downloadPng}><IcoDownload /> Download PNG card</button>
+            <div className="plb-menu-sub">Community</div>
+            <button
+              type="button"
+              className="plb-menu-item"
+              onClick={openSubmit}
+              disabled={authLoading}
+              aria-busy={authLoading || undefined}
+              title={authLoading ? 'Checking your account…' : undefined}
+            ><IcoUsers /> Submit to the community…</button>
+          </div>
         </div>
       )}
 
@@ -3378,84 +2985,53 @@ export default function PaletteBuilder({ onCopy, onExport = onCopy, toast }) {
         </div>
       )}
 
-      {/* ── Global adjust ── */}
-      {/* The grouping role is what DELIVERS the name on the line below. A
-          <footer> that is a descendant of <main> maps to the generic role, and
-          a generic element takes no accessible name — so "Global palette
-          adjustments" was written here, and Chrome's accessibility tree
-          reported this strip nameless at every width and in both themes. The
-          string is unchanged; it simply reaches a reader now. */}
+      {/* ── ADJUST ALL (D:1044-1057): one row, signed values, Copy CSS inline ── */}
       <footer className="plb-adjust" role="group" aria-labelledby="plb-adjust-title">
-        {/* THE STRIP NOW SAYS WHAT IT DOES, ON SCREEN.
-            "Global palette adjustments" existed only as an aria-label, so the
-            name reached assistive technology and nobody else. A sighted user
-            got four sliders against the bottom edge with no statement of
-            SCOPE — and scope is the one thing that matters here, because
-            every other control on this page acts on ONE swatch (lock, copy,
-            the per-row menu) while these four move all of them at once. The
-            founder's screenshot boxed this strip as horrible UX; reading it
-            cold, there is nothing that tells you dragging Hue will repaint
-            the whole board.
-
-            aria-labelledby, not aria-label, so the accessible name IS the
-            visible one rather than a second string that can drift from it. */}
         <p className="plb-adjust-title" id="plb-adjust-title">Adjust all</p>
-        {/* One grid for all four fields, with each field as display:contents, so
-            the LABEL columns size to their own text while the TRACK columns are
-            equal `1fr` siblings of one grid. That is what makes every track the
-            same length no matter how much longer "Temperature" is than "Hue" —
-            a per-field flex row cannot do it, because each row divides its own
-            width. See .plb-adjust-fields in global.css. */}
-        <div className="plb-adjust-fields">
-          {ADJUST_FIELDS.map(f => (
-            <div className={`plb-adjust-field${adjust[f.key] !== 0 ? ' plb-adjust-field--edited' : ''}`} key={f.key}>
-              <label className="plb-adjust-label" htmlFor={`plb-${f.key}`}>{f.label}</label>
-              <SnapSlider
-                id={`plb-${f.key}`}
-                min={f.min}
-                max={f.max}
-                value={adjust[f.key]}
-                defaultValue={0}
-                snaps={f.snaps}
-                snapRadius={f.snapRadius}
-                unit={f.unit}
-                trackGradient={trackGradients?.[f.key] || null}
-                handleColor={handleColors?.[f.key] || null}
-                onChange={(v) => setAdjust(prev => ({ ...prev, [f.key]: v }))}
-                ariaLabel={`${f.label} adjustment`}
-              />
-            </div>
-          ))}
-        </div>
-        {/* Keep this slot in the row at rest. Adding it only after the first
-            input event changed the grid width underneath an active pointer,
-            which made the right-most Temperature thumb jump away mid-drag. */}
+        {ADJUST_FIELDS.map(f => {
+          const v = adjust[f.key]
+          return (
+            <ToolSlider
+              key={f.key}
+              id={`plb-${f.key}`}
+              className={`plb-adjust-field${v !== 0 ? ' plb-adjust-field--edited' : ''}`}
+              label={f.label}
+              min={f.min}
+              max={f.max}
+              step={1}
+              value={v}
+              onChange={(nv) => setAdjust(prev => ({ ...prev, [f.key]: nv }))}
+              snaps={f.snaps}
+              defaultValue={0}
+              // As drawn (D:2171-2174): degrees on Hue, a bare signed number
+              // on the others; the percentage is spoken, not printed.
+              display={`${v > 0 ? '+' : ''}${v}${f.unit === '°' ? '°' : ''}`}
+              track={trackGradients?.[f.key] || ADJUST_TRACKS[f.key]}
+              ariaLabel={`${f.label} adjustment`}
+              ariaValueText={`${v > 0 ? '+' : ''}${v}${f.unit || ''}`}
+            />
+          )
+        })}
+        {/* Always laid out, so that the first nudge of a slider does not
+            reflow the bar under the pointer; hidden until there is something
+            to reset. */}
         <button
           type="button"
-          className={`btn btn-s btn-ghost plb-adjust-reset${adjustDirty ? '' : ' plb-adjust-reset--idle'}`}
+          className={adjustDirty ? 'tl-btn plb-adjust-reset' : 'tl-btn plb-adjust-reset is-idle'}
           onClick={() => setAdjust(ZERO_ADJUST)}
           disabled={!adjustDirty}
-          aria-hidden={!adjustDirty}
-          tabIndex={adjustDirty ? 0 : -1}
+          aria-hidden={!adjustDirty || undefined}
         >
           Reset
         </button>
-        {/* The icon is not decoration and it is not new: it is the same
-            <IcoCopy /> the save menu puts on "Copy CSS variables", which calls
-            this same copyCssExport(). Measured, this button and `.plb-hexfield`
-            — a real text input two rows above it — shared a white ground and
-            the identical 1px rgb(218,216,207) border, and at <=768 this one
-            stretches to the full width of the viewport (628x29 at 660px). The
-            founder read it off a screenshot as a text field. A leading glyph is
-            what a field never has. */}
-        <button type="button" className="btn btn-s plb-copycss" onClick={copyCssExport}><IcoCopy /> Copy CSS</button>
+        <button type="button" className="plb-copycss" onClick={copyCssExport}>
+          <ToolIcon name="copy" size={14} /><span>Copy CSS</span>
+        </button>
       </footer>
 
-      {/* Step 1 of the brand-kit walkthrough (colours → fonts → type scale →
-          icons). Renders nothing unless the visitor is in the flow. This page is
-          the step because it is the tool that writes `design.palette`, which is
-          what the walkthrough reads to know the step is done. */}
+      {/* Step 1 of the brand-kit walkthrough; renders nothing unless the
+          visitor is in the flow. */}
       <UIKitGuide step="color" />
-    </div>
+    </ToolLayout>
   )
 }

@@ -43,7 +43,7 @@ function makeDom({
   // that a media-less theme-color tag is created, put first, and kept in step
   // with the resolved theme. That the values match the real grounds is asserted
   // against index.html in tests/unit/brand-icons.test.js.
-  grounds = { light: '#EFEEE9', dark: '#060607' },
+  grounds = { light: '#F5F5F2', dark: '#060607' },
 } = {}) {
   const attrs = new Map()
   const store = new Map()
@@ -222,7 +222,7 @@ test('boot script · it never fabricates a stored choice for a visitor who has n
 })
 
 test('boot script · vs-t-lightreset is retired, not merely commented out', () => {
-  // The one-time light migration from #132 (2026-07-04). Its own comment said
+  // The one-time light migration from #132. Its own comment said
   // "dark returns later as an explicit opt-in"; dark has now returned, so the
   // migration is spent and a returning visitor's stored dark must be honoured
   // rather than reset. Asserted against the executable half only — the comment
@@ -288,6 +288,11 @@ const themeFactory = (() => {
   }
 
   rewrite(/^import\s*\{([^}]*)\}\s*from\s*'react'\s*$/m, 'const {$1} = __react', 'the react import')
+  // The account-sync listener. Stubbed to a no-op
+  // subscription: this harness drives the provider's own resolution, and no
+  // account is ever signed in here.
+  rewrite(/^import\s*\{\s*onAccountApplied\s*\}\s*from\s*'..\/utils\/accountEvents'\s*$/m,
+    'const onAccountApplied = () => () => {}', 'the account-sync import')
   // The provider's only JSX. Its `value={{…}}` object IS the contract consumers
   // read, so it is kept and returned rather than stubbed away.
   rewrite(
@@ -486,12 +491,12 @@ test('ThemeContext · the chrome tint follows the theme and never accumulates ta
   // tint would freeze on whatever the page happened to open with.
   const dom = makeDom({ osDark: false })
   const provider = mountProvider(dom)
-  assert.equal(dom.themeColor(), '#EFEEE9')
+  assert.equal(dom.themeColor(), '#F5F5F2')
 
   provider.value.setTheme('dark')
   assert.equal(dom.themeColor(), '#060607', 'the tint did not follow the theme')
   provider.value.setTheme('light')
-  assert.equal(dom.themeColor(), '#EFEEE9', 'the tint did not follow the theme back')
+  assert.equal(dom.themeColor(), '#F5F5F2', 'the tint did not follow the theme back')
 
   assert.equal(dom.themeColorCount(), 1,
     `${dom.themeColorCount()} media-less theme-color tags in head; only the first is read, `

@@ -187,18 +187,13 @@ export default function GradientGallery({ toast }) {
             own — a fact, not an invention. */}
         <h2 className="sr-only" id="grg-locked-more">Gradients included with Pro</h2>
         <LibraryGrid className="grg-grid" min={280} labelledBy="grg-locked-more">
-          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} />)}
+          {lockedPreviews.map((preview) => <LockedPaletteCard key={preview.id} preview={preview} gate="gradient-library-locked-card" />)}
         </LibraryGrid>
         <LockedTeaseCta
           gate="gradient-library-tier-lock"
           heading={`Another ${lockedCount} ${lockedCount === 1 ? 'gradient' : 'gradients'} with Pro`}
           body={`Free covers ${browsable.length} of the ${GALLERY_GRADIENTS.length}. Pro opens the remaining ${lockedCount}, each one editable in the Gradient Generator.`}
           action="See what Pro includes"
-          modal={{
-            eyebrow: 'Pro colour tools',
-            title: 'The full gradient library',
-            subtitle: `Free covers ${browsable.length} of the ${GALLERY_GRADIENTS.length} gradients. Pro opens the remaining ${lockedCount}, each one with its CSS to copy and its stops to edit.`,
-          }}
         />
       </>
     )
@@ -264,6 +259,8 @@ export default function GradientGallery({ toast }) {
           in two visually unrelated ways. */}
       <LibraryToolbar
         className="grg-toolbar"
+        quick={1}
+        activeFilters={(tag !== 'all' ? 1 : 0) + (types.includes('all') ? 0 : 1)}
         search={{
           value: rawQuery,
           onChange: setRawQuery,
@@ -358,12 +355,25 @@ export default function GradientGallery({ toast }) {
           requireLogin gate 09-auth-modal-accessibility covers. Sending a submit
           intent ahead of the user would open that form over a gradient they had
           not built. */}
-      <GalleryCloseCta
-        className="grg-cta"
-        detail="Build one in the Gradient Generator — then submit it to the community from there."
-        action="Create and submit your own"
-        to="/create/gradient"
-      />
+      {/* "create and submit your
+          own" is for Pro viewers only; everyone else, at the end of a capped
+          result, is offered more access instead. Where the locked tease is
+          already on screen it IS that offer, so the close does not repeat it. */}
+      {isPro === true ? (
+        <GalleryCloseCta
+          className="grg-cta"
+          detail="Build one in the Gradient Generator — then submit it to the community from there."
+          action="Create and submit your own"
+          to="/create/gradient"
+        />
+      ) : !teaseVisible && lockedCount > 0 ? (
+        <GalleryCloseCta
+          className="grg-cta"
+          detail={`Free covers ${browsable.length} of the ${GALLERY_GRADIENTS.length}. Pro opens all of them.`}
+          action="See what Pro includes"
+          to="/plans"
+        />
+      ) : null}
     </div>
   )
 }

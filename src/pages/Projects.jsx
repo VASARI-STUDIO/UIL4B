@@ -1,28 +1,45 @@
 import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
-import { useClipboard } from '../hooks/useClipboard'
-import { isSvg } from '../utils/imageProcessing'
-import { projectQuota } from '../utils/projectQuota'
-import { nextToolSuggestion, homeStats } from '../utils/userHome'
+import { useSubscription } from '../contexts/SubscriptionContext'
+import { useLoginPrompt } from '../contexts/LoginPromptContext'
 import { readSessionHint } from '../utils/sessionHint'
-import { buildCSSVars } from '../utils/exportBuilder'
-import useModalDialog from '../hooks/useModalDialog'
-import DailyBand from '../components/userhome/DailyBand'
-import StarterRow from '../components/userhome/StarterRow'
-import ProjectCard from '../components/userhome/ProjectCard'
-import SaveRefusal from '../components/SaveRefusal'
+import { NEW_PROJECT_STATE, guideEntry, startGuide } from '../utils/brandKitGuide'
+import { getUsageCount } from '../utils/usageTracker'
 import LocalClock from '../components/LocalClock'
-// The `projects` page stylesheet. Imported here rather than from global.css so
-// Vite emits it as this lazy route's own chunk stylesheet — only a visitor who
-// opens this page downloads it, and it arrives with the chunk, before paint.
+import SaveRefusal from '../components/SaveRefusal'
+import Glyph from '../components/userhome/Glyph'
+import PlanStrip from '../components/userhome/PlanStrip'
+import StartSomething from '../components/userhome/StartSomething'
+import ProjectTile from '../components/userhome/ProjectTile'
+import DiscoverPicks from '../components/userhome/DiscoverPicks'
+import ProPanel from '../components/userhome/ProPanel'
+import RecentExports from '../components/userhome/RecentExports'
+import useProjectIcons from '../hooks/useProjectIcons'
+import { aiUsageToday, byRecent, projectSlots } from '../components/userhome/workspace'
 // The stylesheet families this surface needs, split out of the one
 // render-blocking global sheet (see src/styles/deferred/). They ride this
 // route's own lazy chunk, so they arrive with it and never with the homepage.
 import '../styles/deferred/account.css'
 import '../styles/deferred/tool-shell.css'
 import '../styles/pages/projects.css'
+
+// ── YOUR WORKSPACE ──────────────────────────────────────────────────────────
+//
+// /projects is the "Your workspace" screen (UIL4B App.dc.html, `projects`).
+// No masthead, no Save Current / New Project pair, no search-and-sort bar,
+// ruled rows, tip band or rotating starters: none of that is on the design's
+// screen, so none of it is here.
+//
+// What is here, in the design's order: the title and ONE accent "New project"; the plan
+// strip; "Start something"; "Recent projects"; "New in Discover"; the Pro panel.
+// Every value in it is read off the account, the plan config or the libraries
+// (see components/userhome/workspace.js for each one and what it replaced).
+//
+// Managing one project — rename, duplicate, archive, delete, overwrite — moved
+// to that project's own page, /projects/:id (ProjectDetail.jsx), which is where
+// the design's screen puts a project's controls.
 
 // THE "COMMUNITY" TAB IS GONE, AND IT WAS THE SAME FABRICATION THIS REPOSITORY
 // ALREADY DELETED ONCE.
@@ -50,936 +67,126 @@ import '../styles/pages/projects.css'
 // Nothing replaces it. /community is a real route with real curated links
 // credited to the platform they open; this page is for the projects you made.
 
-// Validate + read a project icon file (SVG or small PNG) as a data URL.
-function readIconFile(file) {
-  return new Promise((resolve, reject) => {
-    const okType = file.type === 'image/svg+xml' || file.type === 'image/png' || isSvg(file)
-    if (!okType) { reject(new Error('Icon must be an SVG or PNG')); return }
-    if (file.size > 50 * 1024) { reject(new Error('Icon must be under 50KB')); return }
-    const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Could not read file'))
-    reader.onload = () => {
-      const dataUrl = reader.result
-      if (isSvg(file)) { resolve(dataUrl); return }
-      // Raster (PNG): reject if larger than 128px in either dimension.
-      const img = new Image()
-      img.onerror = () => reject(new Error('Could not decode image'))
-      img.onload = () => {
-        if (img.width > 128 || img.height > 128) {
-          reject(new Error('Icon must be 128px or smaller'))
-        } else {
-          resolve(dataUrl)
-        }
-      }
-      img.src = dataUrl
-    }
-    reader.readAsDataURL(file)
-  })
-}
+// A project's icon lives ON the project (`project.icon`) and syncs with it.
+// useProjectIcons moves any icon an older version kept in this browser onto
+// its project the first time both are known.
 
-function ProjectDetail({ project, isCurrent, onClose, onLoad, onDelete, onRename, onOverwrite, onArchive, icon, onIconChange, onIconRemove }) {
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(project.name)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
-
-  // The app's shared modal contract — focus moves in, Tab is trapped, Escape
-  // closes, scroll is locked, and focus goes BACK to the card that opened it.
-  // This dialog used to hand-roll only Escape and the scroll lock, so a
-  // keyboard user who closed it was dropped on <body> and had to Tab down the
-  // whole page to find the card they had just been looking at.
-  const dialogRef = useModalDialog(onClose)
-
-  const d = project.design || {}
-  const colors = d.palette?.colors || []
-  const headingFamily = d.fonts?.heading?.family || 'Inter'
-  const bodyFamily = d.fonts?.body?.family || 'Inter'
-  const base = d.typeScale?.base || 16
-  const ratio = d.typeScale?.ratio || 1.25
-  const created = new Date(project.createdAt)
-  const updated = new Date(project.updatedAt || project.createdAt)
-  const fmtDate = (dt) => dt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
-
-  return (
-    <div className="fg-detail-overlay" onClick={onClose}>
-      <div
-        className="il-detail proj-detail"
-        role="dialog"
-        aria-modal="true"
-        aria-label={project.name}
-        ref={dialogRef}
-        tabIndex={-1}
-        onClick={e => e.stopPropagation()}
-      >
-        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-
-        <div className="fg-detail-section proj-detail-head">
-          {editing ? (
-            <div className="proj-detail-rename">
-              <input value={name} onChange={e => setName(e.target.value)} autoFocus aria-label={`Rename ${project.name}`} />
-              <button className="btn btn-s" onClick={() => { onRename(project.id, name); setEditing(false) }}>Save</button>
-              <button className="btn btn-s" onClick={() => { setName(project.name); setEditing(false) }}>Cancel</button>
-            </div>
-          ) : (
-            <div className="proj-detail-title">
-              {icon && <img src={icon} alt="" className="proj-detail-icon" />}
-              <h2 className="proj-detail-h">{project.name}</h2>
-              {/* The same two words the row carries, in the same treatment —
-                  they were a green chip and a grey chip here, a third and a
-                  fourth way of saying one state. */}
-              {isCurrent && <span className="uh-tag uh-tag--live">Loaded</span>}
-              {project.archived && <span className="uh-tag">Archived</span>}
-            </div>
-          )}
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Palette · {colors.length} colour{colors.length === 1 ? '' : 's'}</div>
-          {colors.length ? (
-            <div className="proj-detail-swatches">
-              {colors.map((c, i) => (
-                <div key={i} className="proj-detail-swatch">
-                  <div className="proj-detail-swatch-chip" style={{ background: c }} />
-                  <span className="proj-detail-swatch-hex">{(c || '').toUpperCase()}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="proj-detail-none">No colours saved.</p>
-          )}
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Typography</div>
-          <div className="proj-detail-meta">
-            <div className="proj-detail-meta-row"><span>Heading</span><strong style={{ fontFamily: `'${headingFamily}', sans-serif` }}>{headingFamily}</strong></div>
-            <div className="proj-detail-meta-row"><span>Body</span><strong style={{ fontFamily: `'${bodyFamily}', sans-serif` }}>{bodyFamily}</strong></div>
-            <div className="proj-detail-meta-row"><span>Type scale</span><strong>{base}px / {Number(ratio).toFixed(2)}×</strong></div>
-          </div>
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Icon</div>
-          <div className="proj-detail-iconrow">
-            {icon ? (
-              <img src={icon} alt="Project icon" className="proj-detail-icon-lg" />
-            ) : (
-              <div className="proj-detail-icon-lg proj-detail-icon-empty">—</div>
-            )}
-            <label className="btn btn-s proj-detail-upload">
-              {icon ? 'Replace' : 'Upload icon'}
-              <input
-                type="file"
-                accept="image/svg+xml,image/png"
-                hidden
-                onChange={e => { const f = e.target.files?.[0]; if (f) onIconChange?.(f); e.target.value = '' }}
-              />
-            </label>
-            {icon && (
-              <button className="btn btn-s uh-danger" onClick={() => onIconRemove?.()}>
-                Remove icon
-              </button>
-            )}
-            <span className="proj-detail-hint">SVG or PNG, max 128px / 50KB.</span>
-          </div>
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Details</div>
-          <div className="proj-detail-meta">
-            <div className="proj-detail-meta-row"><span>Created</span><strong>{fmtDate(created)}</strong></div>
-            <div className="proj-detail-meta-row"><span>Updated</span><strong>{fmtDate(updated)}</strong></div>
-            <div className="proj-detail-meta-row"><span>Tints</span><strong>{d.tints?.scale?.length || 0}</strong></div>
-          </div>
-        </div>
-
-        {confirmDelete ? (
-          <div className="fg-detail-actions proj-detail-confirm">
-            <p className="proj-detail-confirm-text">
-              Type <strong>{project.name}</strong> to confirm deletion:
-            </p>
-            <input value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder={project.name} autoFocus aria-label={`Type the project name to confirm deleting ${project.name}`} />
-            <div className="proj-detail-confirm-actions">
-              {/* Filled only once the name matches. The inline version painted
-                  #fff on --err, which is 2.8:1 in dark; --err-strong under
-                  --err-fg clears 4.5 in both themes. */}
-              <button
-                className="btn btn-s uh-danger-go"
-                onClick={() => { onDelete(project.id); setConfirmDelete(false); setDeleteConfirmText(''); onClose() }}
-                disabled={deleteConfirmText !== project.name}
-              >
-                Permanently delete
-              </button>
-              <button className="btn btn-s" onClick={() => { setConfirmDelete(false); setDeleteConfirmText('') }}>Cancel</button>
-            </div>
-          </div>
-        ) : (
-          <div className="fg-detail-actions">
-            {!project.archived && (
-              <>
-                <button className="btn btn-accent" onClick={() => { onLoad(project.id); onClose() }}>
-                  {isCurrent ? 'Reload' : 'Load'}
-                </button>
-                <button className="btn" onClick={() => onOverwrite(project.id)} title="Save current design over this project">Overwrite</button>
-              </>
-            )}
-            <button className="btn" onClick={() => setEditing(true)}>Rename</button>
-            <button className="btn" onClick={() => { onArchive(project.id); onClose() }}>{project.archived ? 'Restore' : 'Archive'}</button>
-            <button className="btn uh-danger" onClick={() => setConfirmDelete(true)}>Delete</button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// Modal for starting a new project: capture a name and a starting point.
-//
-// `error` is the refusal the page got back from saveProject() — the free cap,
-// in ProjectContext's own words. It is shown HERE, under the form that was
-// refused, rather than as a toast: rendered on 2026-09-09, the cap answered
-// "Create project" with a green-tick toast that read "Free plan saves up to 3
-// projects — go Pro for unlimited." for 1.8 seconds and then vanished, leaving
-// the form open and the name still typed as though nothing had been decided.
-function NewProjectModal({ onClose, onCreate, error }) {
-  const [name, setName] = useState('')
-  const [start, setStart] = useState('blank')
-
-  // Shared modal contract (see ProjectDetail above). `initialFocus` keeps the
-  // landing spot this form already had — the name field — without a second
-  // autoFocus fighting the hook for it.
-  const dialogRef = useModalDialog(onClose, { initialFocus: '#proj-new-name' })
-
-  const submit = () => {
-    const trimmed = name.trim()
-    if (!trimmed) return
-    onCreate({ name: trimmed, blank: start === 'blank' })
-  }
-
-  return (
-    <div className="fg-detail-overlay" onClick={onClose}>
-      <div
-        className="il-detail proj-detail proj-new-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="proj-new-title"
-        ref={dialogRef}
-        tabIndex={-1}
-        onClick={e => e.stopPropagation()}
-      >
-        <button className="fg-detail-close" onClick={onClose} aria-label="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-
-        <div className="fg-detail-section proj-detail-head">
-          <h2 id="proj-new-title" className="proj-detail-h">New project</h2>
-          <p className="proj-new-lede">
-            Give it a name and choose where to begin.
-          </p>
-        </div>
-
-        <div className="fg-detail-section">
-          <label className="fg-detail-label" htmlFor="proj-new-name">Project name</label>
-          <input
-            id="proj-new-name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            // preventDefault is load-bearing. submit() closes the dialog, and
-            // useModalDialog hands focus back to the New Project button in the
-            // same tick — so without it the SAME Enter's keypress reaches that
-            // button, Chromium activates it, and the dialog reopens over the
-            // project it just created. Seen in a keydown/keypress/click trace on
-            // 2026-09-09: keydown@input → click@button[New Project].
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
-            placeholder="e.g. Brand v1, Marketing site, Mobile app"
-            className="proj-new-name"
-          />
-        </div>
-
-        <div className="fg-detail-section">
-          <div className="fg-detail-label">Start from</div>
-          <div className="proj-new-start">
-            <button
-              type="button"
-              className={`proj-new-start-opt${start === 'blank' ? ' active' : ''}`}
-              aria-pressed={start === 'blank'}
-              onClick={() => setStart('blank')}
-            >
-              <strong>Blank canvas</strong>
-              <span>Fresh defaults — palette, fonts, and scale reset.</span>
-            </button>
-            <button
-              type="button"
-              className={`proj-new-start-opt${start === 'current' ? ' active' : ''}`}
-              aria-pressed={start === 'current'}
-              onClick={() => setStart('current')}
-            >
-              <strong>Current design</strong>
-              <span>Snapshot what you have open right now.</span>
-            </button>
-          </div>
-        </div>
-
-        {error && <SaveRefusal message={error} testId="project-create-refusal" />}
-
-        <div className="fg-detail-actions">
-          <button className="btn btn-accent" onClick={submit} disabled={!name.trim()}>Create project</button>
-          <button className="btn" onClick={onClose}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-
-export default function Projects({ toast }) {
+export default function Projects() {
   const navigate = useNavigate()
   const { loading: authLoading } = useAuth()
-  const copy = useClipboard(toast)
-  const {
-    projects, canSaveProjects, projectLimit,
-    saveProject, loadProject, deleteProject, renameProject, overwriteProject,
-    archiveProject, resetDesign, duplicateProject,
-  } = useProject()
+  const { plan, isPro, loading: planLoading } = useSubscription()
+  const { openLogin } = useLoginPrompt()
+  const { projects, canSaveProjects, projectLimit, atProjectLimit, resetDesign } = useProject()
+  const { pickIcon } = useProjectIcons()
 
   // ── THREE STATES, NOT TWO ────────────────────────────────────────
   //
-  // This page is the front door for signed-in visitors now, so “we do not know
-  // yet” has to be its own state. Treating it as signed-out (which is what
-  // `canSaveProjects` alone says while Firebase resolves) would show a returning
-  // user the “Sign in to save your designs” panel for the ~1s the auth round trip
-  // takes, and then swap it for their projects. That flash is the exact defect
-  // the routing change exists to avoid, reproduced one level down.
-  //
-  // `resolving` is read from the same synchronous hint the router used, so the
-  // two agree by construction: if the router believed there was a session and
-  // sent them here, this page believes it too and holds the space.
+  // This page is the front door for signed-in visitors, so "we do not know yet"
+  // is its own state. Treating it as signed-out (which is what `canSaveProjects`
+  // alone says while Firebase resolves) would show a returning user the sign-in
+  // panel for the ~1s the auth round trip takes, and then swap it for their
+  // projects. `resolving` reads the same synchronous hint the router used, so
+  // the two agree by construction.
   const [hintedSession] = useState(readSessionHint)
   const resolving = authLoading && hintedSession
   const signedOut = !canSaveProjects && !resolving
-  const [newName, setNewName] = useState('')
-  const [showSaveForm, setShowSaveForm] = useState(false)
-  // The cap's refusal, held until the person acts on it — see SaveRefusal.
-  const [saveError, setSaveError] = useState('')
-  const [createError, setCreateError] = useState('')
-  const [loadedId, setLoadedId] = useState(null)
-  const [showArchived, setShowArchived] = useState(false)
-  const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState('recent')
-  const [detailProject, setDetailProject] = useState(null)
-  const [showNewModal, setShowNewModal] = useState(false)
-  const [iconMap, setIconMap] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('vs-project-icons') || '{}') } catch { return {} }
-  })
-  const setProjectIcon = (projectId, dataUrl) => {
-    const next = { ...iconMap, [projectId]: dataUrl }
-    setIconMap(next)
-    try { localStorage.setItem('vs-project-icons', JSON.stringify(next)) } catch {}
-  }
-  const removeProjectIcon = (projectId) => {
-    const next = { ...iconMap }
-    delete next[projectId]
-    setIconMap(next)
-    try { localStorage.setItem('vs-project-icons', JSON.stringify(next)) } catch {}
-  }
-  const handleIconUpload = async (projectId, file) => {
-    try {
-      const dataUrl = await readIconFile(file)
-      setProjectIcon(projectId, dataUrl)
-      toast('Icon updated')
-    } catch (e) {
-      toast(e.message || 'Could not set icon')
+
+  const [capRefusal, setCapRefusal] = useState('')
+
+  // A new blank project: the cap refusal first, then the default design and the
+  // walkthrough's first step, with its orientation card open.
+  const startNew = () => {
+    if (canSaveProjects && atProjectLimit) {
+      setCapRefusal(`Free plan saves up to ${projectLimit} projects — go Pro for unlimited.`)
+      return
     }
-  }
-  const sortFn = (a, b) => {
-    if (sortBy === 'name') return a.name.localeCompare(b.name)
-    if (sortBy === 'created') return new Date(b.createdAt) - new Date(a.createdAt)
-    return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
-  }
-  const matchesSearch = (p) => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase())
-  const activeProjects = projects.filter(p => !p.archived && matchesSearch(p)).sort(sortFn)
-  const archivedProjects = projects.filter(p => p.archived && matchesSearch(p)).sort(sortFn)
-
-  // A signed-out visitor gets a real page rather than a bounce to /login.
-  //
-  // This panel has existed in this file the whole time and has never once been
-  // seen: /projects was behind RequireAuth, which redirected before it could
-  // render. Making it reachable is what removes the redirect loop the new front
-  // door would otherwise have (see the route note in App.jsx).
-  //
-  // The tip and the starters render here too. They are public, static and useful,
-  // and a page that says only “sign in” to somebody who arrived by accident is a
-  // worse advertisement for the product than one that shows them four real
-  // artefacts they can open without an account.
-  //
-  // WHAT IS NOT HERE: any mention of the free-plan allowance. The quota block sits
-  // below this return, and it must stay below it —
-  // tests/user-sim/20-billing-banner.spec.js asserts that a person who has never
-  // signed in is never told what their plan allows.
-  if (signedOut) {
-    return (
-      <div className="sec uh">
-        <header className="sec-h uh-head">
-          <div>
-            <h1>Projects</h1>
-            <p className="uh-sub">Palette, fonts, type scale and tints — saved together, and yours to open anywhere you sign in.</p>
-          </div>
-        </header>
-
-        <div className="uh-signin">
-          <h2>Sign in to keep what you build</h2>
-          <p>
-            Every tool works without an account. Signing in is what makes a palette,
-            a pairing and a scale survive the tab — saved together as a project you can
-            reopen on any device.
-          </p>
-          <button className="btn btn-accent" onClick={() => navigate('/login')}>Sign in</button>
-        </div>
-
-        <DailyBand suggestion={nextToolSuggestion([])} />
-        <StarterRow />
-      </div>
-    )
+    setCapRefusal('')
+    resetDesign()
+    startGuide()
+    navigate(guideEntry(null).path, { state: NEW_PROJECT_STATE })
   }
 
-  // A refusal is not a success. Both of these used to answer the free cap with
-  // `toast(e.message)`, which is the SUCCESS toast — green tick, 1.8 seconds,
-  // no link — carrying "Free plan saves up to 3 projects — go Pro for
-  // unlimited." Rendered on 2026-09-09 at 390 and 1280: the tick was drawn,
-  // the sentence was gone before it could be read twice, and the form stayed
-  // open with the name still in it, so the person was left to guess whether
-  // the save had happened. The refusal now stays in the form it refused
-  // (SaveRefusal), in ProjectContext's own words, with the way forward as a
-  // link. Nothing about the rule changed; only where the answer lives.
-  const handleSave = () => {
-    if (!newName.trim()) { toast('Enter a project name'); return }
-    try {
-      const id = saveProject(newName.trim())
-      toast(`Saved "${newName.trim()}"`)
-      setLoadedId(id)
-      setNewName('')
-      setSaveError('')
-      setShowSaveForm(false)
-    } catch (e) {
-      setSaveError(e.message || 'Failed to save')
-    }
-  }
-
-  const handleCreateNew = ({ name, blank }) => {
-    try {
-      const id = saveProject(name, { blank })
-      if (blank) resetDesign()
-      setLoadedId(id)
-      setCreateError('')
-      setShowNewModal(false)
-      toast(`Created "${name}"`)
-    } catch (e) {
-      setCreateError(e.message || 'Failed to create project')
-    }
-  }
-
-  const handleLoad = (id) => {
-    loadProject(id)
-    setLoadedId(id)
-    const project = projects.find(p => p.id === id)
-    toast(`Loaded "${project?.name}"`)
-  }
-
-  // “Open straight into a specific tool”, and the LOAD is the important half.
-  // Navigating to /create/type-scale without loading first opens the tool on
-  // whatever design was already in the working kit — which looks like it worked
-  // and quietly edits the wrong thing.
-  const handleOpenIn = (id, route) => {
-    loadProject(id)
-    setLoadedId(id)
-    navigate(route)
-  }
-
-  const handleDuplicate = (id) => {
-    try {
-      const newIdValue = duplicateProject(id)
-      setLoadedId(null)
-      const project = projects.find(p => p.id === id)
-      toast(`Duplicated "${project?.name}"`)
-      return newIdValue
-    } catch (e) {
-      // The cap message from ProjectContext, shown rather than swallowed — a
-      // duplicate button that silently does nothing at the cap is the silent
-      // refusal the account-lifecycle audit filed as B6. There is no form to
-      // hold this one (it comes from a card's overflow menu), so it stays a
-      // toast — but an ERROR toast: the default kind draws the success tick
-      // over a refusal.
-      toast(e.message || 'Could not duplicate that project', 'error')
-      return null
-    }
-  }
-
-  // The export is the CSS custom properties this project resolves to, built by
-  // the same utils/exportBuilder.js the style-guide export uses — not a second
-  // export format invented for this page. Export is free on every plan, which
-  // is what the Plans page already promises.
-  const handleExportCss = (id) => {
-    const project = projects.find(p => p.id === id)
-    if (!project) return
-    const d = project.design || {}
-    copy(buildCSSVars({
-      palette: d.palette,
-      tints: d.tints,
-      fonts: d.fonts,
-      typeScale: d.typeScale,
-    }))
-  }
-
-  const handleDelete = (id) => {
-    deleteProject(id)
-    if (loadedId === id) setLoadedId(null)
-    toast('Project deleted')
-  }
-
-  const handleRename = (id, name) => {
-    if (!name.trim()) return
-    renameProject(id, name.trim())
-    toast('Renamed')
-  }
-
-  const handleOverwrite = (id) => {
-    overwriteProject(id)
-    setLoadedId(id)
-    const project = projects.find(p => p.id === id)
-    toast(`Saved over "${project?.name}"`)
-  }
-
-  const handleArchive = (id) => {
-    archiveProject(id)
-    const project = projects.find(p => p.id === id)
-    toast(project?.archived ? `"${project?.name}" restored` : `"${project?.name}" archived`)
-    if (loadedId === id) setLoadedId(null)
-  }
-
-  const totalProjects = projects.length
-  // Counted off the same array as everything else on the page. See
-  // utils/userHome.js: any figure that comes out zero is not printed at all.
-  const stats = homeStats(projects)
-  const suggestion = resolving ? null : nextToolSuggestion(projects)
-
-  // THE BAND IS BELOW THE WORK NOW, IN EVERY STATE, AND #458 WAS RIGHT ABOUT
-  // THE EMPTY ONE AND HALF-RIGHT ABOUT THE REST.
-  //
-  // #458 measured the empty account and moved the band under the empty state,
-  // because 258px of stacked phone layout sat between a new signup and the only
-  // control this page offers them. It left the band above the list for an
-  // account that HAS projects, on the reasoning that orientation precedes
-  // inventory. Measured, that reasoning cost the same thing one state over.
-  //
-  // Rendered 2026-09-13 on the built preview at 390x844, signed in, free plan:
-  //
-  //   1 project   h1 at y=72, first project card at y=781. 709px of page
-  //               between the heading and the user's own work, and the card's
-  //               top edge 63px from the fold.
-  //   3 projects  first project card at y=882 — BELOW THE FOLD ENTIRELY. A
-  //               person at the free cap, on a phone, opening the page that
-  //               holds everything they have made, saw none of it without
-  //               scrolling.
-  //
-  // The band is 258px of that at phone widths (it collapses to one column at
-  // <=860px, so it is widest exactly where vertical space is scarcest). What it
-  // spends those 258px on, above a person's own saved work, is a rotating
-  // typography tip: "Letter-spacing is a function of size, not of taste."
-  //
-  // So the order is now the same one the empty account already uses, which is
-  // also the order the note at the foot of this file gives for StarterRow —
-  // what you have, then what to look at next. It is not width-gated and not
-  // state-gated: one render site, the same at 320 and at 1440, empty or full,
-  // and the reading order is finally invariant across both.
-
-  // B6 (2026-08-12 account lifecycle audit): the cap was enforced and never
-  // announced. `projects` is the SAME array saveProject() counts — archived
-  // records included — so this counter cannot drift from the rule that actually
-  // refuses the save. projectLimit is already Infinity on Pro, which resolves to
-  // the 'unlimited' state and shows nothing.
-  const quota = projectQuota(totalProjects, projectLimit)
-  // Archiving toggles a flag; it does NOT remove the record, so it does not free
-  // a slot. Saying "archive one" would be false, and a user who has archived
-  // something is the most likely person to believe it. Only mention it to
-  // someone who has actually archived — otherwise it is noise.
-  const hasArchived = projects.some(p => p.archived)
+  const recent = [...projects].sort(byRecent)
+  const ai = aiUsageToday(getUsageCount, plan)
+  const slots = projectSlots(projects.length, projectLimit)
 
   return (
-    <div className="sec uh">
-      <header className="sec-h uh-head">
-        <div className="uh-head-main">
-          {/* The viewer's own date and time — see LocalClock.jsx for why it
-              renders nothing until the browser has answered, and why it ticks
-              on the minute rather than the second. It sits ABOVE the h1 rather
-              than beside it because it is context for the page, not a second
-              title competing with "Projects" for the first line. */}
-          <LocalClock className="uh-clock" />
-          <h1>Projects</h1>
-          <p className="uh-sub">Your saved design systems — palette, fonts, type scale, and tints.</p>
-          {/* QUICK DATA TRACKING, and every figure countable.
+    <div className="uh">
+      <div className="uh-main">
+        {/* The viewer's own date and time, from their machine. LocalClock renders nothing until the
+            browser has answered, so no prerendered shell carries a date. */}
+        <LocalClock className="uh-clock" />
+        <div className="uh-title">
+          <h1 className="uh-h1">Your workspace</h1>
+          <button type="button" className="uh-new" onClick={startNew}>
+            <Glyph name="plus" size={14} />
+            <span>New project</span>
+          </button>
+        </div>
+        {capRefusal && <SaveRefusal message={capRefusal} testId="project-create-refusal" />}
 
-              The rule is in utils/userHome.js and it is the lesson from
-              `homepage-community-points-outward`, which shipped “0 saves” on
-              every card: a figure with nothing behind it is not printed. So
-              somebody with one untouched project sees “1 project” and nothing
-              else, rather than “1 project · 0 colours · 0 parts”.
+        {/* The plan strip is for an account. A visitor who has never signed in
+            has no plan to be told about (20-billing-banner.spec.js). */}
+        {!signedOut && !resolving && !planLoading && (
+          <PlanStrip planLabel={plan?.label || 'Free'} ai={ai} slots={slots} />
+        )}
 
-              The allowance joins the project count ONLY once it is worth
-              knowing (projectQuota decides when). A permanent “1 of 3” from the
-              first project turns the free tier into a countdown, which is the
-              read P-003 is trying to avoid. */}
-          {stats.length > 0 && (
-            <ul className="uh-stats">
-              {stats.map((s) => (
-                <li key={s.id}>
-                  <strong>{s.value}</strong>
-                  {s.id === 'projects' && quota.shouldTell
-                    ? ` of ${quota.limit} projects`
-                    : s.of ? <> of {s.of} {s.label}</> : ` ${s.label}`}
-                </li>
-              ))}
-            </ul>
-          )}
-          {/* The sentence the audit found missing. At the cap it has to do two
-              jobs the old silent refusal did neither of: say that nothing was
-              taken away (true — ProjectContext only blocks NEW saves), and name
-              a way forward that does not require paying. */}
-          {quota.shouldTell && (
-            <p data-testid="project-quota-note" className="uh-quota">
-              {quota.atLimit ? (
-                <>
-                  You’ve used all {quota.limit} projects on the free plan. Nothing has been
-                  removed — everything here is still yours to open and edit. To start
-                  another, delete one you’re finished with
-                  {hasArchived ? ', including any you archived (archived projects still take a slot)' : ''}
-                  , or{' '}
-                  <NavLink to="/plans" className="uh-quota-link">go Pro for unlimited projects</NavLink>.
-                </>
-              ) : (
-                <>
-                  {quota.remaining} more project{quota.remaining === 1 ? '' : 's'} on the free plan.{' '}
-                  <NavLink to="/plans" className="uh-quota-link">Pro lifts the cap</NavLink>.
-                </>
-              )}
+        <StartSomething />
+
+        <div className="uh-recent-head">
+          <h2 className="uh-sec-h">Recent projects</h2>
+        </div>
+
+        {resolving ? (
+          /* WE DO NOT KNOW YET. The session hint says there is an account, so
+             the list is unknown, not empty — "No projects yet" here would tell a
+             returning user their work was gone for the second auth takes. */
+          <div className="uh-resolving" role="status">
+            <div className="fg-loader" />
+            <p>Opening your projects…</p>
+          </div>
+        ) : signedOut ? (
+          /* The design's empty card, carrying the sign-in the page needs. The sentence is
+             the one this page has always given a stranger. */
+          <div className="uh-empty uh-signin">
+            <h3 className="uh-empty-title">Sign in to keep what you build</h3>
+            <p className="uh-empty-text">
+              Every tool works without an account. Signing in is what makes a palette,
+              a pairing and a scale survive the tab — saved together as a project you can
+              reopen on any device.
             </p>
-          )}
-        </div>
-        {/* THE ACCENT IS ON "NEW PROJECT" NOW, AND IT WAS ON THE OTHER ONE.
-            Ported from #481. Both controls stay, but they were drawn as equals
-            with the filled one on the wrong action: the empty state's own
-            control ("Create your first project") opens THIS dialog, so a
-            person's primary action changed colour the moment their account
-            filled up. "Save Current" files away whatever is in the working kit
-            — meaningful only to somebody just back from a tool — so it is the
-            secondary of the two. One filled control on the page. */}
-        <div className="uh-head-actions">
-          {!showSaveForm && (
-            <button className="btn" onClick={() => setShowSaveForm(true)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
-              </svg>
-              Save Current
+            <button type="button" className="uh-empty-cta" onClick={() => openLogin()}>
+              <span>Sign in</span>
             </button>
-          )}
-          <button className="btn btn-accent" onClick={() => setShowNewModal(true)} title="Start a new project">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            New Project
-          </button>
-        </div>
-      </header>
-
-      {showSaveForm && (
-        <div className="uh-save">
-          <label className="uh-save-label" htmlFor="uh-save-name">
-            Add current design to project
-          </label>
-          <div className="uh-save-row">
-            <input
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleSave() }}
-              placeholder="e.g. Brand v1, Marketing site, Mobile app"
-              id="uh-save-name"
-              autoFocus
-            />
-            <button className="btn btn-accent" onClick={handleSave}>Save</button>
-            <button className="btn" onClick={() => { setShowSaveForm(false); setNewName(''); setSaveError('') }}>Cancel</button>
           </div>
-          <p className="uh-save-note">
-            Captures: palette, tints, state colours, gradient, fonts, type scale.
-          </p>
-          {saveError && <SaveRefusal message={saveError} testId="project-save-refusal" />}
-        </div>
-      )}
-
-      {/* FOLDERS ARE GONE. Founder decision, 2026-09-13: drop folders as an
-          entitlement entirely and remove the UI that implies one.
-
-          #452 had already deleted the sentence "3 folders · Upgrade for 10"
-          and its orphan `folderLimit`, on the finding that both numbers were
-          false and that paying changed the string and nothing else. What it
-          left behind was the mechanism the sentence had been sold on, and
-          rendering that mechanism is what made the rest of the case:
-
-          · THE FIVE CATEGORIES WERE NOT THE USER'S. `FOLDERS` was a fixed
-            array — all, brand, app, marketing, personal — identical for every
-            account that has ever existed, with no creation, rename or delete
-            control anywhere in the repository. A filter bar offering someone
-            four categories they did not choose, above a list that holds at most
-            three items on the free plan, is a taxonomy the product invented for
-            them.
-          · IT CONTRADICTED THE PAGE'S OWN PROMISE. The filing lived in
-            `vs-project-folders` in localStorage and nowhere else (see
-            utils/dataExport.js, which marks it pii:'local'). This page's
-            signed-out subtitle reads "saved together, and yours to open
-            anywhere you sign in" — and the folder a project was filed in did
-            not travel to the next device. A project sorted on a laptop was
-            unsorted on the phone, silently, with nothing said.
-          · IT COST A SEVEN-CONTROL ROW ITS MEANING TO ASSISTIVE TECHNOLOGY.
-            Read off Chrome's own accessibility tree at 1440 on 2026-09-13, the
-            five chips and the two tabs above them ALL reported
-            selected=undefined pressed=undefined current=undefined — plain
-            buttons whose only statement of which filter was active was the
-            `.active` class. Deleting the feature deletes that defect rather
-            than papering over it with aria-pressed on a control nobody asked
-            for.
-
-          Nothing replaces it. Search and Sort remain, they are enough for three
-          projects, and the one quota this page states — "3 of 3 projects" in
-          the header — is real and enforced by ProjectContext. */}
-      {projects.length > 0 && (
-        <>
-          <div className="proj-toolbar">
-            <div className="proj-search">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects…" />
-              {search && <button onClick={() => setSearch('')} aria-label="Clear">&times;</button>}
-            </div>
-            <label className="proj-sort">
-              <span>Sort</span>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                <option value="recent">Recently updated</option>
-                <option value="created">Newest</option>
-                <option value="name">Name (A–Z)</option>
-              </select>
-            </label>
-            {/* THE SAME NUMBER TWICE, 364px APART, is what this was without
-                the condition. Measured at 1440 on 2026-09-13 at the free cap:
-                the masthead printed "3 of 3 projects" at y=203 and this printed
-                "3 projects" at y=567. Two counters of one quantity, and the
-                second one silent about the allowance the first one states.
-
-                A count is only worth printing when it is NOT the count the
-                masthead already gives, which is exactly when a search has
-                narrowed the list. Then it says how many of your projects
-                matched, which nothing else on the page says. */}
-            {search.trim() && (
-              <span className="proj-count">{activeProjects.length} project{activeProjects.length === 1 ? '' : 's'}</span>
-            )}
+        ) : recent.length === 0 ? (
+          /* The design's empty state. Its second sentence — "Nothing leaves the browser
+             until you export it." — is deleted: a signed-in account's projects
+             sync to it (ProjectContext pushes them), so it is not true. */
+          <div className="uh-empty">
+            <h3 className="uh-empty-title">No projects yet</h3>
+            <p className="uh-empty-text">Start with a colour and the rest of the project follows.</p>
+            <button type="button" className="uh-empty-cta" onClick={startNew}>
+              <Glyph name="plus" size={14} />
+              <span>Start a project</span>
+            </button>
           </div>
-        </>
-      )}
-
-      {/* WE DO NOT KNOW YET. Firebase is still resolving and the session hint
-          says there is an account, so the project list is genuinely unknown —
-          not empty. Rendering “No projects yet” here would tell a returning user
-          their work was gone for the second it takes auth to land, which is a
-          far worse thing to say than nothing.
-
-          Everything above this point — the masthead, the tip, the whole frame —
-          is already on screen, and the starters below it are too. This is the
-          only region that has to wait, because it is the only region that
-          depends on knowing who you are. */}
-      {resolving ? (
-        <div className="uh-resolving" role="status">
-          <div className="fg-loader" />
-          <p>Opening your projects…</p>
-        </div>
-      ) : projects.length === 0 ? (
-        /* THIS PANEL IS NOW REACHABLE, AND UNTIL 2026-09-10 IT WAS NOT.
-           ProjectContext seeded a "Default Project" into any account that had
-           none, so signed in, `projects.length` was never 0 and nothing below
-           had ever been on a real screen — while Onboarding's "Not now — take
-           me to my projects" and first-run-destination.test.js's "the projects
-           empty state still teaches" both described it as the landing. The
-           founder dropped the seed (see the note where it used to be in
-           src/contexts/ProjectContext.jsx), so it renders for every new
-           account now and was read as new surface.
-
-           TWO THINGS WERE WRONG WITH IT, both structural; not a word of the
-           copy changed, because the sentence already names the two tools that
-           make a project and the control already says what it does.
-
-           · The heading was an <h3> directly under the page's <h1>, and BEFORE
-             the "Starters, rotating daily" <h2> in the DOM. So the outline a
-             screen-reader user heard went 1 → 3 → 2: a level-3 with nothing
-             above it, and then a level-2 after it, which is not an outline at
-             all (WCAG 1.3.1). Same defect and the same fix the legal pages'
-             section headings got — the tag changed, the size deliberately did
-             not, and the universal `*{margin:0}` reset means the two tags
-             compute identically here.
-           · The folder mark was an unlabelled <svg> exposed to the
-             accessibility tree as a graphics object between the heading and
-             the sentence. It is decoration for a panel whose heading already
-             says what it means, so it is hidden rather than given a name it
-             does not need. */
-        /* THE PADDING WAS 48 AND IT WAS A NUMBER, not a rule. Written inline it
-           applied unchanged at 320px, where 48 left and 48 right of a 272px-wide
-           card leave 176px for a sentence that names two tools — it wrapped to
-           five lines and the card grew from 319px tall at 390 to 340 at 320,
-           pushing its own button further down the narrower the screen got. It
-           is a class now so the value can answer the width; the 48 is unchanged
-           from 641px up, which is every width it was ever looked at on. */
-        /* NOT A CARD ANY MORE (2026-09-23, carried over from #481). A centred
-           card with a circular tinted icon badge over a bold centred heading
-           over a filled pill is the stock first-run screen — the founder's
-           "feels AI generated" call on this page. The folder glyph was hidden
-           from assistive technology precisely because it carried nothing, so it
-           is gone, and the panel takes the one shape this page uses for "you
-           have nothing here yet": the same panel .uh-signin draws for a
-           signed-out visitor. Same words. */
-        <div className="uh-empty">
-          <h2 className="uh-empty-title">No projects yet</h2>
-          <p className="uh-empty-text">
-            Build a palette in <NavLink to="/create/color">Colour Studio</NavLink> and pair fonts in <NavLink to="/create/font-pair">Font Pair Finder</NavLink>, then save your design as a project.
-          </p>
-          <button className="btn btn-accent" onClick={() => setShowNewModal(true)}>Create your first project</button>
-        </div>
-      ) : activeProjects.length === 0 && archivedProjects.length === 0 ? (
-        /* THE OTHER EMPTY STATE ON THIS PAGE, and it had the same shape of
-           defect as the one above — found by sweeping the class rather than by
-           reading the file.
-
-           #458 found it printing `No projects match “”.` — an empty pair of
-           curly quotes — when the FOLDER chips emptied the list, because the
-           sentence named only the search. It fixed that by naming whichever of
-           the two filters was responsible. With the folder chips gone there is
-           one filter left that can empty this list, so the sentence has one
-           thing left to say, and the branch that said the other thing is
-           deleted rather than kept alive for a control that no longer exists.
-
-           The rule it borrowed from LibraryEmpty still holds: carry the reset
-           INSIDE the panel rather than leaving the reader to find the control
-           they set. LibraryEmpty itself is not reused here — it belongs to
-           styles/deferred/library.css, which #456 deliberately keeps out of
-           this route's chunk — so the rule is borrowed and its label with it.
-
-           role="status" for the same reason LibraryEmpty gives: the grid
-           emptying is otherwise silent, and at 390 this panel opens at y=815
-           in an 844px viewport, directly under the controls that caused it. */
-        <div className="uh-filtered" role="status">
-          <p className="uh-filtered-text">
-            No projects match “{search.trim()}”.
-          </p>
-          <button
-            type="button"
-            className="btn btn-s"
-            onClick={() => setSearch('')}
-          >
-            Clear filters
-          </button>
-        </div>
-      ) : (
-        <>
+        ) : (
           <div className="uh-grid">
-            {activeProjects.map(p => (
-              <ProjectCard
-                key={p.id}
-                project={p}
-                isCurrent={loadedId === p.id}
-                onLoad={handleLoad}
-                onDelete={handleDelete}
-                onRename={handleRename}
-                onOverwrite={handleOverwrite}
-                onArchive={handleArchive}
-                onOpenDetail={setDetailProject}
-                icon={iconMap[p.id]}
-                onDuplicate={handleDuplicate}
-                onExportCss={handleExportCss}
-                onOpenIn={handleOpenIn}
-              />
+            {recent.map((p) => (
+              <ProjectTile key={p.id} project={p} onPickIcon={pickIcon} />
             ))}
           </div>
+        )}
 
-          {archivedProjects.length > 0 && (
-            <div className="uh-archived">
-              <button className="btn btn-s uh-archived-toggle" onClick={() => setShowArchived(!showArchived)} aria-expanded={showArchived}>
-                {showArchived ? 'Hide' : 'Show'} archived ({archivedProjects.length})
-                <svg className="uh-archived-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
-              {showArchived && (
-                <div className="uh-grid">
-                  {archivedProjects.map(p => (
-                    <ProjectCard
-                      key={p.id}
-                      project={p}
-                      isCurrent={false}
-                      onLoad={handleLoad}
-                      onDelete={handleDelete}
-                      onRename={handleRename}
-                      onOverwrite={handleOverwrite}
-                      onArchive={handleArchive}
-                      onOpenDetail={setDetailProject}
-                      icon={iconMap[p.id]}
-                      onDuplicate={handleDuplicate}
-                      onExportCss={handleExportCss}
-                      onOpenIn={handleOpenIn}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
+        <RecentExports />
 
-      {/* WHAT YOU HAVE, THEN WHAT TO DO NEXT — in that order, in every state.
-          See the note above `suggestion` for the measurement that moved it. */}
-      <DailyBand suggestion={suggestion} resolving={resolving} />
+        <DiscoverPicks />
 
-      {detailProject && (
-        <ProjectDetail
-          project={detailProject}
-          isCurrent={loadedId === detailProject.id}
-          onClose={() => setDetailProject(null)}
-          onLoad={handleLoad}
-          onDelete={handleDelete}
-          onRename={(id, name) => { handleRename(id, name); setDetailProject(prev => prev ? { ...prev, name: name.trim() } : prev) }}
-          onOverwrite={handleOverwrite}
-          onArchive={handleArchive}
-          icon={iconMap[detailProject.id]}
-          onIconChange={(file) => handleIconUpload(detailProject.id, file)}
-          onIconRemove={() => { removeProjectIcon(detailProject.id); toast('Icon removed') }}
-        />
-      )}
-
-      {showNewModal && (
-        <NewProjectModal
-          onClose={() => { setShowNewModal(false); setCreateError('') }}
-          onCreate={handleCreateNew}
-          error={createError}
-        />
-      )}
-
-      {/* Suggested artefacts, at the FOOT rather than the top. They are the
-          least important thing on this page for somebody who came here to open
-          their own work, and putting a “recommended for you” row above a user's
-          own projects is the Fiverr home
-          (mobbin.com/screens/531e6df5-43b8-4458-835c-6ad26d298910), where
-          “Based on your browsing history” outranks everything the visitor
-          actually came for. Below the fold is where a browse row belongs on a
-          working surface. */}
-      <StarterRow />
+        {/* Nothing to sell a Pro account — and nothing drawn until the plan is
+            known, so a Pro account never sees it flash in and out. */}
+        {!isPro && (signedOut || !planLoading) && <ProPanel />}
+      </div>
     </div>
   )
 }

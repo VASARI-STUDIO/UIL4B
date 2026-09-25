@@ -12,7 +12,7 @@
 // src/data/pipeline.js is the backlog of record and it grows every time a PR
 // appends its note — 659 KB at HEAD~60, 812 at HEAD~30, 939 at HEAD~10, 956 at
 // HEAD. About 5 KB a commit. It was genuinely needed by `GET /api/ai?backlog=1`,
-// which is admin-gated (it leaked publicly once — see `backlog-not-public`), so
+// which is admin-gated (it leaked publicly once — see `78-admin-tabs-local-data`), so
 // it could not become a static asset. Shrinking it was a product decision about
 // the backlog, not something a guard can assert.
 //

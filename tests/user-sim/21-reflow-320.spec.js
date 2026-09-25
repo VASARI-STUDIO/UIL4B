@@ -163,11 +163,10 @@ test.describe('reflow at 320px', () => {
     // A floor the filter cannot sneak under: five columns each render a row of
     // tools at this width, so a result that collapsed to a handful would mean
     // the filter ate the population rather than that everything passed.
-    // Five columns x three painted tools (Lock, Copy, More) = 15. It was seven
-    // per column before the <=768 collapse; the floor moves with the row, and it
-    // is still well above the "the filter ate the population" case it guards.
+    // Five columns x two painted tools (the drawn lock, and the colour's
+    // actions menu) = 10; it was three per column before the drawn board.
     expect(tools.length, 'the per-colour tools render').toBeGreaterThan(6)
-    expect(tools.length, 'every column contributes its row').toBe(15)
+    expect(tools.length, 'every column contributes its row').toBe(10)
     const vw = await page.evaluate(() => document.documentElement.clientWidth)
     for (const t of tools) {
       expect(t.right, 'every tool is on screen').toBeLessThanOrEqual(vw + 1)

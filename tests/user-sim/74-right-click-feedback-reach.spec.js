@@ -235,6 +235,10 @@ test.describe('a phone keeps its long-press', () => {
     expect(pointers.coarse, 'a phone reports a coarse pointer').toBe(true)
     expect(pointers.anyFine, 'and no fine pointer at all').toBe(false)
 
+    // The workspace's first screen on a phone is almost all links (the
+    // "Start something" tiles), so the probe is taken over the Pro panel, whose
+    // copy and perk rows are plain text.
+    await page.locator('.uh-pro').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY))
     const at = await plainPoint(page)
     expect(at).not.toBeNull()
     // The same event a long-press synthesises, dispatched on the element under

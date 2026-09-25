@@ -43,7 +43,7 @@ import path from 'node:path'
 const PUBLIC_COPY = [
   'index.html',
   'src/pages/Spectrum.jsx',
-  'src/pages/Plans.jsx',
+  'src/pages/Pricing.jsx',
   'src/pages/SiteMap.jsx',
   'src/pages/HelpCentre.jsx',
   'src/pages/TypeScale.jsx',

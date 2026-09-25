@@ -1,554 +1,329 @@
-/* gradient.css — the Spectrum pass on `/create/gradient`.
+/* gradient.css — /create/gradient, rebuilt to the design.
  *
- * ── WHY THIS FILE EXISTS AT ALL ─────────────────────────────────────────────
+ * Source: "UIL4B App.dc.html", `isGradient` (D:610-716) and its view model
+ * (D:1811-1896). The toolbar, the 1fr/336 grid, the side card, its section
+ * labels, pills and slider rows all come from the shared tool layout
+ * (pages/tool-layout.css); this sheet carries only what is the gradient's own:
+ * the canvas, the stop rail, the code well, the stop rows, the swatches and
+ * the preset strip.
  *
- * The `ggn` family's base rules live in TWO sheets this lane must not edit:
- * `src/styles/global.css` (the shared entry sheet) and
- * `src/styles/deferred/colour.css`, which ten pages import — including the two
- * galleries another agent is editing right now. Changing either would have
- * restyled somebody else's page mid-flight.
+ * Every selector is scoped `.grd …` (0,2,0+). Vite orders chunk CSS by the
+ * dependency graph, not by import order, so scope is what makes these win.
+ * The design's inline values are kept as written; its tokens are the aliases
+ * tool-layout.css defines on `.tl` (--tl-line = ink 10%, --tl-dim, …).
  *
- * So this is a new page stylesheet, imported LAST by GradientGenerator.jsx.
- * `.ggn-*` appears in exactly two source files (`GradientGenerator.jsx` and
- * `src/data/pipeline.js`), so nothing outside this route can see any of it.
- *
- * ── EVERY SELECTOR HERE IS SCOPED `.ggn …`, AND THAT IS NOT DECORATION ──────
- *
- * Importing last does NOT put this sheet last. Measured in a rendered browser,
- * the runtime <link> order is
- *
- *     global.css -> index.css -> THIS SHEET -> colour.css -> tool-shell.css
- *
- * because Vite orders chunk CSS by the dependency graph rather than by the
- * order of the `import` statements in the module. So this file beats global.css
- * on order — which is what tint.css and semantic-color.css rely on, since their
- * base rules are all in global.css — but it LOSES to `deferred/colour.css` at
- * equal specificity, and thirty of the `ggn` rules restyled here also exist
- * there.
- *
- * The first cut of this file did not know that, and thirty declarations were
- * silently discarded: the h1 stayed at colour.css's clamp(38,5vw,64), the step
- * label stayed accent-coloured, the buttons kept their old radius. The page
- * still LOOKED changed, because the `--ggn-accent-text` remap below works
- * through the variable rather than through the cascade, which is exactly the
- * kind of partial success that reads as done.
- *
- * Prefixing the page root takes each rule to (0,2,0) against colour.css's
- * (0,1,0) and settles it by construction rather than by load order — which is
- * the part that would otherwise break again the next time the chunk graph
- * moves. The two reduced-motion companions at the foot are the exception and
- * say why in their own note.
- *
- * NOTHING IS RENAMED. `06-colour-tool-workbenches` and `75-colour-tools-quality`
- * assert `.ggn-step`, `.ggn-preset`, `.ggn-starting`, `.ggn-stop`,
- * `.ggn-handle`, `.ggn-presets` and `.ggn-stop-hex` by class. This file changes
- * how they are painted and never what they are called.
- *
- * ── THE ONE LINE THAT MATTERS MOST ──────────────────────────────────────────
- *
- * `global.css` set `--ggn-accent-text: var(--accent-strong)` on `.ggn` (that
- * declaration has since been deleted; the alias below is the only one).
- * `--accent-strong` is a PER-THEME LITERAL (`#0B5ED7` light, `#4A90FF` dark)
- * declared beside `--accent` rather than derived from it — so a premium theme
- * template that moves `--accent` alone would leave every accent-coloured word
- * on this page stranded on the old brand blue. Re-pointing that one alias at
- * `--accent-text` fixes the step labels, the stop badge, the format tabs, the
- * "from your palette" marker and the gallery link in a single declaration,
- * without touching any of the rules that use it.
- *
- * ── TARGET SIZE: THE STOP HANDLES WERE 20px ─────────────────────────────────
- *
- * Measured in a rendered browser at 390 / 834 / 1440 in BOTH themes: three
- * `.ggn-handle` buttons at 20.0 x 20.0, against WCAG 2.5.8's 24px floor. They
- * are the primary direct-manipulation control of this tool — the thing you drag
- * to place a colour — so this was the worst 4px on the page. They are 24px now,
- * which the 26px rail accommodates without the dots colliding, and a coarse
- * pointer gets a 44px hit area from a pseudo-element rather than a 44px painted
- * dot, which on a 46px bar would overlap its neighbours and hide the gradient
- * the handles exist to show.
- *
- * ── WIDTHS AND THEMES ───────────────────────────────────────────────────────
- *
- * Rendered at 390 / 834 / 1440, light and dark. Zero horizontal page overflow
- * at each; zero text nodes under their contrast floor measured on the
- * COMPOSITED ground rather than the declared colour.
- *
- * The layout is NOT touched. The preset rail's wrap-at-981px rule, the
- * inspector height cap and the 2.4-tile phone basis in colour.css all carry
- * measurements in their own comments and all of them still hold; this pass is
- * type, colour, radius and motion only. */
+ * WHAT IS OURS AND NOT HIS, each kept from the previous build because it is a
+ * function a person uses:
+ *   · the format tabs (CSS / Tailwind / SVG) over the code well;
+ *   · the hex field and full picker under the ten swatches (SELECTED STOP);
+ *   · the lock toggles (stop count, each stop, type, angle) — randomise locks;
+ *   · the flip button at the STOPS label;
+ *   · the gallery-gradient Pro note over the canvas. */
+.grd .grd-count { margin-right: 0; }
 
-.ggn {
-  /* Spectrum's house curve. */
-  --ggn-ease: cubic-bezier(.23, 1, .32, 1);
-  --ggn-wash: color-mix(in srgb, var(--t0) 4%, transparent);
-
-  /* THE FIX. See the header — this replaces `var(--accent-strong)`, which does
-     not track `--accent`. `--accent-text` is `color-mix(in srgb, var(--accent)
-     80%, var(--accent-toward))`, so it follows the theme's accent wherever it
-     goes and keeps its direction: deeper in light, lighter in dark. Measured on
-     `--card`, which is what every user of this alias actually sits on:
-     #0E5BCF on #FFFFFF = 6.15:1 light, #8AB8FF on #111215 = 9.24:1 dark. */
-  --ggn-accent-text: var(--accent-text);
-}
-
-/* ── Header ──────────────────────────────────────────────────────────────────
-   Spectrum's hero metrics. colour.css already lifted this to
-   clamp(38,5vw,64)/600/-.04em, which is close; this takes it the rest of the
-   way to the h1 step the front door uses, and gives the lede the 52ch measure
-   and 1.62 leading that spectrum.css sets for `.sp-lede`. */
-
-.ggn .ggn-title{
-  font-family: var(--display);
-  font-size: clamp(38px, 5.6vw, 72px);
-  font-weight: 600;
-  line-height: .96;
-  letter-spacing: -.045em;
-  color: var(--ggn-t0);
+/* ── The Pro note for a gallery gradient ─────────────────────────────────── */
+.grd .grd-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  text-wrap: balance;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--tl-dim);
 }
 
-.ggn .ggn-sub{
-  max-width: 52ch;
-  margin: 16px 0 0;
-  font-size: 15.5px;
-  line-height: 1.62;
-  color: var(--ggn-t1);
-  text-wrap: pretty;
+/* ── Canvas (D:627) ─────────────────────────────────────────────────────── */
+.grd .grd-canvas {
+  position: relative;
+  min-height: clamp(240px, 42vh, 440px);
+  border-radius: 18px;
+  border: 1px solid var(--tl-line);
 }
 
-/* ── Buttons ─────────────────────────────────────────────────────────────────
-   THE RECTANGLE, NOT THE MARKETING PILL, and deliberately. `/create/contrast`
-   is the finished colour tool on this branch and draws its buttons as 10px
-   rectangles; `/admin`, rebuilt against `UIL4B App.dc.html`, reached 9.3 doing
-   the same. There is also an open founder decision on whether app surfaces
-   should take the app file's rectangle over global.css's 999px pill
-   (SPECTRUM-REVIEW, copy-owed #4) — pilling this page would have voted on it
-   from a tool page. */
-
-.ggn .ggn-btn{
-  min-height: 42px;
-  padding: 9px 18px;
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 540;
-  border-radius: var(--radius-s);
-  border: 1px solid transparent;
-  white-space: nowrap;
-  cursor: pointer;
-  /* `transition: all` was the old rule. It animates every property the element
-     will ever have, including ones a later state adds, which is how a hover
-     picks up a transition nobody wrote. Named properties only. */
-  transition: background var(--dur-1) ease, border-color var(--dur-1) ease,
-              color var(--dur-1) ease, transform var(--dur-1) var(--ggn-ease);
+/* ── Stop rail (D:628-637) ──────────────────────────────────────────────── */
+.grd .grd-rail-wrap { position: relative; padding: 0 12px; }
+.grd .grd-rail {
+  position: relative;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--tl-line);
+  cursor: copy;
+  touch-action: none;
 }
-
-.ggn .ggn-btn:active{ transform: scale(.978); }
-
-/* --accent-mid, NOT --accent and NOT --accent-strong.
-   `--accent-fg` is white, and white on `--accent` measures 4.46:1 at 13px/540 —
-   under the 4.5 floor. The old rule used `--accent-strong`, which passed but is
-   the per-theme literal this file exists to stop using. `--accent-mid` +
-   `--accent-ink` measures 5.18:1 light / 9.17:1 dark.
-
-   AND THE HOVER IS A DIFFERENT COLOUR NOW. `.ggn-btn-accent:hover` in
-   colour.css set the SAME background and the SAME border as the rest state, so
-   the page's primary action had no hover feedback at all — a silent dead state
-   on the one button most visitors press first. `--accent-text` is the next step
-   in the direction `--accent-mid` already travels, so it moves away from the
-   page ground in both themes: 5.73:1 light / 9.65:1 dark.
-   NEVER `--accent-hover` — that one mixes toward `--accent-paper` in BOTH
-   themes, so in light it is lighter than the button it lifts off and measures
-   worse than the state it replaces. */
-.ggn .ggn-btn-accent{
-  background: var(--accent-mid);
-  border-color: var(--accent-mid);
-  color: var(--accent-ink);
-}
-
-.ggn .ggn-btn-accent:hover{
-  background: var(--accent-text);
-  border-color: var(--accent-text);
-  color: var(--accent-ink);
-}
-
-.ggn .ggn-btn-ghost{
+.grd .grd-handle {
+  position: absolute;
+  top: 50%;
+  width: 26px;
+  height: 38px;
+  padding: 0;
+  border: 0;
   background: transparent;
-  border-color: var(--ggn-line);
-  color: var(--ggn-t1);
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  cursor: grab;
+  touch-action: none;
 }
-
-.ggn .ggn-btn-ghost:hover{
-  border-color: var(--ggn-line-2);
-  color: var(--ggn-t0);
-  background: var(--ggn-wash);
+.grd .grd-handle.is-dragging { cursor: grabbing; }
+.grd .grd-handle-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--grd-stop, transparent);
+  border: 3px solid color-mix(in srgb, var(--t0) 20%, transparent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .45);
 }
-
-.ggn .ggn-btn-sm{ min-height: 36px; padding: 7px 14px; font-size: 12px; }
-
-.ggn .ggn-btn:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
-
-/* ── Panels ──────────────────────────────────────────────────────────────────
-   Spectrum's card: a 2xl radius over a hairline on `--card`. The stage holds
-   the canvas and is the page's primary object, so it takes the 3xl and the
-   only real shadow on the page. */
-
-.ggn .ggn-stage,
-.ggn .ggn-panel,
-.ggn .ggn-block{
-  border-radius: var(--radius-2xl);
-  background: var(--ggn-panel);
-  border: 1px solid var(--ggn-line);
-}
-
-.ggn .ggn-stage{ border-radius: var(--radius-3xl); box-shadow: var(--shadow-s); }
-
-.ggn .ggn-stage-head h2,
-.ggn .ggn-panel-head h2,
-.ggn .ggn-block-head h2{
-  margin: 4px 0 0;
-  font-family: var(--display);
-  font-size: 19px;
-  font-weight: 560;
-  letter-spacing: -.02em;
-  color: var(--ggn-t0);
-}
-
-.ggn .ggn-block-head p{ margin: 5px 0 0; max-width: 52ch; font-size: 12.5px; line-height: 1.5; color: var(--ggn-t2); }
-
-/* The step index is `--t3`, not the accent.
-   "01 · CANVAS" is an INDEX — it says where you are in a sequence, which is
-   orientation, not emphasis. In accent it was the brightest thing in a header
-   whose job is to introduce a canvas full of the user's own colour, and this
-   page has two of them competing with the artefact. spectrum.css makes the
-   same call for the same object: `.sp-panel-no` is `--sp-quiet` (`--t3`) while
-   `--accent-text` is spent on `.sp-panel-hint`, which is a live value rather
-   than a label. `--t3` on `--card` measures 5.24:1 light / 5.86:1 dark. */
-.ggn .ggn-step{
-  font-family: var(--mono);
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--t3);
-}
-
-/* The stop counter IS a live value — it is the only place the 12-stop limit
-   appears and the only warning that Add Stop is about to stop working — so it
-   keeps the accent, on the wash rather than as flat text. */
-.ggn .ggn-badge{
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: .04em;
-  color: var(--accent-bright);
-  background: var(--accent-wash-4);
-  border: 1px solid var(--accent-border);
-  padding: 4px 11px;
-  border-radius: var(--radius-pill);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── The canvas chrome ───────────────────────────────────────────────────── */
-
-/* The pills that name the gradient's type and angle sit ON the user's gradient,
-   which can be any colour, so they cannot take a page token: a quiet grey here
-   would be unreadable over half the gradients the tool can make. A near-black
-   scrim with white ink is legible over every one of them, and it is a picture
-   of a chip on an image rather than a themed control — the same exception
-   spectrum.css makes for its three window dots. */
-.ggn .ggn-pill{
+.grd .grd-handle.is-active .grd-handle-dot { border-color: var(--t0); }
+.grd .grd-handle.is-locked .grd-handle-dot { border-style: double; }
+.grd .grd-handle:focus-visible { outline: 2px solid var(--tl-link); outline-offset: 0; }
+/* The live position, over the handle while it moves. White on a near-black
+   scrim is 15.9:1 whatever colour sits under it. */
+.grd .grd-handle-val {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 7px;
+  border-radius: 8px;
+  background: rgba(10, 11, 13, .9);
+  color: #fff;
   font-family: var(--mono);
   font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--dur-1) var(--ease-standard), visibility 0s linear var(--dur-1);
 }
+.grd .grd-handle.is-dragging .grd-handle-val,
+.grd .grd-handle:focus-visible .grd-handle-val { opacity: 1; visibility: visible; transition-delay: 0s; }
 
-/* ── Segmented controls and format tabs ──────────────────────────────────── */
-
-.ggn .ggn-seg,
-.ggn .ggn-fmt{
-  background: var(--ggn-wash);
-  border: 1px solid var(--ggn-line);
-  border-radius: var(--radius);
-  padding: 3px;
+/* ── Code well (D:638-640), with the format tabs on top ─────────────────── */
+.grd .grd-code {
+  border-radius: 12px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+  overflow: hidden;
 }
-
-/* Named transitions, not `transition: all` — see the note on `.ggn-btn`. The
-   SIZES are deliberately left where colour.css and global.css put them: the
-   three format tabs (CSS / Tailwind / SVG) share one row inside a 340px
-   inspector, and stepping them from 11px to the page's 12.5px pushed that row
-   to wrap at 1440. Weight and colour carry the change instead. */
-.ggn .ggn-seg-btn,
-.ggn .ggn-fmt-btn{
-  font-family: var(--font);
-  font-weight: 500;
-  transition: background var(--dur-1) ease, color var(--dur-1) ease;
-}
-
-.ggn .ggn-seg-btn{ font-size: 12.5px; border-radius: var(--radius-s); }
-
-/* The ON state is the INK token, not the accent fill.
-   The old rule filled the selected segment with the brand blue, which put a
-   saturated blue rectangle immediately beside a canvas of the user's own
-   colour and read as part of the artefact. spectrum.css's `.sp-chip` and
-   `.sp-billing-tab` both use the ink ground for the pressed state for exactly
-   this reason, and it measures better: `--bg-0` on `--t0` is 16.88:1 in light
-   and 15.9:1 in dark, against 4.46:1 for white on `--accent`. */
-.ggn .ggn-seg-btn[aria-pressed="true"],
-.ggn .ggn-fmt-btn[aria-pressed="true"],
-.ggn .ggn-seg-btn.is-on,
-.ggn .ggn-fmt-btn.is-on{
-  background: var(--t0);
-  color: var(--bg-0);
-  font-weight: 560;
-}
-
-.ggn .ggn-seg-btn:focus-visible,
-.ggn .ggn-fmt-btn:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
-
-/* ── The stop handles ────────────────────────────────────────────────────────
-   24px, up from a measured 20.0 x 20.0 — see the file header. The white ring
-   and the dark drop shadow stay: they are what makes a handle findable on an
-   arbitrary gradient, and neither is a theme value any more than a crosshair
-   is. `--h-color` is the stop's own colour, written inline by React.
-
-   THE HIT AREA IS SEPARATE FROM THE PAINT. A 44px painted dot on a 46px rail
-   would overlap its neighbours and cover the gradient it is placed against, so
-   a coarse pointer gets the extra area from a pseudo-element instead. This is
-   the region that receives the pointer event, which is what SC 2.5.8 measures —
-   though note that a `getBoundingClientRect()` sweep reads the BUTTON and will
-   report 24px, so an automated check needs to know to look for this. */
-.ggn .ggn-handle{
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  transition: box-shadow var(--dur-1) ease, transform var(--dur-1) var(--ggn-ease);
-}
-
-.ggn .ggn-handle::after{
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-}
-
-.ggn .ggn-handle:focus-visible{ outline: 2px solid var(--accent); outline-offset: 3px; }
-
-@media (pointer: coarse) {
-  .ggn .ggn-handle::after{ inset: -10px; }
-}
-
-/* ── Presets ─────────────────────────────────────────────────────────────── */
-
-.ggn .ggn-preset-swatch{
-  border-radius: var(--radius);
-  border: 1px solid var(--ggn-line);
-  transition: transform var(--dur-2) var(--ggn-ease), box-shadow var(--dur-2) ease;
-}
-
-/* No lift. A -2px rise and a bigger shadow on sixteen tiles was hover carrying
-   more personality than feedback; the border darkening and the name going to
-   full ink say "this one" without moving anything. */
-.ggn .ggn-preset:hover .ggn-preset-swatch{ transform: none; box-shadow: none; border-color: var(--ggn-line-2); }
-
-.ggn .ggn-preset-name{ font-size: 12.5px; font-weight: 500; color: var(--ggn-t1); text-align: left; }
-
-.ggn .ggn-preset:hover .ggn-preset-name{ color: var(--ggn-t0); }
-
-/* "From your palette" — a live marker, so it keeps the accent, and it is the
-   derived step rather than the literal `--ggn-accent` alias. */
-.ggn .ggn-preset--mine .ggn-preset-name{ color: var(--accent-text); }
-
-.ggn .ggn-start-label{
-  display: block;
-  margin-bottom: 10px;
+.grd .grd-fmt { display: flex; gap: 5px; flex-wrap: wrap; padding: 10px 12px 0; }
+.grd .grd-code-text {
+  margin: 0;
+  padding: 12px 16px 14px;
+  overflow-x: auto;
   font-family: var(--mono);
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--t3);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--tl-soft);
+  white-space: pre;
 }
+.grd .grd-code-text code { font: inherit; color: inherit; background: none; padding: 0; }
+.grd .grd-code-text--block { max-height: 260px; }
 
-/* ── Fields ──────────────────────────────────────────────────────────────── */
-
-.ggn .ggn-stop-hex,
-.ggn .ggn-stop-pos input{
-  font-family: var(--mono);
-  border-radius: var(--radius-s);
-  transition: border-color var(--dur-1) ease, box-shadow var(--dur-1) ease;
-}
-
-.ggn .ggn-stop-hex:focus,
-.ggn .ggn-stop-pos input:focus{
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-wash-4);
-}
-
-/* ── Structural pass, lane 1, 2026-09-23 ─────────────────────────────────────
-   Earlier passes on this sheet were type, colour, radius and motion only. This
-   one changes composition, and subtracts. Mobbin: Shopify's brand colours list
-   (mobbin.com/screens/01a1db52-91d3-4c6c-a67c-535f345173d3) runs its colours
-   as one column of swatch rows under hairlines with the destructive action at
-   the row's end; Telegram's editor
-   (mobbin.com/screens/ac204413-1af7-405e-94f5-9105b912151e) keeps the canvas
-   free of chrome and puts every value in the inspector beside it. */
-
-/* THE STOPS ARE ONE COLUMN OF HAIRLINE ROWS, not a two-up grid of boxes.
-   Each stop was a bordered, filled card inside the bordered Stops card, two to
-   a row, so a three-stop gradient read as a grid of tiles with a hole in it
-   and the position field floated mid-row. A stop is a line in an ordered list:
-   index, colour, hex, position, lock, remove. One column is also what lets the
-   lock and remove buttons take a real 44px under a coarse pointer (below). */
-.ggn .ggn-stops{ display: flex; flex-direction: column; gap: 0; }
-.ggn .ggn-stop{
-  position: relative;
-  gap: 12px;
-  padding: 10px 4px 10px 14px;
+/* ── Side card: STOPS (D:645-654) ───────────────────────────────────────── */
+.grd .grd-sec-tools { display: inline-flex; align-items: center; gap: 2px; }
+.grd .grd-stop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 12px;
   background: transparent;
-  border: 0;
-  border-top: 1px solid var(--ggn-line);
-  border-radius: 0;
-  transition: background var(--dur-1) ease;
 }
-.ggn .ggn-stop:last-child{ border-bottom: 1px solid var(--ggn-line); }
-.ggn .ggn-stop:hover{ background: var(--ggn-wash); border-color: var(--ggn-line); }
-/* The stop the handles are editing: the 2px bar /create/tint uses for its
-   selected ramp, instead of an accent box drawn round the whole row. */
-.ggn .ggn-stop.is-active{ border-color: var(--ggn-line); }
-.ggn .ggn-stop.is-active::before{
-  content: '';
-  position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 0;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-}
-.ggn .ggn-stop-pos{ margin-left: auto; }
-.ggn .ggn-stop-x,
-.ggn .ggn-lock{ transition: color var(--dur-1) ease, border-color var(--dur-1) ease, background var(--dur-1) ease; }
-
-/* A locked value was a filled `--accent-strong` square (global.css), the one
-   legacy literal the `--ggn-accent-text` re-point above cannot reach because
-   it is not spelled through the variable. Tint's primary pair instead:
-   --accent-mid ground, --accent-ink glyph (5.18:1 light / 9.17:1 dark). */
-.ggn .ggn-lock.is-on{ color: var(--accent-ink); background: var(--accent-mid); border-color: var(--accent-mid); }
-
-/* "3/12 stops" is a count, not a status and not a thing to press. It was an
-   accent-washed pill; it is a mono figure in the quiet ink now, which is what
-   `.ggn-step` beside it already is. --t2 on the card: 6.43:1 light. */
-.ggn .ggn-badge{
+.grd .grd-stop.is-on { background: var(--tl-row-on); }
+.grd .grd-stop-swatch {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--t2);
+  border-radius: 8px;
+  border: 2px solid color-mix(in srgb, var(--t0) 20%, transparent);
+  cursor: pointer;
+}
+.grd .grd-stop.is-on .grd-stop-swatch { border-color: var(--t0); }
+.grd .grd-stop-hex { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; color: var(--tl-ink); }
+.grd .grd-stop-pos { font-family: var(--mono); font-size: 11px; color: var(--tl-dim); }
+.grd .grd-iconbtn {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--btn-radius);
   background: transparent;
+  color: var(--tl-dim);
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+.grd .grd-lock.is-on { color: var(--tl-ink); background: var(--tl-wash-on); }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-iconbtn:hover { background: var(--tl-wash-2); color: var(--tl-ink); }
+}
+.grd .grd-add { width: 100%; font-size: 13px; }
+
+/* ── SELECTED STOP (D:657-668) ──────────────────────────────────────────── */
+.grd .grd-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.grd .grd-swatch {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--t0) 14%, transparent);
+  cursor: pointer;
+}
+.grd .grd-swatch.is-on { border-color: var(--t0); }
+.grd .grd-pick { display: flex; align-items: center; gap: 8px; }
+.grd .grd-pick-swatch { flex: 0 0 auto; display: flex; }
+.grd .grd-pick-swatch .cpk-trigger { width: 36px; height: 36px; border-radius: 12px; }
+.grd .grd-pick-swatch .cpk-pop { left: 0; right: auto; }
+.grd .grd-hex-field { position: relative; flex: 1; min-width: 0; display: flex; }
+.grd .grd-hex {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  /* The design's own text field (the header search, D:108): a 4.5% ink wash
+     inside a 9% hairline, r12. */
+  border: 1px solid var(--tl-hair);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--t0) 4.5%, transparent);
+  color: var(--tl-ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.grd .grd-hex:focus { border-color: color-mix(in srgb, var(--t0) 30%, transparent); }
+.grd .grd-hex[aria-invalid="true"] { border-color: var(--err); }
+.grd .grd-field-error {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--tl-card);
+  border: 1px solid var(--tl-line-2);
+  color: var(--t0);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ── GEOMETRY (D:671-700) ───────────────────────────────────────────────── */
+.grd .grd-geo { gap: 12px; }
+.grd .grd-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.grd .grd-row > .tl-slider { flex: 1; min-width: 0; }
+.grd .grd-interp { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.grd .grd-interp-k { font-size: 12.5px; color: var(--tl-dim); }
+
+/* ── Start from a preset (D:703-713) ────────────────────────────────────── */
+.grd .grd-presets {
+  margin-top: clamp(14px, 2vw, 20px);
+  border-radius: 18px;
+  border: 1px solid var(--tl-line);
+  background: var(--tl-card);
+  overflow: hidden;
+}
+.grd .grd-presets-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--tl-hair);
+}
+.grd .grd-presets-head h2 { margin: 0; font-size: 14px; font-weight: 560; letter-spacing: -.01em; color: var(--tl-ink); }
+.grd .grd-lib {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--t0) 11%, transparent);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tl-soft);
+  font-size: 12.5px;
+  text-decoration: none;
+}
+.grd .grd-lib:hover { text-decoration: none; background: var(--tl-wash-2); color: var(--tl-ink); }
+.grd .grd-lib-caret { color: var(--tl-faint); }
+.grd .grd-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  background: color-mix(in srgb, var(--t0) 8%, transparent);
+}
+.grd .grd-preset {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
   border: 0;
-  border-radius: 0;
+  background: var(--tl-card);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: var(--font);
+}
+.grd .grd-preset-swatch {
+  display: block;
+  height: 58px;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--tl-line);
+}
+.grd .grd-preset.is-on .grd-preset-swatch { box-shadow: inset 0 0 0 2px var(--t0); }
+.grd .grd-preset-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.grd .grd-preset-name { font-size: 12.5px; color: var(--tl-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grd .grd-preset-meta { font-size: 10.5px; color: var(--tl-faint); white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) {
+  .grd .grd-preset:hover { background: color-mix(in srgb, var(--t0) 4%, var(--card)); }
+}
+@media (max-width: 1100px) {
+  .grd .grd-preset-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .grd .grd-preset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* The canvas labels ("LINEAR", "135°") were frosted-glass pills —
-   backdrop-filter blur on a 999px capsule, the exact premium-signal stack the
-   anti-slop bar names. A plain scrim rectangle does the same job: white ink on
-   rgba(10,11,13,.72) composited over pure white, the worst ground a gradient
-   can present, is 8.5:1 (label-ink-not-dimmed.test.js computes it). */
-.ggn .ggn-pill{
-  color: #fff;
-  background: rgba(10, 11, 13, .72);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  border: 0;
-  border-radius: var(--radius-xs);
-  padding: 5px 9px;
-}
-
-/* The lock note and the palette-import card: the last two accent-bg / lift
-   treatments on the page. */
-.ggn .ggn-lock-note{ background: var(--accent-wash); }
-.ggn .ggn-import:hover{ transform: none; border-color: var(--ggn-line-2); }
-
-/* ── Coarse pointers ─────────────────────────────────────────────────────────
-   44px on the controls that are pressed, not a blanket floor: the preset
-   swatches are already 16/9 tiles well over 44px, and the handles take their
-   area from the pseudo-element above rather than from a min-height that would
-   also stretch the rail. */
-@media (pointer: coarse) {
-  .ggn .ggn-btn,
-  .ggn .ggn-btn-sm,
-  .ggn .ggn-seg-btn,
-  .ggn .ggn-fmt-btn{ min-height: 44px; }
-
-  /* THE LOCK AND THE DELETE BUTTON NOW GET A REAL 44px, and the reason the
-     last pass could not give it has gone. That pass measured the stop row in a
-     TWO-COLUMN grid at 769px: two 44px buttons took 36px from a row whose only
-     flexible item is the hex field, and "#7C3AED" clipped to "#7C3AE" — a
-     wrong colour that looks right. It settled for a 34px pseudo-element hit
-     area, because 44 would overlap Remove Stop.
-
-     The stops are one column now (see `.ggn-stops` above), so the row is the
-     full panel width at every width over 640, and at 640 and under the
-     trailing controls sit on their own grid line (see below). Measured with
-     touch emulation at 320, 390, 481, 600, 769, 780 and 834: no hex field
-     scrolls its text. */
-  .ggn .ggn-lock,
-  .ggn .ggn-stop-lock,
-  .ggn .ggn-stop-x{ width: 44px; height: 44px; }
-  .ggn .ggn-stop-swatch .cpk-trigger{ width: 44px; height: 44px; }
-  .ggn input.ggn-stop-hex,
-  .ggn .ggn-stop-pos input,
-  .ggn input.ggn-angle-input{ min-height: 44px; }
-  .ggn .ggn-stop-pos input{ min-width: 48px; }
-  .ggn .ggn-copy{ min-height: 44px; padding: 0 10px; margin-right: -10px; }
-  .ggn .ggn-gal-link{ min-height: 44px; }
-}
-/* THE TWO-LINE STOP ROW STARTS AT 640, NOT 480. global.css stacks the row
-   (hex on line one, position + lock + remove on line two) only at 480 and
-   under — but its mobile form floor lifts every field to 16px at 640 and
-   under, and a 16px "#7C3AED" in one line with 44px buttons beside it
-   measured 51px of content box against the 69px it needs at 481 with touch
-   emulation: "#7C3AE", the wrong-but-plausible clip 25-defect-sweep N2 exists
-   to catch. From 640 down the row now takes both lines at every pointer. */
+/* iOS zooms the page when a focused field is under 16px; the global ≤640
+   floor loses to this sheet's (0,2,0) size, so it is restated here (C7). */
 @media (max-width: 640px) {
-  .ggn .ggn-stop{ display: grid; grid-template-columns: 20px 32px minmax(0, 1fr) auto auto; gap: 6px 8px; }
-  .ggn .ggn-stop-hex-field{ grid-column: 3 / -1; }
-  /* Under the swatch as well as column 3: with 44px lock and remove buttons
-     column 3 alone measured 8px at 320, narrower than the field it holds. */
-  .ggn .ggn-stop-pos{ grid-column: 2 / 4; margin-left: 0; }
-  .ggn .ggn-stop-lock{ grid-column: 4; }
-  .ggn .ggn-stop-x{ grid-column: 5; }
-}
-@media (pointer: coarse) and (max-width: 640px) {
-  .ggn .ggn-stop{ grid-template-columns: 20px 44px minmax(0, 1fr) auto auto; }
+  .grd .grd-hex { font-size: 16px; }
 }
 
-/* ── Reduced motion ──────────────────────────────────────────────────────────
-   global.css's blanket rule clamps every DURATION under both spellings the app
-   uses — the Settings choice (the `data-reduced-motion` attribute on <html>)
-   and the OS query for anyone who has not made one. A clamp makes movement
-   instant rather than absent, so a rule here that MOVES a box gets a
-   companion that removes the movement itself.
+/* ── The submit modal's preview strip ───────────────────────────────────── */
+.grd-submit-preview { height: 88px; margin-bottom: var(--s-4); border-radius: 12px; border: 1px solid var(--border); }
 
-   NOT `:where()`, and this was measured rather than assumed. `:where()`
-   contributes ZERO specificity, which is correct in spectrum.css because the
-   rule it overrides sits in the same file and wins on order alone. Here the
-   base rule also exists in `deferred/colour.css`, which LOADS AFTER this sheet
-   (see the note above `.ggn`), so a zero-specificity companion loses to it and
-   the movement it was supposed to remove stays on — measured, the preset hover
-   still reported translateY(-2px) with reduced motion active in BOTH spellings.
-   The bare attribute selector adds (0,1,1) and carries it.
+/* ── Coarse pointers: 44px on every stop control, 16px in the hex field so
+   iOS does not zoom the page when it takes focus. ────────────────────────── */
+@media (pointer: coarse) {
+  .grd .grd-iconbtn { width: 44px; height: 44px; }
+  .grd .grd-stop-swatch { width: 44px; height: 44px; }
+  .grd .grd-swatch { width: 44px; height: 44px; }
+  .grd .grd-hex { height: 44px; font-size: 16px; }
+  .grd .grd-pick-swatch .cpk-trigger { width: 44px; height: 44px; }
+  .grd .grd-lib { height: 44px; }
+  .grd .grd-fmt-btn { min-height: 44px; }
+  .grd .grd-rail { height: 44px; }
+  .grd .grd-handle { width: 44px; height: 44px; }
+}
 
-   SCOPED THROUGH THE ROOT, with <html> first: <html> is an ancestor of
-   `.ggn`, so the attribute goes on it and the page root sits between. The
-   preset hover no longer moves at all (see `.ggn-preset:hover` above), so the
-   press on a button is the one movement left to remove. */
-html[data-reduced-motion="true"] .ggn .ggn-btn:active { transform: none; }
-
+:where(html[data-reduced-motion="true"]) .grd .grd-handle-val,
+:where(html[data-reduced-motion="true"]) .grd .grd-iconbtn { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-reduced-motion="false"]) .ggn .ggn-btn:active { transform: none; }
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-handle-val,
+  :where(html:not([data-reduced-motion="false"])) .grd .grd-iconbtn { transition: none !important; }
+}
+@media (forced-colors: active) {
+  .grd .grd-stop.is-on,
+  .grd .grd-preset.is-on { outline: 2px solid Highlight; }
+  .grd .grd-canvas,
+  .grd .grd-rail,
+  .grd .grd-preset-swatch,
+  .grd .grd-swatch,
+  .grd .grd-stop-swatch { forced-color-adjust: none; }
 }

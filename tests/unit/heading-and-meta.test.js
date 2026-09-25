@@ -72,9 +72,16 @@ test('/create/icons and /create/emoji do not share an h1', () => {
   // URLs, two headlines. Both halves of the chain are checked, because either
   // one breaking would re-share the h1 without the other noticing.
   const src = stripComments(read('src/pages/IconEmojiLibrary.jsx'))
+  // The tabs are a data table (LIB_TABS) so a third library
+  // can be added as one row; the masthead reads the current row's title. So
+  // the chain is: the masthead takes the row's title, and every row's title is
+  // its own.
   const title = /\btitle=\{([\s\S]*?)\}\s*\n/.exec(src)?.[1] || ''
-  assert.ok(/tab === 'icon'/.test(title),
-    'the masthead title must differ per tab — the two tabs are two separate indexable URLs')
+  assert.ok(/^current\.title$/.test(title.trim()),
+    'the masthead title must come from the current tab — the two tabs are two separate indexable URLs')
+  const titles = [...src.matchAll(/title: '([^']+)'/g)].map((m) => m[1])
+  assert.ok(titles.includes('Icon Library') && titles.includes('Emoji Library'), 'both tab titles are in the table')
+  assert.equal(new Set(titles).size, titles.length, 'two tabs share a headline')
   assert.ok(!/Find the right symbol\. Keep building\./.test(src),
     'the shared headline is back on both pages')
 

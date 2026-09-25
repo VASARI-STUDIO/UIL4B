@@ -66,7 +66,9 @@ const BAR_ROUTE = '/discover'
 
 // 662 is the founder's own capture. The rest bracket it: 480 and 390 are the
 // phone band, 700 and 768 the rest of the band where the compact bar shows.
-const WIDTHS = [390, 480, 600, 662, 700, 768]
+// 767, not 768: from 768 the header is the App file's desktop row,
+// with no menu button to measure.
+const WIDTHS = [390, 480, 600, 662, 700, 767]
 
 const BAR_H = 80
 

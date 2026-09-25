@@ -107,7 +107,6 @@ const TOOLBARS = [
   ['/discover/palettes', '.lbry-toolbar', 144, 0.6],
   ['/create/emoji', '.lbry-toolbar', 144, 0.6],
   ['/create/icons', '.lbry-toolbar', 144, 0.6],
-  ['/create/font-gallery', '.lbry-toolbar', 211, 0.6],
   ['/discover/prompts', '.lbry-toolbar', 144, 0.6],
 ]
 

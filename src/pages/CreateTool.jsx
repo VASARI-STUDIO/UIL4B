@@ -9,6 +9,7 @@ import { useToast } from '../hooks/useToast'
 import { useClipboard } from '../hooks/useClipboard'
 import { ACTIVATION_EXPORTS } from '../config/activationExports'
 import { trackActivation } from '../utils/analytics'
+import { EVENTS, sendOnce } from '../utils/productEvents'
 
 // The in-tool shell for every Create route. Navigation now lives entirely in the
 // top PillNav (the mega-menus own the tool tree), so this shell is a single,
@@ -163,8 +164,16 @@ export default function CreateTool() {
     return ok
   }, [copy, activationId])
 
+  // The first real interaction inside any tool, once per browser, signed in or
+  // not (utils/productEvents.js). A pointer or key press inside the tool's own
+  // <main>, not merely arriving on the page: arriving is traffic.
+  const toolSlug = normPath(location.pathname).split('/').pop()
+  const markToolUsed = useCallback(() => {
+    sendOnce(EVENTS.firstToolUsed, { tool: toolSlug })
+  }, [toolSlug])
+
   const group = findCreateGroup(location.pathname)
-  const { name, isHome } = resolveTool(location.pathname)
+  const { name, isHome, tool } = resolveTool(location.pathname)
 
   // Impossible in practice — the router only mounts this on resolved Create
   // routes — but keeps the component honest if it's ever reused off-tree.
@@ -185,7 +194,8 @@ export default function CreateTool() {
     return <Navigate to={firstTool.route} replace />
   }
 
-  const LiveTool = group.soon ? null : LIVE_TOOLS[normPath(location.pathname)]
+  // A tool's `views` (toolTree.js) mount the tool's own component.
+  const LiveTool = group.soon ? null : (LIVE_TOOLS[normPath(location.pathname)] || (tool && LIVE_TOOLS[normPath(tool.route)]) || null)
 
   return (
     <>
@@ -193,7 +203,13 @@ export default function CreateTool() {
 
       <div className="rail-shell" data-hue={group.hue}>
         {/* ── Content: the live tool, or the 🤫 still-building state ── */}
-        <main id="main" tabIndex={-1} className={LiveTool ? 'rail-content rail-content--live' : 'rail-content'}>
+        <main
+          id="main"
+          tabIndex={-1}
+          className={LiveTool ? 'rail-content rail-content--live' : 'rail-content'}
+          onPointerDownCapture={LiveTool ? markToolUsed : undefined}
+          onKeyDownCapture={LiveTool ? markToolUsed : undefined}
+        >
           {LiveTool ? (
             <Suspense fallback={<div className="page-loading"><div className="fg-loader" /></div>}>
               <LiveTool onCopy={copy} onExport={exportCopy} toast={toast} />

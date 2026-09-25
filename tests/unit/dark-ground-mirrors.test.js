@@ -50,3 +50,33 @@ for (const [file, names] of Object.entries(MIRRORS)) {
     }
   })
 }
+
+// THE SAME TRIPWIRE FOR THE LIGHT PAGE. The light ground is the design's
+// #F5F5F2 (App file line 20); every suite
+// that measures against a written-down light page has to follow it, or it goes
+// on passing against a ground the app no longer paints.
+function lightToken(name) {
+  const at = css.indexOf('[data-theme="light"]{--bg-0:')
+  assert.ok(at !== -1, 'global.css no longer opens its light block with --bg-0 — this reader is blind')
+  const block = css.slice(at, css.indexOf('}', at))
+  const m = new RegExp(`${name}:(#[0-9A-Fa-f]{6})`).exec(block)
+  assert.ok(m, `${name} is not a plain hex in the light block`)
+  return m[1].toUpperCase()
+}
+const LIGHT_MIRRORS = [
+  'tests/unit/category-hue-contrast.test.js',
+  'tests/unit/prefers-contrast.test.js',
+  'tests/unit/state-token-contrast.test.js',
+  'tests/unit/flair-tone-contrast.test.js',
+  'tests/unit/semantic-roles.test.js',
+  'tests/unit/theme-resolution.test.js',
+  'tests/user-sim/45-prefers-contrast.spec.js',
+  'index.html',
+]
+for (const file of LIGHT_MIRRORS) {
+  test(`${file} measures against the light page global.css actually paints`, () => {
+    const hex = lightToken('--bg-0')
+    assert.ok(read(file).toUpperCase().includes(hex),
+      `${file} does not carry the light --bg-0 (${hex}) — it is measuring a ground the app no longer paints`)
+  })
+}

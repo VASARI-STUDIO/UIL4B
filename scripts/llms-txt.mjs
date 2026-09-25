@@ -129,7 +129,7 @@ export function llmsRoutes() {
   // same kind of question they do — what this product is bound by — and because
   // a machine summarising the product should be able to see which third-party
   // work it is built on without inferring it from the tool list.
-  const more = ['/plans', '/help', '/principles', '/sitemap', '/privacy', '/terms', '/credits']
+  const more = ['/plans', '/mobile', '/help', '/principles', '/sitemap', '/privacy', '/terms', '/credits']
     .map((r) => mustBePrerendered(r, 'the More section'))
 
   // Still in the workshop: every tool the tree marks Soon, group Soon included.

@@ -9,6 +9,8 @@
 //    biting. That reset is the 1st, and telling someone the wrong one is a lie
 //    they will act on by coming back tomorrow to the same wall.
 
+import { Link } from 'react-router-dom'
+
 function Bar({ label, bucket, tone }) {
   const pct = bucket.limit > 0 ? Math.min(100, Math.round((bucket.used / bucket.limit) * 100)) : 0
   return (
@@ -48,6 +50,12 @@ export default function QuotaMeter({ quota, className = '' }) {
         // aria-live so someone who has just used their last generation is told,
         // rather than discovering it from a button that stopped working.
         <p className={`quota-msg quota-msg--${tone}`} aria-live="polite">{message}</p>
+      )}
+      {message && !quota.isPro && (
+        // The wall, or the approach to it, is where someone on Free actually
+        // wants to know what Pro allows. Not shown to Pro, whose next step is
+        // the reset, not a page selling them what they have.
+        <p className="quota-note"><Link to="/plans">See all plans</Link></p>
       )}
       {source === 'local' && (
         <p className="quota-note">Counted on this device until your first generation today.</p>

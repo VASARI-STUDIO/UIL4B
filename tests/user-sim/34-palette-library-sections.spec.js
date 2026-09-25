@@ -1,7 +1,7 @@
 // The Palette Library browses in categories.
 //
-// Founder request (2026-08-08): "trending/popular first, then brand palettes,
-// then community". Two of those three do not exist and neither is faked —
+// The intended order is trending/popular first, then brand palettes, then
+// community. Two of those three do not exist and neither is faked —
 // trending has no usage signal in the product (`upgrade-activation-events`) and
 // community publishing is not built (`community-backend`). What ships is the
 // ordering and the sectioning over the two categories that hold real palettes,
@@ -10,9 +10,9 @@
 // a "Trending" heading over an unranked list would be an invention dressed as a
 // measurement.
 //
-// ── WHY THIS FILE SIGNS IN (2026-09-18) ─────────────────────────────────────
+// ── WHY THIS FILE SIGNS IN ─────────────────────────────────────
 //
-// The galleries gained the founder's three rungs — 3 palettes signed out, 10
+// The galleries gained the design's three rungs — 3 palettes signed out, 10
 // with a free account, all 101 with Pro. Sectioning is a BROWSE behaviour, and
 // below the top rung there is not enough library left to browse: three curated
 // palettes fill one section and the Brand systems group has nothing open in it
@@ -75,7 +75,7 @@ test.describe('palette library sections', () => {
     // Both halves of this matter. Polling until scrollY passes 1500 says the
     // page has gone far enough; it does NOT say it has stopped going, and this
     // page is driven by Lenis. Measuring a pinned heading against a 12px window
-    // while the scroller is still easing is the same mistake 17-founder-batch-3
+    // while the scroller is still easing is the same mistake 17-nav-auth-fontpair-temperature
     // made — see restingScrollY() in helpers.js.
     await page.evaluate(() => window.scrollTo(0, 2200))
     expect(await restingScrollY(page, 'the library scrolled past the first section'))
@@ -122,7 +122,9 @@ test.describe('palette library sections', () => {
   // rather than the component, which will render whatever string it is handed
   // and cannot tell a true label from a false one.
   test('the results row does not restate the heading directly beneath it', async ({ page }) => {
-    const eyebrow = page.locator('.drh-head span')
+    // The results row is the design's h2 and count, with no eyebrow
+    // (UIL4B App.dc.html, palettes line 252), so the h2 is read.
+    const eyebrow = page.locator('.drh-head h2')
     const firstHeading = page.locator(`${HEAD} h3`).first()
 
     // Positive controls. Without both of these the inequality below is
@@ -141,17 +143,19 @@ test.describe('palette library sections', () => {
     // Browse mode shows curated AND brand, so naming either one here would
     // describe the first of two groups as if it were the whole library.
     await expect(page.locator(HEAD)).toHaveCount(2) // positive control: both groups really are on the page
-    await expect(page.locator('.drh-head span')).not.toHaveText(/curated collection|brand systems/i)
+    await expect(page.locator('.drh-head h2')).not.toHaveText(/curated collection|brand/i)
   })
 
   test('the results row names a category only when the view IS that category', async ({ page }) => {
-    const eyebrow = page.locator('.drh-head span')
-    await expect(eyebrow).toHaveText('Everything you can browse')
+    // The results row is the design's h2 and count, with no eyebrow
+    // (UIL4B App.dc.html, palettes line 252), so the h2 is read.
+    const eyebrow = page.locator('.drh-head h2')
+    await expect(eyebrow).toHaveText('Colours worth building with')
 
     await page.locator(TRAY).getByRole('button', { name: 'Brand', exact: true }).click()
     await expect(page.locator('.pgal-card[data-kind="brand"]').first()).toBeVisible()
     await expect(page.locator('.pgal-card[data-kind="curated"]')).toHaveCount(0)
-    await expect(eyebrow).toHaveText('Brand systems')
+    await expect(eyebrow).toHaveText('Brand palettes')
 
     await page.locator(TRAY).getByRole('button', { name: 'Curated', exact: true }).click()
     await expect(page.locator('.pgal-card[data-kind="curated"]').first()).toBeVisible()
@@ -168,7 +172,7 @@ test.describe('palette library sections', () => {
     await page.locator(MOOD_TRAY).getByRole('button', { name: 'Dark', exact: true }).click()
     await expect(page.locator('.pgal-card[data-kind="brand"]').first()).toBeVisible()
     await expect(page.locator('.pgal-card[data-kind="curated"]').first()).toBeVisible()
-    await expect(eyebrow).not.toHaveText(/curated collection|brand systems/i)
+    await expect(eyebrow).not.toHaveText(/curated collection|brand/i)
   })
 
   // THE HERO DESCRIPTION THIS COMPARED AGAINST IS GONE (founder decision,

@@ -7,7 +7,7 @@
 // projects, at the free cap, as Pro, with a long project name, and with every
 // panel, tab and popover each tool has open — by a Playwright sweep that
 // measured boxes, words and paint rather than reading stylesheets (the same
-// reason 23-responsive-mid-band, 25-defect-sweep and 65-new-surfaces give).
+// reason 23-responsive-mid-band, 25-layout-target-sweep and 65-new-surfaces give).
 // 1,446 measurements; no horizontal overflow and no missing focus ring
 // anywhere. Every test below pins a fault that sweep DID find, at the width,
 // theme and state it was found in, and each was watched fail with its fix
@@ -17,6 +17,7 @@
 // Tap is stubbed on the browser fixture.
 import { test, expect } from './base.js'
 import { go, watch, signIn } from './helpers.js'
+import { openPaletteTools } from './palette-helpers.js'
 
 const IOS_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 
@@ -162,20 +163,26 @@ test.describe('a colour picker opened near the left edge stays on screen', () =>
   //
   // /create/palette's seed trigger used to sit 79px from the left, behind the
   // 15px `h1.plb-title` in the toolbar. That h1 moved into a heading area above
-  // the toolbar (2026-09-13), so the trigger is now the first thing in the row
+  // the toolbar, so the trigger is now the first thing in the row
   // and starts at the 12px gutter. Measured at 320x844 after: trigger 12..52,
   // panel 12..256 of 320, "PICK SEED COLOUR" complete. usePopover picks 'start'
   // because start now fits — which is the better outcome, not a regression, and
   // asserting 'clamp' there would be asserting that the trigger stays crowded.
   for (const [route, trigger, what, align] of [
     ['/create/palette', '.plb-seedpick .cpk-trigger', 'the seed colour', 'start'],
-    ['/create/gradient', '.ggn-stop-swatch .cpk-trigger', 'a gradient stop', 'clamp'],
+    ['/create/gradient', '.grd-pick-swatch .cpk-trigger', 'a gradient stop', 'start'],
   ]) {
     test(`${route} · the picker for ${what} at 320`, async ({ browser }) => {
       const { ctx, page } = await at(browser, 320)
       watch(page, `someone picking ${what} on a small phone`)
       await go(page, route)
-      await page.locator(trigger).first().click()
+      // A 320px toolbar keeps undo, Randomise, Tools and Save on its row; the
+      // seed chip is then the first row of the Tools sheet, and its picker
+      // opens from there.
+      if (route === '/create/palette' && !(await page.locator(trigger).first().isVisible())) {
+        await openPaletteTools(page)
+      }
+      await page.locator(trigger).filter({ visible: true }).first().click()
       const pop = page.locator('.cpk-pop')
       await expect(pop).toBeVisible()
       await settled(page, '.cpk-pop')
@@ -237,7 +244,7 @@ test.describe('/create/palette · Save / export, signed in on a desktop', () => 
       watch(page, `a designer saving a palette at 1440px with ${label}`)
       await signIn(page, { plan: 'free', projects })
       await go(page, '/create/palette')
-      await page.locator('button[aria-label="Save / export"]').click()
+      await page.getByRole('button', { name: 'Save current' }).click()
       const menu = page.locator('.plb-savemenu')
       await expect(menu).toBeVisible()
       await expect(menu.getByRole('button', { name: /Submit to the community/ })).toBeVisible()
@@ -324,41 +331,49 @@ test('/create/font-pair · the specimen heading keeps “Typography” whole at 
 })
 
 test('/create/gradient · the CSS output never splits a hex value across two lines', async ({ browser }) => {
-  // `.ggn-css code{word-break:break-all}`: in the two-column band (1024–1136)
-  // and at 390 the inspector wrapped "#7C3AED" as "#7" / "C3AED" — one colour
-  // reading as two. `overflow-wrap:anywhere` wraps at spaces first and only
-  // enters a token that cannot fit a line by itself.
+  // `.ggn-css code{word-break:break-all}` once wrapped "#7C3AED" as "#7" /
+  // "C3AED" — one colour reading as two. The design's drawn code well
+  // (D:638-640) is `white-space:pre` in an `overflow-x:auto` box: the
+  // declaration stays on ONE line and scrolls, so no token can be split.
   //
-  // MUTATION: put `word-break:break-all` back — 1097 and 390 both report
-  // split hex tokens.
+  // MUTATION: set `white-space:normal; word-break:break-all` on
+  // .grd-code-text — the line count goes above 1 and hex tokens split.
   test.setTimeout(60_000)
   const failures = []
   for (const width of [390, 1097]) {
     const { ctx, page } = await at(browser, width)
     watch(page, `a developer reading the gradient's CSS at ${width}px`)
     await go(page, '/create/gradient')
-    const code = page.locator('.ggn-css code')
-    await expect(code).toContainText('linear-gradient')
+    const code = page.locator('.grd-code-text code')
+    await expect(code).toContainText('gradient(')
     await code.scrollIntoViewIfNeeded()
     await settle(page)
-    const split = await page.evaluate(splitWords, '.ggn-css code')
-    const lines = await code.evaluate((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)))
+    const split = await page.evaluate(splitWords, '.grd-code-text code')
+    const m = await page.locator('.grd-code-text').evaluate((el) => ({
+      lines: Math.round(el.querySelector('code').getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)),
+      scrolls: el.scrollWidth > el.clientWidth,
+      overflowX: getComputedStyle(el).overflowX,
+    }))
     await ctx.close()
-    expect(lines, 'the declaration really does wrap at this width — otherwise nothing is tested').toBeGreaterThan(1)
+    // POSITIVE CONTROL: at 390 the declaration is longer than its box, so the
+    // no-wrap is really being exercised rather than trivially true.
+    if (width === 390) expect(m.scrolls, 'the declaration is longer than the well at 390').toBe(true)
+    expect(m.overflowX, 'the well scrolls sideways instead of wrapping').toBe('auto')
+    if (m.lines > 1) failures.push(`${width}px: the declaration wraps onto ${m.lines} lines`)
     const hex = split.filter((w) => /#[0-9A-Fa-f]{3,8}/.test(w))
     if (hex.length) failures.push(`${width}px: ${hex.join(', ')}`)
   }
   expect(failures, `hex values broken across lines:\n  ${failures.join('\n  ')}`).toEqual([])
 })
 
-test('/create/gradient · a saved project’s meta line is not truncated at 1280 and 1440', async ({ browser }) => {
-  // The import cards were 220px columns: 64px of stripes and 12px gap left the
-  // text 118px, and "Saved project · 3 colours" is 123px at 11px, so EVERY
-  // saved project's meta ended in "…" at 1280, 1440 and 1920 — a long name is
-  // meant to truncate; the line under it is not.
+test('/create/gradient · a saved project’s preset meta line is not truncated at 1280 and 1440', async ({ browser }) => {
+  // Saved palettes used to be separate import cards whose "Saved project ·
+  // 3 colours" line was cut to "…" at every desktop width. On the drawn screen
+  // they lead the preset strip (named after the project, D:703-713); a long
+  // NAME may ellipsis, the "N stops" meta beside it may not.
   //
-  // MUTATION: restore `minmax(220px,1fr)` on .ggn-imports — both widths
-  // report the meta 5px wider than its box.
+  // MUTATION: give .grd-preset-meta `overflow:hidden;text-overflow:ellipsis;
+  // max-width:20px` — both widths report the meta wider than its box.
   test.setTimeout(60_000)
   const failures = []
   for (const width of [1280, 1440]) {
@@ -366,14 +381,18 @@ test('/create/gradient · a saved project’s meta line is not truncated at 1280
     watch(page, `a designer starting a gradient from a saved palette at ${width}px`)
     await signIn(page, { plan: 'free', projects: [projectRecord('p-long', LONG_NAME), projectRecord('p2', 'Short')] })
     await go(page, '/create/gradient')
-    const card = page.locator('.ggn-import').first()
-    await card.scrollIntoViewIfNeeded()
-    await expect(card.locator('.ggn-import-meta')).toContainText('colours')
+    const mine = page.locator('.grd-preset--mine')
+    await expect(mine.first()).toBeVisible()
+    await mine.first().scrollIntoViewIfNeeded()
     await settle(page)
-    const m = await page.evaluate(() => [...document.querySelectorAll('.ggn-import-meta')].map((el) => ({ text: el.textContent, over: el.scrollWidth - el.clientWidth })))
+    const m = await page.evaluate(() => [...document.querySelectorAll('.grd-preset--mine .grd-preset-meta')]
+      .map((el) => ({ text: el.textContent, over: el.scrollWidth - el.clientWidth })))
     await ctx.close()
     expect(m.length, 'both seeded projects are offered').toBe(2)
-    for (const x of m) if (x.over > 0) failures.push(`${width}px: "${x.text}" is ${x.over}px wider than its box`)
+    for (const x of m) {
+      if (!/stops/.test(x.text)) failures.push(`${width}px: meta reads "${x.text}"`)
+      if (x.over > 0) failures.push(`${width}px: "${x.text}" is ${x.over}px wider than its box`)
+    }
   }
   expect(failures, `meta lines truncated:\n  ${failures.join('\n  ')}`).toEqual([])
 })
@@ -416,7 +435,7 @@ test('/create/palette · “Use →” on a community card in the Explore popup 
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a designer borrowing a community palette')
   await go(page, '/create/palette')
-  await page.locator('button[aria-label="Explore"]').click()
+  await (await openPaletteTools(page)).getByRole('button', { name: 'Explore palettes' }).click()
   const use = page.locator('.plb-galpopup-body .pgal-use')
   await expect(use.first()).toBeVisible()
   await settled(page, '.plb-galpopup')
@@ -427,45 +446,28 @@ test('/create/palette · “Use →” on a community card in the Explore popup 
   expect(short, `${short.length} of ${boxes.length} "Use" controls under 24px: ${short.slice(0, 5).join(', ')}`).toEqual([])
 })
 
-test('/create/tint · the endpoints checkbox row is a 24px target', async ({ browser }) => {
-  // The <label> wraps the input, so the label is the press target; at 12px
-  // text and 1.45 line-height it was 17px tall.
-  //
-  // MUTATION: drop `min-height:24px` from .tt-check in tint.css.
-  const { ctx, page } = await at(browser, 390)
-  watch(page, 'someone adding the white and black endpoints on a phone')
-  await go(page, '/create/tint')
-  const row = page.locator('label.tt-check')
-  await row.scrollIntoViewIfNeeded()
-  await expect(row).toContainText(/endpoints/)
-  const h = await row.evaluate((el) => +el.getBoundingClientRect().height.toFixed(1))
-  await ctx.close()
-  expect(h, `the checkbox row is ${h}px tall`).toBeGreaterThanOrEqual(24)
-})
+// Not tested: '/create/tint · the endpoints checkbox row is a 24px
+// target'. There is no 0 & 1000 endpoints option on the design's
+// drawn Tint screen, whose steps are 9 / 11 / 13 pills (D:838-842).
 
 // ─────────────────────────────────────────────────────────────────────────────
 // State colours that failed contrast
 // ─────────────────────────────────────────────────────────────────────────────
 
 for (const theme of ['light', 'dark']) {
-  test(`/create/palette · the FREE badge and the Remove item read at 4.5:1 in ${theme}`, async ({ browser }) => {
-    // The colour-system menu's FREE badge: 9px bold #16A34A on its own green
-    // tint measured 2.69:1 in light and 4.07:1 in dark. The swatch context
-    // menu's Remove: #D64545 measured 4.38:1 in light and 3.97:1 in dark.
+  // The colour-system menu's FREE badge went with the drawn System select
+  // (D:990), a native select whose paid options read "(Pro)"; the swatch
+  // context menu's Remove is still here.
+  test(`/create/palette · the Remove item reads at 4.5:1 in ${theme}`, async ({ browser }) => {
+    // The swatch context menu's Remove: #D64545 measured 4.38:1 in light and
+    // 3.97:1 in dark.
     //
-    // MUTATION: `color:#16A34A` back on .plb-free (and delete the dark
-    // override) — both themes fail on the badge; `color:#D64545` back on
-    // .plb-ctx-item--danger — both fail on Remove.
+    // MUTATION: `color:#D64545` back on .plb-ctx-item--danger — both themes
+    // fail on Remove.
     const { ctx, page } = await at(browser, 1440, theme)
     watch(page, `a designer reading the palette menus on a ${theme} screen`)
     await go(page, '/create/palette')
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-
-    await page.locator('button[aria-haspopup="menu"]:has(.plb-harm-k)').first().click()
-    await expect(page.locator('.plb-free').first()).toBeVisible()
-    await settled(page, '.plb-harmmenu')
-    const badge = await page.evaluate(contrastOf, '.plb-free')
-    await page.keyboard.press('Escape')
 
     await page.locator('.plb-col').first().click({ button: 'right' })
     await expect(page.locator('.plb-ctx-item--danger')).toBeVisible()
@@ -473,8 +475,6 @@ for (const theme of ['light', 'dark']) {
     const remove = await page.evaluate(contrastOf, '.plb-ctx-item--danger')
     await ctx.close()
 
-    expect(badge.text).toMatch(/free/i)
-    expect(badge.ratio, `FREE badge: rgb(${badge.ink}) on rgb(${badge.bg})`).toBeGreaterThanOrEqual(4.5)
     expect(remove.text).toMatch(/remove/i)
     expect(remove.ratio, `Remove: rgb(${remove.ink}) on rgb(${remove.bg})`).toBeGreaterThanOrEqual(4.5)
   })
@@ -489,7 +489,7 @@ for (const theme of ['light', 'dark']) {
     const failures = []
     for (const [route, sel, tab] of [
       ['/create/type-scale', '.tsc-copy-primary', 'Developer handoff'],
-      ['/create/tint', '.tt-copy-primary', 'Developer handoff'],
+      ['/create/tint', '.tt .tl-primary .tl-btn', null],
       ['/create/font-pair', '.fpr-copy-primary', null],
     ]) {
       const { ctx, page } = await at(browser, 1440, theme)
@@ -517,10 +517,10 @@ test('/create/gradient · the inspector’s Copy link does not fade to 3.6:1 on 
   const { ctx, page } = await at(browser, 1440)
   watch(page, 'a developer copying the gradient CSS')
   await go(page, '/create/gradient')
-  const copy = page.locator('.ggn-copy').first()
+  const copy = page.locator('.grd .tl-primary .tl-btn').first()
   await copy.scrollIntoViewIfNeeded()
-  await hoverSettled(page, copy, '.ggn-copy')
-  const m = await page.evaluate(contrastOf, '.ggn-copy')
+  await hoverSettled(page, copy, '.grd .tl-primary .tl-btn')
+  const m = await page.evaluate(contrastOf, '.grd .tl-primary .tl-btn')
   await ctx.close()
   expect(m.text).toMatch(/copy/i)
   expect(m.ratio, `hovered Copy: rgb(${m.ink}) on rgb(${m.bg})`).toBeGreaterThanOrEqual(4.5)

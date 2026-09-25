@@ -307,6 +307,7 @@ export async function signIn(page, opts = {}) {
     docs = {},
     claims = {},
     deny = [],
+    authFail = null,
     projectTombstones = null,
     displayName,
   } = opts
@@ -337,6 +338,7 @@ export async function signIn(page, opts = {}) {
     provider: 'password',
     claims,
     deny,
+    authFail,
     docs: {
       [`users/${uid}`]: {
         displayName: name,

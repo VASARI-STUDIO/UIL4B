@@ -1,6 +1,7 @@
 import { firebaseNow, firestoreNow, loadFirestore } from './firebaseAccess'
 import { canWriteSharedAnalytics } from './environment'
 import { startTtvClock, takeTimeToValue } from './timeToValue'
+import { EVENTS, sendEvent, sendOnce } from './productEvents'
 // The Firestore SDK now arrives through the access broker rather than as a
 // static import, so a deferred build can keep it out of the first request
 // wave. Analytics is the easiest consumer to move: every shared write is
@@ -331,6 +332,9 @@ export function trackUpgradeGate(gateId) {
   data.toolUsage[`gate:${id}`] = (data.toolUsage[`gate:${id}`] || 0) + 1
   saveDesignAnalytics(data)
   recordAggregateTool(`gate__${id}`)
+  // The Firestore counter above only runs for a signed-in account; this one
+  // counts every visitor who meets a gate (utils/productEvents.js).
+  sendEvent(EVENTS.upgradeGateShown, { gate: id })
 }
 
 /**
@@ -366,6 +370,9 @@ export function trackActivation(toolId, kind = 'save') {
 
   saveDesignAnalytics(data)
   recordAggregateTool(`activation__${id}__${k}`)
+  // First copy or export of a result, once per browser and for signed-out
+  // visitors too. A project save is not an export, so it is not counted here.
+  if (k === 'export') sendOnce(EVENTS.firstCopyExport, { tool: id })
   if (ttv) {
     // Two counters, not one. The bare bucket is the headline distribution; the
     // per-tool bucket says WHICH first win the time was spent reaching, which

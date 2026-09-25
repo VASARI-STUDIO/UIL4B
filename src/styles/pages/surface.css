@@ -195,7 +195,7 @@
 .srf .lidx-empty { max-width: 56ch; margin: 24px 0 0; text-align: left; }
 .srf .lidx-empty-h { margin: 0; font-size: 18px; font-weight: 560; line-height: 1.35; color: var(--t0); overflow-wrap: anywhere; }
 .srf .lidx-empty-p { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: var(--t1); }
-.srf .lidx-reset { display: inline-flex; align-items: center; min-height: 40px; margin-top: 16px; padding: 0 16px; border: 1px solid var(--srf-hair-2); border-radius: var(--radius-s); background: transparent; font-family: var(--font); font-size: 13.5px; font-weight: 500; color: var(--t0); cursor: pointer; transition: background var(--dur-1) ease, border-color var(--dur-1) ease; }
+.srf .lidx-reset { display: inline-flex; align-items: center; min-height: 40px; margin-top: 16px; padding: 0 16px; border: 1px solid var(--srf-hair-2); border-radius: var(--btn-radius); background: transparent; font-family: var(--font); font-size: 13.5px; font-weight: 500; color: var(--t0); cursor: pointer; transition: background var(--dur-1) ease, border-color var(--dur-1) ease; }
 .srf .lidx-reset:hover { background: var(--srf-wash); border-color: var(--bh); }
 
 .srf :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
