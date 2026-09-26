@@ -96,8 +96,8 @@ export const CREATE_GROUPS = [
       // usable, and the badge states a limit on the output (what each format
       // keeps is listed on the page). Beta also keeps it out of TOOL_COUNT in
       // src/components/spectrum/spectrumFacts.js, so shipping it does not move
-      // the sales page's "Thirteen tools" headline, which is the founder's line.
-      { id: '3d-viewer', label: '3D Viewer', route: '/create/3d-viewer', soon: false, beta: true },
+      // the sales page's "Thirteen tools" headline.
+      { id: '3d-converter', label: '3D Model Converter', route: '/create/3d-converter', soon: false, beta: true },
     ],
   },
   {
@@ -495,7 +495,7 @@ const MENU_ICONS = {
   emoji: 'emoji',
   'file-converter': 'imagery',
   // No cube glyph in NavIcon yet; it shares the imagery mark with the converter.
-  '3d-viewer': 'imagery',
+  '3d-converter': 'imagery',
   'ai-prompt': 'ai',
   'landing-prompts': 'marketing',
 }
@@ -522,7 +522,7 @@ const CREATE_MENU_SPEC = [
   ],
   [
     { label: 'Icons', ids: ['icons', 'emoji'] },
-    { label: 'Media', ids: ['file-converter', 'ratio', '3d-viewer'] },
+    { label: 'Media', ids: ['file-converter', 'ratio', '3d-converter'] },
     { label: 'AI', ids: ['alt-text', 'auto-builder', 'ai-prompt', 'landing-prompts'] },
   ],
 ]

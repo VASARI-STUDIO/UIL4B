@@ -183,6 +183,11 @@
       "permanent": true
     },
     {
+      "source": "/create/3d-viewer",
+      "destination": "/create/3d-converter",
+      "permanent": true
+    },
+    {
       "source": "/docs",
       "destination": "/learn",
       "permanent": true
@@ -278,8 +283,8 @@
       "destination": "/community/index.html"
     },
     {
-      "source": "/create/3d-viewer",
-      "destination": "/create/3d-viewer/index.html"
+      "source": "/create/3d-converter",
+      "destination": "/create/3d-converter/index.html"
     },
     {
       "source": "/create/alt-text",
@@ -550,7 +555,7 @@
         },
         {
           "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.iconify.design https://img.logo.dev https://flagcdn.com https://*.googleusercontent.com https://*.stripe.com https://firebasestorage.googleapis.com; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://api.iconify.design https://cdn.jsdelivr.net https://api.stripe.com https://checkout.stripe.com https://accounts.google.com; frame-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; media-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.iconify.design https://img.logo.dev https://flagcdn.com https://*.googleusercontent.com https://*.stripe.com https://firebasestorage.googleapis.com; connect-src 'self' blob: https://*.googleapis.com https://*.firebaseapp.com https://api.iconify.design https://cdn.jsdelivr.net https://api.stripe.com https://checkout.stripe.com https://accounts.google.com; frame-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; media-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
         }
       ]
     },

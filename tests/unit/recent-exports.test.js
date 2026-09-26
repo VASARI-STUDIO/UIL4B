@@ -56,7 +56,7 @@ test('helpers read the way the design draws the rows', () => {
   assert.equal(formatWhen(0, 3 * 86400e3), '3 DAYS AGO')
   assert.equal(projectIdFrom('/projects/abc', ''), 'abc')
   assert.equal(projectIdFrom('/create/tint', ''), null)
-  assert.equal(toolForPath('/create/3d-viewer').label.length > 0, true)
+  assert.equal(toolForPath('/create/3d-converter').label.length > 0, true)
   assert.equal(isToolExportPage('/settings'), false)
   assert.equal(isToolExportPage('/admin/users'), false)
   assert.equal(isToolExportPage('/create/icons'), true)

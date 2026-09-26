@@ -1,6 +1,6 @@
 // THE STUDIO TOOLS ON THE SHARED TOOL PATTERN, AT PHONE, TABLET AND DESKTOP.
 //
-// File Converter, Alt Text, Brand Starter, 3D Viewer and /seo each open on the
+// File Converter, Alt Text, Brand Starter, 3D Model Converter and /seo each open on the
 // sticky tool toolbar (the name as a 15px label, no display title), with the
 // work itself on the first screen of a 390px phone. For each tool, at 390,
 // 768 and 1440 in both themes:
@@ -21,7 +21,7 @@ const TOOLS = [
   { route: '/create/file-converter', name: 'File Converter', input: '.fc-drop' },
   { route: '/create/alt-text', name: 'Alt Text Generator', input: '.alt-dropzone' },
   { route: '/create/auto-builder', name: 'Brand Starter', input: '#bs-brief' },
-  { route: '/create/3d-viewer', name: '3D Viewer', input: '.v3d-frame' },
+  { route: '/create/3d-converter', name: '3D Model Converter', input: '.v3d-frame' },
   { route: '/seo', name: 'Meta & SERP Inspector', input: '[role="tabpanel"] input, [role="tabpanel"] textarea' },
 ]
 

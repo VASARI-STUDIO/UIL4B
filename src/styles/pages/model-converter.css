@@ -1,6 +1,6 @@
-/* three-d-viewer.css — /create/3d-viewer, the `v3d` family.
+/* model-converter.css — /create/3d-converter, the `v3d` family.
  *
- * Imported by src/pages/ThreeDViewer.jsx alone, so it ships as that route's
+ * Imported by src/pages/ModelConverter.jsx alone, so it ships as that route's
  * chunk stylesheet and never on the homepage. EVERY selector is rooted at
  * `.v3d`: Vite orders chunk CSS by the dependency graph, not by import order,
  * so a sheet imported last can still load first (see commit 8d30f37a), and a
@@ -17,12 +17,10 @@
  *   - no accent anywhere except the one primary action and the selected
  *     output, because accent means "the next action".
  *
- * CONTRAST (tokens, per theme, measured on the built page — see the lane
- * report): the primary button is `--accent-mid` under `--accent-ink`, the pair
- * /create/tint measured at 5.18:1 light / 9.17:1 dark; its hover is
- * `--accent-text`, which moves AWAY from the ground in both themes. Never
- * `--accent-hover` (it lightens in light) and never `--accent-strong` (a
- * per-theme literal that does not follow a premium accent).
+ * CONTRAST: the primary button is `--accent-ink` on `--accent-fill`, and on
+ * `--accent-fill-hover` when hovered; both pairs hold 4.5:1 or more in both
+ * themes. Never `--accent-hover` (it lightens in light) and never
+ * `--accent-strong` (a per-theme literal that does not follow a premium accent).
  *
  * MOTION: colour and border transitions only. Nothing on this page moves a box.
  * The one real motion is the model's turntable, which is decided in JavaScript
@@ -93,7 +91,11 @@
 
 /* A disabled primary drops to the neutral button rather than a faded accent:
    a washed-out blue still reads as "the next action", and it is not one yet. */
-.v3d .v3d-btn--primary:disabled { color: var(--t2); background: var(--bg-2); border-color: var(--border); opacity: 1; }
+.v3d .v3d-btn--primary:disabled,
+.v3d .v3d-btn--primary[aria-disabled="true"],
+.v3d .v3d-btn--primary[aria-disabled="true"]:hover { color: var(--t2); background: var(--bg-2); border-color: var(--border); opacity: 1; cursor: progress; }
+
+.v3d .v3d-btn--primary:disabled { cursor: not-allowed; }
 
 .v3d .v3d-btn--quiet { min-height: 32px; padding: 0 10px; background: transparent; }
 
@@ -114,6 +116,8 @@
   position: relative;
   /* The screen under the header and the tool toolbar, less the hint line. */
   height: clamp(360px, calc(100svh - var(--chrome-h, 60px) - 150px), 760px);
+  /* Clear the fixed nav and the sticky tool toolbar when scrolled to. */
+  scroll-margin-top: calc(var(--chrome-h, 60px) + 76px);
   overflow: hidden;
   background: var(--bg-2);
   border: 1px solid var(--border);
@@ -398,10 +402,44 @@
   border-radius: 1px;
 }
 
-/* Output choices: real radios in a 3 x 2 grid, so arrow keys move between
-   them and a screen reader hears "radio, 3 of 6". What the chosen format
+/* The model's unit and up axis, and the CAD settings: a small label over a
+   control that takes the section's width. Hairline above, no box. */
+.v3d .v3d-opts {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.v3d .v3d-opt { display: grid; gap: 6px; }
+
+.v3d .v3d-opt-k { font-size: 12px; line-height: 1.3; color: var(--t2); }
+
+.v3d .v3d-opt-note { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--t2); }
+
+.v3d .v3d-opt .tl-pills { flex-wrap: nowrap; }
+
+.v3d .v3d-opt .tl-pill { flex: 1 1 0; justify-content: center; min-width: 0; }
+
+.v3d .tl-select.v3d-select { display: flex; width: 100%; }
+
+.v3d .tl-select.v3d-select .tl-select-v { margin-left: auto; }
+
+/* "For Blender" on the toolbar is a toggle: pressed while its settings hold,
+   drawn as the pressed chip is. */
+.v3d .v3d-preset[aria-pressed="true"] { color: var(--tl-ink); background: var(--tl-wash-on); border-color: var(--tl-line-on); }
+
+/* Output choices: real radios in their groups, so arrow keys move between
+   them and a screen reader hears "radio, 3 of 8". What the chosen format
    keeps is one line under the grid (`.v3d-keeps`), not a note per row. */
-.v3d .v3d-outs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.v3d .v3d-outs { display: grid; gap: 12px; }
+
+.v3d .v3d-outgroup { display: grid; gap: 6px; }
+
+.v3d .v3d-outgroup-k { margin: 0; font-size: 12px; line-height: 1.3; color: var(--t2); }
+
+.v3d .v3d-outgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 
 .v3d .v3d-out {
   position: relative;
@@ -452,9 +490,9 @@
 
 .v3d .v3d-out.is-off .v3d-out-dot { border-color: var(--border); }
 
-.v3d .v3d-out-l { pointer-events: none; }
+.v3d .v3d-out-l { display: grid; min-width: 0; font-size: 13px; font-weight: 560; line-height: 1.2; color: var(--t0); pointer-events: none; }
 
-.v3d .v3d-out-l { font-size: 13px; font-weight: 560; color: var(--t0); }
+.v3d .v3d-out-sub { font-size: 10.5px; font-weight: 450; color: var(--t2); }
 
 .v3d .v3d-out.is-off .v3d-out-l { color: var(--t2); text-decoration: line-through; }
 
@@ -501,11 +539,19 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .v3d .v3d-sect + .v3d-sect { border-top: 0; border-left: 1px solid var(--border); }
+  /* The model and its CAD settings on the left, the conversion on the right. */
+  .v3d .v3d-sect.v3d-sect--model,
+  .v3d .v3d-sect.v3d-sect--cad { grid-column: 1; }
+  .v3d .v3d-sect.v3d-sect--cad { border-left: 0; border-top: 1px solid var(--border); }
+  .v3d .v3d-sect.v3d-sect--out { grid-column: 2; grid-row: 1 / span 2; }
 }
 
 @media (max-width: 640px) {
   .v3d .v3d-panel { grid-template-columns: minmax(0, 1fr); }
   .v3d .v3d-sect + .v3d-sect { border-left: 0; border-top: 1px solid var(--border); }
+  .v3d .v3d-sect.v3d-sect--model,
+  .v3d .v3d-sect.v3d-sect--cad,
+  .v3d .v3d-sect.v3d-sect--out { grid-column: auto; grid-row: auto; }
   /* A canvas that fills the screen leaves nothing to scroll the page with, and
      touch on the canvas orbits. Capped well under the viewport so there is
      always page above and below it to grab. */
