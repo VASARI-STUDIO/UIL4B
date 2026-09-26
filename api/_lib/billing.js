@@ -1,7 +1,12 @@
 import { planForSubscription } from './plans.js'
-import { BILLING_INTERVALS, LOOKUP_KEYS } from './pricing.js'
+import { BILLING_INTERVALS } from './pricing.js'
 
-export const LIFETIME_SKU = LOOKUP_KEYS.lifetime
+// The SKU a one-off Pro purchase carries on its Checkout Session metadata and
+// on `users/{uid}.lifetimeEntitlement`. One-off Pro is not sold
+// (create-checkout accepts recurring intervals only), but an entitlement
+// already on an account stays Pro, and a paid session, refund or dispute for
+// one is still handled below and in the webhook.
+export const LIFETIME_SKU = 'uil4b_pro_lifetime'
 
 // A Checkout Session's terminal fields (`status`, `payment_status`) are frozen
 // the moment the payment completes — they keep reporting 'complete' / 'paid'
@@ -262,6 +267,9 @@ export function subscriptionDocFields(sub, now = Date.now()) {
     // Quarterly is interval 'month' with interval_count 3; readers need the
     // count to tell it from monthly (src/utils/billingCadence.js).
     intervalCount: sub?.items?.data?.[0]?.price?.recurring?.interval_count || null,
+    // Stripe's creation time (seconds), so a write for a different
+    // subscription can tell which of the two is newer.
+    subscriptionCreated: Number.isFinite(sub?.created) ? sub.created : null,
     currentPeriodEnd: subscriptionPeriodEnd(sub),
     cancelAtPeriodEnd: sub?.cancel_at_period_end || false,
     trialEndsAt: sub?.trial_end ? sub.trial_end * 1000 : null,
@@ -281,6 +289,157 @@ export function writeSubscriptionDoc(db, uid, sub, now = Date.now(), extra = nul
   return db.collection('users').doc(uid).set({
     subscription: { ...subscriptionDocFields(sub, now), ...(extra || {}) },
   }, { merge: true })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUBSCRIPTION EVENT ORDERING — the newest state wins
+// ─────────────────────────────────────────────────────────────────────────────
+// Stripe does not deliver events in order, and retries a failed delivery hours
+// later. A subscription write therefore records the `created` time (seconds) of
+// the event it came from, and a later delivery is applied only when it could be
+// the newer state. Two facts from Stripe's subscription lifecycle hold even when
+// timestamps tie (events a second apart share one `created`):
+//
+//   · `canceled` and `incomplete_expired` are final. Nothing moves a
+//     subscription out of them, so once one is stored, only another final
+//     status for that subscription may be written.
+//   · `incomplete` is only ever the first status. Once a subscription has left
+//     it, an `incomplete` payload is an old one.
+//
+// A delivery for a DIFFERENT subscription id than the stored one may not
+// replace a stored subscription that grants access with one that does not: an
+// ended subscription must not end a live one. Otherwise it replaces the stored
+// subscription only if it is the newer one: created later (Stripe's
+// `sub.created`, stored as `subscriptionCreated`), or delivered by an event newer
+// than the stored event. A customer who resubscribes is therefore never held on
+// Free by an older record, and a delayed event for an old subscription never
+// replaces a newer one. Where neither time is known on both sides, it is written.
+//
+// The stored event time can belong to the previous subscription: a write made
+// without an event (checkout-status) merges over it. An event from before the
+// stored subscription was created cannot be newer than it, so the event is
+// compared against whichever of the two stored times is later.
+export const FINAL_SUBSCRIPTION_STATUSES = Object.freeze(['canceled', 'incomplete_expired'])
+
+function differentSubscriptionIsNewer(stored, sub, eventCreated) {
+  const storedTimes = [stored.stripeEventCreated, stored.subscriptionCreated].filter(Number.isFinite)
+  const pairs = [
+    [sub?.created, stored.subscriptionCreated],
+    [eventCreated, storedTimes.length ? Math.max(...storedTimes) : null],
+  ].filter(([incoming, current]) => Number.isFinite(incoming) && Number.isFinite(current))
+  if (!pairs.length) return true
+  return pairs.some(([incoming, current]) => incoming > current)
+}
+
+export function subscriptionWriteDecision(stored, sub, eventCreated) {
+  if (!stored?.id) return { write: true, reason: 'nothing_stored' }
+  if (stored.id !== sub?.id) {
+    if (subscriptionStatusGrantsAccess(stored) && !subscriptionStatusGrantsAccess(sub)) {
+      return { write: false, reason: 'another_subscription_grants_access' }
+    }
+    if (!differentSubscriptionIsNewer(stored, sub, eventCreated)) {
+      return { write: false, reason: 'older_subscription' }
+    }
+    return { write: true, reason: 'different_subscription' }
+  }
+  if (FINAL_SUBSCRIPTION_STATUSES.includes(stored.status) && !FINAL_SUBSCRIPTION_STATUSES.includes(sub?.status)) {
+    return { write: false, reason: 'subscription_already_ended' }
+  }
+  if (sub?.status === 'incomplete' && stored.status && stored.status !== 'incomplete') {
+    return { write: false, reason: 'subscription_already_started' }
+  }
+  if (Number.isFinite(eventCreated) && Number.isFinite(stored.stripeEventCreated)
+    && eventCreated < stored.stripeEventCreated) {
+    return { write: false, reason: 'older_than_stored_event' }
+  }
+  return { write: true, reason: 'current' }
+}
+
+/**
+ * Write a subscription delivered by a webhook event, unless what is stored is
+ * newer. The read and the write share one transaction, so two deliveries for
+ * the same account cannot both pass the check against the same stored state.
+ * Returns the decision, so the caller can log a skipped delivery.
+ *
+ * `extra` (a revocation stamp) is still merged when the delivery is skipped.
+ * The stamp is built from the charge behind the event's `latest_invoice`, whose
+ * refund and dispute state is fetched from Stripe when the event is handled
+ * (unless the event's payload already carries the charge expanded). That
+ * invoice comes from the event's snapshot, so for an old event it may not be
+ * the subscription's latest one; the stamp still records money that has gone
+ * back. A stamp only sets a revocation and never clears one.
+ */
+export function writeSubscriptionForEvent(db, uid, sub, eventCreated, now = Date.now(), extra = null) {
+  const ref = db.collection('users').doc(uid)
+  return db.runTransaction(async (tx) => {
+    const stored = (await tx.get(ref)).data()?.subscription || null
+    const decision = subscriptionWriteDecision(stored, sub, eventCreated)
+    if (!decision.write) {
+      if (extra) tx.set(ref, { subscription: { ...extra } }, { merge: true })
+      return decision
+    }
+    tx.set(ref, {
+      subscription: {
+        ...subscriptionDocFields(sub, now),
+        ...(extra || {}),
+        ...(Number.isFinite(eventCreated) ? { stripeEventCreated: eventCreated } : {}),
+      },
+    }, { merge: true })
+    return decision
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WEBHOOK EVENTS ARE HANDLED ONCE
+// ─────────────────────────────────────────────────────────────────────────────
+// Stripe may deliver one event more than once. Each event id gets a record in
+// `stripeEvents`, claimed in a transaction before the event is handled:
+//
+//   · `done`        — handled already; the delivery is acknowledged and skipped.
+//   · `processing`  — another delivery is handling it right now; this one is
+//                     refused so Stripe retries it later. A claim older than the
+//                     lease is treated as abandoned (the function that held it
+//                     stopped), and is taken over.
+//   · no record     — claimed, handled, then marked done. If handling throws,
+//                     the claim is released so Stripe's retry runs it again.
+//
+// Records carry `expiresAt` for a Firestore TTL policy. They are kept for longer
+// than Stripe keeps retrying or resending an event.
+export const STRIPE_EVENTS_COLLECTION = 'stripeEvents'
+export const EVENT_CLAIM_LEASE_MS = 10 * 60 * 1000
+export const EVENT_RECORD_TTL_MS = 35 * 24 * 60 * 60 * 1000
+
+function stripeEventRef(db, eventId) {
+  return db.collection(STRIPE_EVENTS_COLLECTION).doc(eventId)
+}
+
+/** 'claimed', 'duplicate' or 'in_progress'. */
+export function claimStripeEvent(db, event, now = Date.now()) {
+  const ref = stripeEventRef(db, event.id)
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref)
+    const record = snap.exists ? snap.data() : null
+    if (record?.status === 'done') return 'duplicate'
+    if (record?.status === 'processing' && now - (Number(record.claimedAt) || 0) < EVENT_CLAIM_LEASE_MS) {
+      return 'in_progress'
+    }
+    tx.set(ref, {
+      type: event.type || null,
+      created: Number.isFinite(event.created) ? event.created : null,
+      status: 'processing',
+      claimedAt: now,
+      expiresAt: new Date(now + EVENT_RECORD_TTL_MS),
+    })
+    return 'claimed'
+  })
+}
+
+export function completeStripeEvent(db, eventId, now = Date.now()) {
+  return stripeEventRef(db, eventId).set({ status: 'done', processedAt: now }, { merge: true })
+}
+
+export function releaseStripeEvent(db, eventId) {
+  return stripeEventRef(db, eventId).delete()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

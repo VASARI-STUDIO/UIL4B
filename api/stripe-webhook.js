@@ -1,16 +1,20 @@
 import { adminDb } from './_lib/firebase-admin.js'
 import { getStripeServer } from './_lib/stripe.js'
 import {
+  claimStripeEvent,
+  completeStripeEvent,
   disputeRestoreDecision,
   lifetimeEntitlementFromSession,
   lifetimeGrantDecision,
   lifetimeGrantHealth,
+  releaseStripeEvent,
   retrieveSessionWithCharge,
   revocationUpdate,
   subscriptionChargeHealth,
   subscriptionRevocationStamp,
   subscriptionStatusGrantsAccess,
   writeSubscriptionDoc,
+  writeSubscriptionForEvent,
 } from './_lib/billing.js'
 
 export const config = { api: { bodyParser: false } }
@@ -21,14 +25,14 @@ async function buffer(readable) {
   return Buffer.concat(chunks)
 }
 
-async function upsertSubscription(stripe, subscription) {
+async function upsertSubscription(stripe, subscription, eventCreated) {
   const uid = subscription.metadata?.firebaseUid
   if (!uid) {
     const userUid = await uidForCustomer(subscription.customer)
     if (!userUid) return
-    return writeSubscription(userUid, subscription, null, stripe)
+    return writeSubscription(userUid, subscription, null, stripe, eventCreated)
   }
-  return writeSubscription(uid, subscription, null, stripe)
+  return writeSubscription(uid, subscription, null, stripe, eventCreated)
 }
 
 // The subscription document's SHAPE lives in _lib/billing.js, not here, for two
@@ -60,33 +64,40 @@ async function upsertSubscription(stripe, subscription) {
 // or past_due delivery costs nothing extra. A clean charge writes exactly the
 // document it always wrote — byte for byte, which
 // tests/unit/subscription-period-end.test.js pins.
-export async function writeSubscription(uid, sub, db = null, stripe = null) {
+//
+// `eventCreated` is the delivering event's `created` time. When it is given, the
+// write goes through writeSubscriptionForEvent, which skips a delivery older
+// than the stored state (the ordering rules are in _lib/billing.js).
+export async function writeSubscription(uid, sub, db = null, stripe = null, eventCreated = null) {
   const database = db || adminDb()
-  if (!stripe || !subscriptionStatusGrantsAccess(sub)) {
-    await writeSubscriptionDoc(database, uid, sub)
-    return
+  let extra = null
+  if (stripe && subscriptionStatusGrantsAccess(sub)) {
+    const health = await subscriptionChargeHealth(stripe, sub)
+    if (!health.ok && !health.dirty) {
+      // The charge could not be read. Write the document as before — stamping a
+      // revocation on a Stripe hiccup would drop a paying customer to Free,
+      // which is worse than the gap this closes — but never silently.
+      console.error('stripe-webhook: could not read the charge behind a subscription — written WITHOUT a revocation check', {
+        uid, subscriptionId: sub?.id, reason: health.reason, error: health.error || null,
+      })
+    } else if (health.dirty) {
+      console.warn('stripe-webhook: subscription written with access REVOKED — its latest charge has gone back', {
+        uid, subscriptionId: sub?.id, stripeStatus: sub?.status, reason: health.reason,
+      })
+      extra = subscriptionRevocationStamp(sub, health)
+    }
   }
 
-  const health = await subscriptionChargeHealth(stripe, sub)
-  if (health.ok) {
-    await writeSubscriptionDoc(database, uid, sub)
+  if (eventCreated == null) {
+    await writeSubscriptionDoc(database, uid, sub, Date.now(), extra)
     return
   }
-  if (!health.dirty) {
-    // The charge could not be read. Write the document as before — stamping a
-    // revocation on a Stripe hiccup would drop a paying customer to Free, which
-    // is worse than the gap this closes — but never silently.
-    console.error('stripe-webhook: could not read the charge behind a subscription — written WITHOUT a revocation check', {
-      uid, subscriptionId: sub?.id, reason: health.reason, error: health.error || null,
+  const decision = await writeSubscriptionForEvent(database, uid, sub, eventCreated, Date.now(), extra)
+  if (!decision.write) {
+    console.warn('stripe-webhook: subscription delivery skipped — the stored state is newer', {
+      uid, subscriptionId: sub?.id, stripeStatus: sub?.status, eventCreated, reason: decision.reason,
     })
-    await writeSubscriptionDoc(database, uid, sub)
-    return
   }
-
-  console.warn('stripe-webhook: subscription written with access REVOKED — its latest charge has gone back', {
-    uid, subscriptionId: sub?.id, stripeStatus: sub?.status, reason: health.reason,
-  })
-  await writeSubscriptionDoc(database, uid, sub, Date.now(), subscriptionRevocationStamp(sub, health))
 }
 
 // Resolves the Firebase uid for a Stripe customer id (used by invoice events
@@ -96,9 +107,9 @@ export async function writeSubscription(uid, sub, db = null, stripe = null) {
 // second document claiming the same customer id is a tampering signal, not a
 // tie to break. Read two and refuse to guess — writing billing state onto the
 // wrong account is worse than not writing it, and the log line is the alert.
-async function uidForCustomer(customerId) {
+async function uidForCustomer(customerId, db = null) {
   if (!customerId) return null
-  const snap = await adminDb()
+  const snap = await (db || adminDb())
     .collection('users')
     .where('stripeCustomerId', '==', customerId)
     .limit(2)
@@ -498,10 +509,38 @@ async function restoreAfterDisputeWon(stripe, dispute) {
   return restored
 }
 
-async function flagPaymentFailed(invoice) {
-  const uid = await uidForCustomer(invoice.customer)
-  if (!uid) return
-  const ref = adminDb().collection('users').doc(uid)
+// Whether Stripe now reports the invoice as paid. A failure event can be
+// delivered after a retry has already paid the invoice; flagging it then would
+// show a paying customer the failure banner and start their grace window. If
+// the invoice cannot be read, the flag is written as it always was.
+async function invoiceNowPaid(stripe, invoice) {
+  if (!stripe || !invoice?.id) return false
+  try {
+    const current = await stripe.invoices.retrieve(invoice.id)
+    return current?.status === 'paid'
+  } catch (err) {
+    console.error('stripe-webhook: could not read the failed invoice — flagging it as failed', {
+      invoiceId: invoice.id, error: err?.message,
+    })
+    return false
+  }
+}
+
+/**
+ * Flag a failed invoice payment on the customer's account, unless the invoice
+ * has been paid since. Returns 'no_account', 'already_paid' or 'flagged'.
+ */
+export async function flagPaymentFailed(stripe, invoice, db = null) {
+  const database = db || adminDb()
+  const uid = await uidForCustomer(invoice.customer, database)
+  if (!uid) return 'no_account'
+  if (await invoiceNowPaid(stripe, invoice)) {
+    console.warn('stripe-webhook: payment failure skipped — the invoice has been paid since', {
+      uid, invoiceId: invoice.id,
+    })
+    return 'already_paid'
+  }
+  const ref = database.collection('users').doc(uid)
 
   // `paymentFailedAt` is the clock the seven-day grace window runs on
   // (api/_lib/plans.js), so it has to be stamped ONCE — on the transition into
@@ -529,6 +568,7 @@ async function flagPaymentFailed(invoice) {
       updatedAt: Date.now(),
     },
   }, { merge: true })
+  return 'flagged'
 }
 
 async function flagTrialEnding(subscription) {
@@ -571,18 +611,70 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid signature' })
   }
 
+  let outcome
+  try {
+    outcome = await processStripeEvent(event, { db: adminDb(), stripe })
+  } catch (err) {
+    // A non-2xx makes Stripe retry, and the released claim lets the retry run.
+    console.error('stripe-webhook: event handling failed — Stripe will retry', {
+      eventId: event.id, type: event.type, error: err?.message,
+    })
+    return res.status(500).json({ error: 'Event handling failed' })
+  }
+  if (outcome === 'in_progress') {
+    return res.status(409).json({ error: 'Event is already being handled' })
+  }
+  return res.status(200).json({ received: true, ...(outcome === 'duplicate' ? { duplicate: true } : {}) })
+}
+
+/**
+ * Handle a verified event at most once: claim its id, dispatch it, then mark it
+ * done. Returns 'processed', 'duplicate' (already handled) or 'in_progress'
+ * (another delivery holds the claim). A dispatch that throws releases the claim
+ * and rethrows. `dispatch` is injectable for tests/unit/stripe-webhook-delivery.test.js.
+ */
+export async function processStripeEvent(event, { db, stripe, dispatch = dispatchStripeEvent, now = Date.now() }) {
+  const claim = await claimStripeEvent(db, event, now)
+  if (claim !== 'claimed') return claim
+
+  try {
+    await dispatch(stripe, event)
+  } catch (err) {
+    try {
+      await releaseStripeEvent(db, event.id)
+    } catch (releaseErr) {
+      console.error('stripe-webhook: could not release a failed event — its retry waits for the claim to lapse', {
+        eventId: event.id, error: releaseErr?.message,
+      })
+    }
+    throw err
+  }
+
+  try {
+    await completeStripeEvent(db, event.id)
+  } catch (err) {
+    // The event WAS handled. Failing the delivery here would make Stripe send
+    // it again, so the record is left to lapse and the response stays a 200.
+    console.error('stripe-webhook: event handled but not recorded as done', {
+      eventId: event.id, type: event.type, error: err?.message,
+    })
+  }
+  return 'processed'
+}
+
+async function dispatchStripeEvent(stripe, event) {
   switch (event.type) {
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted': {
-      await upsertSubscription(stripe, event.data.object)
+      await upsertSubscription(stripe, event.data.object, event.created)
       break
     }
     case 'checkout.session.completed': {
       const session = event.data.object
       if (session.subscription) {
         const sub = await stripe.subscriptions.retrieve(session.subscription)
-        await upsertSubscription(stripe, sub)
+        await upsertSubscription(stripe, sub, event.created)
       } else {
         await grantLifetimeEntitlement(stripe, session)
       }
@@ -635,7 +727,7 @@ export default async function handler(req, res) {
       break
     }
     case 'invoice.payment_failed': {
-      await flagPaymentFailed(event.data.object)
+      await flagPaymentFailed(stripe, event.data.object)
       break
     }
     case 'invoice.paid': {
@@ -659,6 +751,4 @@ export default async function handler(req, res) {
       break
     }
   }
-
-  return res.status(200).json({ received: true })
 }

@@ -6,7 +6,7 @@
 // tests/unit/stripe-panel-intervals.test.js already fails if Admin.jsx types an
 // interval list. That is a source scan: it proves nobody wrote the literal
 // back. It does NOT prove the rendered panel actually draws a column per
-// interval, fills it from the payload, and puts all four in the POST body.
+// interval, fills it from the payload, and puts every one in the POST body.
 //
 // That distinction is the whole bug. The old panel looked completely healthy —
 // it loaded, it showed the right currencies, it took edits — and failed only
@@ -31,12 +31,10 @@ import { test, expect } from './base.js'
 import { go, signIn } from './helpers.js'
 import {
   DEFAULT_PRICES, SUPPORTED_CURRENCIES, BASE_CURRENCY, BILLING_INTERVALS,
-  LIFETIME_CURRENCY_CODES,
 } from '../../api/_lib/pricing.js'
 
 // The route's own GET shape: { prices, defaults, currencies, baseCurrency }.
-// `prices: null` per interval is "nothing in Stripe yet", which is exactly the
-// state the founder's account is in for quarterly and lifetime.
+// `prices: null` per interval is "nothing in Stripe yet".
 const configPayload = {
   prices: Object.fromEntries(BILLING_INTERVALS.map((i) => [i, null])),
   defaults: DEFAULT_PRICES,
@@ -44,7 +42,7 @@ const configPayload = {
   baseCurrency: BASE_CURRENCY,
 }
 
-async function openPanel(browser) {
+async function openPanel(browser, payload = configPayload) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   const page = await context.newPage()
 
@@ -67,7 +65,7 @@ async function openPanel(browser) {
       })
     }
     return route.fulfill({
-      status: 200, contentType: 'application/json', body: JSON.stringify(configPayload),
+      status: 200, contentType: 'application/json', body: JSON.stringify(payload),
     })
   })
 
@@ -98,26 +96,24 @@ test.describe('the Stripe pricing panel', () => {
   })
 
   test('a currency with no approved amount is stated, not invented', async ({ browser }) => {
-    const { context, page } = await openPanel(browser)
+    // An interval whose defaults leave a currency out. The cell must carry no
+    // input at all — an input would post an amount with no default behind it.
+    const interval = BILLING_INTERVALS[BILLING_INTERVALS.length - 1]
+    const code = SUPPORTED_CURRENCIES[SUPPORTED_CURRENCIES.length - 1].code
+    const { [code]: _omitted, ...rest } = DEFAULT_PRICES[interval]
+    const payload = { ...configPayload, defaults: { ...DEFAULT_PRICES, [interval]: rest } }
+    const { context, page } = await openPanel(browser, payload)
     await expect(page.locator('.adm-stripe-table')).toBeVisible({ timeout: 15000 })
 
-    // Lifetime is deliberately not sold in SGD or CHF: the route refuses those
-    // ("Lifetime pricing is not approved for SGD"). The cell must therefore
-    // carry no input at all — an input would post a number nobody approved.
-    const unapproved = SUPPORTED_CURRENCIES
-      .map((c) => c.code)
-      .filter((code) => !LIFETIME_CURRENCY_CODES.includes(code))
-    expect(unapproved.length, 'no unapproved lifetime currency to test with').toBeGreaterThan(0)
-
-    const lifetimeCol = BILLING_INTERVALS.indexOf('lifetime') + 2 // 1-indexed, after Currency
-    for (const code of unapproved) {
-      const row = page.locator('.adm-stripe-table tbody tr', { hasText: code.toUpperCase() }).first()
-      const cell = row.locator(`td:nth-child(${lifetimeCol})`)
-      await expect(cell.locator('input'),
-        `lifetime/${code.toUpperCase()} has no approved amount, so it must not offer an input`)
-        .toHaveCount(0)
-      await expect(cell.locator('.adm-stripe-na')).toBeVisible()
-    }
+    const col = BILLING_INTERVALS.indexOf(interval) + 2 // 1-indexed, after Currency
+    const row = page.locator('.adm-stripe-table tbody tr', { hasText: code.toUpperCase() }).first()
+    const cell = row.locator(`td:nth-child(${col})`)
+    await expect(cell.locator('input'),
+      `${interval}/${code.toUpperCase()} has no approved amount, so it must not offer an input`)
+      .toHaveCount(0)
+    await expect(cell.locator('.adm-stripe-na')).toBeVisible()
+    // Its neighbour in an interval that does carry the currency keeps its input.
+    await expect(row.locator('td:nth-child(2) input')).toHaveCount(1)
     await context.close()
   })
 
@@ -152,11 +148,9 @@ test.describe('the Stripe pricing panel', () => {
       }
     }
 
-    // And nothing the route refuses.
-    for (const code of Object.keys(body.prices.lifetime)) {
-      expect(LIFETIME_CURRENCY_CODES, `lifetime/${code.toUpperCase()} is not approved`)
-        .toContain(code)
-    }
+    // And no interval the route does not sell.
+    expect(Object.keys(body.prices).sort(), 'Save posted an interval that is not sold')
+      .toEqual([...BILLING_INTERVALS].sort())
     await context.close()
   })
 })

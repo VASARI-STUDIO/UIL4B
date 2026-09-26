@@ -501,11 +501,9 @@ function PromptAdminCard({ prompt, setPendingPrompts, toast }) {
 // Snap an auto-filled amount to the SHAPE OF ITS OWN DEFAULT, rather than to
 // .99 always.
 //
-// The .99 rule was right when every price ended in .99. The founder-approved
-// ladder is whole dollars for the recurring plans — $7 monthly, $18 quarterly,
-// $48 yearly — and .99 only on lifetime (api/_lib/pricing.js says exactly
-// this). Snapping $7 to $6.99 would have quietly overwritten an approved price
-// with a different one every time auto-fill ran.
+// The ladder is whole dollars — $7 monthly, $18 quarterly, $48 yearly
+// (api/_lib/pricing.js). Snapping $7 to $6.99 would overwrite a configured
+// price with a different one every time auto-fill runs.
 //
 // So the reference amount decides: a whole-number default keeps whole numbers,
 // a default with real cents keeps the .99 ending it already had.
@@ -572,9 +570,9 @@ function StripeSetupPanel({ toast }) {
   // THE INTERVALS AND THEIR CURRENCIES COME FROM THE SERVER, not from a list
   // typed here. `defaults` is api/_lib/pricing.js#DEFAULT_PRICES: its keys are
   // the intervals /api/setup-stripe will validate against, and each interval's
-  // own keys are the currencies approved for it — which is how `lifetime`
-  // expresses that it is not sold in SGD or CHF. Reading the shape off the
-  // payload is what stops this panel drifting from the route again.
+  // own keys are the currencies approved for it, so an interval can leave a
+  // currency out. Reading the shape off the payload is what stops this panel
+  // drifting from the route again.
   const buildDraft = useCallback((data) => {
     const out = {}
     for (const interval of Object.keys(data.defaults || {})) {
@@ -610,9 +608,8 @@ function StripeSetupPanel({ toast }) {
   // typing isn't fought mid-keystroke.
   //
   // Only currencies the interval actually HAS are written — iterating the full
-  // currency list would have invented a lifetime price in SGD, which the route
-  // refuses ("Lifetime pricing is not approved for SGD") and which nobody
-  // approved.
+  // currency list would invent a price in a currency the interval has no
+  // default for.
   const handlePriceEdit = (interval, code, raw) => {
     setDraft(d => {
       const next = {}
@@ -682,11 +679,8 @@ function StripeSetupPanel({ toast }) {
                 Set the {intervals.map(intervalLabel).join(', ').toLowerCase()} price for the <strong>UIL4B Pro</strong> plan per currency. Each customer is
                 shown their local currency at checkout automatically (detected from their browser locale).
               </p>
-              {/* The ".99" tip that used to sit here was removed rather than
-                  reworded: the approved ladder is whole dollars on the
-                  recurring plans ($7 / $18 / $48) and .99 on lifetime only, so
-                  the tip argued against the prices it sat above. The sentence
-                  kept below is the half that is still true. */}
+              {/* No ".99" tip: the ladder is whole dollars ($7 / $18 / $48),
+                  so such a tip would argue against the prices below it. */}
               <p className="adm-stripe-tip">
                 Saving creates fresh Stripe prices and retires the old ones — existing subscribers keep their current rate.
               </p>
@@ -708,11 +702,9 @@ function StripeSetupPanel({ toast }) {
                         </td>
                         {intervals.map(interval => {
                           // An interval does not necessarily sell in every
-                          // currency: lifetime has no approved SGD or CHF
-                          // amount, and the route refuses one. A cell with no
-                          // approved amount is stated as unavailable rather
-                          // than given an input that would post a number
-                          // nobody signed off.
+                          // currency. A cell with no approved amount is stated
+                          // as unavailable rather than given an input that
+                          // would post an amount with no default behind it.
                           const value = draft[interval]?.[c.code]
                           if (value == null) {
                             return (
