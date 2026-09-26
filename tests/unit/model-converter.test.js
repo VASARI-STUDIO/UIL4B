@@ -494,23 +494,24 @@ test('a production build keeps three.js out of the entry chunk and out of the pa
   assert.ok(page.dynamicImports.includes(engine.fileName), 'the page does not reach the engine by dynamic import')
 
   // The CAD and IFC workers ship as their own small files. OpenCascade,
-  // web-ifc and rhino3dm are fetched from their pinned CDN URLs, never bundled.
+  // web-ifc, rhino3dm and three's Draco and Basis (KTX2) decoders are fetched
+  // from their pinned CDN URLs, never bundled: no engine file and no
+  // WebAssembly of any kind is emitted.
   const files = fs.readdirSync(path.join(outDir, 'assets'))
   assert.ok(files.some((f) => /^cadWorker-.*\.js$/.test(f)), `no cadWorker asset among ${files.length} files`)
   assert.ok(files.some((f) => /^ifcWorker-.*\.js$/.test(f)), `no ifcWorker asset among ${files.length} files`)
-  // The ONE exception: three's Draco and Basis (KTX2) decoders, served from
-  // this site. Named exactly, so no other wasm can slip in under them.
-  const DECODERS = /^(draco_decoder|draco_wasm_wrapper|basis_transcoder)-[\w-]+\.(wasm|js)$/
-  assert.deepEqual(files.filter((f) => /occt|web-ifc|rhino3dm|\.wasm$/i.test(f) && !/ffmpeg/i.test(f) && !DECODERS.test(f)), [])
-  const decoderWasm = files.filter((f) => /\.wasm$/.test(f) && DECODERS.test(f)).map((f) => f.replace(/-[\w-]+\.wasm$/, '')).sort()
-  assert.deepEqual([...new Set(decoderWasm)], ['basis_transcoder', 'draco_decoder'], 'the decoder wasm files are not the ones allowed')
-  // ...and only the two loaders that use them name them, both reached from
-  // the engine by dynamic import, so nothing on the page's static path does.
-  const naming = chunks.filter((c) => /draco_decoder|basis_transcoder/.test(c.code))
-  assert.deepEqual(naming.map((c) => path.basename(c.facadeModuleId || c.fileName)).sort(), ['DRACOLoader.js', 'KTX2Loader.js'])
-  for (const c of naming) assert.ok(engine.dynamicImports.includes(c.fileName), `${c.fileName} is not a lazy import of the engine`)
+  assert.deepEqual(files.filter((f) => /occt|web-ifc|rhino3dm|draco_|basis_|\.wasm$/i.test(f)), [])
+  // The two decoder loaders still get chunks of their own (the positive
+  // control for the line above), reached from the engine only by dynamic
+  // import, so nothing on the page's static path carries them.
+  const decoderLoaders = chunks.filter((c) => /[\\/](DRACOLoader|KTX2Loader)\.js$/.test(c.facadeModuleId || ''))
+  assert.deepEqual(decoderLoaders.map((c) => path.basename(c.facadeModuleId)).sort(), ['DRACOLoader.js', 'KTX2Loader.js'])
+  for (const c of decoderLoaders) {
+    assert.ok(engine.dynamicImports.includes(c.fileName), `${c.fileName} is not a lazy import of the engine`)
+    assert.doesNotMatch(c.code, /import\.meta\.url/, `${c.fileName} still resolves a decoder next to itself`)
+  }
   const staticIds = new Set([...entryIds, ...staticClosure(page), ...staticClosure(engine)])
-  for (const c of naming) assert.equal(staticIds.has(c.facadeModuleId), false, `${c.facadeModuleId} is on a static path`)
+  for (const c of decoderLoaders) assert.equal(staticIds.has(c.facadeModuleId), false, `${c.facadeModuleId} is on a static path`)
 })
 
 // An MTL written on Windows names its textures with backslashes

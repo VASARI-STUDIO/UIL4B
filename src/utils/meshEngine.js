@@ -69,6 +69,7 @@ import { cadToGroup } from './mesh/cad.js'
 import { parseDXF, parseOFF } from './mesh/parsers.js'
 import { bakeSimilarity, cloneForExport, disposeExportCopy, upMatrix } from './mesh/transform.js'
 import { describeSignatureProblem, extensionOf, signatureProblem, unitFactor, unitFromMetres } from './meshFormats.js'
+import { decoderURLs } from './mesh/decoders.js'
 
 export { cadToGroup }
 
@@ -220,32 +221,36 @@ export function basename(url) {
 // loader fetching `wood.png` from this site and receiving the 404 page.
 const EMPTY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 
-// The Draco and Basis decoders Vite emits beside three.js, which the loaders
-// fetch themselves and the sidecar lookup must let through.
-const OWN_ASSET = /\/(draco_|basis_)[\w.-]+$/
+// The path the KTX2 loader is given for its transcoder. It never reaches the
+// network: the resolver answers it with the verified copy (mesh/decoders.js).
+const DECODER_PATH = 'verified-decoder/'
 
 /**
  * Sidecars resolve by file name: a .gltf asks for "textures/wood.png" and gets
  * the wood.png that was dropped beside it, through a blob: URL that lives until
  * the model is disposed (the loaders fetch() it, so the CSP's connect-src
  * lists blob:). Names that were asked for and not dropped are
- * collected so the page can say which ones.
+ * collected so the page can say which ones. `provide(url, blobUrl)` answers
+ * one exact request with a verified file, ahead of the sidecar lookup.
  */
 function companionResolver(companions) {
   const urls = new Map()
+  const provided = new Map()
   const canBlob = typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
   for (const f of companions) if (canBlob) urls.set(f.name.toLowerCase(), URL.createObjectURL(f))
   const missing = new Set()
   const manager = new LoadingManager()
   manager.setURLModifier((url) => {
-    if (/^(data|blob):/i.test(url) || OWN_ASSET.test(String(url).split(/[?#]/)[0])) return url
+    if (provided.has(url)) return provided.get(url)
+    if (/^(data|blob):/i.test(url)) return url
     const hit = urls.get(basename(url))
     if (hit) return hit
     missing.add(basename(url))
     return EMPTY_PNG
   })
   const revoke = () => { for (const u of urls.values()) URL.revokeObjectURL(u) }
-  return { manager, missing, revoke }
+  const provide = (url, blobUrl) => provided.set(url, blobUrl)
+  return { manager, missing, revoke, provide }
 }
 
 /**
@@ -325,7 +330,7 @@ const animationNote = (n) => `${n} animation${n === 1 ? '' : 's'} in the file ${
  */
 export async function parseModel(format, buffer, { companions = [], renderer = null, signal = null, onStage = null } = {}) {
   const warnings = []
-  const { manager, missing, revoke } = companionResolver(companions)
+  const { manager, missing, revoke, provide } = companionResolver(companions)
   let unit
   const cleanups = []
   try {
@@ -388,13 +393,13 @@ export async function parseModel(format, buffer, { companions = [], renderer = n
         }
         const loader = new GLTFLoader(manager)
         // Decoders load only for a file that declares their extension. The
-        // Draco and Basis decoders are served from this site: Vite emits them
-        // from the installed three package beside the chunks, and no CDN is
-        // involved. Draco uses its glTF-only build, the smaller of the two.
+        // Draco and Basis decoders are pinned CDN files, verified before use
+        // (mesh/decoders.js); the loaders read them from blob: URLs.
         const ext = gltfExtensions(format.id, buffer)
         if (ext.has('KHR_draco_mesh_compression')) {
-          const { DRACOLoader, DRACO_GLTF_CONFIG } = await lazy.draco()
-          const draco = new DRACOLoader(manager).setDecoderPath(DRACO_GLTF_CONFIG)
+          const [{ DRACOLoader }, files] = await Promise.all([lazy.draco(), decoderURLs('draco', { signal })])
+          cleanups.push(files.revoke)
+          const draco = new DRACOLoader(manager).setDecoderPath({ js: files.js, wasm: files.wasm })
           loader.setDRACOLoader(draco)
           cleanups.push(() => draco.dispose())
         }
@@ -405,8 +410,11 @@ export async function parseModel(format, buffer, { companions = [], renderer = n
         }
         if (ext.has('KHR_texture_basisu')) {
           if (!renderer) throw new Error('ktx2-needs-viewer')
-          const KTX2 = await lazy.ktx2()
-          const ktx2 = new KTX2(manager).detectSupport(renderer)
+          const [KTX2, files] = await Promise.all([lazy.ktx2(), decoderURLs('basis', { signal })])
+          cleanups.push(files.revoke)
+          provide(`${DECODER_PATH}basis_transcoder.js`, files.js)
+          provide(`${DECODER_PATH}basis_transcoder.wasm`, files.wasm)
+          const ktx2 = new KTX2(manager).setTranscoderPath(DECODER_PATH).detectSupport(renderer)
           loader.setKTX2Loader(ktx2)
           cleanups.push(() => ktx2.dispose())
         }
@@ -669,7 +677,7 @@ export function describeLoadError(err, format, name) {
   if (msg.startsWith('empty-model')) return `${file} was read, but it contains nothing to draw: no triangles and no points.`
   if (/FBX version not supported/i.test(msg)) return `${file} is older than FBX 7 (2011). Save it as FBX 2011 or newer and try again.`
   if (/Unknown format|FBX/i.test(msg) && format?.id === 'fbx') return `${file} could not be read as FBX. Save it as FBX 2011 or newer.`
-  if (err?.name === 'IntegrityError' || /(CAD|IFC|Rhino) engine|OpenCascade|web-ifc|solid or surface|building element/i.test(msg)) return `${file}: ${msg}.`
+  if (err?.name === 'IntegrityError' || /(CAD|IFC|Rhino) engine|(Draco|KTX2 texture) decoder|OpenCascade|web-ifc|solid or surface|building element/i.test(msg)) return `${file}: ${msg}.`
   if (/Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(msg)) {
     return 'The converter could not be downloaded. Check the connection and choose the file again.'
   }
