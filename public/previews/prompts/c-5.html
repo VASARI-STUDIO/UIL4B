@@ -3,497 +3,469 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dev Aranda Strength — 12-week coaching, Brunswick East</title>
+<title>Dev Aranda Strength · 1-to-1 coaching in Brunswick East</title>
+<meta name="description" content="Twelve-week strength coaching in Brunswick East, Melbourne. The plan is on the bar: see every week before you start.">
+<meta name="uil4b-capture" content='{"mode":"run","ms":5000}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/anton.js"></script>
+<script src="../vendor/fonts/outfit.js"></script>
+<script src="../vendor/fonts/dm-mono.js"></script>
 <style>
   :root{
-    --black:#111111; --black-2:#0A0A0A; --coal:#1A1A1A; --coal-2:#242424;
-    --white:#FFFFFF; --ash:#C5C5C2; --ash-2:#8B8B87; --ash-3:#7E7E7A;
-    --lime:#CDDC39; --lime-d:#A8B62A;
-    --line:rgba(255,255,255,.13); --line-2:rgba(255,255,255,.07);
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --ground:#121212;
+    --raised:#1b1b1b;
+    --chalk:#efede8;
+    --dim:#a6a39c;
+    --faint:#8a8780;
+    --line:rgba(239,237,232,.12);
+    --line-2:rgba(239,237,232,.26);
+    --red:#d7263d; --blue:#2463c4; --yellow:#f2c230; --green:#2e9d5b; --white:#ecebe6;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.6vw,56px);
+    --display:"Anton",Impact,"Arial Narrow",sans-serif;
+    --sans:"Outfit","Helvetica Neue",Arial,sans-serif;
+    --mono:"DM Mono",ui-monospace,Menlo,monospace;
+    color-scheme:dark;
   }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--black);color:var(--white);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{background:var(--ground);-webkit-text-size-adjust:100%;scrollbar-color:#333 var(--ground)}
+  body{background:var(--ground);color:var(--chalk);font:400 17px/1.55 var(--sans);-webkit-font-smoothing:antialiased;caret-color:var(--red)}
+  .page{overflow-x:clip}
+  ::selection{background:var(--yellow);color:var(--ground)}
   a{color:inherit}
-  svg{max-width:100%}
-  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-  :focus-visible{outline:3px solid var(--lime);outline-offset:3px;border-radius:2px}
-  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
-  h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.035em;line-height:1.02;text-transform:uppercase}
-  .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);font-weight:500}
+  h1,h2,h3,p,ul,ol,dl,dd{margin:0}
+  ul,ol{list-style:none;padding:0}
+  :focus-visible{outline:2px solid var(--yellow);outline-offset:3px;border-radius:4px}
+  .mono{font:400 12.5px/1.4 var(--mono);letter-spacing:.02em}
+  .num{font-variant-numeric:tabular-nums}
+  .cap{font:400 12px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 
-  /* ---------- header ---------- */
-  header{border-bottom:1px solid var(--line-2);position:sticky;top:0;z-index:20;background:rgba(17,17,17,.94)}
-  .hd{display:flex;align-items:center;gap:28px;height:70px}
-  .logo{display:flex;align-items:center;gap:11px;text-decoration:none}
-  .logo .m{width:32px;height:32px;background:var(--lime);display:grid;place-items:center;flex:0 0 auto}
-  .logo .m svg{width:19px;height:19px;stroke:var(--black);stroke-width:2.6;fill:none;stroke-linecap:round}
-  .logo b{display:block;font-size:15px;font-weight:800;letter-spacing:-.02em;text-transform:uppercase;line-height:1.05}
-  .logo small{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--ash-2);text-transform:uppercase}
-  .hd nav{display:flex;gap:26px;margin-left:auto}
-  .hd nav a{font-size:12.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;
-            text-decoration:none;color:var(--ash);padding:6px 0;transition:color .16s}
-  .hd nav a:hover{color:var(--lime)}
-
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
-       font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;
-       padding:16px 26px;text-decoration:none;border:2px solid var(--lime);
-       background:var(--lime);color:var(--black);transition:background .16s,color .16s,border-color .16s}
-  .btn:hover{background:var(--white);border-color:var(--white)}
-  .btn-o{background:transparent;color:var(--lime)}
-  .btn-o:hover{background:var(--lime);color:var(--black);border-color:var(--lime)}
-  .btn-sm{padding:11px 18px;font-size:11.5px}
-  .btn .arw{width:14px;height:14px;stroke:currentColor;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  /* ---------- nav ---------- */
+  .nav{display:flex;align-items:center;gap:clamp(12px,2.4vw,32px);padding:14px var(--gutter);border-bottom:1px solid var(--line)}
+  .brand{display:inline-flex;align-items:center;gap:12px;text-decoration:none;min-height:44px}
+  .brand b{font:400 22px/1 var(--display);letter-spacing:.02em;text-transform:uppercase}
+  .brand small{display:block;font:400 11px/1.2 var(--mono);color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+  .nav ul{display:flex;gap:2px;margin-left:auto}
+  .nav ul a{display:block;text-decoration:none;color:var(--dim);font-size:15px;padding:10px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .nav ul a:hover{color:var(--chalk);background:rgba(239,237,232,.07)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border-radius:999px;text-decoration:none;font:600 16px/1 var(--sans);border:1px solid transparent;cursor:pointer;
+    transition:background-color .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
+  .btn:active{transform:scale(.98)}
+  .btn.red{background:var(--red);color:#fff}
+  .btn.red:hover{background:#e53a50}
+  .btn.line{border-color:var(--line-2)}
+  .btn.line:hover{border-color:var(--chalk);background:rgba(239,237,232,.05)}
+  .nav .btn{min-height:44px;font-size:15px}
 
   /* ---------- hero ---------- */
-  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line-2)}
-  .rig{position:absolute;inset:0;pointer-events:none}
-  .rig svg{width:100%;height:100%;display:block}
-  .hero .wrap{position:relative;padding-top:78px;padding-bottom:70px}
-  .hero h1{font-size:clamp(46px,9.2vw,124px);letter-spacing:-.05em;max-width:11ch}
-  .hero h1 em{font-style:normal;color:var(--lime);display:block}
-  .hero .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.72fr);gap:48px;
-              margin-top:46px;padding-top:34px;border-top:1px solid var(--line);align-items:start}
-  .hero p{margin:0;font-size:17.5px;color:var(--ash);line-height:1.6;max-width:48ch}
-  .hero p b{color:var(--white);font-weight:700}
-  .hero .acts{display:flex;flex-direction:column;gap:12px;align-items:stretch}
-  .hero .acts .note{font-family:var(--mono);font-size:11.5px;color:var(--ash-2);letter-spacing:.04em;line-height:1.6}
+  .hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(24px,4vw,64px);align-items:center;padding:clamp(30px,6vh,72px) var(--gutter) clamp(30px,6vh,64px)}
+  h1{font:400 clamp(52px,5.7vw,98px)/.9 var(--display);text-transform:uppercase;letter-spacing:.005em;margin-top:18px}
+  h1 span{color:var(--dim)}
+  .lede{margin-top:22px;max-width:40ch;color:var(--dim);font-size:clamp(17px,1.25vw,19px)}
+  .lede b{color:var(--chalk);font-weight:500}
+  .acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .slots{margin-top:18px;display:flex;align-items:center;gap:10px;font-size:15px;color:var(--dim)}
+  .slots i{display:flex;gap:3px}
+  .slots i b{width:7px;height:16px;border-radius:2px;background:var(--chalk)}
+  .slots i b.open{background:transparent;box-shadow:inset 0 0 0 1.5px var(--chalk)}
 
-  /* ---------- facts strip ---------- */
-  .facts{border-bottom:1px solid var(--line-2);background:var(--coal)}
-  .facts .wrap{display:grid;grid-template-columns:repeat(4,1fr);padding:0}
-  .facts div{padding:24px 24px;border-left:1px solid var(--line-2)}
-  .facts div:first-child{border-left:0}
-  .facts b{display:block;font-size:27px;font-weight:800;letter-spacing:-.04em;line-height:1.1}
-  .facts b .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--lime);margin-right:9px;vertical-align:middle}
-  .facts span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
-              text-transform:uppercase;color:var(--ash-2);margin-top:6px}
+  .rig{border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);padding:18px 0 20px}
+  .rig-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+  .load{font:400 clamp(64px,7.4vw,128px)/.9 var(--display);letter-spacing:.01em}
+  .load small{font:400 .32em/1 var(--display);color:var(--dim);margin-left:.15em}
+  .phase{text-align:right}
+  .phase b{display:block;font:400 26px/1 var(--display);text-transform:uppercase;letter-spacing:.02em}
+  .phase span{display:block;margin-top:6px;color:var(--dim);font-size:15px;max-width:26ch}
+  .bar svg{display:block;width:100%;height:auto;overflow:visible}
+  .shaft{fill:#8f9296}
+  .sleeve{fill:#b9bcc0}
+  .collar{fill:#6d7075}
+  .plate{transition:transform .5s var(--ease),opacity .35s var(--ease)}
+  .plate.off{opacity:0}
+  .plate .hub{fill:rgba(0,0,0,.18)}
+  .plate text{font:400 13px var(--display);fill:rgba(0,0,0,.55);letter-spacing:.02em}
+  .floor{stroke:var(--line-2)}
+  .week{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;margin-top:10px}
+  .week label{font:400 13px/1 var(--mono);color:var(--dim);white-space:nowrap}
+  .week label b{color:var(--chalk);font-weight:400;display:inline-block;min-width:2ch}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0;cursor:pointer}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--chalk) var(--f,0%),rgba(239,237,232,.2) var(--f,0%))}
+  input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:rgba(239,237,232,.2)}
+  input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--chalk)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-10px;border-radius:50%;background:var(--chalk);border:4px solid var(--ground);box-shadow:0 0 0 1px var(--chalk)}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--chalk);border:4px solid var(--ground)}
+  input[type=range]:focus-visible{outline-offset:0}
+  .ticks{display:grid;grid-template-columns:4fr 4fr 3fr 1fr;margin-left:calc(5.6em + 16px);font:400 11px/1.3 var(--mono);color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+  .ticks span{border-left:1px solid var(--line-2);padding:4px 0 0 6px}
+  .ticks span.on{color:var(--chalk)}
+  .note{margin-top:12px;font-size:13.5px;color:var(--faint)}
 
-  section{padding:90px 0}
-  .sec-hd{margin-bottom:38px;max-width:62ch}
-  .sec-hd h2{font-size:clamp(28px,4vw,46px);letter-spacing:-.04em;margin-top:14px}
-  .sec-hd h2 em{font-style:normal;color:var(--lime)}
-  .sec-hd p{margin:16px 0 0;font-size:17px;color:var(--ash);line-height:1.62}
+  /* ---------- sections ---------- */
+  .sec{padding:clamp(70px,9vw,130px) var(--gutter);border-top:1px solid var(--line)}
+  .sec-head{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(24px,4vw,64px);align-items:end;margin-bottom:clamp(30px,4vw,54px)}
+  h2{font:400 clamp(40px,4.6vw,76px)/.92 var(--display);text-transform:uppercase;letter-spacing:.005em}
+  .sec-head p{color:var(--dim);max-width:50ch}
+  .phases{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line-2)}
+  .phases li{padding:20px 22px 0 0;display:grid;gap:10px;align-content:start}
+  .phases li + li{padding-left:22px;border-left:1px solid var(--line)}
+  .phases .w{font:400 12px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+  .phases .w i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:-1px}
+  .phases h3{font:400 30px/1 var(--display);text-transform:uppercase;letter-spacing:.01em}
+  .phases p{color:var(--dim);font-size:16px}
+  .measure{margin-top:clamp(40px,5vw,70px);display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(24px,4vw,64px)}
+  .measure h3{font:400 30px/1 var(--display);text-transform:uppercase}
+  .measure > div > p{margin-top:12px;color:var(--dim);max-width:40ch}
+  .mtable div{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.6fr);gap:16px;padding:13px 0;border-top:1px solid var(--line);font-size:16px}
+  .mtable div:last-child{border-bottom:1px solid var(--line)}
+  .mtable dt{font-weight:500}
+  .mtable dd{color:var(--dim)}
+  .mtable .hd{font:400 11.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint);border-top:0;padding-top:0}
 
-  /* ---------- phases ---------- */
-  .phases{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--line-2);border:1px solid var(--line-2)}
-  .ph{background:var(--coal);padding:24px 22px 26px;position:relative}
-  .ph .wk{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--lime);text-transform:uppercase}
-  .ph h3{font-size:19px;margin:12px 0 10px;letter-spacing:-.02em}
-  .ph p{margin:0;font-size:14.5px;color:var(--ash);line-height:1.55}
-  .ph .bar{position:absolute;left:0;right:0;top:0;height:3px;background:var(--lime);opacity:.28}
-  .ph:nth-child(2) .bar{opacity:.5}.ph:nth-child(3) .bar{opacity:.75}.ph:nth-child(4) .bar{opacity:1}
+  .plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line-2)}
+  .plans article{padding:26px 26px 0 0;display:flex;flex-direction:column;gap:16px}
+  .plans article + article{padding-left:26px;border-left:1px solid var(--line)}
+  .plans .tag{display:flex;align-items:center;gap:10px}
+  .plans .tag i{width:12px;height:28px;border-radius:3px}
+  .plans h3{font:400 34px/1 var(--display);text-transform:uppercase}
+  .plans .price{font:400 54px/1 var(--display)}
+  .plans .price small{font:400 14px var(--mono);color:var(--dim);margin-left:6px}
+  .plans p{color:var(--dim);font-size:16px}
+  .plans ul{display:grid;gap:8px;font-size:15.5px}
+  .plans ul li{display:flex;gap:10px}
+  .plans ul li::before{content:"";flex:none;width:8px;height:2px;background:var(--chalk);margin-top:.75em}
+  .plans .rec{font:400 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--yellow)}
+  .plans .btn{margin-top:auto;align-self:flex-start}
 
-  .measure{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:48px;
-           margin-top:54px;padding-top:44px;border-top:1px solid var(--line-2);align-items:start}
-  .measure h3{font-size:22px;letter-spacing:-.025em;margin-bottom:14px}
-  .measure p{margin:0;font-size:16px;color:var(--ash);line-height:1.62}
-  .mlist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-2);border:1px solid var(--line-2)}
-  .mlist li{background:var(--coal);padding:16px 18px}
-  .mlist b{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em}
-  .mlist span{display:block;font-size:13px;color:var(--ash-2);margin-top:3px;line-height:1.45}
+  .coach{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(24px,4vw,64px)}
+  .coach .quote{font:400 clamp(30px,3vw,48px)/1.02 var(--display);text-transform:uppercase;letter-spacing:.005em}
+  .coach .quote span{color:var(--dim)}
+  .coach .body{display:grid;gap:16px;color:var(--dim);max-width:56ch}
+  .coach .body strong{color:var(--chalk);font-weight:500}
+  .certs{margin-top:10px;border-top:1px solid var(--line)}
+  .certs div{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15.5px}
+  .certs dt{color:var(--chalk)}
+  .certs dd{font:400 13px/1.8 var(--mono);color:var(--faint)}
+  .not{padding:16px 0 0;border-top:2px solid var(--red);color:var(--chalk)}
 
-  /* ---------- programs ---------- */
-  .progs{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
-  .prog{border:1px solid var(--line);background:var(--coal);padding:30px 26px 28px;display:flex;flex-direction:column;
-        transition:border-color .18s,background .18s}
-  .prog:hover{border-color:var(--lime);background:var(--coal-2)}
-  .prog.feat{border-color:var(--lime)}
-  .prog .tagrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px;min-height:24px}
-  .prog .tagrow span{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
-                     border:1px solid var(--line);padding:4px 8px;color:var(--ash)}
-  .prog .tagrow span.hi{border-color:var(--lime);color:var(--lime)}
-  .prog h3{font-size:26px;letter-spacing:-.035em}
-  .prog .for{margin:10px 0 0;font-size:14.5px;color:var(--ash);line-height:1.5;min-height:66px}
-  .spec{list-style:none;margin:22px 0 0;padding:20px 0 0;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:10px}
-  .spec li{display:flex;justify-content:space-between;gap:16px;font-size:14px;color:var(--ash)}
-  .spec b{color:var(--white);font-weight:650;text-align:right}
-  .price{margin:24px 0 0;padding-top:20px;border-top:1px solid var(--line-2);display:flex;align-items:baseline;gap:8px}
-  .price b{font-size:36px;font-weight:800;letter-spacing:-.045em}
-  .price span{font-size:13.5px;color:var(--ash-2)}
-  .prog .btn{margin-top:20px;width:100%}
-  .progs-note{margin:26px 0 0;font-size:14px;color:var(--ash-2)}
-
-  /* ---------- quotes ---------- */
-  .quotes{background:var(--coal);border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
-  .qgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-  .q{border:1px solid var(--line-2);background:var(--black);padding:30px 28px;display:flex;flex-direction:column}
-  .q blockquote{margin:0;font-size:19px;line-height:1.5;letter-spacing:-.018em;font-weight:500}
-  .q .who{margin-top:auto;padding-top:24px;display:flex;align-items:center;gap:13px}
-  .q .av{width:42px;height:42px;background:var(--lime);color:var(--black);display:grid;place-items:center;
-         font-size:14px;font-weight:800;flex:0 0 auto;letter-spacing:-.02em}
-  .q .who b{display:block;font-size:15px;font-weight:700}
-  .q .who span{display:block;font-family:var(--mono);font-size:11px;color:var(--ash-2);letter-spacing:.06em;margin-top:2px}
-  .demo{margin:22px 0 0;font-size:12.5px;color:var(--ash-3)}
-
-  /* ---------- coach ---------- */
-  .coach .wrap{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:56px;align-items:start}
-  .plate{border:1px solid var(--line);background:var(--coal);padding:0}
-  .plate .art{aspect-ratio:1/1;display:block;background:var(--black-2)}
-  .plate .body{padding:26px 24px}
-  .plate h3{font-size:24px;letter-spacing:-.03em}
-  .plate .role{margin:8px 0 0;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--lime)}
-  .certs{list-style:none;margin:22px 0 0;padding:20px 0 0;border-top:1px solid var(--line-2);display:flex;flex-direction:column;gap:11px}
-  .certs li{display:flex;gap:11px;font-size:13.5px;color:var(--ash);line-height:1.45}
-  .certs svg{width:15px;height:15px;flex:0 0 auto;margin-top:2px;stroke:var(--lime);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .coach h2{font-size:clamp(28px,3.8vw,42px);letter-spacing:-.04em;margin-bottom:20px;max-width:17ch}
-  .coach p{margin:0 0 17px;font-size:17px;color:var(--ash);line-height:1.66;max-width:58ch}
-  .coach p b{color:var(--white);font-weight:650}
-  .specs{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px;padding-top:24px;border-top:1px solid var(--line-2)}
-  .specs span{font-size:13.5px;padding:7px 13px;border:1px solid var(--line);color:var(--ash)}
-
-  /* ---------- faq ---------- */
-  .faq h2{font-size:clamp(26px,3.4vw,38px);letter-spacing:-.04em;margin-bottom:28px}
-  details{border-top:1px solid var(--line-2)}
-  details:last-of-type{border-bottom:1px solid var(--line-2)}
-  summary{display:flex;align-items:flex-start;gap:16px;padding:20px 0;cursor:pointer;list-style:none;
-          font-size:17px;font-weight:650;letter-spacing:-.018em}
+  .faq{max-width:900px}
+  details{border-top:1px solid var(--line)}
+  details:last-child{border-bottom:1px solid var(--line)}
+  summary{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 0;cursor:pointer;list-style:none;font-weight:500;font-size:clamp(18px,1.5vw,21px);border-radius:4px}
   summary::-webkit-details-marker{display:none}
-  summary::after{content:"";margin-left:auto;flex:0 0 auto;width:14px;height:14px;margin-top:7px;
-    background:linear-gradient(var(--ash-2),var(--ash-2)) center/14px 2px no-repeat,
-               linear-gradient(var(--ash-2),var(--ash-2)) center/2px 14px no-repeat;
-    transition:transform .22s}
-  details[open] summary::after{
-    background:linear-gradient(var(--lime),var(--lime)) center/14px 2px no-repeat;
-    transform:rotate(180deg)}
-  summary:hover{color:var(--lime)}
-  details p{margin:0 0 22px;font-size:15.5px;color:var(--ash);line-height:1.68;max-width:70ch;padding-right:40px}
+  summary::after{content:"";flex:none;width:14px;height:14px;background:linear-gradient(var(--chalk),var(--chalk)) center/14px 2px no-repeat,linear-gradient(var(--chalk),var(--chalk)) center/2px 14px no-repeat;transition:transform .3s var(--ease)}
+  details[open] summary::after{transform:rotate(45deg)}
+  summary:hover{color:#fff}
+  details p{padding:0 0 22px;color:var(--dim);max-width:62ch}
 
-  /* ---------- final ---------- */
-  .final{background:var(--lime);color:var(--black)}
-  .final .wrap{padding-top:72px;padding-bottom:72px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:48px;align-items:center}
-  .final h2{font-size:clamp(30px,4.8vw,58px);letter-spacing:-.045em;max-width:14ch}
-  .final p{margin:20px 0 0;font-size:17px;color:#2A2E0B;max-width:44ch;line-height:1.6}
-  .final p b{font-weight:800}
-  .final .btn{background:var(--black);color:var(--lime);border-color:var(--black);width:100%;padding:20px 24px;font-size:14px}
-  .final .btn:hover{background:var(--white);color:var(--black);border-color:var(--black)}
-  .final .cap{margin:14px 0 0;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;color:#3A400F;line-height:1.6}
+  .book{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,6fr);gap:clamp(24px,4vw,64px);align-items:start}
+  .book h2{font-size:clamp(48px,6vw,104px)}
+  .book .fact{margin-top:22px;font-size:18px;color:var(--dim);max-width:34ch}
+  .book .fact b{color:var(--chalk);font-weight:500}
+  form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .f{display:grid;gap:7px}
+  .f.full{grid-column:1/-1}
+  label.l,legend{font-size:14px;font-weight:500;color:var(--chalk);padding:0}
+  input[type=text],input[type=email],input[type=tel]{font:inherit;font-size:16px;color:var(--chalk);background:var(--raised);border:1px solid var(--line-2);border-radius:10px;padding:12px 14px;min-height:48px;transition:border-color .2s var(--ease)}
+  input[type=text]:hover,input[type=email]:hover,input[type=tel]:hover{border-color:rgba(239,237,232,.45)}
+  input[type=text]:focus,input[type=email]:focus,input[type=tel]:focus{outline:none;border-color:var(--chalk)}
+  input[aria-invalid="true"]{border-color:#ff7a88}
+  fieldset{border:0;margin:0;padding:0;grid-column:1/-1;display:grid;gap:10px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chips label{position:relative;cursor:pointer}
+  .chips input{position:absolute;opacity:0;width:1px;height:1px}
+  .chips span{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line-2);font-size:15px;transition:background-color .2s var(--ease),border-color .2s var(--ease),color .2s var(--ease)}
+  .chips label:hover span{border-color:var(--chalk)}
+  .chips input:checked + span{background:var(--chalk);border-color:var(--chalk);color:var(--ground)}
+  .chips input:focus-visible + span{outline:2px solid var(--yellow);outline-offset:3px}
+  .send{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+  .err{color:#ff9aa5;font-size:15px;min-height:1.3em}
+  .done{grid-column:1/-1;padding:16px 18px;border-radius:10px;border:1px solid var(--line-2);background:var(--raised)}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;padding:24px var(--gutter) 30px;border-top:1px solid var(--line);font:400 13px/1.5 var(--mono);color:var(--faint)}
 
-  footer{padding:36px 0 44px;font-size:13.5px;color:var(--ash-3);border-top:1px solid var(--line-2)}
-  footer .wrap{display:flex;gap:14px 36px;flex-wrap:wrap;align-items:center}
-  footer a{color:var(--ash-2);text-decoration:none}
-  footer a:hover{color:var(--lime)}
-  footer .r{margin-left:auto;text-align:right}
+  @media (prefers-reduced-motion: reduce){ .plate{transition:none} }
 
-  @media (max-width:980px){
-    .hero .cols,.measure,.coach .wrap,.final .wrap{grid-template-columns:1fr;gap:32px}
-    .progs,.phases{grid-template-columns:1fr 1fr}
-    .qgrid{grid-template-columns:1fr}
-    .facts .wrap{grid-template-columns:1fr 1fr}
-    .facts div:nth-child(3){border-left:0}
-    .facts div:nth-child(n+3){border-top:1px solid var(--line-2)}
-    .hd nav{display:none}
-    .rig{opacity:.4}
-    footer .r{margin-left:0;text-align:left}
+  /* ---------- responsive ---------- */
+  @media (max-width:1000px){
+    .nav ul{display:none}
+    .nav .btn{margin-left:auto}
+    .hero,.sec-head,.measure,.coach,.book{grid-template-columns:minmax(0,1fr)}
+    .phases{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .phases li:nth-child(3){border-left:0;padding-left:0}
+    .phases li:nth-child(n+3){margin-top:22px;border-top:1px solid var(--line);padding-top:20px}
+    .plans{grid-template-columns:minmax(0,1fr)}
+    .plans article + article{padding-left:0;border-left:0;border-top:1px solid var(--line);margin-top:26px}
+    .plans article{padding-right:0}
   }
-  @media (max-width:620px){
-    .wrap{padding:0 18px}
-    section{padding:58px 0}
-    .progs,.phases,.mlist{grid-template-columns:1fr}
-    .facts .wrap{grid-template-columns:1fr}
-    .facts div{border-left:0;border-top:1px solid var(--line-2);padding:18px}
-    .facts div:first-child{border-top:0}
-    .prog .for{min-height:0}
-    .hero .wrap{padding-top:50px;padding-bottom:48px}
-    .rig{display:none}
-    details p{padding-right:0}
+  @media (max-width:560px){
+    .brand small{display:none}
+    .phases{grid-template-columns:minmax(0,1fr)}
+    .phases li + li{padding-left:0;border-left:0;border-top:1px solid var(--line);margin-top:20px;padding-top:18px}
+    .mtable div{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+    .mtable div dd:last-child{grid-column:1/-1}
+    .mtable .hd dd:last-child{display:none}
+    .phase span{display:none}
+    .ticks{margin-left:0}
+    .week{grid-template-columns:minmax(0,1fr)}
+    .week label{order:-1}
+    .acts .btn{flex:1 1 auto}
+    form{grid-template-columns:minmax(0,1fr)}
   }
-  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-  @media (prefers-reduced-motion:no-preference){
-    .facts b .dot,.final .dot{animation:pz 2.2s ease-in-out infinite}
-    @keyframes pz{0%,100%{box-shadow:0 0 0 0 rgba(205,220,57,.6)}60%{box-shadow:0 0 0 7px rgba(205,220,57,0)}}
-    .rig .drift{animation:dr 18s ease-in-out infinite}
-    @keyframes dr{0%,100%{transform:translateX(0)}50%{transform:translateX(26px)}}
+  @media (max-height:520px) and (min-width:560px){
+    .nav{padding-top:6px;padding-bottom:6px}
+    .hero{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);padding-top:14px;gap:22px}
+    h1{font-size:clamp(34px,6vw,52px);margin-top:6px}
+    .cap.eyebrow,.lede,.slots,.note,.ticks{display:none}
+    .acts{margin-top:14px}
+    .load{font-size:54px}
+    .phase span{display:none}
+    .rig{padding:10px 0}
   }
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <symbol id="tk" viewBox="0 0 24 24"><path d="M4 12.6l5.4 5.4L20 7"/></symbol>
-  <symbol id="ar" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-</defs></svg>
-
-<header>
-  <div class="wrap hd">
-    <a class="logo" href="#top">
-      <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6M7 6v12M17 6v12M21 9v6M7 12h10"/></svg></span>
-      <span><b>Dev Aranda</b><small>Strength</small></span>
-    </a>
-    <nav aria-label="Main">
-      <a href="#programs">Programs</a><a href="#coach">The coach</a><a href="#faq">FAQ</a>
-    </nav>
-    <a class="btn btn-sm" href="#book" style="margin-left:24px">Book free consult</a>
-  </div>
+<div class="page">
+<header class="nav">
+  <a class="brand" href="#top" aria-label="Dev Aranda Strength home">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="1" y="9" width="5" height="16" rx="1.5" fill="#d7263d"/><rect x="7" y="11" width="4" height="12" rx="1.2" fill="#2463c4"/><rect x="11" y="16" width="12" height="2" fill="#efede8"/><rect x="23" y="11" width="4" height="12" rx="1.2" fill="#2463c4"/><rect x="28" y="9" width="5" height="16" rx="1.5" fill="#d7263d"/></svg>
+    <span><b>Dev Aranda</b><small>Strength · Brunswick East</small></span>
+  </a>
+  <ul><li><a href="#plan">The 12 weeks</a></li><li><a href="#programmes">Programmes</a></li><li><a href="#coach">The coach</a></li><li><a href="#faq">FAQ</a></li></ul>
+  <a class="btn red" href="#book">Book a free consult</a>
 </header>
 
 <main id="top">
-  <!-- ---------- hero ---------- -->
-  <section class="hero">
-    <div class="rig" aria-hidden="true">
-      <svg viewBox="0 0 1440 620" preserveAspectRatio="xMaxYMid slice">
-        <rect width="1440" height="620" fill="#111111"/>
-        <g class="drift" opacity=".5">
-          <rect x="1010" y="0" width="2" height="620" fill="#CDDC39" opacity=".18"/>
-          <rect x="1180" y="0" width="2" height="620" fill="#CDDC39" opacity=".1"/>
-          <rect x="1320" y="0" width="2" height="620" fill="#CDDC39" opacity=".14"/>
-        </g>
-        <!-- barbell -->
-        <g opacity=".92">
-          <rect x="880" y="292" width="520" height="12" rx="6" fill="#2B2B2B"/>
-          <g fill="#1E1E1E" stroke="#333" stroke-width="1.5">
-            <rect x="940" y="228" width="30" height="140" rx="7"/>
-            <rect x="978" y="210" width="38" height="176" rx="8"/>
-            <rect x="1260" y="210" width="38" height="176" rx="8"/>
-            <rect x="1306" y="228" width="30" height="140" rx="7"/>
-          </g>
-          <rect x="1022" y="290" width="232" height="16" rx="8" fill="#CDDC39" opacity=".16"/>
-          <rect x="1022" y="290" width="92" height="16" rx="8" fill="#CDDC39" opacity=".8"/>
-        </g>
-        <g opacity=".2" stroke="#CDDC39" stroke-width="1.4" fill="none">
-          <path d="M880 430h520M880 460h380M880 490h460"/>
-        </g>
+<section class="hero" aria-labelledby="h">
+  <div>
+    <p class="cap eyebrow">1-to-1 strength coaching · Brunswick East, Melbourne</p>
+    <h1 id="h">Stronger in twelve weeks. <span>Here’s the plan.</span></h1>
+    <p class="lede">Three sessions a week on a barbell, written for you and adjusted every Monday. The free consult is <b>45 minutes</b>: a movement screen, a talk about what you want, and a first go on the bar. No sales pitch at the end.</p>
+    <div class="acts"><a class="btn red" href="#book">Book a free consult</a><a class="btn line" href="#plan">See the 12 weeks</a></div>
+    <p class="slots"><i aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b class="open"></b><b class="open"></b></i>12 of 14 client places taken</p>
+  </div>
+
+  <div class="rig" aria-labelledby="rig-h">
+    <h2 id="rig-h" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">The plan, week by week</h2>
+    <div class="rig-head">
+      <p class="load num" aria-live="polite"><span id="kg">100</span><small>kg squat</small></p>
+      <p class="phase"><b id="ph">Week 12 · Test</b><span id="pd">A new top single, then we write the next block.</span></p>
+    </div>
+    <div class="bar">
+      <svg viewBox="0 0 760 250" aria-hidden="true">
+        <line class="floor" x1="0" y1="232" x2="760" y2="232"/>
+        <rect class="shaft" x="150" y="121" width="460" height="8" rx="2"/>
+        <rect class="sleeve" x="14" y="116" width="136" height="18" rx="3"/>
+        <rect class="sleeve" x="610" y="116" width="136" height="18" rx="3"/>
+        <rect class="collar" x="142" y="106" width="12" height="38" rx="2"/>
+        <rect class="collar" x="606" y="106" width="12" height="38" rx="2"/>
+        <g id="L"></g><g id="R"></g>
       </svg>
     </div>
-    <div class="wrap">
-      <p class="lbl">Brunswick East · 1-to-1 strength coaching</p>
-      <h1 style="margin-top:22px">Transform your body in <em>12 weeks</em></h1>
-      <div class="cols">
-        <p>Three sessions a week with me on the floor, a programme written for your body and your calendar, and a number to hit every single session. <b>No packs of ten. No app-only plans.</b> Twelve weeks is long enough to change how strong you are and short enough that you can actually see the end of it.</p>
-        <div class="acts">
-          <a class="btn" href="#book">Book free consultation<svg class="arw" viewBox="0 0 24 24" aria-hidden="true"><use href="#ar"/></svg></a>
-          <a class="btn btn-o" href="#programs">See the programs</a>
-          <p class="note">30 minutes, in person or on the phone.<br>No obligation, no sales pitch, no card.</p>
-        </div>
-      </div>
+    <div class="week">
+      <label for="wk">Week <b id="wn" class="num">12</b> of 12</label>
+      <input id="wk" type="range" min="1" max="12" step="1" value="12" aria-valuetext="Week 12, test week, 100 kilograms">
     </div>
-  </section>
-
-  <div class="facts">
-    <div class="wrap">
-      <div><b>Since 2013</b><span>Coaching full time</span></div>
-      <div><b>8</b><span>1-to-1 clients at a time</span></div>
-      <div><b>Ironbark, Brunswick East</b><span>Where we train</span></div>
-      <div><b><span class="dot"></span>2 spots</b><span>Open from March</span></div>
-    </div>
+    <div class="ticks" aria-hidden="true"><span>1–4 Foundation</span><span>5–8 Build</span><span>9–11 Peak</span><span>12</span></div>
+    <p class="note">The planned working weight for someone who tests at 70 kg in week one. Yours is written from your own first test; the plan is a plan, not a promise.</p>
   </div>
+</section>
 
-  <!-- ---------- what changes ---------- -->
-  <section>
-    <div class="wrap">
-      <div class="sec-hd">
-        <p class="lbl">The 12 weeks</p>
-        <h2>Most people quit in week three. <em>Here is what happens instead.</em></h2>
-        <p>Nobody gets a dramatic result in a fortnight, and anyone who tells you otherwise is selling something. The block is built so weeks one to three are deliberately easy to finish — that is the part where people normally fall off.</p>
-      </div>
+<section class="sec" id="plan" aria-labelledby="plan-h">
+  <div class="sec-head">
+    <h2 id="plan-h">What the twelve weeks look like</h2>
+    <p>Four phases. Each one changes one thing, so you can tell what worked. The weights go up slowly on purpose, and two weeks are deliberately lighter.</p>
+  </div>
+  <ol class="phases">
+    <li><span class="w"><i style="background:var(--green)"></i>Weeks 1–4</span><h3>Foundation</h3><p>Technique on the squat, bench and deadlift, three sessions a week. We find your starting numbers and fix the thing that hurts.</p></li>
+    <li><span class="w"><i style="background:var(--yellow)"></i>Weeks 5–8</span><h3>Build</h3><p>More sets, the same careful weights. Week 8 is lighter so you arrive at the next phase fresh rather than sore.</p></li>
+    <li><span class="w"><i style="background:var(--blue)"></i>Weeks 9–11</span><h3>Peak</h3><p>Fewer, heavier sets. Accessory work drops away so the main lifts get the energy.</p></li>
+    <li><span class="w"><i style="background:var(--red)"></i>Week 12</span><h3>Test</h3><p>A new top single on each lift, filmed, and a conversation about the next block.</p></li>
+  </ol>
+  <div class="measure">
+    <div><h3>What we measure</h3><p>Everything goes into a shared log you can read. Nothing on it is a target you are judged against.</p></div>
+    <dl class="mtable">
+      <div class="hd"><dt>Measure</dt><dd>How often</dd><dd>Why</dd></div>
+      <div><dt>Squat, bench, deadlift top set</dt><dd>Every session</dd><dd>Shows the plan is working</dd></div>
+      <div><dt>Bar speed on the top set</dt><dd>Every session</dd><dd>Tells us when to hold back</dd></div>
+      <div><dt>Sleep and soreness, 1–5</dt><dd>Every session</dd><dd>Explains the bad days</dd></div>
+      <div><dt>Bodyweight</dt><dd>Weekly, optional</dd><dd>Only if it matters to you</dd></div>
+      <div><dt>Waist</dt><dd>Every 4 weeks, optional</dd><dd>A better guide than the scale</dd></div>
+    </dl>
+  </div>
+</section>
 
-      <div class="phases">
-        <div class="ph"><span class="bar"></span>
-          <p class="wk">Weeks 1–3</p><h3>Assess &amp; groove</h3>
-          <p>Movement screen, a starting number on six lifts, and technique work at loads you can absolutely handle. Nothing here should be hard.</p>
-        </div>
-        <div class="ph"><span class="bar"></span>
-          <p class="wk">Weeks 4–7</p><h3>Build</h3>
-          <p>Volume climbs. Same six lifts, more sets, small jumps each week. This is where the work actually accumulates.</p>
-        </div>
-        <div class="ph"><span class="bar"></span>
-          <p class="wk">Weeks 8–10</p><h3>Intensify</h3>
-          <p>Fewer sets, heavier top sets, conditioning gets shorter and sharper. Sleep and food start mattering more than the programme.</p>
-        </div>
-        <div class="ph"><span class="bar"></span>
-          <p class="wk">Weeks 11–12</p><h3>Test &amp; deload</h3>
-          <p>Re-test the same six lifts and the same measurements, then a week backing off. You leave with a number, not a feeling.</p>
-        </div>
-      </div>
+<section class="sec" id="programmes" aria-labelledby="pr-h">
+  <div class="sec-head">
+    <h2 id="pr-h">Programmes</h2>
+    <p>All three are twelve weeks, one to one, in the gym at 44 Nicholson Street. Prices are per week and include GST; there is no joining fee and no lock-in after the first block.</p>
+  </div>
+  <div class="plans">
+    <article>
+      <p class="tag"><i style="background:var(--green)"></i><span class="cap">For fat loss</span></p>
+      <h3>Strong and lean</h3>
+      <p class="price num">$95<small>/ week</small></p>
+      <p>Two sessions with me and one written session on your own, with food guidance you can actually keep up.</p>
+      <ul><li>2 coached sessions a week</li><li>1 self-guided session</li><li>Weekly food check-in</li></ul>
+      <a class="btn line" href="#book">Start with a consult</a>
+    </article>
+    <article>
+      <p class="tag"><i style="background:var(--red)"></i><span class="cap">For muscle and strength</span></p>
+      <h3>The full block</h3>
+      <p class="price num">$135<small>/ week</small></p>
+      <p class="rec">Where I suggest most people start</p>
+      <ul><li>3 coached sessions a week</li><li>Technique video review</li><li>A new plan every Monday</li></ul>
+      <a class="btn red" href="#book">Start with a consult</a>
+    </article>
+    <article>
+      <p class="tag"><i style="background:var(--blue)"></i><span class="cap">For sport</span></p>
+      <h3>Season ready</h3>
+      <p class="price num">$165<small>/ week</small></p>
+      <p>Built around your training and match calendar, with speed and jump work alongside the barbell.</p>
+      <ul><li>3 coached sessions a week</li><li>Written around your fixtures</li><li>Liaison with your club coach</li></ul>
+      <a class="btn line" href="#book">Start with a consult</a>
+    </article>
+  </div>
+</section>
 
-      <div class="measure">
-        <div>
-          <h3>What we actually measure</h3>
-          <p>Every fortnight, the same five things, taken the same way, at the same time of day. You get the spreadsheet. If a number is not moving after six weeks, we change the programme rather than the story about the programme.</p>
-        </div>
-        <ul class="mlist">
-          <li><b>Six working lifts</b><span>Squat, hinge, press, pull, carry, row — load × reps</span></li>
-          <li><b>Waist and hip</b><span>Tape, morning, before food</span></li>
-          <li><b>Body weight trend</b><span>Weekly average, never a single day</span></li>
-          <li><b>Resting heart rate</b><span>On waking, from your own watch</span></li>
-          <li><b>Sessions completed</b><span>Out of 36. The one that predicts the rest</span></li>
-          <li><b>Sleep, self-reported</b><span>Hours and a 1–5 quality score</span></li>
-        </ul>
-      </div>
-    </div>
-  </section>
+<section class="sec coach" id="coach" aria-labelledby="coach-h">
+  <div>
+    <h2 id="coach-h" class="quote">Strength first. <span>Most other things get easier after it.</span></h2>
+  </div>
+  <div class="body">
+    <p>I’m <strong>Dev Aranda</strong>. I have coached in Brunswick since 2015, after six years of competing in powerlifting that taught me mostly what not to do. I coach about forty people a year, fourteen at a time, and I write every programme myself.</p>
+    <dl class="certs">
+      <div><dt>Certificate IV in Fitness</dt><dd>2014</dd></div>
+      <div><dt>ASCA Level 2 Strength &amp; Conditioning Coach</dt><dd>2019</dd></div>
+      <div><dt>Specialities</dt><dd>Returning lifters · over-40s</dd></div>
+    </dl>
+    <p class="not"><strong>Who I’m not right for:</strong> if you want a visible six-pack for an event in five weeks, or a coach who shouts, you will be happier elsewhere, and I can recommend someone.</p>
+  </div>
+</section>
 
-  <!-- ---------- programs ---------- -->
-  <section id="programs" style="background:var(--coal-2);border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2)">
-    <div class="wrap">
-      <div class="sec-hd">
-        <p class="lbl">Programs</p>
-        <h2>Three blocks. Pick the one that matches the goal.</h2>
-      </div>
-      <div class="progs">
-        <article class="prog">
-          <div class="tagrow"><span>Nutrition targets</span><span>Weekly check-in</span></div>
-          <h3>Fat loss</h3>
-          <p class="for">For people carrying more than they want to and sick of starting again every January.</p>
-          <ul class="spec">
-            <li><span>Duration</span><b>12 weeks</b></li>
-            <li><span>Sessions</span><b>2 / week with me</b></li>
-            <li><span>Own training</span><b>2 / week programmed</b></li>
-            <li><span>Included</span><b>Food targets + review</b></li>
-          </ul>
-          <p class="price"><b>$165</b><span>per week · $1,980 total</span></p>
-          <a class="btn btn-o" href="#book">Start with a consult</a>
-        </article>
+<section class="sec" id="faq" aria-labelledby="faq-h">
+  <div class="sec-head"><h2 id="faq-h">Before you book</h2><p>The questions people ask in the consult, answered here so you don’t have to.</p></div>
+  <div class="faq">
+    <details open><summary>What does it cost, all in?</summary><p>The weekly price and nothing else: gym access for our sessions is included. If you train on your own days at another gym, that membership is yours.</p></details>
+    <details><summary>I haven’t trained in years. Is that a problem?</summary><p>No. Most people I coach are coming back to it. Week one starts from what you can do comfortably, not from what you used to lift.</p></details>
+    <details><summary>What happens if I miss a session?</summary><p>Give me 24 hours and we move it within the same week. Missed without notice, the session counts. Two holiday weeks a year pause the block at no cost.</p></details>
+    <details><summary>What is guaranteed?</summary><p>That every session is planned, that the plan changes when you need it to, and that you can stop after the first block. What is not guaranteed is a number on the bar or the scale; anyone who guarantees that is guessing.</p></details>
+  </div>
+</section>
 
-        <article class="prog feat">
-          <div class="tagrow"><span class="hi">Most booked</span><span>Lift video review</span></div>
-          <h3>Strength &amp; muscle</h3>
-          <p class="for">For people who can already train and want to be measurably stronger by the end of it.</p>
-          <ul class="spec">
-            <li><span>Duration</span><b>16 weeks</b></li>
-            <li><span>Sessions</span><b>3 / week with me</b></li>
-            <li><span>Own training</span><b>1 / week programmed</b></li>
-            <li><span>Included</span><b>Lift video review</b></li>
-          </ul>
-          <p class="price"><b>$215</b><span>per week · $3,440 total</span></p>
-          <a class="btn" href="#book">Start with a consult</a>
-        </article>
-
-        <article class="prog">
-          <div class="tagrow"><span>Force plate testing</span><span>Return to play</span></div>
-          <h3>Sports performance</h3>
-          <p class="for">For club and pre-season athletes, and for anyone coming back from a cleared injury.</p>
-          <ul class="spec">
-            <li><span>Duration</span><b>10 weeks</b></li>
-            <li><span>Sessions</span><b>3 / week with me</b></li>
-            <li><span>Testing</span><b>Weeks 1, 5 and 10</b></li>
-            <li><span>Included</span><b>Physio liaison</b></li>
-          </ul>
-          <p class="price"><b>$290</b><span>per week · $2,900 total</span></p>
-          <a class="btn btn-o" href="#book">Start with a consult</a>
-        </article>
+<section class="sec book" id="book" aria-labelledby="book-h">
+  <div>
+    <h2 id="book-h">Book the free consult</h2>
+    <p class="fact">I take <b>14 clients at a time</b>. Two places are open now, and the next opening after those is <b>Monday 13 October</b>.</p>
+  </div>
+  <form id="form" novalidate>
+    <div class="f"><label class="l" for="n">Name</label><input id="n" type="text" autocomplete="name" required></div>
+    <div class="f"><label class="l" for="p">Mobile</label><input id="p" type="tel" autocomplete="tel" inputmode="tel" required></div>
+    <div class="f full"><label class="l" for="e">Email</label><input id="e" type="email" autocomplete="email" required></div>
+    <fieldset>
+      <legend>Best time for the consult</legend>
+      <div class="chips">
+        <label><input type="radio" name="t" checked><span>Weekday, 6–9 am</span></label>
+        <label><input type="radio" name="t"><span>Weekday, 5–8 pm</span></label>
+        <label><input type="radio" name="t"><span>Saturday morning</span></label>
       </div>
-      <p class="progs-note">Paid fortnightly. Pause any block once for up to three weeks — illness, travel, life. Prices include GST.</p>
-    </div>
-  </section>
-
-  <!-- ---------- quotes ---------- -->
-  <section class="quotes">
-    <div class="wrap">
-      <div class="sec-hd"><p class="lbl">In their words</p><h2>What finishing a block feels like</h2></div>
-      <div class="qgrid">
-        <article class="q">
-          <blockquote>“I came in able to do exactly zero chin-ups and finished the block with four. Dev never once mentioned how I looked — it was always the number on the bar, and that turned out to be the thing that kept me coming back.”</blockquote>
-          <div class="who"><span class="av">HL</span><span><b>Hannah L.</b><span>Strength &amp; muscle · 16 weeks</span></span></div>
-        </article>
-        <article class="q">
-          <blockquote>“Two previous trainers gave me a printout and a thumbs up. This was the first time somebody watched every rep and changed the plan when my knee complained rather than telling me to push through.”</blockquote>
-          <div class="who"><span class="av">RO</span><span><b>Rob O.</b><span>Sports performance · 10 weeks</span></span></div>
-        </article>
-      </div>
-      <p class="demo">Client quotes are sample content written for this demonstration site.</p>
-    </div>
-  </section>
-
-  <!-- ---------- coach ---------- -->
-  <section class="coach" id="coach">
-    <div class="wrap">
-      <div class="plate">
-        <svg class="art" viewBox="0 0 300 300" role="img" aria-label="Illustrated portrait plate for coach Dev Aranda">
-          <rect width="300" height="300" fill="#0A0A0A"/>
-          <g stroke="#CDDC39" stroke-opacity=".12" stroke-width="1"><path d="M0 60h300M0 120h300M0 180h300M0 240h300M60 0v300M120 0v300M180 0v300M240 0v300"/></g>
-          <circle cx="150" cy="128" r="58" fill="#1A1A1A" stroke="#CDDC39" stroke-width="1.5"/>
-          <path d="M150 90a26 26 0 1 1 0 52 26 26 0 0 1 0-52z" fill="#CDDC39" opacity=".9"/>
-          <path d="M104 186c6-26 24-38 46-38s40 12 46 38z" fill="#CDDC39" opacity=".9"/>
-          <rect x="52" y="214" width="196" height="8" rx="4" fill="#2B2B2B"/>
-          <g fill="#1E1E1E" stroke="#3A3A3A" stroke-width="1.2">
-            <rect x="66" y="196" width="18" height="44" rx="5"/><rect x="88" y="188" width="22" height="60" rx="6"/>
-            <rect x="190" y="188" width="22" height="60" rx="6"/><rect x="216" y="196" width="18" height="44" rx="5"/>
-          </g>
-          <text x="150" y="278" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="11" letter-spacing="4" fill="#5E5E5B">ASCA L2 · CERT IV</text>
-        </svg>
-        <div class="body">
-          <h3>Dev Aranda</h3>
-          <p class="role">Strength coach &amp; owner</p>
-          <ul class="certs">
-            <li><svg><use href="#tk"/></svg><span>ASCA Level 2 Strength &amp; Conditioning Coach</span></li>
-            <li><svg><use href="#tk"/></svg><span>Cert IV Fitness, AIPT — registered with AUSactive</span></li>
-            <li><svg><use href="#tk"/></svg><span>Precision Nutrition Level 1</span></li>
-            <li><svg><use href="#tk"/></svg><span>Current first aid &amp; CPR, Working with Children check</span></li>
-            <li><svg><use href="#tk"/></svg><span>$20m public liability, certificate on request</span></li>
-          </ul>
-        </div>
-      </div>
-      <div>
-        <p class="lbl">The coach</p>
-        <h2 style="margin-top:14px">Thirteen years, one room, no franchise behind me</h2>
-        <p>I started on the floor of a 24-hour gym in Coburg in 2013 handing out free assessments nobody wanted. I now coach out of one room at Ironbark in Brunswick East, and I cap it at <b>eight one-to-one clients</b> because past that I stop remembering what happened in your last session.</p>
-        <p>Most of the people I work with are between 35 and 60, have trained on and off for years, and have something that hurts. The job is usually not motivation. It is picking the right five exercises and getting you to do them for long enough to matter.</p>
-        <p>If your goal is a stage, a photo shoot or a number on the scale by a fixed date, I am probably the wrong coach and I will say so in the consult.</p>
-        <div class="specs">
-          <span>Barbell strength</span><span>Return from injury</span><span>Over-50s training</span>
-          <span>Pre-season conditioning</span><span>Pre &amp; post-natal</span><span>Desk-bound backs</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ---------- faq ---------- -->
-  <section class="faq" id="faq" style="background:var(--coal);border-top:1px solid var(--line-2)">
-    <div class="wrap">
-      <p class="lbl">Questions</p>
-      <h2 style="margin-top:14px">Before you book</h2>
-      <details open>
-        <summary>What actually happens in the free consultation?</summary>
-        <p>Thirty minutes. I ask what you have tried, what hurt, and what your week genuinely looks like — not what you wish it looked like. You do a short movement screen if we are in the gym. At the end I tell you which block fits, or that none of them do. Nobody is asked for a card.</p>
-      </details>
-      <details>
-        <summary>I have not trained in years. Am I too unfit to start?</summary>
-        <p>No. Weeks one to three exist precisely for this. The first month is loads you can do comfortably for the stated reps — if you finish a session feeling wrecked in the first fortnight, I have programmed it wrong.</p>
-      </details>
-      <details>
-        <summary>Will I lose a specific amount of weight?</summary>
-        <p>I will not put a number on it, and I would be suspicious of anyone who does. What I will commit to is that we measure the same six lifts and five metrics every fortnight and change the plan when they stall. What your body does with that depends on sleep, food, stress and genetics I do not control.</p>
-      </details>
-      <details>
-        <summary>What if I miss a session?</summary>
-        <p>Give me 12 hours and we move it, no charge. Less than 12 hours and it is used, because the slot is yours and I cannot fill it. Every block includes one pause of up to three weeks for illness or travel.</p>
-      </details>
-      <details>
-        <summary>Do I need a gym membership as well?</summary>
-        <p>Yes, for the days you train on your own. Ironbark is $22 a week on a month-to-month and there is no joining fee through me. Your sessions with me are covered by the block price.</p>
-      </details>
-      <details>
-        <summary>Can I claim it on private health?</summary>
-        <p>Personal training is not claimable. If a physio or exercise physiologist refers you under a care plan, that part may be — bring the paperwork to the consult and I will work with them directly.</p>
-      </details>
-    </div>
-  </section>
-
-  <!-- ---------- final ---------- -->
-  <section class="final" id="book">
-    <div class="wrap">
-      <div>
-        <h2>Start with a conversation, not a contract</h2>
-        <p>I take <b>eight one-to-one clients</b> at a time and two of those slots open in March. If they fill, the consult is still free and I will tell you honestly when the next one is — or point you at someone who has room now.</p>
-      </div>
-      <div>
-        <a class="btn" href="#book">Book free consultation<svg class="arw" viewBox="0 0 24 24" aria-hidden="true"><use href="#ar"/></svg></a>
-        <p class="cap">Ironbark Strength, 212 Lygon Street, Brunswick East VIC 3057<br>
-        Call or text <a href="tel:+61491570119" style="color:#2A2E0B;font-weight:700">0491 570 119</a> · <a href="mailto:dev@devaranda.example.com" style="color:#2A2E0B;font-weight:700">dev@devaranda.example.com</a></p>
-      </div>
-    </div>
-  </section>
+    </fieldset>
+    <div class="send"><button class="btn red" type="submit">Request a consult</button><p class="err" id="err" role="alert"></p></div>
+  </form>
+</section>
 </main>
+<footer><span>Dev Aranda Strength · 44 Nicholson Street, Brunswick East VIC 3057</span><span>ABN 63 190 552 417</span></footer>
+</div>
 
-<footer>
-  <div class="wrap">
-    <span>© 2026 Dev Aranda Strength · ABN 51 907 344 218</span>
-    <a href="#book">Book a consult</a>
-    <a href="#faq">FAQ</a>
-    <span class="r">AUSactive registered exercise professional</span>
-  </div>
-</footer>
+<script>
+(function(){
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* the planned working weight for a lifter who tests at 70 kg; weeks 4 and 8 are lighter on purpose */
+  var PLAN = [70, 72.5, 75, 70, 77.5, 80, 82.5, 75, 87.5, 92.5, 95, 100];
+  var PHASE = [
+    ['Foundation', 'Technique first. Three sessions, moderate weights.'],
+    ['Foundation', 'Technique first. Three sessions, moderate weights.'],
+    ['Foundation', 'Technique first. Three sessions, moderate weights.'],
+    ['Foundation · lighter', 'A lighter week to consolidate before the build.'],
+    ['Build', 'More sets at careful weights.'],
+    ['Build', 'More sets at careful weights.'],
+    ['Build', 'More sets at careful weights.'],
+    ['Build · lighter', 'A lighter week so the peak starts fresh.'],
+    ['Peak', 'Fewer, heavier sets. Accessories drop away.'],
+    ['Peak', 'Fewer, heavier sets. Accessories drop away.'],
+    ['Peak', 'Fewer, heavier sets. Accessories drop away.'],
+    ['Test', 'A new top single, then we write the next block.']
+  ];
+  /* competition plates: kg, colour, height, width */
+  var PLATES = [[25, '#d7263d', 200, 22], [20, '#2463c4', 200, 18], [15, '#f2c230', 176, 16], [10, '#2e9d5b', 150, 14], [5, '#ecebe6', 104, 12], [2.5, '#26262a', 82, 9], [1.25, '#b9bcc0', 64, 7]];
+  function perSide(w){
+    var side = (w - 20) / 2, out = [];
+    PLATES.forEach(function(p){ while (side >= p[0] - 1e-6){ out.push(p); side -= p[0]; } });
+    return out;
+  }
+  var NS = 'http://www.w3.org/2000/svg', L = document.getElementById('L'), R = document.getElementById('R');
+  function draw(w){
+    [L, R].forEach(function(g, s){
+      var list = perSide(w), x = s ? 620 : 140, have = g.children;
+      for (var i = 0; i < Math.max(list.length, have.length); i++){
+        var p = list[i], el = have[i];
+        if (!p){ el.classList.add('off'); el.dataset.kg = ''; continue; }
+        if (!el){ el = document.createElementNS(NS, 'g'); el.setAttribute('class', 'plate off'); el.innerHTML = '<rect rx="3"/><rect class="hub"/><text text-anchor="middle"></text>'; g.appendChild(el); }
+        if (el.dataset.kg !== String(p[0])){
+          var r = el.firstChild, t = el.lastChild;
+          r.setAttribute('width', p[3]); r.setAttribute('height', p[2]); r.setAttribute('y', 125 - p[2] / 2); r.setAttribute('fill', p[1]);
+          r.setAttribute('x', 0);
+          var hb = r.nextSibling; hb.setAttribute('x', 1.5); hb.setAttribute('width', Math.max(2, p[3] - 3)); hb.setAttribute('y', 125 - Math.min(26, p[2] * .2)); hb.setAttribute('height', Math.min(52, p[2] * .4)); hb.setAttribute('rx', 2);
+          t.textContent = p[0] >= 10 ? p[0] : '';
+          t.setAttribute('transform', 'translate(' + (p[3] / 2 + 4.5) + ' 125) rotate(-90)');
+          el.dataset.kg = String(p[0]);
+        }
+        var px = s ? x : x - p[3];
+        el.style.transform = 'translate(' + px + 'px,0)';
+        el.classList.remove('off');
+        x += s ? p[3] + 2 : -(p[3] + 2);
+      }
+    });
+  }
+  var wk = document.getElementById('wk'), kg = document.getElementById('kg'), wn = document.getElementById('wn'), ph = document.getElementById('ph'), pd = document.getElementById('pd');
+  var ticks = document.querySelectorAll('.ticks span');
+  function set(n){
+    var w = PLAN[n - 1];
+    kg.textContent = String(w).replace('.5', '.5');
+    wn.textContent = n;
+    ph.textContent = 'Week ' + n + ' · ' + PHASE[n - 1][0];
+    pd.textContent = PHASE[n - 1][1];
+    wk.value = n;
+    wk.style.setProperty('--f', ((n - 1) / 11 * 100).toFixed(1) + '%');
+    wk.setAttribute('aria-valuetext', 'Week ' + n + ', ' + PHASE[n - 1][0] + ', ' + w + ' kilograms');
+    var band = n <= 4 ? 0 : n <= 8 ? 1 : n <= 11 ? 2 : 3;
+    [].forEach.call(ticks, function(t, i){ t.classList.toggle('on', i === band); });
+    draw(w);
+  }
+  var auto = 0;
+  wk.addEventListener('input', function(){ clearInterval(auto); set(+wk.value); });
+  if (reduce) set(12);
+  else {
+    /* on load the plan plays once, week 1 to week 12, and then it is the reader's */
+    var n = 1; set(1);
+    auto = setInterval(function(){ n++; set(n); if (n >= 12) clearInterval(auto); }, 330);
+  }
+
+  var form = document.getElementById('form'), err = document.getElementById('err');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var bad = [].filter.call(form.querySelectorAll('[required]'), function(f){ return !f.value.trim() || (f.type === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.value)); });
+    [].forEach.call(form.querySelectorAll('input'), function(f){ f.removeAttribute('aria-invalid'); });
+    if (bad.length){
+      bad.forEach(function(f){ f.setAttribute('aria-invalid', 'true'); });
+      err.textContent = bad[0].type === 'email' && bad[0].value ? 'That email address looks incomplete.' : 'Please add your ' + form.querySelector('label[for="' + bad[0].id + '"]').textContent.toLowerCase() + '.';
+      bad[0].focus(); return;
+    }
+    var done = document.createElement('p');
+    done.className = 'done'; done.setAttribute('role', 'status'); done.tabIndex = -1;
+    done.textContent = 'Thanks. This is a demonstration page, so nothing was sent.';
+    form.replaceChildren(done); done.focus();
+  });
+})();
+</script>
 </body>
 </html>

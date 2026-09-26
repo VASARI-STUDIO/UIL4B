@@ -1,355 +1,439 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-AU">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cronwright — Pricing</title>
+<title>Pricing · Cronwright</title>
+<meta name="description" content="Cronwright is priced per monitored job. Drag to your number of jobs and see what each plan costs.">
+<meta name="uil4b-capture" content='{"mode":"run","ms":5000}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/bricolage-grotesque.js"></script>
+<script src="../vendor/fonts/instrument-sans.js"></script>
+<script src="../vendor/fonts/jetbrains-mono.js"></script>
 <style>
   :root{
-    --paper:#FBFBF8; --card:#FFFFFF; --ink:#12161A; --ink-2:#4E5862; --ink-3:#7B8690;
-    --line:#E4E3DC; --line-2:#EFEEE8;
-    --pine:#0F5D4A; --pine-2:#0B4638; --tint:#E7F0EC;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --paper:#f6f6f2;
+    --card:#fdfdfb;
+    --ink:#111214;
+    --ink-2:#4d5058;
+    --ink-3:#6e717a;
+    --line:rgba(17,18,20,.12);
+    --line-2:rgba(17,18,20,.24);
+    --ok:#12804a;
+    --ok-soft:#dff3e7;
+    --late:#c98a06;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.6vw,56px);
+    --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+    --sans:"Instrument Sans","Helvetica Neue",Arial,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+    color-scheme:light;
   }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{
-    background:var(--paper); color:var(--ink); font-family:var(--sans);
-    font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
-  }
-  .num{font-variant-numeric:tabular-nums}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{background:var(--paper);-webkit-text-size-adjust:100%}
+  body{background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;caret-color:var(--ok)}
+  .page{overflow-x:clip}
+  ::selection{background:var(--ink);color:var(--paper)}
   a{color:inherit}
-  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-  :focus-visible{outline:2.5px solid var(--pine);outline-offset:3px;border-radius:5px}
-  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  h1,h2,h3,p,ul,dl,dd{margin:0}
+  ul{list-style:none;padding:0}
+  :focus-visible{outline:2px solid var(--ok);outline-offset:3px;border-radius:6px}
+  .num{font-variant-numeric:tabular-nums}
+  .mono{font:500 12px/1.4 var(--mono);letter-spacing:.02em}
 
-  /* ---------- header ---------- */
-  header{border-bottom:1px solid var(--line-2);background:rgba(251,251,248,.9)}
-  .hd{display:flex;align-items:center;gap:26px;height:62px}
-  .logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.02em;font-size:16.5px;text-decoration:none}
-  .logo svg{width:20px;height:20px;stroke:var(--pine);stroke-width:2;fill:none;stroke-linecap:round}
-  .hnav{display:flex;gap:22px;margin-left:8px}
-  .hnav a{font-size:14.5px;color:var(--ink-2);text-decoration:none;font-weight:500;padding:4px 0}
-  .hnav a:hover{color:var(--ink)}
-  .hnav a[aria-current]{color:var(--ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--pine)}
-  .hd .r{margin-left:auto;display:flex;align-items:center;gap:14px}
-  .hd .r a{font-size:14.5px;color:var(--ink-2);text-decoration:none;font-weight:500}
-  .hd .r a:hover{color:var(--ink)}
-  .hd .r a.cta.solid{color:#fff}
-  .hd .r a.cta.solid:hover{color:#fff}
+  /* ---------- nav ---------- */
+  .nav{display:flex;align-items:center;gap:clamp(12px,2.4vw,32px);padding:14px var(--gutter);border-bottom:1px solid var(--line)}
+  .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font:700 19px/1 var(--display);letter-spacing:-.03em;min-height:44px}
+  .nav ul{display:flex;gap:2px}
+  .nav ul a{display:block;text-decoration:none;color:var(--ink-2);font-size:15px;padding:10px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .nav ul a:hover{color:var(--ink);background:rgba(17,18,20,.05)}
+  .nav ul a[aria-current]{color:var(--ink);font-weight:600}
+  .nav .end{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 20px;border-radius:999px;text-decoration:none;font:600 15px/1 var(--sans);border:1px solid transparent;cursor:pointer;
+    transition:background-color .2s var(--ease),border-color .2s var(--ease),color .2s var(--ease),transform .2s var(--ease)}
+  .btn:active{transform:scale(.98)}
+  .btn.ink{background:var(--ink);color:var(--paper)}
+  .btn.ink:hover{background:#2a2c31}
+  .btn.line{border-color:var(--line-2);color:var(--ink);background:var(--card)}
+  .btn.line:hover{border-color:var(--ink)}
+  .btn.go{background:var(--ok);color:#fff}
+  .btn.go:hover{background:#0e6b3d}
+  .nav .btn{min-height:42px;font-size:14.5px}
+  .nav .ghost{text-decoration:none;font-size:15px;color:var(--ink-2);padding:10px 12px;border-radius:999px}
+  .nav .ghost:hover{color:var(--ink);background:rgba(17,18,20,.05)}
 
-  /* ---------- hero + gradient ---------- */
-  .top{position:relative;overflow:hidden;padding:56px 0 0}
-  .top::before{
-    content:"";position:absolute;inset:-160px 0 auto;height:620px;pointer-events:none;
-    background:
-      radial-gradient(760px 320px at 22% 32%,rgba(15,93,74,.10),transparent 68%),
-      radial-gradient(680px 300px at 82% 18%,rgba(196,168,96,.13),transparent 66%),
-      radial-gradient(1100px 500px at 50% 0%,#F1F3EE,transparent 72%);
-  }
-  .top>*{position:relative}
-  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--pine);font-weight:700;margin:0 0 14px}
-  .hero{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:0 56px;align-items:end}
-  h1{margin:0;font-size:clamp(30px,4vw,46px);line-height:1.08;letter-spacing:-.033em;font-weight:680;max-width:20ch}
-  .sub{margin:0 0 5px;font-size:16.5px;color:var(--ink-2);line-height:1.58}
+  /* ---------- head ---------- */
+  .head{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(20px,4vw,64px);align-items:end;padding:clamp(40px,7vh,84px) var(--gutter) clamp(26px,4vh,40px)}
+  h1{font:700 clamp(44px,5.6vw,92px)/.92 var(--display);letter-spacing:-.05em}
+  h1 span{color:var(--ink-3)}
+  .head p{color:var(--ink-2);font-size:clamp(16.5px,1.2vw,18.5px);max-width:40ch}
+  .head p b{color:var(--ink);font-weight:600}
 
-  /* ---------- toggle ---------- */
-  .cycle{display:flex;align-items:center;gap:14px;margin:36px 0 38px;flex-wrap:wrap;
-         padding-top:22px;border-top:1px solid var(--line)}
-  .cycle .note{margin-left:auto}
-  .seg{position:relative;display:inline-flex;padding:4px;background:#F1F0EA;border:1px solid var(--line);border-radius:999px}
-  .seg .thumb{position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);
-              background:var(--card);border-radius:999px;box-shadow:0 1px 3px rgba(18,22,26,.14);
-              transition:transform .3s cubic-bezier(.2,.8,.2,1)}
-  .seg button{position:relative;z-index:1;padding:7px 18px;border-radius:999px;font-size:14.5px;
-              font-weight:600;color:var(--ink-3);transition:color .2s;min-width:104px}
-  .seg button[aria-pressed=true]{color:var(--ink)}
-  .seg button:hover{color:var(--ink)}
-  [data-cycle=year] .seg .thumb{transform:translateX(100%)}
-  .save{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:650;color:var(--pine);
-        background:var(--tint);border-radius:999px;padding:5px 12px}
-  .note{font-size:13.5px;color:var(--ink-3)}
+  /* ---------- calculator ---------- */
+  .calc{margin:0 var(--gutter);display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);border:1px solid var(--line-2);border-radius:18px;background:var(--card);overflow:hidden}
+  .calc .ctl{padding:clamp(20px,2.6vw,34px);display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--line)}
+  .calc label{font-weight:600;font-size:15px}
+  .jobs{display:flex;align-items:baseline;gap:12px}
+  .jobs output{font:700 clamp(56px,6vw,96px)/.9 var(--display);letter-spacing:-.05em}
+  .jobs span{color:var(--ink-3);font-size:17px}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0;cursor:pointer}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--ink) var(--f,30%),rgba(17,18,20,.14) var(--f,30%))}
+  input[type=range]::-moz-range-track{height:6px;border-radius:3px;background:rgba(17,18,20,.14)}
+  input[type=range]::-moz-range-progress{height:6px;border-radius:3px;background:var(--ink)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-10px;border-radius:50%;background:var(--card);border:2px solid var(--ink);transition:transform .15s var(--ease)}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--card);border:2px solid var(--ink)}
+  input[type=range]:active::-webkit-slider-thumb{transform:scale(1.12)}
+  .scale{display:flex;justify-content:space-between;margin-top:-6px;color:var(--ink-3)}
+  .presets{display:flex;flex-wrap:wrap;gap:6px}
+  .presets button{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:transparent;font:500 13px var(--mono);cursor:pointer;color:var(--ink-2);transition:border-color .2s var(--ease),color .2s var(--ease)}
+  .presets button:hover{border-color:var(--ink);color:var(--ink)}
+  .verdict{margin-top:auto;padding-top:18px;border-top:1px solid var(--line)}
+  .verdict p{font-size:15px;color:var(--ink-2)}
+  .verdict strong{display:block;font:700 30px/1.05 var(--display);letter-spacing:-.035em;color:var(--ink);margin-bottom:6px}
+  .chart{padding:clamp(16px,2vw,26px) clamp(16px,2vw,26px) 12px;position:relative}
+  .chart svg{display:block;width:100%;height:auto;overflow:visible}
+  .axis text{font:500 10.5px var(--mono);fill:var(--ink-3)}
+  .grid line{stroke:var(--line)}
+  .curve{fill:none;stroke-width:2.5;stroke-linejoin:round}
+  .curve.pro{stroke:var(--ink)} .curve.ent{stroke:#8a8d95;stroke-dasharray:7 5} .curve.free{stroke:var(--ok);stroke-width:4;stroke-linecap:round}
+  .curve-l{font:600 12px var(--sans)}
+  .cursor{stroke:var(--ink);stroke-dasharray:3 4}
+  .dot{fill:var(--card);stroke:var(--ink);stroke-width:2.5}
+  .tip rect{fill:var(--ink)}
+  .tip text{font:600 12px var(--mono);fill:var(--paper)}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;color:var(--ink-2);font-size:13.5px}
+  .legend i{display:inline-block;width:18px;height:0;border-top:2.5px solid;margin-right:7px;vertical-align:middle}
 
   /* ---------- plans ---------- */
-  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:start;padding-bottom:12px}
-  .plan{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 24px 28px;
-        display:flex;flex-direction:column;position:relative}
-  .plan.pro{border:1.5px solid var(--pine);margin-block:-18px;padding:40px 26px 34px;
-            box-shadow:0 18px 44px -26px rgba(15,93,74,.5),0 2px 10px rgba(18,22,26,.05);z-index:1}
-  .flag{position:absolute;top:0;left:26px;transform:translateY(-50%);
-        background:var(--pine);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.07em;
-        text-transform:uppercase;padding:5px 12px;border-radius:999px}
-  .pname{margin:0;font-size:15px;font-weight:700;letter-spacing:-.005em}
-  .pfor{margin:4px 0 0;font-size:13.5px;color:var(--ink-3)}
+  .bill{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:clamp(40px,6vw,70px) var(--gutter) 18px}
+  .bill h2{font:700 clamp(28px,2.8vw,42px)/1 var(--display);letter-spacing:-.04em}
+  .toggle{display:inline-flex;padding:4px;border-radius:999px;background:rgba(17,18,20,.06);position:relative}
+  .toggle button{position:relative;z-index:1;min-height:40px;padding:0 18px;border-radius:999px;border:0;background:transparent;font:600 14.5px var(--sans);color:var(--ink-2);cursor:pointer;transition:color .25s var(--ease)}
+  .toggle button[aria-pressed="true"]{color:var(--ink)}
+  .toggle .pill{position:absolute;top:4px;bottom:4px;left:4px;border-radius:999px;background:var(--card);box-shadow:0 1px 2px rgba(17,18,20,.12),0 0 0 1px var(--line);transition:transform .35s var(--ease),width .35s var(--ease)}
+  .toggle small{font:600 11px var(--mono);color:var(--ok);margin-left:6px}
+  .tax{color:var(--ink-3)}
+  .plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0 var(--gutter);border:1px solid var(--line-2);border-radius:18px;background:var(--card)}
+  .plan{position:relative;padding:28px clamp(18px,2vw,30px) 30px;display:flex;flex-direction:column;gap:16px;transition:background-color .35s var(--ease)}
+  .plan + .plan{border-left:1px solid var(--line)}
+  .plan.fit{background:var(--ok-soft)}
+  .plan:first-child{border-radius:17px 0 0 17px}.plan:last-child{border-radius:0 17px 17px 0}
+  .badge{position:absolute;top:-13px;left:clamp(18px,2vw,30px);display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border-radius:999px;background:var(--ok);color:#fff;font:600 12px var(--sans);opacity:0;transform:translateY(4px);transition:opacity .3s var(--ease),transform .3s var(--ease)}
+  .plan.fit .badge{opacity:1;transform:none}
+  .plan h3{font:700 24px/1 var(--display);letter-spacing:-.03em}
+  .plan .for{color:var(--ink-2);font-size:15px;margin-top:-8px}
+  .amount{display:flex;align-items:baseline;gap:8px;min-height:64px}
+  .amount b{font:700 56px/1 var(--display);letter-spacing:-.05em}
+  .amount span{color:var(--ink-2);font-size:14.5px;line-height:1.3}
+  .billed{font:500 12.5px/1.5 var(--mono);color:var(--ink-3);min-height:2.9em}
+  .plan .btn{width:100%}
+  .feat{display:grid;gap:9px;font-size:15px;padding-top:16px;border-top:1px solid var(--line)}
+  .feat li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;color:var(--ink-2)}
+  .feat li b{color:var(--ink);font-weight:600}
+  .feat li.lead{display:block;font-weight:600;color:var(--ink)}
+  .feat svg{width:16px;height:16px;margin-top:3px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .feat .y svg{stroke:var(--ok)} .feat .n svg{stroke:#9a9ca3} .feat .n{color:var(--ink-3)}
+  .over{margin:18px var(--gutter) 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start;padding:16px 18px;border-radius:14px;background:rgba(201,138,6,.1);color:var(--ink-2);font-size:15px}
+  .over b{color:var(--ink)}
+  .over svg{width:20px;height:20px;stroke:var(--late);fill:none;stroke-width:2;margin-top:2px}
 
-  .price{display:flex;align-items:baseline;gap:7px;margin:20px 0 0;
-         font-size:46px;font-weight:680;letter-spacing:-.045em;line-height:1.02}
-  .plan.pro .price{font-size:52px}
-  .price.word{font-size:34px;letter-spacing:-.03em}
-  .price .per{font-size:14.5px;font-weight:550;letter-spacing:0;color:var(--ink-3)}
-  .roll{display:inline-grid;overflow:hidden}
-  .roll>span{grid-area:1/1;transition:transform .36s cubic-bezier(.2,.85,.25,1),opacity .22s ease}
-  .roll>span:nth-child(2){transform:translateY(108%);opacity:0}
-  [data-cycle=year] .roll>span:nth-child(1){transform:translateY(-108%);opacity:0}
-  [data-cycle=year] .roll>span:nth-child(2){transform:translateY(0);opacity:1}
-  .billed{margin:9px 0 0;font-size:13px;color:var(--ink-3);min-height:20px}
-  .billed .roll>span{white-space:nowrap}
+  /* ---------- compare + faq ---------- */
+  .sec{padding:clamp(60px,8vw,110px) var(--gutter) 0}
+  .sec h2{font:700 clamp(28px,2.8vw,42px)/1 var(--display);letter-spacing:-.04em;margin-bottom:22px}
+  .tablewrap{overflow-x:auto;border:1px solid var(--line-2);border-radius:14px;background:var(--card)}
+  table{width:100%;border-collapse:collapse;font-size:15px;min-width:620px}
+  th,td{padding:13px 18px;text-align:left;border-bottom:1px solid var(--line)}
+  thead th{font:600 13px var(--sans);color:var(--ink-2);background:rgba(17,18,20,.02)}
+  tbody th{font-weight:500}
+  tbody tr:last-child th,tbody tr:last-child td{border-bottom:0}
+  td{color:var(--ink-2)}
+  td.y::before{content:"✓ ";color:var(--ok);font-weight:700}
+  td.n{color:#9a9ca3}
+  .faq{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 clamp(24px,4vw,64px)}
+  .faq div{padding:18px 0;border-top:1px solid var(--line)}
+  .faq dt{font-weight:600;font-size:17px}
+  .faq dd{margin-top:6px;color:var(--ink-2);max-width:52ch}
+  .close{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;margin:clamp(60px,8vw,110px) var(--gutter) 0;padding:28px 0;border-top:1px solid var(--ink)}
+  .close p{font:700 clamp(24px,2.4vw,34px)/1.1 var(--display);letter-spacing:-.035em}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;padding:22px var(--gutter) 30px;color:var(--ink-3);font-size:14px}
 
-  .blurb{margin:16px 0 0;font-size:14px;color:var(--ink-2);min-height:63px;line-height:1.5}
-  .cta{display:block;width:100%;text-align:center;margin-top:20px;padding:12px 16px;border-radius:9px;
-       font-size:14.5px;font-weight:650;text-decoration:none;
-       border:1.5px solid var(--line);color:var(--ink);background:var(--card);
-       transition:background .16s,border-color .16s,color .16s}
-  .cta:hover{background:#F4F3EE;border-color:#D4D3CA}
-  .cta.solid{background:var(--pine);border-color:var(--pine);color:#fff}
-  .cta.solid:hover{background:var(--pine-2);border-color:var(--pine-2)}
-
-  .incl{margin:24px 0 12px;padding-top:20px;border-top:1px solid var(--line-2);
-        font-size:12.5px;font-weight:650;color:var(--ink);letter-spacing:.005em}
-  ul.feat{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
-  ul.feat li{display:flex;gap:10px;font-size:14px;color:var(--ink-2);line-height:1.42}
-  ul.feat svg{width:16px;height:16px;flex:0 0 auto;margin-top:2px;stroke-width:2.3;fill:none;
-              stroke-linecap:round;stroke-linejoin:round}
-  ul.feat .y svg{stroke:var(--pine)}
-  ul.feat .n{color:var(--ink-3)}
-  ul.feat .n svg{stroke:#B9BCB4}
-  ul.feat b{color:var(--ink);font-weight:650}
-
-  /* ---------- everything band ---------- */
-  .band{border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);margin-top:46px;
-        background:rgba(255,255,255,.55)}
-  .band .wrap{display:flex;gap:14px 34px;flex-wrap:wrap;padding-top:20px;padding-bottom:20px;
-              font-size:13.5px;color:var(--ink-2);align-items:center}
-  .band b{color:var(--ink);font-weight:650;font-size:13px;letter-spacing:.05em;text-transform:uppercase}
-  .band span{display:inline-flex;align-items:center;gap:8px}
-  .band span svg{width:14px;height:14px;stroke:var(--pine);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
-
-  /* ---------- faq ---------- */
-  .faq{padding-block:62px 74px;padding-inline:24px}
-  .faq h2{margin:0 0 6px;font-size:clamp(23px,3vw,30px);letter-spacing:-.028em;font-weight:680}
-  .faq .lead{margin:0 0 30px;color:var(--ink-2);font-size:15.5px}
-  .faq .lead a{color:var(--pine);text-decoration-thickness:1px;text-underline-offset:3px}
-  .qs{column-count:2;column-gap:48px;border-top:1px solid var(--line)}
-  .qs details{break-inside:avoid}
-  details{border-bottom:1px solid var(--line)}
-  summary{display:flex;align-items:flex-start;gap:14px;padding:17px 0;cursor:pointer;
-          font-size:15.5px;font-weight:600;letter-spacing:-.008em;list-style:none}
-  summary::-webkit-details-marker{display:none}
-  summary::after{content:"";margin-left:auto;margin-right:4px;flex:0 0 auto;width:11px;height:11px;margin-top:6px;
-                 border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);
-                 transform:rotate(45deg);transition:transform .2s}
-  details[open] summary::after{transform:rotate(225deg);border-color:var(--pine)}
-  summary:hover{color:var(--pine)}
-  details p{margin:0 0 19px;font-size:14.5px;color:var(--ink-2);line-height:1.6;max-width:56ch;padding-right:24px}
-  details p code{font-family:var(--mono);font-size:13px;background:#F2F1EB;padding:1px 5px;border-radius:4px}
-
-  footer{border-top:1px solid var(--line-2);padding:22px 0 30px;font-size:13px;color:var(--ink-3)}
-  footer .wrap{display:flex;gap:10px 22px;flex-wrap:wrap;align-items:center}
-  footer a{color:var(--ink-3);text-decoration:none}
-  footer a:hover{color:var(--ink);text-decoration:underline}
+  @media (prefers-reduced-motion: reduce){ .toggle .pill,.plan,.badge{transition:none} }
 
   /* ---------- responsive ---------- */
-  @media (max-width:940px){
-    .hero{grid-template-columns:1fr;gap:18px}
-    .sub{margin:0}
-    .plans{grid-template-columns:1fr;gap:18px;max-width:460px}
-    .plan.pro{margin-block:22px;padding:34px 24px 30px}
-    .plan.pro .price{font-size:46px}
-    .blurb{min-height:0}
-    .qs{column-count:1}
-    .faq{padding-block:46px 56px}
-    .qs details p{padding-right:0}
+  @media (max-width:980px){
+    .nav ul{display:none}
+    .head{grid-template-columns:minmax(0,1fr)}
+    .calc{grid-template-columns:minmax(0,1fr)}
+    .calc .ctl{border-right:0;border-bottom:1px solid var(--line)}
+    .plans{grid-template-columns:minmax(0,1fr);border:0;background:transparent;gap:22px}
+    .plan{border:1px solid var(--line-2);border-radius:18px!important;background:var(--card)}
+    .plan + .plan{border-left:1px solid var(--line-2)}
+    .faq{grid-template-columns:minmax(0,1fr)}
   }
-  @media (max-width:680px){
-    .wrap{padding:0 16px}
-    .faq{padding-inline:16px}
-    .hnav{display:none}
-    .top{padding-top:38px}
-    .hero{grid-template-columns:1fr;gap:16px}
-    .sub{margin:0}
-    .cycle .note{margin-left:0}
-    .cycle{margin:24px 0 32px}
-    .seg button{min-width:0;padding:7px 14px;font-size:14px}
-    .plans{max-width:none}
-    details p{padding-right:0}
+  @media (max-width:560px){
+    .nav .ghost{display:none}
+    .bill{flex-direction:column;align-items:flex-start}
   }
-  @media (prefers-reduced-motion:reduce){
-    *{animation:none!important;transition:none!important}
+  @media (max-height:520px) and (min-width:560px){
+    .nav{padding-top:6px;padding-bottom:6px}
+    .head{padding-top:14px;padding-bottom:12px;grid-template-columns:minmax(0,1fr)}
+    .head p{display:none}
+    h1{font-size:36px}
+    .calc{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)}
+    .calc .ctl{border-right:1px solid var(--line);border-bottom:0;padding:14px;gap:8px}
+    .presets,.scale,.verdict p{display:none}
+    .jobs output{font-size:44px}
+    .verdict{padding-top:8px}
+    .verdict strong{font-size:20px}
+    .legend{display:none}
   }
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <symbol id="ok" viewBox="0 0 24 24"><path d="M4 12.5l5.2 5.2L20 6.8"/></symbol>
-  <symbol id="no" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
-</defs></svg>
-
-<header>
-  <div class="wrap hd">
-    <a class="logo" href="#top">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.4 2"/></svg>
-      Cronwright
-    </a>
-    <nav class="hnav" aria-label="Main">
-      <a href="#top">Product</a>
-      <a href="#top">Integrations</a>
-      <a href="#top" aria-current="page">Pricing</a>
-      <a href="#top">Docs</a>
-    </nav>
-    <div class="r">
-      <a href="#top">Sign in</a>
-      <a class="cta solid" style="width:auto;margin:0;padding:8px 15px;font-size:14px" href="#top">Start free</a>
-    </div>
-  </div>
+<div class="page">
+<header class="nav">
+  <a class="brand" href="#top" aria-label="Cronwright home">
+    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11" fill="none" stroke="#111214" stroke-width="2.2"/><path d="M13 6.5V13l4.5 3" fill="none" stroke="#111214" stroke-width="2.2" stroke-linecap="round"/><circle cx="21.5" cy="4.5" r="3.5" fill="#12804a"/></svg>
+    Cronwright
+  </a>
+  <ul><li><a href="#top">Product</a></li><li><a href="#top">Integrations</a></li><li><a href="#top" aria-current="page">Pricing</a></li><li><a href="#top">Docs</a></li></ul>
+  <div class="end"><a class="ghost" href="#top">Sign in</a><a class="btn ink" href="#plans">Start free</a></div>
 </header>
 
-<main id="top" data-cycle="month">
-  <section class="top">
-    <div class="wrap">
-      <p class="eyebrow">Pricing</p>
-      <div class="hero">
-        <h1>Know a cron job failed before your customers do.</h1>
-        <p class="sub">Cronwright watches your scheduled tasks and pages someone when one runs late, exits non-zero, or stops checking in. Priced per monitored job and per seat — never per alert.</p>
-      </div>
+<main id="top">
+<section class="head" aria-labelledby="h">
+  <h1 id="h">Pay for the jobs you watch. <span>Nothing else.</span></h1>
+  <p>Cronwright pages you when a scheduled job runs late, exits non-zero or stops checking in. The only thing we count is <b>monitored jobs</b>: never alerts, runs or check-ins.</p>
+</section>
 
-      <div class="cycle">
-        <div class="seg" role="group" aria-label="Billing period">
-          <span class="thumb" aria-hidden="true"></span>
-          <button type="button" id="b-month" aria-pressed="true">Monthly</button>
-          <button type="button" id="b-year" aria-pressed="false">Yearly</button>
-        </div>
-        <span class="save">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5.2 5.2L20 6.8"/></svg>
-          Save 21% on yearly
-        </span>
-        <span class="note">Prices in AUD, excluding GST.</span>
-      </div>
-
-      <div class="plans">
-        <!-- FREE -->
-        <article class="plan">
-          <h2 class="pname">Free</h2>
-          <p class="pfor">Side projects and homelabs</p>
-          <div class="price"><span class="roll"><span>$0</span><span>$0</span></span><span class="per">forever</span></div>
-          <p class="billed"><span class="roll"><span>No card required</span><span>No card required</span></span></p>
-          <p class="blurb">Enough to cover the handful of jobs you actually lose sleep over, with e-mail alerts and a day of history.</p>
-          <a class="cta" href="#top">Create a workspace</a>
-          <p class="incl">Includes</p>
-          <ul class="feat">
-            <li class="y"><svg><use href="#ok"/></svg><span><b>5</b> monitored jobs</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span><b>1</b> seat</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>24-hour event history</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>Email alerts, 1-minute resolution</span></li>
-            <li class="n"><svg><use href="#no"/></svg><span>Slack, PagerDuty and webhooks</span></li>
-            <li class="n"><svg><use href="#no"/></svg><span>On-call schedules</span></li>
-          </ul>
-        </article>
-
-        <!-- PRO -->
-        <article class="plan pro" aria-labelledby="p-pro">
-          <span class="flag">Most popular</span>
-          <h2 class="pname" id="p-pro">Pro</h2>
-          <p class="pfor">Teams that carry a pager</p>
-          <div class="price"><span class="roll"><span>$24</span><span>$19</span></span><span class="per">per seat / month</span></div>
-          <p class="billed"><span class="roll"><span>Billed monthly, cancel any time</span><span>Billed $228 per seat, yearly</span></span></p>
-          <p class="blurb">Routing, escalation and a real audit trail — so a failed 03:00 job reaches the person who can fix it.</p>
-          <a class="cta solid" href="#top">Start 14-day trial</a>
-          <p class="incl">Everything in Free, plus</p>
-          <ul class="feat">
-            <li class="y"><svg><use href="#ok"/></svg><span><b>200</b> monitored jobs, then $0.30 each</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>Up to <b>25</b> seats</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>90-day event history and run logs</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>Slack, PagerDuty, Opsgenie, webhooks</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>On-call rotations and escalation</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>Status page on your own domain</span></li>
-            <li class="n"><svg><use href="#no"/></svg><span>SAML SSO and audit log</span></li>
-          </ul>
-        </article>
-
-        <!-- ENTERPRISE -->
-        <article class="plan">
-          <h2 class="pname">Enterprise</h2>
-          <p class="pfor">Regulated and high-volume estates</p>
-          <div class="price word"><span class="roll"><span>Custom</span><span>Custom</span></span></div>
-          <p class="billed"><span class="roll"><span>Annual agreement, from 25 seats</span><span>Annual agreement, from 25 seats</span></span></p>
-          <p class="blurb">For estates where the job list is in the thousands and someone will ask where the data is stored.</p>
-          <a class="cta" href="#top">Talk to sales</a>
-          <p class="incl">Everything in Pro, plus</p>
-          <ul class="feat">
-            <li class="y"><svg><use href="#ok"/></svg><span>Unlimited jobs and seats</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>3-year event history, exportable</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>SAML SSO, SCIM and audit log</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>Self-hosted runner inside your VPC</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>99.95% uptime SLA, named engineer</span></li>
-            <li class="y"><svg><use href="#ok"/></svg><span>Invoice billing, NET-30</span></li>
-          </ul>
-        </article>
-      </div>
+<section class="calc" aria-labelledby="calc-h">
+  <div class="ctl">
+    <h2 id="calc-h" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Price calculator</h2>
+    <label for="n">How many jobs do you run?</label>
+    <div class="jobs"><output id="nOut" for="n" class="num">120</output><span>monitored jobs</span></div>
+    <input id="n" type="range" min="0" max="1000" step="1" value="560" aria-describedby="verdict">
+    <div class="scale mono" aria-hidden="true"><span>1</span><span>10</span><span>100</span><span>1,000</span><span>5,000</span></div>
+    <div class="presets" aria-label="Examples">
+      <button type="button" data-n="4">A side project</button>
+      <button type="button" data-n="120">A product team</button>
+      <button type="button" data-n="3500">A data platform</button>
     </div>
-  </section>
-
-  <div class="band">
-    <div class="wrap">
-      <b>Every plan</b>
-      <span><svg><use href="#ok"/></svg>1-minute check resolution</span>
-      <span><svg><use href="#ok"/></svg>Unlimited alerts, never metered</span>
-      <span><svg><use href="#ok"/></svg>Data stored in ap-southeast-2</span>
-      <span><svg><use href="#ok"/></svg>Downgrade or cancel yourself</span>
-    </div>
+    <div class="verdict" id="verdict" aria-live="polite"><strong>Pro, $45 a month</strong><p>50 jobs included, then 70 more at $0.30 each.</p></div>
   </div>
+  <div class="chart">
+    <svg id="chart" viewBox="0 0 640 320" role="img" aria-label="Monthly cost against number of monitored jobs for the Free, Pro and Enterprise plans.">
+      <g class="grid" id="grid"></g>
+      <g class="axis" id="axis"></g>
+      <path class="curve ent" id="cEnt"/>
+      <path class="curve pro" id="cPro"/>
+      <path class="curve free" id="cFree"/>
+      <text class="curve-l" id="lPro" fill="#111214">Pro</text>
+      <text class="curve-l" id="lEnt" fill="#6e717a">Enterprise</text>
+      <text class="curve-l" id="lFree" fill="#12804a">Free</text>
+      <line class="cursor" id="cur" y1="10" y2="280"/>
+      <circle class="dot" id="dot" r="6"/>
+      <g class="tip" id="tip"><rect rx="6" height="24" width="70"/><text x="10" y="16"></text></g>
+    </svg>
+    <p class="legend" aria-hidden="true"><span><i style="border-color:#12804a"></i>Free, up to 5 jobs</span><span><i style="border-color:#111214"></i>Pro</span><span><i style="border-color:#8a8d95;border-top-style:dashed"></i>Enterprise</span></p>
+  </div>
+</section>
 
-  <section class="faq wrap" aria-labelledby="faq-t">
-    <h2 id="faq-t">Billing questions</h2>
-    <p class="lead">Anything not covered here, email <a href="#top">billing@cronwright.example.com</a> — a person answers within a business day.</p>
-    <div class="qs">
-      <details open>
-        <summary>What counts as a monitored job?</summary>
-        <p>One scheduled task with one expected schedule. A job that runs every five minutes counts once, not 288 times a day. Paused jobs don't count against your limit until you resume them.</p>
-      </details>
-      <details>
-        <summary>How does per-seat billing work mid-month?</summary>
-        <p>Seats are prorated to the day. Add someone on the 20th of a 30-day month and you're charged a third of a seat. Remove a seat and the remainder is credited against your next invoice — we don't refund seats to a card.</p>
-      </details>
-      <details>
-        <summary>What happens if I go over the job limit?</summary>
-        <p>Nothing stops working. We keep monitoring every job you've added and email the workspace owner. On Pro, jobs past 200 are billed at $0.30 each on your next invoice; on Free, new jobs stop being accepted after 14 days.</p>
-      </details>
-      <details>
-        <summary>Can I move from monthly to yearly later?</summary>
-        <p>Yes, at any time. The unused part of your current month is credited against the annual invoice. Moving back to monthly takes effect at your renewal date rather than immediately.</p>
-      </details>
-      <details>
-        <summary>Which payment methods do you accept?</summary>
-        <p>Visa, Mastercard and Amex on Free and Pro. Enterprise can pay by invoice on NET-30 terms in AUD, USD, GBP or EUR. Purchase orders are fine; send them to <code>ap@cronwright.example.com</code>.</p>
-      </details>
-      <details>
-        <summary>Do you offer refunds?</summary>
-        <p>Cancel an annual plan within the first 30 days and we refund it in full. After that the plan runs to the end of its term — we don't do partial-year refunds. We email every workspace owner 14 days before a renewal charge.</p>
-      </details>
-    </div>
-  </section>
+<div class="bill" id="plans">
+  <h2>Plans</h2>
+  <div class="toggle" role="group" aria-label="Billing period">
+    <span class="pill" id="pill" aria-hidden="true"></span>
+    <button type="button" aria-pressed="true" data-p="m">Monthly</button>
+    <button type="button" aria-pressed="false" data-p="y">Yearly<small>2 months free</small></button>
+  </div>
+  <p class="tax mono">Prices in AUD, excluding GST</p>
+</div>
+<section class="plans" aria-label="Plans">
+  <article class="plan" data-plan="free">
+    <span class="badge">Fits your jobs</span>
+    <h3>Free</h3><p class="for">Side projects and homelabs</p>
+    <p class="amount"><b class="num" data-m="0" data-y="0">$0</b><span>forever</span></p>
+    <p class="billed">No card needed</p>
+    <a class="btn line" href="#top">Create a workspace</a>
+    <ul class="feat">
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span><b>5</b> monitored jobs</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>1 seat</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>Email alerts</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>7 days of run history</span></li>
+      <li class="n"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg><span>Slack, PagerDuty and webhooks<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"> (not included)</span></span></li>
+      <li class="n"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg><span>Escalation rules<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"> (not included)</span></span></li>
+    </ul>
+  </article>
+  <article class="plan" data-plan="pro">
+    <span class="badge">Fits your jobs</span>
+    <h3>Pro</h3><p class="for">Teams that carry a pager</p>
+    <p class="amount"><b class="num" data-m="24" data-y="20">$24</b><span>a month,<br>50 jobs included</span></p>
+    <p class="billed" data-m="Billed monthly. Extra jobs $0.30 each a month." data-y="Billed $240 a year. Extra jobs $0.30 each a month.">Billed monthly. Extra jobs $0.30 each a month.</p>
+    <a class="btn go" href="#top">Start a 14-day trial</a>
+    <ul class="feat">
+      <li class="lead">Everything in Free, plus</li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span><b>50</b> jobs, then $0.30 per job</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span><b>10</b> seats</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>Slack, PagerDuty and webhooks</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>Escalation rules</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>90 days of run history</span></li>
+    </ul>
+  </article>
+  <article class="plan" data-plan="ent">
+    <span class="badge">Fits your jobs</span>
+    <h3>Enterprise</h3><p class="for">Platforms with thousands of jobs</p>
+    <p class="amount"><b class="num" data-m="900" data-y="900">$900</b><span>a month,<br>2,500 jobs included</span></p>
+    <p class="billed" data-m="Annual agreement, invoiced monthly or yearly. Extra jobs $0.18 each." data-y="Annual agreement, invoiced monthly or yearly. Extra jobs $0.18 each.">Annual agreement, invoiced monthly or yearly. Extra jobs $0.18 each.</p>
+    <a class="btn line" href="#top">Talk to an engineer</a>
+    <ul class="feat">
+      <li class="lead">Everything in Pro, plus</li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span><b>2,500</b> jobs, then $0.18 per job</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span><b>Unlimited</b> seats</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>SAML SSO, SCIM and audit log</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>3 years of run history</span></li>
+      <li class="y"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5"/></svg><span>99.95% uptime, credited in writing</span></li>
+    </ul>
+  </article>
+</section>
+<p class="over"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5 18 17H2z M10 8v4 M10 14.5v.1"/></svg><span><b>Going over never stops monitoring.</b> On Pro and Enterprise, extra jobs are billed per day they exist, and we email the account owner at 80% and 100% of the included jobs. On Free, a sixth job is created paused until you upgrade.</span></p>
+
+<section class="sec" aria-labelledby="cmp-h">
+  <h2 id="cmp-h">Compare every limit</h2>
+  <div class="tablewrap" tabindex="0" role="region" aria-labelledby="cmp-h">
+    <table>
+      <thead><tr><th scope="col">Limit</th><th scope="col">Free</th><th scope="col">Pro</th><th scope="col">Enterprise</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Monitored jobs included</th><td>5</td><td>50</td><td>2,500</td></tr>
+        <tr><th scope="row">Each extra job, a month</th><td class="n">Paused</td><td>$0.30</td><td>$0.18</td></tr>
+        <tr><th scope="row">Seats</th><td>1</td><td>10, then $6 each</td><td>Unlimited</td></tr>
+        <tr><th scope="row">Shortest check interval</th><td>5 minutes</td><td>1 minute</td><td>10 seconds</td></tr>
+        <tr><th scope="row">Run history</th><td>7 days</td><td>90 days</td><td>3 years</td></tr>
+        <tr><th scope="row">Alert channels</th><td>Email</td><td class="y">Slack, PagerDuty, SMS, webhooks</td><td class="y">All, plus Opsgenie</td></tr>
+        <tr><th scope="row">SSO and audit log</th><td class="n">Not included</td><td class="n">Not included</td><td class="y">SAML, SCIM, audit log</td></tr>
+        <tr><th scope="row">Support</th><td>Docs and forum</td><td>Email, one business day</td><td>Named engineer, 1-hour page</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="faq-h">
+  <h2 id="faq-h">Billing, answered</h2>
+  <dl class="faq">
+    <div><dt>What counts as a monitored job?</dt><dd>Any schedule we watch: a cron line, a Kubernetes CronJob, an Airflow DAG. Paused jobs and jobs deleted before the day ends are not counted.</dd></div>
+    <div><dt>What happens if I go over?</dt><dd>Nothing stops. Extra jobs are billed at your plan’s per-job rate, pro-rated by day, and you get an email at 80% and 100%.</dd></div>
+    <div><dt>Someone joins or leaves mid-month?</dt><dd>Seats beyond the included ten are pro-rated by day in both directions, and credited on the next invoice.</dd></div>
+    <div><dt>Can I switch between monthly and yearly?</dt><dd>Yes, at any time. Moving to yearly credits what is left of the month; moving to monthly starts when the year ends.</dd></div>
+    <div><dt>How can I pay?</dt><dd>Visa, Mastercard or Amex on Pro. Enterprise can also pay by invoice with 30-day terms, in AUD, USD or EUR.</dd></div>
+    <div><dt>Do you give refunds?</dt><dd>Within 30 days of any charge, in full, no form to fill in. After that, we refund the unused part of a yearly plan if you close the account.</dd></div>
+  </dl>
+</section>
+
+<div class="close"><p>Five jobs free, for as long as you like.</p><a class="btn ink" href="#top">Create a workspace</a></div>
 </main>
-
-<footer>
-  <div class="wrap">
-    <span>© 2026 Cronwright Pty Ltd · ABN 62 418 903 771</span>
-    <a href="#top">Terms</a><a href="#top">Privacy</a><a href="#top">Status</a><a href="#top">Security</a>
-  </div>
-</footer>
+<footer><span>Cronwright Pty Ltd · Level 3, 90 Collins Street, Melbourne</span><span>ABN 38 612 007 419</span></footer>
+</div>
 
 <script>
 (function(){
-  var root=document.getElementById('top'),
-      m=document.getElementById('b-month'),
-      y=document.getElementById('b-year');
-  function set(cycle){
-    root.setAttribute('data-cycle',cycle);
-    m.setAttribute('aria-pressed',String(cycle==='month'));
-    y.setAttribute('aria-pressed',String(cycle==='year'));
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var W = 640, H = 320, L = 56, R = 16, T = 12, B = 40, MAXN = 5000, MAXC = 1800;
+  function fmt(n){ return n.toLocaleString('en-AU', { maximumFractionDigits: 2, minimumFractionDigits: n % 1 ? 2 : 0 }); }
+  /* the slider is logarithmic: 1 to 5,000 jobs across 0..1000 */
+  function jobsAt(v){ return Math.max(1, Math.round(Math.pow(10, v / 1000 * Math.log10(MAXN)))); }
+  function valueAt(n){ return Math.round(Math.log10(Math.max(1, n)) / Math.log10(MAXN) * 1000); }
+  function x(n){ return L + Math.log10(Math.max(1, n)) / Math.log10(MAXN) * (W - L - R); }
+  function y(c){ return H - B - Math.min(c, MAXC) / MAXC * (H - B - T); }
+  var yearly = false;
+  function pro(n){ return (yearly ? 20 : 24) + Math.max(0, n - 50) * 0.3; }
+  function ent(n){ return 900 + Math.max(0, n - 2500) * 0.18; }
+
+  /* axes and gridlines, drawn once */
+  var grid = document.getElementById('grid'), axis = document.getElementById('axis'), g = '', a = '';
+  [0, 300, 600, 900, 1200, 1500, 1800].forEach(function(c){ g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(c) + '" y2="' + y(c) + '"/>'; a += '<text x="' + (L - 10) + '" y="' + (y(c) + 4) + '" text-anchor="end">$' + fmt(c) + '</text>'; });
+  [1, 10, 100, 1000, 5000].forEach(function(n){ a += '<text x="' + x(n) + '" y="' + (H - B + 22) + '" text-anchor="middle">' + fmt(n) + '</text>'; });
+  a += '<text x="' + (W - R) + '" y="' + (H - 4) + '" text-anchor="end">monitored jobs (log scale)</text>';
+  grid.innerHTML = g; axis.innerHTML = a;
+
+  function path(fn, from, to){
+    var d = '', steps = 120;
+    for (var i = 0; i <= steps; i++){ var n = Math.pow(10, Math.log10(from) + (Math.log10(to) - Math.log10(from)) * i / steps); d += (i ? 'L' : 'M') + x(n).toFixed(1) + ' ' + y(fn(n)).toFixed(1); }
+    return d;
   }
-  m.addEventListener('click',function(){set('month');});
-  y.addEventListener('click',function(){set('year');});
+  var cPro = document.getElementById('cPro'), cEnt = document.getElementById('cEnt'), cFree = document.getElementById('cFree');
+  function curves(){
+    cPro.setAttribute('d', path(pro, 1, MAXN));
+    cEnt.setAttribute('d', path(ent, 1, MAXN));
+    cFree.setAttribute('d', 'M' + x(1) + ' ' + y(0) + 'L' + x(5) + ' ' + y(0));
+    var lp = document.getElementById('lPro'); lp.setAttribute('x', x(900)); lp.setAttribute('y', y(pro(900)) - 12);
+    var le = document.getElementById('lEnt'); le.setAttribute('x', x(8)); le.setAttribute('y', y(900) - 10);
+    var lf = document.getElementById('lFree'); lf.setAttribute('x', x(1.3)); lf.setAttribute('y', y(0) - 10);
+  }
+
+  var slider = document.getElementById('n'), out = document.getElementById('nOut'), verdict = document.getElementById('verdict');
+  var cur = document.getElementById('cur'), dot = document.getElementById('dot'), tip = document.getElementById('tip');
+  var plans = [].slice.call(document.querySelectorAll('.plan'));
+  function best(n){
+    if (n <= 5) return ['free', 0];
+    var p = pro(n), e = ent(n);
+    return p <= e ? ['pro', p] : ['ent', e];
+  }
+  function update(){
+    var n = jobsAt(+slider.value);
+    out.textContent = fmt(n);
+    slider.style.setProperty('--f', (slider.value / 10) + '%');
+    slider.setAttribute('aria-valuetext', fmt(n) + ' monitored jobs');
+    var b = best(n), plan = b[0], cost = b[1];
+    plans.forEach(function(el){ el.classList.toggle('fit', el.dataset.plan === plan); });
+    var s = verdict.querySelector('strong'), p = verdict.querySelector('p');
+    if (plan === 'free'){ s.textContent = 'Free, $0'; p.textContent = 'Up to five jobs, forever. No card needed.'; }
+    else if (plan === 'pro'){ s.textContent = 'Pro, $' + fmt(Math.round(cost * 100) / 100) + ' a month'; p.textContent = n > 50 ? '50 jobs included, then ' + fmt(n - 50) + ' more at $0.30 each' + (yearly ? ', on yearly billing.' : '.') : 'Your ' + fmt(n) + ' jobs fit inside the 50 included' + (yearly ? ', on yearly billing.' : '.'); }
+    else { s.textContent = 'Enterprise, $' + fmt(Math.round(cost)) + ' a month'; p.textContent = 'Past about 2,970 jobs, Enterprise costs less than Pro, and includes SSO and unlimited seats.'; }
+    var cx = x(n), cy = y(cost);
+    cur.setAttribute('x1', cx); cur.setAttribute('x2', cx);
+    dot.setAttribute('cx', cx); dot.setAttribute('cy', cy);
+    var label = '$' + fmt(Math.round(cost)), tw = label.length * 7.6 + 20;
+    tip.querySelector('rect').setAttribute('width', tw);
+    tip.querySelector('text').textContent = label;
+    var tx = Math.min(W - R - tw, Math.max(L, cx + 10)), ty = Math.max(T, cy - 36);
+    tip.setAttribute('transform', 'translate(' + tx.toFixed(1) + ' ' + ty.toFixed(1) + ')');
+  }
+  slider.addEventListener('input', update);
+  [].forEach.call(document.querySelectorAll('.presets button'), function(b){ b.addEventListener('click', function(){ ease(+b.dataset.n); }); });
+  var tw = 0;
+  function ease(n){
+    var from = +slider.value, to = valueAt(n), t0 = performance.now();
+    cancelAnimationFrame(tw);
+    if (reduce){ slider.value = to; update(); return; }
+    (function step(now){ var t = Math.min(1, (now - t0) / 600), e = 1 - Math.pow(1 - t, 3); slider.value = Math.round(from + (to - from) * e); update(); if (t < 1) tw = requestAnimationFrame(step); })(t0);
+  }
+
+  /* billing toggle: prices roll to the new period */
+  var pill = document.getElementById('pill'), tbtn = [].slice.call(document.querySelectorAll('.toggle button'));
+  function placePill(){ var on = tbtn.filter(function(b){ return b.getAttribute('aria-pressed') === 'true'; })[0]; pill.style.width = on.offsetWidth + 'px'; pill.style.transform = 'translateX(' + (on.offsetLeft - 4) + 'px)'; }
+  function roll(el, to){
+    var from = +el.dataset.now || +el.dataset.m, t0 = performance.now();
+    el.dataset.now = to;
+    if (reduce || from === to){ el.textContent = '$' + fmt(to); return; }
+    (function step(now){ var t = Math.min(1, (now - t0) / 500), e = 1 - Math.pow(1 - t, 3); el.textContent = '$' + fmt(Math.round(from + (to - from) * e)); if (t < 1) requestAnimationFrame(step); })(t0);
+  }
+  tbtn.forEach(function(b){
+    b.addEventListener('click', function(){
+      yearly = b.dataset.p === 'y';
+      tbtn.forEach(function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      placePill();
+      [].forEach.call(document.querySelectorAll('.amount b'), function(el){ roll(el, +el.dataset[yearly ? 'y' : 'm']); });
+      [].forEach.call(document.querySelectorAll('.billed[data-m]'), function(el){ el.textContent = el.dataset[yearly ? 'y' : 'm']; });
+      document.querySelector('[data-plan="pro"] .amount span').innerHTML = yearly ? 'a month, billed yearly,<br>50 jobs included' : 'a month,<br>50 jobs included';
+      curves(); update();
+    });
+  });
+  addEventListener('resize', placePill);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placePill);
+
+  curves(); placePill();
+  /* on load the slider travels once from a single job to a product team's 120 */
+  if (reduce){ slider.value = valueAt(120); update(); }
+  else { slider.value = 0; update(); setTimeout(function(){ ease(120); }, 500); }
 })();
 </script>
 </body>

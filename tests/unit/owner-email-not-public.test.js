@@ -97,6 +97,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import zlib from 'node:zlib'
 import { pathToFileURL } from 'node:url'
 import { adminEmails as serverAdminEmails } from '../../api/_lib/adminEmails.js'
 import {
@@ -112,7 +113,9 @@ import {
 import { prerenderRoutes } from '../../scripts/route-matrix.mjs'
 
 const REPO = process.cwd()
-const DIST = path.join(REPO, 'dist')
+// DIST_DIR lets this test target a build output directory other than the
+// default, so more than one build can exist without overwriting another.
+const DIST = path.join(REPO, process.env.DIST_DIR || 'dist')
 
 // These read dist/, so they only mean anything after a build; skip rather than
 // fail when run standalone, the way tests/unit/canonical-host.test.js does.
@@ -147,6 +150,103 @@ function allowed(address) {
   return UNROUTABLE.test(lower.slice(lower.lastIndexOf('@') + 1))
 }
 
+// ── Images: read the metadata, not the pixels ───────────────────────────────
+//
+// Compressed pixel data is noise to a text scan, and megabytes of it will spell
+// something address-shaped by chance sooner or later. For WebP and PNG, which
+// are recognised by their signature bytes rather than their file name, the
+// scan reads every chunk EXCEPT the ones holding pixels: XMP, EXIF, ICC
+// profiles, PNG text chunks (inflated where compressed), any chunk the parser
+// does not recognise, and anything trailing the container are all still read.
+// A file that does not parse as its container is read whole, so a malformed
+// image can only make the scan stricter. Every other format is read whole.
+const WEBP_PIXELS = new Set(['VP8 ', 'VP8L', 'ALPH'])
+const PNG_PIXELS = new Set(['IDAT', 'fdAT'])
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+/** RIFF chunks under `buf`, minus pixel chunks, pushed onto `out`. Animation
+ *  frames (ANMF) are descended into past their 16-byte frame header. */
+function webpChunks(buf, out) {
+  let at = 0
+  while (at < buf.length) {
+    if (at + 8 > buf.length) throw new Error('truncated WebP chunk header')
+    const id = buf.toString('latin1', at, at + 4)
+    const size = buf.readUInt32LE(at + 4)
+    const end = at + 8 + size
+    if (end > buf.length) throw new Error(`WebP chunk ${id} overruns the file`)
+    const body = buf.subarray(at + 8, end)
+    if (id === 'ANMF') {
+      if (size < 16) throw new Error('truncated WebP frame header')
+      webpChunks(body.subarray(16), out)
+    } else if (!WEBP_PIXELS.has(id)) {
+      out.push(body)
+    }
+    at = end + (size & 1)
+  }
+}
+
+function webpText(bytes) {
+  const riffEnd = 8 + bytes.readUInt32LE(4)
+  if (riffEnd > bytes.length) throw new Error('WebP RIFF size overruns the file')
+  const out = []
+  webpChunks(bytes.subarray(12, riffEnd), out)
+  if (riffEnd < bytes.length) out.push(bytes.subarray(riffEnd))
+  return out
+}
+
+/** The deflated payload of a PNG zTXt, iTXt or iCCP chunk, or nothing. */
+function pngInflated(id, body) {
+  const nul = body.indexOf(0)
+  if (nul < 0) return []
+  let data = null
+  if (id === 'zTXt' || id === 'iCCP') data = body.subarray(nul + 2)
+  if (id === 'iTXt' && body[nul + 1] === 1) {
+    const lang = body.indexOf(0, nul + 3)
+    const keyword = lang < 0 ? -1 : body.indexOf(0, lang + 1)
+    if (keyword >= 0) data = body.subarray(keyword + 1)
+  }
+  if (!data) return []
+  try {
+    return [zlib.inflateSync(data)]
+  } catch {
+    return []
+  }
+}
+
+function pngText(bytes) {
+  const out = []
+  let at = PNG_SIGNATURE.length
+  while (at < bytes.length) {
+    if (at + 12 > bytes.length) throw new Error('truncated PNG chunk')
+    const size = bytes.readUInt32BE(at)
+    const id = bytes.toString('latin1', at + 4, at + 8)
+    const end = at + 12 + size
+    if (end > bytes.length) throw new Error(`PNG chunk ${id} overruns the file`)
+    const body = bytes.subarray(at + 8, at + 8 + size)
+    if (!PNG_PIXELS.has(id)) out.push(body, ...pngInflated(id, body))
+    at = end
+    if (id === 'IEND') break
+  }
+  if (at < bytes.length) out.push(bytes.subarray(at))
+  return out
+}
+
+/** The text a file carries, and which container parser (if any) read it. */
+function readableText(bytes) {
+  const isWebp = bytes.length >= 12
+    && bytes.toString('latin1', 0, 4) === 'RIFF' && bytes.toString('latin1', 8, 12) === 'WEBP'
+  const isPng = bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE)
+  try {
+    // Joined with a newline, which the address pattern cannot cross, so no hit
+    // is stitched together from the end of one chunk and the start of the next.
+    if (isWebp) return { text: webpText(bytes).map((b) => b.toString('utf8')).join('\n'), container: 'webp' }
+    if (isPng) return { text: pngText(bytes).map((b) => b.toString('utf8')).join('\n'), container: 'png' }
+  } catch {
+    // Not a well-formed container: fall through and read every byte.
+  }
+  return { text: bytes.toString('utf8'), container: null }
+}
+
 /** Every file under `dir`, as text, plus the address-shaped strings in them.
  *  THROWS on a directory that does not exist, and on one holding no files — a
  *  probe reading nothing is the exact failure mode this file guards against. */
@@ -159,7 +259,7 @@ function scan(dir, { label = dir } = {}) {
       const bytes = fs.readFileSync(p)
       files.push({
         rel: path.relative(dir, p).split(path.sep).join('/'),
-        text: bytes.toString('utf8'),
+        ...readableText(bytes),
         bytes: bytes.length,
       })
     }
@@ -247,6 +347,91 @@ test('the digest search finds a planted address when it is there', () => {
     + 'address" below would be vacuous')
   assert.ok(!digests.includes(FOUNDER_DIGEST),
     'a fixture containing somebody else\'s address digested to the owner\'s — the comparison is not comparing')
+  fs.rmSync(dir, { recursive: true, force: true })
+})
+
+// ── The chunk walk is only trusted once it has been made to fail ───────────
+//
+// The pixel-exclusion logic above cannot be verified by reading dist/: a real
+// build either has a false positive today or it doesn't. So these build their
+// own minimal WebP and PNG containers — real enough for scan()'s own parser,
+// never decoded as images — to prove both directions: text living in a
+// metadata chunk is still found, and bytes living in a pixel chunk are not
+// text at all as far as the scan is concerned.
+
+/** A throwaway directory holding exactly the raw bytes given, unlike
+ *  fixture() above, which always writes utf8 text. */
+function binaryFixture(files) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'uil4b-address-probe-bin-'))
+  for (const [name, body] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), body)
+  return dir
+}
+
+function webpChunk(id, body) {
+  const size = Buffer.alloc(4)
+  size.writeUInt32LE(body.length, 0)
+  const pad = body.length % 2 ? Buffer.from([0]) : Buffer.alloc(0)
+  return Buffer.concat([Buffer.from(id, 'latin1'), size, body, pad])
+}
+
+/** A minimal container the chunk walk above reads as a WebP file. It is never
+ *  passed to an image decoder, so it does not need to be a displayable one. */
+function buildWebp(chunks) {
+  const payload = Buffer.concat([Buffer.from('WEBP', 'latin1'), ...chunks])
+  const size = Buffer.alloc(4)
+  size.writeUInt32LE(payload.length, 0)
+  return Buffer.concat([Buffer.from('RIFF', 'latin1'), size, payload])
+}
+
+function pngChunk(type, data) {
+  const len = Buffer.alloc(4)
+  len.writeUInt32BE(data.length, 0)
+  return Buffer.concat([len, Buffer.from(type, 'latin1'), data, Buffer.alloc(4)])
+}
+
+function buildPng(chunks) {
+  return Buffer.concat([PNG_SIGNATURE, ...chunks])
+}
+
+test('a personal address in a WebP XMP chunk is still caught', () => {
+  const email = 'someone@gmail.com'
+  const xmp = Buffer.from(`<?xpacket begin?><x:xmpmeta creator="${email}"/>`, 'utf8')
+  const pixels = crypto.randomBytes(64) // stands in for a real VP8L bitstream
+  const webp = buildWebp([webpChunk('VP8L', pixels), webpChunk('XMP ', xmp)])
+  const dir = binaryFixture({ 'planted.webp': webp })
+  const { addresses } = scan(dir)
+  assert.ok(addresses.has(email), 'an address planted in a WebP XMP chunk was not found by the scan')
+  assert.equal(allowed(email), false, 'a gmail.com address is being treated as an allowed one')
+  fs.rmSync(dir, { recursive: true, force: true })
+})
+
+test('random bytes in a WebP pixel chunk are never read as text', () => {
+  // The defect this file exists to fix: compressed pixel data is address-shaped
+  // by chance often enough to raise a false alarm on a real shipped animation.
+  // Excluding the pixel chunk by id (rather than by trying to tell noise from
+  // text) means this holds for ANY bytes in that chunk, not just ones this run
+  // of random.randomBytes happened to produce.
+  const pixels = crypto.randomBytes(200_000)
+  const webp = buildWebp([webpChunk('VP8L', pixels)])
+  const dir = binaryFixture({ 'noise.webp': webp })
+  const { files } = scan(dir)
+  assert.equal(files[0].text, '',
+    'bytes from a WebP pixel chunk reached the text scan — the false positive this file fixes can still happen')
+  fs.rmSync(dir, { recursive: true, force: true })
+})
+
+test('a personal address in a PNG tEXt chunk is still caught', () => {
+  const email = 'someone@gmail.com'
+  const text = Buffer.concat([Buffer.from('Author\0', 'latin1'), Buffer.from(email, 'utf8')])
+  const png = buildPng([
+    pngChunk('IHDR', Buffer.alloc(13)),
+    pngChunk('tEXt', text),
+    pngChunk('IDAT', crypto.randomBytes(64)),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ])
+  const dir = binaryFixture({ 'planted.png': png })
+  const { addresses } = scan(dir)
+  assert.ok(addresses.has(email), 'an address planted in a PNG tEXt chunk was not found by the scan')
   fs.rmSync(dir, { recursive: true, force: true })
 })
 

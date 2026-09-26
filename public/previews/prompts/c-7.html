@@ -3,685 +3,465 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>14 Rosella Street, Coburg VIC 3058 — Northline Property</title>
+<title>14 Rosella Street, Coburg · Northline Property</title>
+<meta name="description" content="A 1926 Californian bungalow on 562 square metres in Coburg, extended in 2019. Three bedrooms, two bathrooms, rear-lane garage. Auction Saturday 4 October, 11 am.">
+<meta name="uil4b-capture" content='{"mode":"run","ms":6000}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/newsreader.js"></script>
+<script src="../vendor/fonts/newsreader-italic.js"></script>
+<script src="../vendor/fonts/instrument-sans.js"></script>
+<script src="../vendor/fonts/ibm-plex-mono.js"></script>
 <style>
   :root{
-    --paper:#FFFFFF; --wash:#F6F8FB; --wash-2:#EEF2F7;
-    --ink:#0F172A; --ink-2:#475569; --ink-3:#7A8699;
-    --line:#E2E8F0; --line-2:#EFF3F8;
-    --blue:#2563EB; --blue-d:#1D4FD8; --blue-t:#EAF0FE;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    --paper:#f5f2ea;
+    --paper-2:#ece7dc;
+    --white:#fbfaf6;
+    --ink:#1d2327;
+    --ink-2:#4f575c;
+    --ink-3:#71787c;
+    --line:rgba(29,35,39,.14);
+    --line-2:rgba(29,35,39,.28);
+    --brick:#a4452c;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.4vw,52px);
+    --serif:"Newsreader",Georgia,serif;
+    --sans:"Instrument Sans","Helvetica Neue",Arial,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    color-scheme:light;
   }
-  *{box-sizing:border-box}
-  html,body{margin:0}
-  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{background:var(--paper);-webkit-text-size-adjust:100%}
+  body{background:var(--paper);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;caret-color:var(--brick)}
+  .page{overflow-x:clip}
+  ::selection{background:var(--ink);color:var(--paper)}
   a{color:inherit}
-  svg{max-width:100%}
-  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-  :focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:5px}
-  .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
-  h1,h2,h3{margin:0;letter-spacing:-.025em;font-weight:650}
+  h1,h2,h3,p,ul,ol,dl,dd,figure{margin:0}
+  ul,ol{list-style:none;padding:0}
+  :focus-visible{outline:2px solid var(--brick);outline-offset:3px;border-radius:4px}
+  .mono{font:500 11.5px/1.4 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
   .num{font-variant-numeric:tabular-nums}
+  button{font:inherit;color:inherit}
+
+  /* drawing styles */
+  .dw{display:block;width:100%;height:auto}
+  .dw .k{stroke:var(--ink);stroke-width:1.3;fill-rule:evenodd}
+  .dw path.k{fill:none}
+  .dw .t{stroke:var(--ink);stroke-width:.8}
+  .dw path.t{fill:none}
+  .dw .h{stroke:var(--ink);stroke-width:.4}
+  .dw .f{stroke:var(--ink);stroke-width:.9;fill:none;opacity:.75}
+  .dw .g{stroke:var(--ink);stroke-width:2}
+  .dw .d{stroke:var(--brick);stroke-width:.8;fill:none}
+  .dw .dt{font:500 11px var(--mono);fill:var(--brick)}
+  .dw .nt{font:500 10px var(--mono);fill:var(--ink-2)}
+  .dw .rt{font:500 12.5px var(--sans);fill:var(--ink)}
+  .dw .rt.sm{font-size:10.5px}
+  .dw .st{font:500 10px var(--mono);fill:var(--ink-3)}
+  .dw .room{fill:var(--white);stroke:var(--ink);stroke-width:2.2}
+  .dw .outer{fill:none;stroke:var(--ink);stroke-width:5}
+  .dw .fx{fill:none;stroke:var(--ink);stroke-width:.9}
+  .dw .door{fill:none;stroke:var(--ink);stroke-width:.9}
+  .dw .gap{stroke:var(--white);stroke-width:5}
+  .dw .win{stroke:var(--ink);stroke-width:1;fill:none}
+  .map .road{stroke:var(--ink);stroke-opacity:.14;stroke-width:10}
+  .map .main{stroke:var(--ink);stroke-opacity:.3;stroke-width:14}
+  .map .rail{stroke:var(--ink);stroke-width:5}
+  .map .rail-t{stroke:var(--paper);stroke-width:3;stroke-dasharray:8 8}
+  .map .ring{fill:none;stroke:var(--brick);stroke-width:1.2;stroke-dasharray:4 5}
 
   /* ---------- header ---------- */
-  header{border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95)}
-  .hd{display:flex;align-items:center;gap:26px;height:66px}
-  .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-  .logo .m{width:30px;height:30px;border-radius:7px;background:var(--ink);display:grid;place-items:center;flex:0 0 auto}
-  .logo .m svg{width:16px;height:16px;stroke:#fff;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .logo b{font-size:16px;font-weight:700;letter-spacing:-.03em;display:block;line-height:1.05}
-  .logo small{display:block;font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
-  .hd nav{display:flex;gap:24px;margin-left:12px}
-  .hd nav a{font-size:14.5px;text-decoration:none;color:var(--ink-2);font-weight:500}
-  .hd nav a:hover{color:var(--ink)}
-  .hd .r{margin-left:auto;display:flex;gap:12px;align-items:center}
+  .nav{display:flex;align-items:center;gap:clamp(12px,2.2vw,30px);padding:14px var(--gutter);border-bottom:1px solid var(--line)}
+  .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;min-height:44px}
+  .brand b{font:500 20px/1 var(--serif);letter-spacing:-.01em}
+  .nav ul{display:flex;gap:2px}
+  .nav ul a{display:block;text-decoration:none;font-size:15px;color:var(--ink-2);padding:10px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .nav ul a:hover{color:var(--ink);background:rgba(29,35,39,.06)}
+  .nav .end{margin-left:auto;display:flex;gap:8px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 20px;border-radius:999px;border:1px solid transparent;cursor:pointer;text-decoration:none;font:600 15px/1 var(--sans);
+    transition:background-color .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
+  .btn:active{transform:scale(.98)}
+  .btn.ink{background:var(--ink);color:var(--paper)}
+  .btn.ink:hover{background:#343d42}
+  .btn.line{border-color:var(--line-2);background:transparent}
+  .btn.line:hover{border-color:var(--ink)}
+  .btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .btn[aria-pressed="true"] svg{fill:currentColor}
+  .nav .btn{min-height:42px;font-size:14.5px}
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:9px;
-       font-size:15px;font-weight:650;text-decoration:none;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);
-       transition:background .15s,border-color .15s,color .15s}
-  .btn:hover{background:var(--wash);border-color:#CBD5E1}
-  .btn-b{background:var(--blue);border-color:var(--blue);color:#fff}
-  .btn-b:hover{background:var(--blue-d);border-color:var(--blue-d);color:#fff}
-  .btn-sm{padding:9px 15px;font-size:14px}
-  .btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .title{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px 40px;align-items:end;padding:clamp(22px,4vh,40px) var(--gutter) 20px}
+  .crumbs{display:flex;gap:8px;font-size:13.5px;color:var(--ink-3);margin-bottom:12px}
+  .crumbs a{text-decoration:none}.crumbs a:hover{color:var(--ink);text-decoration:underline}
+  h1{font:400 clamp(38px,4.6vw,72px)/1 var(--serif);letter-spacing:-.03em}
+  h1 em{font-style:italic;color:var(--ink-2)}
+  .guide{text-align:right}
+  .guide b{display:block;font:500 clamp(24px,2.2vw,32px)/1.1 var(--serif);letter-spacing:-.02em}
+  .auction{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:7px 12px;border-radius:999px;background:var(--brick);color:#fff;font-weight:600;font-size:14px}
 
-  /* ---------- breadcrumb ---------- */
-  .crumb{font-size:13.5px;color:var(--ink-3);padding:16px 0 0}
-  .crumb a{text-decoration:none}
-  .crumb a:hover{color:var(--blue);text-decoration:underline}
-  .crumb span{margin:0 7px;opacity:.6}
-
-  /* ---------- gallery ---------- */
-  .gal{padding:14px 0 0}
-  .stage{position:relative;border-radius:14px;overflow:hidden;background:var(--wash-2);border:1px solid var(--line);
-         aspect-ratio:16/9}
-  .slide{position:absolute;inset:0;opacity:0;transition:opacity .35s ease}
-  .slide[data-on]{opacity:1}
-  .slide svg{width:100%;height:100%;display:block}
-  .stage .tagline{position:absolute;left:16px;top:16px;display:flex;gap:8px;flex-wrap:wrap;z-index:3}
-  .pill{background:rgba(15,23,42,.82);color:#fff;font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:7px;
-        backdrop-filter:blur(4px)}
-  .pill.blue{background:var(--blue)}
-  .navbtn{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;
-          background:rgba(255,255,255,.93);border:1px solid var(--line);display:grid;place-items:center;z-index:3;
-          box-shadow:0 2px 10px rgba(15,23,42,.14);transition:background .15s}
-  .navbtn:hover{background:#fff}
-  .navbtn svg{width:18px;height:18px;stroke:var(--ink);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .navbtn.p{left:14px}.navbtn.n{right:14px}
-  .counter{position:absolute;right:16px;bottom:16px;z-index:3;background:rgba(15,23,42,.82);color:#fff;
-           font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:7px;font-variant-numeric:tabular-nums}
-  .thumbs{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px}
-  .thumb{border-radius:9px;overflow:hidden;border:2px solid transparent;background:var(--wash-2);
-         aspect-ratio:16/10;padding:0;position:relative;transition:border-color .15s}
-  .thumb svg{width:100%;height:100%;display:block}
-  .thumb[aria-current=true]{border-color:var(--blue)}
-  .thumb:hover{border-color:#94A3B8}
-  .thumb .lb{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(0deg,rgba(15,23,42,.8),transparent);
-             color:#fff;font-size:11px;font-weight:600;padding:12px 8px 5px;text-align:left}
-
-  /* ---------- key bar ---------- */
-  .keybar{margin-top:26px;border:1px solid var(--line);border-radius:14px;background:var(--paper);overflow:hidden}
-  .keytop{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;padding:22px 24px 20px}
-  .keytop h1{font-size:clamp(23px,2.9vw,32px);line-height:1.15}
-  .keytop .sub{margin:6px 0 0;font-size:15.5px;color:var(--ink-2)}
-  .keytop .pr{margin-left:auto;text-align:right}
-  .keytop .pr b{display:block;font-size:clamp(22px,2.6vw,29px);font-weight:700;letter-spacing:-.03em;line-height:1.15}
-  .keytop .pr span{display:block;font-size:13.5px;color:var(--ink-3);margin-top:4px}
-  .keystats{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid var(--line-2);background:var(--wash)}
-  .keystats div{padding:14px 20px;border-left:1px solid var(--line-2);display:flex;align-items:center;gap:10px}
-  .keystats div:first-child{border-left:0}
-  .keystats svg{width:19px;height:19px;flex:0 0 auto;stroke:var(--blue);stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .keystats b{display:block;font-size:16px;font-weight:650;line-height:1.2}
-  .keystats span{display:block;font-size:12px;color:var(--ink-3);margin-top:1px}
-
-  /* ---------- layout ---------- */
-  .cols{display:grid;grid-template-columns:minmax(0,1fr) 336px;gap:44px;padding:44px 0 0;align-items:start}
-  .blk{padding-bottom:40px;margin-bottom:40px;border-bottom:1px solid var(--line-2)}
-  .blk:last-child{border-bottom:0}
-  .blk h2{font-size:22px;margin-bottom:16px}
-  .blk p{font-size:16.5px;color:var(--ink-2);line-height:1.68;margin:0 0 16px;max-width:66ch}
-  .blk p b{color:var(--ink);font-weight:650}
-  .hl{list-style:none;margin:22px 0 0;padding:20px 0 0;border-top:1px solid var(--line-2);
-      display:flex;flex-direction:column;gap:12px}
-  .hl li{display:flex;gap:12px;font-size:15.5px;color:var(--ink-2);line-height:1.5}
-  .hl svg{width:18px;height:18px;flex:0 0 auto;margin-top:3px;stroke:var(--blue);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .hl b{color:var(--ink);font-weight:650}
-
-  .feats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-2);border:1px solid var(--line-2);border-radius:12px;overflow:hidden}
-  .feats span{background:var(--paper);padding:13px 16px;font-size:14.5px;color:var(--ink-2);display:flex;gap:10px;align-items:center}
-  .feats span svg{width:15px;height:15px;flex:0 0 auto;stroke:var(--blue);stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
-
-  details.plan{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper)}
-  details.plan summary{display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;list-style:none;
-                       font-size:16px;font-weight:650;background:var(--wash)}
-  details.plan summary::-webkit-details-marker{display:none}
-  details.plan summary .ch{margin-left:auto;font-size:13.5px;color:var(--blue);font-weight:600}
-  details.plan summary .ch::after{content:" ▾"}
-  details.plan[open] summary .ch::after{content:" ▴"}
-  details.plan summary svg{width:18px;height:18px;stroke:var(--ink-2);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .planbody{padding:20px;border-top:1px solid var(--line)}
-  .planbody svg{width:100%;height:auto;display:block}
-  .planmeta{display:flex;gap:10px 26px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2);
-            font-size:13.5px;color:var(--ink-3)}
-  .planmeta b{color:var(--ink);font-weight:650}
-
-  .mapwrap{border:1px solid var(--line);border-radius:12px;overflow:hidden}
-  .mapwrap svg{width:100%;height:auto;display:block}
-  .amen{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-2);
-        border-top:1px solid var(--line-2)}
-  .amen li{background:var(--paper);padding:12px 16px;display:flex;align-items:center;gap:11px;font-size:14.5px}
-  .amen .ic{width:26px;height:26px;border-radius:7px;background:var(--blue-t);display:grid;place-items:center;flex:0 0 auto}
-  .amen .ic svg{width:14px;height:14px;stroke:var(--blue);stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .amen b{font-weight:600}
-  .amen .d{margin-left:auto;font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums;white-space:nowrap}
-
-  /* ---------- sidebar ---------- */
-  .side{position:sticky;top:86px;display:flex;flex-direction:column;gap:18px}
-  .card{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--paper)}
-  .insp{padding:18px 20px}
-  .insp h3{font-size:12px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin-bottom:14px}
-  .insp .row{display:flex;gap:13px;padding:11px 0;border-top:1px solid var(--line-2)}
-  .insp .row:first-of-type{border-top:0;padding-top:0}
-  .insp .dt{width:44px;flex:0 0 auto;text-align:center;border:1px solid var(--line);border-radius:8px;padding:5px 0;background:var(--wash)}
-  .insp .dt b{display:block;font-size:17px;font-weight:700;line-height:1.1}
-  .insp .dt span{display:block;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
-  .insp .tx b{display:block;font-size:14.5px;font-weight:650}
-  .insp .tx span{display:block;font-size:13px;color:var(--ink-3);margin-top:1px}
-  .insp .btn{width:100%;margin-top:14px}
-
-  .agent{padding:20px}
-  .agent .top{display:flex;gap:14px;align-items:center}
-  .agent .av{width:58px;height:58px;border-radius:50%;flex:0 0 auto;overflow:hidden;background:var(--wash-2);border:1px solid var(--line)}
-  .agent .av svg{width:100%;height:100%;display:block}
-  .agent .top b{display:block;font-size:17px;font-weight:650;letter-spacing:-.02em}
-  .agent .top span{display:block;font-size:13.5px;color:var(--ink-3)}
-  .agency{display:flex;align-items:center;gap:9px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2)}
-  .agency .m{width:26px;height:26px;border-radius:6px;background:var(--ink);display:grid;place-items:center;flex:0 0 auto}
-  .agency .m svg{width:14px;height:14px;stroke:#fff;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .agency span{font-size:13px;color:var(--ink-3);line-height:1.35}
-  .agency b{display:block;color:var(--ink);font-size:13.5px;font-weight:650;letter-spacing:-.01em}
-  .contactlines{margin:16px 0 0;display:flex;flex-direction:column;gap:9px}
-  .contactlines a{display:flex;align-items:center;gap:10px;font-size:14.5px;text-decoration:none;color:var(--ink-2);word-break:break-word}
-  .contactlines a:hover{color:var(--blue)}
-  .contactlines svg{width:15px;height:15px;flex:0 0 auto;stroke:var(--ink-3);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
-  .agent .btn{width:100%;margin-top:16px}
-
-  .costs{padding:18px 20px}
-  .costs h3{font-size:12px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin-bottom:12px}
-  .costs .row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-top:1px solid var(--line-2);font-size:14.5px;color:var(--ink-2)}
-  .costs .row:first-of-type{border-top:0}
-  .costs b{color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums}
-  .costs .note{margin:12px 0 0;font-size:12.5px;color:var(--ink-3);line-height:1.5}
-
-  /* ---------- similar ---------- */
-  .similar{background:var(--wash);border-top:1px solid var(--line);margin-top:54px;padding:52px 0 62px}
-  .similar h2{font-size:23px;margin-bottom:22px}
-  .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-  .lst{display:block;background:var(--paper);border:1px solid var(--line);border-radius:13px;overflow:hidden;text-decoration:none;
-       transition:box-shadow .16s,border-color .16s,transform .16s}
-  .lst:hover{border-color:#CBD5E1;box-shadow:0 8px 22px -12px rgba(15,23,42,.24);transform:translateY(-2px)}
-  .lst .pic{aspect-ratio:16/10;display:block;background:var(--wash-2)}
-  .lst .pic svg{width:100%;height:100%;display:block}
-  .lst .b{padding:15px 17px 17px}
-  .lst .b .p{display:block;font-size:17px;font-weight:700;letter-spacing:-.025em}
-  .lst .b .a{display:block;font-size:14.5px;color:var(--ink-2);margin-top:3px}
-  .lst .b .m{display:flex;gap:14px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line-2);
-             font-size:13.5px;color:var(--ink-3)}
-  .lst .b .m span{display:inline-flex;align-items:center;gap:5px}
-  .lst .b .m svg{width:14px;height:14px;stroke:var(--ink-3);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
-
-  footer{padding:28px 0 36px;font-size:13px;color:var(--ink-3);border-top:1px solid var(--line)}
-  footer .wrap{display:flex;gap:10px 26px;flex-wrap:wrap;align-items:center}
-  footer a{text-decoration:none}
-  footer a:hover{color:var(--blue)}
-  footer .r{margin-left:auto}
-
-  @media (max-width:1040px){
-    .cols{grid-template-columns:1fr;gap:34px}
-    .side{position:static}
-    .keystats{grid-template-columns:repeat(3,1fr)}
-    .keystats div:nth-child(4){border-left:0}
-    .keystats div:nth-child(n+4){border-top:1px solid var(--line-2)}
-    .sgrid{grid-template-columns:1fr 1fr}
-    .hd nav{display:none}
+  /* ---------- the drawing set ---------- */
+  .set{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:0;margin:0 var(--gutter);border:1px solid var(--line-2);border-radius:14px;background:var(--white);overflow:hidden}
+  .sheet{position:relative;border-right:1px solid var(--line)}
+  .sheet .pane{padding:clamp(12px,2vw,28px) clamp(12px,2vw,28px) 0}
+  .sheet .pane[hidden]{display:none}
+  .sheet .pane svg{max-height:62vh;margin:0 auto}
+  .tb{display:grid;grid-template-columns:1.2fr 2fr 1fr 1fr auto;border-top:1px solid var(--ink);margin-top:14px}
+  .tb div{padding:9px 12px;border-right:1px solid var(--line)}
+  .tb div:last-child{border-right:0}
+  .tb dt{font:500 9.5px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  .tb dd{font:500 13.5px/1.3 var(--mono);margin-top:2px}
+  .tb .ex{display:flex;align-items:center;padding:6px}
+  .icon{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);background:transparent;cursor:pointer;transition:border-color .2s var(--ease),background-color .2s var(--ease)}
+  .icon:hover{border-color:var(--ink);background:rgba(29,35,39,.04)}
+  .icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .index{display:flex;flex-direction:column}
+  .index p{padding:16px 16px 10px}
+  .index [role=tab]{display:grid;grid-template-columns:3.6em minmax(0,1fr);gap:2px 8px;text-align:left;padding:14px 16px;border:0;border-top:1px solid var(--line);background:transparent;cursor:pointer;transition:background-color .2s var(--ease)}
+  .index [role=tab]:hover{background:rgba(29,35,39,.04)}
+  .index [role=tab][aria-selected="true"]{background:var(--paper)}
+  .index [role=tab] span{font:600 12.5px/1.4 var(--mono);color:var(--ink-3)}
+  .index [role=tab][aria-selected="true"] span{color:var(--brick)}
+  .index [role=tab] b{font-weight:600;font-size:15px}
+  .index [role=tab] small{grid-column:2;color:var(--ink-3);font-size:13px}
+  .index .nav2{margin-top:auto;display:flex;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+  @media (prefers-reduced-motion: no-preference){
+    .pane.in svg{animation:draw .5s var(--ease)}
+    @keyframes draw{from{opacity:0;transform:translateY(8px)}}
   }
-  @media (max-width:680px){
-    .wrap{padding:0 16px}
-    .thumbs{grid-template-columns:repeat(3,1fr)}
-    .thumbs .thumb:nth-child(n+4){display:none}
-    .keystats{grid-template-columns:1fr 1fr}
-    .keystats div:nth-child(3){border-left:0}
-    .keystats div:nth-child(n+3){border-top:1px solid var(--line-2)}
-    .keytop .pr{margin-left:0;text-align:left}
-    .feats,.amen{grid-template-columns:1fr}
-    .sgrid{grid-template-columns:1fr}
-    .navbtn{width:38px;height:38px}
-    .navbtn.p{left:8px}.navbtn.n{right:8px}
+
+  /* ---------- facts ---------- */
+  .facts{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin:20px var(--gutter) 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
+  .facts div{padding:14px 14px 14px 0}
+  .facts div + div{padding-left:14px;border-left:1px solid var(--line)}
+  .facts dt{font:500 10.5px/1.3 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+  .facts dd{margin-top:4px;font:500 20px/1.2 var(--serif)}
+
+  /* ---------- body ---------- */
+  .body{display:grid;grid-template-columns:minmax(0,7fr) minmax(300px,4fr);gap:clamp(28px,5vw,80px);padding:clamp(40px,6vw,80px) var(--gutter)}
+  .body h2{font:400 clamp(28px,2.6vw,40px)/1.1 var(--serif);letter-spacing:-.02em;margin-bottom:18px}
+  .desc{display:grid;gap:14px;color:var(--ink-2);max-width:62ch;font-size:17px}
+  .desc strong{color:var(--ink);font-weight:600}
+  .hl{margin-top:28px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px}
+  .hl li{padding:11px 0;border-top:1px solid var(--line);display:flex;gap:12px;font-size:15.5px}
+  .hl li::before{content:"";flex:none;width:6px;height:6px;margin-top:.55em;background:var(--brick)}
+  .features{margin-top:48px}
+  .fgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
+  .fgrid div{padding:14px 16px 14px 0;border-bottom:1px solid var(--line)}
+  .fgrid dt{font:500 10.5px/1.3 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+  .fgrid dd{margin-top:4px;font-weight:600;font-size:15.5px}
+  .fgrid dd small{display:block;font-weight:400;color:var(--ink-2);font-size:13.5px}
+  .loc{margin-top:48px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:24px;align-items:start}
+  .loc svg{border:1px solid var(--line-2);border-radius:12px}
+  .walk li{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+  .walk span{font:500 12.5px/1.8 var(--mono);color:var(--ink-3)}
+
+  aside{position:sticky;top:18px;align-self:start;display:grid;gap:18px}
+  .agent{border:1px solid var(--line-2);border-radius:14px;background:var(--white);padding:20px}
+  .who{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:center}
+  .who .av{width:52px;height:52px;border-radius:50%;background:var(--paper-2);display:grid;place-items:center;font:500 18px var(--serif)}
+  .who b{display:block;font-size:17px}
+  .who span{font-size:14px;color:var(--ink-2)}
+  .agent .contact{display:grid;gap:4px;margin:16px 0;font:500 14px/1.6 var(--mono)}
+  .agent .contact a{text-decoration:none}
+  .agent .contact a:hover{text-decoration:underline}
+  .agent .btn{width:100%}
+  .times,.costs{border-top:1px solid var(--line);padding-top:14px;margin-top:16px}
+  .times li,.costs div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:14.5px}
+  .times b{font-weight:600}
+  .costs dt{color:var(--ink-2)}
+  .costs dd{font-weight:600}
+  form{display:grid;gap:12px;margin-top:16px}
+  form[hidden]{display:none}
+  .f{display:grid;gap:6px}
+  label,legend{font-size:13.5px;font-weight:600;padding:0}
+  input,textarea{font:inherit;font-size:16px;min-height:46px;padding:10px 12px;border-radius:10px;border:1px solid var(--line-2);background:#fff;color:var(--ink);transition:border-color .2s var(--ease)}
+  input:hover,textarea:hover{border-color:var(--ink-3)}
+  input:focus,textarea:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(164,69,44,.2)}
+  input[aria-invalid="true"]{border-color:#b3261e}
+  fieldset{border:0;margin:0;padding:0;display:grid;gap:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips label{position:relative;font-weight:500}
+  .chips input{position:absolute;opacity:0;width:1px;height:1px;min-height:0}
+  .chips span{display:inline-flex;align-items:center;min-height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);font-size:13.5px;cursor:pointer;transition:background-color .2s var(--ease),border-color .2s var(--ease)}
+  .chips input:checked + span{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .chips input:focus-visible + span{outline:2px solid var(--brick);outline-offset:2px}
+  .err{color:#b3261e;font-size:14px;min-height:1.2em}
+  .done{padding:14px;border-radius:10px;background:var(--paper);font-size:14.5px}
+
+  .similar{padding:clamp(40px,6vw,80px) var(--gutter);border-top:1px solid var(--line)}
+  .similar h2{font:400 clamp(28px,2.6vw,40px)/1.1 var(--serif);letter-spacing:-.02em;margin-bottom:22px}
+  .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2vw,28px)}
+  .cards a{display:block;text-decoration:none;border-radius:12px}
+  .cards .pic{aspect-ratio:16/10;border-radius:12px;border:1px solid var(--line-2);background:var(--white);display:grid;place-items:center;overflow:hidden}
+  .cards .pic svg{width:78%;height:auto;transition:transform .5s var(--ease)}
+  .cards a:hover .pic svg{transform:scale(1.03)}
+  .cards h3{margin-top:12px;font:400 21px/1.2 var(--serif)}
+  .cards p{font-size:14.5px;color:var(--ink-2)}
+  .cards .pr{font-weight:600;color:var(--ink)}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;padding:22px var(--gutter) 30px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13.5px}
+
+  dialog{width:min(1100px,94vw);max-height:92vh;border:0;border-radius:14px;padding:0;background:var(--white);color:var(--ink)}
+  dialog::backdrop{background:rgba(29,35,39,.55)}
+  dialog .bar{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 10px 20px;border-bottom:1px solid var(--line)}
+  dialog .inner{padding:20px;overflow:auto;max-height:calc(92vh - 66px)}
+  dialog .inner svg{min-width:760px}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1080px){
+    .nav ul{display:none}
+    .facts{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .facts div:nth-child(5){border-left:0;padding-left:0}
+    .facts div:nth-child(n+5){border-top:1px solid var(--line)}
+    .body{grid-template-columns:minmax(0,1fr)}
+    aside{position:static}
   }
-  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  @media (max-width:760px){
+    .title{grid-template-columns:minmax(0,1fr)}
+    .guide{text-align:left}
+    .set{grid-template-columns:minmax(0,1fr)}
+    .sheet{border-right:0;border-bottom:1px solid var(--line)}
+    .index{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .index p{grid-column:1/-1}
+    .index [role=tab]{grid-template-columns:minmax(0,1fr)}
+    .index [role=tab] small{grid-column:1}
+    .index .nav2{grid-column:1/-1}
+    .tb{grid-template-columns:1fr 1fr auto}
+    .tb div:nth-child(3),.tb div:nth-child(4){display:none}
+    .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .facts div:nth-child(odd){border-left:0;padding-left:0}
+    .facts div:nth-child(n+3){border-top:1px solid var(--line)}
+    .facts div:nth-child(5){padding-left:0}
+    .hl,.fgrid{grid-template-columns:minmax(0,1fr)}
+    .loc{grid-template-columns:minmax(0,1fr)}
+    .cards{grid-template-columns:minmax(0,1fr)}
+    .nav .btn.line{display:none}
+  }
+  @media (max-height:520px) and (min-width:560px){
+    .nav,.crumbs{display:none}
+    .title{padding-top:10px;padding-bottom:10px;grid-template-columns:minmax(0,1fr) auto}
+    h1{font-size:28px}
+    .guide{text-align:right}
+    .auction{display:none}
+    .set{grid-template-columns:minmax(0,1fr) 170px}
+    .sheet{border-right:1px solid var(--line);border-bottom:0}
+    .index{display:flex}
+    .index p,.index small,.index .nav2{display:none}
+    .index [role=tab]{padding:8px 12px;grid-template-columns:3.2em minmax(0,1fr)}
+    .sheet .pane svg{max-height:210px}
+    .tb{margin-top:6px}
+    .tb div:nth-child(3),.tb div:nth-child(4){display:none}
+    .tb{grid-template-columns:1fr 1fr auto}
+  }
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <symbol id="bed" viewBox="0 0 24 24"><path d="M3 18v-7h18v7"/><path d="M3 18v2M21 18v2M3 11V6h7v5"/><circle cx="6.5" cy="8.5" r="1.6"/></symbol>
-  <symbol id="bath" viewBox="0 0 24 24"><path d="M3 12h18v3a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 12V6a2 2 0 0 1 4 0"/><path d="M6.5 19l-1 2M17.5 19l1 2"/></symbol>
-  <symbol id="car" viewBox="0 0 24 24"><path d="M4 16v3M20 16v3"/><path d="M3 16v-3.5L5 8h14l2 4.5V16z"/><circle cx="7" cy="16" r="1.4"/><circle cx="17" cy="16" r="1.4"/></symbol>
-  <symbol id="land" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M9 4v16"/></symbol>
-  <symbol id="floor" viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12z"/><path d="M4 14h16M12 14v6"/></symbol>
-  <symbol id="house" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></symbol>
-  <symbol id="ok" viewBox="0 0 24 24"><path d="M4 12.5l5.2 5.2L20 6.8"/></symbol>
-  <symbol id="ph" viewBox="0 0 24 24"><path d="M6.6 3h3l1.6 4-2 1.4a12.4 12.4 0 0 0 5.4 5.4l1.4-2 4 1.6v3a2 2 0 0 1-2.2 2A16.8 16.8 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3z"/></symbol>
-  <symbol id="mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></symbol>
-  <symbol id="sch" viewBox="0 0 24 24"><path d="M12 4L2 9l10 5 10-5z"/><path d="M6 11.5V17c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5"/></symbol>
-  <symbol id="trn" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="13" rx="3"/><path d="M5 10h14M8 19l-2 2M16 19l2 2"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/></symbol>
-  <symbol id="park" viewBox="0 0 24 24"><path d="M12 21v-6"/><path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M8 9h8M12 3v12"/></symbol>
-  <symbol id="shop" viewBox="0 0 24 24"><path d="M4 8h16l-1 12H5z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
-  <symbol id="cl" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.4 2"/></symbol>
-</defs></svg>
-
-<header>
-  <div class="wrap hd">
-    <a class="logo" href="#top">
-      <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/></svg></span>
-      <span><b>Northline</b><small>Property</small></span>
-    </a>
-    <nav aria-label="Main"><a href="#top">Buy</a><a href="#top">Rent</a><a href="#top">Sold</a><a href="#top">Appraisals</a></nav>
-    <div class="r">
-      <a class="btn btn-sm" href="#top">Save</a>
-      <a class="btn btn-b btn-sm" href="#enquire">Enquire now</a>
-    </div>
-  </div>
+<div class="page">
+<header class="nav">
+  <a class="brand" href="#top" aria-label="Northline Property home"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="8" fill="#1d2327"/><path d="M8 21V11l7-4 7 4v10" fill="none" stroke="#f5f2ea" stroke-width="1.8" stroke-linejoin="round"/><path d="M13 21v-5h4v5" fill="none" stroke="#a4452c" stroke-width="1.8"/></svg><b>Northline</b></a>
+  <ul><li><a href="#top">Buy</a></li><li><a href="#top">Rent</a></li><li><a href="#top">Sold</a></li><li><a href="#top">Appraisals</a></li></ul>
+  <div class="end"><button class="btn line" type="button" id="save" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5S2.5 10 2.5 6A2.8 2.8 0 0 1 8 4.8 2.8 2.8 0 0 1 13.5 6c0 4-5.5 7.5-5.5 7.5z"/></svg><span>Save</span></button><a class="btn ink" href="#enquire">Enquire</a></div>
 </header>
 
 <main id="top">
-  <div class="wrap">
-    <p class="crumb"><a href="#top">Buy</a><span>/</span><a href="#top">VIC</a><span>/</span><a href="#top">Coburg 3058</a><span>/</span>14 Rosella Street</p>
+<section class="title" aria-labelledby="h">
+  <div>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="#top">Buy</a><span aria-hidden="true">/</span><a href="#top">VIC</a><span aria-hidden="true">/</span><a href="#top">Coburg 3058</a></nav>
+    <h1 id="h">14 Rosella Street, <em>Coburg</em></h1>
+  </div>
+  <div class="guide">
+    <p class="mono">Price guide</p>
+    <b class="num">$1,380,000 – $1,480,000</b>
+    <span class="auction">Auction Saturday 4 October, 11 am</span>
+  </div>
+</section>
 
-    <!-- ---------- gallery ---------- -->
-    <div class="gal">
-      <div class="stage" id="stage">
-        <div class="tagline">
-          <span class="pill blue">Auction Sat 4 Oct</span>
-          <span class="pill">New to market</span>
-        </div>
+<section class="set" aria-label="Drawings of the property">
+  <div class="sheet">
+    <div class="pane" id="p0" role="tabpanel" aria-labelledby="t0" data-no="A-01" data-name="Street elevation" data-scale="1:100"><svg viewBox="0 0 800 440" class="dw" role="img" aria-label="Street elevation: a Californian bungalow with a low gabled roof, a verandah on brick piers, a bay window and a picket fence."><defs><pattern id="brick" width="16" height="8" patternUnits="userSpaceOnUse"><path d="M0 .5H16M0 4.5H16M4 .5V4.5M12 4.5V8.5" stroke="#1d2327" stroke-width=".6" fill="none"/></pattern><pattern id="tile" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(-22)"><path d="M0 5H10" stroke="#1d2327" stroke-width=".55"/></pattern><pattern id="shingle" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 7.5H8M4 0V7.5" stroke="#1d2327" stroke-width=".5"/></pattern></defs><path class="g" d="M20 380H780"/><path d="M150 224 L400 116 L650 224 Z" fill="url(#tile)" class="k"/><path class="k" d="M142 228 H658"/><path d="M522 170 V112 H552 V158" fill="#f5f2ea" class="k"/><path class="k" d="M516 112 H558 M520 104 H554 V112 M520 104 V112"/><rect x="190" y="228" width="420" height="122" fill="#f5f2ea" class="k"/><path class="t" d="M190 239 H610"/><path class="t" d="M190 250 H610"/><path class="t" d="M190 261 H610"/><path class="t" d="M190 272 H610"/><path class="t" d="M190 283 H610"/><path class="t" d="M190 294 H610"/><path class="t" d="M190 305 H610"/><path class="t" d="M190 316 H610"/><path class="t" d="M190 327 H610"/><path class="t" d="M190 338 H610"/><path class="t" d="M190 349 H610"/><rect x="176" y="350" width="448" height="30" fill="url(#brick)" class="k"/><path d="M188 266 L310 196 L432 266 Z" fill="#f5f2ea" class="k"/><path d="M216 258 L310 204 L404 258 Z" fill="url(#shingle)" class="t"/><rect x="200" y="266" width="220" height="12" fill="#f5f2ea" class="k"/><rect x="286" y="290" width="42" height="60" fill="#f5f2ea" class="k"/><path class="t" d="M292 298 H322 V318 H292 Z M292 324 H322 V344 H292 Z"/><circle cx="321" cy="330" r="1.6" fill="#1d2327"/><rect x="332" y="290" width="12" height="60" fill="#f5f2ea" class="k"/><path class="t" d="M335 296 V344"/><rect x="352" y="292" width="50" height="40" fill="#f5f2ea" class="k"/><path class="t" d="M377 292 V332 M352 304 H402 M364 292 V304 M390 292 V304"/><rect x="195" y="312" width="22" height="68" fill="url(#brick)" class="k"/><path class="k" d="M199 312 L202 278 H210 L213 312" fill="#f5f2ea"/><rect x="393" y="312" width="22" height="68" fill="url(#brick)" class="k"/><path class="k" d="M397 312 L400 278 H408 L411 312" fill="#f5f2ea"/><path class="k" d="M276 350 H340 M270 360 H346 M264 370 H352 M258 380"/><path d="M452 250 H598 V340 H452 Z" fill="#f5f2ea" class="k"/><path class="k" d="M446 250 H604 M446 340 H604 M444 346 H606"/><rect x="458" y="256" width="38" height="78" class="t" fill="none"/><path class="t" d="M458 278 H496"/><path class="h" d="M464 256 V278"/><path class="h" d="M470 256 V278"/><path class="h" d="M476 256 V278"/><path class="h" d="M482 256 V278"/><path class="h" d="M488 256 V278"/><path class="h" d="M494 256 V278"/><path class="h" d="M458 262 H496"/><path class="h" d="M458 268 H496"/><path class="h" d="M458 274 H496"/><rect x="506" y="256" width="38" height="78" class="t" fill="none"/><path class="t" d="M506 278 H544"/><path class="h" d="M512 256 V278"/><path class="h" d="M518 256 V278"/><path class="h" d="M524 256 V278"/><path class="h" d="M530 256 V278"/><path class="h" d="M536 256 V278"/><path class="h" d="M542 256 V278"/><path class="h" d="M506 262 H544"/><path class="h" d="M506 268 H544"/><path class="h" d="M506 274 H544"/><rect x="554" y="256" width="38" height="78" class="t" fill="none"/><path class="t" d="M554 278 H592"/><path class="h" d="M560 256 V278"/><path class="h" d="M566 256 V278"/><path class="h" d="M572 256 V278"/><path class="h" d="M578 256 V278"/><path class="h" d="M584 256 V278"/><path class="h" d="M590 256 V278"/><path class="h" d="M554 262 H592"/><path class="h" d="M554 268 H592"/><path class="h" d="M554 274 H592"/><path class="f" d="M30 340 V380 M27 340 L30 336 L33 340"/><path class="f" d="M39 340 V380 M36 340 L39 336 L42 340"/><path class="f" d="M48 340 V380 M45 340 L48 336 L51 340"/><path class="f" d="M57 340 V380 M54 340 L57 336 L60 340"/><path class="f" d="M66 340 V380 M63 340 L66 336 L69 340"/><path class="f" d="M75 340 V380 M72 340 L75 336 L78 340"/><path class="f" d="M84 340 V380 M81 340 L84 336 L87 340"/><path class="f" d="M93 340 V380 M90 340 L93 336 L96 340"/><path class="f" d="M102 340 V380 M99 340 L102 336 L105 340"/><path class="f" d="M111 340 V380 M108 340 L111 336 L114 340"/><path class="f" d="M120 340 V380 M117 340 L120 336 L123 340"/><path class="f" d="M129 340 V380 M126 340 L129 336 L132 340"/><path class="f" d="M138 340 V380 M135 340 L138 336 L141 340"/><path class="f" d="M147 340 V380 M144 340 L147 336 L150 340"/><path class="f" d="M156 340 V380 M153 340 L156 336 L159 340"/><path class="f" d="M165 340 V380 M162 340 L165 336 L168 340"/><path class="f" d="M174 340 V380 M171 340 L174 336 L177 340"/><path class="f" d="M183 340 V380 M180 340 L183 336 L186 340"/><path class="f" d="M192 340 V380 M189 340 L192 336 L195 340"/><path class="f" d="M201 340 V380 M198 340 L201 336 L204 340"/><path class="f" d="M210 340 V380 M207 340 L210 336 L213 340"/><path class="f" d="M219 340 V380 M216 340 L219 336 L222 340"/><path class="f" d="M228 340 V380 M225 340 L228 336 L231 340"/><path class="f" d="M237 340 V380 M234 340 L237 336 L240 340"/><path class="f" d="M246 340 V380 M243 340 L246 336 L249 340"/><path class="f" d="M309 340 V380 M306 340 L309 336 L312 340"/><path class="f" d="M318 340 V380 M315 340 L318 336 L321 340"/><path class="f" d="M327 340 V380 M324 340 L327 336 L330 340"/><path class="f" d="M336 340 V380 M333 340 L336 336 L339 340"/><path class="f" d="M345 340 V380 M342 340 L345 336 L348 340"/><path class="f" d="M354 340 V380 M351 340 L354 336 L357 340"/><path class="f" d="M363 340 V380 M360 340 L363 336 L366 340"/><path class="f" d="M372 340 V380 M369 340 L372 336 L375 340"/><path class="f" d="M381 340 V380 M378 340 L381 336 L384 340"/><path class="f" d="M390 340 V380 M387 340 L390 336 L393 340"/><path class="f" d="M399 340 V380 M396 340 L399 336 L402 340"/><path class="f" d="M408 340 V380 M405 340 L408 336 L411 340"/><path class="f" d="M417 340 V380 M414 340 L417 336 L420 340"/><path class="f" d="M426 340 V380 M423 340 L426 336 L429 340"/><path class="f" d="M435 340 V380 M432 340 L435 336 L438 340"/><path class="f" d="M444 340 V380 M441 340 L444 336 L447 340"/><path class="f" d="M453 340 V380 M450 340 L453 336 L456 340"/><path class="f" d="M462 340 V380 M459 340 L462 336 L465 340"/><path class="f" d="M471 340 V380 M468 340 L471 336 L474 340"/><path class="f" d="M480 340 V380 M477 340 L480 336 L483 340"/><path class="f" d="M489 340 V380 M486 340 L489 336 L492 340"/><path class="f" d="M498 340 V380 M495 340 L498 336 L501 340"/><path class="f" d="M507 340 V380 M504 340 L507 336 L510 340"/><path class="f" d="M516 340 V380 M513 340 L516 336 L519 340"/><path class="f" d="M525 340 V380 M522 340 L525 336 L528 340"/><path class="f" d="M534 340 V380 M531 340 L534 336 L537 340"/><path class="f" d="M543 340 V380 M540 340 L543 336 L546 340"/><path class="f" d="M552 340 V380 M549 340 L552 336 L555 340"/><path class="f" d="M561 340 V380 M558 340 L561 336 L564 340"/><path class="f" d="M570 340 V380 M567 340 L570 336 L573 340"/><path class="f" d="M579 340 V380 M576 340 L579 336 L582 340"/><path class="f" d="M588 340 V380 M585 340 L588 336 L591 340"/><path class="f" d="M597 340 V380 M594 340 L597 336 L600 340"/><path class="f" d="M606 340 V380 M603 340 L606 336 L609 340"/><path class="f" d="M615 340 V380 M612 340 L615 336 L618 340"/><path class="f" d="M624 340 V380 M621 340 L624 336 L627 340"/><path class="f" d="M633 340 V380 M630 340 L633 336 L636 340"/><path class="f" d="M642 340 V380 M639 340 L642 336 L645 340"/><path class="f" d="M651 340 V380 M648 340 L651 336 L654 340"/><path class="f" d="M660 340 V380 M657 340 L660 336 L663 340"/><path class="f" d="M669 340 V380 M666 340 L669 336 L672 340"/><path class="f" d="M678 340 V380 M675 340 L678 336 L681 340"/><path class="f" d="M687 340 V380 M684 340 L687 336 L690 340"/><path class="f" d="M696 340 V380 M693 340 L696 336 L699 340"/><path class="f" d="M705 340 V380 M702 340 L705 336 L708 340"/><path class="f" d="M714 340 V380 M711 340 L714 336 L717 340"/><path class="f" d="M723 340 V380 M720 340 L723 336 L726 340"/><path class="f" d="M732 340 V380 M729 340 L732 336 L735 340"/><path class="f" d="M741 340 V380 M738 340 L741 336 L744 340"/><path class="f" d="M750 340 V380 M747 340 L750 336 L753 340"/><path class="f" d="M759 340 V380 M756 340 L759 336 L762 340"/><path class="f" d="M768 340 V380 M765 340 L768 336 L771 340"/><path class="f" d="M24 350 H250 M300 350 H776 M24 368 H250 M300 368 H776"/><path class="k" d="M712 380 V262 M712 300 L690 282 M712 290 L734 270"/><path class="t" d="M650 262 C640 220 676 196 700 206 C712 176 758 182 764 214 C790 222 788 262 766 270 C764 292 730 298 716 286 C700 300 664 294 660 276 C646 276 640 266 650 262 Z" fill="#f5f2ea"/><path class="t" d="M40 380 C30 356 50 338 72 344 C84 328 112 336 112 356 C124 362 120 380 112 380"/><path class="d" d="M110 380 V116 M104 380 H116 M104 116 H116 M150 116 H116"/><text class="dt" x="98" y="252" transform="rotate(-90 98 252)" text-anchor="middle">6.2 m to ridge</text><path class="d" d="M176 402 H624 M176 396 V408 M624 396 V408"/><text class="dt" x="400" y="420" text-anchor="middle">11.2 m frontage of house</text><text class="nt" x="632" y="396">RL 100.00</text></svg></div>
+    <div class="pane" id="p1" role="tabpanel" aria-labelledby="t1" data-no="A-02" data-name="Section, street to garden" data-scale="1:100" hidden><svg viewBox="0 0 800 440" class="dw" role="img" aria-label="Section from the street to the garden: the 1926 rooms with 3.3 metre ceilings at the front, and the 2019 kitchen and living extension with a raked ceiling, skylight and roof-mounted solar at the rear."><defs><pattern id="earth" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 5H10" stroke="#1d2327" stroke-width=".5"/></pattern><pattern id="batt" width="12" height="10" patternUnits="userSpaceOnUse"><path d="M0 5 Q3 0 6 5 T12 5" fill="none" stroke="#1d2327" stroke-width=".6"/></pattern></defs><rect x="20" y="382" width="760" height="30" fill="url(#earth)"/><path class="g" d="M20 382H780"/><rect x="110" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="146" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="182" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="218" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="254" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="290" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="326" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="362" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="398" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="434" y="364" width="8" height="26" class="t" fill="#f5f2ea"/><rect x="96" y="356" width="380" height="8" fill="#1d2327"/><rect x="476" y="370" width="250" height="14" fill="#1d2327"/><rect x="96" y="250" width="7" height="106" fill="#1d2327"/><rect x="256" y="250" width="7" height="106" fill="#1d2327"/><rect x="470" y="250" width="7" height="120" fill="#1d2327"/><rect x="720" y="214" width="7" height="156" fill="#1d2327"/><path class="k" d="M96 250 H476"/><rect x="100" y="238" width="372" height="12" fill="url(#batt)"/><path class="k" d="M62 258 L286 160 L500 252"/><path class="t" d="M72 254 L286 170 L490 248"/><path class="k" d="M476 262 L727 214"/><path class="k" d="M470 250 L740 198"/><rect x="560" y="236" width="44" height="6" transform="rotate(-10.8 582 239)" fill="#f5f2ea" class="k"/><rect x="624" y="214" width="30" height="5" transform="rotate(-10.8 639 216)" fill="#1d2327" opacity=".85"/><rect x="658" y="207" width="30" height="5" transform="rotate(-10.8 673 209)" fill="#1d2327" opacity=".85"/><rect x="692" y="201" width="30" height="5" transform="rotate(-10.8 707 203)" fill="#1d2327" opacity=".85"/><path class="t" d="M720 262 V370 M712 262 V370"/><path class="k" d="M727 370 H784 M740 370 V384 M770 370 V384"/><path class="k" d="M40 356 H96 M44 356 V282 M36 282 L100 256"/><text class="rt" x="176" y="318" text-anchor="middle">Bed 1</text><text class="rt" x="362" y="318" text-anchor="middle">Hall and bed 3</text><text class="rt" x="600" y="318" text-anchor="middle">Kitchen and living, 2019</text><text class="rt" x="64" y="346" text-anchor="middle">Verandah</text><text class="rt" x="755" y="360" text-anchor="middle">Deck</text><path class="d" d="M200 356 V250 M194 356 H206 M194 250 H206"/><text class="dt" x="212" y="306">3.3 m</text><path class="d" d="M500 370 V258 M494 370 H506 M494 258 H506"/><text class="dt" x="508" y="300">2.7 m</text><path class="d" d="M700 370 V218 M694 370 H706 M694 218 H706"/><text class="dt" x="664" y="300">4.2 m</text><text class="nt" x="380" y="226">R4.0 ceiling batts</text><text class="nt" x="600" y="190">6.6 kW solar</text><text class="nt" x="520" y="222">Skylight</text><text class="nt" x="120" y="404">Stumps restumped 2018</text><text class="nt" x="520" y="404">Slab on ground, 2019</text></svg></div>
+    <div class="pane" id="p2" role="tabpanel" aria-labelledby="t2" data-no="A-03" data-name="Floor plan" data-scale="1:100" hidden><svg viewBox="0 0 800 460" class="dw plan" role="img" aria-label="Floor plan, 168 square metres, street on the left: three bedrooms, a hall and the living room at the front, bathroom, laundry and WC in the middle, and a 7.0 by 8.8 metre kitchen, dining and living room with a study opening to a rear deck."><defs><pattern id="deck" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M3 0V6" stroke="#1d2327" stroke-width=".5"/></pattern></defs><rect x="583.2" y="122.0" width="52.2" height="266.8" class="t" fill="url(#deck)"/><rect x="43.8" y="64.0" width="52.2" height="174.0" class="t" fill="none"/><rect x="96.0" y="64.0" width="121.8" height="121.8" class="room"/><rect x="96.0" y="185.8" width="232.0" height="40.6" class="room"/><rect x="96.0" y="226.4" width="121.8" height="162.4" class="room"/><rect x="217.8" y="64.0" width="110.2" height="121.8" class="room"/><rect x="217.8" y="226.4" width="110.2" height="98.6" class="room"/><rect x="217.8" y="325.0" width="110.2" height="63.8" class="room"/><rect x="328.0" y="64.0" width="69.6" height="75.4" class="room"/><rect x="328.0" y="139.4" width="69.6" height="46.4" class="room"/><rect x="397.6" y="64.0" width="185.6" height="121.8" class="room"/><rect x="328.0" y="185.8" width="255.2" height="203.0" class="room"/><rect x="96.0" y="64.0" width="487.2" height="324.8" class="outer"/><path class="win" d="M94.0 90.1 V159.7 M98.0 90.1 V159.7"/><path class="win" d="M94.0 249.6 V365.6 M98.0 249.6 V365.6"/><path class="win" d="M125.0 62.0 H188.8 M125.0 66.0 H188.8"/><path class="win" d="M241.0 62.0 H304.8 M241.0 66.0 H304.8"/><path class="win" d="M426.6 62.0 H548.4 M426.6 66.0 H548.4"/><path class="win" d="M125.0 386.8 H188.8 M125.0 390.8 H188.8"/><path class="win" d="M241.0 386.8 H304.8 M241.0 390.8 H304.8"/><path class="gap" d="M142.4 185.8 H168.5"/><path class="gap" d="M159.8 226.4 H188.8"/><path class="gap" d="M252.6 185.8 H278.7"/><path class="gap" d="M252.6 226.4 H278.7"/><path class="gap" d="M444.0 185.8 H470.1"/><path class="gap" d="M328.0 188.7 V223.5"/><path class="gap" d="M328.0 93.0 V119.1"/><path class="gap" d="M96.0 190.1 V217.7"/><path class="door" d="M96.0 190.1 H123.5 A27.5 27.5 0 0 1 96.0 217.7"/><path class="gap" d="M583.2 209.0 V348.2"/><path class="t" d="M580.2 209.0 V284.4 M586.2 272.8 V348.2"/><rect x="397.6" y="368.5" width="150.8" height="20.3" class="fx" fill="none"/><rect x="426.6" y="301.8" width="69.6" height="29.0" class="fx" fill="none"/><rect x="301.9" y="330.8" width="23.2" height="52.2" class="fx" rx="6" fill="none"/><text class="rt" x="156.9" y="120.9" text-anchor="middle">Bed 1</text><text class="st" x="156.9" y="136.9" text-anchor="middle">4.2 × 4.2</text><text class="rt sm" x="212.0" y="210.1" text-anchor="middle">Hall</text><text class="rt" x="156.9" y="303.6" text-anchor="middle">Living</text><text class="st" x="156.9" y="319.6" text-anchor="middle">5.6 × 4.2</text><text class="rt" x="272.9" y="120.9" text-anchor="middle">Bed 2</text><text class="st" x="272.9" y="136.9" text-anchor="middle">4.2 × 3.8</text><text class="rt" x="272.9" y="271.7" text-anchor="middle">Bed 3</text><text class="st" x="272.9" y="287.7" text-anchor="middle">3.4 × 3.8</text><text class="rt sm" x="272.9" y="354.9" text-anchor="middle">Bath</text><text class="st" x="272.9" y="367.9" text-anchor="middle">2.2 × 3.8</text><text class="rt" x="362.8" y="97.7" text-anchor="middle">Laundry</text><text class="st" x="362.8" y="113.7" text-anchor="middle">2.6 × 2.4</text><text class="rt sm" x="362.8" y="160.6" text-anchor="middle">WC</text><text class="st" x="362.8" y="173.6" text-anchor="middle">1.6 × 2.4</text><text class="rt" x="490.4" y="120.9" text-anchor="middle">Study</text><text class="st" x="490.4" y="136.9" text-anchor="middle">4.2 × 6.4</text><text class="rt" x="455.6" y="249.6" text-anchor="middle">Kitchen, dining and living</text><text class="st" x="455.6" y="264.6" text-anchor="middle">7.0 × 8.8</text><text class="rt sm" x="609.3" y="255.4" text-anchor="middle" transform="rotate(-90 609.3 255.4)">Deck</text><text class="rt sm" x="69.9" y="151.0" text-anchor="middle" transform="rotate(-90 69.9 151.0)">Verandah</text><path class="d" d="M96.0 417.8 H583.2 M96.0 412.0 V423.6 M583.2 412.0 V423.6"/><text class="dt" x="339.6" y="433.8" text-anchor="middle">16.8 m</text><path class="d" d="M658.6 64.0 V388.8 M652.8 64.0 H664.4 M652.8 388.8 H664.4"/><text class="dt" x="688.6" y="230.4" text-anchor="middle">11.2 m</text><g transform="translate(629.6 40)"><circle r="18" class="t" fill="none"/><path d="M14 0 L-10 -6 L-6 0 L-10 6 Z" fill="#1d2327"/><text class="dt" x="30" y="4" text-anchor="middle">N</text></g><g transform="translate(496.2 446)"><path class="k" d="M0 0 H145"/><rect x="0" y="-4" width="29" height="4" fill="#1d2327"/><rect x="58" y="-4" width="29" height="4" fill="#1d2327"/><rect x="116" y="-4" width="29" height="4" fill="#1d2327"/><text class="dt" x="0" y="-8">0</text><text class="dt" x="145" y="-8" text-anchor="end">5 m</text></g><text class="nt" x="20.6" y="226.4" transform="rotate(-90 20.6 226.4)" text-anchor="middle">Rosella Street</text></svg></div>
+    <div class="pane" id="p3" role="tabpanel" aria-labelledby="t3" data-no="A-04" data-name="Site plan" data-scale="1:250" hidden><svg viewBox="0 0 800 440" class="dw" role="img" aria-label="Site plan: a 562 square metre lot, 15.24 metres wide and 36.9 metres deep, with the house set 6 metres back from Rosella Street, a rear garden, a rainwater tank and a double garage reached from the rear lane."><defs><pattern id="lawn" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M2 6 L3 3 L4 6" fill="none" stroke="#1d2327" stroke-width=".45"/></pattern><pattern id="pv" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 0H6V6" fill="none" stroke="#f5f2ea" stroke-width=".8"/></pattern></defs><rect x="60" y="80" width="100" height="280" fill="none" class="t"/><path class="d" d="M110 90 V350"/><text class="rt" x="96" y="220" transform="rotate(-90 96 220)" text-anchor="middle">Rosella Street</text><rect x="583.9" y="80" width="46" height="280" fill="none" class="t"/><text class="rt sm" x="601.9" y="220" transform="rotate(90 601.9 220)" text-anchor="middle">Rear lane</text><rect x="170.0" y="130.0" width="405.9" height="167.6" fill="url(#lawn)" class="outer"/><rect x="236.0" y="152.0" width="184.8" height="123.2" fill="#f5f2ea" class="k"/><rect x="216.2" y="152.0" width="19.8" height="66.0" fill="#f5f2ea" class="t"/><rect x="420.8" y="174.0" width="19.8" height="101.2" fill="#f5f2ea" class="t"/><rect x="350.4" y="167.4" width="59.4" height="35.2" fill="#1d2327"/><rect x="350.4" y="167.4" width="59.4" height="35.2" fill="url(#pv)"/><text class="rt" x="302.0" y="224.6" text-anchor="middle">House</text><text class="st" x="302.0" y="238.6" text-anchor="middle">168 m²</text><rect x="509.9" y="222.4" width="66.0" height="70.4" fill="#f5f2ea" class="k"/><text class="rt sm" x="542.9" y="259.8" text-anchor="middle">Garage</text><circle cx="456.0" cy="282.9" r="9.9" fill="#f5f2ea" class="k"/><text class="nt" x="438.4" y="268.6">5,000 L tank</text><circle cx="489.0" cy="174.0" r="28.6" fill="#f5f2ea" class="t"/><circle cx="489.0" cy="174.0" r="1.5" fill="#1d2327"/><circle cx="198.6" cy="255.4" r="19.8" fill="#f5f2ea" class="t"/><circle cx="198.6" cy="255.4" r="1.5" fill="#1d2327"/><circle cx="539.6" cy="165.2" r="22.0" fill="#f5f2ea" class="t"/><circle cx="539.6" cy="165.2" r="1.5" fill="#1d2327"/><path class="t" d="M170.0 182.8 H216.2" stroke-dasharray="3 3"/><path class="d" d="M553.9 130.0 V218.0" stroke-dasharray="6 4"/><text class="nt" x="484.6" y="122.0">2 m drainage easement</text><path class="d" d="M170.0 323.6 H575.9 M170.0 317.6 V329.6 M575.9 317.6 V329.6"/><text class="dt" x="372.9" y="341.6" text-anchor="middle">36.9 m</text><path class="d" d="M170.0 130.0 V297.6"/><text class="dt" x="213.2" y="122.0" text-anchor="middle">15.24 m</text><text class="nt" x="174.4" y="143.2">6.0 m setback</text><text class="dt" x="575.9" y="106.0" text-anchor="end">562 m² · Lot 12 on PS 407221</text><g transform="translate(730 40)"><circle r="18" class="t" fill="none"/><path d="M14 0 L-10 -6 L-6 0 L-10 6 Z" fill="#1d2327"/><text class="dt" x="30" y="4" text-anchor="middle">N</text></g></svg></div>
+    <dl class="tb">
+      <div><dt>Drawing</dt><dd id="tbNo">A-01</dd></div>
+      <div><dt>Title</dt><dd id="tbName">Street elevation</dd></div>
+      <div><dt>Scale</dt><dd id="tbScale">1:100</dd></div>
+      <div><dt>Surveyed</dt><dd>Sep 2026</dd></div>
+      <div class="ex"><button class="icon" type="button" id="expand" aria-label="Open this drawing full size"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9"/></svg></button></div>
+    </dl>
+  </div>
+  <div class="index">
+    <p class="mono">Drawing set · 4 sheets</p>
+    <div role="tablist" aria-label="Drawings" aria-orientation="vertical" id="tabs" style="display:contents">
+      <button role="tab" id="t0" aria-controls="p0" aria-selected="true"><span>A-01</span><b>Street elevation</b><small>The house from Rosella St</small></button>
+      <button role="tab" id="t1" aria-controls="p1" aria-selected="false" tabindex="-1"><span>A-02</span><b>Section</b><small>1926 front, 2019 rear</small></button>
+      <button role="tab" id="t2" aria-controls="p2" aria-selected="false" tabindex="-1"><span>A-03</span><b>Floor plan</b><small>Every room, measured</small></button>
+      <button role="tab" id="t3" aria-controls="p3" aria-selected="false" tabindex="-1"><span>A-04</span><b>Site plan</b><small>562 m², rear lane</small></button>
+    </div>
+    <div class="nav2"><button class="icon" type="button" id="prev" aria-label="Previous drawing"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button><button class="icon" type="button" id="next" aria-label="Next drawing"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button></div>
+  </div>
+</section>
 
-        <div class="slide" data-on data-label="Front elevation">
-          <svg viewBox="0 0 800 450" role="img" aria-label="Front elevation of a California bungalow with a red brick porch, tiled roof and established front garden">
-            <rect width="800" height="450" fill="#D9E6F2"/>
-            <circle cx="646" cy="86" r="42" fill="#F7E7C4" opacity=".75"/>
-            <rect y="326" width="800" height="124" fill="#9FBF87"/>
-            <path d="M120 326V196l180-96 180 96v130z" fill="#B9542F"/>
-            <path d="M100 206L300 92l200 114-10 18-190-108-190 108z" fill="#5E3A2B"/>
-            <rect x="150" y="238" width="300" height="88" fill="#A34827"/>
-            <g fill="#F2E6D2"><rect x="172" y="258" width="54" height="52" rx="2"/><rect x="380" y="258" width="54" height="52" rx="2"/></g>
-            <g stroke="#5E3A2B" stroke-width="2.2"><path d="M199 258v52M172 284h54M407 258v52M380 284h54"/></g>
-            <rect x="272" y="252" width="56" height="74" rx="2" fill="#2E4A3B"/>
-            <circle cx="318" cy="290" r="3" fill="#D9C48A"/>
-            <g fill="#8A4A2A"><rect x="140" y="230" width="14" height="96"/><rect x="446" y="230" width="14" height="96"/></g>
-            <rect x="130" y="222" width="340" height="12" fill="#5E3A2B"/>
-            <path d="M262 326h76v-4h-76z" fill="#C9C4BA"/>
-            <g fill="#4F7A46"><circle cx="90" cy="300" r="34"/><circle cx="128" cy="312" r="24"/><circle cx="520" cy="298" r="30"/><circle cx="558" cy="310" r="22"/></g>
-            <g fill="#3E6A3A"><circle cx="672" cy="272" r="46"/><rect x="666" y="300" width="12" height="32"/></g>
-            <rect x="0" y="326" width="800" height="10" fill="#8AAB74"/>
-            <path d="M270 450v-124h60v124z" fill="#C9C4BA"/>
-            <g stroke="#B4AFA5" stroke-width="2"><path d="M270 356h60M270 386h60M270 416h60"/></g>
-          </svg>
-        </div>
+<dl class="facts" aria-label="Key details">
+  <div><dt>Guide</dt><dd class="num">$1.38–1.48m</dd></div>
+  <div><dt>Bedrooms</dt><dd>3 + study</dd></div>
+  <div><dt>Bathrooms</dt><dd>2</dd></div>
+  <div><dt>Parking</dt><dd>2, garage</dd></div>
+  <div><dt>Land</dt><dd class="num">562 m²</dd></div>
+  <div><dt>Floor area</dt><dd class="num">168 m²</dd></div>
+  <div><dt>Type</dt><dd>House, 1926</dd></div>
+</dl>
 
-        <div class="slide" data-label="Living &amp; kitchen">
-          <svg viewBox="0 0 800 450" role="img" aria-label="Open plan living and kitchen with a stone island bench, timber floors and north-facing glazing">
-            <rect width="800" height="450" fill="#F3EFE8"/>
-            <rect y="330" width="800" height="120" fill="#C79B67"/>
-            <g stroke="#B08655" stroke-width="2"><path d="M0 360h800M0 392h800M0 424h800"/></g>
-            <rect x="470" y="60" width="300" height="270" fill="#CFE2EE"/>
-            <g stroke="#8C99A3" stroke-width="5" fill="none"><rect x="470" y="60" width="300" height="270"/><path d="M620 60v270M470 190h300"/></g>
-            <g fill="#9FBF87" opacity=".8"><circle cx="540" cy="250" r="34"/><circle cx="700" cy="262" r="28"/></g>
-            <rect x="60" y="188" width="330" height="18" rx="4" fill="#3D4A4F"/>
-            <rect x="72" y="206" width="306" height="124" fill="#556169"/>
-            <g stroke="#3D4A4F" stroke-width="3"><path d="M175 206v124M275 206v124"/></g>
-            <g fill="#8E9AA2"><rect x="110" y="256" width="34" height="5" rx="2.5"/><rect x="208" y="256" width="34" height="5" rx="2.5"/><rect x="308" y="256" width="34" height="5" rx="2.5"/></g>
-            <rect x="130" y="84" width="230" height="86" fill="#E7DFD2"/>
-            <g stroke="#C6BBA8" stroke-width="3"><path d="M130 127h230"/></g>
-            <rect x="200" y="96" width="34" height="22" rx="2" fill="#B08655"/>
-            <rect x="262" y="138" width="42" height="22" rx="2" fill="#9FBF87"/>
-            <rect x="404" y="122" width="46" height="60" rx="3" fill="#6E7B84"/>
-            <path d="M420 122v-16a12 12 0 0 1 24 0" stroke="#6E7B84" stroke-width="5" fill="none"/>
-            <rect x="0" y="322" width="800" height="10" fill="#B08655"/>
-          </svg>
-        </div>
+<div class="body">
+  <div>
+    <h2>The house</h2>
+    <div class="desc">
+      <p>A <strong>Californian bungalow built in 1926</strong>, weatherboard on a red-brick base under a terracotta-tiled roof, on a 562 m² lot with 15.24 metres of frontage and rear-lane access.</p>
+      <p>The front four rooms are original, with <strong>3.3 metre ceilings</strong>, Baltic pine floors and leadlight casements. The house was restumped in 2018. In 2019 the rear was replaced with a 7.0 by 8.8 metre kitchen, dining and living room on a slab, with a raked ceiling to 4.2 metres, a skylight and double-glazed sliding doors to a north-facing deck.</p>
+      <p>Rosella Street is a short, one-way street of similar houses, 450 metres from Coburg station and 300 metres from the Sydney Road trams. Street parking is unrestricted.</p>
+    </div>
+    <ul class="hl">
+      <li>North-facing rear garden, 13.3 metres deep</li>
+      <li>Double garage from the rear lane, with power</li>
+      <li>Restumped 2018, certificate provided</li>
+      <li>Rewired 2019 with a new switchboard</li>
+      <li>Heritage overlay: none</li>
+      <li>Zoning: General Residential 1</li>
+    </ul>
 
-        <div class="slide" data-label="Rear deck &amp; pool">
-          <svg viewBox="0 0 800 450" role="img" aria-label="Rear deck with a covered pergola overlooking a plunge pool and lawn">
-            <rect width="800" height="450" fill="#CFE2EE"/>
-            <rect y="212" width="800" height="238" fill="#9FBF87"/>
-            <rect x="0" y="120" width="330" height="188" fill="#EDE6DA"/>
-            <g fill="#CFE2EE"><rect x="44" y="160" width="86" height="110"/><rect x="176" y="160" width="86" height="110"/></g>
-            <g stroke="#9A8F7D" stroke-width="4" fill="none"><rect x="44" y="160" width="86" height="110"/><rect x="176" y="160" width="86" height="110"/></g>
-            <rect x="0" y="108" width="342" height="16" fill="#6E5F4C"/>
-            <g fill="#8A7A63"><rect x="330" y="120" width="12" height="188"/><rect x="474" y="120" width="12" height="188"/></g>
-            <rect x="322" y="108" width="176" height="14" fill="#6E5F4C"/>
-            <g stroke="#8A7A63" stroke-width="5"><path d="M346 122h130M346 142h130M346 162h130"/></g>
-            <rect x="0" y="292" width="500" height="34" fill="#B78E5E"/>
-            <g stroke="#9C7549" stroke-width="2"><path d="M0 300h500M0 310h500M0 320h500"/></g>
-            <rect x="540" y="278" width="230" height="118" rx="8" fill="#4FA3C7"/>
-            <rect x="554" y="290" width="202" height="94" rx="6" fill="#67BDDD"/>
-            <g stroke="#A8DCEE" stroke-width="4" fill="none" stroke-linecap="round"><path d="M578 322h154M578 348h154"/></g>
-            <rect x="540" y="268" width="230" height="12" rx="6" fill="#DED6C6"/>
-            <g fill="#3E6A3A"><circle cx="694" cy="176" r="52"/><rect x="688" y="208" width="13" height="42"/></g>
-            <g fill="#4F7A46"><circle cx="576" cy="206" r="30"/><circle cx="612" cy="218" r="20"/></g>
-            <rect x="96" y="256" width="118" height="10" rx="5" fill="#6E5F4C"/>
-            <g fill="#6E5F4C"><rect x="104" y="266" width="9" height="26"/><rect x="198" y="266" width="9" height="26"/></g>
-          </svg>
-        </div>
-
-        <div class="slide" data-label="Main bedroom">
-          <svg viewBox="0 0 800 450" role="img" aria-label="Main bedroom with a bay window, built-in robes and timber floors">
-            <rect width="800" height="450" fill="#EFEAE2"/>
-            <rect y="348" width="800" height="102" fill="#C79B67"/>
-            <g stroke="#B08655" stroke-width="2"><path d="M0 376h800M0 408h800"/></g>
-            <rect x="508" y="74" width="256" height="216" fill="#CFE2EE"/>
-            <g stroke="#94A0A8" stroke-width="5" fill="none"><rect x="508" y="74" width="256" height="216"/><path d="M636 74v216"/></g>
-            <rect x="494" y="60" width="284" height="16" fill="#DDD5C7"/>
-            <g fill="#9FBF87" opacity=".75"><circle cx="560" cy="234" r="26"/><circle cx="716" cy="244" r="22"/></g>
-            <rect x="96" y="200" width="330" height="148" rx="6" fill="#DCD3C4"/>
-            <rect x="110" y="126" width="302" height="86" rx="8" fill="#5C6B73"/>
-            <g fill="#EFEAE2"><rect x="140" y="212" width="112" height="46" rx="8"/><rect x="270" y="212" width="112" height="46" rx="8"/></g>
-            <rect x="96" y="258" width="330" height="60" rx="5" fill="#B0C4B1"/>
-            <rect x="96" y="310" width="330" height="38" rx="4" fill="#C9C0B0"/>
-            <g fill="#8A7A63"><rect x="88" y="320" width="10" height="28"/><rect x="424" y="320" width="10" height="28"/></g>
-            <rect x="452" y="278" width="44" height="70" rx="4" fill="#9A8F7D"/>
-            <circle cx="474" cy="258" r="16" fill="#E8DCC2"/>
-            <rect x="472" y="258" width="4" height="22" fill="#9A8F7D"/>
-          </svg>
-        </div>
-
-        <div class="slide" data-label="Floor plan">
-          <svg viewBox="0 0 800 450" role="img" aria-label="Floor plan of the ground floor showing four bedrooms, two bathrooms, open plan living and a rear deck">
-            <rect width="800" height="450" fill="#FBFCFD"/>
-            <g stroke="#E2E8F0" stroke-width="1"><path d="M0 50h800M0 100h800M0 150h800M0 200h800M0 250h800M0 300h800M0 350h800M0 400h800M50 0v450M100 0v450M150 0v450M200 0v450M250 0v450M300 0v450M350 0v450M400 0v450M450 0v450M500 0v450M550 0v450M600 0v450M650 0v450M700 0v450M750 0v450"/></g>
-            <g fill="#F1F5F9" stroke="#0F172A" stroke-width="5">
-              <rect x="92" y="60" width="616" height="330"/>
-            </g>
-            <g stroke="#0F172A" stroke-width="5" fill="none">
-              <path d="M330 60v146M330 250v140M92 206h238M478 60v330M478 224h230"/>
-            </g>
-            <g stroke="#0F172A" stroke-width="3.5" fill="none">
-              <path d="M210 206v184M92 300h118"/>
-            </g>
-            <g stroke="#FBFCFD" stroke-width="7"><path d="M330 150v42M330 296v40M406 206h44M478 128v42M478 300v40M210 254v38"/></g>
-            <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">
-              <g font-size="14" font-weight="650" fill="#0F172A">
-                <text x="211" y="126">BED 1</text><text x="404" y="120">BED 2</text>
-                <text x="151" y="248">BED 3</text><text x="151" y="346">BED 4</text>
-                <text x="270" y="300">LIVING</text><text x="594" y="140">KITCHEN / DINING</text><text x="594" y="310">DECK</text>
-                <text x="404" y="300">BATH</text>
-              </g>
-              <g font-size="10.5" fill="#7A8699">
-                <text x="211" y="144">4.2 × 3.8</text><text x="404" y="138">3.6 × 3.2</text>
-                <text x="151" y="266">3.4 × 3.0</text><text x="151" y="364">3.2 × 3.0</text>
-                <text x="270" y="318">7.1 × 4.4</text><text x="594" y="158">8.2 × 5.6</text><text x="594" y="328">6.0 × 3.4</text>
-                <text x="404" y="318">2.8 × 2.4</text>
-              </g>
-            </g>
-            <g stroke="#2563EB" stroke-width="1.6" fill="none">
-              <path d="M92 412h616M92 406v12M708 406v12"/>
-              <path d="M56 60v330M50 60h12M50 390h12"/>
-            </g>
-            <g font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#2563EB">
-              <text x="400" y="432" text-anchor="middle">18.4 m</text>
-              <text x="44" y="228" text-anchor="middle" transform="rotate(-90 44 228)">11.6 m</text>
-            </g>
-            <g fill="#2563EB" opacity=".1"><rect x="478" y="228" width="230" height="160"/></g>
-            <text x="742" y="82" text-anchor="end" font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#7A8699">GROUND FLOOR · 214 m²</text>
-          </svg>
-        </div>
-
-        <button class="navbtn p" type="button" id="gp" aria-label="Previous photo"><svg viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></svg></button>
-        <button class="navbtn n" type="button" id="gn" aria-label="Next photo"><svg viewBox="0 0 24 24"><path d="M10 6l6 6-6 6"/></svg></button>
-        <span class="counter" id="gc">1 / 5</span>
-      </div>
-      <div class="thumbs" id="thumbs"></div>
+    <div class="features">
+      <h2>Services and fabric</h2>
+      <dl class="fgrid">
+        <div><dt>Heating</dt><dd>Hydronic<small>24 kW condensing gas boiler, 9 panels</small></dd></div>
+        <div><dt>Cooling</dt><dd>Split system<small>7.1 kW, living room</small></dd></div>
+        <div><dt>Solar</dt><dd>6.6 kW<small>18 panels, 5 kW inverter, 2019</small></dd></div>
+        <div><dt>Water</dt><dd>5,000 L tank<small>Plumbed to WC and laundry</small></dd></div>
+        <div><dt>Hot water</dt><dd>Heat pump<small>270 L, 2022</small></dd></div>
+        <div><dt>Glazing</dt><dd>Double, rear<small>Timber frames, original leadlight at front</small></dd></div>
+        <div><dt>Insulation</dt><dd>R4.0 ceiling<small>R2.5 walls in the extension</small></dd></div>
+        <div><dt>Internet</dt><dd>NBN fibre to the premises</dd></div>
+        <div><dt>Energy rating</dt><dd>Not assessed<small>Available on request</small></dd></div>
+      </dl>
     </div>
 
-    <!-- ---------- key bar ---------- -->
-    <div class="keybar">
-      <div class="keytop">
-        <div>
-          <h1>14 Rosella Street, Coburg VIC 3058</h1>
-          <p class="sub">California bungalow, extended 2019 · North-facing rear</p>
-        </div>
-        <div class="pr">
-          <b class="num">$1,285,000 – $1,360,000</b>
-          <span>Auction Sat 4 Oct, 12:00pm on site</span>
-        </div>
-      </div>
-      <div class="keystats">
-        <div><svg><use href="#bed"/></svg><span><b class="num">4</b><span>Bedrooms</span></span></div>
-        <div><svg><use href="#bath"/></svg><span><b class="num">2</b><span>Bathrooms</span></span></div>
-        <div><svg><use href="#car"/></svg><span><b class="num">2</b><span>Car spaces</span></span></div>
-        <div><svg><use href="#land"/></svg><span><b class="num">622 m²</b><span>Land</span></span></div>
-        <div><svg><use href="#floor"/></svg><span><b class="num">214 m²</b><span>Floor area</span></span></div>
-        <div><svg><use href="#house"/></svg><span><b>House</b><span>Built 1928</span></span></div>
-      </div>
-    </div>
-
-    <!-- ---------- body ---------- -->
-    <div class="cols">
+    <div class="loc">
+      <svg viewBox="0 0 640 420" class="dw map" role="img" aria-label="Locality map: the house, Coburg station on the Upfield line, the route 19 tram on Sydney Road, Coburg North Primary, Bridges Reserve and the shops on Sydney Road, with 5 and 10 minute walking rings."><rect x="0" y="0" width="640" height="420" fill="#f5f2ea"/><rect x="392" y="46" width="170" height="120" rx="6" fill="#dfe3d4" class="t"/><text class="rt sm" x="477" y="112" text-anchor="middle">Bridges Reserve</text><path class="road" d="M0 70 H640"/><path class="road" d="M0 150 H640"/><path class="road" d="M0 230 H640"/><path class="road" d="M0 310 H640"/><path class="road" d="M0 390 H640"/><path class="road" d="M80 0 V420"/><path class="road" d="M190 0 V420"/><path class="road" d="M300 0 V420"/><path class="road" d="M410 0 V420"/><path class="road" d="M520 0 V420"/><path class="main" d="M246 0 V420"/><text class="nt" x="252" y="20">Sydney Road · tram 19</text><path class="rail" d="M136 0 V420"/><path class="rail-t" d="M136 0 V420"/><text class="nt" x="142" y="408">Upfield line</text><circle cx="340" cy="240" r="96" class="ring"/><circle cx="340" cy="240" r="192" class="ring"/><text class="nt" x="352" y="148">5 min</text><text class="nt" x="352" y="54">10 min</text><g><circle cx="136" cy="198" r="7" fill="#f5f2ea" stroke="#1d2327" stroke-width="2"/><text class="rt sm" x="118" y="194" text-anchor="end">Coburg station</text></g><g><rect x="232" y="252" width="28" height="12" fill="#1d2327"/><text class="rt sm" x="228" y="276" text-anchor="end">Sydney Rd shops</text></g><g><rect x="430" y="300" width="60" height="40" class="k" fill="#f5f2ea"/><text class="rt sm" x="460" y="358" text-anchor="middle">Coburg North Primary</text></g><g><path d="M340 222 C350 222 356 230 356 238 C356 250 340 262 340 262 C340 262 324 250 324 238 C324 230 330 222 340 222 Z" fill="#a4452c"/><circle cx="340" cy="238" r="5" fill="#f5f2ea"/><text class="rt" x="364" y="244">14 Rosella St</text></g></svg>
       <div>
-        <section class="blk">
-          <h2>About this property</h2>
-          <p>A 1928 California bungalow on the high side of Rosella Street, held by the same family since 1994 and extended across the rear in 2019 by Kettle &amp; Grange. The original four rooms off the central hall are intact — <b>leadlight, picture rails, Baltic pine floors</b> — and the new work sits behind them rather than through them.</p>
-          <p>The rear addition is a single 8.2 × 5.6 metre room facing due north, with a 3.4 metre raked ceiling and full-height glazing onto the deck. Double glazing throughout the extension, hydronic panels in the original rooms, and a 6.6 kW array that covered about two thirds of last year's electricity.</p>
-          <p>Rosella Street runs off Mackay, so through traffic is limited to residents. The 19 tram is a six-minute walk at the Moreland Road stop, and Coburg North Primary is directly across the reserve.</p>
-          <ul class="hl">
-            <li><svg><use href="#ok"/></svg><span><b>North-facing rear</b> — the living room takes direct sun from about 9am through to mid-afternoon in winter.</span></li>
-            <li><svg><use href="#ok"/></svg><span><b>Rear lane access</b> to a double garage off Wilkes Lane, with room for a workshop bench.</span></li>
-            <li><svg><use href="#ok"/></svg><span><b>Two separate living zones</b> — the original front lounge with the gas fireplace stays a quiet room.</span></li>
-            <li><svg><use href="#ok"/></svg><span><b>622 m² with a genuinely usable back yard</b>, 14 metres of lawn behind the pool fence.</span></li>
-            <li><svg><use href="#ok"/></svg><span><b>Neighbourhood Residential Zone</b> — the streetscape is protected, so the outlook is not going to change.</span></li>
-          </ul>
-        </section>
-
-        <section class="blk">
-          <h2>Features</h2>
-          <div class="feats">
-            <span><svg><use href="#ok"/></svg>Hydronic heating</span>
-            <span><svg><use href="#ok"/></svg>Ducted refrigerated cooling</span>
-            <span><svg><use href="#ok"/></svg>6.6 kW solar, 2021</span>
-            <span><svg><use href="#ok"/></svg>5,000 L rainwater tank</span>
-            <span><svg><use href="#ok"/></svg>Double glazing (extension)</span>
-            <span><svg><use href="#ok"/></svg>Gas fireplace, front lounge</span>
-            <span><svg><use href="#ok"/></svg>Butler's pantry</span>
-            <span><svg><use href="#ok"/></svg>Underfloor heating, both baths</span>
-            <span><svg><use href="#ok"/></svg>Plunge pool, solar heated</span>
-            <span><svg><use href="#ok"/></svg>Double garage, rear lane</span>
-            <span><svg><use href="#ok"/></svg>NBN fibre to the premises</span>
-            <span><svg><use href="#ok"/></svg>Monitored alarm</span>
-          </div>
-        </section>
-
-        <section class="blk" id="plan">
-          <h2>Floor plan</h2>
-          <details class="plan" open>
-            <summary><svg><use href="#floor"/></svg>Ground floor — 214 m² internal<span class="ch">Collapse</span></summary>
-            <div class="planbody">
-              <svg viewBox="0 0 800 450" role="img" aria-label="Ground floor plan: four bedrooms along the west and north, central living room, kitchen and dining across the east, bathroom between, and a rear deck">
-                <rect width="800" height="450" fill="#FBFCFD"/>
-                <g fill="#F1F5F9" stroke="#0F172A" stroke-width="5"><rect x="92" y="60" width="616" height="330"/></g>
-                <g stroke="#0F172A" stroke-width="5" fill="none"><path d="M330 60v146M330 250v140M92 206h238M478 60v330M478 224h230"/></g>
-                <g stroke="#0F172A" stroke-width="3.5" fill="none"><path d="M210 206v184M92 300h118"/></g>
-                <g stroke="#FBFCFD" stroke-width="7"><path d="M330 150v42M330 296v40M406 206h44M478 128v42M478 300v40M210 254v38"/></g>
-                <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">
-                  <g font-size="14" font-weight="650" fill="#0F172A">
-                    <text x="211" y="126">BED 1</text><text x="404" y="120">BED 2</text>
-                    <text x="151" y="248">BED 3</text><text x="151" y="346">BED 4</text>
-                    <text x="270" y="300">LIVING</text><text x="594" y="140">KITCHEN / DINING</text><text x="594" y="310">DECK</text>
-                    <text x="404" y="300">BATH</text>
-                  </g>
-                  <g font-size="10.5" fill="#7A8699">
-                    <text x="211" y="144">4.2 × 3.8</text><text x="404" y="138">3.6 × 3.2</text>
-                    <text x="151" y="266">3.4 × 3.0</text><text x="151" y="364">3.2 × 3.0</text>
-                    <text x="270" y="318">7.1 × 4.4</text><text x="594" y="158">8.2 × 5.6</text><text x="594" y="328">6.0 × 3.4</text>
-                    <text x="404" y="318">2.8 × 2.4</text>
-                  </g>
-                </g>
-                <g stroke="#2563EB" stroke-width="1.6" fill="none"><path d="M92 412h616M92 406v12M708 406v12"/><path d="M56 60v330M50 60h12M50 390h12"/></g>
-                <g font-family="ui-monospace,Menlo,monospace" font-size="11" fill="#2563EB">
-                  <text x="400" y="432" text-anchor="middle">18.4 m</text>
-                  <text x="44" y="228" text-anchor="middle" transform="rotate(-90 44 228)">11.6 m</text>
-                </g>
-                <g fill="#2563EB" opacity=".1"><rect x="478" y="228" width="230" height="160"/></g>
-                <path d="M742 92v-28M736 70l6-8 6 8" stroke="#7A8699" stroke-width="2" fill="none"/>
-                <text x="742" y="106" text-anchor="middle" font-family="ui-monospace,Menlo,monospace" font-size="10" fill="#7A8699">N</text>
-              </svg>
-              <p class="planmeta">
-                <span>Internal <b>214 m²</b></span><span>Deck <b>20 m²</b></span><span>Garage <b>36 m²</b></span>
-                <span>Ceilings <b>3.1 m original / 3.4 m raked</b></span><span>Plan indicative, not to scale</span>
-              </p>
-            </div>
-          </details>
-        </section>
-
-        <section class="blk">
-          <h2>Location</h2>
-          <div class="mapwrap">
-            <svg viewBox="0 0 800 340" role="img" aria-label="Local map showing 14 Rosella Street relative to Coburg North Primary, Merri Creek trail, Sydney Road shops and the number 19 tram">
-              <rect width="800" height="340" fill="#F2F5F8"/>
-              <path d="M0 0h260v120H0z" fill="#E6F0E3"/>
-              <path d="M556 0c-16 40-4 92-30 132-24 38-8 84 6 128v80H800V0z" fill="#E3EFF5"/>
-              <path d="M566 12c-14 38-2 84-26 122-22 36-8 78 4 120" stroke="#9CC6DC" stroke-width="7" fill="none" stroke-linecap="round"/>
-              <g stroke="#DCE3EB" stroke-width="16" fill="none"><path d="M0 188h800M300 0v340M0 84h560M110 0v340M660 0v340M0 272h560"/></g>
-              <g stroke="#FFFFFF" stroke-width="2.4" stroke-dasharray="12 10" fill="none"><path d="M0 188h800M300 0v340"/></g>
-              <rect x="292" y="0" width="16" height="340" fill="#F3D9A6"/>
-              <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="10.5" fill="#7A8699" letter-spacing="1.1">
-                <text x="16" y="182">MORELAND RD</text>
-                <text x="318" y="28" transform="rotate(90 318 28)">SYDNEY RD</text>
-                <text x="126" y="28" transform="rotate(90 126 28)">ROSELLA ST</text>
-                <text x="676" y="28" transform="rotate(90 676 28)">MERRI CREEK TRL</text>
-                <text x="16" y="78">MACKAY ST</text>
-                <text x="16" y="266">BELL ST</text>
-                <text x="16" y="112">COBURG NORTH RESERVE</text>
-              </g>
-              <g fill="#0F172A"><circle cx="72" cy="52" r="6"/><circle cx="240" cy="228" r="6"/><circle cx="300" cy="120" r="6"/><circle cx="600" cy="188" r="6"/><circle cx="300" cy="272" r="6"/></g>
-              <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="11.5" fill="#0F172A" font-weight="600">
-                <text x="84" y="56">Coburg North Primary</text>
-                <text x="252" y="232">Coburg Lake Reserve</text>
-                <text x="312" y="124">Tram 19 — Moreland Rd</text>
-                <text x="516" y="180">Merri Creek trail</text>
-                <text x="312" y="276">Sydney Rd shops</text>
-              </g>
-              <g><circle cx="110" cy="132" r="15" fill="#2563EB" opacity=".18"/><circle cx="110" cy="132" r="9" fill="#2563EB"/><circle cx="110" cy="132" r="3.4" fill="#fff"/></g>
-              <text x="128" y="136" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="12.5" font-weight="700" fill="#2563EB">14 Rosella St</text>
-            </svg>
-            <ul class="amen">
-              <li><span class="ic"><svg><use href="#sch"/></svg></span><b>Coburg North Primary</b><span class="d">400 m</span></li>
-              <li><span class="ic"><svg><use href="#park"/></svg></span><b>Merri Creek trail</b><span class="d">250 m</span></li>
-              <li><span class="ic"><svg><use href="#trn"/></svg></span><b>Tram 19, Moreland Rd</b><span class="d">600 m</span></li>
-              <li><span class="ic"><svg><use href="#park"/></svg></span><b>Coburg Lake Reserve</b><span class="d">900 m</span></li>
-              <li><span class="ic"><svg><use href="#shop"/></svg></span><b>Sydney Rd shops</b><span class="d">1.4 km</span></li>
-              <li><span class="ic"><svg><use href="#trn"/></svg></span><b>Batman Station</b><span class="d">1.1 km</span></li>
-            </ul>
-          </div>
-        </section>
+        <h2>Walking distance</h2>
+        <ul class="walk">
+          <li>Coburg station, Upfield line <span>6 min</span></li>
+          <li>Route 19 tram, Sydney Road <span>4 min</span></li>
+          <li>Sydney Road shops <span>5 min</span></li>
+          <li>Coburg North Primary <span>8 min</span></li>
+          <li>Bridges Reserve <span>3 min</span></li>
+        </ul>
       </div>
-
-      <!-- ---------- sidebar ---------- -->
-      <aside class="side" id="enquire">
-        <div class="card insp">
-          <h3>Inspections</h3>
-          <div class="row">
-            <span class="dt"><b class="num">20</b><span>Sep</span></span>
-            <span class="tx"><b>Saturday 11:00 – 11:30am</b><span>Open for inspection</span></span>
-          </div>
-          <div class="row">
-            <span class="dt"><b class="num">24</b><span>Sep</span></span>
-            <span class="tx"><b>Wednesday 5:30 – 6:00pm</b><span>Open for inspection</span></span>
-          </div>
-          <div class="row">
-            <span class="dt"><b class="num">4</b><span>Oct</span></span>
-            <span class="tx"><b>Saturday 12:00pm</b><span>Auction, on site</span></span>
-          </div>
-          <a class="btn" href="#enquire"><svg><use href="#cl"/></svg>Add to calendar</a>
-        </div>
-
-        <div class="card agent">
-          <div class="top">
-            <span class="av">
-              <svg viewBox="0 0 64 64" role="img" aria-label="Illustrated portrait of Priya Raman">
-                <rect width="64" height="64" fill="#DCE7F4"/>
-                <circle cx="32" cy="25" r="11" fill="#0F172A"/>
-                <path d="M11 60c2-13 10-19 21-19s19 6 21 19z" fill="#2563EB"/>
-                <path d="M23 24a9 9 0 0 1 18 0v2a9 9 0 0 1-18 0z" fill="#E4B896"/>
-                <path d="M21 22c1-8 6-11 11-11s10 3 11 11c-4-4-8-5-11-5s-7 1-11 5z" fill="#1A1A2E"/>
-              </svg>
-            </span>
-            <span><b>Priya Raman</b><span>Director, sales</span></span>
-          </div>
-          <div class="agency">
-            <span class="m"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/></svg></span>
-            <span><b>Northline Property</b>482 Sydney Road, Coburg VIC 3058</span>
-          </div>
-          <div class="contactlines">
-            <a href="tel:+61491570110"><svg><use href="#ph"/></svg>0491 570 110</a>
-            <a href="mailto:priya.raman@northline.example.com"><svg><use href="#mail"/></svg>priya.raman@northline.example.com</a>
-          </div>
-          <a class="btn btn-b" href="#enquire">Enquire now</a>
-        </div>
-
-        <div class="card costs">
-          <h3>Running costs</h3>
-          <div class="row"><span>Council rates</span><b>$1,842 pa</b></div>
-          <div class="row"><span>Water rates</span><b>$1,116 pa</b></div>
-          <div class="row"><span>Owners corporation</span><b>None</b></div>
-          <div class="row"><span>Last sold</span><b>Mar 1994</b></div>
-          <p class="note">Figures supplied by the vendor and believed accurate. Buyers should make their own enquiries. Statement of Information available on request.</p>
-        </div>
-      </aside>
     </div>
   </div>
 
-  <!-- ---------- similar ---------- -->
-  <section class="similar">
-    <div class="wrap">
-      <h2>Similar listings in Coburg</h2>
-      <div class="sgrid">
-        <a class="lst" href="#top">
-          <span class="pic"><svg viewBox="0 0 320 200" aria-hidden="true">
-            <rect width="320" height="200" fill="#D9E6F2"/><rect y="146" width="320" height="54" fill="#9FBF87"/>
-            <path d="M58 146V84l102-52 102 52v62z" fill="#C9705A"/><path d="M44 90L160 30l116 60-6 12-110-56-110 56z" fill="#5E3A2B"/>
-            <rect x="84" y="102" width="152" height="44" fill="#B45B44"/>
-            <g fill="#F2E6D2"><rect x="100" y="112" width="30" height="26"/><rect x="190" y="112" width="30" height="26"/></g>
-            <rect x="146" y="106" width="28" height="40" fill="#2E4A3B"/>
-            <g fill="#4F7A46"><circle cx="34" cy="134" r="20"/><circle cx="288" cy="132" r="22"/></g>
-          </svg></span>
-          <span class="b"><span class="p num">$1,180,000 – $1,250,000</span><span class="a">27 Mackay Street, Coburg</span>
-            <span class="m"><span><svg><use href="#bed"/></svg>3</span><span><svg><use href="#bath"/></svg>1</span><span><svg><use href="#car"/></svg>2</span><span><svg><use href="#land"/></svg>548 m²</span></span></span>
-        </a>
-        <a class="lst" href="#top">
-          <span class="pic"><svg viewBox="0 0 320 200" aria-hidden="true">
-            <rect width="320" height="200" fill="#DCE7F4"/><rect y="152" width="320" height="48" fill="#9FBF87"/>
-            <rect x="44" y="52" width="232" height="100" fill="#E9E3D8"/><rect x="44" y="40" width="232" height="14" fill="#5C6B73"/>
-            <g fill="#8FB6CF"><rect x="62" y="68" width="46" height="34"/><rect x="128" y="68" width="46" height="34"/><rect x="194" y="68" width="46" height="34"/>
-              <rect x="62" y="114" width="46" height="30"/><rect x="194" y="114" width="46" height="30"/></g>
-            <rect x="136" y="110" width="30" height="42" fill="#2E4A3B"/>
-            <g fill="#4F7A46"><circle cx="296" cy="140" r="18"/></g>
-          </svg></span>
-          <span class="b"><span class="p num">$965,000</span><span class="a">8/112 Bell Street, Coburg</span>
-            <span class="m"><span><svg><use href="#bed"/></svg>2</span><span><svg><use href="#bath"/></svg>2</span><span><svg><use href="#car"/></svg>1</span><span><svg><use href="#floor"/></svg>96 m²</span></span></span>
-        </a>
-        <a class="lst" href="#top">
-          <span class="pic"><svg viewBox="0 0 320 200" aria-hidden="true">
-            <rect width="320" height="200" fill="#D9E6F2"/><rect y="150" width="320" height="50" fill="#9FBF87"/>
-            <path d="M52 150V72h96v78z" fill="#E4DACA"/><path d="M148 150V54h120v96z" fill="#C6BBA8"/>
-            <path d="M40 74l60-30 60 30" stroke="#5E3A2B" stroke-width="10" fill="none"/>
-            <path d="M136 56l72-30 72 30" stroke="#5E3A2B" stroke-width="10" fill="none"/>
-            <g fill="#8FB6CF"><rect x="70" y="92" width="28" height="26"/><rect x="172" y="76" width="34" height="28"/><rect x="224" y="76" width="34" height="28"/><rect x="172" y="116" width="34" height="28"/></g>
-            <rect x="102" y="112" width="26" height="38" fill="#2E4A3B"/>
-            <g fill="#4F7A46"><circle cx="24" cy="138" r="18"/><circle cx="298" cy="136" r="16"/></g>
-          </svg></span>
-          <span class="b"><span class="p num">$1,420,000 – $1,500,000</span><span class="a">5 Wilkes Street, Coburg North</span>
-            <span class="m"><span><svg><use href="#bed"/></svg>4</span><span><svg><use href="#bath"/></svg>2</span><span><svg><use href="#car"/></svg>2</span><span><svg><use href="#land"/></svg>701 m²</span></span></span>
-        </a>
-      </div>
+  <aside id="enquire" aria-label="Agent and inspections">
+    <div class="agent">
+      <div class="who"><span class="av" aria-hidden="true">RK</span><div><b>Rosa Karagiannis</b><span>Director, Northline Property Coburg</span></div></div>
+      <p class="contact"><a href="#enquire">0491 570 156</a><a href="#enquire">rosa@northline.example</a></p>
+      <button class="btn ink" type="button" id="enq">Enquire now</button>
+      <form id="form" novalidate hidden>
+        <div class="f"><label for="fn">Name</label><input id="fn" autocomplete="name" required></div>
+        <div class="f"><label for="fe">Email</label><input id="fe" type="email" autocomplete="email" required></div>
+        <fieldset><legend>I’d like</legend><div class="chips">
+          <label><input type="checkbox" checked><span>The contract and Section 32</span></label>
+          <label><input type="checkbox"><span>A private inspection</span></label>
+          <label><input type="checkbox"><span>A call about the price</span></label>
+        </div></fieldset>
+        <button class="btn ink" type="submit">Send enquiry</button>
+        <p class="err" id="err" role="alert"></p>
+      </form>
+      <div class="times"><p class="mono">Open for inspection</p><ul>
+        <li><b>Sat 20 Sep</b><span>10:30–11:00 am</span></li>
+        <li><b>Thu 25 Sep</b><span>5:30–6:00 pm</span></li>
+        <li><b>Sat 27 Sep</b><span>10:30–11:00 am</span></li>
+      </ul></div>
+      <dl class="costs"><p class="mono">Running costs</p>
+        <div><dt>Council rates</dt><dd class="num">$2,184 a year</dd></div>
+        <div><dt>Water rates</dt><dd class="num">$812 a year</dd></div>
+      </dl>
     </div>
-  </section>
+  </aside>
+</div>
+
+<section class="similar" aria-labelledby="sim-h">
+  <h2 id="sim-h">Similar in Coburg</h2>
+  <ul class="cards">
+    <li><a href="#top"><div class="pic"><svg viewBox="0 0 200 110" aria-hidden="true" class="dw"><path class="k" d="M20 100H180M40 100V56H160V100M30 58L100 20L170 58"/><path class="t" d="M52 64H86V92H52ZM110 64H150V92H110ZM69 64V92M130 64V92"/></svg></div><h3>8 Moreland Road</h3><p><span class="pr">$1,250,000 – $1,350,000</span> · 3 bed · 1 bath · 1926 bungalow</p></a></li>
+    <li><a href="#top"><div class="pic"><svg viewBox="0 0 200 110" aria-hidden="true" class="dw"><path class="k" d="M20 100H180M60 100V40H140V100M52 42L100 14L148 42"/><path class="t" d="M72 50H96V70H72ZM104 50H128V70H104ZM90 78H110V100H90Z"/></svg></div><h3>31 Bell Street</h3><p><span class="pr">$990,000 – $1,080,000</span> · 2 bed · 1 bath · Edwardian</p></a></li>
+    <li><a href="#top"><div class="pic"><svg viewBox="0 0 200 110" aria-hidden="true" class="dw"><path class="k" d="M20 100H180M30 100V50H110V100M110 100V64H170V100M24 52L70 26L116 52"/><path class="t" d="M44 60H70V86H44ZM124 72H160V90H124Z"/></svg></div><h3>2 Hudson Street</h3><p><span class="pr">$1,420,000 – $1,550,000</span> · 4 bed · 2 bath · extended</p></a></li>
+  </ul>
+</section>
 </main>
+<footer><span>Northline Property Coburg · 412 Sydney Road, Coburg VIC 3058</span><span>Drawings and figures are illustrative; the Section 32 is the document to rely on.</span></footer>
+</div>
 
-<footer>
-  <div class="wrap">
-    <span>© 2026 Northline Property Pty Ltd · Licensed estate agent 088 214 6</span>
-    <a href="#top">Privacy</a><a href="#top">Due diligence checklist</a>
-    <span class="r">Statement of Information available at every inspection</span>
-  </div>
-</footer>
+<dialog id="dlg" aria-labelledby="dlgT"><div class="bar"><p class="mono" id="dlgT">A-01 Street elevation</p><button class="icon" type="button" id="close" aria-label="Close"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div><div class="inner" id="dlgBody"></div></dialog>
 
 <script>
 (function(){
-  var slides=[].slice.call(document.querySelectorAll('#stage .slide')),
-      thumbs=document.getElementById('thumbs'),
-      counter=document.getElementById('gc'), i=0;
-
-  slides.forEach(function(s,n){
-    var b=document.createElement('button');
-    b.type='button'; b.className='thumb';
-    b.setAttribute('aria-label','Show photo '+(n+1)+': '+s.dataset.label);
-    b.innerHTML=s.querySelector('svg').outerHTML+'<span class="lb">'+s.dataset.label+'</span>';
-    b.querySelector('svg').removeAttribute('role');
-    b.querySelector('svg').setAttribute('aria-hidden','true');
-    b.addEventListener('click',function(){go(n);});
-    thumbs.appendChild(b);
-  });
-
-  function go(n){
-    i=(n+slides.length)%slides.length;
-    slides.forEach(function(s,x){ if(x===i){s.setAttribute('data-on','');}else{s.removeAttribute('data-on');} });
-    [].forEach.call(thumbs.children,function(t,x){ t.setAttribute('aria-current',String(x===i)); });
-    counter.textContent=(i+1)+' / '+slides.length;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var tabs = [].slice.call(document.querySelectorAll('[role=tab]'));
+  var panes = [].slice.call(document.querySelectorAll('.pane'));
+  var tbNo = document.getElementById('tbNo'), tbName = document.getElementById('tbName'), tbScale = document.getElementById('tbScale');
+  var at = 0;
+  function show(i, focus){
+    at = (i + 4) % 4;
+    tabs.forEach(function(t, k){ t.setAttribute('aria-selected', k === at ? 'true' : 'false'); t.tabIndex = k === at ? 0 : -1; });
+    panes.forEach(function(p, k){ p.hidden = k !== at; p.classList.toggle('in', k === at); });
+    var p = panes[at];
+    tbNo.textContent = p.dataset.no; tbName.textContent = p.dataset.name; tbScale.textContent = p.dataset.scale;
+    if (focus) tabs[at].focus();
   }
-  document.getElementById('gp').addEventListener('click',function(){go(i-1);});
-  document.getElementById('gn').addEventListener('click',function(){go(i+1);});
-  go(0);
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ stop(); show(i); });
+    t.addEventListener('keydown', function(e){
+      var d = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0;
+      if (d){ e.preventDefault(); stop(); show(at + d, true); }
+      if (e.key === 'Home'){ e.preventDefault(); stop(); show(0, true); }
+      if (e.key === 'End'){ e.preventDefault(); stop(); show(3, true); }
+    });
+  });
+  document.getElementById('prev').addEventListener('click', function(){ stop(); show(at - 1); });
+  document.getElementById('next').addEventListener('click', function(){ stop(); show(at + 1); });
+
+  /* on load the set pages through once, elevation to site plan, then rests on the elevation */
+  var timer = 0, seq = [1, 2, 3, 0], k = 0;
+  function stop(){ clearTimeout(timer); timer = 0; }
+  function tick(){ show(seq[k++]); if (k < seq.length) timer = setTimeout(tick, 1400); }
+  if (!reduce) timer = setTimeout(tick, 1400);
+  document.querySelector('.set').addEventListener('pointerdown', stop);
+  document.querySelector('.set').addEventListener('focusin', stop);
+
+  /* full-size view in a dialog */
+  var dlg = document.getElementById('dlg'), body = document.getElementById('dlgBody');
+  document.getElementById('expand').addEventListener('click', function(){
+    stop();
+    var svg = panes[at].querySelector('svg').cloneNode(true);
+    svg.querySelectorAll('[id]').forEach(function(n){ n.removeAttribute('id'); });
+    body.replaceChildren(svg);
+    document.getElementById('dlgT').textContent = panes[at].dataset.no + ' ' + panes[at].dataset.name + ', full size';
+    dlg.showModal();
+  });
+  document.getElementById('close').addEventListener('click', function(){ dlg.close(); });
+  dlg.addEventListener('click', function(e){ if (e.target === dlg) dlg.close(); });
+
+  var save = document.getElementById('save');
+  save.addEventListener('click', function(){ var on = save.getAttribute('aria-pressed') !== 'true'; save.setAttribute('aria-pressed', on ? 'true' : 'false'); save.querySelector('span').textContent = on ? 'Saved' : 'Save'; });
+
+  var enq = document.getElementById('enq'), form = document.getElementById('form'), err = document.getElementById('err');
+  enq.addEventListener('click', function(){ form.hidden = false; enq.hidden = true; document.getElementById('fn').focus(); });
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var bad = [].filter.call(form.querySelectorAll('[required]'), function(f){ return !f.value.trim() || (f.type === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.value)); });
+    [].forEach.call(form.querySelectorAll('input'), function(f){ f.removeAttribute('aria-invalid'); });
+    if (bad.length){ bad.forEach(function(f){ f.setAttribute('aria-invalid', 'true'); }); err.textContent = bad[0].type === 'email' && bad[0].value ? 'That email address looks incomplete.' : 'Please add your ' + form.querySelector('label[for="' + bad[0].id + '"]').textContent.toLowerCase() + '.'; bad[0].focus(); return; }
+    var done = document.createElement('p'); done.className = 'done'; done.setAttribute('role', 'status'); done.tabIndex = -1;
+    done.textContent = 'Thanks. This is a demonstration listing, so nothing was sent.';
+    form.replaceWith(done); done.focus();
+  });
 })();
 </script>
 </body>

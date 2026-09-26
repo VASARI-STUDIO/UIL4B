@@ -1,9 +1,4 @@
-// The prompt library shows the OUTPUT, and a click runs it.
-//
-// Founder, 2026-09-15: "instead of showing a code snippet we can show the
-// actual output in a real preview style. or even better is showing it but on
-// click it shows the actual output in live preview. similar to other component
-// libraries."
+// The prompt library shows the OUTPUT, and opening a prompt runs it.
 //
 // ─────────────────────────────────────────────────────────────────────────────
 // THE ONE ASSERTION HERE THAT IS NOT ABOUT DESIGN
@@ -56,7 +51,7 @@ test.describe('the prompt library shows its outputs', () => {
     await context.close()
   })
 
-  test('the modal opens on the PROMPT, and running it is one click', async ({ browser }) => {
+  test('the modal opens on the running demo, and the prompt text is one tap away', async ({ browser }) => {
     const { context, page } = await openLibrary(browser)
     const first = withPreview[0]
 
@@ -64,20 +59,19 @@ test.describe('the prompt library shows its outputs', () => {
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
 
-    // The prompt is what a prompt library is for; the output is the evidence.
-    await expect(dialog.locator('.pl-modal-prompt pre')).toBeVisible()
-    await expect(dialog.locator('.pl-modal-frame'), 'the iframe must not be mounted until asked for')
-      .toHaveCount(0)
-
-    await dialog.getByRole('tab', { name: /see it running/i }).click()
+    // The output is the first thing seen; the prompt is the other tab.
+    await expect(dialog.getByRole('tab', { name: /see it running/i })).toHaveAttribute('aria-selected', 'true')
     const frame = dialog.locator('.pl-modal-frame')
     await expect(frame).toBeVisible()
     await expect(dialog.locator('.pl-modal-prompt'), 'the two views share one panel').toHaveCount(0)
 
-    // …and back, so the copy path is never a trap.
     await dialog.getByRole('tab', { name: /the prompt/i }).click()
     await expect(dialog.locator('.pl-modal-prompt pre')).toBeVisible()
-    await expect(dialog.locator('.pl-modal-frame')).toHaveCount(0)
+    await expect(dialog.locator('.pl-modal-frame'), 'the frame is unmounted when its view closes').toHaveCount(0)
+
+    // …and back, so neither view is a dead end.
+    await dialog.getByRole('tab', { name: /see it running/i }).click()
+    await expect(dialog.locator('.pl-modal-frame')).toBeVisible()
     await context.close()
   })
 
@@ -87,7 +81,6 @@ test.describe('the prompt library shows its outputs', () => {
 
     await page.locator('.pl-card', { hasText: first.title }).first().click()
     const dialog = page.getByRole('dialog')
-    await dialog.getByRole('tab', { name: /see it running/i }).click()
     const frame = dialog.locator('.pl-modal-frame')
     await expect(frame).toBeVisible()
 
@@ -106,9 +99,12 @@ test.describe('the prompt library shows its outputs', () => {
       expect(flags, `a preview must not be granted ${never}`).not.toContain(never)
     }
 
-    // The src must be one of ours, not something a payload could steer.
-    const src = await frame.getAttribute('src')
-    expect(src).toMatch(/^\/previews\/prompts\/c-\d+\.html$/)
+    // The page arrives as srcdoc, fetched from our own previews folder: no
+    // src a payload could steer, and relative assets resolve against ours.
+    expect(await frame.getAttribute('src')).toBeNull()
+    const doc = await frame.getAttribute('srcdoc')
+    const origin = new URL(page.url()).origin
+    expect(doc).toContain(`<base href="${origin}/previews/prompts/">`)
     await context.close()
   })
 
@@ -120,7 +116,6 @@ test.describe('the prompt library shows its outputs', () => {
 
     await page.locator('.pl-card', { hasText: first.title }).first().click()
     const dialog = page.getByRole('dialog')
-    await dialog.getByRole('tab', { name: /see it running/i }).click()
     await expect(dialog.locator('.pl-modal-frame')).toBeVisible()
 
     const inner = page.frameLocator('.pl-modal-frame')

@@ -1,399 +1,316 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Relay — edge platform</title>
+<title>Light Before Film · Museum of Optics, Bath</title>
+<meta name="description" content="Light Before Film: 212 hand-painted magic lantern slides, 1850 to 1920. Free, until 12 April 2027.">
+<meta name="uil4b-capture" content='{"mode":"run","ms":5000}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/gloock.js"></script>
+<script src="../vendor/fonts/schibsted-grotesk.js"></script>
+<script src="../vendor/fonts/schibsted-grotesk-italic.js"></script>
+<script src="../vendor/fonts/martian-mono.js"></script>
 <style>
   :root{
-    --ink:#f1f5f8;
-    --dim:#b2c3cd;
-    --faint:#7e8f9c;
-    --line:rgba(255,255,255,.20);
-    --R:342px;          /* carousel radius */
-    --cw:240px;         /* card width */
-    --chh:244px;        /* card height */
+    --ground:#100e0c;
+    --ink:#efe6d4;
+    --dim:#b5ab99;
+    --faint:#8c8373;
+    --line:rgba(239,230,212,.14);
+    --line-2:rgba(239,230,212,.28);
+    --lamp:#f0b458;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.6vw,56px);
+    --display:"Gloock",Georgia,serif;
+    --sans:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
+    --mono:"Martian Mono",ui-monospace,Menlo,monospace;
+    color-scheme:dark;
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0}
-  html{overflow-x:clip}
-  body{
-    background:#10161c;
-    background:linear-gradient(135deg,#0b0f14 0%,#1d3a4a 52%,#161d24 100%);
-    background-attachment:fixed;
-    color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip;
-  }
+  html{background:var(--ground);-webkit-text-size-adjust:100%}
+  body{background:var(--ground);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;caret-color:var(--lamp)}
+  .page{overflow-x:clip}
+  ::selection{background:var(--lamp);color:var(--ground)}
   a{color:inherit}
-  ::selection{background:rgba(178,195,205,.4)}
-  :where(a,button):focus-visible{outline:2px solid #d3e2ea;outline-offset:3px}
+  h1,h2,h3,p,dl,dd{margin:0}
+  :focus-visible{outline:2px solid var(--lamp);outline-offset:3px;border-radius:4px}
+  .mono{font:400 11px/1.5 var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--faint)}
 
-  .hero{position:relative;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;overflow:hidden}
-  /* the light the glass has something to catch */
-  .lamp{position:absolute;border-radius:50%;pointer-events:none;filter:blur(10px)}
-  .lamp.a{left:50%;top:-14%;width:min(120vw,900px);aspect-ratio:1;transform:translateX(-50%);
-    background:radial-gradient(circle,rgba(226,238,243,.22) 0%,rgba(110,175,200,.10) 38%,transparent 66%)}
-  .lamp.b{left:-12%;bottom:-24%;width:min(90vw,620px);aspect-ratio:1;
-    background:radial-gradient(circle,rgba(70,150,175,.30) 0%,transparent 64%)}
-  .lamp.c{right:-10%;top:32%;width:min(80vw,520px);aspect-ratio:1;
-    background:radial-gradient(circle,rgba(94,196,232,.18) 0%,transparent 62%)}
+  .hero{position:relative;min-height:100vh;min-height:100svh;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);grid-template-rows:auto 1fr auto;grid-template-areas:"nav nav" "copy ring" "base base";isolation:isolate;overflow:hidden}
+  /* the projector: one warm pool of light behind the ring */
+  .hero::before{content:"";position:absolute;z-index:-1;right:-6%;top:6%;width:70%;height:86%;background:radial-gradient(closest-side,rgba(240,180,88,.16),rgba(240,180,88,.05) 55%,transparent);pointer-events:none}
 
-  .nav{
-    position:relative;z-index:4;display:flex;align-items:center;gap:26px;
-    padding:22px clamp(18px,4vw,56px);
-  }
-  .mark{display:flex;align-items:center;gap:9px;text-decoration:none;font-size:15px;font-weight:660;letter-spacing:-.01em}
-  .nav nav{display:flex;gap:24px;margin-left:auto;font-size:14px}
-  .nav nav a{color:var(--dim);text-decoration:none}
-  .nav nav a:hover{color:var(--ink)}
-  .pill{
-    text-decoration:none;font-size:14px;font-weight:600;padding:9px 17px;border-radius:999px;
-    background:rgba(255,255,255,.94);color:#121a21;
-  }
-  .pill:hover{background:#fff}
+  .nav{grid-area:nav;display:flex;align-items:center;gap:clamp(12px,2.4vw,30px);padding:16px var(--gutter)}
+  .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;min-height:44px;font:400 19px/1 var(--display);white-space:nowrap}
+  .brand svg{display:block}
+  .nav ul{display:flex;gap:2px;margin:0 0 0 auto;padding:0;list-style:none}
+  .nav ul a{display:block;text-decoration:none;color:var(--dim);font-size:14.5px;padding:10px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .nav ul a:hover{color:var(--ink);background:rgba(239,230,212,.07)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 22px;border-radius:999px;border:1px solid transparent;cursor:pointer;text-decoration:none;font:600 15px/1 var(--sans);
+    transition:background-color .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
+  .btn:active{transform:scale(.98)}
+  .btn.lamp{background:var(--lamp);color:#1a1208}
+  .btn.lamp:hover{background:#f6c371}
+  .btn.line{border-color:var(--line-2)}
+  .btn.line:hover{border-color:var(--ink);background:rgba(239,230,212,.05)}
+  .nav .btn{min-height:42px;font-size:14.5px}
 
-  .head{position:relative;z-index:3;text-align:center;padding:clamp(2px,1vh,14px) clamp(18px,4vw,56px) 0}
-  .eyebrow{margin:0 0 11px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
-  h1{
-    margin:0 auto;max-width:21ch;
-    font-size:clamp(23px,2.7vw,34px);line-height:1.1;letter-spacing:-.026em;font-weight:660;
-  }
-  .sub{margin:10px auto 0;max-width:62ch;color:var(--dim);font-size:clamp(13px,.95vw,14.5px)}
+  .copy{grid-area:copy;align-self:center;padding:0 0 0 var(--gutter);position:relative;z-index:2}
+  h1{margin-top:18px;font:400 clamp(52px,6.6vw,112px)/.92 var(--display);letter-spacing:-.02em}
+  h1 em{font-style:normal;color:var(--lamp)}
+  .lede{margin-top:22px;max-width:36ch;color:var(--dim);font-size:clamp(16.5px,1.2vw,18.5px)}
+  .lede b{color:var(--ink);font-weight:600}
+  .acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
 
-  /* ---------- carousel ---------- */
-  .stage{
-    position:relative;z-index:2;flex:1;
-    min-height:calc(var(--chh) + 100px);
-    display:flex;align-items:center;justify-content:center;
-    perspective:1650px;perspective-origin:50% 50%;
-    touch-action:pan-y;cursor:grab;
-  }
-  .stage.grabbing{cursor:grabbing}
-  .ring{
-    position:relative;width:0;height:0;
-    transform-style:preserve-3d;
-    transform:rotateX(-6deg) rotateY(0deg);
-  }
-  .card{
-    position:absolute;
-    width:var(--cw);height:var(--chh);
-    left:calc(var(--cw) / -2);top:calc(var(--chh) / -2);
-    transform:rotateY(calc(var(--i) * 60deg)) translateZ(var(--R));
-    transform-origin:50% 50%;
-    /* without this the far cards paint their own mirrored text through the ring */
-    backface-visibility:hidden;
-  }
-  .glass{
-    position:relative;width:100%;height:100%;
-    border-radius:20px;
-    padding:22px 20px;
-    display:flex;flex-direction:column;
-    border:1px solid rgba(255,255,255,.22);
-    background:
-      linear-gradient(150deg,rgba(255,255,255,.30) 0%,rgba(255,255,255,.14) 30%,rgba(255,255,255,.085) 62%,rgba(255,255,255,.17) 100%),
-      linear-gradient(180deg,rgba(28,50,62,.46),rgba(18,26,33,.56));
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.42),
-      inset 0 -18px 40px rgba(16,29,36,.30),
-      0 26px 60px rgba(8,4,32,.46);
-    transform-origin:50% 50%;
-    will-change:transform,opacity;
-  }
-  /* the refraction edge — a bright sliver down the leading side */
-  .glass::before{
-    content:"";position:absolute;left:0;top:10%;bottom:10%;width:2px;border-radius:2px;
-    background:linear-gradient(180deg,transparent,rgba(255,255,255,.55),transparent);
-  }
-  /* cards further round the ring sink into the background */
-  .glass::after{
-    content:"";position:absolute;inset:-1px;border-radius:20px;pointer-events:none;
-    background:rgba(11,15,20,.72);opacity:var(--back,0);
-  }
-  .ico{
-    width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
-    background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);
-    color:#eef4f7;margin-bottom:auto;
-  }
-  .ico svg{display:block}
-  .card h2{margin:16px 0 0;font-size:17.5px;line-height:1.2;letter-spacing:-.015em;font-weight:640}
-  .card p{margin:7px 0 0;font-size:12.5px;line-height:1.46;color:rgba(230,240,245,.82)}
-  .card .meta{
-    margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.16);
-    font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(211,226,234,.62);
-    font-variant-numeric:tabular-nums;
-  }
+  /* ---------- the ring of slides ---------- */
+  .ringbox{grid-area:ring;position:relative;display:grid;place-items:center;min-height:500px;padding-bottom:64px;perspective:1500px;perspective-origin:50% 42%;touch-action:pan-y;cursor:grab;user-select:none}
+  .ringbox.dragging{cursor:grabbing}
+  .ring{position:relative;width:min(290px,22vw);height:min(290px,22vw);transform-style:preserve-3d;transform:rotateX(-8deg) rotateY(var(--a,0deg))}
+  .slide{position:absolute;inset:0;transform:rotateY(var(--at)) translateZ(var(--r,min(420px,31vw))) scale(var(--sc,1));backface-visibility:hidden;-webkit-backface-visibility:hidden;margin:0}
+  .mount{position:absolute;inset:0;border-radius:6px;background:#2b251e;padding:20px;
+    box-shadow:inset 0 0 0 1px rgba(239,230,212,.2),0 30px 60px -30px rgba(0,0,0,.9)}
+  /* slides further round the ring sit in shadow */
+  .mount::after{content:"";position:absolute;inset:0;border-radius:6px;background:#0a0908;opacity:calc(1 - var(--lit,1));pointer-events:none;z-index:2}
+  .mount::before{content:"";position:absolute;inset:0;border-radius:6px;background:repeating-linear-gradient(90deg,rgba(0,0,0,.25) 0 1px,transparent 1px 5px);opacity:.4}
+  .glass{position:relative;width:100%;height:100%;border-radius:50%/50%;overflow:hidden;background:#0c1422}
+  .slide.sq .glass{border-radius:3px}
+  .glass svg{display:block;width:100%;height:100%}
+  /* the glass itself: a bright edge on the leading side and a soft inner highlight */
+  .glass::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,rgba(255,255,255,.28) 0 2%,rgba(255,255,255,.07) 12%,transparent 34%,transparent 78%,rgba(255,255,255,.08));box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);pointer-events:none}
+  .tape{position:absolute;left:10px;right:10px;bottom:4px;display:flex;justify-content:space-between;font:400 8px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#a89c86}
+  .tape b{font-weight:400;color:#d8cdb8}
+  .spin{transform-origin:50% 50%;animation:turn 24s linear infinite}
+  @keyframes turn{to{transform:rotate(360deg)}}
+  .ctrl{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;z-index:2}
+  .ctrl button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);background:rgba(16,14,12,.6);color:var(--ink);cursor:pointer;display:grid;place-items:center;transition:border-color .2s var(--ease),background-color .2s var(--ease)}
+  .ctrl button:hover{border-color:var(--ink);background:rgba(239,230,212,.06)}
+  .ctrl svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .dots{display:flex;gap:6px}
+  .dots i{width:6px;height:6px;border-radius:3px;background:var(--line-2);transition:width .3s var(--ease),background-color .3s var(--ease)}
+  .dots i.on{width:20px;background:var(--lamp)}
 
-  /* no-JS / first-paint depth, so the ring never paints flat */
-  .card:nth-child(1) .glass{--back:0}
-  .card:nth-child(2) .glass,.card:nth-child(6) .glass{--back:.46;opacity:.82}
-  .card:nth-child(3) .glass,.card:nth-child(5) .glass{--back:.8;opacity:.48}
-  .card:nth-child(4) .glass{--back:.92;opacity:.3}
+  /* ---------- the caption for the front slide ---------- */
+  .base{grid-area:base;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px;padding:18px var(--gutter) clamp(20px,4vh,40px);border-top:1px solid var(--line)}
+  .visit{display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline}
+  .visit dd{font-weight:600;margin-top:2px}
+  .cap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 18px;align-items:baseline}
+  .cap .n{font:400 12px var(--mono);color:var(--lamp)}
+  .cap h2{font:400 clamp(22px,1.9vw,30px)/1.1 var(--display)}
+  .cap p{grid-column:2/-1;color:var(--dim);font-size:15px;max-width:60ch}
+  .cap .meta{text-align:right}
 
-  .controls{
-    position:relative;z-index:4;
-    display:flex;align-items:center;justify-content:center;gap:14px;
-    padding:2px clamp(18px,4vw,56px) clamp(22px,4vh,44px);
+  @media (prefers-reduced-motion: no-preference){
+    .js .copy > *{animation:rise 1s var(--ease) backwards}
+    .js .copy > :nth-child(2){animation-delay:.08s}.js .copy > :nth-child(3){animation-delay:.16s}.js .copy > :nth-child(4){animation-delay:.24s}
+    @keyframes rise{from{opacity:0;translate:0 18px}}
+    .cap.swap > *{animation:fade .45s var(--ease) backwards}
+    @keyframes fade{from{opacity:0;translate:0 6px}}
   }
-  .controls button{
-    width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
-    border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--ink);
-    cursor:pointer;transition:background .16s ease,border-color .16s ease;
-  }
-  .controls button:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.44)}
-  .controls .dots{display:flex;gap:7px;margin:0 6px}
-  .controls .dots i{
-    display:block;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.28);
-    transition:background .2s ease,transform .2s ease;
-  }
-  .controls .dots i.on{background:#fff;transform:scale(1.35)}
-  .drag{
-    margin:0 0 0 10px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);
-  }
+  @media (prefers-reduced-motion: reduce){ .spin{animation:none} }
 
-  @media (prefers-reduced-motion: reduce){
-    /* the ring sits still at its rest angle: six cards, front one readable,
-       every one of them already at full opacity. The buttons still work. */
-    .drag{visibility:hidden}
-    .controls button,.controls .dots i{transition:none}
-  }
-
-  @media (max-width:900px){
-    .nav nav{display:none}
-    :root{--R:262px;--cw:202px;--chh:256px}
-    h1{font-size:clamp(27px,5.4vw,36px)}
+  /* ---------- responsive ---------- */
+  @media (max-width:1000px){
+    .nav ul{display:none}
+    .nav .btn{margin-left:auto}
+    .hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "copy" "ring" "base"}
+    .copy{padding-right:var(--gutter);padding-top:10px}
+    .ringbox{min-height:430px}
+    .ring{width:220px;height:220px}
+    .slide{--r:310px}
+    .base{grid-template-columns:minmax(0,1fr)}
+    .hero::before{right:-20%;top:40%;width:120%;height:60%}
   }
   @media (max-width:560px){
-    :root{--R:190px;--cw:176px;--chh:274px}
-    .stage{perspective:900px}
-    .card h2{font-size:16.5px}
-    .card p{font-size:12px}
-    .card .meta{font-size:9.5px;letter-spacing:.1em}
-    .drag{display:none}
+    h1{font-size:clamp(40px,11.4vw,56px);margin-top:10px}
+    .lede{margin-top:14px;font-size:16px}
+    .acts{margin-top:18px}
+    .ringbox{min-height:330px;perspective:1100px;padding-bottom:58px}
+    .ring{width:164px;height:164px}
+    .slide{--r:210px}
+    .nav .btn{white-space:nowrap}
+    .mount{padding:14px}
+    .tape{font-size:7px}
+    .acts .btn{flex:1 1 auto}
+    .cap{grid-template-columns:auto minmax(0,1fr)}
+    .cap .meta{grid-column:2;text-align:left}
+  }
+  @media (max-height:520px) and (min-width:560px){
+    .nav{padding-top:6px;padding-bottom:0}
+    h1{font-size:clamp(34px,5.6vw,52px);margin-top:4px}
+    .lede,.copy .mono{display:none}
+    .acts{margin-top:14px}
+    .ringbox{min-height:0;padding-bottom:50px}
+    .ring{width:140px;height:140px}
+    .slide{--r:190px}
+    .mount{padding:12px}
+    .base{padding-top:8px;padding-bottom:10px}
+    .base .visit,.cap p{display:none}
+    .ctrl{bottom:0}
   }
 </style>
 </head>
 <body>
-
-<section class="hero">
-  <div class="lamp a" aria-hidden="true"></div>
-  <div class="lamp b" aria-hidden="true"></div>
-  <div class="lamp c" aria-hidden="true"></div>
-
+<div class="page">
+<section class="hero" aria-labelledby="h">
   <header class="nav">
-    <a class="mark" href="#top">
-      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-        <rect x="1.4" y="1.4" width="17.2" height="17.2" rx="5" fill="none" stroke="#d3e2ea" stroke-width="1.5"/>
-        <path d="M6.5 13.5L10 6l3.5 7.5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
-      </svg>
-      Relay
-    </a>
-    <nav aria-label="Primary">
-      <a href="#top">Platform</a><a href="#top">Docs</a><a href="#top">Pricing</a><a href="#top">Status</a>
-    </nav>
-    <a class="pill" href="#top">Start a project</a>
+    <a class="brand" href="#h" aria-label="Museum of Optics home"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="11" fill="none" stroke="#efe6d4" stroke-width="1.6"/><circle cx="13" cy="13" r="5" fill="#f0b458"/></svg>Museum of Optics</a>
+    <ul><li><a href="#h">Exhibitions</a></li><li><a href="#h">Collection</a></li><li><a href="#h">Visit</a></li></ul>
+    <a class="btn line" href="#h">Free tickets</a>
   </header>
 
-  <div class="head" id="top">
-    <p class="eyebrow">The edge platform</p>
-    <h1>Everything runs at the edge. Nothing needs operating.</h1>
-    <p class="sub">Relay builds, signs and ships your code to 214 points of presence, then stays out of the way.</p>
+  <div class="copy">
+    <p class="mono">Exhibition · Gallery 3 · until 12 April 2027</p>
+    <h1 id="h">Before cinema, there was <em>glass</em>.</h1>
+    <p class="lede"><b>212 hand-painted magic lantern slides</b>, 1850 to 1920, shown the way they were meant to be: lit from behind, one at a time, in the dark.</p>
+    <div class="acts"><a class="btn lamp" href="#h">Plan your visit</a><a class="btn line" href="#h">Browse all 212 slides</a></div>
   </div>
 
-  <div class="stage" id="stage">
+  <div class="ringbox" id="box" role="region" aria-roledescription="carousel" aria-label="Six slides from the exhibition">
     <div class="ring" id="ring">
-      <div class="card" style="--i:0">
-        <article class="glass">
-          <span class="ico" aria-hidden="true">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 3c3 2.6 4.6 6.1 4.6 9.2L12 16.6 7.4 12.2C7.4 9.1 9 5.6 12 3Z"/>
-              <circle cx="12" cy="10" r="1.7"/><path d="M8.2 16.3 6 20.5l4.2-1.6M15.8 16.3 18 20.5l-4.2-1.6"/>
-            </svg>
-          </span>
-          <h2>Four minutes to first deploy</h2>
-          <p>Point Relay at a repository. It builds, signs the artefact and pushes it to every edge before the branch finishes merging.</p>
-          <p class="meta">Median cold start 41 ms</p>
-        </article>
-      </div>
-
-      <div class="card" style="--i:1">
-        <article class="glass">
-          <span class="ico" aria-hidden="true">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 3l7.2 2.9v5.2c0 4.6-3.1 7.7-7.2 9.2-4.1-1.5-7.2-4.6-7.2-9.2V5.9L12 3Z"/>
-              <path d="M9.3 11.8l1.9 1.9 3.6-3.7"/>
-            </svg>
-          </span>
-          <h2>Keys never leave the enclave</h2>
-          <p>Secrets are sealed to the node that runs them and decrypt nowhere else. Rotation is a thirty-second job, not a migration.</p>
-          <p class="meta">mTLS on every hop</p>
-        </article>
-      </div>
-
-      <div class="card" style="--i:2">
-        <article class="glass">
-          <span class="ico" aria-hidden="true">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M13.2 2.8 5.6 13.2h5l-1 8 7.8-10.6h-5l.8-7.8Z"/>
-            </svg>
-          </span>
-          <h2>Replicated before the response returns</h2>
-          <p>A write is acknowledged only once every region holds it. No queue to drain, and no eventual surprise on the read path.</p>
-          <p class="meta">p99 commit 40 ms</p>
-        </article>
-      </div>
-
-      <div class="card" style="--i:3">
-        <article class="glass">
-          <span class="ico" aria-hidden="true">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.6 3.6 5.6 3.6 9s-1.2 6.4-3.6 9c-2.4-2.6-3.6-5.6-3.6-9S9.6 5.6 12 3Z"/>
-            </svg>
-          </span>
-          <h2>214 edges, 76 countries</h2>
-          <p>Anycast from Reykjavík to Hobart, with capacity planned per region rather than averaged across a continent.</p>
-          <p class="meta">Slowest p99: Perth, 38 ms</p>
-        </article>
-      </div>
-
-      <div class="card" style="--i:4">
-        <article class="glass">
-          <span class="ico" aria-hidden="true">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 6.5 3.6 12 9 17.5M15 6.5 20.4 12 15 17.5"/>
-            </svg>
-          </span>
-          <h2>One spec, nine generated clients</h2>
-          <p>REST and GraphQL come from the same OpenAPI document, so the SDKs cannot drift. <code>relay tail</code> streams logs from any edge.</p>
-          <p class="meta">OpenAPI 3.1 · CLI v4.2</p>
-        </article>
-      </div>
-
-      <div class="card" style="--i:5">
-        <article class="glass">
-          <span class="ico" aria-hidden="true">
-            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 20.3S4.6 15.9 4.6 11a3.9 3.9 0 0 1 7.4-1.8A3.9 3.9 0 0 1 19.4 11c0 4.9-7.4 9.3-7.4 9.3Z"/>
-            </svg>
-          </span>
-          <h2>Open source, MIT, in public</h2>
-          <p>The runtime, the CLI and the edge proxy are all developed in the open — issues, RFCs and the roadmap included.</p>
-          <p class="meta">MIT licence</p>
-        </article>
-      </div>
+      <figure class="slide" role="group" aria-roledescription="slide" aria-label="1 of 6: The Moon, after Lord Rosse">
+        <div class="mount"><div class="glass"><svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" fill="#10224a"/><circle cx="100" cy="100" r="64" fill="#e9dcb6"/><circle cx="84" cy="86" r="12" fill="#cbb98c"/><circle cx="120" cy="116" r="17" fill="#d4c397"/><circle cx="116" cy="74" r="6" fill="#c3b081"/><circle cx="78" cy="122" r="8" fill="#c8b688"/><path d="M100 36a64 64 0 0 1 0 128a46 64 0 0 0 0-128z" fill="#10224a" opacity=".38"/><g fill="#f3e9c9"><circle cx="30" cy="30" r="1.4"/><circle cx="170" cy="46" r="1.2"/><circle cx="160" cy="170" r="1.4"/><circle cx="36" cy="160" r="1"/></g></svg></div>
+          <p class="tape"><b>No. 14</b><span>Newton &amp; Co.</span></p></div>
+      </figure>
+      <figure class="slide sq" role="group" aria-roledescription="slide" aria-label="2 of 6: Donati's Comet, 1858">
+        <div class="mount"><div class="glass"><svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" fill="#0d1a33"/><path d="M0 170 Q60 150 110 162 T200 150 V200 H0Z" fill="#1c2a1c"/><path d="M146 58 C110 70 60 96 18 150 C70 110 116 84 150 64 Z" fill="#f2e4b8" opacity=".55"/><path d="M146 58 C120 76 84 104 50 150 C92 110 126 86 150 64 Z" fill="#fff4d0" opacity=".6"/><circle cx="150" cy="60" r="6" fill="#fffbe8"/><g fill="#f3e9c9"><circle cx="40" cy="40" r="1.2"/><circle cx="90" cy="24" r="1"/><circle cx="176" cy="110" r="1.2"/></g></svg></div>
+          <p class="tape"><b>No. 31</b><span>1858</span></p></div>
+      </figure>
+      <figure class="slide" role="group" aria-roledescription="slide" aria-label="3 of 6: Chromatrope">
+        <div class="mount"><div class="glass"><svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" fill="#1b0f2b"/><g class="spin"><g id="petal"><path d="M100 100 C120 60 150 50 170 64 C150 80 130 90 100 100Z" fill="#e0452b"/><path d="M100 100 C130 88 160 96 168 118 C140 116 124 110 100 100Z" fill="#f0b458"/><path d="M100 100 C110 80 118 70 132 70" fill="none" stroke="#2f7ba8" stroke-width="3"/></g><use href="#petal" transform="rotate(60 100 100)"/><use href="#petal" transform="rotate(120 100 100)"/><use href="#petal" transform="rotate(180 100 100)"/><use href="#petal" transform="rotate(240 100 100)"/><use href="#petal" transform="rotate(300 100 100)"/></g><circle cx="100" cy="100" r="10" fill="#f6e3a8"/></svg></div>
+          <p class="tape"><b>No. 88</b><span>Rack-work</span></p></div>
+      </figure>
+      <figure class="slide sq" role="group" aria-roledescription="slide" aria-label="4 of 6: Fingal's Cave, Staffa">
+        <div class="mount"><div class="glass"><svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" fill="#7fa3b8"/><path d="M0 0H200V120 Q160 70 100 70 Q40 70 0 120Z" fill="#3a3230"/><g fill="#4d4340" stroke="#2a2422" stroke-width="1.2"><path d="M8 120 V40 H22 V112 Z"/><path d="M24 104 V30 H38 V98 Z"/><path d="M40 92 V24 H54 V88 Z"/><path d="M146 88 V24 H160 V92 Z"/><path d="M162 98 V30 H176 V104 Z"/><path d="M178 112 V40 H192 V120 Z"/></g><path d="M0 150 Q50 136 100 150 T200 146 V200 H0Z" fill="#2d5d73"/><path d="M0 168 Q50 156 100 170 T200 164" fill="none" stroke="#cfe1e6" stroke-width="2" opacity=".6"/></svg></div>
+          <p class="tape"><b>No. 102</b><span>Walter Tyler</span></p></div>
+      </figure>
+      <figure class="slide" role="group" aria-roledescription="slide" aria-label="5 of 6: The Eddystone Light">
+        <div class="mount"><div class="glass"><svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" fill="#152238"/><path d="M104 66 L200 40 V96 Z" fill="#f6dc93" opacity=".45"/><path d="M96 66 L0 44 V92 Z" fill="#f6dc93" opacity=".3"/><path d="M88 150 L94 70 H106 L112 150 Z" fill="#e9e1cf"/><path d="M92 104 H108 M90 126 H110" stroke="#b33a2a" stroke-width="6"/><rect x="94" y="58" width="12" height="12" fill="#f6dc93"/><path d="M90 58 H110 L100 48 Z" fill="#3b2f2a"/><path d="M0 150 Q40 140 80 150 T160 148 T200 150 V200 H0Z" fill="#23405a"/><path d="M70 150 H130 L124 160 H76Z" fill="#5a4e46"/></svg></div>
+          <p class="tape"><b>No. 147</b><span>York &amp; Son</span></p></div>
+      </figure>
+      <figure class="slide sq" role="group" aria-roledescription="slide" aria-label="6 of 6: Diatoms, arranged">
+        <div class="mount"><div class="glass"><svg viewBox="0 0 200 200" aria-hidden="true"><rect width="200" height="200" fill="#0b1616"/><g fill="none" stroke="#bfe0d0" stroke-width="1.4"><circle cx="100" cy="100" r="30"/><circle cx="100" cy="100" r="22"/><ellipse cx="100" cy="46" rx="10" ry="18"/><ellipse cx="100" cy="154" rx="10" ry="18"/><ellipse cx="46" cy="100" rx="18" ry="10"/><ellipse cx="154" cy="100" rx="18" ry="10"/><path d="M60 60 L72 72 M140 60 L128 72 M60 140 L72 128 M140 140 L128 128"/><rect x="52" y="52" width="12" height="12" transform="rotate(45 58 58)"/><rect x="136" y="52" width="12" height="12" transform="rotate(45 142 58)"/><rect x="52" y="136" width="12" height="12" transform="rotate(45 58 142)"/><rect x="136" y="136" width="12" height="12" transform="rotate(45 142 142)"/></g><g fill="#e7c86b"><circle cx="100" cy="100" r="5"/><circle cx="100" cy="46" r="2"/><circle cx="100" cy="154" r="2"/><circle cx="46" cy="100" r="2"/><circle cx="154" cy="100" r="2"/></g></svg></div>
+          <p class="tape"><b>No. 190</b><span>J. D. Möller</span></p></div>
+      </figure>
+    </div>
+    <div class="ctrl">
+      <button type="button" id="prev" aria-label="Previous slide"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
+      <span class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></span>
+      <button type="button" id="next" aria-label="Next slide"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
     </div>
   </div>
 
-  <div class="controls">
-    <button type="button" id="prev" aria-label="Previous feature">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5 8 12l6.5 7"/></svg>
-    </button>
-    <span class="dots" id="dots" aria-hidden="true">
-      <i class="on"></i><i></i><i></i><i></i><i></i><i></i>
-    </span>
-    <button type="button" id="next" aria-label="Next feature">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5 16 12l-6.5 7"/></svg>
-    </button>
-    <p class="drag">Drag to spin</p>
+  <div class="base">
+    <dl class="visit">
+      <div><dt class="mono">Entry</dt><dd>Free, timed tickets</dd></div>
+      <div><dt class="mono">Open</dt><dd>Tue–Sun, 10 am–5 pm</dd></div>
+      <div><dt class="mono">Shows</dt><dd>Lantern shows daily at 2 pm</dd></div>
+    </dl>
+    <div class="cap" id="cap" aria-live="polite">
+      <span class="n">1 / 6</span><h2>The Moon, after Lord Rosse</h2><span class="mono meta">Newton &amp; Co., London · 1864</span>
+      <p>Painted from drawings made at the 72-inch Leviathan telescope at Birr Castle. The craters are built up in three glazes so they read at the back of a large hall.</p>
+    </div>
   </div>
 </section>
+</div>
 
 <script>
 (function(){
-  var ring = document.getElementById('ring');
-  var stage = document.getElementById('stage');
-  if (!ring || !stage) return;
-  var cards = ring.querySelectorAll('.card');
-  var glass = ring.querySelectorAll('.glass');
-  var dots = document.getElementById('dots').querySelectorAll('i');
-  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var root = document.documentElement;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) root.classList.add('js');
 
-  var angle = 0;          /* current ring rotation, degrees */
-  var goal = null;        /* snap target while easing */
-  var drag = null;        /* {x, a} while a pointer is down */
-  var holdUntil = 0;      /* timestamp: auto-rotate resumes after this */
-  var SPEED = 4.6;        /* degrees per SECOND, not per frame */
+  var INFO = [
+    ['The Moon, after Lord Rosse', 'Newton & Co., London · 1864', 'Painted from drawings made at the 72-inch Leviathan telescope at Birr Castle. The craters are built up in three glazes so they read at the back of a large hall.'],
+    ["Donati's Comet", 'Anonymous · 1858', 'Made within weeks of the comet’s closest pass. The tail is scratched through black varnish, so it glows where nothing was painted at all.'],
+    ['Chromatrope', 'Rack-work slide · c. 1870', 'Two painted glass discs turned in opposite directions by a small crank, making the pattern bloom and fold. Audiences were known to cheer.'],
+    ["Fingal's Cave, Staffa", 'Walter Tyler, London · 1885', 'One of a set of 48 on the Hebrides, sold with a printed lecture to read aloud while the slides changed.'],
+    ['The Eddystone Light', 'York & Son, Notting Hill · 1882', 'The new tower, lit the year of its opening. The beam is a separate glass that could be slid across by hand for a flashing effect.'],
+    ['Diatoms, arranged', 'J. D. Möller, Wedel · 1890', 'A photographic slide of real diatoms, each under a tenth of a millimetre, placed one by one with a single hair.']
+  ];
+  var box = document.getElementById('box'), ring = document.getElementById('ring');
+  var slides = [].slice.call(ring.children), dots = [].slice.call(document.querySelectorAll('.dots i'));
+  var cap = document.getElementById('cap');
+  var N = slides.length, STEP = 360 / N;
+  slides.forEach(function(s, i){ s.style.setProperty('--at', (i * STEP) + 'deg'); });
 
+  var angle = 0, target = null, speed = 4.5, paused = false, hover = false, lastFront = -1, holdUntil = 0;
+  function front(){ return ((Math.round(-angle / STEP) % N) + N) % N; }
   function paint(){
-    ring.style.transform = 'rotateX(-6deg) rotateY(' + angle.toFixed(2) + 'deg)';
-    var front = 0, best = -2;
-    for (var i = 0; i < cards.length; i++){
-      var a = (angle + i * 60) * Math.PI / 180;
-      var face = Math.cos(a);                       /* 1 = facing the viewer */
-      if (face > best){ best = face; front = i; }
-      var t = (face + 1) / 2;                       /* 0 behind .. 1 in front */
-      glass[i].style.transform = 'scale(' + (0.84 + 0.22 * t).toFixed(3) + ')';
-      glass[i].style.opacity = (0.26 + 0.74 * t).toFixed(3);
-      glass[i].style.setProperty('--back', (0.92 * (1 - t)).toFixed(3));
-    }
-    for (var d = 0; d < dots.length; d++) dots[d].className = (d === front ? 'on' : '');
-  }
-
-  function snapTarget(dir){
-    var base = Math.round(angle / 60) * 60;
-    return base + dir * 60;
-  }
-  function pause(ms){ holdUntil = performance.now() + (ms || 2600); }
-  function goTo(t){ goal = t; pause(3200); }
-
-  document.getElementById('next').addEventListener('click', function(){ goTo(snapTarget(-1)); });
-  document.getElementById('prev').addEventListener('click', function(){ goTo(snapTarget(1)); });
-
-  if (!still){
-    stage.addEventListener('pointerdown', function(e){
-      if (e.button !== undefined && e.button !== 0) return;
-      drag = { x: e.clientX, a: angle };
-      goal = null; pause(4000);
-      stage.classList.add('grabbing');
-      if (stage.setPointerCapture) { try { stage.setPointerCapture(e.pointerId); } catch (err) {} }
+    ring.style.setProperty('--a', angle.toFixed(2) + 'deg');
+    slides.forEach(function(s, i){
+      /* how far round the ring this slide is from the viewer, 0 (front) to 180 (back) */
+      var d = Math.abs((((i * STEP + angle) % 360) + 540) % 360 - 180);
+      var f = 1 - d / 180;
+      s.style.setProperty('--sc', (0.78 + 0.28 * Math.pow(f, 2)).toFixed(3));
+      s.style.setProperty('--lit', (0.4 + 0.6 * Math.pow(f, 1.4)).toFixed(3));
     });
-    stage.addEventListener('pointermove', function(e){
-      if (!drag) return;
-      angle = drag.a + (e.clientX - drag.x) * 0.26;
-      paint();
-    });
-    function release(){
-      if (!drag) return;
-      drag = null;
-      stage.classList.remove('grabbing');
-      goal = Math.round(angle / 60) * 60;     /* snap to the nearest card */
-      pause(3600);
+    var fr = front();
+    if (fr !== lastFront){
+      lastFront = fr;
+      dots.forEach(function(d, i){ d.classList.toggle('on', i === fr); });
+      var I = INFO[fr];
+      cap.querySelector('.n').textContent = (fr + 1) + ' / ' + N;
+      cap.querySelector('h2').textContent = I[0];
+      cap.querySelector('.meta').textContent = I[1];
+      cap.querySelector('p').textContent = I[2];
+      if (!reduce){ cap.classList.remove('swap'); void cap.offsetWidth; cap.classList.add('swap'); }
     }
-    stage.addEventListener('pointerup', release);
-    stage.addEventListener('pointercancel', release);
-    stage.addEventListener('pointerleave', function(){ if (drag) release(); });
-    stage.addEventListener('mouseenter', function(){ pause(1200); });
-    stage.addEventListener('mousemove', function(){ if (!drag) pause(1200); });
+  }
+  function goTo(i){
+    var want = -i * STEP;
+    /* take the short way round */
+    var diff = ((want - angle) % 360 + 540) % 360 - 180;
+    target = angle + diff;
+    holdUntil = performance.now() + 5000;
+    if (reduce){ angle = target; target = null; paint(); }
   }
 
-  paint();   /* correct depth on the very first paint */
-
-  if (still){
-    /* motion off: no spin, no easing. The arrows jump straight to the card. */
-    var jump = function(){ if (goal !== null){ angle = goal; goal = null; paint(); } };
-    document.getElementById('next').addEventListener('click', jump);
-    document.getElementById('prev').addEventListener('click', jump);
-    return;
+  var last = performance.now(), running = false, visible = true, inView = true;
+  function frame(now){
+    if (!running) return;
+    var dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+    if (target !== null){
+      angle += (target - angle) * (1 - Math.exp(-dt * 9));
+      if (Math.abs(target - angle) < 0.05){ angle = target; target = null; }
+    } else if (!paused && !hover && now > holdUntil){
+      angle -= speed * dt;          /* degrees per second, from the frame delta */
+    }
+    paint();
+    requestAnimationFrame(frame);
+  }
+  function sync(){
+    var go = visible && inView && !reduce;
+    if (go && !running){ running = true; last = performance.now(); requestAnimationFrame(frame); }
+    else if (!go) running = false;
   }
 
-  /* let the first paint sit on the front card long enough to be photographed */
-  holdUntil = performance.now() + 1400;
-  var prev = performance.now();
-  (function loop(now){
-    var dt = Math.min(0.05, (now - prev) / 1000);
-    prev = now;
-    if (!drag){
-      if (goal !== null){
-        angle += (goal - angle) * (1 - Math.pow(0.004, dt));
-        if (Math.abs(goal - angle) < 0.06){ angle = goal; goal = null; }
-        paint();
-      } else if (now >= holdUntil){
-        angle -= SPEED * dt;
-        paint();
-      }
-    }
-    requestAnimationFrame(loop);
-  })(prev);
+  /* drag to spin, snap to the nearest slide on release */
+  var sx = 0, sa = 0, dragging = false;
+  box.addEventListener('pointerdown', function(e){
+    if (e.target.closest('button')) return;
+    dragging = true; paused = true; target = null; sx = e.clientX; sa = angle;
+    box.classList.add('dragging'); box.setPointerCapture(e.pointerId);
+  });
+  box.addEventListener('pointermove', function(e){ if (!dragging) return; angle = sa + (e.clientX - sx) * 0.26; if (reduce) paint(); });
+  function release(){ if (!dragging) return; dragging = false; paused = false; box.classList.remove('dragging'); goTo(front()); }
+  box.addEventListener('pointerup', release);
+  box.addEventListener('pointercancel', release);
+  box.addEventListener('pointerenter', function(){ hover = true; });
+  box.addEventListener('pointerleave', function(){ hover = false; });
+  document.getElementById('prev').addEventListener('click', function(){ goTo((front() - 1 + N) % N); });
+  document.getElementById('next').addEventListener('click', function(){ goTo((front() + 1) % N); });
+  box.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight'){ e.preventDefault(); goTo((front() + 1) % N); }
+    if (e.key === 'ArrowLeft'){ e.preventDefault(); goTo((front() - 1 + N) % N); }
+  });
+  box.tabIndex = 0;
+
+  document.addEventListener('visibilitychange', function(){ visible = !document.hidden; sync(); });
+  if ('IntersectionObserver' in window) new IntersectionObserver(function(en){ inView = en[0].isIntersecting; sync(); }).observe(box);
+  paint();
+  sync();
 })();
 </script>
 </body>

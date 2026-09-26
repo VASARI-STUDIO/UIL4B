@@ -1,723 +1,558 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Solenne — Aubin Wool-Cashmere Coat</title>
+<title>The Filey Gansey, navy · Cammish &amp; Daughter</title>
+<meta name="description" content="A hand-knitted Filey gansey in 5-ply worsted wool, knitted to order in Filey, North Yorkshire, with your initials in the hem.">
+<meta name="uil4b-capture" content='{"mode":"run","ms":5000}'>
+<link rel="icon" href="data:,">
+<script src="../vendor/fonts/literata.js"></script>
+<script src="../vendor/fonts/literata-italic.js"></script>
+<script src="../vendor/fonts/red-hat-display.js"></script>
+<script src="../vendor/fonts/red-hat-mono.js"></script>
 <style>
   :root{
-    --ink:#2A2521;
-    --ink-70:rgba(42,37,33,.70);
-    --ink-50:rgba(42,37,33,.50);
-    --line:rgba(42,37,33,.16);
-    --line-soft:rgba(42,37,33,.09);
-    --cream:#FAF6EF;
-    --paper:#FFFDF9;
-    --taupe:#A99985;
-    --taupe-soft:#E7DFD2;
-    --gold:#B8860B;
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --serif:Georgia,"Times New Roman",serif;
+    --oat:#efe9de;
+    --oat-2:#e6dfd1;
+    --stage:#e4ddcf;
+    --ink:#1e2a3d;
+    --ink-2:#4e5868;
+    --ink-3:#6f7684;
+    --line:rgba(30,42,61,.14);
+    --line-2:rgba(30,42,61,.28);
+    --rope:#8a5a2b;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(18px,3.4vw,52px);
+    --serif:"Literata",Georgia,serif;
+    --sans:"Red Hat Display","Helvetica Neue",Arial,sans-serif;
+    --mono:"Red Hat Mono",ui-monospace,Menlo,monospace;
+    --wool:#1f2b40;
+    color-scheme:light;
   }
-  *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%}
-  body{
-    margin:0;background:var(--cream);color:var(--ink);
-    font-family:var(--sans);font-size:15px;line-height:1.6;
-    -webkit-font-smoothing:antialiased;
-  }
-  img,svg{display:block;max-width:100%}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{background:var(--oat);-webkit-text-size-adjust:100%}
+  body{background:var(--oat);color:var(--ink);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;caret-color:var(--rope)}
+  .page{overflow-x:clip}
+  ::selection{background:var(--ink);color:var(--oat)}
   a{color:inherit}
+  h1,h2,h3,p,ul,ol,dl,dd{margin:0}
+  ul,ol{list-style:none;padding:0}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:4px}
+  .mono{font:500 12px/1.4 var(--mono);letter-spacing:.04em;text-transform:uppercase}
+  .num{font-variant-numeric:tabular-nums}
   button{font:inherit;color:inherit}
-  :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-
-  .wrap{max-width:1240px;margin:0 auto;padding:0 20px}
-  @media(min-width:900px){.wrap{padding:0 32px}}
 
   /* ---------- header ---------- */
-  .ship-note{
-    background:var(--ink);color:var(--cream);text-align:center;
-    font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding:9px 16px;
-  }
-  header{border-bottom:1px solid var(--line);background:var(--cream)}
-  .bar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
-  .brand{
-    font-family:var(--serif);font-size:23px;letter-spacing:.22em;text-transform:uppercase;
-    text-decoration:none;
-  }
-  nav{display:none;gap:26px;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
-  @media(min-width:900px){nav{display:flex}}
-  nav a{text-decoration:none;color:var(--ink-70);padding:4px 0;border-bottom:1px solid transparent}
-  nav a:hover,nav a:focus-visible{color:var(--ink);border-bottom-color:var(--ink)}
-  .utils{display:flex;align-items:center;gap:18px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
-  .utils button{background:none;border:0;cursor:pointer;letter-spacing:.1em;text-transform:uppercase;font-size:12px;padding:4px}
-  .crumbs{
-    font-size:11.5px;letter-spacing:.06em;color:var(--ink-50);
-    padding:16px 0 4px;
-  }
-  .crumbs a{color:inherit;text-decoration:none}
+  .strip{padding:8px var(--gutter);background:var(--ink);color:#dfe3ea;text-align:center;font-size:13.5px}
+  .nav{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:14px var(--gutter);border-bottom:1px solid var(--line)}
+  .nav ul{display:flex;gap:2px}
+  .nav a{text-decoration:none}
+  .nav ul a{display:block;font-size:14.5px;color:var(--ink-2);padding:10px 12px;border-radius:999px;transition:color .2s var(--ease),background-color .2s var(--ease)}
+  .nav ul a:hover{color:var(--ink);background:rgba(30,42,61,.06)}
+  .wordmark{font:400 22px/1 var(--serif);letter-spacing:-.01em;white-space:nowrap;text-align:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:.28em}
+  .wordmark em{font-style:italic}
+  .tools{display:flex;justify-content:flex-end;gap:4px}
+  .tools a{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:999px;font-size:14.5px;transition:background-color .2s var(--ease)}
+  .tools a:hover{background:rgba(30,42,61,.06)}
+  .tools .count{font:500 12px var(--mono);display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:var(--ink);color:var(--oat)}
+
+  .crumbs{display:flex;gap:10px;padding:18px var(--gutter) 0;font-size:13.5px;color:var(--ink-3)}
+  .crumbs a{text-decoration:none}
   .crumbs a:hover{color:var(--ink);text-decoration:underline}
 
-  /* ---------- product layout ---------- */
-  .product{display:grid;gap:34px;padding:12px 0 8px}
-  @media(min-width:900px){
-    .product{grid-template-columns:minmax(0,1.32fr) minmax(330px,.68fr);gap:52px;padding:20px 0 24px}
-  }
+  /* ---------- product ---------- */
+  .pdp{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:clamp(24px,4vw,72px);padding:16px var(--gutter) clamp(50px,7vw,100px);align-items:start}
+  .gallery{display:grid;grid-template-columns:88px minmax(0,1fr);gap:14px}
+  .thumbs{display:grid;gap:10px;align-content:start}
+  .thumbs button{display:block;width:100%;aspect-ratio:4/5;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--stage);cursor:pointer;overflow:hidden;transition:border-color .2s var(--ease)}
+  .thumbs button:hover{border-color:var(--ink-3)}
+  .thumbs button[aria-selected="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+  .thumbs svg{display:block;width:100%;height:100%}
+  .thumbs span{display:block;margin-top:4px}
+  .stage{position:relative;aspect-ratio:4/5;border-radius:8px;background:var(--stage);overflow:hidden;cursor:zoom-in;isolation:isolate}
+  .stage .zoom{position:absolute;inset:0;transition:transform .35s var(--ease)}
+  .stage.zoomed .zoom{transition:transform .08s linear}
+  .stage svg{display:block;width:100%;height:100%}
+  .stage .tag{position:absolute;left:14px;top:14px;z-index:1;background:var(--oat);padding:6px 10px;border-radius:999px}
+  .stage .hint{position:absolute;right:14px;bottom:14px;z-index:1;color:var(--ink-2)}
+  .views{display:flex;gap:6px;margin-top:12px;grid-column:2}
+  .views button{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:transparent;cursor:pointer;font-size:14px;transition:background-color .2s var(--ease),color .2s var(--ease),border-color .2s var(--ease)}
+  .views button:hover{border-color:var(--ink)}
+  .views button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--oat)}
 
-  /* media */
-  .media{display:grid;gap:12px}
-  @media(min-width:900px){.media{grid-template-columns:62px minmax(0,1fr);align-items:start}}
-  .thumbs{display:flex;gap:10px;order:2}
-  @media(min-width:900px){.thumbs{flex-direction:column;order:0}}
-  .thumb{
-    width:62px;height:82px;border:1px solid var(--line-soft);background:var(--paper);
-    padding:0;cursor:pointer;overflow:hidden;flex:none;
-  }
-  .thumb[aria-current="true"]{border-color:var(--ink)}
-  .thumb svg{width:100%;height:100%}
-
-  .stage{position:relative;background:linear-gradient(168deg,#F3ECE0 0%,#E6DCCB 58%,#DCD0BC 100%);overflow:hidden}
-  .stage-inner{aspect-ratio:4/5;position:relative}
-  .frame{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-  .frame[hidden]{display:none}
-  .frame svg{width:64%;height:auto}
-  .zoomer{position:absolute;inset:0;border:0;padding:0;background:none;cursor:zoom-in;width:100%}
-  .stage .art{transform-origin:var(--zx,50%) var(--zy,50%)}
-  @media(prefers-reduced-motion:no-preference){
-    .stage .art{transition:transform .5s cubic-bezier(.2,.7,.2,1)}
-  }
-  @media(hover:hover){
-    .stage:hover .art{transform:scale(1.55)}
-  }
-  .stage-tag{
-    position:absolute;left:14px;top:14px;background:rgba(250,246,239,.92);
-    font-size:10px;letter-spacing:.16em;text-transform:uppercase;padding:6px 10px;color:var(--ink-70);
-  }
-  .zoom-hint{
-    position:absolute;right:14px;bottom:14px;font-size:10px;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--ink-50);background:rgba(250,246,239,.88);padding:6px 10px;
-  }
-  .spin{
-    display:flex;align-items:center;gap:12px;margin-top:2px;
-    border:1px solid var(--line);padding:10px 14px;background:var(--paper);
-  }
-  .spin label{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-70);white-space:nowrap}
-  .spin input{flex:1;accent-color:var(--gold);min-width:0}
-  .spin .val{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-50);width:74px;text-align:right}
-
-  /* info column */
-  .info{align-self:start}
-  @media(min-width:900px){.info{position:sticky;top:24px}}
-  .eyebrow{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin:0 0 10px}
-  h1{font-family:var(--serif);font-size:33px;line-height:1.15;letter-spacing:-.01em;margin:0 0 12px;font-weight:400}
-  @media(min-width:900px){h1{font-size:38px}}
-  .prices{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
-  .price-now{font-size:21px;letter-spacing:.01em}
-  .price-was{font-size:15px;color:var(--ink-50);text-decoration:line-through}
-  .price-off{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);padding:3px 8px}
-  .pay-note{font-size:12.5px;color:var(--ink-50);margin:0 0 26px}
-
-  .opt{margin-bottom:24px}
-  .opt-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}
-  .opt-label{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-70)}
-  .opt-value{font-size:12.5px;color:var(--ink)}
-  .link{font-size:12px;color:var(--ink-70);text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;cursor:pointer}
-  .link:hover{color:var(--ink)}
-
+  .info{position:sticky;top:18px;display:grid;gap:22px}
+  .maker{color:var(--rope)}
+  h1{font:400 clamp(34px,3.2vw,50px)/1.04 var(--serif);letter-spacing:-.025em}
+  h1 em{font-style:italic}
+  .price{display:flex;align-items:baseline;gap:12px;font-size:22px;font-weight:600}
+  .price small{font-size:14px;font-weight:400;color:var(--ink-3)}
+  .blurb{color:var(--ink-2);max-width:46ch}
+  .opt{display:grid;gap:10px;padding-top:18px;border-top:1px solid var(--line)}
+  .opt-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14.5px}
+  .opt-head b{font-weight:600}
+  .opt-head a,.linkish{font-size:14px;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;background:none;border:0;padding:0;cursor:pointer}
+  .opt-head a:hover,.linkish:hover{color:var(--ink)}
   .swatches{display:flex;gap:10px}
-  .sw{
-    width:34px;height:34px;border-radius:50%;border:1px solid var(--line);
-    padding:0;cursor:pointer;position:relative;
-  }
-  .sw[aria-pressed="true"]{box-shadow:0 0 0 1px var(--cream),0 0 0 2px var(--ink)}
-  .sizes{display:flex;flex-wrap:wrap;gap:8px}
-  .size{
-    min-width:52px;padding:11px 12px;border:1px solid var(--line);background:var(--paper);
-    font-size:13px;letter-spacing:.06em;cursor:pointer;
-  }
-  .size:hover:not(:disabled){border-color:var(--ink)}
-  .size[aria-pressed="true"]{background:var(--ink);color:var(--cream);border-color:var(--ink)}
-  .size:disabled{color:var(--ink-50);cursor:not-allowed;background:transparent;position:relative;overflow:hidden}
-  .size:disabled::after{
-    content:"";position:absolute;left:-10%;right:-10%;top:50%;height:1px;background:var(--line);
-    transform:rotate(-16deg);
-  }
-  .qty{display:inline-flex;align-items:center;border:1px solid var(--line);background:var(--paper)}
-  .qty button{width:42px;height:44px;background:none;border:0;cursor:pointer;font-size:17px;line-height:1}
-  .qty button:hover{background:var(--taupe-soft)}
-  .qty output{width:42px;text-align:center;font-size:14px}
-
-  .actions{display:grid;gap:10px;margin:26px 0 18px}
-  .btn{
-    border:1px solid var(--ink);padding:15px 20px;cursor:pointer;background:var(--ink);color:var(--cream);
-    font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;width:100%;
-  }
-  .btn:hover{background:#3d3630;border-color:#3d3630}
-  .btn--ghost{background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:9px}
-  .btn--ghost:hover{background:var(--taupe-soft)}
-  .stock{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-70);margin-bottom:22px}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);flex:none}
-  .assure{border-top:1px solid var(--line-soft);padding-top:16px;display:grid;gap:8px;font-size:12.5px;color:var(--ink-70)}
-  .assure div{display:flex;gap:10px}
-  .assure b{font-weight:600;color:var(--ink);font-size:12.5px}
+  .swatches button{width:44px;height:44px;border-radius:50%;border:0;padding:0;cursor:pointer;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);position:relative}
+  .swatches button::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1.5px solid transparent;transition:border-color .2s var(--ease)}
+  .swatches button:hover::after{border-color:var(--line-2)}
+  .swatches button[aria-checked="true"]::after{border-color:var(--ink)}
+  .sizes{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+  .sizes button{min-height:46px;border-radius:8px;border:1px solid var(--line-2);background:transparent;cursor:pointer;font:500 15px var(--sans);transition:background-color .2s var(--ease),border-color .2s var(--ease),color .2s var(--ease)}
+  .sizes button:hover:not([aria-disabled="true"]){border-color:var(--ink)}
+  .sizes button[aria-checked="true"]{background:var(--ink);color:var(--oat);border-color:var(--ink)}
+  .sizes button[aria-disabled="true"]{color:var(--ink-3);cursor:not-allowed;background:repeating-linear-gradient(135deg,transparent 0 6px,rgba(30,42,61,.06) 6px 7px)}
+  .stock{font-size:14.5px;color:var(--ink-2);display:flex;gap:10px;align-items:center}
+  .stock::before{content:"";width:8px;height:8px;border-radius:50%;background:#3f7a4a;flex:none}
+  .initials{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+  .initials input{font:600 18px var(--mono);letter-spacing:.3em;text-transform:uppercase;min-height:48px;padding:0 14px;border:1px solid var(--line-2);border-radius:8px;background:#f7f3ea;color:var(--ink);width:100%;transition:border-color .2s var(--ease)}
+  .initials input:hover{border-color:var(--ink-3)}
+  .initials input:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(30,42,61,.14)}
+  .initials small{font-size:13.5px;color:var(--ink-3)}
+  .buy{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:52px;padding:0 24px;border-radius:999px;border:1px solid transparent;cursor:pointer;font:600 16px/1 var(--sans);text-decoration:none;
+    transition:background-color .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease)}
+  .btn:active{transform:scale(.985)}
+  .btn.ink{background:var(--ink);color:var(--oat)}
+  .btn.ink:hover{background:#2c3b54}
+  .btn.save{width:52px;padding:0;border-color:var(--line-2);background:transparent}
+  .btn.save:hover{border-color:var(--ink)}
+  .btn.save svg{width:20px;height:20px;fill:none;stroke:var(--ink);stroke-width:1.7}
+  .btn.save[aria-pressed="true"] svg{fill:var(--ink)}
+  .status{font-size:14.5px;min-height:1.4em;color:var(--ink-2)}
+  .made{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .made div{padding:12px 12px 12px 0}
+  .made div + div{padding-left:12px;border-left:1px solid var(--line)}
+  .made dt{font:500 11px/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+  .made dd{margin-top:4px;font-weight:600;font-size:15.5px}
 
   /* ---------- tabs ---------- */
-  .tabs-sec{margin:44px 0 0;border-top:1px solid var(--line)}
-  .tablist{display:flex;gap:28px;overflow-x:auto;scrollbar-width:none}
-  .tablist::-webkit-scrollbar{display:none}
-  .tab{
-    background:none;border:0;border-bottom:1px solid transparent;cursor:pointer;
-    padding:18px 0 15px;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-50);
-    white-space:nowrap;
+  .more{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:clamp(24px,4vw,72px);padding:clamp(60px,8vw,110px) var(--gutter);border-top:1px solid var(--line);background:var(--oat-2)}
+  .knitter h2{font:400 clamp(28px,2.6vw,40px)/1.1 var(--serif);letter-spacing:-.02em}
+  .knitter h2 em{font-style:italic}
+  .knitter p{margin-top:16px;color:var(--ink-2);max-width:40ch}
+  .knitter .sig{margin-top:18px;font:italic 400 22px var(--serif);color:var(--rope)}
+  #tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-2);overflow-x:auto;scrollbar-width:none}
+  #tabs [role=tab]{background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:14px 14px;min-height:48px;cursor:pointer;font-weight:600;font-size:15.5px;color:var(--ink-3);white-space:nowrap;transition:color .2s var(--ease),border-color .2s var(--ease)}
+  #tabs [role=tab]:hover{color:var(--ink)}
+  #tabs [role=tab][aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+  [role=tabpanel]{padding-top:24px;color:var(--ink-2);max-width:66ch}
+  [role=tabpanel] p + p,[role=tabpanel] p + ul,[role=tabpanel] ul + p{margin-top:12px}
+  [role=tabpanel] li{padding:8px 0;border-bottom:1px solid var(--line)}
+  [role=tabpanel] strong{color:var(--ink);font-weight:600}
+  table{border-collapse:collapse;width:100%;font-size:15px;font-variant-numeric:tabular-nums}
+  th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font:500 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+  td:first-child,th:first-child{padding-left:0}
+  tr.out td{color:var(--ink-3)}
+  .fit-note{margin-top:14px;font-size:14.5px}
+
+  /* ---------- look + recent ---------- */
+  .sec{padding:clamp(60px,8vw,110px) var(--gutter);border-top:1px solid var(--line)}
+  .sec h2{font:400 clamp(28px,2.6vw,40px)/1.1 var(--serif);letter-spacing:-.02em;margin-bottom:26px}
+  .look{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2vw,28px)}
+  .item a{display:block;text-decoration:none;border-radius:8px}
+  .item .pic{aspect-ratio:1;border-radius:8px;background:var(--stage);display:grid;place-items:center;overflow:hidden}
+  .item .pic svg{width:62%;height:auto;transition:transform .5s var(--ease)}
+  .item a:hover .pic svg{transform:scale(1.04)}
+  .item h3{margin-top:12px;font:400 19px/1.2 var(--serif)}
+  .item p{font-size:14.5px;color:var(--ink-2);display:flex;justify-content:space-between;gap:10px}
+  .rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(180px,22%);gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:12px;scrollbar-color:var(--ink-3) transparent;overscroll-behavior-x:contain}
+  .rail li{scroll-snap-align:start}
+  .rail .pic{aspect-ratio:4/5}
+  .rail-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+  .rail-head p{color:var(--ink-3);font-size:14px}
+  footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;padding:24px var(--gutter) 30px;background:var(--ink);color:#c7ccd6;font-size:14px}
+
+  @media (prefers-reduced-motion: no-preference){
+    .knit-in{animation:knit .5s var(--ease) backwards}
+    @keyframes knit{from{opacity:0;transform:scale(.3)}}
   }
-  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
-  .tab:hover{color:var(--ink)}
-  .panel{padding:26px 0 44px;border-top:1px solid var(--line-soft)}
-  .panel[hidden]{display:none}
-  .cols{display:grid;gap:28px}
-  @media(min-width:760px){.cols{grid-template-columns:1fr 1fr;gap:52px}}
-  .panel h3{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-50);margin:0 0 12px;font-weight:600}
-  .panel p{margin:0 0 14px;max-width:62ch;color:var(--ink-70)}
-  .speclist{list-style:none;margin:0;padding:0;font-size:14px;color:var(--ink-70)}
-  .speclist li{padding:9px 0;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:16px}
-  .speclist li:last-child{border-bottom:0}
-  .speclist span{color:var(--ink)}
+  .knit-in{transform-box:fill-box;transform-origin:center}
 
-  /* reviews */
-  .rev-top{display:grid;gap:26px;margin-bottom:28px}
-  @media(min-width:760px){.rev-top{grid-template-columns:230px 1fr;gap:48px}}
-  .score{font-family:var(--serif);font-size:48px;line-height:1}
-  .stars{display:flex;gap:3px;margin:8px 0 6px}
-  .stars svg{width:14px;height:14px;color:var(--gold)}
-  .rev-count{font-size:12.5px;color:var(--ink-50)}
-  .bars{display:grid;gap:7px;align-content:start;max-width:420px}
-  .barrow{display:grid;grid-template-columns:44px 1fr 28px;align-items:center;gap:12px;font-size:12px;color:var(--ink-50)}
-  .track{display:block;height:6px;background:var(--taupe-soft)}
-  .fill{display:block;height:100%;background:#8C7C66}
-  .barrow span:last-child{text-align:right}
-  .rev{border-top:1px solid var(--line-soft);padding:20px 0}
-  .rev-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-bottom:8px}
-  .rev-name{font-size:13.5px;font-weight:600}
-  .verified{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-50);border:1px solid var(--line);padding:2px 7px}
-  .rev-body{margin:0 0 8px;max-width:64ch;color:var(--ink-70)}
-  .rev-meta{font-size:12px;color:var(--ink-50)}
-  .demo-note{font-size:11.5px;color:var(--ink-50);border-left:2px solid var(--taupe);padding-left:12px;margin-top:22px;max-width:60ch}
+  @media (hover:none){ .stage .hint{display:none} .stage{cursor:auto} }
 
-  /* ---------- recommendations ---------- */
-  .band{border-top:1px solid var(--line);padding:44px 0}
-  .band-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-bottom:22px}
-  .band h2{font-family:var(--serif);font-size:23px;font-weight:400;margin:0;letter-spacing:-.01em}
-  .look{display:grid;gap:18px;grid-template-columns:repeat(2,1fr)}
-  @media(min-width:760px){.look{grid-template-columns:repeat(4,1fr)}}
-  .card{text-decoration:none;display:block}
-  .card .pic{aspect-ratio:3/4;background:linear-gradient(168deg,#F1EADE,#E2D8C6);display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .card .pic svg{width:70%;height:auto}
-  @media(prefers-reduced-motion:no-preference){
-    .card .pic svg{transition:transform .6s cubic-bezier(.2,.7,.2,1)}
-    .card:hover .pic svg,.card:focus-visible .pic svg{transform:scale(1.06)}
+  /* ---------- responsive ---------- */
+  @media (max-width:980px){
+    .nav{grid-template-columns:auto 1fr auto}
+    .nav ul{display:none}
+    .wordmark{justify-self:start}
+    .pdp{grid-template-columns:minmax(0,1fr)}
+    .info{position:static}
+    .more{grid-template-columns:minmax(0,1fr)}
   }
-  .card .nm{display:block;font-size:13.5px;margin-top:11px;line-height:1.35}
-  .card .pr{display:block;font-size:13px;margin-top:3px}
-  .card .cl{display:block;font-size:11.5px;color:var(--ink-50);margin-top:2px}
-
-  .rail{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:10px;-webkit-overflow-scrolling:touch}
-  .rail .card{flex:0 0 154px;scroll-snap-align:start}
-  @media(min-width:760px){.rail .card{flex:0 0 188px}}
-
-  footer{border-top:1px solid var(--line);padding:32px 0 44px;font-size:12px;color:var(--ink-50)}
-  .foot{display:flex;flex-wrap:wrap;gap:10px 28px;justify-content:space-between}
-
-  @media(prefers-reduced-motion:reduce){
-    *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  @media (max-width:640px){
+    .gallery{grid-template-columns:minmax(0,1fr)}
+    .thumbs{grid-template-columns:repeat(4,minmax(0,1fr));order:2}
+    .views{display:none}
+    .tools .lbl{display:none}
+    .sizes{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .look{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+    .look .item:last-child{display:none}
+    .rail{grid-auto-columns:62%}
+    .crumbs{display:none}
+  }
+  @media (max-height:520px) and (min-width:560px){
+    .strip,.crumbs{display:none}
+    .nav{padding-top:6px;padding-bottom:6px}
+    .pdp{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);padding-top:10px}
+    .info{position:static;gap:12px}
+    .gallery{grid-template-columns:minmax(0,1fr)}
+    .thumbs,.views,.blurb,.made{display:none}
+    h1{font-size:28px}
   }
 </style>
 </head>
 <body>
-
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="star" viewBox="0 0 24 24"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9z" fill="currentColor"/></symbol>
-  <symbol id="heart" viewBox="0 0 24 24"><path d="M12 20.5S3.8 15.2 3.8 9.6A4.6 4.6 0 0 1 12 6.9a4.6 4.6 0 0 1 8.2 2.7c0 5.6-8.2 10.9-8.2 10.9Z" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
-
-  <!-- coat, front -->
-  <symbol id="coat-front" viewBox="0 0 300 400">
-    <path fill="#A99985" stroke="#6E6252" stroke-width="1.7" stroke-linejoin="round"
-      d="M126 52c-12 1-22 4-29 10L64 228c-2 6 0 11 6 12l20 5c6 1 10-2 11-8l7-113-16 252h116l-16-252 7 113c1 6 5 9 11 8l20-5c6-1 8-6 6-12L203 62c-7-6-17-9-29-10-8 12-16 18-24 18s-16-6-24-18Z"/>
-    <path fill="#B4A48F" stroke="#6E6252" stroke-width="1.5" stroke-linejoin="round"
-      d="M126 52c6 22 14 32 24 32s18-10 24-32l12 4c-9 28-21 42-36 42s-27-14-36-42Z"/>
-    <path fill="none" stroke="#6E6252" stroke-width="1.1" stroke-dasharray="3 6" d="M150 96v278"/>
-    <g fill="#6E6252">
-      <circle cx="140" cy="166" r="4"/><circle cx="140" cy="212" r="4"/>
-      <circle cx="140" cy="258" r="4"/><circle cx="140" cy="304" r="4"/>
-    </g>
-    <g fill="none" stroke="#6E6252" stroke-width="1.2" opacity=".55">
-      <path d="M104 244h30M196 244h-30M88 226l16 4M212 226l-16 4"/>
-    </g>
-  </symbol>
-
-  <!-- coat, three-quarter -->
-  <symbol id="coat-34" viewBox="0 0 300 400">
-    <path fill="#A99985" stroke="#6E6252" stroke-width="1.7" stroke-linejoin="round"
-      d="M132 52c-11 1-20 4-26 10L78 228c-2 6 0 11 6 12l17 5c6 1 10-2 11-8l6-113-14 252h108l-18-252 8 113c1 6 5 9 11 8l20-5c6-1 8-6 6-12L199 62c-7-6-17-9-29-10-7 12-14 18-21 18s-12-6-17-18Z"/>
-    <path fill="#B4A48F" stroke="#6E6252" stroke-width="1.5" stroke-linejoin="round"
-      d="M132 52c5 20 12 32 20 32s16-12 22-32l12 4c-8 28-19 42-34 42s-24-14-32-42Z"/>
-    <path fill="none" stroke="#6E6252" stroke-width="1.1" stroke-dasharray="3 6" d="M160 96c-4 94-5 190-3 278"/>
-    <g fill="#6E6252">
-      <circle cx="152" cy="166" r="4"/><circle cx="152" cy="212" r="4"/>
-      <circle cx="151" cy="258" r="4"/><circle cx="151" cy="304" r="4"/>
-    </g>
-    <g fill="none" stroke="#6E6252" stroke-width="1.2" opacity=".5">
-      <path d="M112 244h26M198 244h-26M100 226l14 4"/>
-    </g>
-  </symbol>
-
-  <!-- coat, side -->
-  <symbol id="coat-side" viewBox="0 0 300 400">
-    <path fill="#A99985" stroke="#6E6252" stroke-width="1.7" stroke-linejoin="round"
-      d="M138 52c-10 1-18 4-24 10L92 228c-2 6 0 11 6 12l18 5c6 1 10-2 11-8l5-113-16 252h76l-12-252 5 113c1 6 5 9 11 8l14-5c6-1 8-6 6-12L188 62c-6-6-14-9-24-10-4 12-9 18-13 18s-9-6-13-18Z"/>
-    <path fill="#B4A48F" stroke="#6E6252" stroke-width="1.5" stroke-linejoin="round"
-      d="M138 52c4 18 8 30 13 30s10-12 13-30l10 4c-6 26-13 38-23 38s-17-12-23-38Z"/>
-    <path fill="none" stroke="#6E6252" stroke-width="1.2" d="M176 80c-4 98-5 198-3 294"/>
-    <g fill="none" stroke="#6E6252" stroke-width="1.2" opacity=".5">
-      <path d="M120 244h24M112 226l14 4"/>
-    </g>
-  </symbol>
-
-  <!-- coat, back -->
-  <symbol id="coat-back" viewBox="0 0 300 400">
-    <path fill="#A99985" stroke="#6E6252" stroke-width="1.7" stroke-linejoin="round"
-      d="M126 52c-12 1-22 4-29 10L64 228c-2 6 0 11 6 12l20 5c6 1 10-2 11-8l7-113-16 252h116l-16-252 7 113c1 6 5 9 11 8l20-5c6-1 8-6 6-12L203 62c-7-6-17-9-29-10-8 8-16 12-24 12s-16-4-24-12Z"/>
-    <path fill="#BCAD99" stroke="#6E6252" stroke-width="1.5" stroke-linejoin="round"
-      d="M126 52c8 8 16 12 24 12s16-4 24-12l5 20c-9 6-19 9-29 9s-20-3-29-9Z"/>
-    <path fill="none" stroke="#6E6252" stroke-width="1.3" d="M150 78v238M150 322v52"/>
-    <g fill="none" stroke="#6E6252" stroke-width="1.2" opacity=".5">
-      <path d="M116 150h68M88 226l16 4M212 226l-16 4"/>
-    </g>
-  </symbol>
-
-  <!-- companions -->
-  <symbol id="knit" viewBox="0 0 300 400">
-    <g fill="#B9AE9B" stroke="#6E6252" stroke-width="1.6" stroke-linejoin="round">
-      <path d="M150 60c16 0 26 4 34 8l46 20c8 4 11 9 11 17l-10 60-24-8 2 168c0 5-3 8-8 8H99c-5 0-8-3-8-8l2-168-24 8-10-60c0-8 3-13 11-17l46-20c8-4 18-8 34-8Z"/>
-      <path d="M118 62c8 12 18 18 32 18s24-6 32-18" fill="none" stroke="#6E6252" stroke-width="1.6"/>
-    </g>
-    <g fill="none" stroke="#6E6252" stroke-width="1" opacity=".38">
-      <path d="M112 120v200M134 120v200M156 120v200M178 120v200"/>
-    </g>
-  </symbol>
-  <symbol id="trouser" viewBox="0 0 300 400">
-    <g fill="#9C9081" stroke="#6E6252" stroke-width="1.6" stroke-linejoin="round">
-      <path d="M96 40h108l8 34-10 288c0 5-3 6-8 6h-30c-5 0-7-2-8-6l-6-180-6 180c-1 4-3 6-8 6h-30c-5 0-8-1-8-6L88 74Z"/>
-      <path d="M92 76h116" fill="none" stroke="#6E6252" stroke-width="1.3"/>
-    </g>
-  </symbol>
-  <symbol id="bag" viewBox="0 0 300 400">
-    <g fill="#8E7F6B" stroke="#5E5344" stroke-width="1.6" stroke-linejoin="round">
-      <path d="M62 150h176l14 190c0 6-4 10-10 10H58c-6 0-10-4-10-10Z"/>
-      <path d="M104 152v-38a46 46 0 0 1 92 0v38" fill="none" stroke="#5E5344" stroke-width="7"/>
-      <path d="M48 214h204" fill="none" stroke="#5E5344" stroke-width="1.3" opacity=".6"/>
-    </g>
-  </symbol>
-  <symbol id="scarf" viewBox="0 0 300 400">
-    <g fill="#B0A390" stroke="#6E6252" stroke-width="1.6" stroke-linejoin="round">
-      <path d="M104 40h92l-10 130 22 190h-40l-18-150-18 150h-40l22-190Z"/>
-      <path d="M100 118h100" fill="none" stroke="#6E6252" stroke-width="1.2" opacity=".55"/>
-      <path d="M100 168h100" fill="none" stroke="#6E6252" stroke-width="1.2" opacity=".55"/>
-    </g>
-  </symbol>
-  <symbol id="boot" viewBox="0 0 300 400">
-    <g fill="#7E7160" stroke="#544A3D" stroke-width="1.6" stroke-linejoin="round">
-      <path d="M110 40h72v196l54 74c4 6 1 14-7 14H117c-5 0-7-3-7-8Z"/>
-      <path d="M110 236h72" fill="none" stroke="#544A3D" stroke-width="1.3"/>
-    </g>
-  </symbol>
-</svg>
-
-<div class="ship-note">Complimentary shipping and returns on all Australian orders</div>
-
-<header>
-  <div class="wrap bar">
-    <a class="brand" href="#main">Solenne</a>
-    <nav aria-label="Primary">
-      <a href="#main">New in</a>
-      <a href="#main">Ready to wear</a>
-      <a href="#main">Outerwear</a>
-      <a href="#main">Knitwear</a>
-      <a href="#main">Atelier</a>
-    </nav>
-    <div class="utils">
-      <button type="button">Search</button>
-      <button type="button">Bag (0)</button>
-    </div>
-  </div>
+<div class="page">
+<p class="strip">Every gansey is knitted by hand in Filey. Free UK delivery; free darning for five years.</p>
+<header class="nav">
+  <ul><li><a href="#top">Ganseys</a></li><li><a href="#look">Caps &amp; socks</a></li><li><a href="#knitter">The knitters</a></li></ul>
+  <a class="wordmark" href="#top" aria-label="Cammish and Daughter home">Cammish <em>&amp;</em> Daughter</a>
+  <div class="tools"><a href="#top"><span class="lbl">Saved</span></a><a href="#top" aria-label="Bag"><span class="lbl">Bag</span><span class="count num" id="bagN">0</span></a></div>
 </header>
 
-<main id="main">
-  <div class="wrap">
-    <p class="crumbs"><a href="#main">Ready to wear</a> / <a href="#main">Outerwear</a> / Aubin Coat</p>
+<nav class="crumbs" aria-label="Breadcrumb"><a href="#top">Ganseys</a><span aria-hidden="true">/</span><a href="#top">Traditional</a><span aria-hidden="true">/</span><span aria-current="page">The Filey Gansey</span></nav>
 
-    <div class="product">
-
-      <!-- ---------- media ---------- -->
-      <div class="media">
-        <div class="thumbs" role="group" aria-label="Product views">
-          <button class="thumb" type="button" data-view="0" aria-current="true" aria-label="Front view">
-            <svg viewBox="40 20 220 360" aria-hidden="true"><use href="#coat-front"/></svg>
-          </button>
-          <button class="thumb" type="button" data-view="1" aria-label="Three-quarter view">
-            <svg viewBox="40 20 220 360" aria-hidden="true"><use href="#coat-34"/></svg>
-          </button>
-          <button class="thumb" type="button" data-view="2" aria-label="Side view">
-            <svg viewBox="40 20 220 360" aria-hidden="true"><use href="#coat-side"/></svg>
-          </button>
-          <button class="thumb" type="button" data-view="3" aria-label="Back view">
-            <svg viewBox="40 20 220 360" aria-hidden="true"><use href="#coat-back"/></svg>
-          </button>
+<main id="top">
+<section class="pdp" aria-labelledby="h">
+  <div class="gallery">
+    <div class="thumbs" role="tablist" aria-label="Views" id="thumbs"></div>
+    <div>
+      <div class="stage" id="stage">
+        <span class="tag mono">Knitted to order</span>
+        <div class="zoom" id="zoom">
+          <svg id="main" viewBox="0 0 400 500" role="img" aria-label="The Filey gansey, front view, in navy, with rope cables and diamond panels across the yoke.">
+            <defs>
+              <pattern id="st" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M1 .5 L4 6.5 L7 .5" fill="none" stroke="#fff" stroke-opacity=".13" stroke-width="1.1"/><path d="M1 1.5 L4 7.5" fill="none" stroke="#000" stroke-opacity=".12" stroke-width=".8"/></pattern>
+              <pattern id="rib" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="3" height="6" fill="#000" fill-opacity=".18"/><rect x="3" width="3" height="6" fill="#fff" fill-opacity=".08"/></pattern>
+              <pattern id="cable" width="22" height="30" patternUnits="userSpaceOnUse"><rect width="22" height="30" fill="#000" fill-opacity=".14"/><path d="M5 0 C5 10 17 10 17 15 C17 20 5 20 5 30" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3.2"/><path d="M17 0 C17 8 13 11 12 12 M10 18 C9 19 5 22 5 30" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="3.2"/><path d="M5 0 C5 10 17 10 17 15" fill="none" stroke="#000" stroke-opacity=".22" stroke-width="1"/></pattern>
+              <pattern id="diamond" width="26" height="26" patternUnits="userSpaceOnUse"><path d="M13 2 L24 13 L13 24 L2 13 Z" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="2" stroke-dasharray="2 2.2"/><circle cx="13" cy="13" r="1.6" fill="#fff" fill-opacity=".3"/></pattern>
+              <pattern id="ladder" width="14" height="8" patternUnits="userSpaceOnUse"><path d="M0 4 H14" stroke="#fff" stroke-opacity=".22" stroke-width="2" stroke-dasharray="1.6 2"/></pattern>
+              <pattern id="ridge" width="8" height="6" patternUnits="userSpaceOnUse"><path d="M0 3 H8" stroke="#fff" stroke-opacity=".26" stroke-width="2.2" stroke-dasharray="2 1.6"/></pattern>
+              <clipPath id="bodyClip"><path id="bodyPath" d="M128 62 Q200 84 272 62 L318 76 L372 118 L396 358 L352 366 L328 196 L330 452 L70 452 L72 196 L48 366 L4 358 L28 118 L82 76 Z"/></clipPath>
+              <g id="garment">
+                <use href="#bodyPath" fill="var(--wool)"/>
+                <g clip-path="url(#bodyClip)">
+                  <rect x="0" y="0" width="400" height="500" fill="url(#st)"/>
+                  <!-- yoke: panels of cable, diamond and ladder, mirrored -->
+                  <g class="yoke">
+                    <rect x="72" y="98" width="22" height="104" fill="url(#cable)"/><rect x="94" y="98" width="36" height="104" fill="url(#diamond)"/>
+                    <rect x="130" y="98" width="14" height="104" fill="url(#ladder)"/><rect x="144" y="98" width="22" height="104" fill="url(#cable)"/>
+                    <rect x="166" y="98" width="68" height="104" fill="url(#diamond)"/>
+                    <rect x="234" y="98" width="22" height="104" fill="url(#cable)"/><rect x="256" y="98" width="14" height="104" fill="url(#ladder)"/>
+                    <rect x="270" y="98" width="36" height="104" fill="url(#diamond)"/><rect x="306" y="98" width="22" height="104" fill="url(#cable)"/>
+                    <rect x="28" y="202" width="344" height="12" fill="url(#ridge)"/><rect x="28" y="88" width="344" height="10" fill="url(#ridge)"/>
+                  </g>
+                  <rect x="60" y="428" width="280" height="30" fill="url(#rib)"/>
+                  <path d="M4 340 L48 348 L50 366 L4 358 Z M396 340 L352 348 L350 366 L396 358 Z" fill="url(#rib)"/>
+                  <rect x="190" y="118" width="20" height="340" fill="#000" fill-opacity=".05"/>
+                  <!-- underarm gusset seams and side seam 'seeds' -->
+                  <path d="M72 196 V452 M328 196 V452" stroke="#000" stroke-opacity=".22" stroke-width="1.4" stroke-dasharray="2 3"/>
+                </g>
+                <path d="M128 62 Q200 84 272 62 Q256 50 200 48 Q144 50 128 62 Z" fill="var(--wool)"/>
+                <path class="neck-front" d="M140 62 Q200 92 260 62" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="10"/>
+                <path class="neck-front" d="M140 62 Q200 92 260 62" fill="none" stroke="url(#rib)" stroke-width="9"/>
+                <path class="neck-back" d="M140 62 Q200 70 260 62" fill="none" stroke="#000" stroke-opacity=".3" stroke-width="10" display="none"/>
+                <use href="#bodyPath" fill="none" stroke="#000" stroke-opacity=".25" stroke-width="1.2"/>
+                <g id="letters" fill="#fff" fill-opacity=".62"></g>
+              </g>
+            </defs>
+            <rect width="400" height="500" fill="var(--stage)"/>
+            <ellipse cx="200" cy="468" rx="150" ry="10" fill="#000" fill-opacity=".06"/>
+            <use href="#garment"/>
+          </svg>
         </div>
-
-        <div>
-          <div class="stage">
-            <div class="stage-inner" id="stage">
-              <div class="frame" data-frame="0"><svg class="art" viewBox="0 0 300 400" aria-hidden="true"><use href="#coat-front"/></svg></div>
-              <div class="frame" data-frame="1" hidden><svg class="art" viewBox="0 0 300 400" aria-hidden="true"><use href="#coat-34"/></svg></div>
-              <div class="frame" data-frame="2" hidden><svg class="art" viewBox="0 0 300 400" aria-hidden="true"><use href="#coat-side"/></svg></div>
-              <div class="frame" data-frame="3" hidden><svg class="art" viewBox="0 0 300 400" aria-hidden="true"><use href="#coat-back"/></svg></div>
-              <span class="stage-tag">Aubin Coat · Fawn</span>
-              <span class="zoom-hint">Hover to zoom</span>
-            </div>
-          </div>
-
-          <div class="spin">
-            <label for="rotate">Rotate view</label>
-            <input id="rotate" type="range" min="0" max="3" step="1" value="0" aria-describedby="rotate-val">
-            <span class="val" id="rotate-val">Front</span>
-          </div>
-        </div>
+        <span class="hint mono" aria-hidden="true">Hover to look closer</span>
       </div>
+      <div class="views" role="group" aria-label="Rotate the view">
+        <button type="button" data-v="0" aria-pressed="true">Front</button>
+        <button type="button" data-v="1" aria-pressed="false">Back</button>
+        <button type="button" data-v="2" aria-pressed="false">Yoke</button>
+        <button type="button" data-v="3" aria-pressed="false">Hem</button>
+      </div>
+    </div>
+  </div>
 
-      <!-- ---------- info ---------- -->
-      <div class="info">
-        <p class="eyebrow">Autumn / Winter 26</p>
-        <h1>Aubin Double-Faced Wool-Cashmere Coat</h1>
+  <div class="info">
+    <p class="mono maker">Knitted in Filey, North Yorkshire</p>
+    <h1 id="h">The Filey Gansey, <em id="colName">navy</em></h1>
+    <p class="price num"><span id="price">£285</span><small id="priceNote">Knitted to order · 6 weeks</small></p>
+    <p class="blurb">A fisherman’s jumper knitted in the round from 5-ply worsted, so tight it sheds spray. Rope cables and marriage-line diamonds across the yoke, a gusset under each arm, and your initials in the hem, the way they have been knitted on this coast since the 1850s.</p>
 
-        <div class="prices">
-          <span class="price-now">A$1,290</span>
-          <span class="price-was">A$1,890</span>
-          <span class="price-off">Archive — 30% off</span>
-        </div>
-        <p class="pay-note">Includes GST. Duties calculated at checkout for orders outside Australia.</p>
-
-        <div class="opt">
-          <div class="opt-head">
-            <span class="opt-label">Colour</span>
-            <span class="opt-value" id="colour-value">Fawn</span>
-          </div>
-          <div class="swatches" role="group" aria-label="Colour">
-            <button class="sw" type="button" aria-pressed="true" data-colour="Fawn" style="background:#A99985" aria-label="Fawn"></button>
-            <button class="sw" type="button" aria-pressed="false" data-colour="Bone" style="background:#E8E1D4" aria-label="Bone"></button>
-            <button class="sw" type="button" aria-pressed="false" data-colour="Slate" style="background:#5C6068" aria-label="Slate"></button>
-            <button class="sw" type="button" aria-pressed="false" data-colour="Ink" style="background:#2A2521" aria-label="Ink"></button>
-          </div>
-        </div>
-
-        <div class="opt">
-          <div class="opt-head">
-            <span class="opt-label">Size — AU</span>
-            <button class="link" type="button">Size guide</button>
-          </div>
-          <div class="sizes" role="group" aria-label="Size">
-            <button class="size" type="button" disabled aria-label="Size 6, sold out">6</button>
-            <button class="size" type="button" aria-pressed="false">8</button>
-            <button class="size" type="button" aria-pressed="true">10</button>
-            <button class="size" type="button" aria-pressed="false">12</button>
-            <button class="size" type="button" aria-pressed="false">14</button>
-            <button class="size" type="button" disabled aria-label="Size 16, sold out">16</button>
-          </div>
-        </div>
-
-        <div class="opt">
-          <div class="opt-head"><span class="opt-label">Quantity</span></div>
-          <div class="qty">
-            <button type="button" id="minus" aria-label="Decrease quantity">−</button>
-            <output id="qty" aria-live="polite">1</output>
-            <button type="button" id="plus" aria-label="Increase quantity">+</button>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button class="btn" type="button">Add to bag — A$1,290</button>
-          <button class="btn btn--ghost" type="button">
-            <svg width="16" height="16" aria-hidden="true"><use href="#heart"/></svg>
-            Save to wishlist
-          </button>
-        </div>
-
-        <p class="stock"><span class="dot"></span> Four left in AU 10 · Ships from Collingwood in 1–2 days</p>
-
-        <div class="assure">
-          <div><b>Made in:</b><span>Biella, Italy — 68% wool, 28% cashmere, 4% silk</span></div>
-          <div><b>Returns:</b><span>30 days, free, including sale pieces</span></div>
-          <div><b>Care:</b><span>Specialist dry clean only. Brush after wear.</span></div>
-        </div>
+    <div class="opt">
+      <div class="opt-head"><span>Colour: <b id="colLabel">Navy</b></span></div>
+      <div class="swatches" role="radiogroup" aria-label="Colour">
+        <button type="button" role="radio" aria-checked="true" style="--c:#1f2b40" data-c="#1f2b40" data-n="Navy" aria-label="Navy"></button>
+        <button type="button" role="radio" aria-checked="false" style="--c:#d6c8ad" data-c="#cdbd9f" data-n="Oatmeal" aria-label="Oatmeal"></button>
+        <button type="button" role="radio" aria-checked="false" style="--c:#4b5a3d" data-c="#4b5a3d" data-n="Seaweed" aria-label="Seaweed"></button>
+        <button type="button" role="radio" aria-checked="false" style="--c:#8a2f2a" data-c="#8a2f2a" data-n="Coble red" aria-label="Coble red"></button>
       </div>
     </div>
 
-    <!-- ---------- tabs ---------- -->
-    <section class="tabs-sec" aria-label="Product information">
-      <div class="tablist" role="tablist">
-        <button class="tab" role="tab" id="t1" aria-controls="p1" aria-selected="true">Details</button>
-        <button class="tab" role="tab" id="t2" aria-controls="p2" aria-selected="false" tabindex="-1">Size &amp; fit</button>
-        <button class="tab" role="tab" id="t3" aria-controls="p3" aria-selected="false" tabindex="-1">Shipping &amp; returns</button>
-        <button class="tab" role="tab" id="t4" aria-controls="p4" aria-selected="false" tabindex="-1">Reviews (38)</button>
+    <div class="opt">
+      <div class="opt-head"><span>Chest size: <b id="sizeLabel">40</b></span><button type="button" class="linkish" id="guide">Size guide</button></div>
+      <div class="sizes" role="radiogroup" aria-label="Chest size, inches">
+        <button type="button" role="radio" aria-checked="false">36</button>
+        <button type="button" role="radio" aria-checked="false">38</button>
+        <button type="button" role="radio" aria-checked="true">40</button>
+        <button type="button" role="radio" aria-checked="false">42</button>
+        <button type="button" role="radio" aria-checked="false">44</button>
+        <button type="button" role="radio" aria-checked="false" aria-disabled="true" aria-label="46, wool sold out until March">46</button>
       </div>
+      <p class="stock" id="stock">3 ready-knitted in 40 ship in 1–2 days. Any other size is knitted for you in 6 weeks.</p>
+    </div>
 
-      <div class="panel" role="tabpanel" id="p1" aria-labelledby="t1" tabindex="0">
-        <div class="cols">
-          <div>
-            <h3>About the coat</h3>
-            <p>A double-faced wool-cashmere in a straight, single-breasted line that falls just below the knee. The cloth is woven in Biella and bonded without a lining, so the coat holds its shape but stays light on the shoulder — the seams are hand-finished for the same reason.</p>
-            <p>Cut roomy enough for a knit underneath. Four horn buttons, two welt pockets, one inside pocket sized for a passport.</p>
-          </div>
-          <div>
-            <h3>Composition &amp; detail</h3>
-            <ul class="speclist">
-              <li>Fabric <span>68% wool, 28% cashmere, 4% silk</span></li>
-              <li>Weight <span>640 gsm double-faced</span></li>
-              <li>Lining <span>Unlined, bonded construction</span></li>
-              <li>Buttons <span>Natural horn, four front</span></li>
-              <li>Made in <span>Biella, Italy</span></li>
-              <li>Style code <span>SLN-AW26-0142</span></li>
-            </ul>
-          </div>
-        </div>
-      </div>
+    <div class="opt">
+      <div class="opt-head"><label for="ini">Initials in the hem <b>+£20</b></label></div>
+      <div class="initials"><input id="ini" maxlength="3" autocomplete="off" spellcheck="false" aria-describedby="iniHelp" value="MC"><button type="button" class="linkish" id="showHem">See it</button></div>
+      <small id="iniHelp">Up to three letters, knitted in purl stitch above the ribbing.</small>
+    </div>
 
-      <div class="panel" role="tabpanel" id="p2" aria-labelledby="t2" tabindex="0" hidden>
-        <div class="cols">
-          <div>
-            <h3>How it fits</h3>
-            <p>Relaxed through the body with a dropped shoulder. Most people take their usual size; if you are between sizes and want to wear it over a heavy knit, take the larger one.</p>
-            <p>Our model is 178 cm and wears AU 10. Back length 108 cm in AU 10, graded 2 cm per size.</p>
-          </div>
-          <div>
-            <h3>Measurements — AU 10</h3>
-            <ul class="speclist">
-              <li>Bust <span>106 cm</span></li>
-              <li>Waist <span>104 cm</span></li>
-              <li>Shoulder <span>44 cm</span></li>
-              <li>Sleeve <span>61 cm</span></li>
-              <li>Back length <span>108 cm</span></li>
-            </ul>
-          </div>
-        </div>
-      </div>
+    <div class="buy">
+      <button class="btn ink" type="button" id="add">Add to bag · <span id="addPrice" class="num">£305</span></button>
+      <button class="btn save" type="button" id="save" aria-pressed="false" aria-label="Save for later"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>
+    </div>
+    <p class="status" id="status" role="status"></p>
 
-      <div class="panel" role="tabpanel" id="p3" aria-labelledby="t3" tabindex="0" hidden>
-        <div class="cols">
-          <div>
-            <h3>Shipping</h3>
-            <ul class="speclist">
-              <li>Australia — standard <span>Free, 2–5 days</span></li>
-              <li>Australia — express <span>A$12, next day</span></li>
-              <li>New Zealand <span>A$20, 4–7 days</span></li>
-              <li>Rest of world <span>A$45, 7–12 days</span></li>
-            </ul>
-          </div>
-          <div>
-            <h3>Returns</h3>
-            <p>Thirty days from delivery, sale pieces included. Print the label from your order page or book a pickup — we do not charge for either within Australia.</p>
-            <p>Alterations through our Collingwood atelier are complimentary for the first twelve months: sleeve and hem length, and a taken-in waist.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel" role="tabpanel" id="p4" aria-labelledby="t4" tabindex="0" hidden>
-        <div class="rev-top">
-          <div>
-            <div class="score">4.6</div>
-            <div class="stars" role="img" aria-label="4.6 out of 5">
-              <svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg>
-              <svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg>
-              <svg aria-hidden="true" style="opacity:.35"><use href="#star"/></svg>
-            </div>
-            <div class="rev-count">38 reviews · 34 would buy again</div>
-          </div>
-          <div class="bars">
-            <div class="barrow"><span>5 star</span><span class="track"><span class="fill" style="width:68%"></span></span><span>26</span></div>
-            <div class="barrow"><span>4 star</span><span class="track"><span class="fill" style="width:21%"></span></span><span>8</span></div>
-            <div class="barrow"><span>3 star</span><span class="track"><span class="fill" style="width:8%"></span></span><span>3</span></div>
-            <div class="barrow"><span>2 star</span><span class="track"><span class="fill" style="width:3%"></span></span><span>1</span></div>
-            <div class="barrow"><span>1 star</span><span class="track"><span class="fill" style="width:0%"></span></span><span>0</span></div>
-          </div>
-        </div>
-
-        <article class="rev">
-          <div class="rev-head">
-            <span class="rev-name">Marguerite D.</span>
-            <span class="stars" role="img" aria-label="5 out of 5">
-              <svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg>
-            </span>
-            <span class="verified">Verified purchase</span>
-          </div>
-          <p class="rev-body">Warmer than it looks, which was the thing I was unsure about with no lining. Wore it through a Melbourne July with a merino crew underneath and never wanted a scarf.</p>
-          <p class="rev-meta">Bought AU 10 · Usually AU 10 · 168 cm · 12 August 2026</p>
-        </article>
-
-        <article class="rev">
-          <div class="rev-head">
-            <span class="rev-name">Thanh N.</span>
-            <span class="stars" role="img" aria-label="4 out of 5">
-              <svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true"><use href="#star"/></svg><svg aria-hidden="true" style="opacity:.35"><use href="#star"/></svg>
-            </span>
-            <span class="verified">Verified purchase</span>
-          </div>
-          <p class="rev-body">The sleeves were long on me and the atelier shortened them 4 cm for nothing, which I did not expect. One star off only because the horn buttons need a firmer thread — I had to re-sew the second one.</p>
-          <p class="rev-meta">Bought AU 8 · Usually AU 8 · 161 cm · 29 July 2026</p>
-        </article>
-
-        <p class="demo-note">Sample data. Solenne is a fictional label and these reviews are written demo content, not real customer feedback.</p>
-      </div>
-    </section>
-
-    <!-- ---------- complete the look ---------- -->
-    <section class="band">
-      <div class="band-head">
-        <h2>Complete the look</h2>
-        <a class="link" href="#main" style="text-decoration:underline">Shop the AW26 edit</a>
-      </div>
-      <div class="look">
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#knit"/></svg></span>
-          <span class="nm">Perrin Ribbed Cashmere Crew</span>
-          <span class="cl">Oat</span>
-          <span class="pr">A$480</span>
-        </a>
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#trouser"/></svg></span>
-          <span class="nm">Lisle Wide-Leg Wool Trouser</span>
-          <span class="cl">Bitter chocolate</span>
-          <span class="pr">A$520</span>
-        </a>
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#bag"/></svg></span>
-          <span class="nm">Marais Top-Handle Bag</span>
-          <span class="cl">Saddle</span>
-          <span class="pr">A$1,150</span>
-        </a>
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#scarf"/></svg></span>
-          <span class="nm">Doubled Cashmere Scarf</span>
-          <span class="cl">Fawn / bone</span>
-          <span class="pr">A$290</span>
-        </a>
-      </div>
-    </section>
-
-    <!-- ---------- recently viewed ---------- -->
-    <section class="band">
-      <div class="band-head"><h2>Recently viewed</h2></div>
-      <div class="rail">
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#coat-34"/></svg></span>
-          <span class="nm">Aubin Coat</span><span class="cl">Slate</span><span class="pr">A$1,290</span>
-        </a>
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#boot"/></svg></span>
-          <span class="nm">Rive Leather Boot</span><span class="cl">Espresso</span><span class="pr">A$690</span>
-        </a>
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#knit"/></svg></span>
-          <span class="nm">Perrin Crew</span><span class="cl">Charcoal</span><span class="pr">A$480</span>
-        </a>
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#scarf"/></svg></span>
-          <span class="nm">Doubled Scarf</span><span class="cl">Ink</span><span class="pr">A$290</span>
-        </a>
-        <a class="card" href="#main">
-          <span class="pic"><svg viewBox="0 0 300 400" aria-hidden="true"><use href="#trouser"/></svg></span>
-          <span class="nm">Lisle Trouser</span><span class="cl">Bone</span><span class="pr">A$520</span>
-        </a>
-      </div>
-    </section>
+    <dl class="made">
+      <div><dt>Wool</dt><dd>5-ply worsted</dd></div>
+      <div><dt>Stitches</dt><dd class="num">About 110,000</dd></div>
+      <div><dt>By hand</dt><dd class="num">60 hours</dd></div>
+    </dl>
   </div>
+</section>
+
+<section class="more" id="knitter" aria-labelledby="k-h">
+  <div class="knitter">
+    <h2 id="k-h">Knitted by <em>Margaret Cammish</em>, and four others in Filey.</h2>
+    <p>Margaret learned from her grandmother, who knitted for the herring fleet. The patterns are the town’s own: rope for the fisherman’s trade, diamonds for the net, and the ladder of life up the middle.</p>
+    <p class="sig">Margaret, knitter no. 1</p>
+  </div>
+  <div>
+    <div role="tablist" aria-label="Product information" id="tabs">
+      <button role="tab" id="t0" aria-selected="true" aria-controls="p0">Details</button>
+      <button role="tab" id="t1" aria-selected="false" aria-controls="p1" tabindex="-1">Size &amp; fit</button>
+      <button role="tab" id="t2" aria-selected="false" aria-controls="p2" tabindex="-1">Delivery &amp; returns</button>
+      <button role="tab" id="t3" aria-selected="false" aria-controls="p3" tabindex="-1">Care &amp; repair</button>
+    </div>
+    <div role="tabpanel" id="p0" aria-labelledby="t0" tabindex="0">
+      <p><strong>100% British wool</strong>, 5-ply worsted spun in West Yorkshire, knitted on five steel needles at nine stitches to the inch.</p>
+      <ul><li>Knitted in the round: no side seams to split</li><li>Underarm gussets for reach, knitted in, not sewn</li><li>Rope cable, marriage-line diamond and ladder panels across the yoke</li><li>Initials in purl stitch above the hem ribbing</li><li>Weight about 780 g in size 40</li></ul>
+    </div>
+    <div role="tabpanel" id="p1" aria-labelledby="t1" tabindex="0" hidden>
+      <table>
+        <thead><tr><th>Size</th><th>Chest</th><th>Length</th><th>Sleeve</th><th>Fits chest</th></tr></thead>
+        <tbody>
+          <tr><td>36</td><td>96 cm</td><td>64 cm</td><td>48 cm</td><td>86–91 cm</td></tr>
+          <tr><td>38</td><td>101 cm</td><td>66 cm</td><td>49 cm</td><td>91–96 cm</td></tr>
+          <tr><td>40</td><td>106 cm</td><td>68 cm</td><td>50 cm</td><td>96–101 cm</td></tr>
+          <tr><td>42</td><td>111 cm</td><td>70 cm</td><td>51 cm</td><td>101–106 cm</td></tr>
+          <tr><td>44</td><td>116 cm</td><td>71 cm</td><td>52 cm</td><td>106–111 cm</td></tr>
+          <tr class="out"><td>46</td><td>121 cm</td><td>72 cm</td><td>53 cm</td><td>Wool back in March</td></tr>
+        </tbody>
+      </table>
+      <p class="fit-note">A gansey fits close, with about 10 cm of ease. It relaxes by roughly 2 cm with wear. If you are between sizes, take the larger.</p>
+    </div>
+    <div role="tabpanel" id="p2" aria-labelledby="t2" tabindex="0" hidden>
+      <p>Free UK delivery by tracked post; <strong>£14</strong> to Europe, <strong>£24</strong> worldwide. Ready-knitted sizes ship in 1–2 days.</p>
+      <p>Returns within 30 days for anything ready-knitted. A gansey knitted to order with your initials cannot be returned, but if it does not fit we will re-knit it once, free.</p>
+    </div>
+    <div role="tabpanel" id="p3" aria-labelledby="t3" tabindex="0" hidden>
+      <p>Hand-wash cool with a wool soap, press the water out in a towel, and dry flat. Never tumble dry.</p>
+      <p><strong>Free darning for five years.</strong> Post it back with a note of where it has worn, and Margaret or one of the knitters will mend it in the same wool.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="look" aria-labelledby="look-h">
+  <h2 id="look-h">Worn with it</h2>
+  <ul class="look">
+    <li class="item"><a href="#look"><div class="pic"><svg viewBox="0 0 120 100" aria-hidden="true"><path d="M14 76 Q14 18 60 16 Q106 18 106 76 Z" fill="#1f2b40"/><rect x="10" y="70" width="100" height="22" rx="4" fill="#1f2b40"/><rect x="10" y="70" width="100" height="22" rx="4" fill="url(#rib)"/><path d="M14 76 Q14 18 60 16 Q106 18 106 76 Z" fill="url(#st)"/></svg></div><h3>Watch cap</h3><p><span>Navy, 4-ply</span><span class="num">£48</span></p></a></li>
+    <li class="item"><a href="#look"><div class="pic"><svg viewBox="0 0 120 100" aria-hidden="true"><path d="M30 8 H58 V60 Q58 78 76 80 H96 Q106 80 106 90 H44 Q30 90 30 74 Z" fill="#cdbd9f"/><rect x="30" y="8" width="28" height="14" fill="url(#rib)"/><path d="M30 8 H58 V60 Q58 78 76 80 H96 Q106 80 106 90 H44 Q30 90 30 74 Z" fill="url(#st)"/><path d="M92 80 Q106 80 106 90 H90 Z" fill="#8a5a2b" opacity=".5"/></svg></div><h3>Sea-boot socks</h3><p><span>Oatmeal, knee length</span><span class="num">£36</span></p></a></li>
+    <li class="item"><a href="#look"><div class="pic"><svg viewBox="0 0 120 100" aria-hidden="true"><path d="M40 12 L60 18 L80 12 L104 26 L110 70 L96 72 L92 40 L92 94 L28 94 L28 40 L24 72 L10 70 L16 26 Z" fill="#b99a6a"/><path d="M52 14 L60 30 L68 14" fill="none" stroke="#6e5530" stroke-width="2"/><rect x="44" y="52" width="32" height="18" rx="2" fill="none" stroke="#6e5530" stroke-width="1.5"/></svg></div><h3>Canvas smock</h3><p><span>Waxed tan cotton</span><span class="num">£165</span></p></a></li>
+  </ul>
+</section>
+
+<section class="sec" aria-labelledby="rv-h">
+  <div class="rail-head"><h2 id="rv-h">Recently viewed</h2><p>Scroll sideways</p></div>
+  <ul class="rail" tabindex="0" aria-label="Recently viewed, scrollable">
+    <li class="item"><a href="#top"><div class="pic" style="background:#4b5a3d"><svg viewBox="0 0 100 125" aria-hidden="true" style="width:100%;height:100%"><rect width="100" height="125" fill="url(#diamond)"/></svg></div><h3>Whitby gansey</h3><p><span>Seaweed</span><span class="num">£285</span></p></a></li>
+    <li class="item"><a href="#top"><div class="pic" style="background:#8a2f2a"><svg viewBox="0 0 100 125" aria-hidden="true" style="width:100%;height:100%"><rect width="100" height="125" fill="url(#cable)"/></svg></div><h3>Staithes gansey</h3><p><span>Coble red</span><span class="num">£285</span></p></a></li>
+    <li class="item"><a href="#top"><div class="pic" style="background:#1f2b40"><svg viewBox="0 0 100 125" aria-hidden="true" style="width:100%;height:100%"><rect width="100" height="125" fill="url(#ladder)"/></svg></div><h3>Robin Hood’s Bay</h3><p><span>Navy</span><span class="num">£295</span></p></a></li>
+    <li class="item"><a href="#top"><div class="pic" style="background:#cdbd9f"><svg viewBox="0 0 100 125" aria-hidden="true" style="width:100%;height:100%"><rect width="100" height="125" fill="url(#st)"/><rect width="100" height="125" fill="url(#ridge)"/></svg></div><h3>Plain guernsey</h3><p><span>Oatmeal</span><span class="num">£240</span></p></a></li>
+    <li class="item"><a href="#top"><div class="pic" style="background:#2e3a52"><svg viewBox="0 0 100 125" aria-hidden="true" style="width:100%;height:100%"><rect width="100" height="125" fill="url(#rib)"/></svg></div><h3>Rib scarf</h3><p><span>Slate</span><span class="num">£72</span></p></a></li>
+    <li class="item"><a href="#top"><div class="pic" style="background:#b99a6a"><svg viewBox="0 0 100 125" aria-hidden="true" style="width:100%;height:100%"><rect width="100" height="125" fill="url(#st)"/></svg></div><h3>Knitting kit</h3><p><span>Everything but the hours</span><span class="num">£95</span></p></a></li>
+  </ul>
+</section>
 </main>
-
-<footer>
-  <div class="wrap foot">
-    <span>Solenne — 14 Sackville Street, Collingwood VIC 3066</span>
-    <span>Client care 03 5550 0128 · care@example.com</span>
-  </div>
-</footer>
+<footer><span>Cammish &amp; Daughter Ltd · 21 Queen Street, Filey YO14 9HB</span><span>Company no. 09822154</span></footer>
+</div>
 
 <script>
 (function(){
-  var names = ['Front','Three-quarter','Side','Back'];
-  var frames = document.querySelectorAll('.frame');
-  var thumbs = document.querySelectorAll('.thumb');
-  var range = document.getElementById('rotate');
-  var val = document.getElementById('rotate-val');
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var svg = document.getElementById('main'), root = document.documentElement;
 
-  function show(i){
-    i = Math.max(0, Math.min(3, i|0));
-    frames.forEach(function(f, n){ f.hidden = n !== i; });
-    thumbs.forEach(function(t, n){ t.setAttribute('aria-current', n === i ? 'true' : 'false'); });
-    range.value = i;
-    val.textContent = names[i];
+  /* ---- initials, knitted in purl stitch: a 5 x 7 bitmap font ---- */
+  var F = {A:'01110100011000111111100011000110001',B:'11110100011000111110100011000111110',C:'01110100011000010000100001000101110',D:'11110100011000110001100011000111110',E:'11111100001000011110100001000011111',F:'11111100001000011110100001000010000',G:'01110100011000010111100011000101111',H:'10001100011000111111100011000110001',I:'01110001000010000100001000010001110',J:'00111000100001000010000101001001100',K:'10001100101010011000101001001010001',L:'10000100001000010000100001000011111',M:'10001110111010110101100011000110001',N:'10001100011100110101100111000110001',O:'01110100011000110001100011000101110',P:'11110100011000111110100001000010000',Q:'01110100011000110001101011001001101',R:'11110100011000111110101001001010001',S:'01111100001000001110000010000111110',T:'11111001000010000100001000010000100',U:'10001100011000110001100011000101110',V:'10001100011000110001100010101000100',W:'10001100011000110101101011010101010',X:'10001100010101000100010101000110001',Y:'10001100010101000100001000010000100',Z:'11111000010001000100010001000011111'};
+  /* each letter is 35 bits, seven rows of five, read left to right */
+  function rows(ch){
+    var s = F[ch]; if (!s) return null;
+    var out = [];
+    for (var i = 0; i < 7; i++) out.push(parseInt(s.substr(i * 5, 5), 2));
+    return out;
   }
-  thumbs.forEach(function(t){ t.addEventListener('click', function(){ show(+t.dataset.view); }); });
-  range.addEventListener('input', function(){ show(+range.value); });
+  var letters = document.getElementById('letters');
+  function knit(text, animate){
+    letters.innerHTML = '';
+    var x0 = 92, y0 = 392, P = 4.6, n = 0;
+    text.split('').forEach(function(ch, k){
+      var R = rows(ch); if (!R) return;
+      for (var r = 0; r < 7; r++) for (var c = 0; c < 5; c++){
+        if (R[r] >> (4 - c) & 1){
+          var e = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          e.setAttribute('cx', (x0 + k * 30 + c * P).toFixed(1)); e.setAttribute('cy', (y0 + r * P).toFixed(1)); e.setAttribute('r', '1.7');
+          if (animate && !reduce){ e.setAttribute('class', 'knit-in'); e.style.animationDelay = (n++ * 9) + 'ms'; }
+          letters.appendChild(e);
+        }
+      }
+    });
+  }
 
-  // pointer-anchored zoom origin
-  var stage = document.getElementById('stage');
-  stage.addEventListener('pointermove', function(e){
-    var r = stage.getBoundingClientRect();
-    stage.parentElement.style.setProperty('--zx', ((e.clientX - r.left) / r.width * 100) + '%');
-    stage.parentElement.style.setProperty('--zy', ((e.clientY - r.top) / r.height * 100) + '%');
+  /* ---- views: one drawing, four framings ---- */
+  var VIEWS = [[0, 0, 400, 500], [0, 0, 400, 500], [60, 70, 280, 350], [68, 262, 184, 230]];
+  var viewBtns = [].slice.call(document.querySelectorAll('.views button'));
+  var neckF = svg.querySelectorAll('.neck-front'), neckB = svg.querySelector('.neck-back');
+  var cur = VIEWS[0].slice(), anim = 0;
+  function frame(vb){ svg.setAttribute('viewBox', vb.map(function(v){ return v.toFixed(1); }).join(' ')); }
+  function view(i){
+    viewBtns.forEach(function(b, j){ b.setAttribute('aria-pressed', j === i ? 'true' : 'false'); });
+    [].forEach.call(thumbs.children, function(b, j){ b.setAttribute('aria-selected', j === i ? 'true' : 'false'); b.tabIndex = j === i ? 0 : -1; });
+    var back = i === 1;
+    [].forEach.call(neckF, function(n){ n.setAttribute('display', back ? 'none' : 'inline'); });
+    neckB.setAttribute('display', back ? 'inline' : 'none');
+    letters.setAttribute('display', back ? 'none' : 'inline');
+    svg.setAttribute('aria-label', 'The Filey gansey, ' + ['front view', 'back view', 'close-up of the yoke patterns', 'close-up of the initials in the hem'][i] + ', in ' + colName.textContent + '.');
+    var to = VIEWS[i], from = cur.slice(), t0 = performance.now();
+    cancelAnimationFrame(anim);
+    if (reduce){ cur = to.slice(); frame(cur); return; }
+    (function step(now){
+      var t = Math.min(1, (now - t0) / 480), e = 1 - Math.pow(1 - t, 3);
+      for (var k = 0; k < 4; k++) cur[k] = from[k] + (to[k] - from[k]) * e;
+      frame(cur);
+      if (t < 1) anim = requestAnimationFrame(step);
+    })(t0);
+  }
+  var thumbs = document.getElementById('thumbs');
+  ['Front', 'Back', 'Yoke', 'Hem'].forEach(function(name, i){
+    var b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-label', name + ' view');
+    b.innerHTML = '<svg viewBox="' + VIEWS[i].join(' ') + '" aria-hidden="true"><rect x="-50" y="-50" width="500" height="600" fill="var(--stage)"/><use href="#garment"/>' + (i === 1 ? '<rect x="86" y="386" width="100" height="40" fill="var(--wool)"/><rect x="86" y="386" width="100" height="40" fill="url(#st)"/>' : '') + '</svg>';
+    b.addEventListener('click', function(){ view(i); });
+    thumbs.appendChild(b);
+  });
+  thumbs.addEventListener('keydown', function(e){
+    var i = [].indexOf.call(thumbs.children, document.activeElement); if (i < 0) return;
+    var n = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? (i + 1) % 4 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? (i + 3) % 4 : -1;
+    if (n >= 0){ e.preventDefault(); thumbs.children[n].focus(); view(n); }
+  });
+  viewBtns.forEach(function(b, i){ b.addEventListener('click', function(){ view(i); }); });
+
+  /* ---- zoom anchored to the pointer ---- */
+  var stage = document.getElementById('stage'), zoom = document.getElementById('zoom');
+  if (matchMedia('(hover: hover)').matches){
+    stage.addEventListener('pointermove', function(e){
+      var r = stage.getBoundingClientRect();
+      zoom.style.transformOrigin = ((e.clientX - r.left) / r.width * 100).toFixed(1) + '% ' + ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%';
+      zoom.style.transform = 'scale(2.1)'; stage.classList.add('zoomed');
+    });
+    stage.addEventListener('pointerleave', function(){ zoom.style.transform = ''; stage.classList.remove('zoomed'); });
+  }
+
+  /* ---- options ---- */
+  var colName = document.getElementById('colName'), colLabel = document.getElementById('colLabel');
+  function radios(group, onPick){
+    var items = [].slice.call(group.querySelectorAll('[role=radio]'));
+    function pick(el, focus){
+      if (el.getAttribute('aria-disabled') === 'true') return;
+      items.forEach(function(x){ x.setAttribute('aria-checked', x === el ? 'true' : 'false'); x.tabIndex = x === el ? 0 : -1; });
+      if (focus) el.focus();
+      onPick(el);
+    }
+    items.forEach(function(el){
+      el.tabIndex = el.getAttribute('aria-checked') === 'true' ? 0 : -1;
+      el.addEventListener('click', function(){ pick(el); });
+      el.addEventListener('keydown', function(e){
+        var d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!d) return; e.preventDefault();
+        var i = items.indexOf(el);
+        for (var k = 1; k <= items.length; k++){ var nx = items[(i + d * k + items.length) % items.length]; if (nx.getAttribute('aria-disabled') !== 'true'){ pick(nx, true); break; } }
+      });
+    });
+  }
+  radios(document.querySelector('.swatches'), function(el){
+    root.style.setProperty('--wool', el.dataset.c);
+    colName.textContent = el.dataset.n.toLowerCase(); colLabel.textContent = el.dataset.n;
+    letters.setAttribute('fill', el.dataset.n === 'Oatmeal' ? '#3b3325' : '#fff');
+  });
+  var stock = document.getElementById('stock'), sizeLabel = document.getElementById('sizeLabel');
+  radios(document.querySelector('.sizes'), function(el){
+    sizeLabel.textContent = el.textContent;
+    stock.textContent = el.textContent === '40' ? '3 ready-knitted in 40 ship in 1–2 days. Any other size is knitted for you in 6 weeks.' : 'Size ' + el.textContent + ' is knitted for you: about 6 weeks.';
+  });
+  document.querySelector('.sizes [aria-disabled]').addEventListener('click', function(){ stock.textContent = 'Size 46 needs a longer run of wool, which is back in March.'; });
+
+  var ini = document.getElementById('ini'), priceEl = document.getElementById('price'), addPrice = document.getElementById('addPrice');
+  function price(){
+    var t = ini.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    if (ini.value !== t) ini.value = t;
+    var p = 285 + (t ? 20 : 0);
+    priceEl.textContent = '£' + p; addPrice.textContent = '£' + p;
+    return t;
+  }
+  ini.addEventListener('input', function(){ knit(price(), true); });
+  document.getElementById('showHem').addEventListener('click', function(){ view(3); });
+
+  var bagN = document.getElementById('bagN'), status = document.getElementById('status'), bag = 0;
+  document.getElementById('add').addEventListener('click', function(){
+    bag++; bagN.textContent = bag;
+    var t = price();
+    status.textContent = 'Added: size ' + sizeLabel.textContent + ', ' + colLabel.textContent + (t ? ', initials ' + t : '') + '. This is a demonstration shop, so nothing is charged.';
+  });
+  var save = document.getElementById('save');
+  save.addEventListener('click', function(){
+    var on = save.getAttribute('aria-pressed') !== 'true';
+    save.setAttribute('aria-pressed', on ? 'true' : 'false');
+    save.setAttribute('aria-label', on ? 'Saved. Remove from saved' : 'Save for later');
+    status.textContent = on ? 'Saved for later.' : 'Removed from saved.';
   });
 
-  // colour swatches
-  var cv = document.getElementById('colour-value');
-  document.querySelectorAll('.sw').forEach(function(b){
-    b.addEventListener('click', function(){
-      document.querySelectorAll('.sw').forEach(function(o){ o.setAttribute('aria-pressed','false'); });
-      b.setAttribute('aria-pressed','true');
-      cv.textContent = b.dataset.colour;
-      document.querySelector('.stage-tag').textContent = 'Aubin Coat · ' + b.dataset.colour;
+  /* ---- tabs: arrow keys move between them, one panel at a time ---- */
+  var tabs = [].slice.call(document.querySelectorAll('[role=tab]'));
+  function tab(i, focus){
+    tabs.forEach(function(t, j){
+      var on = j === i;
+      t.setAttribute('aria-selected', on ? 'true' : 'false'); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
     });
-  });
-
-  // sizes
-  document.querySelectorAll('.size:not(:disabled)').forEach(function(b){
-    b.addEventListener('click', function(){
-      document.querySelectorAll('.size:not(:disabled)').forEach(function(o){ o.setAttribute('aria-pressed','false'); });
-      b.setAttribute('aria-pressed','true');
-    });
-  });
-
-  // quantity
-  var q = 1, out = document.getElementById('qty');
-  document.getElementById('plus').addEventListener('click', function(){ q = Math.min(4, q+1); out.textContent = q; });
-  document.getElementById('minus').addEventListener('click', function(){ q = Math.max(1, q-1); out.textContent = q; });
-
-  // tabs
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role=tab]'));
-  function select(t){
-    tabs.forEach(function(o){
-      var on = o === t;
-      o.setAttribute('aria-selected', on ? 'true' : 'false');
-      o.tabIndex = on ? 0 : -1;
-      document.getElementById(o.getAttribute('aria-controls')).hidden = !on;
-    });
+    if (focus) tabs[i].focus();
   }
   tabs.forEach(function(t, i){
-    t.addEventListener('click', function(){ select(t); });
+    t.addEventListener('click', function(){ tab(i); });
     t.addEventListener('keydown', function(e){
-      var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-      if(!d) return;
-      e.preventDefault();
-      var n = tabs[(i + d + tabs.length) % tabs.length];
-      select(n); n.focus();
+      var n = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
+      if (n >= 0){ e.preventDefault(); tab(n, true); }
     });
   });
+  document.getElementById('guide').addEventListener('click', function(){ tab(1); document.getElementById('knitter').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }); tabs[1].focus({ preventScroll: true }); });
+
+  knit(price(), false);
+  view(0);
+  /* on load the initials knit themselves in once, stitch by stitch */
+  if (!reduce) setTimeout(function(){ knit(price(), true); }, 700);
 })();
 </script>
 </body>

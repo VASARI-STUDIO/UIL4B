@@ -29,6 +29,52 @@
 .plib-page .pl-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 
 
+/* ── The gallery ───────────────────────────────────────────────────────────
+   Three columns on desktop, two on tablet, one on phones. The preview window
+   is 16:10 of the card's own width, the shape the output is captured at, so
+   the poster and the animation fill it without cropping into a different
+   composition. The height is in container units (`cqi`) because the scrolling
+   text preview's keyframes and the locked placeholder both read it as a
+   length; each card, locked or not, is its own size container. */
+.plib-page .pl-gallery{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  --pl-gap:20px;--pl-preview-h:62.5cqi;
+}
+.plib-page .pl-card,
+.plib-page .lockt-card--prompt{container-type:inline-size}
+@media(max-width:980px){.plib-page .pl-gallery{grid-template-columns:repeat(2,minmax(0,1fr));--pl-gap:16px}}
+@media(max-width:640px){.plib-page .pl-gallery{grid-template-columns:minmax(0,1fr)}}
+
+/* The grid item. It holds the card and, for community prompts, the Save
+   toggle laid over the card's foot as a sibling (never nested inside the
+   card's own button role). */
+.plib-page .pl-card-cell{position:relative;display:flex;min-width:0}
+.plib-page .pl-card-cell>.pl-card{flex:1;display:flex;flex-direction:column;min-width:0}
+.plib-page .pl-card-cell .pl-card-text-hero{flex:1}
+
+/* The output: the poster fixes the box; the animation sits on top of it and
+   fades in once decoded, so the swap never shows an empty frame. The box is
+   the capture's own 16:10, so nothing runs past its foot and the text
+   preview's bottom fade has nothing to hide: the output is shown as made. */
+.plib-page .pl-card-shot{position:relative;isolation:isolate}
+.plib-page .pl-card-shot::after{content:none}
+.plib-page .pl-card-shot .pl-card-anim{position:absolute;inset:0;opacity:0;transition:opacity var(--dur-2) var(--ease-standard)}
+.plib-page .pl-card-shot.is-playing .pl-card-anim{opacity:1}
+
+/* Save: the shared hairline pill, compact, aligned with the author row. The
+   author row keeps the button's width clear so the two never overlap. */
+.plib-page .pl-card-save{
+  position:absolute;right:19px;bottom:19px;
+  min-height:32px;padding:0 12px;gap:6px;font-size:12px;
+}
+.plib-page .pl-card-cell.has-save .pl-card-author{min-height:32px;padding-right:92px}
+.plib-page .pl-save.is-saved svg{color:var(--accent)}
+@media(pointer:coarse){
+  .plib-page .pl-card-save{min-height:44px;padding:0 14px;bottom:17px}
+  .plib-page .pl-card-cell.has-save .pl-card-author{min-height:40px;padding-right:100px}
+}
+
+
 /* ── The card ──────────────────────────────────────────────────────────────
    Design (`UIL4B App.dc.html`, the Palette Library card, line 256): 18px on
    `--card` over a hairline, and `[data-lift]` as the hover — the border warms
@@ -83,14 +129,71 @@
   font-size:12px;color:var(--accent-mid);text-decoration:none;
 }
 .plib-page .pl-modal-profile:hover{text-decoration:underline}
+/* A tab's underline is a straight rule: on the pill radius the button shape
+   bent it into an arc. */
+.plib-page .pl-modal-view{border-radius:0}
 .plib-page .pl-modal-view.is-on{border-bottom-color:var(--t0)}
 .plib-page .pl-modal-prompt{border-radius:var(--radius);background:color-mix(in srgb,var(--t0) 4%,transparent)}
 .plib-page .pl-modal-prompt:hover{background:color-mix(in srgb,var(--t0) 6.5%,transparent)}
 /* Was an inline `opacity:1` over the resting .5 — the modal's copy hint is
    always shown because the whole box is the copy target. */
 .plib-page .pl-modal-prompt .pl-card-copy-hint.is-shown{opacity:1}
-.plib-page .pl-modal-frame{border-radius:var(--radius)}
 .plib-page .pl-modal-footer .lib-btn{min-width:0}
+
+/* "See it running": the modal widens for the demo. The stage is one hairline
+   box; the poster fills it while the page loads and stays under the frame, so
+   the view opens on the output rather than on an empty box. The frame scrolls
+   internally; the modal itself does not grow to fit a long page.
+
+   The live modal has a fixed height (the viewport less the backdrop's 40px
+   top and bottom, capped for tall screens) and the stage takes whatever the
+   header and footer leave, so the whole frame is always on screen and the
+   body never scrolls: a wheel or swipe over the demo moves the demo only.
+
+   The size belongs to any modal that HAS a demo (`.has-live`), not only to
+   the running view, so switching to the prompt text does not shrink the
+   dialog under the pointer. The text keeps a readable measure inside it. */
+.plib-page .pl-modal.has-live{
+  max-width:1080px;
+  height:min(calc(100vh - 80px),960px);height:min(calc(100dvh - 80px),960px);max-height:none;
+}
+.plib-page .pl-modal.has-live .pl-modal-prompt pre{max-width:88ch}
+.plib-page .pl-modal.is-live .pl-modal-body{display:flex;flex-direction:column;overflow:hidden}
+.plib-page .pl-modal.is-live .pl-modal-live{flex:1;min-height:0}
+.plib-page .pl-modal-stage{
+  position:relative;isolation:isolate;width:100%;aspect-ratio:16/10;min-height:240px;
+  border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg-2);
+}
+.plib-page .pl-modal.is-live .pl-modal-stage{flex:1;aspect-ratio:auto}
+.plib-page .pl-modal-stage-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+.plib-page .pl-modal-frame{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:0;background:transparent}
+.plib-page .pl-modal-frame:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.plib-page .pl-modal-stage-note{
+  position:absolute;left:12px;bottom:12px;margin:0;padding:6px 12px;
+  border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--card);
+  font-size:12px;line-height:1.4;color:var(--t1);
+}
+.plib-page .pl-modal-stage-error{
+  position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:12px;
+  padding:24px;text-align:center;background:color-mix(in srgb,var(--card) 90%,transparent);
+}
+.plib-page .pl-modal-stage-error p{margin:0;max-width:40ch;font-size:13px;line-height:1.5;color:var(--t0)}
+
+/* Phones: the modal is a full-screen sheet, and the running demo takes the
+   height left over, so a page gets a phone-shaped viewport rather than a
+   thumbnail of its desktop layout. */
+@media(max-width:640px){
+  .plib-page .pl-modal-backdrop{padding:0}
+  .plib-page .pl-modal,
+  .plib-page .pl-modal.has-live{max-width:none;min-height:100vh;min-height:100dvh;max-height:100vh;max-height:100dvh;border:0;border-radius:0}
+  .plib-page .pl-modal.has-live{height:100vh;height:100dvh}
+  .plib-page .pl-modal-close{top:12px;right:12px}
+  .plib-page .pl-modal-header{padding:20px 16px 0}
+  .plib-page .pl-modal-views{padding:10px 16px 0}
+  .plib-page .pl-modal-body{padding:16px}
+  .plib-page .pl-modal-footer{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+  .plib-page .pl-modal.is-live .pl-modal-stage{min-height:320px}
+}
 
 
 /* ── The two add panels (My Prompts' add, Community's submit) ──────────────
