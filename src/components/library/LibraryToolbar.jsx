@@ -1,4 +1,4 @@
-import { Children, useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Children, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import LibrarySearch from './LibrarySearch'
 import { ToolbarModeContext } from './toolbarMode'
@@ -109,6 +109,14 @@ export default function LibraryToolbar({
   const effective = Math.max(stage, minStage)
   const needs = useRef({})
   const rowRef = useRef(null)
+  // The stage that is ON SCREEN, for `decide` to read when an observer fires.
+  // Written in the commit, before the browser lays the new row out, so a
+  // measurement is always filed under the stage it measured. A value closed
+  // over by the callback could lag the DOM by a frame, and a need cached under
+  // the wrong stage makes the row step from a stage it is not on, which never
+  // settles on a busy main thread.
+  const live = useRef({ effective, minStage, phone })
+  useLayoutEffect(() => { live.current = { effective, minStage, phone } })
 
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
@@ -125,6 +133,7 @@ export default function LibraryToolbar({
   const decide = useCallback(() => {
     const row = rowRef.current
     if (!row) return
+    const { effective, minStage, phone } = live.current
     const width = row.clientWidth
     if (!width) return
     const gap = parseFloat(getComputedStyle(row).columnGap) || 0
@@ -142,34 +151,34 @@ export default function LibraryToolbar({
       const known = needs.current[s]
       if (known != null && known <= width) { setStage(s); return }
     }
-  }, [effective, minStage, phone])
+  }, [])
 
-  // Re-attached whenever the stage (and so what is on the row) changes.
-  useEffect(() => {
+  // Re-attached whenever the stage (and so what is on the row) changes. In the
+  // commit, not after paint: the previous observer is disconnected before the
+  // new row is laid out, and the new one takes its first measurement in the
+  // same frame.
+  useLayoutEffect(() => {
     const row = rowRef.current
     if (!row || typeof ResizeObserver === 'undefined') return undefined
     const obs = new ResizeObserver(() => decide())
     obs.observe(row)
     for (const el of row.children) obs.observe(el)
     return () => obs.disconnect()
-  }, [decide, groups.length, count, action])
+  }, [decide, effective, phone, groups.length, count, action])
 
   // A font swap changes every option's width, so every cached need is stale.
-  // Cleared ONCE, when the fonts settle, not every time `decide` changes: it
-  // changes with every stage, and `fonts.ready` has long resolved by then, so
-  // clearing there emptied the cache on each step and a row that had stepped
-  // up could never find a lower stage to step back down to.
-  const decideRef = useRef(decide)
-  useEffect(() => { decideRef.current = decide }, [decide])
+  // Cleared ONCE, when the fonts settle: clearing on every stage change would
+  // empty the cache on each step, and a row that had stepped up could never
+  // find a lower stage to step back down to.
   useEffect(() => {
     let cancelled = false
     document.fonts?.ready?.then(() => {
       if (cancelled) return
       needs.current = {}
-      decideRef.current()
+      decide()
     }).catch(() => {})
     return () => { cancelled = true }
-  }, [])
+  }, [decide])
 
   // Leaving the stage that owns the panel closes it, rather than leaving a
   // panel open with no control on screen to hand focus back to.
