@@ -41,8 +41,25 @@ function stored(page, email) {
   )
 }
 
-/** What actually reached the account's sync document. */
+/** What actually reached the account: one document per project, read back as
+ *  the live projects and the deletes. */
 function pushed(page, uid) {
+  return page.evaluate((u) => {
+    const store = window.__UIL4B_TEST_STORE__
+    if (!store) return null
+    const rows = store.list(`users/${u}/projects`)
+    const list = []
+    const deleted = {}
+    for (const row of rows) {
+      if (row.data.deletedAt) deleted[row.id] = row.data.deletedAt
+      else if (row.data.project) list.push(row.data.project)
+    }
+    return { list, deleted }
+  }, uid)
+}
+
+/** The account's original single sync document, kept after migration. */
+function legacyDoc(page, uid) {
   return page.evaluate(
     (u) => window.__UIL4B_TEST_STORE__?.get(`users/${u}/sync/projects`) || null,
     uid,
@@ -149,10 +166,9 @@ test.describe('sync has a visible state, in both directions', () => {
       .toBe(2)
   })
 
-  test('the size ceiling is named in kilobytes, before Firestore rejects it', async ({ page }) => {
-    // The measured shape of the P1: a brand logo is capped at 32 KB, so about
-    // thirty logo projects fill the single document. Rather than send that and
-    // swallow the rejection, the write is refused and the refusal is priced.
+  test('thirty logo projects sync without reaching any ceiling', async ({ page }) => {
+    // A brand logo is capped at 32 KB, so thirty logo projects used to fill a
+    // single shared document. Each project now has a document of its own.
     watch(page, 'a Pro designer with thirty brand-kit projects')
     const logo = `data:image/png;base64,${'A'.repeat(32 * 1024)}`
     const heavy = Array.from({ length: 30 }, (_, i) => {
@@ -160,7 +176,25 @@ test.describe('sync has a visible state, in both directions', () => {
       p.design.brandLogo = logo
       return p
     })
-    await signIn(page, { plan: 'pro', projects: heavy })
+    const account = await signIn(page, { plan: 'pro', projects: heavy })
+    await go(page, '/projects')
+
+    await expect
+      .poll(() => pushed(page, account.uid).then((d) => d?.list?.length ?? null),
+        { message: 'every project must reach the account', timeout: 15_000 })
+      .toBe(30)
+    await expect(page.locator('[data-testid="sync-notice"]'),
+      'and nothing may be reported, because nothing failed').toHaveCount(0)
+  })
+
+  test('a single project too large to sync is named in kilobytes, before Firestore rejects it', async ({ page }) => {
+    // The ceiling now belongs to one project rather than to the whole account.
+    // Rather than send it and swallow the rejection, the write is refused and
+    // the refusal is priced.
+    watch(page, 'a designer whose one project has grown past the size limit')
+    const huge = projectRecord('huge', 'Oversized', OLDER)
+    huge.design.brandLogo = `data:image/png;base64,${'A'.repeat(950 * 1024)}`
+    await signIn(page, { plan: 'pro', projects: [huge] })
     await go(page, '/projects')
 
     const notice = page.locator('[data-testid="sync-notice"]')
@@ -172,7 +206,45 @@ test.describe('sync has a visible state, in both directions', () => {
     expect(said).toMatch(/saved on this device/i)
 
     // Nothing was destroyed to produce this state.
-    expect((await stored(page, 'pro.user@uil4b.test')).length).toBe(30)
+    expect((await stored(page, 'pro.user@uil4b.test')).length).toBe(1)
+  })
+
+  test('an account still on the single sync document is moved across on first load, losing nothing', async ({ page }) => {
+    // The first load after this ships, for every existing account: projects
+    // saved on another device exist only in the old document's list.
+    watch(page, 'a returning designer opening the app on a new laptop')
+    const account = await signIn(page, {
+      plan: 'free',
+      projects: [],
+      docs: {
+        'users/test-uid-free/sync/projects': {
+          list: [
+            projectRecord('p1', 'Autumn Rebrand', OLDER),
+            projectRecord('p2', 'Harbour Signage', NEWER),
+          ],
+          deleted: { p0: DELETED_AT },
+          v: 1,
+          _updatedAt: Date.parse(NEWER),
+        },
+      },
+    })
+    await go(page, '/projects')
+
+    await expect(projectCard(page, 'Autumn Rebrand')).toBeVisible({ timeout: 10_000 })
+    await expect(projectCard(page, 'Harbour Signage')).toBeVisible()
+
+    await expect
+      .poll(() => pushed(page, account.uid).then((d) => (d?.list || []).map((p) => p.id).sort()),
+        { message: 'each project must have its own document now', timeout: 10_000 })
+      .toEqual(['p1', 'p2'])
+    expect((await pushed(page, account.uid)).deleted, 'deletes move across as deletes')
+      .toEqual({ p0: DELETED_AT })
+
+    const legacy = await legacyDoc(page, account.uid)
+    expect(legacy.v, 'the old document is marked as moved').toBe(2)
+    expect(legacy.migratedAt, 'by the migration on pull, not merely by a later push').toBeTruthy()
+    expect(legacy.list.map((p) => p.id), 'and keeps its list as a copy').toEqual(['p1', 'p2'])
+    await expect(page.locator('[data-testid="sync-notice"]')).toHaveCount(0)
   })
 
   test('a conflict is EXPLAINED, and the newer copy is the one kept', async ({ page }) => {

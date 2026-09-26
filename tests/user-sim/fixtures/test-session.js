@@ -206,6 +206,10 @@ function createFakeAuth(d) {
     },
   }
   auth.currentUser = buildUser(d)
+  // What the auth server holds, as distinct from the signed-in User object,
+  // and the links it would have emailed. See firebase-auth.js.
+  auth.account = { emailVerified: auth.currentUser.emailVerified }
+  auth.mail = []
   return auth
 }
 
@@ -361,4 +365,5 @@ export const fakeDb = DECLARED ? { [IS_FAKE_DB]: true, store, type: 'firestore' 
  */
 if (DECLARED) {
   try { window.__UIL4B_TEST_STORE__ = store } catch { /* no window: nothing to expose */ }
+  try { window.__UIL4B_TEST_AUTH__ = { account: fakeAuth.account, mail: fakeAuth.mail } } catch { /* no window */ }
 }

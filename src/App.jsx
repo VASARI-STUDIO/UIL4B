@@ -12,7 +12,7 @@ import { useClipboard } from './hooks/useClipboard'
 import useSmoothScroll, { getLenis } from './hooks/useSmoothScroll'
 import { initAnalytics, trackPageView, trackSessionPage } from './utils/analytics'
 import { purgeStaleUsage } from './utils/usageTracker'
-import { onboardingDestination } from './utils/onboardingState'
+import { onboardingDestination, knownProfile, resumeOnboardingTarget, resumeDecisionOwed } from './utils/onboardingState'
 import { readSessionHint, rootDestination } from './utils/sessionHint'
 import { openFirebaseGate } from './utils/firebaseAccess'
 import { updateRouteMeta, isUnknownRoute } from './utils/routeMeta'
@@ -229,7 +229,7 @@ function LoginRoute() {
 }
 
 function AppInner() {
-  const { user: authUser, userProfile, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
+  const { user: authUser, userProfile, profileLoaded, loading: authLoading, pendingOnboarding, clearPendingOnboarding } = useAuth()
   useFirestoreSync(authUser?.uid || null)
   // Records what auth resolved to, so the NEXT cold load can pick the right
   // page before Firebase has finished loading. See utils/sessionHint.js.
@@ -274,6 +274,20 @@ function AppInner() {
     // flow even if this browser holds another account's completion flag.
     if (location.pathname !== '/onboarding') navigate('/onboarding', { replace: true, state: { fresh: true } })
   }, [authLoading, authUser, pendingOnboarding, clearPendingOnboarding, location.pathname, navigate])
+
+  // A returning account that opened onboarding and never finished it resumes
+  // it from the signed-in home. Decided once per account per page load, the
+  // first time that account's answer is known, so leaving onboarding for the
+  // home later in the same visit is not undone, and switching to another
+  // account decides again for it.
+  const resumeDecidedForRef = useRef(null)
+  useEffect(() => {
+    const uid = authUser?.uid || null
+    if (!resumeDecisionOwed(resumeDecidedForRef.current, uid, profileLoaded)) return
+    resumeDecidedForRef.current = uid
+    const target = resumeOnboardingTarget({ pathname: location.pathname, profile: userProfile, loaded: profileLoaded })
+    if (target) navigate(target, { replace: true })
+  }, [authUser, profileLoaded, userProfile, location.pathname, navigate])
 
   useEffect(() => {
     document.querySelector('.main')?.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -435,7 +449,7 @@ function AppInner() {
       loading: authLoading,
       signedIn: !!authUser,
       hint: readSessionHint(),
-      appHome: onboardingDestination(userProfile),
+      appHome: onboardingDestination(knownProfile(userProfile, profileLoaded)),
       salesPage: '/home',
     })
     // '/home' is the one destination we render in place rather than navigate to:
