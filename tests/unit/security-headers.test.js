@@ -102,6 +102,9 @@ test('the CSP allows what the code actually loads', () => {
     ['img-src', 'https://flagcdn.com', 'src/pages/Settings.jsx'],
     ['connect-src', 'https://cdn.jsdelivr.net', 'src/utils/ffmpegEngine.js'],
     ['connect-src', 'https://cdn.jsdelivr.net', 'src/utils/cadEngine.js'],
+    ['connect-src', 'https://fonts.googleapis.com', 'src/utils/kitFonts.js'],
+    ['connect-src', 'https://fonts.gstatic.com', 'src/utils/kitFonts.js'],
+    ['connect-src', 'https://cdn.jsdelivr.net', 'src/utils/kitFonts.js'],
     ['img-src', 'https://lh3.googleusercontent.com', null],
   ]
   for (const [directive, origin, file] of loads) {
