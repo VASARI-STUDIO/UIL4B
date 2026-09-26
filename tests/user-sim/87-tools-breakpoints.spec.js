@@ -308,6 +308,75 @@ test.describe('the library toolbar gives the filters back when there is room aga
     await expect(toolbar, '@1440 after 700, the row stayed on the Filters control').toHaveAttribute('data-stage', '0')
     await expect(page.locator('.lbry-filtersbtn'), '@1440 after 700, the Filters control is still there').toHaveCount(0)
   })
+
+  // A BUSY MAIN THREAD, IN A FIXED ORDER. Every scheduler task React posts is
+  // held back 30ms, so a frame is always laid out between a commit and its
+  // passive effects. A measurement filed under the stage that was on screen
+  // one render earlier then records the new, narrower row as the old stage's
+  // need; the row steps back down to a stage that does not fit, up again, and
+  // never stops. On a slow machine that happens by chance; here it happens
+  // every time. An idle load of the same page is the reference: both must
+  // settle, and on the same stage.
+  test('on a busy main thread the icon toolbar settles on the stage an idle one reaches', async ({ browser }) => {
+    test.setTimeout(120_000)
+    const RECORD = `(() => {
+      window.__stages = []
+      new MutationObserver(() => {
+        const bar = document.querySelector('.lbry-toolbar')
+        if (!bar) return
+        const last = window.__stages[window.__stages.length - 1]
+        if (!last || last.s !== bar.dataset.stage) window.__stages.push({ s: bar.dataset.stage, t: performance.now() })
+      }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-stage'] })
+    })()`
+    const HOLD = `(() => {
+      const post = MessagePort.prototype.postMessage
+      window.__held = 0
+      MessagePort.prototype.postMessage = function (...args) {
+        window.__held += 1
+        setTimeout(() => post.apply(this, args), 30)
+      }
+    })()`
+    const load = async (width, busy) => {
+      const ctx = await browser.newContext({ viewport: { width, height: 900 } })
+      const page = await ctx.newPage()
+      watch(page, `someone on a ${busy ? 'slow, busy' : 'quiet'} machine opening the icon library at ${width}px`)
+      await page.addInitScript(RECORD)
+      if (busy) await page.addInitScript(HOLD)
+      await go(page, '/create/icons')
+      await expect(page.locator('.lbry-toolbar'), `@${width} no library toolbar`).toBeVisible({ timeout: 15_000 })
+      await settle(page)
+      // Settled means no stage change for a full second, looked for over 12s.
+      const r = await page.evaluate(async () => {
+        const start = performance.now()
+        const quiet = () => {
+          const last = window.__stages[window.__stages.length - 1]
+          return !!last && performance.now() - last.t >= 1000
+        }
+        while (!quiet() && performance.now() - start < 12_000) {
+          await new Promise((res) => setTimeout(res, 100))
+        }
+        return {
+          settled: quiet(),
+          stage: document.querySelector('.lbry-toolbar')?.dataset.stage,
+          seq: window.__stages.map((x) => x.s).join(' '),
+          held: window.__held || 0,
+        }
+      })
+      await ctx.close()
+      return r
+    }
+
+    for (const width of [768, 1440]) {
+      const idle = await load(width, false)
+      expect(idle.settled, `@${width} even an idle load never settled: stages ${idle.seq}`).toBe(true)
+      const busy = await load(width, true)
+      // POSITIVE CONTROL: a hold that never engaged measured an idle thread.
+      expect(busy.held, `@${width} the scheduler hold never engaged, so this measured nothing`).toBeGreaterThan(0)
+      expect(busy.settled, `@${width} on a busy thread the toolbar never settled: stages ${busy.seq}`).toBe(true)
+      expect(busy.stage, `@${width} busy settled on stage ${busy.stage} (${busy.seq}), idle on ${idle.stage} (${idle.seq})`)
+        .toBe(idle.stage)
+    }
+  })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
