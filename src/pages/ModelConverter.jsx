@@ -1,13 +1,22 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react'
 import useExportGate from '../hooks/useExportGate'
-import { ToolLayout, ToolButton } from '../components/tool/ToolLayout'
+import { ToolLayout, ToolButton, ToolPills, ToolSelect } from '../components/tool/ToolLayout'
 import { useAppearance } from '../contexts/AppearanceContext'
 import {
+  BLENDER_PRESET,
+  CAD_NORMALS,
+  CAD_QUALITIES,
+  CAD_SPLITS,
   INPUT_FORMATS,
   LARGE_MODEL_BYTES,
   MAX_MODEL_BYTES,
   OUTPUT_FORMATS,
+  OUTPUT_GROUPS,
+  REMOTE_ENGINES,
+  UNITS,
   acceptAttribute,
+  cadQuality,
+  describeCadQuality,
   describeSignatureProblem,
   describeSizeLimit,
   formatBytes,
@@ -15,24 +24,29 @@ import {
   listForProse,
   outputFormat,
   outputLabels,
+  outputName,
+  outputsInGroup,
   pickPrimary,
   signatureProblem,
+  unitById,
+  unsupportedFor,
 } from '../utils/meshFormats'
-import '../styles/pages/three-d-viewer.css'
+import '../styles/pages/model-converter.css'
 
-// ── /create/3d-viewer ────────────────────────────────────────────────────────
+// ── /create/3d-converter ────────────────────────────────────────────────────────
 //
 // View a 3D model and write it out in another format, entirely in this tab: a
 // file is read with the File API, drawn with three.js and exported to a Blob.
-// Nothing is uploaded. The one network request a model can cause is the CAD
-// engine for STEP and IGES (see src/utils/cadEngine.js).
+// Nothing is uploaded. The network requests a model can cause are the pinned
+// engines for CAD, Rhino and IFC files (REMOTE_ENGINES in meshFormats.js) and
+// the meshopt encoder for a compressed GLB.
 //
 // THE ENGINE ARRIVES LATE, ON PURPOSE. three.js and every loader live in
 // src/utils/meshEngine.js behind the ONE dynamic import below, so opening this
 // route costs the page and its stylesheet and nothing else. It is fetched when
 // a file is brought, or a little earlier when the pointer or focus reaches the
 // drop area, which hides most of the wait behind the file picker.
-// tests/unit/three-d-viewer.test.js builds the app and fails if three.js
+// tests/unit/model-converter.test.js builds the app and fails if three.js
 // reaches the entry chunk or this page's chunk.
 //
 // LAYOUT is the shared tool pattern (components/tool/ToolLayout.jsx): a sticky
@@ -63,8 +77,8 @@ function getEngine() {
 }
 
 // THE RAW DOWNLOAD. Only ever called after `requireExportAccount` resolves
-// true — producing a file needs a free account (founder decision 2026-09-15,
-// src/hooks/useExportGate.js); viewing and converting never do.
+// true: saving the file needs a free account (src/hooks/useExportGate.js);
+// viewing and converting never do.
 function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -75,8 +89,6 @@ function triggerDownload(blob, filename) {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
-
-const baseName = (name) => String(name || 'model').replace(/\.[^.]+$/, '') || 'model'
 
 const fmt3 = (n) => {
   if (!Number.isFinite(n)) return '—'
@@ -89,23 +101,52 @@ const fmt3 = (n) => {
 const count = (n, one, many = one + 's') => `${n.toLocaleString('en')} ${n === 1 ? one : many}`
 
 /** The text alternative for the canvas: what a sighted visitor learns from the panel. */
-function describeModel(model) {
+function describeModel(model, unitId) {
   const { stats, name, format } = model
-  const unit = format.unit || 'file units'
+  const unit = unitById(unitId)?.short || 'file units'
   const shape = stats.points > 0 && stats.triangles === 0
     ? count(stats.points, 'point')
     : `${count(stats.triangles, 'triangle')} in ${count(stats.meshes, 'mesh', 'meshes')}`
   return `${name}, ${format.label}: ${shape}, ${fmt3(stats.size[0])} by ${fmt3(stats.size[1])} by ${fmt3(stats.size[2])} ${unit}.`
 }
 
-const STAGE_LABEL = {
-  engine: 'Fetching the CAD engine',
-  reading: 'Reading the file',
-  parsing: 'Building the model',
-  viewer: 'Loading the viewer',
+// The loading line names the engine doing the work, since the CAD, Rhino and
+// IFC readers each fetch their own and take their own time.
+const ENGINE_NAME = { cad: 'the CAD engine', rhino: 'the Rhino engine', ifc: 'the IFC engine' }
+const PARSE_LABEL = {
+  cad: 'Meshing the CAD surfaces',
+  rhino: 'Meshing the Rhino geometry',
+  ifc: 'Meshing the building elements',
+}
+function stageLabel(busy) {
+  if (busy.stage === 'engine') return `Fetching ${ENGINE_NAME[busy.engine] || 'the engine'}`
+  if (busy.stage === 'reading') return 'Reading the file'
+  if (busy.stage === 'parsing') return PARSE_LABEL[busy.engine] || 'Building the model'
+  return 'Loading the viewer'
 }
 
-const CAD_LABELS = listForProse(INPUT_FORMATS.filter((f) => f.engine === 'cad').map((f) => f.label))
+// Readers that run in a worker can be stopped at any stage; the rest only
+// before they start parsing on the page's own thread.
+const WORKER_ENGINES = new Set(['cad', 'ifc'])
+
+const labelsFor = (engine) => listForProse(INPUT_FORMATS.filter((f) => f.engine === engine).map((f) => f.label))
+
+const UNIT_OPTIONS = [{ value: '', label: 'File units' }, ...UNITS.map((u) => ({ value: u.id, label: u.label }))]
+const WRITE_UNIT_OPTIONS = UNITS.map((u) => ({ value: u.id, label: u.label }))
+const UP_OPTIONS = [{ value: 'y', label: 'Y up' }, { value: 'z', label: 'Z up' }]
+const QUALITY_OPTIONS = CAD_QUALITIES.map((q) => ({ value: q.id, label: q.label }))
+const NORMAL_OPTIONS = CAD_NORMALS.map((n) => ({ value: n.id, label: n.label }))
+const SPLIT_OPTIONS = CAD_SPLITS.map((s) => ({ value: s.id, label: s.label }))
+
+// Bare-number outputs are written in millimetres for printing and in metres
+// for 3D apps, until another unit is picked.
+const DEFAULT_WRITE_UNITS = Object.freeze({ print: 'mm', apps: 'm', web: 'm' })
+
+const hasSkeleton = (root) => {
+  let found = false
+  root.traverse((o) => { if (o.isSkinnedMesh || o.isBone) found = true })
+  return found
+}
 
 // ── Glyphs: one stroke, the nav's weight ─────────────────────────────────────
 const Svg = ({ children }) => (
@@ -117,7 +158,7 @@ const FitGlyph = () => <Svg><path d="M4 9V5a1 1 0 011-1h4M15 4h4a1 1 0 011 1v4M2
 const TurnGlyph = () => <Svg><path d="M20 12a8 8 0 1 1-2.35-5.65" /><path d="M20 4v4.5h-4.5" /></Svg>
 
 // ── The page ─────────────────────────────────────────────────────────────────
-export default function ThreeDViewer({ toast }) {
+export default function ModelConverter({ toast }) {
   const requireExportAccount = useExportGate()
   const { reducedMotion } = useAppearance() || {}
   const uid = useId()
@@ -129,22 +170,35 @@ export default function ThreeDViewer({ toast }) {
   const inputRef = useRef(null)
   const viewerRef = useRef(null)
   const abortRef = useRef(null)
-  // Bumped whenever a new model starts loading. A conversion that finishes
-  // after that belongs to the model that was replaced, so it is dropped rather
-  // than shown as a download beside the new one.
+  // Bumped whenever the model on screen is replaced or changed (a new file, a
+  // new up axis or unit). A conversion that finishes after that belongs to the
+  // old model, so it is dropped rather than shown as a download beside it.
   const modelGenRef = useRef(0)
+  // The drop the model on screen came from, so a CAD setting can re-read it.
+  const dropRef = useRef(null)
+  const convertRef = useRef(null)
+  const downloadRef = useRef(null)
+  const focusDownloadRef = useRef(false)
 
-  // busy: null | { stage, name, loaded?, total?, cad }
+  // busy: null | { stage, name, loaded?, total?, engine }
   const [busy, setBusy] = useState(null)
   const [error, setError] = useState(null)
   const [model, setModel] = useState(null) // { name, bytes, format, stats, warnings }
   const [over, setOver] = useState(false)
   const [wire, setWire] = useState(false)
   const [spin, setSpin] = useState(false)
-  const [outId, setOutId] = useState('glb')
+  const [outId, setOutId] = useState(BLENDER_PRESET.output)
   const [output, setOutput] = useState(null) // { blob, name, bytes, format }
   const [converting, setConverting] = useState(false)
   const [announce, setAnnounce] = useState('')
+  // The model's length unit ('' = bare numbers) and up axis. Each is read from
+  // the file on load and can be corrected here.
+  const [srcUnit, setSrcUnit] = useState('')
+  const [up, setUp] = useState('y')
+  // How CAD surfaces become triangles. Kept across files.
+  const [cad, setCad] = useState(() => ({ quality: BLENDER_PRESET.quality, normals: BLENDER_PRESET.normals, split: BLENDER_PRESET.split }))
+  // The unit each output group writes bare-number formats in.
+  const [writeUnits, setWriteUnits] = useState(DEFAULT_WRITE_UNITS)
 
   // One renderer per mount; the WebGL context goes back on unmount.
   useEffect(() => () => {
@@ -162,37 +216,10 @@ export default function ThreeDViewer({ toast }) {
 
   const prefetch = useCallback(() => { getEngine().catch(() => {}) }, [])
 
-  const onFiles = useCallback(async (fileList) => {
-    const files = Array.from(fileList || [])
-    if (!files.length) return
-    const drop = pickPrimary(files)
-    if (!drop) {
-      const shown = files.length === 1 ? files[0].name : `None of those ${files.length} files`
-      setError(`${shown} ${files.length === 1 ? 'is not' : 'is'} a format this viewer reads. It opens ${listForProse(inputLabels())}.`)
-      return
-    }
+  // Read a drop and put it on screen. `keep` carries the up axis and unit the
+  // visitor set when the same file is read again with other CAD settings.
+  const load = useCallback(async (drop, { cadOptions, keep = null } = {}) => {
     const { primary, format } = drop
-    if (primary.size > MAX_MODEL_BYTES) {
-      setError(`${primary.name} is ${formatBytes(primary.size)}. The limit is ${describeSizeLimit()}: the whole file is parsed in this tab's memory, and past that a phone or a small laptop runs out of it.`)
-      return
-    }
-
-    // A file that is plainly not what its extension says is refused HERE, from
-    // its first megabyte and the small meshFormats module — before the 808 kB
-    // three.js engine is fetched. It used to wait on that download, so on a
-    // slow connection a wrong file sat on "Loading the viewer" for seconds
-    // before being told it was wrong (CI run 35849298083: over 5 s).
-    // meshEngine.loadModel still runs the same check on the whole read.
-    let head = null
-    try {
-      head = new Uint8Array(await primary.slice(0, 1 << 20).arrayBuffer())
-    } catch { /* unreadable here; loadModel reports it */ }
-    const problem = head && signatureProblem(format.id, head, primary.size)
-    if (problem) {
-      setError(describeSignatureProblem(primary.name, format, problem))
-      return
-    }
-
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
@@ -200,7 +227,7 @@ export default function ThreeDViewer({ toast }) {
     setError(null)
     setOutput(null)
     setAnnounce('')
-    setBusy({ stage: 'viewer', name: primary.name, cad: format.engine === 'cad' })
+    setBusy({ stage: 'viewer', name: primary.name, engine: format.engine })
     let engine
     try {
       engine = await getEngine()
@@ -210,21 +237,30 @@ export default function ThreeDViewer({ toast }) {
         viewerRef.current.setAutoRotate(spin && !reducedMotion)
         viewerRef.current.setReducedMotion(!!reducedMotion)
       }
-      const { object, warnings, revoke } = await engine.loadModel(drop, {
+      const loaded = await engine.loadModel(drop, {
         signal: controller.signal,
         onStage: (s) => setBusy((prev) => (prev ? { ...prev, ...s } : prev)),
+        cad: cadOptions,
+        up: keep?.up,
+        // KTX2 textures are decoded for this renderer's GPU.
+        renderer: viewerRef.current?.renderer,
       })
+      const { object, warnings, revoke } = loaded
       if (controller.signal.aborted) { engine.disposeObject(object); revoke(); return }
       const stats = viewerRef.current.setModel(object, revoke)
       viewerRef.current.setWireframe(wire)
       if (primary.size > LARGE_MODEL_BYTES) warnings.unshift(`At ${formatBytes(primary.size)} this is a large file; orbiting may be slow on a phone.`)
-      if (drop.ignored.length) warnings.push(`${count(drop.ignored.length, 'other file')} in the same drop ${drop.ignored.length === 1 ? 'was' : 'were'} not opened: ${drop.ignored.map((f) => f.name).slice(0, 3).join(', ')}${drop.ignored.length > 3 ? ', …' : ''}.`)
+      if (drop.ignored?.length) warnings.push(`${count(drop.ignored.length, 'other file')} in the same drop ${drop.ignored.length === 1 ? 'was' : 'were'} not opened: ${drop.ignored.map((f) => f.name).slice(0, 3).join(', ')}${drop.ignored.length > 3 ? ', …' : ''}.`)
       const next = { name: primary.name, bytes: primary.size, format, stats, warnings }
+      const unit = keep ? keep.unit : (loaded.unit || '')
+      dropRef.current = drop
       setModel(next)
+      setSrcUnit(unit)
+      setUp(loaded.up || format.up)
       // A point cloud cannot be written as STL or 3MF; move off a choice the
       // panel is about to disable rather than leave it selected and dead.
       if (stats.points > 0 && stats.triangles === 0 && !outputFormat(outId)?.points) setOutId('glb')
-      setAnnounce(`Loaded ${describeModel(next)}`)
+      setAnnounce(`Loaded ${describeModel(next, unit)}`)
     } catch (err) {
       if (err?.name === 'AbortError' || controller.signal.aborted) return
       const describe = engine?.describeLoadError || engineModule?.describeLoadError
@@ -239,6 +275,100 @@ export default function ThreeDViewer({ toast }) {
       }
     }
   }, [spin, reducedMotion, wire, outId])
+
+  const onFiles = useCallback(async (fileList) => {
+    const files = Array.from(fileList || [])
+    if (!files.length) return
+    // Loading, errors and the model all draw on the stage. On one column the
+    // stage can be scrolled away above the panel, so bring it back first.
+    const r = frameRef.current?.getBoundingClientRect()
+    if (r && (r.bottom < 200 || r.top > window.innerHeight - 120)) {
+      frameRef.current.scrollIntoView({ block: 'start', behavior: reducedMotion ? 'auto' : 'smooth' })
+    }
+    const drop = pickPrimary(files)
+    if (!drop) {
+      // A format with no reader here gets the way to one that has.
+      const known = files.map((f) => ({ file: f, row: unsupportedFor(f.name) })).find((x) => x.row)
+      if (known) {
+        setError(`${known.file.name} can't be opened here: ${known.row.why}. ${known.row.route}`)
+        return
+      }
+      const shown = files.length === 1 ? files[0].name : `None of those ${files.length} files`
+      setError(`${shown} ${files.length === 1 ? 'is not' : 'is'} a format this viewer reads. It opens ${listForProse(inputLabels())}.`)
+      return
+    }
+    const { primary, format } = drop
+    if (primary.size > MAX_MODEL_BYTES) {
+      setError(`${primary.name} is ${formatBytes(primary.size)}. The limit is ${describeSizeLimit()}: the whole file is parsed in this tab's memory, and past that a phone or a small laptop runs out of it.`)
+      return
+    }
+
+    // A file that is plainly not what its extension says is refused HERE, from
+    // its first megabyte and the small meshFormats module — before the 808 kB
+    // three.js engine is fetched. meshEngine.loadModel still runs the same
+    // check on the whole read.
+    let head = null
+    try {
+      head = new Uint8Array(await primary.slice(0, 1 << 20).arrayBuffer())
+    } catch { /* unreadable here; loadModel reports it */ }
+    const problem = head && signatureProblem(format.id, head, primary.size)
+    if (problem) {
+      setError(describeSignatureProblem(primary.name, format, problem))
+      return
+    }
+    await load(drop, { cadOptions: cad })
+  }, [load, cad, reducedMotion])
+
+  // A CAD setting re-reads the open CAD file. The tessellation is cached per
+  // quality in meshEngine, so normals and the split never re-run the kernel.
+  const changeCad = useCallback((patch) => {
+    const nextCad = { ...cad, ...patch }
+    setCad(nextCad)
+    const drop = dropRef.current
+    if (drop && model?.format.engine === 'cad' && !busy) {
+      load(drop, { cadOptions: nextCad, keep: { up, unit: srcUnit } })
+    }
+  }, [cad, model, busy, load, up, srcUnit])
+
+  // The up axis is corrected on the model in place, then re-framed. A rigged
+  // model is read again instead: its bind poses would need rebuilding.
+  const changeUp = useCallback(async (next) => {
+    const v = viewerRef.current
+    if (!v?.model || next === up || busy) return
+    if (hasSkeleton(v.model)) {
+      if (dropRef.current) load(dropRef.current, { cadOptions: cad, keep: { up: next, unit: srcUnit } })
+      return
+    }
+    const engine = await getEngine()
+    engine.reorient(v.model, next, up)
+    const stats = v.refresh()
+    modelGenRef.current++
+    setUp(next)
+    setOutput(null)
+    setModel((m) => (m ? { ...m, stats } : m))
+    setAnnounce(`The model is now read as ${next === 'z' ? 'Z' : 'Y'} up.`)
+  }, [up, busy, load, cad, srcUnit])
+
+  const changeUnit = useCallback((next) => {
+    modelGenRef.current++
+    setSrcUnit(next)
+    setOutput(null)
+  }, [])
+
+  const setWriteUnit = useCallback((group, unit) => {
+    setWriteUnits((w) => ({ ...w, [group]: unit }))
+    setOutput(null)
+  }, [])
+
+  const blenderOn = outId === BLENDER_PRESET.output
+    && cad.quality === BLENDER_PRESET.quality && cad.normals === BLENDER_PRESET.normals && cad.split === BLENDER_PRESET.split
+  const applyBlender = useCallback(() => {
+    setOutId(BLENDER_PRESET.output)
+    setOutput(null)
+    const cadDiffers = cad.quality !== BLENDER_PRESET.quality || cad.normals !== BLENDER_PRESET.normals || cad.split !== BLENDER_PRESET.split
+    if (cadDiffers) changeCad({ quality: BLENDER_PRESET.quality, normals: BLENDER_PRESET.normals, split: BLENDER_PRESET.split })
+    setAnnounce('Set for Blender: GLB, smooth normals, one object per part.')
+  }, [cad, changeCad])
 
   const cancel = useCallback(() => {
     abortRef.current?.abort()
@@ -259,13 +389,19 @@ export default function ThreeDViewer({ toast }) {
     const viewer = viewerRef.current
     if (!format || !viewer?.model || converting || !model) return
     const gen = modelGenRef.current
+    // Whoever pressed Convert from the keyboard lands on Download when the
+    // file is ready, rather than on the page body.
+    focusDownloadRef.current = document.activeElement === convertRef.current
     setConverting(true)
     setOutput(null)
     try {
       const engine = await getEngine()
-      const blob = await engine.exportModel(viewer.model, format, { sourceUnit: model.format.unit })
+      const blob = await engine.exportModel(viewer.model, format, {
+        sourceUnit: srcUnit || null,
+        unit: format.unit === 'choose' ? writeUnits[format.group] : null,
+      })
       if (gen !== modelGenRef.current) return
-      const out = { blob, format, bytes: blob.size, name: `${baseName(model.name)}.${format.ext}` }
+      const out = { blob, format, bytes: blob.size, name: outputName(model.name, format) }
       setOutput(out)
       setAnnounce(`${out.name} is ready, ${formatBytes(out.bytes)}.`)
     } catch (err) {
@@ -276,7 +412,13 @@ export default function ThreeDViewer({ toast }) {
     } finally {
       setConverting(false)
     }
-  }, [outId, converting, model, toast])
+  }, [outId, converting, model, toast, srcUnit, writeUnits])
+
+  useEffect(() => {
+    if (!output || !focusDownloadRef.current) return
+    focusDownloadRef.current = false
+    downloadRef.current?.focus()
+  }, [output])
 
   const download = useCallback(async () => {
     if (!output) return
@@ -325,10 +467,12 @@ export default function ThreeDViewer({ toast }) {
   const pointCloud = !!stats && stats.points > 0 && stats.triangles === 0
   const ready = !!model && !busy
   const canConvert = ready && !!outFormat && (!pointCloud || outFormat.points)
-  const unit = model?.format?.unit || 'file units'
+  const unit = unitById(srcUnit)?.short || 'file units'
+  const isCad = model?.format?.engine === 'cad'
   const state = busy ? 'busy' : model ? 'ready' : error ? 'error' : 'idle'
-  const cancellable = busy && (busy.stage !== 'parsing' || busy.cad)
+  const cancellable = busy && (busy.stage !== 'parsing' || WORKER_ENGINES.has(busy.engine))
   const pct = busy?.total ? Math.min(100, Math.round((busy.loaded / busy.total) * 100)) : null
+  const writeUnit = outFormat?.unit === 'choose' ? writeUnits[outFormat.group] : null
 
   const openLabel = model ? 'Open another file' : 'Open a file'
 
@@ -336,11 +480,29 @@ export default function ThreeDViewer({ toast }) {
     <ToolLayout
       className="v3d"
       data-state={state}
-      title="3D Viewer"
+      title="3D Model Converter"
       titleId="v3d-title"
       items={[
         // The word and only the word: beta is a limit, not an action.
         { id: 'beta', menu: false, render: () => <span className="v3d-beta">Beta</span> },
+        {
+          // The settings a Blender import wants, in one press. Pressed while
+          // every one of them is still in force.
+          id: 'blender',
+          align: 'end',
+          render: () => (
+            <ToolButton
+              icon={blenderOn ? 'check-circle' : 'sliders-horizontal'}
+              className="v3d-preset"
+              aria-pressed={blenderOn}
+              onClick={applyBlender}
+              disabled={!!busy}
+            >
+              For Blender
+            </ToolButton>
+          ),
+          menu: { label: 'For Blender', icon: blenderOn ? 'check-circle' : 'sliders-horizontal', pressed: blenderOn, onSelect: applyBlender, disabled: !!busy },
+        },
         {
           id: `open-${model ? 'another' : 'first'}`,
           align: 'end',
@@ -396,8 +558,8 @@ export default function ThreeDViewer({ toast }) {
             {busy && (
               <div className="v3d-overlay v3d-busy" data-testid="v3d-busy">
                 <p className="v3d-busy-name">{busy.name}</p>
-                <p className="v3d-busy-stage">
-                  {STAGE_LABEL[busy.stage] || STAGE_LABEL.viewer}
+                <p className="v3d-busy-stage" data-testid="v3d-stage">
+                  {stageLabel(busy)}
                   {busy.loaded != null && (busy.stage === 'reading' || busy.stage === 'engine') && (
                     <span className="v3d-busy-bytes">
                       {' '}{formatBytes(busy.loaded)}{busy.total ? ` of ${formatBytes(busy.total)}` : ''}
@@ -408,7 +570,7 @@ export default function ThreeDViewer({ toast }) {
                   <div
                     className="v3d-meter"
                     role="progressbar"
-                    aria-label={STAGE_LABEL[busy.stage]}
+                    aria-label={stageLabel(busy)}
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={pct}
@@ -474,11 +636,11 @@ export default function ThreeDViewer({ toast }) {
         </section>
 
         <aside className="v3d-panel" aria-label="Model and conversion">
-          <div className="v3d-sect">
+          <div className="v3d-sect v3d-sect--model">
             <h2 className="v3d-label">Model</h2>
             {model && stats ? (
               <>
-                <p className="sr-only" id={summaryId}>{describeModel(model)}</p>
+                <p className="sr-only" id={summaryId}>{describeModel(model, srcUnit)}</p>
                 <dl className="v3d-facts" data-testid="v3d-facts">
                   <dt>File</dt><dd data-fact="file" title={model.name}>{model.name}</dd>
                   <dt>Format</dt><dd data-fact="format">{model.format.label}</dd>
@@ -502,55 +664,124 @@ export default function ThreeDViewer({ toast }) {
                     {model.warnings.map((w) => <li key={w}>{w}</li>)}
                   </ul>
                 )}
+                {/* What the numbers mean and which way is up: read from the
+                    file where it says, and set here where it does not. */}
+                <div className="v3d-opts">
+                  <ToolSelect
+                    className="v3d-select"
+                    label="Units"
+                    ariaLabel="Model units"
+                    value={srcUnit}
+                    options={UNIT_OPTIONS}
+                    onChange={changeUnit}
+                    disabled={!ready}
+                  />
+                  <div className="v3d-opt">
+                    <span className="v3d-opt-k" id={`${uid}-up`}>Up axis</span>
+                    <ToolPills options={UP_OPTIONS} value={up} onChange={changeUp} labelledBy={`${uid}-up`} disabledValues={ready ? undefined : ['y', 'z']} />
+                  </div>
+                </div>
               </>
             ) : (
               <dl className="v3d-facts v3d-facts--idle">
                 <dt>Opens</dt><dd data-fact="reads">{inputLabels().join(', ')}</dd>
                 <dt>Writes</dt><dd data-fact="writes">{outputLabels().join(', ')}</dd>
                 <dt>Limit</dt><dd data-fact="limit">{describeSizeLimit()}</dd>
-                <dt>{CAD_LABELS}</dt><dd data-fact="cad">The first one fetches a 7.6 MB engine from cdn.jsdelivr.net</dd>
+                {Object.entries(REMOTE_ENGINES).map(([id, e]) => (
+                  <Fragment key={id}>
+                    <dt>{labelsFor(id)}</dt>
+                    <dd data-fact={`engine-${id}`}>The first one fetches {e.label}, {formatBytes(e.bytes)}, from cdn.jsdelivr.net</dd>
+                  </Fragment>
+                ))}
               </dl>
             )}
           </div>
 
-          <div className="v3d-sect">
+          {isCad && (
+            <div className="v3d-sect v3d-sect--cad" role="group" aria-labelledby={`${uid}-cad`}>
+              <h2 className="v3d-label" id={`${uid}-cad`}>CAD import</h2>
+              <div className="v3d-opt">
+                <span className="v3d-opt-k" id={`${uid}-q`}>Quality</span>
+                <ToolPills options={QUALITY_OPTIONS} value={cad.quality} onChange={(q) => changeCad({ quality: q })} labelledBy={`${uid}-q`} disabledValues={ready ? undefined : QUALITY_OPTIONS.map((o) => o.value)} />
+                <p className="v3d-opt-note">Facets {describeCadQuality(cadQuality(cad.quality))}.</p>
+              </div>
+              <div className="v3d-opt">
+                <span className="v3d-opt-k" id={`${uid}-n`}>Normals</span>
+                <ToolPills options={NORMAL_OPTIONS} value={cad.normals} onChange={(n) => changeCad({ normals: n })} labelledBy={`${uid}-n`} disabledValues={ready ? undefined : NORMAL_OPTIONS.map((o) => o.value)} />
+              </div>
+              <div className="v3d-opt">
+                <span className="v3d-opt-k" id={`${uid}-s`}>Objects</span>
+                <ToolPills options={SPLIT_OPTIONS} value={cad.split} onChange={(s) => changeCad({ split: s })} labelledBy={`${uid}-s`} disabledValues={ready ? undefined : SPLIT_OPTIONS.map((o) => o.value)} />
+              </div>
+            </div>
+          )}
+
+          <div className="v3d-sect v3d-sect--out">
             <h2 className="v3d-label" id={`${uid}-out`}>Convert to</h2>
-            {/* Six formats as a 3 x 2 grid of choices, and what the chosen one
-                keeps written ONCE underneath. The first cut gave every row its
-                own two-line note, which pushed Convert below the fold at
-                1440 x 900 — the page's one action out of sight to explain five
-                options nobody had picked. */}
+            {/* The formats in their groups, and what the chosen one keeps
+                written ONCE underneath rather than a note per choice, so
+                Convert stays in view at 1440 x 900. One set of native radios
+                across the groups: arrow keys move through all of them. */}
             <div className="v3d-outs" role="radiogroup" aria-labelledby={`${uid}-out`} aria-describedby={`${uid}-keeps`}>
-              {OUTPUT_FORMATS.map((f) => {
-                const blocked = pointCloud && !f.points
-                return (
-                  <label key={f.id} className={`v3d-out${outId === f.id ? ' is-on' : ''}${blocked ? ' is-off' : ''}`}>
-                    {/* The native radio covers the whole choice, so the control
-                        itself — not only its label — is the size of the tile
-                        (44px tall on a coarse pointer). The dot is its picture. */}
-                    <input
-                      type="radio"
-                      name={`${uid}-out`}
-                      value={f.id}
-                      checked={outId === f.id}
-                      disabled={blocked}
-                      onChange={() => { setOutId(f.id); setOutput(null) }}
-                    />
-                    <span className="v3d-out-dot" aria-hidden="true" />
-                    <span className="v3d-out-l">{f.label}</span>
-                  </label>
-                )
-              })}
+              {OUTPUT_GROUPS.map((g) => (
+                <div key={g.id} className="v3d-outgroup">
+                  <p className="v3d-outgroup-k" aria-hidden="true">{g.label}</p>
+                  <div className="v3d-outgrid">
+                    {outputsInGroup(g.id).map((f) => {
+                      const blocked = pointCloud && !f.points
+                      return (
+                        <label key={f.id} className={`v3d-out${outId === f.id ? ' is-on' : ''}${blocked ? ' is-off' : ''}`}>
+                          {/* The native radio covers the whole choice, so the
+                              control itself is the size of the tile (44px tall
+                              on a coarse pointer). The dot is its picture. */}
+                          <input
+                            type="radio"
+                            name={`${uid}-out`}
+                            value={f.id}
+                            checked={outId === f.id}
+                            disabled={blocked}
+                            aria-label={`${f.label} (${g.label})`}
+                            onChange={() => { setOutId(f.id); setOutput(null) }}
+                          />
+                          <span className="v3d-out-dot" aria-hidden="true" />
+                          {/* "GLB, compressed" sets its qualifier under the
+                              name, so a third of the panel still holds it. */}
+                          <span className="v3d-out-l">
+                            {f.label.split(/,\s*/)[0]}
+                            {f.label.includes(',') && <span className="v3d-out-sub">{f.label.split(/,\s*/)[1]}</span>}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
             <p className="v3d-keeps" id={`${uid}-keeps`} data-testid="v3d-keeps">
               {outFormat?.keeps}.
               {pointCloud && ` ${listForProse(OUTPUT_FORMATS.filter((f) => !f.points).map((f) => f.label))} need triangles, and this model is a point cloud.`}
+              {model && !srcUnit && ' This model has no unit set, so its numbers are written as they are. Set its units above to convert them.'}
             </p>
+            {writeUnit && (
+              <ToolSelect
+                className="v3d-select"
+                label="Write in"
+                ariaLabel={`Units for the ${outFormat.label} file`}
+                value={writeUnit}
+                options={WRITE_UNIT_OPTIONS}
+                onChange={(u) => setWriteUnit(outFormat.group, u)}
+              />
+            )}
             <div className="v3d-actions">
+              {/* aria-disabled while writing, not disabled: a disabled button
+                  drops keyboard focus to the page body. convert() ignores
+                  presses while a write is running. */}
               <button
+                ref={convertRef}
                 type="button"
                 className="v3d-btn v3d-btn--primary"
-                disabled={!canConvert || converting}
+                disabled={!canConvert}
+                aria-disabled={converting || undefined}
                 aria-busy={converting || undefined}
                 onClick={convert}
                 data-testid="v3d-convert"
@@ -558,7 +789,7 @@ export default function ThreeDViewer({ toast }) {
                 {converting ? `Writing ${outFormat?.label}…` : `Convert to ${outFormat?.label}`}
               </button>
               {output && (
-                <button type="button" className="v3d-btn" onClick={download} data-testid="v3d-download">
+                <button ref={downloadRef} type="button" className="v3d-btn" onClick={download} data-testid="v3d-download">
                   Download
                 </button>
               )}

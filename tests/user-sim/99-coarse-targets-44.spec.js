@@ -40,7 +40,7 @@ const CASES = [
   { route: '/create/auto-builder', sels: ['.bs-btn--primary'] },
   // The output-format choices: the radio itself is the whole tile, so the
   // control a finger lands on is 44px tall, not a 20px box inside a label.
-  { route: '/create/3d-viewer', sels: ['.v3d-out input'] },
+  { route: '/create/3d-converter', sels: ['.v3d-out input'] },
   { route: '/create/tint', sels: ['.tt-iconbtn', '.tt-picker', '.tt-hex-input'] },
   { route: '/login', sels: ['.ui-login-x'] },
   { route: '/projects', signin: true, sels: ['.uh-card-name'] },

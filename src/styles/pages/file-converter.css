@@ -10,7 +10,7 @@
  * ── THE TOOL PATTERN ─────────────────────────────────────────────────────────
  *
  * The root is also the ToolLayout root (`.tl.fc`): the sticky tool toolbar
- * carries the name, the Alpha tag and the way to the 3D viewer, so the page
+ * carries the name, the Alpha tag and the way to the 3D Model Converter, so the page
  * has no hero. The mode tabs sit under it as a row of pills. Each mode's
  * bench is the canvas column beside a side column that holds the settings
  * card and, under it, the run's action bar (Convert / Build / Extract). At

@@ -55,6 +55,7 @@ import {
   createTools,
 } from './toolTree.js'
 import { LEGACY_REDIRECTS } from './legacyRoutes.js'
+import { INPUT_FORMATS, OUTPUT_FORMATS } from '../utils/meshFormats.js'
 
 // ── Retired destinations ────────────────────────────────────────────────────
 //
@@ -249,9 +250,15 @@ export const CREATE_TOOL_SEARCH = {
     description: 'Solve any aspect ratio, resolution, PPI or diagonal from a single measurement.',
     keywords: ['ratio', 'aspect', 'aspect ratio', 'resolution', 'calculator', 'dimensions', 'resize', 'imagery', 'media', '16:9', '4:3', 'crop', 'ppi', 'diagonal', 'screen size', 'device', 'instagram', 'reel', 'banner'],
   },
-  '3d-viewer': {
-    description: 'Open a 3D model in the browser and convert it between mesh formats.',
-    keywords: ['3d', '3d viewer', 'viewer', 'model', 'mesh', 'convert', 'converter', 'obj', 'stl', 'gltf', 'glb', 'ply', '3mf', 'fbx', 'step', 'stp', 'iges', 'cad', '3d print', 'three.js', 'beta'],
+  '3d-converter': {
+    description: 'Open a 3D model or CAD file in the browser and convert it to another format.',
+    // Every extension the converter reads or writes comes from its format
+    // table, so search finds a format the moment the tool gains it.
+    keywords: [
+      '3d', '3d model converter', '3d converter', '3d viewer', 'viewer', 'model', 'mesh', 'convert', 'converter',
+      'cad', 'blender', '3d print', 'three.js', 'beta',
+      ...new Set([...INPUT_FORMATS.flatMap((f) => f.exts), ...OUTPUT_FORMATS.map((f) => f.ext)]),
+    ],
   },
   'alt-text': {
     description: 'Generate accessible alt text for images in batch using AI.',

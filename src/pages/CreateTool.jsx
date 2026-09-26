@@ -57,11 +57,11 @@ const ContrastChecker = lazy(() => import('./ContrastChecker'))
 // RatioCalculator is a light aspect-ratio helper.
 const FileConverter = lazy(() => import('./FileConverter'))
 const RatioCalculator = lazy(() => import('./RatioCalculator'))
-// The 3D Viewer carries no three.js itself: the page chunk is small and
+// The 3D Model Converter carries no three.js itself: the page chunk is small and
 // fetches src/utils/meshEngine.js with a second dynamic import when a model
-// arrives. tests/unit/three-d-viewer.test.js proves three.js stays out of the
+// arrives. tests/unit/model-converter.test.js proves three.js stays out of the
 // entry chunk and out of this page's own chunk.
-const ThreeDViewer = lazy(() => import('./ThreeDViewer'))
+const ModelConverter = lazy(() => import('./ModelConverter'))
 
 // Typography — three standalone tools on one Google Fonts catalogue. Gallery
 // browses it, Font Pair suggests and previews combinations, Type Scale turns a
@@ -97,7 +97,7 @@ const LIVE_TOOLS = {
   '/create/emoji': IconEmojiLibrary,
   '/create/file-converter': FileConverter,
   '/create/aspect-ratio': RatioCalculator,
-  '/create/3d-viewer': ThreeDViewer,
+  '/create/3d-converter': ModelConverter,
   '/create/font-gallery': FontGallery,
   '/create/font-pair': FontMatcher,
   '/create/type-scale': TypeScale,

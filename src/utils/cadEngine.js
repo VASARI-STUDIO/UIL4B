@@ -1,45 +1,36 @@
-// ── The CAD engine, and why it is NOT served from uil4b.com ──────────────────
+// The CAD engine: OpenCascade, fetched from a pinned CDN URL and run in a worker.
 //
-// STEP and IGES are boundary representations, not meshes: there is no triangle
-// in the file to draw until a geometry kernel has tessellated the surfaces. In
-// the browser that kernel is OpenCascade compiled to WebAssembly, here through
-// occt-import-js — the build 3dviewer.net runs — which hands back plain
-// position / normal / index arrays that meshEngine.js turns into three.js
-// geometry like any other format.
+// STEP, IGES and BREP are boundary representations, not meshes: there is no
+// triangle in the file until a geometry kernel has tessellated the surfaces.
+// In the browser that kernel is OpenCascade compiled to WebAssembly, through
+// occt-import-js, which hands back position / normal / index arrays per part
+// and the assembly tree that names them. meshEngine.js turns those into
+// three.js geometry like any other format.
 //
-// THE WEIGHT. Measured against jsDelivr on 2026-09-23: the wasm is 7,604,031
-// bytes; the JS wrapper is 96,871. That is the same class of file as the ffmpeg
-// core in src/pages/FileConverter.jsx and it gets the same treatment for the
-// same reason recorded there: a content-hashed wasm under dist/assets is
-// re-fetched from origin in every edge region on every deploy. So it is never
-// imported through Vite, never appears in dist/, and is never a dependency in
-// package.json — tests/unit/three-d-viewer.test.js fails if anything under src/
-// imports it.
+// NOT BUNDLED. The wasm is 7,604,031 bytes and the JS wrapper 96,871. Both are
+// fetched from jsDelivr at an exact version, never imported through Vite, never
+// written to dist/, and never listed in package.json;
+// tests/unit/model-converter.test.js fails if anything under src/ imports it.
 //
-// PINNED TO AN EXACT VERSION, and to the bytes: OCCT_SHA256 below holds the
-// SHA-256 of both files (hashed against jsDelivr on 2026-09-23), and it is
-// ENFORCED. The engine runs in a worker on our origin — IndexedDB auth tokens,
-// credentialed /api — so this module fetches both files itself, checks them
-// with utils/integrity.js, and posts only verified bytes to the worker, which
-// fetches nothing. A mismatch throws an IntegrityError before any worker is
-// started. tests/unit/cdn-engine-integrity feeds it one changed byte.
-// jsDelivr serves both with `access-control-allow-origin: *` and an immutable
-// one-year cache-control. vercel.json sets no Content-Security-Policy; if one
-// is ever added it must allow cdn.jsdelivr.net for connect, blob: for the
-// worker's importScripts, and 'wasm-unsafe-eval'.
+// PINNED TO THE BYTES. OCCT_SHA256 holds the SHA-256 of both files and is
+// enforced: the worker runs on our origin (IndexedDB, credentialed /api), so
+// this module fetches both files itself, checks them with utils/integrity.js,
+// and posts only verified bytes to the worker, which fetches nothing. A
+// mismatch throws an IntegrityError before any worker is started. jsDelivr
+// serves both with `access-control-allow-origin: *` and an immutable cache.
+// The Content-Security-Policy in vercel.json allows cdn.jsdelivr.net for
+// connect, blob: for the worker's importScripts, and 'wasm-unsafe-eval'.
 //
 // IN A WORKER, because OpenCascade's reader is synchronous: a large STEP holds
-// the thread for seconds, and on the main thread that freezes the page with the
-// Cancel button unpressable. In a worker the page stays live, the progress line
+// the thread for seconds. In a worker the page stays live, the progress line
 // keeps painting, and Cancel terminates the worker outright.
 //
-// LOADED ONLY WHEN A CAD FILE IS DROPPED. An OBJ or a GLB never asks for any of
-// this. NO FALLBACK MIRROR, for the reason FileConverter.jsx gives: a second CDN
-// is a code path that only runs during someone else's outage. The honest
-// failure is built instead — the page says the CAD engine could not be fetched,
-// and every mesh format still works.
+// LOADED ONLY WHEN A CAD FILE IS DROPPED, with no fallback mirror: if the CDN
+// cannot be reached the page says the CAD engine could not be fetched, and
+// every mesh format still works.
 
 import { fetchVerified } from './integrity.js'
+import { cadQuality } from './meshFormats.js'
 
 export const OCCT_VERSION = '0.0.23'
 export const OCCT_BASE = `https://cdn.jsdelivr.net/npm/occt-import-js@${OCCT_VERSION}/dist`
@@ -50,17 +41,20 @@ export const OCCT_SHA256 = Object.freeze({
   wasm: '33391fc9d94ea5c869a6718488bf0a9a464222bac9bdc764dfe1690cef281952',
 })
 
-// Tessellation. `bounding_box_ratio` makes the linear deflection a fraction of
-// the model's own size, so a 2 mm bracket and a 2 m chassis both come out
-// smooth rather than one faceted and the other absurdly dense.
-export const TESSELLATION = Object.freeze({
-  linearUnit: 'millimeter',
-  linearDeflectionType: 'bounding_box_ratio',
-  linearDeflection: 0.001,
-  angularDeflection: 0.5,
-})
+// Tessellation parameters for occt-import-js. Lengths come back in
+// millimetres; `bounding_box_ratio` makes the linear deflection a fraction of
+// the model's own size (see CAD_QUALITIES in meshFormats.js).
+export function tessellationParams(quality) {
+  const q = cadQuality(quality)
+  return {
+    linearUnit: 'millimeter',
+    linearDeflectionType: 'bounding_box_ratio',
+    linearDeflection: q.linear,
+    angularDeflection: q.angular,
+  }
+}
 
-export const CAD_READERS = Object.freeze({ step: 'ReadStepFile', iges: 'ReadIgesFile' })
+export const CAD_READERS = Object.freeze({ step: 'ReadStepFile', iges: 'ReadIgesFile', brep: 'ReadBrepFile' })
 
 // One worker per page life, kept between files so the 7.6 MB engine is
 // compiled once. Terminated (and forgotten) on cancel; the next CAD file
@@ -127,12 +121,12 @@ function abortError() {
  * Tessellate a CAD file off the main thread.
  *
  * @param {Uint8Array} bytes  the whole file; its buffer is transferred to the worker
- * @param {'step'|'iges'} formatId
- * @param {(p: { stage: 'engine'|'parsing', loaded?: number, total?: number }) => void} onStage
- * @param {AbortSignal} [signal]
- * @returns {Promise<{ meshes: Array<{ name: string, position: Float32Array, normal: Float32Array|null, index: Uint32Array|null, color: number[]|null, faces: Array<{ first: number, last: number, color: number[] }> }> }>}
+ * @param {'step'|'iges'|'brep'} formatId
+ * @param {{ quality?: string, onStage?: Function, signal?: AbortSignal }} opts
+ *   onStage receives { stage: 'engine'|'parsing', loaded?, total? }.
+ * @returns {Promise<{ root: { name: string, meshes: number[], children: object[] }, meshes: Array<{ name: string, position: Float32Array|null, normal: Float32Array|null, index: Uint32Array|null, color: number[]|null, faces: Array<{ first: number, last: number, color: number[]|null }> }> }>}
  */
-export async function readCad(bytes, formatId, onStage, signal) {
+export async function readCad(bytes, formatId, { quality, onStage, signal } = {}) {
   const reader = CAD_READERS[formatId]
   if (!reader) throw new Error(`${formatId} is not a CAD format this engine reads`)
   if (signal?.aborted) throw abortError()
@@ -179,9 +173,8 @@ export async function readCad(bytes, formatId, onStage, signal) {
     w.addEventListener('message', onMessage)
     w.addEventListener('error', onError)
     signal?.addEventListener('abort', onAbort, { once: true })
-    // TRANSFERRED, not copied: meshEngine.loadModel reads the file into a
-    // buffer for this call alone and never touches it again, and a STEP file
-    // can run to tens of megabytes. After this the caller's view is detached.
-    w.postMessage({ id, reader, bytes, params: TESSELLATION }, [bytes.buffer])
+    // Transferred, not copied: the caller reads the file into a buffer for this
+    // call alone. After this the caller's view is detached.
+    w.postMessage({ id, reader, bytes, params: tessellationParams(quality) }, [bytes.buffer])
   })
 }

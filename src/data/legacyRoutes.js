@@ -122,6 +122,8 @@ export const RETIRED_ROUTES = Object.freeze([
   ['/contrast', '/create/contrast'],
   ['/imgconvert', '/create/file-converter'],
   ['/video-frames', '/create/file-converter'],
+  // The viewer and the converter are one tool under one name.
+  ['/create/3d-viewer', '/create/3d-converter'],
   ['/docs', '/learn'],
   ['/docs-design', '/learn'],
   ['/docs-social', '/learn'],
